@@ -1348,8 +1348,65 @@ class _Dependencies:
         return self.parameter_information_contract
 
     def population_parameter_sources(self, reader: Any) -> dict[str, str]:
-        """Prove the exact country percentage getter and registered pop argument."""
+        """Prove the exact scoped percentage getter and registered pop argument."""
         from .vanilla_inventory import _PARAMETER_EVIDENCE_HASHES  # noqa: PLC0415
+
+        if reader.engine == "pop_type_percent_state":
+            if (
+                reader.scope != "root"
+                or reader.path
+                or reader.parameters != (("target", "pop_type:peasants"),)
+                or reader.kind != "number"
+                or reader.unit != "ratio"
+                or reader.value_field != "value"
+                or reader.argument is not None
+                or reader.minimum != 0
+                or reader.maximum != 1
+            ):
+                return {}
+            sources = (
+                "common/political_movements/05_slave_revolt_movements.txt",
+                "common/pop_types/peasants.txt",
+            )
+            for source in sources:
+                raw = self.native_bytes.get(source)
+                if (
+                    raw is None
+                    or source not in self.native.roots
+                    or hashlib.sha256(raw).hexdigest() != _PARAMETER_EVIDENCE_HASHES[source]
+                    or self.effective_bytes.get(source) != raw
+                ):
+                    return {}
+            example, state = _resolve(
+                self.native.roots[sources[0]],
+                "movement_slave_revolt",
+                "creation_trigger.OR.any_scope_state",
+            )
+            expected = parse_bytes(
+                b"any_scope_state={pop_type_percent_state={target=pop_type:slaves value>=0.55}}",
+                path="native-state-population-example",
+            ).root.items[0]
+            pop, pop_state = _resolve(self.native.roots[sources[1]], "peasants", "__body__")
+            if (
+                example is None
+                or state != "found"
+                or _digest(example) != _digest(expected)
+                or pop is None
+                or pop_state != "found"
+                or not isinstance(pop.value, Block)
+                or any(
+                    index.owners[family, name] != [source]
+                    for index in (self.native, self.effective)
+                    for family, name, source in (
+                        ("political_movements", "movement_slave_revolt", sources[0]),
+                        ("pop_types", "peasants", sources[1]),
+                    )
+                )
+            ):
+                return {}
+            return {
+                source: hashlib.sha256(self.native_bytes[source]).hexdigest() for source in sources
+            }
 
         if (
             reader.engine != "pop_type_percent_country"
@@ -1500,16 +1557,81 @@ class _Dependencies:
                 for predicate, knowledge_only in used:
                     reader = readers[predicate.fact]
                     resource = any(part.startswith(("mg:", "sg:")) for part in reader.path)
+                    # This new proof authorizes only the optional state tax
+                    # comparison. Existing country/target comparisons keep
+                    # their independent native consumer contracts.
+                    relative = (
+                        predicate.value
+                        if isinstance(predicate.value, decision_rules.FactReference)
+                        and reader.engine == "tax_capacity"
+                        else None
+                    )
                     if not (
                         reader.engine in observation_queries.QUERY_ENGINES
                         or reader.engine
-                        in {"is_production_method_active", "pop_type_percent_country"}
+                        in {
+                            "is_production_method_active",
+                            "pop_type_percent_country",
+                            "pop_type_percent_state",
+                        }
                         or resource
+                        or relative is not None
                     ):
                         continue
                     resolved = decision_interfaces.reader_scope(
                         reader, policy.actor_path, native_root=policy.native_root
                     )
+                    if relative is not None:
+                        other = readers[relative.key]
+                        if (
+                            reader.kind != "number"
+                            or other.kind != "number"
+                            or reader.unit != other.unit
+                            or reader.scope != other.scope
+                            or reader.path != other.path
+                            or relative.expression != other.reference()
+                            or reader.reference() == other.reference()
+                            or decision_interfaces.reader_scope(
+                                other, policy.actor_path, native_root=policy.native_root
+                            )
+                            != resolved
+                            or (reader.engine, other.engine, resolved, reader.unit)
+                            != (
+                                "tax_capacity",
+                                "tax_capacity_usage",
+                                "state",
+                                "tax_capacity_points",
+                            )
+                        ):
+                            return {}
+                        tax_query = observation_queries.AnyIncorporatedStateTaxCapacityShortfall()
+                        for name in observation_queries.required_sources(tax_query):
+                            verify(name)
+                            for item in self.native.roots[name].assignments():
+                                if item.is_variable:
+                                    continue
+                                family = _family(name)
+                                if self.native.owners[family, item.key] != [
+                                    name
+                                ] or self.effective.owners[family, item.key] != [name]:
+                                    return {}
+                                before, bstate = _resolve(
+                                    self.native.roots[name],
+                                    item.key,
+                                    "should_auto_expand"
+                                    if name.endswith("07_government.txt")
+                                    else "__body__",
+                                )
+                                after, astate = _resolve(
+                                    self.effective.roots[name],
+                                    item.key,
+                                    "should_auto_expand"
+                                    if name.endswith("07_government.txt")
+                                    else "__body__",
+                                )
+                                if bstate != astate or _ast(before) != _ast(after):
+                                    return {}
+                        observation_queries.compile_query(tax_query, inputs)
                     if reader.engine in observation_queries.QUERY_ENGINES:
                         query = observation_queries.from_reader(
                             reader.engine, dict(reader.parameters)
@@ -1556,7 +1678,7 @@ class _Dependencies:
                                 recipe[source_key]
                             ]:
                                 return {}
-                    elif reader.engine == "pop_type_percent_country":
+                    elif reader.engine in {"pop_type_percent_country", "pop_type_percent_state"}:
                         population = self.population_parameter_sources(reader)
                         if not population:
                             return {}
@@ -1629,6 +1751,7 @@ class _Dependencies:
         engines = observation_queries.QUERY_ENGINES | {
             "is_production_method_active",
             "pop_type_percent_country",
+            "pop_type_percent_state",
         }
 
         def occurrences(node: Assignment) -> list[tuple[Any, ...]]:
@@ -1667,6 +1790,11 @@ class _Dependencies:
                     if condition and (
                         item.key in engines
                         or (resource and item.key in decision_interfaces._INPUTS)
+                        or (
+                            item.key == "tax_capacity"
+                            and isinstance(item.value, Scalar)
+                            and item.value.quoted
+                        )
                     ):
                         found.append(
                             (

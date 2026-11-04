@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "plan": "A2",
+  "status": "archived_reference_only",
+  "commit": "97c606cfb3b4fb4321166e8399578f5cdb7b6796",
+  "originals": [
+    {
+      "path": "docs/design/架构主计划.md",
+      "bytes": 9923,
+      "sha256": "1a2af323513c09e1f7ce211090e5840a0b4a6481cfe08bc15d0662a9aa6bba6e"
+    },
+    {
+      "path": "docs/design/架构子计划.md",
+      "bytes": 8339,
+      "sha256": "64e5b9f0cbfb9dc4eb1735ace69ecd6bf9f86167378b701a59e7419fa093e627"
+    },
+    {
+      "path": "docs/design/当前工作清单.md",
+      "bytes": 4944,
+      "sha256": "93be6bfcd9cd72a41b8b87197bda5c331d235ca98442c796c63d25b1fe3d0c2b"
+    },
+    {
+      "path": "docs/design/exec/架构阶段收据.json",
+      "bytes": 5304743,
+      "sha256": "9ef6de7130368715da3481ead774e39a311b7dc8f2970e8c024a423845dcf6ee"
+    },
+    {
+      "path": "docs/design/exec/架构重设计-结果.md",
+      "bytes": 72385,
+      "sha256": "1a0120aafe4c40cfe986c2415cd58a96569a877a0cb730757b2b756229b78523"
+    }
+  ]
+}

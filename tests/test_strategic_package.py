@@ -69,7 +69,7 @@ def test_release_is_the_public_full_candidate():
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
     assert metadata["version"] == distribution.RELEASE_VERSION
-    assert metadata["status"] == "candidate"
+    assert metadata["status"] == "released"
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",

@@ -21,6 +21,7 @@ from . import (
     company_sectors,
     config,
     decision_intents,
+    decision_interfaces,
     decision_rules,
     equipment_opportunities,
     law_opportunities,
@@ -348,7 +349,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 (name, rule["field"]) not in treaty_fields
                 or rule["operation"] != "multiply"
                 or len(rule["field"].split(".")) != 3
-                or not rule["field"].endswith(".ai.proposal_weight")
+                or not rule["field"].endswith((".ai.proposal_weight", ".ai.evaluation_chance"))
                 for rule in rules
             ):
                 raise ValueError("条约适配只许可已核实的精确提议倍率块")
@@ -850,6 +851,13 @@ def build(
         law_opportunities.verify_inputs(inputs)
     if adapters.technology_opportunities_sha256 is not None:
         technology_opportunities.verify_inputs(inputs)
+    state_recovery_evidence: tuple[str, ...] = ()
+    if any(
+        reader.engine == "devastation"
+        for _, policy in adapters.policies
+        for reader in policy.readers
+    ):
+        state_recovery_evidence = decision_interfaces.verify_state_devastation_sources(inputs)
     # 一次词法扫描同时建立校验集合与原件定位，避免逐读取器反复扫描大文件。
     evidence = reader_evidence(inputs)
     words = frozenset(evidence)
@@ -871,6 +879,21 @@ def build(
         if not selected:
             continue
         for reader in policy.readers:
+            if reader.engine in {"tax_capacity", "tax_capacity_usage", "is_incorporated"}:
+                query = observation_queries.from_reader(
+                    "any_scope_state", {"state_query": "tax_capacity_shortfall"}
+                )
+                if query not in query_evidence:
+                    query_evidence[query] = observation_queries.compile_query(query, inputs)
+                # Native auto-expand uses state.tax_capacity on a building;
+                # this consumer already has that exact state as ROOT. Only
+                # grant the unqualified getter after the full AST proof.
+                for engine in ("tax_capacity", "tax_capacity_usage"):
+                    evidence[engine] = {
+                        **evidence[f"state.{engine}"],
+                        "contract": "same_candidate_state_tax_capacity_comparison",
+                    }
+                words |= {"tax_capacity", "tax_capacity_usage"}
             if reader.engine == "market_goods_consumption" and not consumption_evidence:
                 observation_queries.verify_market_consumption_sources(inputs)
                 consumption_evidence = True
@@ -980,6 +1003,7 @@ def build(
             for engine in sorted(required_engines)
             if engine.startswith("sitai_context_")
         },
+        "state_recovery_reader_evidence": list(state_recovery_evidence),
         "reader_evidence_limits": "token_locations_only; typed_signatures_are_static_contracts; engine_validity_pending_f1",
         "production_recipes": production_inputs.recipes(inputs, active_methods),
         "initialized_consumers": [

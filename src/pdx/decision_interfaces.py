@@ -187,17 +187,28 @@ _COUNTRY_NUMBER = frozenset(
         "num_alliances",
     }
 )
-_STATE_NUMBER = frozenset({"infrastructure_delta", "market_access", "state_unemployment_rate"})
+_STATE_NUMBER = frozenset(
+    {
+        "infrastructure_delta",
+        "market_access",
+        "state_unemployment_rate",
+        "tax_capacity",
+        "tax_capacity_usage",
+        "devastation",
+    }
+)
 _INPUTS = {
     **dict.fromkeys(_COUNTRY_BOOLEAN, ("country", "boolean")),
     **dict.fromkeys(_COUNTRY_NUMBER, ("country", "number")),
     **dict.fromkeys(_STATE_NUMBER, ("state", "number")),
     "is_treaty_port": ("state", "boolean"),
+    "is_incorporated": ("state", "boolean"),
     "is_production_method_active": ("state", "boolean"),
     "is_homeland_of_country_cultures": ("state", "boolean"),
     "owner": ("state", "boolean"),
     "is_isolated_from_market": ("state", "boolean"),
     "primary_cultures_percent_state": ("state", "number"),
+    "pop_type_percent_state": ("state", "number"),
     "ig_clout": ("interest_group", "number"),
     "ig_approval": ("interest_group", "number"),
     "is_in_government": ("interest_group", "boolean"),
@@ -234,11 +245,15 @@ _UNITS = {
     "relations:root": "relations_minus100_100",
     "country_fervor_primary_culture": "fervor_points",
     "primary_cultures_percent_state": "ratio",
+    "pop_type_percent_state": "ratio",
     "ig_clout": "ratio",
     "ig_approval": "approval_points",
     "infrastructure_delta": "infrastructure_points",
+    "devastation": "ratio",
     "market_access": "ratio",
     "state_unemployment_rate": "ratio",
+    "tax_capacity": "tax_capacity_points",
+    "tax_capacity_usage": "tax_capacity_points",
     "num_defensive_pacts": "treaty_article_count",
     "wanted_army_size_script_value": "battalions",
     "wanted_marines_size_script_value": "battalions",
@@ -254,12 +269,46 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine == "pop_type_percent_state" and (
+        root != "state"
+        or reader.scope != "root"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters != (("target", "pop_type:peasants"),)
+        or reader.value_field != "value"
+        or reader.minimum != 0
+        or reader.maximum != 1
+    ):
+        raise ValueError(f"农民比例必须保持候选州ROOT精确peasants参数合同：{reader.key}")
+    if reader.engine in {"tax_capacity", "tax_capacity_usage", "is_incorporated"} and (
+        root != "state"
+        or reader.scope != "root"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+    ):
+        raise ValueError(f"地方征税读取器必须保持候选州ROOT无参数合同：{reader.key}")
     if not isinstance(root, str) or (root, actor_path) not in {
         ("country", ()),
         ("state", ("owner",)),
         ("military_formation", ("owner",)),
     }:
         raise ValueError("读取器原生ROOT类型与AI所有者路径不一致")
+    if reader.engine == "devastation" and (
+        root != "state"
+        or actor_path != ("owner",)
+        or reader.scope != "root"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.kind != "number"
+        or reader.unit != "ratio"
+        or reader.minimum != 0
+        or reader.maximum != 1
+    ):
+        raise ValueError(f"受创比例必须保持精确候选州ROOT、ratio和[0,1]合同：{reader.key}")
     if reader.engine == "any_insurrection_ongoing":
         scripted_trigger_snapshot()
         if (
@@ -545,7 +594,28 @@ def consumer(
             "research/situated/treaty-opportunities.json",
             "vanilla_treaty_article_proposal_multiplier",
         )
+    elif (
+        leaf == "evaluation_chance"
+        and source is not None
+        and source.startswith("common/treaty_articles/")
+    ):
+        if (
+            actor_path
+            or native_root not in {None, "country"}
+            or len(field) != 3
+            or field[1] != "ai"
+        ):
+            raise ValueError("条约抽样概率只允许被评估国家ROOT，无条款或对方角色")
+        evidence, role = (
+            "research/situated/treaty-opportunities.json",
+            "vanilla_treaty_article_evaluation_probability",
+        )
     return {
+        **(
+            {"native_unit": "probability", "writer_unit": "multiplier"}
+            if role == "vanilla_treaty_article_evaluation_probability"
+            else {}
+        ),
         "role": role,
         "impact": "B",
         "root": native_root if native_root is not None else "state" if actor_path else "country",
@@ -710,3 +780,70 @@ def coverage(baseline: str, owners: dict[tuple[str, ...], str]) -> list[dict[str
     if {field[0] for field in owners} - {row["field"] for row in result}:
         raise ValueError("覆盖台账含不在锁定默认策略中的写入字段")
     return result
+
+
+STATE_DEVASTATION_SOURCE = "common/ideologies/01_character_ideologies.txt"
+STATE_DEVASTATION_SHA256 = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
+
+
+def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
+    """Pin the native state ratio AST and victim-limited five-year memory.
+
+    The ideology supplies a state getter witness, not a railway effect.
+    The consumer remains the independently proved state building ai_value.
+    """
+    from .textio import normalized_text  # noqa: PLC0415
+
+    sources = {
+        STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
+        "common/on_actions/00_code_on_actions.txt": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
+    }
+    parsed = {}
+    for source, expected in sources.items():
+        text = texts.get(source)
+        if (
+            not isinstance(text, str)
+            or hashlib.sha256(normalized_text(text).encode()).hexdigest() != expected
+        ):
+            raise ValueError(f"州恢复读取器原版来源漂移或缺失：{source}")
+        result = parse_text(text, path=source)
+        if result.errors:
+            raise ValueError(f"州恢复读取器原版AST无法解析：{source}")
+        parsed[source] = result.root
+
+    def shape(node):
+        if isinstance(node, Scalar):
+            return node.text, node.quoted
+        if isinstance(node, Assignment):
+            return node.key, node.op, node.prefix, shape(node.value)
+        if isinstance(node, Block):
+            return tuple(shape(x) for x in node.items)
+        raise ValueError("州恢复原版AST含未知节点")
+
+    ideology = parsed[STATE_DEVASTATION_SOURCE].first("ideology_pacifist")
+    expected = shape(
+        parse_text("owner = { any_scope_state = { is_incorporated = yes devastation > 0.2 } }").root
+    )
+    references = []
+    if ideology is None or not isinstance(ideology.value, Block):
+        raise ValueError("州受创读取器失去精确原版意识形态消费者")
+    for field in ("interest_group_leader_weight", "non_interest_group_leader_weight"):
+        weight = ideology.value.first(field)
+        matches = []
+        if weight is not None and isinstance(weight.value, Block):
+            for branch in weight.value.all("if"):
+                if isinstance(branch.value, Block):
+                    limit = branch.value.first("limit")
+                    if limit is not None and shape(limit.value) == expected:
+                        matches.append(limit.line)
+        if len(matches) != 1:
+            raise ValueError("州受创读取器缺少唯一owner到同州devastation完整原版AST")
+        references.append(f"{STATE_DEVASTATION_SOURCE}:{matches[0]}")
+    memory = parsed["common/on_actions/00_code_on_actions.txt"].first("on_lost_war")
+    expected_memory = parse_text(
+        "effect = { if = { limit = { exists = scope:victim_of_wargoal } set_variable = { name = recently_lost_war days = 1825 value = yes } } }"
+    ).root
+    if memory is None or shape(memory.value) != shape(expected_memory):
+        raise ValueError("州恢复失去原版受害者限定与1825天战败记忆生命周期")
+    references.append(f"common/on_actions/00_code_on_actions.txt:{memory.line}")
+    return tuple(references)

@@ -53,11 +53,14 @@ def _value(derived, law, changes):
 
 
 def test_six_complete_native_families_have_37_unique_concrete_consumers(derived):
-    assert len(derived["covered"]) == 37
-    assert len({(row["source"], row["field"]) for row in derived["covered"]}) == 37
+    assert len(derived["covered"]) == 52
+    assert len({(row["source"], row["field"]) for row in derived["covered"]}) == 52
     assert sorted(Counter(row["source"] for row in derived["covered"]).values()) == [
         3,
+        4,
         5,
+        5,
+        6,
         6,
         6,
         8,
@@ -66,7 +69,7 @@ def test_six_complete_native_families_have_37_unique_concrete_consumers(derived)
     assert all(rule["contribution_group"] for rule in derived["rules"])
     assert not any(rule.get("intent") or rule.get("contexts") for rule in derived["rules"])
     assert not any(
-        c["fact"] in {"industrial", "war", "loans", "default", "coord_layer_foundation"}
+        c["fact"] in {"industrial", "war", "loans", "coord_layer_foundation"}
         for rule in derived["rules"]
         for c in rule["conditions"]
     )

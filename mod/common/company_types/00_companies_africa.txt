@@ -346,6 +346,13 @@ company_suez_company = {
 				# company_sector_company_suez_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
+			# GROUP program_685673e8146eeab1_company_trade_operating_pressure_negative
+			add = { value = 0
+				# company_sector_company_suez_company_trade_loss_low_cash [market]; 本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0 cash_reserves_ratio < 0.25 } } } add = -0.1 }
+				# company_sector_company_suez_company_trade_loss [market]; 本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0 } } } add = -0.05 }
+			}
 			min = 0.5
 			max = 1.2
 		} }

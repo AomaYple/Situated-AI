@@ -156,8 +156,8 @@ def _read_surface(paths: Iterable[str]) -> dict[str, str]:
     for path in paths:
         try:
             surface[path] = (ROOT / path).read_text(encoding="utf-8")
-        except (OSError, UnicodeError):
-            continue
+        except (OSError, UnicodeError) as exc:
+            raise ValueError(f"无法读取审计源码 {path}: {type(exc).__name__}: {exc}") from exc
     return surface
 
 
@@ -261,13 +261,16 @@ def scan_paths(
     """扫描给定 Python 文件，返回函数/类级别的引用分类。"""
 
     path_list = sorted(paths)
-    texts = surface if surface is not None else _read_surface(reference_paths or path_list)
+    references = list(reference_paths) if reference_paths is not None else path_list
+    required_paths = sorted(set(path_list) | set(references))
+    texts = surface if surface is not None else _read_surface(required_paths)
+    missing = [path for path in required_paths if path not in texts]
+    if missing:
+        raise ValueError("审计源码缺少文本：" + ", ".join(missing))
     index = _word_index(texts)
     rows: list[Definition] = []
     for path in path_list:
-        text = texts.get(path)
-        if text is None:
-            continue
+        text = texts[path]
         try:
             tree = ast.parse(text, filename=path)
         except SyntaxError as exc:

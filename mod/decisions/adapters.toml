@@ -2,6 +2,7 @@
 schema = 1
 
 [sources]
+"common/ideologies/01_character_ideologies.txt" = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
 "common/journal_entries/00_acw_entries.txt" = "6132f262affcfc038df2549a0d5cb6ae059bc9e7fb90a8a1fe2c14db5263ff3e"
 "events/law_events/children_rights_events.txt" = "1b8a75290df30ea93fcf1948fd09fffc2175ecd932f7faef585b6952e3d068e2"
 "common/achievements/ip2_pivot_of_empire_achievements.txt" = "42a9c8cec20b6add6332b19a1354640d66fb7cfc45e464b95913315e824a4a04"
@@ -122,6 +123,7 @@ kind = "number"
 minimum = 0
 
 [actors]
+"common/buildings/06_urban_center.txt" = ["owner"]
 "common/buildings/01_industry.txt" = ["owner"]
 "common/buildings/02_agro.txt" = ["owner"]
 "common/buildings/03_mines.txt" = ["owner"]
@@ -10369,19 +10371,20 @@ source = "common/buildings/01_industry.txt"
 field = "building_textile_mill.ai_value"
 domain = "economy"
 priority = 5000
-contribution_group = "building_output_demand"
+contribution_group = "employment_absorption"
 operation = "multiply"
-value = 1.3
+value = 1.1
 conditions = [
   { fact = "pm_active_building_textile_mill_pm_dye_workshops", op = "=", value = true },
   { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
   { fact = "state_owner_clothes_balance", op = "<", value = 0 },
   { fact = "state_owner_dye_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_dye_balance", op = ">=", value = 0 },
   { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
   { fact = "state_unemployment", op = ">=", value = 0.1 },
-  { fact = "state_owner_reserves", op = ">", value = 0 },
 ]
-why = "已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润"
+why = "实际启用配方、衣物需求和投入准备只升同一就业吸纳原因；独立基础不要求储备，旧就业增量已迁移不双计"
 counterexample = "保留原版可行性、候选范围、成本、失败和最终执行。未满足条件、玩家、缺失作用域或非法输入不干预；相对GDP不代表军事实力或战争胜率。方向、作用域及收益仍待用户长期行为验收。"
 contexts = ["state_building_capacity"]
 
@@ -10391,42 +10394,23 @@ source = "common/buildings/01_industry.txt"
 field = "building_textile_mill.ai_value"
 domain = "economy"
 priority = 5001
-contribution_group = "building_output_demand"
+contribution_group = "employment_absorption"
 operation = "multiply"
-value = 1.3
+value = 1.1
 conditions = [
   { fact = "pm_active_building_textile_mill_pm_electric_sewing_machines", op = "=", value = true },
   { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
   { fact = "state_owner_clothes_balance", op = "<", value = 0 },
   { fact = "state_owner_dye_price", op = "<=", value = 0.25 },
-  { fact = "state_owner_electricity_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_dye_balance", op = ">=", value = 0 },
+  { fact = "state_local_electricity_price", op = "<=", value = 0.25 },
   { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
   { fact = "state_owner_tools_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_tools_balance", op = ">=", value = 0 },
   { fact = "state_unemployment", op = ">=", value = 0.1 },
-  { fact = "state_owner_reserves", op = ">", value = 0 },
 ]
-why = "已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润"
-counterexample = "保留原版可行性、候选范围、成本、失败和最终执行。未满足条件、玩家、缺失作用域或非法输入不干预；相对GDP不代表军事实力或战争胜率。方向、作用域及收益仍待用户长期行为验收。"
-contexts = ["state_building_capacity"]
-
-[[rules]]
-id = "comparative_employment_active_building_textile_mill_pm_handsewn_clothes_output_clothes"
-source = "common/buildings/01_industry.txt"
-field = "building_textile_mill.ai_value"
-domain = "economy"
-priority = 5002
-contribution_group = "building_output_demand"
-operation = "multiply"
-value = 1.3
-conditions = [
-  { fact = "pm_active_building_textile_mill_pm_handsewn_clothes", op = "=", value = true },
-  { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
-  { fact = "state_owner_clothes_balance", op = "<", value = 0 },
-  { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
-  { fact = "state_unemployment", op = ">=", value = 0.1 },
-  { fact = "state_owner_reserves", op = ">", value = 0 },
-]
-why = "已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润"
+why = "实际启用配方、衣物需求和投入准备只升同一就业吸纳原因；独立基础不要求储备，旧就业增量已迁移不双计"
 counterexample = "保留原版可行性、候选范围、成本、失败和最终执行。未满足条件、玩家、缺失作用域或非法输入不干预；相对GDP不代表军事实力或战争胜率。方向、作用域及收益仍待用户长期行为验收。"
 contexts = ["state_building_capacity"]
 
@@ -10436,20 +10420,22 @@ source = "common/buildings/01_industry.txt"
 field = "building_textile_mill.ai_value"
 domain = "economy"
 priority = 5003
-contribution_group = "building_output_demand"
+contribution_group = "employment_absorption"
 operation = "multiply"
-value = 1.3
+value = 1.1
 conditions = [
   { fact = "pm_active_building_textile_mill_pm_sewing_machines", op = "=", value = true },
   { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
   { fact = "state_owner_clothes_balance", op = "<", value = 0 },
   { fact = "state_owner_dye_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_dye_balance", op = ">=", value = 0 },
   { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
   { fact = "state_owner_tools_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_tools_balance", op = ">=", value = 0 },
   { fact = "state_unemployment", op = ">=", value = 0.1 },
-  { fact = "state_owner_reserves", op = ">", value = 0 },
 ]
-why = "已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润"
+why = "实际启用配方、衣物需求和投入准备只升同一就业吸纳原因；独立基础不要求储备，旧就业增量已迁移不双计"
 counterexample = "保留原版可行性、候选范围、成本、失败和最终执行。未满足条件、玩家、缺失作用域或非法输入不干预；相对GDP不代表军事实力或战争胜率。方向、作用域及收益仍待用户长期行为验收。"
 contexts = ["state_building_capacity"]
 
@@ -16863,9 +16849,9 @@ required_known_facts = ["state_owner_loans"]
 field = "building_textile_mill.ai_value"
 domain = "economy"
 priority = 6003
-contribution_group = "building_output_demand"
+contribution_group = "employment_absorption"
 operation = "multiply"
-value = 1.30
+value = 1.10
 conditions = [
   { fact = "pm_active_building_textile_mill_pm_handsewn_clothes", op = "=", value = true },
   { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
@@ -23601,3 +23587,135 @@ contribution_group = "subject_self_administration"
 conditions = [ { fact = "actor_is_subject", op = "=", value = true }, { fact = "bureaucracy", op = "<", value = 0 } ]
 why = "实际属国自身行政缺口形成修复治理能力的独立自强需求；财政未知不抹已证缺口，不等于已建成或已选择策略"
 counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/胜率换算；同原因档位取最强，独立原因联合，未知只撤回依赖分量，不当健康或零。每个具名候选与本国观测精确绑定，不以选中/排队当完成；保留玩家、关闭模块、原版资格/具体成本/执行、secret外层trigger、原版限幅与特殊主体终结零分。策略评分不等于建造、立法、援助、自由或战争必然实现"
+
+
+[readers.state_is_incorporated]
+engine = "is_incorporated"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+
+[readers.state_tax_capacity]
+engine = "tax_capacity"
+scope = "root"
+kind = "number"
+unit = "tax_capacity_points"
+
+[readers.state_tax_capacity_usage]
+engine = "tax_capacity_usage"
+scope = "root"
+kind = "number"
+unit = "tax_capacity_points"
+
+[[rules]]
+id = "administrative_local_tax_capacity_repair"
+source = "common/buildings/07_government.txt"
+field = "building_government_administration.ai_value"
+domain = "fiscal"
+priority = 20600
+contribution_group = "administrative_local_tax_capacity"
+operation = "multiply"
+value = 1.1
+conditions = [
+  { fact = "state_is_incorporated", op = "=", value = true },
+  { fact = "state_tax_capacity", op = "<", value = { fact = "state_tax_capacity_usage" } },
+]
+why = "已整合候选州的征税容量真实低于同州使用量；独立于全国官僚缺口，不要求现有PM或财政健康"
+counterexample = "未整合、容量相等或任一事实未知仅退出地方税收机会；融资与实际纸电话成本继续独立联合，原版资格、玩家和尾部保留；不保证实际税收收益"
+
+
+[[rules]]
+id = "local_power_plant_observed_default_cost"
+source = "common/buildings/06_urban_center.txt"
+field = "building_power_plant.ai_value"
+domain = "fiscal"
+priority = 20620
+contribution_group = "building_fiscal_default"
+operation = "multiply"
+value = 0.85
+conditions = [{ fact = "state_owner_default", op = "=", value = true }]
+why = "电厂真实违约融资成本独立于同州电价供给需求"
+counterexample = "正常借款不扣；违约未知只退出本项；保留首座电厂引导、资格、费用、玩家与原版终结零分"
+
+[readers.state_devastation]
+engine = "devastation"
+scope = "root"
+kind = "number"
+unit = "ratio"
+minimum = 0
+maximum = 1
+
+[readers.state_owner_war]
+engine = "is_at_war"
+scope = "root"
+path = ["owner"]
+kind = "boolean"
+unit = "boolean"
+
+[readers.state_owner_war_defeat]
+engine = "has_variable"
+scope = "root"
+path = ["owner"]
+kind = "boolean"
+unit = "boolean"
+argument = "recently_lost_war"
+
+[[rules]]
+id = "infrastructure_railway_observed_postwar_recovery"
+source = "common/buildings/11_private_infrastructure.txt"
+field = "building_railway.ai_value"
+domain = "economy"
+priority = 20516
+contribution_group = "building_output_demand"
+operation = "multiply"
+value = 1.25
+conditions = [
+  { fact = "state_infrastructure", op = "<", value = 0 },
+  { fact = "state_devastation", op = ">", value = 0.2 },
+  { fact = "state_owner_war", op = "=", value = false },
+  { fact = "state_owner_war_defeat", op = "=", value = true },
+]
+why = "同一候选州真实受创且基建不足，所属国家和平且仍有原版限时战败记忆时，升级同一铁路基建需求；铁路是缓解基建缺口的候选，不会消除devastation"
+counterexample = "无缺口不因战败加建；损伤/战争/记忆未知或条件消失仅撤恢复升档，原无PM门的基建基础继续；实际煤/引擎/电/油和违约成本独立联合，原版科技、可建资格、工资、资源、零值与执行保留"
+
+[readers.state_peasants_share]
+engine = "pop_type_percent_state"
+scope = "root"
+kind = "number"
+unit = "ratio"
+minimum = 0
+maximum = 1
+value_field = "value"
+parameters = { target = "pop_type:peasants" }
+
+[[rules]]
+id = "textile_local_labor_tightness_cost"
+source = "common/buildings/01_industry.txt"
+field = "building_textile_mill.ai_value"
+domain = "economy"
+priority = 20641
+contribution_group = "building_labor_opportunity_cost"
+operation = "multiply"
+value = 0.92
+conditions = [
+ { fact = "state_unemployment", op = "<", value = 0.02 },
+ { fact = "state_peasants_share", op = "<", value = 0.02 },
+]
+why = "同一候选州失业与农民占比均低才形成独立劳力机会成本；大量农民不冒充劳力紧张"
+counterexample = "另一州或全国比例不能替代；未知仅退出劳力成本，不吞掉商品需求；不推断工资和资格"
+
+[[rules]]
+id = "comparative_employment_active_building_textile_mill_pm_handsewn_clothes_output_clothes"
+source = "common/buildings/01_industry.txt"
+field = "building_textile_mill.ai_value"
+domain = "economy"
+priority = 20640
+contribution_group = "employment_absorption"
+operation = "multiply"
+value = 1.06
+conditions = [
+ { fact = "state_unemployment", op = ">=", value = 0.1 },
+ { fact = "state_owner_clothes_balance", op = "<", value = 0 },
+]
+why = "衣物真实市场需求与候选州失业形成独立有限就业吸纳机会；全部PMG最坏组合仍有正劳工岗位，不要求PM、储备、低价投入或全面健康"
+counterexample = "未知只退出本项；配方岗位不保证实际招聘、资格、工资或盈利，成本与原版资格执行继续保留"

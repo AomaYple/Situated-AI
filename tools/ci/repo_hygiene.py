@@ -35,7 +35,13 @@ ROOT_CACHE_NAMES = frozenset(
         ".tox",
     }
 )
-ROOT_CACHE_PREFIXES = (".ruff-cache-", "sitai-perf-restore-", "v3-parse-cache-")
+ROOT_CACHE_PREFIXES = (
+    ".ruff-cache-",
+    "sitai-perf-restore-",
+    "v3-parse-cache-",
+    "pip-install-",
+    "pip-ephem-wheel-cache-",
+)
 ROOT_CACHE_FILES = (".coverage",)
 
 # 这些目录的内容有独立字节契约或是本机运行环境，不属于源码卫生门禁。

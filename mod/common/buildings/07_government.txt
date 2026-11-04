@@ -69,8 +69,13 @@ building_government_administration = {
 				# fiscal_government_building_loans_downgrade [fiscal]; 州所属国家正在借贷时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes taking_loans = yes } } } add = -0.25 }
 			}
+			# GROUP program_23cf35935032bc42_administrative_local_tax_capacity_positive
+			add = { value = 0
+				# administrative_local_tax_capacity_repair [fiscal]; 已整合候选州的征税容量真实低于同州使用量；独立于全国官僚缺口，不要求现有PM或财政健康
+				if = { limit = { exists = ROOT ROOT = { is_incorporated = yes tax_capacity < "ROOT.tax_capacity_usage" exists = owner owner = { is_ai = yes } } } add = 0.1 }
+			}
 			min = 0.5
-			max = 1.25
+			max = 1.35
 		} }
 		# SITAI END information:building_government_administration.ai_value
 	}

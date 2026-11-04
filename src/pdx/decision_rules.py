@@ -279,6 +279,7 @@ def from_data(
             ("has_diplomatic_pact", "boolean", None): {"who", "type"},
             ("has_treaty_alliance_with", "boolean", None): {"TARGET"},
             ("primary_cultures_percent_state", "number", "value"): {"target_country"},
+            ("pop_type_percent_state", "number", "value"): {"target"},
             ("institution_investment_level", "number", "value"): {"institution"},
         }
         value_field = item.get("value_field")
@@ -309,7 +310,14 @@ def from_data(
                 argument is not None
                 or set(parameters) != parameter_keys.get(parameter_shape)
                 or any(
-                    not isinstance(literal, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", literal)
+                    not isinstance(literal, str)
+                    or (
+                        not re.fullmatch(r"[a-z][a-z0-9_-]*", literal)
+                        and not (
+                            item["engine"] == "pop_type_percent_state"
+                            and literal == "pop_type:peasants"
+                        )
+                    )
                     for literal in parameters.values()
                 )
             )
@@ -1064,7 +1072,13 @@ def patch(
         if reader.key not in used_reader_keys:
             continue
         path_proven = all(
-            part in words or (part.startswith("mg:") and part[3:] in words and "mg:grain" in words)
+            part in words
+            or (part.startswith("mg:") and part[3:] in words and "mg:grain" in words)
+            or (
+                part in {"sg:electricity", "sg:transportation"}
+                and part[3:] in words
+                and "sg:transportation" in words
+            )
             for part in reader.path
         )
         if reader.key in coordination_readers:
@@ -1080,7 +1094,16 @@ def patch(
             reader.engine not in words
             or not path_proven
             or (reader.argument is not None and reader.argument not in words)
-            or any(literal not in words for _, literal in reader.parameters)
+            or any(
+                literal not in words
+                and not (
+                    reader.engine == "pop_type_percent_state"
+                    and literal == "pop_type:peasants"
+                    and "peasants" in words
+                    and "pop_type:slaves" in words
+                )
+                for _, literal in reader.parameters
+            )
         ):
             raise ValueError(f"读取器没有锁定原版依据：{reader.key}")
     if any(part not in words for part in rules.actor_path):

@@ -22,6 +22,15 @@ def test_clean_tree_has_no_violations(tmp_path: Path) -> None:
     assert find_violations(tmp_path) == []
 
 
+def test_detects_abandoned_pip_directories_only_at_root(tmp_path: Path) -> None:
+    names = ("pip-install-abandoned", "pip-ephem-wheel-cache-abandoned")
+    for name in names:
+        (tmp_path / name).mkdir()
+    (tmp_path / "src" / "pip-install-legitimate").mkdir(parents=True)
+
+    assert _paths(find_violations(tmp_path)) == set(names)
+
+
 def test_detects_root_caches_bytecode_and_nested_pycache(tmp_path: Path) -> None:
     (tmp_path / ".pytest_cache").mkdir()
     (tmp_path / ".coverage.123").write_text("data", encoding="utf-8")

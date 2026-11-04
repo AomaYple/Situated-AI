@@ -31,5 +31,7 @@ research/situated/a2-evidence/raw/*.html binary
 research/situated/a2-evidence/**/*.gz binary
 research/situated/a2-evidence/**/*.zip binary
 research/situated/a2-evidence/**/*.whl binary
+# 历史归档对象保留压缩前精确原始字节，不做文本规范化。
+docs/design/archive/objects/**/*.gz binary
 research/official-docs/** -diff linguist-vendored
 tests/test_golden/** linguist-generated

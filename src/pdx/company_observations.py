@@ -84,7 +84,20 @@ class ExistingBusiness:
     strong: bool = False
 
 
-CompanyQuery = RailInfrastructure | PowerScarcity | PortMethod | ExistingBusiness
+@dataclass(frozen=True, slots=True)
+class TradeBusinessPressure:
+    """A loss-making owned trade center; low cash upgrades this same building.
+
+    This finite risk proxy is not national trade profit or candidate-company
+    profit. Weekly currency and cash ratio are compared independently.
+    """
+
+    strong: bool = False
+
+
+CompanyQuery = (
+    RailInfrastructure | PowerScarcity | PortMethod | ExistingBusiness | TradeBusinessPressure
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +167,13 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CompanyQuery:
         and parameters["tier"] in {"base", "strong"}
     ):
         query = ExistingBusiness(parameters["building"], parameters["tier"] == "strong")
+    elif (
+        engine == "any_scope_building"
+        and tag == "trade_business_pressure"
+        and set(parameters) == {"company_query", "tier"}
+        and parameters["tier"] in {"base", "strong"}
+    ):
+        query = TradeBusinessPressure(parameters["tier"] == "strong")
     else:
         raise ValueError("公司查询引擎、标识或参数形状未登记")
     render(query)
@@ -161,6 +181,14 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CompanyQuery:
 
 
 def render(query: CompanyQuery) -> str:
+    if type(query) is TradeBusinessPressure:
+        if type(query.strong) is not bool:
+            raise ValueError("贸易经营压力仅接受明确布尔档位")
+        cash = " cash_reserves_ratio < 0.25" if query.strong else ""
+        return (
+            "any_scope_building = { is_building_type = building_trade_center "
+            f"level >= 1 weekly_profit < 0{cash} }}"
+        )
     if type(query) is ExistingBusiness:
         if (
             not isinstance(query.building_id, str)
@@ -214,6 +242,11 @@ def reader_spec(query: CompanyQuery) -> dict[str, Any]:
             "company_query": "power_scarcity",
             "minimum_price": repr(_price(query.minimum_price)),
         }
+    elif isinstance(query, TradeBusinessPressure):
+        parameters = {
+            "company_query": "trade_business_pressure",
+            "tier": "strong" if query.strong else "base",
+        }
     elif isinstance(query, ExistingBusiness):
         parameters = {
             "company_query": "existing_business",
@@ -224,7 +257,7 @@ def reader_spec(query: CompanyQuery) -> dict[str, Any]:
         parameters = {"company_query": "port_method", "method": query.method_id}
     return {
         "engine": "any_scope_building"
-        if isinstance(query, (PortMethod, ExistingBusiness))
+        if isinstance(query, (PortMethod, ExistingBusiness, TradeBusinessPressure))
         else "any_scope_state",
         "parameters": parameters,
         "scope": "root",
@@ -235,8 +268,8 @@ def reader_spec(query: CompanyQuery) -> dict[str, Any]:
 
 def required_sources(query: CompanyQuery) -> tuple[str, ...]:
     render(query)
-    if isinstance(query, ExistingBusiness):
-        if query.building_id == "building_gold_mine":
+    if isinstance(query, (ExistingBusiness, TradeBusinessPressure)):
+        if isinstance(query, ExistingBusiness) and query.building_id == "building_gold_mine":
             return tuple(sorted({_OPIUM, _MINES_BUILDING, _MINES_GROUP, _MINES_METHOD, _GOODS}))
         return tuple(sorted({_OPIUM, _PRIVATE_BUILDING, _RAIL_GROUP, _PRIVATE_METHOD}))
     common = {_PRIVATE_BUILDING, _GOODS}
@@ -347,7 +380,10 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
         references.append(f"{source}:{_entry(roots[source], key).line}")
         return block
 
-    if isinstance(query, ExistingBusiness):
+    if isinstance(query, (ExistingBusiness, TradeBusinessPressure)):
+        building_id = (
+            query.building_id if isinstance(query, ExistingBusiness) else "building_trade_center"
+        )
         native = _child(reference(_OPIUM, "je_opium"), "complete")
         line = _exact(
             native,
@@ -356,8 +392,8 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
             "weekly_profit > 0 occupancy >= 0.75 level >= 10",
         )
         references.append(f"{_OPIUM}:{line}")
-        if query.building_id == "building_gold_mine":
-            building = reference(_MINES_BUILDING, query.building_id)
+        if building_id == "building_gold_mine":
+            building = reference(_MINES_BUILDING, building_id)
             group_id = "pmg_mining_equipment_building_gold_mine"
             if group_id not in _list(building, "production_method_groups"):
                 raise ValueError("金矿经营查询失去实际基础开采组")
@@ -394,7 +430,7 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
             if _scalar(good, "fixed_price") != "yes" or _scalar(good, "tradeable") != "no":
                 raise ValueError("金矿经营查询失去固定价/不可贸易机制")
         else:
-            building = reference(_PRIVATE_BUILDING, query.building_id)
+            building = reference(_PRIVATE_BUILDING, building_id)
             group_id = "pmg_base_building_trade_center"
             if group_id not in _list(building, "production_method_groups"):
                 raise ValueError("贸易经营查询失去实际服务PM组")
@@ -419,6 +455,14 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
             if not query.strong
             else "building:occupancy[ratio]>=.9+cash_reserves_ratio[ratio]>.5",
         )
+        if isinstance(query, TradeBusinessPressure):
+            chain = (
+                "country:any_scope_building->owned_building",
+                "building:is_building_type+level[building_levels]",
+                "building:weekly_profit[currency_per_week]<0",
+                "building:cash_reserves_ratio[ratio]<.25" if query.strong else "loss_only",
+                "reverse_comparison:finite_numeric_ordering;cash_ratio_threshold=.25_design_parameter",
+            )
     elif isinstance(query, PortMethod):
         native = _child(reference(_ART, "je_romanticism"), "complete")
         line = _exact(

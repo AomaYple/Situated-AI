@@ -553,17 +553,15 @@ counterexample = "不删除舰船、不改变已有舰队、实际军费或海�
 
 [[rules]]
 id = "naval_design_affordability"
-intent = "fiscal_recovery"
 domain = "military"
 field = "max_ship_design_complexity"
 priority = 50
 value = 0.85
 conditions = [
   { fact = "default", op = "=", value = true },
-  { fact = "war", op = "=", value = false },
 ]
-why = "和平违约期降低新舰设计复杂度目标"
-counterexample = "不改变既有舰船设计和战斗数值"
+why = "真实违约独立降低新舰设计复杂度目标；和平、战争或战争未知均保留这项新增设计融资机会成本"
+counterexample = "违约未知局部回原版；正常借款不扣；不改变既有舰船、战斗数值或实际军费；原版国家等级、法律和零值保留"
 
 [[rules]]
 id = "military_artillery_affordability"

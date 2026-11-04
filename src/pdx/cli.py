@@ -38,6 +38,8 @@ subparsers 的脚本、2 个裸脚本（``show_outputs.py`` 连 ``main()`` 都�
 from __future__ import annotations
 
 import json
+import shutil
+import tempfile
 import time
 
 # Path 必须能**在运行期**导入：typer 用 ``inspect.signature(eval_str=True)``
@@ -74,6 +76,7 @@ from pdx import (
     evidence,
     exe_strings,
     information_catalog,
+    law_opportunities,
     lockfile,
     observe,
     political_surface,
@@ -81,6 +84,7 @@ from pdx import (
     snapshot,
     tables_offline,
     tabular,
+    technology_opportunities,
     unknowns,
     vanilla_index,
     verify,
@@ -88,6 +92,7 @@ from pdx import (
 from pdx import mods as mods_mod
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
+from pdx.generation_transaction import GenerationTransaction
 from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
 from pdx.situated import bindings as situated_bindings
 from pdx.situated import domain_coverage as situated_domain_coverage
@@ -2599,6 +2604,48 @@ def political_surface_cmd(
     )
 
 
+def _modgen_verify_sources() -> None:
+    """Verify existing independent pins before exposing new generated ledgers."""
+    distribution.engine_scope.verify_strategy_game(config.GAME)
+    distribution.decision_interfaces.verify_scripted_trigger_game(config.GAME)
+    distribution.engine_scope.verify_company_defaults_game(config.GAME)
+    company_sectors.verify_game(config.GAME)
+    distribution.equipment_opportunities.verify_game(config.GAME)
+    distribution.treaty_opportunities.verify_game(config.GAME)
+    distribution.mobilization_opportunities.verify_game(config.GAME)
+    country_state.validate(country_state.load(), config.GAME)
+    # This also checks every source of adapter-specific queries and readers.
+    adapters = decisions.decision_adapters.load()
+    inputs = decisions.decision_adapters.read_inputs(adapters)
+    law_opportunities.verify_inputs(inputs)
+    technology_opportunities.verify_inputs(inputs)
+
+
+def _modgen_output_changes(production: dict[str, str | bytes]) -> dict[Path, bytes | None]:
+    """Build all bytes and existing stale-file cleanup in a disposable Mod copy."""
+    root = decisions.PRODUCT
+    with tempfile.TemporaryDirectory(prefix="sitai-modgen-") as folder:
+        staged = Path(folder) / "mod"
+        shutil.copytree(root, staged)
+        decisions.write(staged, production)
+        (staged / "generation-lock.json").write_text(
+            distribution.generation_lock(production), encoding="utf-8", newline="\n"
+        )
+        before = {
+            path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
+        }
+        after = {
+            path.relative_to(staged): path.read_bytes()
+            for path in staged.rglob("*")
+            if path.is_file()
+        }
+        return {
+            root / name: after.get(name)
+            for name in sorted(before.keys() | after.keys())
+            if before.get(name) != after.get(name)
+        }
+
+
 @app.command("modgen")
 def modgen_cmd(
     write: Annotated[bool, typer.Option("--write", help="生成唯一正式 Mod 的仓库产物")] = False,
@@ -2611,16 +2658,31 @@ def modgen_cmd(
         if not (config.GAME / "common").is_dir():
             raise ValueError(f"缺少锁定游戏原件：{config.GAME / 'common'}")
         if write:
-            company_sectors.write_baseline(config.GAME)
-            distribution.equipment_opportunities.write_baseline(config.GAME)
-            distribution.treaty_opportunities.write_baseline(config.GAME)
-            distribution.mobilization_opportunities.write_baseline(config.GAME)
-            binding_count = situated_bindings.write()
-            domain_count = situated_domain_coverage.write_counts()
+            _modgen_verify_sources()
+            bindings = situated_bindings.build()
+            ledgers = {
+                situated_bindings.DEFAULT_SOURCE: situated_bindings.render(bindings).encode(
+                    "utf-8"
+                ),
+                situated_domain_coverage.DEFAULT_SOURCE: situated_domain_coverage.render_counts(
+                    situated_domain_coverage.DEFAULT_SOURCE
+                ).encode("utf-8"),
+            }
+            # Strict production readers need the updated generated counts and
+            # bindings. Expose only these reversible inputs after source pin
+            # verification; any later error restores their original bytes.
+            with GenerationTransaction() as transaction:
+                transaction.replace(ledgers)
+                _, _, files = distribution.package_inputs()
+                production = {name: text for name, text in files.items() if name != "README.md"}
+                transaction.replace(_modgen_output_changes(production))
             console.print(
-                f"[green]已重建 {binding_count} 条原版消费者绑定和 {domain_count} 个领域统计[/]"
+                f"[green]已重建 {len(bindings)} 条原版消费者绑定和 "
+                f"{len(situated_domain_coverage.FAMILIES)} 个领域统计[/]"
             )
-        elif check:
+            console.print(f"[green]已生成 {len(production)} 个生产文件：UTF-8 无 BOM、LF[/]")
+            return
+        if check:
             source_problems = [
                 *situated_bindings.check(),
                 *situated_domain_coverage.check_counts(),
@@ -2629,13 +2691,7 @@ def modgen_cmd(
                 _fail("生成合同不一致：\n" + "\n".join(source_problems), EXIT_FAILED)
         _, _, files = distribution.package_inputs()
         production = {name: text for name, text in files.items() if name != "README.md"}
-        if write:
-            written = decisions.write(decisions.PRODUCT, production)
-            (decisions.PRODUCT / "generation-lock.json").write_text(
-                distribution.generation_lock(production), encoding="utf-8", newline="\n"
-            )
-            console.print(f"[green]已生成 {len(written)} 个生产文件：UTF-8 无 BOM、LF[/]")
-        elif check:
+        if check:
             problems = decisions.check(decisions.PRODUCT, production)
             distribution.check_generation_lock()
             if problems:

@@ -191,6 +191,18 @@ def test_s2_actual_railway_costs_saturation_and_unknowns_have_distinct_six_roles
             {**need, "pm_active_building_railway_pm_electric_trains": True, **coal},
             1.20,
         ),
+        (
+            "positive",
+            "transport_preparation_and_observed_postwar_repair_share_final_ceiling",
+            {
+                **prepared,
+                "state_local_transportation_price": 0.6,
+                "state_devastation": 0.3,
+                "state_owner_war": False,
+                "state_owner_war_defeat": True,
+            },
+            1.45,
+        ),
     )
     for role, label, changes, expected in cases:
         values = _rail_values(candidate["raw"], changes)
@@ -218,7 +230,9 @@ def test_s2_actual_railway_costs_saturation_and_unknowns_have_distinct_six_roles
     assert numeric is not None
     assert isinstance(numeric.value, Block)
     final = list(numeric.value.assignments())[-2:]
-    assert [(item.key, _scalar(item)) for item in final] == [("min", "0.5"), ("max", "1.2")]
+    # Local transport demand and postwar repair now have independent benefits;
+    # their joint consumer keeps one final .50..1.45 envelope.
+    assert [(item.key, _scalar(item)) for item in final] == [("min", "0.5"), ("max", "1.45")]
     positive = _rail_values(candidate["raw"], prepared)
     player = pdx_eval.select(overlay, _facts(candidate["raw"], positive, is_ai=False))
     _record(

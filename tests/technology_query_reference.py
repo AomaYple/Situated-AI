@@ -141,8 +141,15 @@ def _members(technology, purpose):
             keep = row["labor_saved"] > 0 and bool(row["prior"])
         elif purpose == "administration":
             keep = row["kind"] == "method" and services.get("country_bureaucracy_add", 0) > 0
-        elif purpose == "knowledge":
+        elif purpose in {"knowledge", "knowledge_ready"}:
             keep = row["kind"] == "method" and services.get("country_weekly_innovation_add", 0) > 0
+            if purpose == "knowledge_ready":
+                keep = (
+                    keep
+                    and row["building"] == "building_university"
+                    and bool(row["prior"])
+                    and row["inputs"].get("paper", 0) > 0
+                )
         elif purpose == "infrastructure":
             keep = services.get("state_infrastructure_add", 0) > 0
         elif purpose == "local_supply":
@@ -210,7 +217,10 @@ def realize_query_world(reader):
         "any_scope_state": [],
         "has_technology_researched": {(("argument", key),): True for key in technologies},
         "has_law_or_variant": {(("argument", f"law_type:{key}"),): False for key in laws},
-        "market": {f"mg:{key}": {"market_goods_delta": 0} for key in CATALOG["goods"]},
+        "market": {
+            f"mg:{key}": {"market_goods_delta": 0, "market_goods_pricier": 0}
+            for key in CATALOG["goods"]
+        },
     }
     state: dict[str, Any] = {
         "state_unemployment_rate": 0.01,
@@ -400,6 +410,17 @@ def evaluate(reader, collections, root_facts=None):
             else True
         )
         common = [_gates(row, root), ready]
+        if purpose == "knowledge_ready":
+            market = root.get("market")
+            paper = market.get("mg:paper") if isinstance(market, Mapping) else None
+            common.append(
+                _number(paper.get("market_goods_pricier"), "<=", 0.25)
+                if isinstance(paper, Mapping)
+                else None
+                if "market" not in root
+                or (isinstance(market, Mapping) and "mg:paper" not in market)
+                else False
+            )
         if purpose.startswith("productive") or purpose == "throughput":
             common.append(
                 _any(

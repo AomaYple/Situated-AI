@@ -69,7 +69,14 @@ TAXONOMY = (
     (
         "administrative",
         "行政与国家能力",
-        ("bureaucracy", "infrastructure", "tax_shortfall", "institution_investment_level"),
+        (
+            "bureaucracy",
+            "infrastructure",
+            "tax_shortfall",
+            "tax_capacity",
+            "is_incorporated",
+            "institution_investment_level",
+        ),
         ("institution_", "ai_weight", "bureaucrat"),
         ("fiscal", "political"),
     ),
@@ -132,7 +139,7 @@ TAXONOMY = (
     (
         "war",
         "战争与战后恢复",
-        ("war", "war_defeat", "wargoal", "supply", "ammunition"),
+        ("war", "war_defeat", "wargoal", "supply", "ammunition", "devastation"),
         ("wargoal", "wanted_", "reconstruction", "protect_supply"),
         ("military", "economy"),
     ),
@@ -204,6 +211,7 @@ PROFILE_ROLES = {
             "influence",
             "max_num_companies",
             "institution_investment_level",
+            "tax_capacity",
         ),
         "pressure": (
             "average_sol",
@@ -220,6 +228,8 @@ PROFILE_ROLES = {
             "state_unemployment_rate",
             "taking_loans",
             "weeks_until_bankruptcy",
+            "tax_capacity_usage",
+            "devastation",
         ),
         "structure": (
             "has_law_or_variant",
@@ -231,6 +241,8 @@ PROFILE_ROLES = {
             "primary_cultures_percent_state",
             "has_institution",
             "num_companies",
+            "is_incorporated",
+            "pop_type_percent_state",
         ),
         "external_opportunity": (
             "has_diplomatic_pact",

@@ -26578,6 +26578,26 @@
       "scope": "root",
       "unit": "boolean"
     },
+    "company_trade_loss": {
+      "engine": "any_scope_building",
+      "kind": "boolean",
+      "parameters": {
+        "company_query": "trade_business_pressure",
+        "tier": "base"
+      },
+      "scope": "root",
+      "unit": "boolean"
+    },
+    "company_trade_loss_low_cash": {
+      "engine": "any_scope_building",
+      "kind": "boolean",
+      "parameters": {
+        "company_query": "trade_business_pressure",
+        "tier": "strong"
+      },
+      "scope": "root",
+      "unit": "boolean"
+    },
     "company_trade_need": {
       "engine": "any_scope_building",
       "kind": "boolean",
@@ -51163,6 +51183,44 @@
     {
       "conditions": [
         {
+          "fact": "company_trade_loss",
+          "op": "=",
+          "value": true
+        }
+      ],
+      "contribution_group": "company_trade_operating_pressure",
+      "counterexample": "局部未知撤回相应贡献；保留原版资格、成本、随机、非正分拒绝与执行；潜在配方不是active PM",
+      "domain": "market",
+      "field": "company_panama_company.ai_weight",
+      "id": "company_sector_company_panama_company_trade_loss",
+      "operation": "multiply",
+      "priority": 51165,
+      "source": "common/company_types/00_companies_americas.txt",
+      "value": 0.95,
+      "why": "本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益"
+    },
+    {
+      "conditions": [
+        {
+          "fact": "company_trade_loss_low_cash",
+          "op": "=",
+          "value": true
+        }
+      ],
+      "contribution_group": "company_trade_operating_pressure",
+      "counterexample": "局部未知撤回相应贡献；保留原版资格、成本、随机、非正分拒绝与执行；潜在配方不是active PM",
+      "domain": "market",
+      "field": "company_panama_company.ai_weight",
+      "id": "company_sector_company_panama_company_trade_loss_low_cash",
+      "operation": "multiply",
+      "priority": 51166,
+      "source": "common/company_types/00_companies_americas.txt",
+      "value": 0.9,
+      "why": "本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益"
+    },
+    {
+      "conditions": [
+        {
           "fact": "company_port_basic",
           "op": "=",
           "value": true
@@ -51179,7 +51237,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_basic_need",
       "operation": "multiply",
-      "priority": 51165,
+      "priority": 51167,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -51208,7 +51266,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_basic_pressure",
       "operation": "multiply",
-      "priority": 51166,
+      "priority": 51168,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -51232,7 +51290,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_basic_clippers_input",
       "operation": "multiply",
-      "priority": 51167,
+      "priority": 51169,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 0.85,
       "why": "已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本"
@@ -51256,7 +51314,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_industrial_need",
       "operation": "multiply",
-      "priority": 51168,
+      "priority": 51170,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -51285,7 +51343,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_industrial_pressure",
       "operation": "multiply",
-      "priority": 51169,
+      "priority": 51171,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -51309,7 +51367,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_industrial_steamers_input",
       "operation": "multiply",
-      "priority": 51170,
+      "priority": 51172,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -51333,7 +51391,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_industrial_coal_input",
       "operation": "multiply",
-      "priority": 51171,
+      "priority": 51173,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本"
@@ -51357,7 +51415,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_modern_need",
       "operation": "multiply",
-      "priority": 51172,
+      "priority": 51174,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -51386,7 +51444,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_modern_pressure",
       "operation": "multiply",
-      "priority": 51173,
+      "priority": 51175,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -51410,7 +51468,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_modern_steamers_input",
       "operation": "multiply",
-      "priority": 51174,
+      "priority": 51176,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -51434,7 +51492,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_port_modern_oil_input",
       "operation": "multiply",
-      "priority": 51175,
+      "priority": 51177,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本"
@@ -51453,7 +51511,7 @@
       "field": "company_panama_company.ai_weight",
       "id": "company_sector_company_panama_company_default",
       "operation": "multiply",
-      "priority": 51176,
+      "priority": 51178,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -51472,7 +51530,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_fine_art_need",
       "operation": "multiply",
-      "priority": 51177,
+      "priority": 51179,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fine_art；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -51496,7 +51554,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_fine_art_pressure",
       "operation": "multiply",
-      "priority": 51178,
+      "priority": 51180,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "fine_art缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -51515,7 +51573,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_telephones_need",
       "operation": "multiply",
-      "priority": 51179,
+      "priority": 51181,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出telephones；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -51539,7 +51597,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_telephones_pressure",
       "operation": "multiply",
-      "priority": 51180,
+      "priority": 51182,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "telephones缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -51558,7 +51616,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_iron_input",
       "operation": "multiply",
-      "priority": 51181,
+      "priority": 51183,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -51577,7 +51635,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_lead_input",
       "operation": "multiply",
-      "priority": 51182,
+      "priority": 51184,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单"
@@ -51596,7 +51654,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_paper_input",
       "operation": "multiply",
-      "priority": 51183,
+      "priority": 51185,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要paper；高价为配方机会成本，不是当前实际账单"
@@ -51615,7 +51673,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_rubber_input",
       "operation": "multiply",
-      "priority": 51184,
+      "priority": 51186,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单"
@@ -51634,7 +51692,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_tools_input",
       "operation": "multiply",
-      "priority": 51185,
+      "priority": 51187,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -51653,7 +51711,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_workforce",
       "operation": "multiply",
-      "priority": 51186,
+      "priority": 51188,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -51672,7 +51730,7 @@
       "field": "company_paradox.ai_weight",
       "id": "company_sector_company_paradox_default",
       "operation": "multiply",
-      "priority": 51187,
+      "priority": 51189,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -51691,7 +51749,7 @@
       "field": "company_pedro_domecq.ai_weight",
       "id": "company_sector_company_pedro_domecq_groceries_need",
       "operation": "multiply",
-      "priority": 51188,
+      "priority": 51190,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -51715,7 +51773,7 @@
       "field": "company_pedro_domecq.ai_weight",
       "id": "company_sector_company_pedro_domecq_groceries_pressure",
       "operation": "multiply",
-      "priority": 51189,
+      "priority": 51191,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "groceries缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -51734,7 +51792,7 @@
       "field": "company_pedro_domecq.ai_weight",
       "id": "company_sector_company_pedro_domecq_wine_need",
       "operation": "multiply",
-      "priority": 51190,
+      "priority": 51192,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出wine；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -51758,7 +51816,7 @@
       "field": "company_pedro_domecq.ai_weight",
       "id": "company_sector_company_pedro_domecq_wine_pressure",
       "operation": "multiply",
-      "priority": 51191,
+      "priority": 51193,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "wine缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -51777,7 +51835,7 @@
       "field": "company_pedro_domecq.ai_weight",
       "id": "company_sector_company_pedro_domecq_grain_input",
       "operation": "multiply",
-      "priority": 51192,
+      "priority": 51194,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单"
@@ -51796,7 +51854,7 @@
       "field": "company_pedro_domecq.ai_weight",
       "id": "company_sector_company_pedro_domecq_workforce",
       "operation": "multiply",
-      "priority": 51193,
+      "priority": 51195,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -51815,7 +51873,7 @@
       "field": "company_pedro_domecq.ai_weight",
       "id": "company_sector_company_pedro_domecq_default",
       "operation": "multiply",
-      "priority": 51194,
+      "priority": 51196,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -51834,7 +51892,7 @@
       "field": "company_pernambuco_textiles.ai_weight",
       "id": "company_sector_company_pernambuco_textiles_clothes_need",
       "operation": "multiply",
-      "priority": 51195,
+      "priority": 51197,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -51858,7 +51916,7 @@
       "field": "company_pernambuco_textiles.ai_weight",
       "id": "company_sector_company_pernambuco_textiles_clothes_pressure",
       "operation": "multiply",
-      "priority": 51196,
+      "priority": 51198,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.2,
       "why": "clothes缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -51877,7 +51935,7 @@
       "field": "company_pernambuco_textiles.ai_weight",
       "id": "company_sector_company_pernambuco_textiles_fabric_input",
       "operation": "multiply",
-      "priority": 51197,
+      "priority": 51199,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单"
@@ -51896,7 +51954,7 @@
       "field": "company_pernambuco_textiles.ai_weight",
       "id": "company_sector_company_pernambuco_textiles_workforce",
       "operation": "multiply",
-      "priority": 51198,
+      "priority": 51200,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -51915,7 +51973,7 @@
       "field": "company_pernambuco_textiles.ai_weight",
       "id": "company_sector_company_pernambuco_textiles_default",
       "operation": "multiply",
-      "priority": 51199,
+      "priority": 51201,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -51934,7 +51992,7 @@
       "field": "company_perskhlopok.ai_weight",
       "id": "company_sector_company_perskhlopok_fabric_need",
       "operation": "multiply",
-      "priority": 51200,
+      "priority": 51202,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -51958,7 +52016,7 @@
       "field": "company_perskhlopok.ai_weight",
       "id": "company_sector_company_perskhlopok_fabric_pressure",
       "operation": "multiply",
-      "priority": 51201,
+      "priority": 51203,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.2,
       "why": "fabric缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -51977,7 +52035,7 @@
       "field": "company_perskhlopok.ai_weight",
       "id": "company_sector_company_perskhlopok_workforce",
       "operation": "multiply",
-      "priority": 51202,
+      "priority": 51204,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -51996,7 +52054,7 @@
       "field": "company_perskhlopok.ai_weight",
       "id": "company_sector_company_perskhlopok_default",
       "operation": "multiply",
-      "priority": 51203,
+      "priority": 51205,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52015,7 +52073,7 @@
       "field": "company_persshelk.ai_weight",
       "id": "company_sector_company_persshelk_silk_need",
       "operation": "multiply",
-      "priority": 51204,
+      "priority": 51206,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出silk；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52039,7 +52097,7 @@
       "field": "company_persshelk.ai_weight",
       "id": "company_sector_company_persshelk_silk_pressure",
       "operation": "multiply",
-      "priority": 51205,
+      "priority": 51207,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.2,
       "why": "silk缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52058,7 +52116,7 @@
       "field": "company_persshelk.ai_weight",
       "id": "company_sector_company_persshelk_workforce",
       "operation": "multiply",
-      "priority": 51206,
+      "priority": 51208,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -52077,7 +52135,7 @@
       "field": "company_persshelk.ai_weight",
       "id": "company_sector_company_persshelk_default",
       "operation": "multiply",
-      "priority": 51207,
+      "priority": 51209,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52096,7 +52154,7 @@
       "field": "company_peruvian_amazon.ai_weight",
       "id": "company_sector_company_peruvian_amazon_rubber_need",
       "operation": "multiply",
-      "priority": 51208,
+      "priority": 51210,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出rubber；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52120,7 +52178,7 @@
       "field": "company_peruvian_amazon.ai_weight",
       "id": "company_sector_company_peruvian_amazon_rubber_pressure",
       "operation": "multiply",
-      "priority": 51209,
+      "priority": 51211,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.2,
       "why": "rubber缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52139,7 +52197,7 @@
       "field": "company_peruvian_amazon.ai_weight",
       "id": "company_sector_company_peruvian_amazon_workforce",
       "operation": "multiply",
-      "priority": 51210,
+      "priority": 51212,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -52158,7 +52216,7 @@
       "field": "company_peruvian_amazon.ai_weight",
       "id": "company_sector_company_peruvian_amazon_default",
       "operation": "multiply",
-      "priority": 51211,
+      "priority": 51213,
       "source": "common/company_types/00_companies_americas.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52177,7 +52235,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_telephones_need",
       "operation": "multiply",
-      "priority": 51212,
+      "priority": 51214,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出telephones；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52201,7 +52259,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_telephones_pressure",
       "operation": "multiply",
-      "priority": 51213,
+      "priority": 51215,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.2,
       "why": "telephones缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52220,7 +52278,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_iron_input",
       "operation": "multiply",
-      "priority": 51214,
+      "priority": 51216,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -52239,7 +52297,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_lead_input",
       "operation": "multiply",
-      "priority": 51215,
+      "priority": 51217,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单"
@@ -52258,7 +52316,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_rubber_input",
       "operation": "multiply",
-      "priority": 51216,
+      "priority": 51218,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单"
@@ -52277,7 +52335,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_tools_input",
       "operation": "multiply",
-      "priority": 51217,
+      "priority": 51219,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -52296,7 +52354,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_workforce",
       "operation": "multiply",
-      "priority": 51218,
+      "priority": 51220,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -52315,7 +52373,7 @@
       "field": "company_philips.ai_weight",
       "id": "company_sector_company_philips_default",
       "operation": "multiply",
-      "priority": 51219,
+      "priority": 51221,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52334,7 +52392,7 @@
       "field": "company_prussian_state_railways.ai_weight",
       "id": "company_sector_company_prussian_state_railways_building_railway_need",
       "operation": "multiply",
-      "priority": 51220,
+      "priority": 51222,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -52353,7 +52411,7 @@
       "field": "company_prussian_state_railways.ai_weight",
       "id": "company_sector_company_prussian_state_railways_building_railway_pressure",
       "operation": "multiply",
-      "priority": 51221,
+      "priority": 51223,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -52372,7 +52430,7 @@
       "field": "company_prussian_state_railways.ai_weight",
       "id": "company_sector_company_prussian_state_railways_engines_input",
       "operation": "multiply",
-      "priority": 51222,
+      "priority": 51224,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -52391,7 +52449,7 @@
       "field": "company_prussian_state_railways.ai_weight",
       "id": "company_sector_company_prussian_state_railways_workforce",
       "operation": "multiply",
-      "priority": 51223,
+      "priority": 51225,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -52410,7 +52468,7 @@
       "field": "company_prussian_state_railways.ai_weight",
       "id": "company_sector_company_prussian_state_railways_default",
       "operation": "multiply",
-      "priority": 51224,
+      "priority": 51226,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52429,7 +52487,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_artillery_need",
       "operation": "multiply",
-      "priority": 51225,
+      "priority": 51227,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52453,7 +52511,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_artillery_pressure",
       "operation": "multiply",
-      "priority": 51226,
+      "priority": 51228,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52472,7 +52530,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_clippers_need",
       "operation": "multiply",
-      "priority": 51227,
+      "priority": 51229,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52496,7 +52554,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_clippers_pressure",
       "operation": "multiply",
-      "priority": 51228,
+      "priority": 51230,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52515,7 +52573,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_engines_need",
       "operation": "multiply",
-      "priority": 51229,
+      "priority": 51231,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52539,7 +52597,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_engines_pressure",
       "operation": "multiply",
-      "priority": 51230,
+      "priority": 51232,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.2,
       "why": "engines缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52558,7 +52616,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_steamers_need",
       "operation": "multiply",
-      "priority": 51231,
+      "priority": 51233,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52582,7 +52640,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_steamers_pressure",
       "operation": "multiply",
-      "priority": 51232,
+      "priority": 51234,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52601,7 +52659,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_steel_input",
       "operation": "multiply",
-      "priority": 51233,
+      "priority": 51235,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单"
@@ -52620,7 +52678,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_workforce",
       "operation": "multiply",
-      "priority": 51234,
+      "priority": 51236,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -52639,7 +52697,7 @@
       "field": "company_putilov_company.ai_weight",
       "id": "company_sector_company_putilov_company_default",
       "operation": "multiply",
-      "priority": 51235,
+      "priority": 51237,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52658,7 +52716,7 @@
       "field": "company_ralli_brothers.ai_weight",
       "id": "company_sector_company_ralli_brothers_grain_need",
       "operation": "multiply",
-      "priority": 51236,
+      "priority": 51238,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52682,7 +52740,7 @@
       "field": "company_ralli_brothers.ai_weight",
       "id": "company_sector_company_ralli_brothers_grain_pressure",
       "operation": "multiply",
-      "priority": 51237,
+      "priority": 51239,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.2,
       "why": "grain缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52701,7 +52759,7 @@
       "field": "company_ralli_brothers.ai_weight",
       "id": "company_sector_company_ralli_brothers_workforce",
       "operation": "multiply",
-      "priority": 51238,
+      "priority": 51240,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -52720,7 +52778,7 @@
       "field": "company_ralli_brothers.ai_weight",
       "id": "company_sector_company_ralli_brothers_default",
       "operation": "multiply",
-      "priority": 51239,
+      "priority": 51241,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52739,7 +52797,7 @@
       "field": "company_ramirez.ai_weight",
       "id": "company_sector_company_ramirez_fish_need",
       "operation": "multiply",
-      "priority": 51240,
+      "priority": 51242,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fish；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52763,7 +52821,7 @@
       "field": "company_ramirez.ai_weight",
       "id": "company_sector_company_ramirez_fish_pressure",
       "operation": "multiply",
-      "priority": 51241,
+      "priority": 51243,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "fish缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52782,7 +52840,7 @@
       "field": "company_ramirez.ai_weight",
       "id": "company_sector_company_ramirez_groceries_need",
       "operation": "multiply",
-      "priority": 51242,
+      "priority": 51244,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52806,7 +52864,7 @@
       "field": "company_ramirez.ai_weight",
       "id": "company_sector_company_ramirez_groceries_pressure",
       "operation": "multiply",
-      "priority": 51243,
+      "priority": 51245,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "groceries缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52825,7 +52883,7 @@
       "field": "company_ramirez.ai_weight",
       "id": "company_sector_company_ramirez_grain_input",
       "operation": "multiply",
-      "priority": 51244,
+      "priority": 51246,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单"
@@ -52844,7 +52902,7 @@
       "field": "company_ramirez.ai_weight",
       "id": "company_sector_company_ramirez_workforce",
       "operation": "multiply",
-      "priority": 51245,
+      "priority": 51247,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -52863,7 +52921,7 @@
       "field": "company_ramirez.ai_weight",
       "id": "company_sector_company_ramirez_default",
       "operation": "multiply",
-      "priority": 51246,
+      "priority": 51248,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -52882,7 +52940,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_ammunition_need",
       "operation": "multiply",
-      "priority": 51247,
+      "priority": 51249,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出ammunition；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52906,7 +52964,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_ammunition_pressure",
       "operation": "multiply",
-      "priority": 51248,
+      "priority": 51250,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "ammunition缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52925,7 +52983,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_artillery_need",
       "operation": "multiply",
-      "priority": 51249,
+      "priority": 51251,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52949,7 +53007,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_artillery_pressure",
       "operation": "multiply",
-      "priority": 51250,
+      "priority": 51252,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -52968,7 +53026,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_explosives_need",
       "operation": "multiply",
-      "priority": 51251,
+      "priority": 51253,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出explosives；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -52992,7 +53050,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_explosives_pressure",
       "operation": "multiply",
-      "priority": 51252,
+      "priority": 51254,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "explosives缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53011,7 +53069,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_explosives_input",
       "operation": "multiply",
-      "priority": 51253,
+      "priority": 51255,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单"
@@ -53030,7 +53088,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_fertilizer_input",
       "operation": "multiply",
-      "priority": 51254,
+      "priority": 51256,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要fertilizer；高价为配方机会成本，不是当前实际账单"
@@ -53049,7 +53107,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_lead_input",
       "operation": "multiply",
-      "priority": 51255,
+      "priority": 51257,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单"
@@ -53068,7 +53126,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_sulfur_input",
       "operation": "multiply",
-      "priority": 51256,
+      "priority": 51258,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要sulfur；高价为配方机会成本，不是当前实际账单"
@@ -53087,7 +53145,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_workforce",
       "operation": "multiply",
-      "priority": 51257,
+      "priority": 51259,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -53106,7 +53164,7 @@
       "field": "company_rheinmetall.ai_weight",
       "id": "company_sector_company_rheinmetall_default",
       "operation": "multiply",
-      "priority": 51258,
+      "priority": 51260,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -53125,7 +53183,7 @@
       "field": "company_ricordi.ai_weight",
       "id": "company_sector_company_ricordi_fine_art_need",
       "operation": "multiply",
-      "priority": 51259,
+      "priority": 51261,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fine_art；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53149,7 +53207,7 @@
       "field": "company_ricordi.ai_weight",
       "id": "company_sector_company_ricordi_fine_art_pressure",
       "operation": "multiply",
-      "priority": 51260,
+      "priority": 51262,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.2,
       "why": "fine_art缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53168,7 +53226,7 @@
       "field": "company_ricordi.ai_weight",
       "id": "company_sector_company_ricordi_paper_input",
       "operation": "multiply",
-      "priority": 51261,
+      "priority": 51263,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要paper；高价为配方机会成本，不是当前实际账单"
@@ -53187,7 +53245,7 @@
       "field": "company_ricordi.ai_weight",
       "id": "company_sector_company_ricordi_default",
       "operation": "multiply",
-      "priority": 51262,
+      "priority": 51264,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -53206,7 +53264,7 @@
       "field": "company_rodriguez_arguelles_y_cia.ai_weight",
       "id": "company_sector_company_rodriguez_arguelles_y_cia_tobacco_need",
       "operation": "multiply",
-      "priority": 51263,
+      "priority": 51265,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出tobacco；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53230,7 +53288,7 @@
       "field": "company_rodriguez_arguelles_y_cia.ai_weight",
       "id": "company_sector_company_rodriguez_arguelles_y_cia_tobacco_pressure",
       "operation": "multiply",
-      "priority": 51264,
+      "priority": 51266,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "tobacco缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53249,7 +53307,7 @@
       "field": "company_rodriguez_arguelles_y_cia.ai_weight",
       "id": "company_sector_company_rodriguez_arguelles_y_cia_workforce",
       "operation": "multiply",
-      "priority": 51265,
+      "priority": 51267,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -53268,7 +53326,7 @@
       "field": "company_rodriguez_arguelles_y_cia.ai_weight",
       "id": "company_sector_company_rodriguez_arguelles_y_cia_default",
       "operation": "multiply",
-      "priority": 51266,
+      "priority": 51268,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -53287,7 +53345,7 @@
       "field": "company_romanian_star.ai_weight",
       "id": "company_sector_company_romanian_star_oil_need",
       "operation": "multiply",
-      "priority": 51267,
+      "priority": 51269,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53311,7 +53369,7 @@
       "field": "company_romanian_star.ai_weight",
       "id": "company_sector_company_romanian_star_oil_pressure",
       "operation": "multiply",
-      "priority": 51268,
+      "priority": 51270,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.2,
       "why": "oil缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53330,7 +53388,7 @@
       "field": "company_romanian_star.ai_weight",
       "id": "company_sector_company_romanian_star_engines_input",
       "operation": "multiply",
-      "priority": 51269,
+      "priority": 51271,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -53349,7 +53407,7 @@
       "field": "company_romanian_star.ai_weight",
       "id": "company_sector_company_romanian_star_workforce",
       "operation": "multiply",
-      "priority": 51270,
+      "priority": 51272,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -53368,7 +53426,7 @@
       "field": "company_romanian_star.ai_weight",
       "id": "company_sector_company_romanian_star_default",
       "operation": "multiply",
-      "priority": 51271,
+      "priority": 51273,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -53387,7 +53445,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_ammunition_need",
       "operation": "multiply",
-      "priority": 51272,
+      "priority": 51274,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出ammunition；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53411,7 +53469,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_ammunition_pressure",
       "operation": "multiply",
-      "priority": 51273,
+      "priority": 51275,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.2,
       "why": "ammunition缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53430,7 +53488,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_small_arms_need",
       "operation": "multiply",
-      "priority": 51274,
+      "priority": 51276,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出small_arms；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53454,7 +53512,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_small_arms_pressure",
       "operation": "multiply",
-      "priority": 51275,
+      "priority": 51277,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.2,
       "why": "small_arms缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53473,7 +53531,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_explosives_input",
       "operation": "multiply",
-      "priority": 51276,
+      "priority": 51278,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单"
@@ -53492,7 +53550,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_hardwood_input",
       "operation": "multiply",
-      "priority": 51277,
+      "priority": 51279,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单"
@@ -53511,7 +53569,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_lead_input",
       "operation": "multiply",
-      "priority": 51278,
+      "priority": 51280,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单"
@@ -53530,7 +53588,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_workforce",
       "operation": "multiply",
-      "priority": 51279,
+      "priority": 51281,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -53549,7 +53607,7 @@
       "field": "company_rossi.ai_weight",
       "id": "company_sector_company_rossi_default",
       "operation": "multiply",
-      "priority": 51280,
+      "priority": 51282,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -53568,7 +53626,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_meat_need",
       "operation": "multiply",
-      "priority": 51281,
+      "priority": 51283,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出meat；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53592,7 +53650,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_meat_pressure",
       "operation": "multiply",
-      "priority": 51282,
+      "priority": 51284,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "meat缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53611,7 +53669,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_oil_need",
       "operation": "multiply",
-      "priority": 51283,
+      "priority": 51285,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53635,7 +53693,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_oil_pressure",
       "operation": "multiply",
-      "priority": 51284,
+      "priority": 51286,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "oil缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53654,7 +53712,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_wood_need",
       "operation": "multiply",
-      "priority": 51285,
+      "priority": 51287,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出wood；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -53678,7 +53736,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_wood_pressure",
       "operation": "multiply",
-      "priority": 51286,
+      "priority": 51288,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "wood缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -53702,7 +53760,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_basic_need",
       "operation": "multiply",
-      "priority": 51287,
+      "priority": 51289,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -53731,7 +53789,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_basic_pressure",
       "operation": "multiply",
-      "priority": 51288,
+      "priority": 51290,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -53755,7 +53813,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_basic_clippers_input",
       "operation": "multiply",
-      "priority": 51289,
+      "priority": 51291,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本"
@@ -53779,7 +53837,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_industrial_need",
       "operation": "multiply",
-      "priority": 51290,
+      "priority": 51292,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -53808,7 +53866,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_industrial_pressure",
       "operation": "multiply",
-      "priority": 51291,
+      "priority": 51293,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -53832,7 +53890,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_industrial_steamers_input",
       "operation": "multiply",
-      "priority": 51292,
+      "priority": 51294,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -53856,7 +53914,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_industrial_coal_input",
       "operation": "multiply",
-      "priority": 51293,
+      "priority": 51295,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本"
@@ -53880,7 +53938,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_modern_need",
       "operation": "multiply",
-      "priority": 51294,
+      "priority": 51296,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -53909,7 +53967,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_modern_pressure",
       "operation": "multiply",
-      "priority": 51295,
+      "priority": 51297,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -53933,7 +53991,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_modern_steamers_input",
       "operation": "multiply",
-      "priority": 51296,
+      "priority": 51298,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -53957,7 +54015,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_port_modern_oil_input",
       "operation": "multiply",
-      "priority": 51297,
+      "priority": 51299,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本"
@@ -53976,7 +54034,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_workforce",
       "operation": "multiply",
-      "priority": 51298,
+      "priority": 51300,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -53995,7 +54053,7 @@
       "field": "company_russian_american_company.ai_weight",
       "id": "company_sector_company_russian_american_company_default",
       "operation": "multiply",
-      "priority": 51299,
+      "priority": 51301,
       "source": "common/company_types/00_companies_mp1.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -54014,7 +54072,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_ammunition_need",
       "operation": "multiply",
-      "priority": 51300,
+      "priority": 51302,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出ammunition；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54038,7 +54096,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_ammunition_pressure",
       "operation": "multiply",
-      "priority": 51301,
+      "priority": 51303,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "ammunition缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54057,7 +54115,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_artillery_need",
       "operation": "multiply",
-      "priority": 51302,
+      "priority": 51304,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54081,7 +54139,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_artillery_pressure",
       "operation": "multiply",
-      "priority": 51303,
+      "priority": 51305,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54100,7 +54158,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_small_arms_need",
       "operation": "multiply",
-      "priority": 51304,
+      "priority": 51306,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出small_arms；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54124,7 +54182,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_small_arms_pressure",
       "operation": "multiply",
-      "priority": 51305,
+      "priority": 51307,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "small_arms缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54143,7 +54201,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_explosives_input",
       "operation": "multiply",
-      "priority": 51306,
+      "priority": 51308,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单"
@@ -54162,7 +54220,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_hardwood_input",
       "operation": "multiply",
-      "priority": 51307,
+      "priority": 51309,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单"
@@ -54181,7 +54239,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_lead_input",
       "operation": "multiply",
-      "priority": 51308,
+      "priority": 51310,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单"
@@ -54200,7 +54258,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_workforce",
       "operation": "multiply",
-      "priority": 51309,
+      "priority": 51311,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -54219,7 +54277,7 @@
       "field": "company_saint_etienne.ai_weight",
       "id": "company_sector_company_saint_etienne_default",
       "operation": "multiply",
-      "priority": 51310,
+      "priority": 51312,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -54238,7 +54296,7 @@
       "field": "company_san_miguel.ai_weight",
       "id": "company_sector_company_san_miguel_groceries_need",
       "operation": "multiply",
-      "priority": 51311,
+      "priority": 51313,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54262,7 +54320,7 @@
       "field": "company_san_miguel.ai_weight",
       "id": "company_sector_company_san_miguel_groceries_pressure",
       "operation": "multiply",
-      "priority": 51312,
+      "priority": 51314,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.2,
       "why": "groceries缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54281,7 +54339,7 @@
       "field": "company_san_miguel.ai_weight",
       "id": "company_sector_company_san_miguel_grain_input",
       "operation": "multiply",
-      "priority": 51313,
+      "priority": 51315,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单"
@@ -54300,7 +54358,7 @@
       "field": "company_san_miguel.ai_weight",
       "id": "company_sector_company_san_miguel_workforce",
       "operation": "multiply",
-      "priority": 51314,
+      "priority": 51316,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -54319,7 +54377,7 @@
       "field": "company_san_miguel.ai_weight",
       "id": "company_sector_company_san_miguel_default",
       "operation": "multiply",
-      "priority": 51315,
+      "priority": 51317,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -54338,7 +54396,7 @@
       "field": "company_sao_paulo_railway.ai_weight",
       "id": "company_sector_company_sao_paulo_railway_building_railway_need",
       "operation": "multiply",
-      "priority": 51316,
+      "priority": 51318,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.12,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -54357,7 +54415,7 @@
       "field": "company_sao_paulo_railway.ai_weight",
       "id": "company_sector_company_sao_paulo_railway_building_railway_pressure",
       "operation": "multiply",
-      "priority": 51317,
+      "priority": 51319,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.2,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -54376,7 +54434,7 @@
       "field": "company_sao_paulo_railway.ai_weight",
       "id": "company_sector_company_sao_paulo_railway_engines_input",
       "operation": "multiply",
-      "priority": 51318,
+      "priority": 51320,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -54395,7 +54453,7 @@
       "field": "company_sao_paulo_railway.ai_weight",
       "id": "company_sector_company_sao_paulo_railway_workforce",
       "operation": "multiply",
-      "priority": 51319,
+      "priority": 51321,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -54414,7 +54472,7 @@
       "field": "company_sao_paulo_railway.ai_weight",
       "id": "company_sector_company_sao_paulo_railway_default",
       "operation": "multiply",
-      "priority": 51320,
+      "priority": 51322,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -54433,7 +54491,7 @@
       "field": "company_savva_morozov.ai_weight",
       "id": "company_sector_company_savva_morozov_clothes_need",
       "operation": "multiply",
-      "priority": 51321,
+      "priority": 51323,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54457,7 +54515,7 @@
       "field": "company_savva_morozov.ai_weight",
       "id": "company_sector_company_savva_morozov_clothes_pressure",
       "operation": "multiply",
-      "priority": 51322,
+      "priority": 51324,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.2,
       "why": "clothes缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54476,7 +54534,7 @@
       "field": "company_savva_morozov.ai_weight",
       "id": "company_sector_company_savva_morozov_fabric_input",
       "operation": "multiply",
-      "priority": 51323,
+      "priority": 51325,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单"
@@ -54495,7 +54553,7 @@
       "field": "company_savva_morozov.ai_weight",
       "id": "company_sector_company_savva_morozov_workforce",
       "operation": "multiply",
-      "priority": 51324,
+      "priority": 51326,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -54514,7 +54572,7 @@
       "field": "company_savva_morozov.ai_weight",
       "id": "company_sector_company_savva_morozov_default",
       "operation": "multiply",
-      "priority": 51325,
+      "priority": 51327,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -54533,7 +54591,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_clippers_need",
       "operation": "multiply",
-      "priority": 51326,
+      "priority": 51328,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54557,7 +54615,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_clippers_pressure",
       "operation": "multiply",
-      "priority": 51327,
+      "priority": 51329,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54576,7 +54634,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_engines_need",
       "operation": "multiply",
-      "priority": 51328,
+      "priority": 51330,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54600,7 +54658,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_engines_pressure",
       "operation": "multiply",
-      "priority": 51329,
+      "priority": 51331,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "engines缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54619,7 +54677,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_steamers_need",
       "operation": "multiply",
-      "priority": 51330,
+      "priority": 51332,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54643,7 +54701,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_steamers_pressure",
       "operation": "multiply",
-      "priority": 51331,
+      "priority": 51333,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54662,7 +54720,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_steel_input",
       "operation": "multiply",
-      "priority": 51332,
+      "priority": 51334,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单"
@@ -54681,7 +54739,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_workforce",
       "operation": "multiply",
-      "priority": 51333,
+      "priority": 51335,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -54700,7 +54758,7 @@
       "field": "company_schichau.ai_weight",
       "id": "company_sector_company_schichau_default",
       "operation": "multiply",
-      "priority": 51334,
+      "priority": 51336,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -54719,7 +54777,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_artillery_need",
       "operation": "multiply",
-      "priority": 51335,
+      "priority": 51337,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54743,7 +54801,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_artillery_pressure",
       "operation": "multiply",
-      "priority": 51336,
+      "priority": 51338,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54762,7 +54820,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_engines_need",
       "operation": "multiply",
-      "priority": 51337,
+      "priority": 51339,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54786,7 +54844,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_engines_pressure",
       "operation": "multiply",
-      "priority": 51338,
+      "priority": 51340,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "engines缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54805,7 +54863,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_steel_need",
       "operation": "multiply",
-      "priority": 51339,
+      "priority": 51341,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54829,7 +54887,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_steel_pressure",
       "operation": "multiply",
-      "priority": 51340,
+      "priority": 51342,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "steel缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54848,7 +54906,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_coal_input",
       "operation": "multiply",
-      "priority": 51341,
+      "priority": 51343,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单"
@@ -54867,7 +54925,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_iron_input",
       "operation": "multiply",
-      "priority": 51342,
+      "priority": 51344,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -54886,7 +54944,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_steel_input",
       "operation": "multiply",
-      "priority": 51343,
+      "priority": 51345,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单"
@@ -54905,7 +54963,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_workforce",
       "operation": "multiply",
-      "priority": 51344,
+      "priority": 51346,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -54924,7 +54982,7 @@
       "field": "company_schneider_creusot.ai_weight",
       "id": "company_sector_company_schneider_creusot_default",
       "operation": "multiply",
-      "priority": 51345,
+      "priority": 51347,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -54943,7 +55001,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_clippers_need",
       "operation": "multiply",
-      "priority": 51346,
+      "priority": 51348,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -54967,7 +55025,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_clippers_pressure",
       "operation": "multiply",
-      "priority": 51347,
+      "priority": 51349,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -54986,7 +55044,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_steamers_need",
       "operation": "multiply",
-      "priority": 51348,
+      "priority": 51350,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55010,7 +55068,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_steamers_pressure",
       "operation": "multiply",
-      "priority": 51349,
+      "priority": 51351,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55029,7 +55087,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_steel_need",
       "operation": "multiply",
-      "priority": 51350,
+      "priority": 51352,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55053,7 +55111,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_steel_pressure",
       "operation": "multiply",
-      "priority": 51351,
+      "priority": 51353,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "steel缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55072,7 +55130,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_coal_input",
       "operation": "multiply",
-      "priority": 51352,
+      "priority": 51354,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单"
@@ -55091,7 +55149,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_iron_input",
       "operation": "multiply",
-      "priority": 51353,
+      "priority": 51355,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -55110,7 +55168,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_workforce",
       "operation": "multiply",
-      "priority": 51354,
+      "priority": 51356,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -55129,7 +55187,7 @@
       "field": "company_secn.ai_weight",
       "id": "company_sector_company_secn_default",
       "operation": "multiply",
-      "priority": 51355,
+      "priority": 51357,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -55148,7 +55206,7 @@
       "field": "company_sherkat_shemali.ai_weight",
       "id": "company_sector_company_sherkat_shemali_fabric_need",
       "operation": "multiply",
-      "priority": 51356,
+      "priority": 51358,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55172,7 +55230,7 @@
       "field": "company_sherkat_shemali.ai_weight",
       "id": "company_sector_company_sherkat_shemali_fabric_pressure",
       "operation": "multiply",
-      "priority": 51357,
+      "priority": 51359,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.2,
       "why": "fabric缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55191,7 +55249,7 @@
       "field": "company_sherkat_shemali.ai_weight",
       "id": "company_sector_company_sherkat_shemali_workforce",
       "operation": "multiply",
-      "priority": 51358,
+      "priority": 51360,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -55210,7 +55268,7 @@
       "field": "company_sherkat_shemali.ai_weight",
       "id": "company_sector_company_sherkat_shemali_default",
       "operation": "multiply",
-      "priority": 51359,
+      "priority": 51361,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -55229,7 +55287,7 @@
       "field": "company_sherkate_eslamiya.ai_weight",
       "id": "company_sector_company_sherkate_eslamiya_clothes_need",
       "operation": "multiply",
-      "priority": 51360,
+      "priority": 51362,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55253,7 +55311,7 @@
       "field": "company_sherkate_eslamiya.ai_weight",
       "id": "company_sector_company_sherkate_eslamiya_clothes_pressure",
       "operation": "multiply",
-      "priority": 51361,
+      "priority": 51363,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.2,
       "why": "clothes缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55272,7 +55330,7 @@
       "field": "company_sherkate_eslamiya.ai_weight",
       "id": "company_sector_company_sherkate_eslamiya_fabric_input",
       "operation": "multiply",
-      "priority": 51362,
+      "priority": 51364,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单"
@@ -55291,7 +55349,7 @@
       "field": "company_sherkate_eslamiya.ai_weight",
       "id": "company_sector_company_sherkate_eslamiya_workforce",
       "operation": "multiply",
-      "priority": 51363,
+      "priority": 51365,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -55310,7 +55368,7 @@
       "field": "company_sherkate_eslamiya.ai_weight",
       "id": "company_sector_company_sherkate_eslamiya_default",
       "operation": "multiply",
-      "priority": 51364,
+      "priority": 51366,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -55329,7 +55387,7 @@
       "field": "company_siam_electrical_company_limited.ai_weight",
       "id": "company_sector_company_siam_electrical_company_limited_building_power_plant_need",
       "operation": "multiply",
-      "priority": 51365,
+      "priority": 51367,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格"
@@ -55348,7 +55406,7 @@
       "field": "company_siam_electrical_company_limited.ai_weight",
       "id": "company_sector_company_siam_electrical_company_limited_building_power_plant_pressure",
       "operation": "multiply",
-      "priority": 51366,
+      "priority": 51368,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格"
@@ -55367,7 +55425,7 @@
       "field": "company_siam_electrical_company_limited.ai_weight",
       "id": "company_sector_company_siam_electrical_company_limited_engines_input",
       "operation": "multiply",
-      "priority": 51367,
+      "priority": 51369,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -55386,7 +55444,7 @@
       "field": "company_siam_electrical_company_limited.ai_weight",
       "id": "company_sector_company_siam_electrical_company_limited_workforce",
       "operation": "multiply",
-      "priority": 51368,
+      "priority": 51370,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -55405,7 +55463,7 @@
       "field": "company_siam_electrical_company_limited.ai_weight",
       "id": "company_sector_company_siam_electrical_company_limited_default",
       "operation": "multiply",
-      "priority": 51369,
+      "priority": 51371,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -55424,7 +55482,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_telephones_need",
       "operation": "multiply",
-      "priority": 51370,
+      "priority": 51372,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出telephones；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55448,7 +55506,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_telephones_pressure",
       "operation": "multiply",
-      "priority": 51371,
+      "priority": 51373,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.2,
       "why": "telephones缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55467,7 +55525,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_iron_input",
       "operation": "multiply",
-      "priority": 51372,
+      "priority": 51374,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -55486,7 +55544,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_lead_input",
       "operation": "multiply",
-      "priority": 51373,
+      "priority": 51375,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单"
@@ -55505,7 +55563,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_rubber_input",
       "operation": "multiply",
-      "priority": 51374,
+      "priority": 51376,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单"
@@ -55524,7 +55582,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_tools_input",
       "operation": "multiply",
-      "priority": 51375,
+      "priority": 51377,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -55543,7 +55601,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_workforce",
       "operation": "multiply",
-      "priority": 51376,
+      "priority": 51378,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -55562,7 +55620,7 @@
       "field": "company_siemens_and_halske.ai_weight",
       "id": "company_sector_company_siemens_and_halske_default",
       "operation": "multiply",
-      "priority": 51377,
+      "priority": 51379,
       "source": "common/company_types/00_companies_germany.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -55581,7 +55639,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_artillery_need",
       "operation": "multiply",
-      "priority": 51378,
+      "priority": 51380,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55605,7 +55663,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_artillery_pressure",
       "operation": "multiply",
-      "priority": 51379,
+      "priority": 51381,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55624,7 +55682,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_engines_need",
       "operation": "multiply",
-      "priority": 51380,
+      "priority": 51382,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55648,7 +55706,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_engines_pressure",
       "operation": "multiply",
-      "priority": 51381,
+      "priority": 51383,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 1.2,
       "why": "engines缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55667,7 +55725,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_steel_need",
       "operation": "multiply",
-      "priority": 51382,
+      "priority": 51384,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55691,7 +55749,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_steel_pressure",
       "operation": "multiply",
-      "priority": 51383,
+      "priority": 51385,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 1.2,
       "why": "steel缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55710,7 +55768,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_coal_input",
       "operation": "multiply",
-      "priority": 51384,
+      "priority": 51386,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单"
@@ -55729,7 +55787,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_iron_input",
       "operation": "multiply",
-      "priority": 51385,
+      "priority": 51387,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -55748,7 +55806,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_steel_input",
       "operation": "multiply",
-      "priority": 51386,
+      "priority": 51388,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单"
@@ -55767,7 +55825,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_workforce",
       "operation": "multiply",
-      "priority": 51387,
+      "priority": 51389,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -55786,7 +55844,7 @@
       "field": "company_skoda.ai_weight",
       "id": "company_sector_company_skoda_default",
       "operation": "multiply",
-      "priority": 51388,
+      "priority": 51390,
       "source": "common/company_types/00_companies_austria_hungary.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -55805,7 +55863,7 @@
       "field": "company_societe_francaise_charbonnages_du_tonkin.ai_weight",
       "id": "company_sector_company_societe_francaise_charbonnages_du_tonkin_coal_need",
       "operation": "multiply",
-      "priority": 51389,
+      "priority": 51391,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55829,7 +55887,7 @@
       "field": "company_societe_francaise_charbonnages_du_tonkin.ai_weight",
       "id": "company_sector_company_societe_francaise_charbonnages_du_tonkin_coal_pressure",
       "operation": "multiply",
-      "priority": 51390,
+      "priority": 51392,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "coal缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55848,7 +55906,7 @@
       "field": "company_societe_francaise_charbonnages_du_tonkin.ai_weight",
       "id": "company_sector_company_societe_francaise_charbonnages_du_tonkin_wood_need",
       "operation": "multiply",
-      "priority": 51391,
+      "priority": 51393,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出wood；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55872,7 +55930,7 @@
       "field": "company_societe_francaise_charbonnages_du_tonkin.ai_weight",
       "id": "company_sector_company_societe_francaise_charbonnages_du_tonkin_wood_pressure",
       "operation": "multiply",
-      "priority": 51392,
+      "priority": 51394,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "wood缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55891,7 +55949,7 @@
       "field": "company_societe_francaise_charbonnages_du_tonkin.ai_weight",
       "id": "company_sector_company_societe_francaise_charbonnages_du_tonkin_tools_input",
       "operation": "multiply",
-      "priority": 51393,
+      "priority": 51395,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -55910,7 +55968,7 @@
       "field": "company_societe_francaise_charbonnages_du_tonkin.ai_weight",
       "id": "company_sector_company_societe_francaise_charbonnages_du_tonkin_workforce",
       "operation": "multiply",
-      "priority": 51394,
+      "priority": 51396,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -55929,7 +55987,7 @@
       "field": "company_societe_francaise_charbonnages_du_tonkin.ai_weight",
       "id": "company_sector_company_societe_francaise_charbonnages_du_tonkin_default",
       "operation": "multiply",
-      "priority": 51395,
+      "priority": 51397,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -55948,7 +56006,7 @@
       "field": "company_societe_mokta_el_hadid.ai_weight",
       "id": "company_sector_company_societe_mokta_el_hadid_iron_need",
       "operation": "multiply",
-      "priority": 51396,
+      "priority": 51398,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -55972,7 +56030,7 @@
       "field": "company_societe_mokta_el_hadid.ai_weight",
       "id": "company_sector_company_societe_mokta_el_hadid_iron_pressure",
       "operation": "multiply",
-      "priority": 51397,
+      "priority": 51399,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "iron缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -55991,7 +56049,7 @@
       "field": "company_societe_mokta_el_hadid.ai_weight",
       "id": "company_sector_company_societe_mokta_el_hadid_sulfur_need",
       "operation": "multiply",
-      "priority": 51398,
+      "priority": 51400,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出sulfur；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56015,7 +56073,7 @@
       "field": "company_societe_mokta_el_hadid.ai_weight",
       "id": "company_sector_company_societe_mokta_el_hadid_sulfur_pressure",
       "operation": "multiply",
-      "priority": 51399,
+      "priority": 51401,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.2,
       "why": "sulfur缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56034,7 +56092,7 @@
       "field": "company_societe_mokta_el_hadid.ai_weight",
       "id": "company_sector_company_societe_mokta_el_hadid_tools_input",
       "operation": "multiply",
-      "priority": 51400,
+      "priority": 51402,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -56053,7 +56111,7 @@
       "field": "company_societe_mokta_el_hadid.ai_weight",
       "id": "company_sector_company_societe_mokta_el_hadid_workforce",
       "operation": "multiply",
-      "priority": 51401,
+      "priority": 51403,
       "source": "common/company_types/00_companies_france.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -56072,7 +56130,7 @@
       "field": "company_societe_mokta_el_hadid.ai_weight",
       "id": "company_sector_company_societe_mokta_el_hadid_default",
       "operation": "multiply",
-      "priority": 51402,
+      "priority": 51404,
       "source": "common/company_types/00_companies_france.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -56091,7 +56149,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_clippers_need",
       "operation": "multiply",
-      "priority": 51403,
+      "priority": 51405,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56115,7 +56173,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_clippers_pressure",
       "operation": "multiply",
-      "priority": 51404,
+      "priority": 51406,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56134,7 +56192,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_explosives_need",
       "operation": "multiply",
-      "priority": 51405,
+      "priority": 51407,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出explosives；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56158,7 +56216,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_explosives_pressure",
       "operation": "multiply",
-      "priority": 51406,
+      "priority": 51408,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.2,
       "why": "explosives缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56177,7 +56235,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_steamers_need",
       "operation": "multiply",
-      "priority": 51407,
+      "priority": 51409,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56201,7 +56259,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_steamers_pressure",
       "operation": "multiply",
-      "priority": 51408,
+      "priority": 51410,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56220,7 +56278,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_fertilizer_input",
       "operation": "multiply",
-      "priority": 51409,
+      "priority": 51411,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要fertilizer；高价为配方机会成本，不是当前实际账单"
@@ -56239,7 +56297,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_sulfur_input",
       "operation": "multiply",
-      "priority": 51410,
+      "priority": 51412,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要sulfur；高价为配方机会成本，不是当前实际账单"
@@ -56258,7 +56316,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_workforce",
       "operation": "multiply",
-      "priority": 51411,
+      "priority": 51413,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -56277,7 +56335,7 @@
       "field": "company_stabilimento_tecnico_di_fiume.ai_weight",
       "id": "company_sector_company_stabilimento_tecnico_di_fiume_default",
       "operation": "multiply",
-      "priority": 51412,
+      "priority": 51414,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -56296,7 +56354,7 @@
       "field": "company_standard_oil.ai_weight",
       "id": "company_sector_company_standard_oil_oil_need",
       "operation": "multiply",
-      "priority": 51413,
+      "priority": 51415,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56320,7 +56378,7 @@
       "field": "company_standard_oil.ai_weight",
       "id": "company_sector_company_standard_oil_oil_pressure",
       "operation": "multiply",
-      "priority": 51414,
+      "priority": 51416,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "oil缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56339,7 +56397,7 @@
       "field": "company_standard_oil.ai_weight",
       "id": "company_sector_company_standard_oil_building_railway_need",
       "operation": "multiply",
-      "priority": 51415,
+      "priority": 51417,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -56358,7 +56416,7 @@
       "field": "company_standard_oil.ai_weight",
       "id": "company_sector_company_standard_oil_building_railway_pressure",
       "operation": "multiply",
-      "priority": 51416,
+      "priority": 51418,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -56377,7 +56435,7 @@
       "field": "company_standard_oil.ai_weight",
       "id": "company_sector_company_standard_oil_engines_input",
       "operation": "multiply",
-      "priority": 51417,
+      "priority": 51419,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -56396,7 +56454,7 @@
       "field": "company_standard_oil.ai_weight",
       "id": "company_sector_company_standard_oil_workforce",
       "operation": "multiply",
-      "priority": 51418,
+      "priority": 51420,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -56415,7 +56473,7 @@
       "field": "company_standard_oil.ai_weight",
       "id": "company_sector_company_standard_oil_default",
       "operation": "multiply",
-      "priority": 51419,
+      "priority": 51421,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -56434,7 +56492,7 @@
       "field": "company_steel_brothers.ai_weight",
       "id": "company_sector_company_steel_brothers_grain_need",
       "operation": "multiply",
-      "priority": 51420,
+      "priority": 51422,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56458,7 +56516,7 @@
       "field": "company_steel_brothers.ai_weight",
       "id": "company_sector_company_steel_brothers_grain_pressure",
       "operation": "multiply",
-      "priority": 51421,
+      "priority": 51423,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.2,
       "why": "grain缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56477,7 +56535,7 @@
       "field": "company_steel_brothers.ai_weight",
       "id": "company_sector_company_steel_brothers_oil_need",
       "operation": "multiply",
-      "priority": 51422,
+      "priority": 51424,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56501,7 +56559,7 @@
       "field": "company_steel_brothers.ai_weight",
       "id": "company_sector_company_steel_brothers_oil_pressure",
       "operation": "multiply",
-      "priority": 51423,
+      "priority": 51425,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.2,
       "why": "oil缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56520,7 +56578,7 @@
       "field": "company_steel_brothers.ai_weight",
       "id": "company_sector_company_steel_brothers_engines_input",
       "operation": "multiply",
-      "priority": 51424,
+      "priority": 51426,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -56539,7 +56597,7 @@
       "field": "company_steel_brothers.ai_weight",
       "id": "company_sector_company_steel_brothers_workforce",
       "operation": "multiply",
-      "priority": 51425,
+      "priority": 51427,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -56558,7 +56616,7 @@
       "field": "company_steel_brothers.ai_weight",
       "id": "company_sector_company_steel_brothers_default",
       "operation": "multiply",
-      "priority": 51426,
+      "priority": 51428,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -56577,7 +56635,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_artillery_need",
       "operation": "multiply",
-      "priority": 51427,
+      "priority": 51429,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56601,7 +56659,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_artillery_pressure",
       "operation": "multiply",
-      "priority": 51428,
+      "priority": 51430,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56620,7 +56678,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_clippers_need",
       "operation": "multiply",
-      "priority": 51429,
+      "priority": 51431,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56644,7 +56702,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_clippers_pressure",
       "operation": "multiply",
-      "priority": 51430,
+      "priority": 51432,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56663,7 +56721,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_steamers_need",
       "operation": "multiply",
-      "priority": 51431,
+      "priority": 51433,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -56687,7 +56745,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_steamers_pressure",
       "operation": "multiply",
-      "priority": 51432,
+      "priority": 51434,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -56706,7 +56764,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_workforce",
       "operation": "multiply",
-      "priority": 51433,
+      "priority": 51435,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -56725,7 +56783,7 @@
       "field": "company_stt.ai_weight",
       "id": "company_sector_company_stt_default",
       "operation": "multiply",
-      "priority": 51434,
+      "priority": 51436,
       "source": "common/company_types/00_companies_italy.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -56749,7 +56807,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_basic_need",
       "operation": "multiply",
-      "priority": 51435,
+      "priority": 51437,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -56778,7 +56836,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_basic_pressure",
       "operation": "multiply",
-      "priority": 51436,
+      "priority": 51438,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -56802,7 +56860,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_basic_clippers_input",
       "operation": "multiply",
-      "priority": 51437,
+      "priority": 51439,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本"
@@ -56826,7 +56884,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_industrial_need",
       "operation": "multiply",
-      "priority": 51438,
+      "priority": 51440,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -56855,7 +56913,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_industrial_pressure",
       "operation": "multiply",
-      "priority": 51439,
+      "priority": 51441,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -56879,7 +56937,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_industrial_steamers_input",
       "operation": "multiply",
-      "priority": 51440,
+      "priority": 51442,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -56903,7 +56961,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_industrial_coal_input",
       "operation": "multiply",
-      "priority": 51441,
+      "priority": 51443,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本"
@@ -56927,7 +56985,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_modern_need",
       "operation": "multiply",
-      "priority": 51442,
+      "priority": 51444,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -56956,7 +57014,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_modern_pressure",
       "operation": "multiply",
-      "priority": 51443,
+      "priority": 51445,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -56980,7 +57038,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_modern_steamers_input",
       "operation": "multiply",
-      "priority": 51444,
+      "priority": 51446,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -57004,7 +57062,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_port_modern_oil_input",
       "operation": "multiply",
-      "priority": 51445,
+      "priority": 51447,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本"
@@ -57023,7 +57081,7 @@
       "field": "company_sudamericana_de_vapores.ai_weight",
       "id": "company_sector_company_sudamericana_de_vapores_default",
       "operation": "multiply",
-      "priority": 51446,
+      "priority": 51448,
       "source": "common/company_types/00_companies_cots.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -57042,7 +57100,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_building_trade_center_need",
       "operation": "multiply",
-      "priority": 51447,
+      "priority": 51449,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.12,
       "why": "本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收"
@@ -57061,10 +57119,48 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_building_trade_center_pressure",
       "operation": "multiply",
-      "priority": 51448,
+      "priority": 51450,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.2,
       "why": "本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收"
+    },
+    {
+      "conditions": [
+        {
+          "fact": "company_trade_loss",
+          "op": "=",
+          "value": true
+        }
+      ],
+      "contribution_group": "company_trade_operating_pressure",
+      "counterexample": "局部未知撤回相应贡献；保留原版资格、成本、随机、非正分拒绝与执行；潜在配方不是active PM",
+      "domain": "market",
+      "field": "company_suez_company.ai_weight",
+      "id": "company_sector_company_suez_company_trade_loss",
+      "operation": "multiply",
+      "priority": 51451,
+      "source": "common/company_types/00_companies_africa.txt",
+      "value": 0.95,
+      "why": "本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益"
+    },
+    {
+      "conditions": [
+        {
+          "fact": "company_trade_loss_low_cash",
+          "op": "=",
+          "value": true
+        }
+      ],
+      "contribution_group": "company_trade_operating_pressure",
+      "counterexample": "局部未知撤回相应贡献；保留原版资格、成本、随机、非正分拒绝与执行；潜在配方不是active PM",
+      "domain": "market",
+      "field": "company_suez_company.ai_weight",
+      "id": "company_sector_company_suez_company_trade_loss_low_cash",
+      "operation": "multiply",
+      "priority": 51452,
+      "source": "common/company_types/00_companies_africa.txt",
+      "value": 0.9,
+      "why": "本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益"
     },
     {
       "conditions": [
@@ -57085,7 +57181,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_basic_need",
       "operation": "multiply",
-      "priority": 51449,
+      "priority": 51453,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -57114,7 +57210,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_basic_pressure",
       "operation": "multiply",
-      "priority": 51450,
+      "priority": 51454,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -57138,7 +57234,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_basic_clippers_input",
       "operation": "multiply",
-      "priority": 51451,
+      "priority": 51455,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 0.85,
       "why": "已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本"
@@ -57162,7 +57258,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_industrial_need",
       "operation": "multiply",
-      "priority": 51452,
+      "priority": 51456,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -57191,7 +57287,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_industrial_pressure",
       "operation": "multiply",
-      "priority": 51453,
+      "priority": 51457,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -57215,7 +57311,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_industrial_steamers_input",
       "operation": "multiply",
-      "priority": 51454,
+      "priority": 51458,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -57239,7 +57335,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_industrial_coal_input",
       "operation": "multiply",
-      "priority": 51455,
+      "priority": 51459,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本"
@@ -57263,7 +57359,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_modern_need",
       "operation": "multiply",
-      "priority": 51456,
+      "priority": 51460,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -57292,7 +57388,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_modern_pressure",
       "operation": "multiply",
-      "priority": 51457,
+      "priority": 51461,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -57316,7 +57412,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_modern_steamers_input",
       "operation": "multiply",
-      "priority": 51458,
+      "priority": 51462,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -57340,7 +57436,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_port_modern_oil_input",
       "operation": "multiply",
-      "priority": 51459,
+      "priority": 51463,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本"
@@ -57359,7 +57455,7 @@
       "field": "company_suez_company.ai_weight",
       "id": "company_sector_company_suez_company_default",
       "operation": "multiply",
-      "priority": 51460,
+      "priority": 51464,
       "source": "common/company_types/00_companies_africa.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -57378,7 +57474,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_fertilizer_need",
       "operation": "multiply",
-      "priority": 51461,
+      "priority": 51465,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fertilizer；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -57402,7 +57498,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_fertilizer_pressure",
       "operation": "multiply",
-      "priority": 51462,
+      "priority": 51466,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "fertilizer缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -57421,7 +57517,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_lead_need",
       "operation": "multiply",
-      "priority": 51463,
+      "priority": 51467,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出lead；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -57445,7 +57541,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_lead_pressure",
       "operation": "multiply",
-      "priority": 51464,
+      "priority": 51468,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "lead缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -57464,7 +57560,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_steel_need",
       "operation": "multiply",
-      "priority": 51465,
+      "priority": 51469,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -57488,7 +57584,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_steel_pressure",
       "operation": "multiply",
-      "priority": 51466,
+      "priority": 51470,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "steel缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -57507,7 +57603,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_coal_input",
       "operation": "multiply",
-      "priority": 51467,
+      "priority": 51471,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单"
@@ -57526,7 +57622,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_iron_input",
       "operation": "multiply",
-      "priority": 51468,
+      "priority": 51472,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -57545,7 +57641,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_sulfur_input",
       "operation": "multiply",
-      "priority": 51469,
+      "priority": 51473,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要sulfur；高价为配方机会成本，不是当前实际账单"
@@ -57564,7 +57660,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_tools_input",
       "operation": "multiply",
-      "priority": 51470,
+      "priority": 51474,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -57583,7 +57679,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_workforce",
       "operation": "multiply",
-      "priority": 51471,
+      "priority": 51475,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -57602,7 +57698,7 @@
       "field": "company_sumitomo.ai_weight",
       "id": "company_sector_company_sumitomo_default",
       "operation": "multiply",
-      "priority": 51472,
+      "priority": 51476,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -57621,7 +57717,7 @@
       "field": "company_sunhwaguk.ai_weight",
       "id": "company_sector_company_sunhwaguk_grain_need",
       "operation": "multiply",
-      "priority": 51473,
+      "priority": 51477,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -57645,7 +57741,7 @@
       "field": "company_sunhwaguk.ai_weight",
       "id": "company_sector_company_sunhwaguk_grain_pressure",
       "operation": "multiply",
-      "priority": 51474,
+      "priority": 51478,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.2,
       "why": "grain缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -57664,7 +57760,7 @@
       "field": "company_sunhwaguk.ai_weight",
       "id": "company_sector_company_sunhwaguk_tobacco_need",
       "operation": "multiply",
-      "priority": 51475,
+      "priority": 51479,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出tobacco；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -57688,7 +57784,7 @@
       "field": "company_sunhwaguk.ai_weight",
       "id": "company_sector_company_sunhwaguk_tobacco_pressure",
       "operation": "multiply",
-      "priority": 51476,
+      "priority": 51480,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.2,
       "why": "tobacco缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -57707,7 +57803,7 @@
       "field": "company_sunhwaguk.ai_weight",
       "id": "company_sector_company_sunhwaguk_workforce",
       "operation": "multiply",
-      "priority": 51477,
+      "priority": 51481,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -57726,7 +57822,7 @@
       "field": "company_sunhwaguk.ai_weight",
       "id": "company_sector_company_sunhwaguk_default",
       "operation": "multiply",
-      "priority": 51478,
+      "priority": 51482,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -57745,7 +57841,7 @@
       "field": "company_tashkent_railroad.ai_weight",
       "id": "company_sector_company_tashkent_railroad_building_railway_need",
       "operation": "multiply",
-      "priority": 51479,
+      "priority": 51483,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.12,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -57764,7 +57860,7 @@
       "field": "company_tashkent_railroad.ai_weight",
       "id": "company_sector_company_tashkent_railroad_building_railway_pressure",
       "operation": "multiply",
-      "priority": 51480,
+      "priority": 51484,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.2,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -57783,7 +57879,7 @@
       "field": "company_tashkent_railroad.ai_weight",
       "id": "company_sector_company_tashkent_railroad_engines_input",
       "operation": "multiply",
-      "priority": 51481,
+      "priority": 51485,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -57802,7 +57898,7 @@
       "field": "company_tashkent_railroad.ai_weight",
       "id": "company_sector_company_tashkent_railroad_workforce",
       "operation": "multiply",
-      "priority": 51482,
+      "priority": 51486,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -57821,7 +57917,7 @@
       "field": "company_tashkent_railroad.ai_weight",
       "id": "company_sector_company_tashkent_railroad_default",
       "operation": "multiply",
-      "priority": 51483,
+      "priority": 51487,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -57840,7 +57936,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_clothes_need",
       "operation": "multiply",
-      "priority": 51484,
+      "priority": 51488,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -57864,7 +57960,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_clothes_pressure",
       "operation": "multiply",
-      "priority": 51485,
+      "priority": 51489,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.2,
       "why": "clothes缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -57883,7 +57979,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_steel_need",
       "operation": "multiply",
-      "priority": 51486,
+      "priority": 51490,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -57907,7 +58003,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_steel_pressure",
       "operation": "multiply",
-      "priority": 51487,
+      "priority": 51491,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.2,
       "why": "steel缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -57926,7 +58022,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_coal_input",
       "operation": "multiply",
-      "priority": 51488,
+      "priority": 51492,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单"
@@ -57945,7 +58041,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_fabric_input",
       "operation": "multiply",
-      "priority": 51489,
+      "priority": 51493,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单"
@@ -57964,7 +58060,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_iron_input",
       "operation": "multiply",
-      "priority": 51490,
+      "priority": 51494,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -57983,7 +58079,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_workforce",
       "operation": "multiply",
-      "priority": 51491,
+      "priority": 51495,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58002,7 +58098,7 @@
       "field": "company_tata.ai_weight",
       "id": "company_sector_company_tata_default",
       "operation": "multiply",
-      "priority": 51492,
+      "priority": 51496,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58021,7 +58117,7 @@
       "field": "company_tokyo_electric_light_company.ai_weight",
       "id": "company_sector_company_tokyo_electric_light_company_building_power_plant_need",
       "operation": "multiply",
-      "priority": 51493,
+      "priority": 51497,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格"
@@ -58040,7 +58136,7 @@
       "field": "company_tokyo_electric_light_company.ai_weight",
       "id": "company_sector_company_tokyo_electric_light_company_building_power_plant_pressure",
       "operation": "multiply",
-      "priority": 51494,
+      "priority": 51498,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格"
@@ -58059,7 +58155,7 @@
       "field": "company_tokyo_electric_light_company.ai_weight",
       "id": "company_sector_company_tokyo_electric_light_company_engines_input",
       "operation": "multiply",
-      "priority": 51495,
+      "priority": 51499,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -58078,7 +58174,7 @@
       "field": "company_tokyo_electric_light_company.ai_weight",
       "id": "company_sector_company_tokyo_electric_light_company_workforce",
       "operation": "multiply",
-      "priority": 51496,
+      "priority": 51500,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58097,7 +58193,7 @@
       "field": "company_tokyo_electric_light_company.ai_weight",
       "id": "company_sector_company_tokyo_electric_light_company_default",
       "operation": "multiply",
-      "priority": 51497,
+      "priority": 51501,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58116,7 +58212,7 @@
       "field": "company_trubia.ai_weight",
       "id": "company_sector_company_trubia_artillery_need",
       "operation": "multiply",
-      "priority": 51498,
+      "priority": 51502,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58140,7 +58236,7 @@
       "field": "company_trubia.ai_weight",
       "id": "company_sector_company_trubia_artillery_pressure",
       "operation": "multiply",
-      "priority": 51499,
+      "priority": 51503,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58159,7 +58255,7 @@
       "field": "company_trubia.ai_weight",
       "id": "company_sector_company_trubia_small_arms_need",
       "operation": "multiply",
-      "priority": 51500,
+      "priority": 51504,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出small_arms；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58183,7 +58279,7 @@
       "field": "company_trubia.ai_weight",
       "id": "company_sector_company_trubia_small_arms_pressure",
       "operation": "multiply",
-      "priority": 51501,
+      "priority": 51505,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.2,
       "why": "small_arms缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58202,7 +58298,7 @@
       "field": "company_trubia.ai_weight",
       "id": "company_sector_company_trubia_hardwood_input",
       "operation": "multiply",
-      "priority": 51502,
+      "priority": 51506,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单"
@@ -58221,7 +58317,7 @@
       "field": "company_trubia.ai_weight",
       "id": "company_sector_company_trubia_workforce",
       "operation": "multiply",
-      "priority": 51503,
+      "priority": 51507,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58240,7 +58336,7 @@
       "field": "company_trubia.ai_weight",
       "id": "company_sector_company_trubia_default",
       "operation": "multiply",
-      "priority": 51504,
+      "priority": 51508,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58259,7 +58355,7 @@
       "field": "company_turkish_petroleum.ai_weight",
       "id": "company_sector_company_turkish_petroleum_oil_need",
       "operation": "multiply",
-      "priority": 51505,
+      "priority": 51509,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58283,7 +58379,7 @@
       "field": "company_turkish_petroleum.ai_weight",
       "id": "company_sector_company_turkish_petroleum_oil_pressure",
       "operation": "multiply",
-      "priority": 51506,
+      "priority": 51510,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.2,
       "why": "oil缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58302,7 +58398,7 @@
       "field": "company_turkish_petroleum.ai_weight",
       "id": "company_sector_company_turkish_petroleum_engines_input",
       "operation": "multiply",
-      "priority": 51507,
+      "priority": 51511,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -58321,7 +58417,7 @@
       "field": "company_turkish_petroleum.ai_weight",
       "id": "company_sector_company_turkish_petroleum_workforce",
       "operation": "multiply",
-      "priority": 51508,
+      "priority": 51512,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58340,7 +58436,7 @@
       "field": "company_turkish_petroleum.ai_weight",
       "id": "company_sector_company_turkish_petroleum_default",
       "operation": "multiply",
-      "priority": 51509,
+      "priority": 51513,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58359,7 +58455,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_fertilizer_need",
       "operation": "multiply",
-      "priority": 51510,
+      "priority": 51514,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fertilizer；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58383,7 +58479,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_fertilizer_pressure",
       "operation": "multiply",
-      "priority": 51511,
+      "priority": 51515,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "fertilizer缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58402,7 +58498,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_grain_need",
       "operation": "multiply",
-      "priority": 51512,
+      "priority": 51516,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58426,7 +58522,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_grain_pressure",
       "operation": "multiply",
-      "priority": 51513,
+      "priority": 51517,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "grain缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58445,7 +58541,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_tobacco_need",
       "operation": "multiply",
-      "priority": 51514,
+      "priority": 51518,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出tobacco；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58469,7 +58565,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_tobacco_pressure",
       "operation": "multiply",
-      "priority": 51515,
+      "priority": 51519,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "tobacco缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58488,7 +58584,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_iron_input",
       "operation": "multiply",
-      "priority": 51516,
+      "priority": 51520,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -58507,7 +58603,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_sulfur_input",
       "operation": "multiply",
-      "priority": 51517,
+      "priority": 51521,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要sulfur；高价为配方机会成本，不是当前实际账单"
@@ -58526,7 +58622,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_workforce",
       "operation": "multiply",
-      "priority": 51518,
+      "priority": 51522,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58545,7 +58641,7 @@
       "field": "company_uniao_fabril.ai_weight",
       "id": "company_sector_company_uniao_fabril_default",
       "operation": "multiply",
-      "priority": 51519,
+      "priority": 51523,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58564,7 +58660,7 @@
       "field": "company_united_fruit.ai_weight",
       "id": "company_sector_company_united_fruit_fruit_need",
       "operation": "multiply",
-      "priority": 51520,
+      "priority": 51524,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出fruit；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58588,7 +58684,7 @@
       "field": "company_united_fruit.ai_weight",
       "id": "company_sector_company_united_fruit_fruit_pressure",
       "operation": "multiply",
-      "priority": 51521,
+      "priority": 51525,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "fruit缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58607,7 +58703,7 @@
       "field": "company_united_fruit.ai_weight",
       "id": "company_sector_company_united_fruit_sugar_need",
       "operation": "multiply",
-      "priority": 51522,
+      "priority": 51526,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出sugar；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58631,7 +58727,7 @@
       "field": "company_united_fruit.ai_weight",
       "id": "company_sector_company_united_fruit_sugar_pressure",
       "operation": "multiply",
-      "priority": 51523,
+      "priority": 51527,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "sugar缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58650,7 +58746,7 @@
       "field": "company_united_fruit.ai_weight",
       "id": "company_sector_company_united_fruit_workforce",
       "operation": "multiply",
-      "priority": 51524,
+      "priority": 51528,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58669,7 +58765,7 @@
       "field": "company_united_fruit.ai_weight",
       "id": "company_sector_company_united_fruit_default",
       "operation": "multiply",
-      "priority": 51525,
+      "priority": 51529,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58688,7 +58784,7 @@
       "field": "company_united_tobacco_factories.ai_weight",
       "id": "company_sector_company_united_tobacco_factories_tobacco_need",
       "operation": "multiply",
-      "priority": 51526,
+      "priority": 51530,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出tobacco；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58712,7 +58808,7 @@
       "field": "company_united_tobacco_factories.ai_weight",
       "id": "company_sector_company_united_tobacco_factories_tobacco_pressure",
       "operation": "multiply",
-      "priority": 51527,
+      "priority": 51531,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.2,
       "why": "tobacco缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58731,7 +58827,7 @@
       "field": "company_united_tobacco_factories.ai_weight",
       "id": "company_sector_company_united_tobacco_factories_workforce",
       "operation": "multiply",
-      "priority": 51528,
+      "priority": 51532,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58750,7 +58846,7 @@
       "field": "company_united_tobacco_factories.ai_weight",
       "id": "company_sector_company_united_tobacco_factories_default",
       "operation": "multiply",
-      "priority": 51529,
+      "priority": 51533,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58769,7 +58865,7 @@
       "field": "company_ursus.ai_weight",
       "id": "company_sector_company_ursus_engines_need",
       "operation": "multiply",
-      "priority": 51530,
+      "priority": 51534,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58793,7 +58889,7 @@
       "field": "company_ursus.ai_weight",
       "id": "company_sector_company_ursus_engines_pressure",
       "operation": "multiply",
-      "priority": 51531,
+      "priority": 51535,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.2,
       "why": "engines缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58812,7 +58908,7 @@
       "field": "company_ursus.ai_weight",
       "id": "company_sector_company_ursus_steel_input",
       "operation": "multiply",
-      "priority": 51532,
+      "priority": 51536,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单"
@@ -58831,7 +58927,7 @@
       "field": "company_ursus.ai_weight",
       "id": "company_sector_company_ursus_workforce",
       "operation": "multiply",
-      "priority": 51533,
+      "priority": 51537,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -58850,7 +58946,7 @@
       "field": "company_ursus.ai_weight",
       "id": "company_sector_company_ursus_default",
       "operation": "multiply",
-      "priority": 51534,
+      "priority": 51538,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -58869,7 +58965,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_coal_need",
       "operation": "multiply",
-      "priority": 51535,
+      "priority": 51539,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58893,7 +58989,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_coal_pressure",
       "operation": "multiply",
-      "priority": 51536,
+      "priority": 51540,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "coal缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58912,7 +59008,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_iron_need",
       "operation": "multiply",
-      "priority": 51537,
+      "priority": 51541,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58936,7 +59032,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_iron_pressure",
       "operation": "multiply",
-      "priority": 51538,
+      "priority": 51542,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "iron缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58955,7 +59051,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_steel_need",
       "operation": "multiply",
-      "priority": 51539,
+      "priority": 51543,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -58979,7 +59075,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_steel_pressure",
       "operation": "multiply",
-      "priority": 51540,
+      "priority": 51544,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "steel缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -58998,7 +59094,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_coal_input",
       "operation": "multiply",
-      "priority": 51541,
+      "priority": 51545,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单"
@@ -59017,7 +59113,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_iron_input",
       "operation": "multiply",
-      "priority": 51542,
+      "priority": 51546,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -59036,7 +59132,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_tools_input",
       "operation": "multiply",
-      "priority": 51543,
+      "priority": 51547,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -59055,7 +59151,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_workforce",
       "operation": "multiply",
-      "priority": 51544,
+      "priority": 51548,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -59074,7 +59170,7 @@
       "field": "company_us_steel.ai_weight",
       "id": "company_sector_company_us_steel_default",
       "operation": "multiply",
-      "priority": 51545,
+      "priority": 51549,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -59093,7 +59189,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_clippers_need",
       "operation": "multiply",
-      "priority": 51546,
+      "priority": 51550,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59117,7 +59213,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_clippers_pressure",
       "operation": "multiply",
-      "priority": 51547,
+      "priority": 51551,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59136,7 +59232,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_engines_need",
       "operation": "multiply",
-      "priority": 51548,
+      "priority": 51552,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59160,7 +59256,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_engines_pressure",
       "operation": "multiply",
-      "priority": 51549,
+      "priority": 51553,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "engines缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59179,7 +59275,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_steamers_need",
       "operation": "multiply",
-      "priority": 51550,
+      "priority": 51554,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59203,7 +59299,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_steamers_pressure",
       "operation": "multiply",
-      "priority": 51551,
+      "priority": 51555,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59222,7 +59318,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_tools_need",
       "operation": "multiply",
-      "priority": 51552,
+      "priority": 51556,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出tools；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59246,7 +59342,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_tools_pressure",
       "operation": "multiply",
-      "priority": 51553,
+      "priority": 51557,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "tools缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59265,7 +59361,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_steel_input",
       "operation": "multiply",
-      "priority": 51554,
+      "priority": 51558,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单"
@@ -59284,7 +59380,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_workforce",
       "operation": "multiply",
-      "priority": 51555,
+      "priority": 51559,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -59303,7 +59399,7 @@
       "field": "company_van_vlissingen_en_dudok_van_heel.ai_weight",
       "id": "company_sector_company_van_vlissingen_en_dudok_van_heel_default",
       "operation": "multiply",
-      "priority": 51556,
+      "priority": 51560,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -59322,7 +59418,7 @@
       "field": "company_vodka_monopoly.ai_weight",
       "id": "company_sector_company_vodka_monopoly_groceries_need",
       "operation": "multiply",
-      "priority": 51557,
+      "priority": 51561,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59346,7 +59442,7 @@
       "field": "company_vodka_monopoly.ai_weight",
       "id": "company_sector_company_vodka_monopoly_groceries_pressure",
       "operation": "multiply",
-      "priority": 51558,
+      "priority": 51562,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.2,
       "why": "groceries缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59365,7 +59461,7 @@
       "field": "company_vodka_monopoly.ai_weight",
       "id": "company_sector_company_vodka_monopoly_wine_need",
       "operation": "multiply",
-      "priority": 51559,
+      "priority": 51563,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出wine；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59389,7 +59485,7 @@
       "field": "company_vodka_monopoly.ai_weight",
       "id": "company_sector_company_vodka_monopoly_wine_pressure",
       "operation": "multiply",
-      "priority": 51560,
+      "priority": 51564,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.2,
       "why": "wine缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59408,7 +59504,7 @@
       "field": "company_vodka_monopoly.ai_weight",
       "id": "company_sector_company_vodka_monopoly_grain_input",
       "operation": "multiply",
-      "priority": 51561,
+      "priority": 51565,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单"
@@ -59427,7 +59523,7 @@
       "field": "company_vodka_monopoly.ai_weight",
       "id": "company_sector_company_vodka_monopoly_workforce",
       "operation": "multiply",
-      "priority": 51562,
+      "priority": 51566,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -59446,7 +59542,7 @@
       "field": "company_vodka_monopoly.ai_weight",
       "id": "company_sector_company_vodka_monopoly_default",
       "operation": "multiply",
-      "priority": 51563,
+      "priority": 51567,
       "source": "common/company_types/00_companies_russia.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -59465,7 +59561,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_artillery_need",
       "operation": "multiply",
-      "priority": 51564,
+      "priority": 51568,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59489,7 +59585,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_artillery_pressure",
       "operation": "multiply",
-      "priority": 51565,
+      "priority": 51569,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.2,
       "why": "artillery缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59508,7 +59604,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_clippers_need",
       "operation": "multiply",
-      "priority": 51566,
+      "priority": 51570,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59532,7 +59628,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_clippers_pressure",
       "operation": "multiply",
-      "priority": 51567,
+      "priority": 51571,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59551,7 +59647,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_steamers_need",
       "operation": "multiply",
-      "priority": 51568,
+      "priority": 51572,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59575,7 +59671,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_steamers_pressure",
       "operation": "multiply",
-      "priority": 51569,
+      "priority": 51573,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59594,7 +59690,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_workforce",
       "operation": "multiply",
-      "priority": 51570,
+      "priority": 51574,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -59613,7 +59709,7 @@
       "field": "company_wadia_shipbuilders.ai_weight",
       "id": "company_sector_company_wadia_shipbuilders_default",
       "operation": "multiply",
-      "priority": 51571,
+      "priority": 51575,
       "source": "common/company_types/00_companies_ip2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -59632,7 +59728,7 @@
       "field": "company_west_ural_petroleum.ai_weight",
       "id": "company_sector_company_west_ural_petroleum_oil_need",
       "operation": "multiply",
-      "priority": 51572,
+      "priority": 51576,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -59656,7 +59752,7 @@
       "field": "company_west_ural_petroleum.ai_weight",
       "id": "company_sector_company_west_ural_petroleum_oil_pressure",
       "operation": "multiply",
-      "priority": 51573,
+      "priority": 51577,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.2,
       "why": "oil缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -59675,7 +59771,7 @@
       "field": "company_west_ural_petroleum.ai_weight",
       "id": "company_sector_company_west_ural_petroleum_engines_input",
       "operation": "multiply",
-      "priority": 51574,
+      "priority": 51578,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -59694,7 +59790,7 @@
       "field": "company_west_ural_petroleum.ai_weight",
       "id": "company_sector_company_west_ural_petroleum_workforce",
       "operation": "multiply",
-      "priority": 51575,
+      "priority": 51579,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -59713,7 +59809,7 @@
       "field": "company_west_ural_petroleum.ai_weight",
       "id": "company_sector_company_west_ural_petroleum_default",
       "operation": "multiply",
-      "priority": 51576,
+      "priority": 51580,
       "source": "common/company_types/00_companies_soi.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -59737,7 +59833,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_basic_need",
       "operation": "multiply",
-      "priority": 51577,
+      "priority": 51581,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -59766,7 +59862,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_basic_pressure",
       "operation": "multiply",
-      "priority": 51578,
+      "priority": 51582,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -59790,7 +59886,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_basic_clippers_input",
       "operation": "multiply",
-      "priority": 51579,
+      "priority": 51583,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本"
@@ -59814,7 +59910,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_industrial_need",
       "operation": "multiply",
-      "priority": 51580,
+      "priority": 51584,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -59843,7 +59939,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_industrial_pressure",
       "operation": "multiply",
-      "priority": 51581,
+      "priority": 51585,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -59867,7 +59963,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_industrial_steamers_input",
       "operation": "multiply",
-      "priority": 51582,
+      "priority": 51586,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -59891,7 +59987,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_industrial_coal_input",
       "operation": "multiply",
-      "priority": 51583,
+      "priority": 51587,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本"
@@ -59915,7 +60011,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_modern_need",
       "operation": "multiply",
-      "priority": 51584,
+      "priority": 51588,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -59944,7 +60040,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_modern_pressure",
       "operation": "multiply",
-      "priority": 51585,
+      "priority": 51589,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -59968,7 +60064,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_modern_steamers_input",
       "operation": "multiply",
-      "priority": 51586,
+      "priority": 51590,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -59992,7 +60088,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_port_modern_oil_input",
       "operation": "multiply",
-      "priority": 51587,
+      "priority": 51591,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本"
@@ -60011,7 +60107,7 @@
       "field": "company_white_star_line.ai_weight",
       "id": "company_sector_company_white_star_line_default",
       "operation": "multiply",
-      "priority": 51588,
+      "priority": 51592,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -60030,7 +60126,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_clippers_need",
       "operation": "multiply",
-      "priority": 51589,
+      "priority": 51593,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60054,7 +60150,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_clippers_pressure",
       "operation": "multiply",
-      "priority": 51590,
+      "priority": 51594,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "clippers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60073,7 +60169,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_engines_need",
       "operation": "multiply",
-      "priority": 51591,
+      "priority": 51595,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60097,7 +60193,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_engines_pressure",
       "operation": "multiply",
-      "priority": 51592,
+      "priority": 51596,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "engines缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60116,7 +60212,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_steamers_need",
       "operation": "multiply",
-      "priority": 51593,
+      "priority": 51597,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60140,7 +60236,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_steamers_pressure",
       "operation": "multiply",
-      "priority": 51594,
+      "priority": 51598,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.2,
       "why": "steamers缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60159,7 +60255,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_steel_input",
       "operation": "multiply",
-      "priority": 51595,
+      "priority": 51599,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单"
@@ -60178,7 +60274,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_workforce",
       "operation": "multiply",
-      "priority": 51596,
+      "priority": 51600,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -60197,7 +60293,7 @@
       "field": "company_william_cramp.ai_weight",
       "id": "company_sector_company_william_cramp_default",
       "operation": "multiply",
-      "priority": 51597,
+      "priority": 51601,
       "source": "common/company_types/00_companies_usa.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -60216,7 +60312,7 @@
       "field": "company_william_sandford.ai_weight",
       "id": "company_sector_company_william_sandford_steel_need",
       "operation": "multiply",
-      "priority": 51598,
+      "priority": 51602,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60240,7 +60336,7 @@
       "field": "company_william_sandford.ai_weight",
       "id": "company_sector_company_william_sandford_steel_pressure",
       "operation": "multiply",
-      "priority": 51599,
+      "priority": 51603,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.2,
       "why": "steel缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60259,7 +60355,7 @@
       "field": "company_william_sandford.ai_weight",
       "id": "company_sector_company_william_sandford_coal_input",
       "operation": "multiply",
-      "priority": 51600,
+      "priority": 51604,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单"
@@ -60278,7 +60374,7 @@
       "field": "company_william_sandford.ai_weight",
       "id": "company_sector_company_william_sandford_iron_input",
       "operation": "multiply",
-      "priority": 51601,
+      "priority": 51605,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单"
@@ -60297,7 +60393,7 @@
       "field": "company_william_sandford.ai_weight",
       "id": "company_sector_company_william_sandford_workforce",
       "operation": "multiply",
-      "priority": 51602,
+      "priority": 51606,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -60316,7 +60412,7 @@
       "field": "company_william_sandford.ai_weight",
       "id": "company_sector_company_william_sandford_default",
       "operation": "multiply",
-      "priority": 51603,
+      "priority": 51607,
       "source": "common/company_types/00_companies_asia.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -60335,7 +60431,7 @@
       "field": "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight",
       "id": "company_sector_company_witkowitzer_bergbau_und_huttengewerkschaft_coal_need",
       "operation": "multiply",
-      "priority": 51604,
+      "priority": 51608,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60359,7 +60455,7 @@
       "field": "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight",
       "id": "company_sector_company_witkowitzer_bergbau_und_huttengewerkschaft_coal_pressure",
       "operation": "multiply",
-      "priority": 51605,
+      "priority": 51609,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.2,
       "why": "coal缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60378,7 +60474,7 @@
       "field": "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight",
       "id": "company_sector_company_witkowitzer_bergbau_und_huttengewerkschaft_iron_need",
       "operation": "multiply",
-      "priority": 51606,
+      "priority": 51610,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60402,7 +60498,7 @@
       "field": "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight",
       "id": "company_sector_company_witkowitzer_bergbau_und_huttengewerkschaft_iron_pressure",
       "operation": "multiply",
-      "priority": 51607,
+      "priority": 51611,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.2,
       "why": "iron缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60421,7 +60517,7 @@
       "field": "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight",
       "id": "company_sector_company_witkowitzer_bergbau_und_huttengewerkschaft_tools_input",
       "operation": "multiply",
-      "priority": 51608,
+      "priority": 51612,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -60440,7 +60536,7 @@
       "field": "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight",
       "id": "company_sector_company_witkowitzer_bergbau_und_huttengewerkschaft_workforce",
       "operation": "multiply",
-      "priority": 51609,
+      "priority": 51613,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -60459,7 +60555,7 @@
       "field": "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight",
       "id": "company_sector_company_witkowitzer_bergbau_und_huttengewerkschaft_default",
       "operation": "multiply",
-      "priority": 51610,
+      "priority": 51614,
       "source": "common/company_types/00_companies_ip3.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -60478,7 +60574,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_sulfur_need",
       "operation": "multiply",
-      "priority": 51611,
+      "priority": 51615,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出sulfur；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60502,7 +60598,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_sulfur_pressure",
       "operation": "multiply",
-      "priority": 51612,
+      "priority": 51616,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "sulfur缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60521,7 +60617,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_building_railway_need",
       "operation": "multiply",
-      "priority": 51613,
+      "priority": 51617,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -60540,7 +60636,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_building_railway_pressure",
       "operation": "multiply",
-      "priority": 51614,
+      "priority": 51618,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求"
@@ -60564,7 +60660,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_basic_need",
       "operation": "multiply",
-      "priority": 51615,
+      "priority": 51619,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -60593,7 +60689,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_basic_pressure",
       "operation": "multiply",
-      "priority": 51616,
+      "priority": 51620,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -60617,7 +60713,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_basic_clippers_input",
       "operation": "multiply",
-      "priority": 51617,
+      "priority": 51621,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本"
@@ -60641,7 +60737,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_industrial_need",
       "operation": "multiply",
-      "priority": 51618,
+      "priority": 51622,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -60670,7 +60766,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_industrial_pressure",
       "operation": "multiply",
-      "priority": 51619,
+      "priority": 51623,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -60694,7 +60790,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_industrial_steamers_input",
       "operation": "multiply",
-      "priority": 51620,
+      "priority": 51624,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -60718,7 +60814,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_industrial_coal_input",
       "operation": "multiply",
-      "priority": 51621,
+      "priority": 51625,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本"
@@ -60742,7 +60838,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_modern_need",
       "operation": "multiply",
-      "priority": 51622,
+      "priority": 51626,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -60771,7 +60867,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_modern_pressure",
       "operation": "multiply",
-      "priority": 51623,
+      "priority": 51627,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -60795,7 +60891,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_modern_steamers_input",
       "operation": "multiply",
-      "priority": 51624,
+      "priority": 51628,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -60819,7 +60915,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_port_modern_oil_input",
       "operation": "multiply",
-      "priority": 51625,
+      "priority": 51629,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本"
@@ -60838,7 +60934,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_engines_input",
       "operation": "multiply",
-      "priority": 51626,
+      "priority": 51630,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单"
@@ -60857,7 +60953,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_tools_input",
       "operation": "multiply",
-      "priority": 51627,
+      "priority": 51631,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单"
@@ -60876,7 +60972,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_workforce",
       "operation": "multiply",
-      "priority": 51628,
+      "priority": 51632,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -60895,7 +60991,7 @@
       "field": "company_yasuda.ai_weight",
       "id": "company_sector_company_yasuda_default",
       "operation": "multiply",
-      "priority": 51629,
+      "priority": 51633,
       "source": "common/company_types/00_companies_ep2.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -60914,7 +61010,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_groceries_need",
       "operation": "multiply",
-      "priority": 51630,
+      "priority": 51634,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60938,7 +61034,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_groceries_pressure",
       "operation": "multiply",
-      "priority": 51631,
+      "priority": 51635,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "groceries缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -60957,7 +61053,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_sugar_need",
       "operation": "multiply",
-      "priority": 51632,
+      "priority": 51636,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出sugar；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -60981,7 +61077,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_sugar_pressure",
       "operation": "multiply",
-      "priority": 51633,
+      "priority": 51637,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "sugar缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -61005,7 +61101,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_basic_need",
       "operation": "multiply",
-      "priority": 51634,
+      "priority": 51638,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -61034,7 +61130,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_basic_pressure",
       "operation": "multiply",
-      "priority": 51635,
+      "priority": 51639,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -61058,7 +61154,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_basic_clippers_input",
       "operation": "multiply",
-      "priority": 51636,
+      "priority": 51640,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本"
@@ -61082,7 +61178,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_industrial_need",
       "operation": "multiply",
-      "priority": 51637,
+      "priority": 51641,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -61111,7 +61207,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_industrial_pressure",
       "operation": "multiply",
-      "priority": 51638,
+      "priority": 51642,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -61135,7 +61231,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_industrial_steamers_input",
       "operation": "multiply",
-      "priority": 51639,
+      "priority": 51643,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -61159,7 +61255,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_industrial_coal_input",
       "operation": "multiply",
-      "priority": 51640,
+      "priority": 51644,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本"
@@ -61183,7 +61279,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_modern_need",
       "operation": "multiply",
-      "priority": 51641,
+      "priority": 51645,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.12,
       "why": "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出"
@@ -61212,7 +61308,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_modern_pressure",
       "operation": "multiply",
-      "priority": 51642,
+      "priority": 51646,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.2,
       "why": "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励"
@@ -61236,7 +61332,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_modern_steamers_input",
       "operation": "multiply",
-      "priority": 51643,
+      "priority": 51647,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本"
@@ -61260,7 +61356,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_port_modern_oil_input",
       "operation": "multiply",
-      "priority": 51644,
+      "priority": 51648,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本"
@@ -61279,7 +61375,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_grain_input",
       "operation": "multiply",
-      "priority": 51645,
+      "priority": 51649,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单"
@@ -61298,7 +61394,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_workforce",
       "operation": "multiply",
-      "priority": 51646,
+      "priority": 51650,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -61317,7 +61413,7 @@
       "field": "company_ynchausti_y_compania.ai_weight",
       "id": "company_sector_company_ynchausti_y_compania_default",
       "operation": "multiply",
-      "priority": 51647,
+      "priority": 51651,
       "source": "common/company_types/00_companies_ip4.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"
@@ -61336,7 +61432,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_ammunition_need",
       "operation": "multiply",
-      "priority": 51648,
+      "priority": 51652,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出ammunition；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -61360,7 +61456,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_ammunition_pressure",
       "operation": "multiply",
-      "priority": 51649,
+      "priority": 51653,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.2,
       "why": "ammunition缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -61379,7 +61475,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_small_arms_need",
       "operation": "multiply",
-      "priority": 51650,
+      "priority": 51654,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.12,
       "why": "主业基础配方可能产出small_arms；国家市场已有买单缺口，形成筹建机会，不假定已启用PM"
@@ -61403,7 +61499,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_small_arms_pressure",
       "operation": "multiply",
-      "priority": 51651,
+      "priority": 51655,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.2,
       "why": "small_arms缺口且相对基价高，升档同一主业需求，不能重复奖励"
@@ -61422,7 +61518,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_explosives_input",
       "operation": "multiply",
-      "priority": 51652,
+      "priority": 51656,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单"
@@ -61441,7 +61537,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_hardwood_input",
       "operation": "multiply",
-      "priority": 51653,
+      "priority": 51657,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单"
@@ -61460,7 +61556,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_lead_input",
       "operation": "multiply",
-      "priority": 51654,
+      "priority": 51658,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.85,
       "why": "主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单"
@@ -61479,7 +61575,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_workforce",
       "operation": "multiply",
-      "priority": 51655,
+      "priority": 51659,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 1.04,
       "why": "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺"
@@ -61498,7 +61594,7 @@
       "field": "company_zastava.ai_weight",
       "id": "company_sector_company_zastava_default",
       "operation": "multiply",
-      "priority": 51656,
+      "priority": 51660,
       "source": "common/company_types/00_companies_europe.txt",
       "value": 0.8,
       "why": "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款"

@@ -143,7 +143,7 @@ def test_all_37_consumers_and_exact_historical_successors_are_live(production):
             row for row in policies[source].rules if row.field == (law, "ai_enact_weight_modifier")
         ]
         assert rules
-        assert all(row.id.startswith("law_context_") for row in rules)
+        assert all(row.id.startswith(("law_context_", "political_capacity_law_")) for row in rules)
         stripped = re.sub(
             r"(?m)^\s*# SITAI BEGIN information:[^\n]+\n.*?^\s*# SITAI END information:[^\n]+\n",
             "\n",

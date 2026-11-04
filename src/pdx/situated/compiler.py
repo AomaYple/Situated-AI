@@ -724,9 +724,13 @@ def _frozen_treaty_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCon
         ),
     )
     return {
-        (row["source"], f"{identity}.ai.proposal_weight"): context
+        (row["source"], f"{identity}.ai.{leaf}"): context
         for identity, row in data["candidates"].items()
-        if row["weight_shape"] == "block"
+        for leaf, shape in (
+            ("proposal_weight", row["weight_shape"]),
+            ("evaluation_chance", row["evaluation_shape"]),
+        )
+        if shape == "block"
     }
 
 
@@ -883,6 +887,7 @@ def validate_context_readers(
     shapes["ai_enact_weight_modifier"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
     shapes["company.ai_weight"] = {"root": ("country", "actor")}
     shapes["treaty.ai.proposal_weight"] = {"root": ("country", "actor")}
+    shapes["treaty.ai.evaluation_chance"] = {"root": ("country", "actor")}
     shapes["wanted_construction_output"] = {"root": ("country", "actor")}
     shapes["institution_scores"] = {"root": ("country", "actor")}
     shapes["min_law_chance_to_pass"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
@@ -955,6 +960,7 @@ def validate_context_readers(
             "max_ship_design_complexity",
             "ship_modification.ai_weight",
             "treaty.ai.proposal_weight",
+            "treaty.ai.evaluation_chance",
             "recklessness",
             "wargoal_maneuvers_fraction",
             "wanted_construction_output",
@@ -1730,7 +1736,7 @@ def load_model(
                     if source.startswith("common/company_types/")
                     else "ship_modification.ai_weight"
                     if (source, field) in ship_modification_contexts
-                    else "treaty.ai.proposal_weight"
+                    else f"treaty.{'.'.join(rule.field[-2:])}"
                     if (source, field) in treaty_contexts
                     else field
                 )

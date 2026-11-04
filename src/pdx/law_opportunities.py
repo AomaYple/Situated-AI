@@ -23,13 +23,51 @@ if TYPE_CHECKING:
 
 PARAMETERS = config.REPO / "mod/decisions/law_opportunities.toml"
 
+# Exact modifier values in the complete hash-locked labour source. Omitted
+# modifier keys have zero contribution; guild qualifications are not reused.
+LABOUR_EFFECTS = {
+    "law_guild_system": (0.0, 0.0),
+    "law_combination_acts": (0.25, -0.25),
+    "law_anti_strike_laws": (0.10, -0.10),
+    "law_right_to_associate": (-0.10, 0.10),
+    "law_corporatized_unions": (0.0, 0.0),
+    "law_factory_councils": (0.0, 0.25),
+}
+AUTHORITY_EFFECTS = {
+    "common/laws/00_citizenship.txt": {
+        "law_subjecthood": 100,  # Current origin only: no native score field.
+        "law_ethnostate": 200,
+        "law_national_supremacy": 150,
+        "law_racial_segregation": 100,
+        "law_cultural_exclusion": 50,
+        "law_multicultural": 0,
+    },
+    "common/laws/00_church_and_state.txt": {
+        "law_state_religion": 200,
+        "law_millet_system": 200,
+        "law_people_of_the_book": 200,
+        "law_freedom_of_conscience": 100,
+        "law_total_separation": 0,
+        "law_state_atheism": 200,
+    },
+}
+POLICING_SOURCE = "common/laws/01_policing.txt"
+# Per invested institution level: turmoil losses, movement radicalization,
+# and turmoil mortality. Shared dedicated/militarized effects subtract to zero.
+POLICING_EFFECTS = {
+    "law_no_police": (0.0, 0.0, 0.0),
+    "law_local_police": (-0.05, 0.0, 0.0),
+    "law_dedicated_police": (0.0, -0.05, 0.0),
+    "law_militarized_police": (0.0, -0.05, 0.004),
+}
+
 
 def load() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
     if (
         set(data) != {"schema", "tuning", "sources", "candidates"}
         or type(data["schema"]) is not int
-        or data["schema"] != 1
+        or data["schema"] != 3
     ):
         raise ValueError("具体法律机会schema无效")
     expected = {
@@ -54,8 +92,16 @@ def load() -> dict[str, Any]:
         and 0 < tuning["administration_change"] <= 10
     ):
         raise ValueError("具体法律机会参数越界")
-    if len(data["sources"]) != 6 or len(data["candidates"]) != 37:
-        raise ValueError("具体法律机会必须保留六族37候选独立分母")
+    if len(data["sources"]) != 9 or len(data["candidates"]) != 52:
+        raise ValueError("具体法律机会必须保留原37候选并扩展公民权5、宗教6及警务4候选")
+    if {law for law, name in data["candidates"].items() if name == POLICING_SOURCE} != set(
+        POLICING_EFFECTS
+    ):
+        raise ValueError("警务法律必须保留四个精确原版评分消费者")
+    for source, effects in AUTHORITY_EFFECTS.items():
+        expected_laws = set(effects) - {"law_subjecthood"}
+        if {law for law, name in data["candidates"].items() if name == source} != expected_laws:
+            raise ValueError("身份及宗教法律必须保留精确原版评分消费者分母")
     if set(data["candidates"].values()) != set(data["sources"]):
         raise ValueError("具体法律候选与锁定原版来源不一致")
     if any(not re.fullmatch(r"law_[a-z_]+", law) for law in data["candidates"]):
@@ -161,6 +207,26 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 [_condition(fact, "=", True)],
                 "本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益",
             )
+            if (
+                law in LABOUR_EFFECTS
+                or law in POLICING_EFFECTS
+                or data["candidates"][law] in AUTHORITY_EFFECTS
+            ):
+                # Withdrawal is explicit so an unknown current identity does
+                # not erase an independently observed agenda. Both directions
+                # use the same strongest tier, so known adoption cancels once.
+                add(
+                    law,
+                    f"adopted_agenda_{tier}",
+                    "law_observed_agenda",
+                    -tuning[f"agenda_{tier}"],
+                    [_condition(fact, "=", True), _condition(current(law), "=", True)],
+                    "候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求",
+                )
+        # The newly expanded sources retain their existing named crisis
+        # writers, including immutable published migration identities.
+        if data["candidates"][law] in AUTHORITY_EFFECTS or law in POLICING_EFFECTS:
+            continue
         add(
             law,
             "crisis_cost",
@@ -173,6 +239,119 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             ],
             "已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求",
         )
+
+    for authority_effects in AUTHORITY_EFFECTS.values():
+        for law, authority in authority_effects.items():
+            if law not in data["candidates"]:
+                continue
+            for origin, old_authority in authority_effects.items():
+                delta = authority - old_authority
+                if delta == 0:
+                    continue
+                add(
+                    law,
+                    f"{origin}_authority_transition",
+                    "law_authority_transition",
+                    -8 if delta < 0 else 6,
+                    [
+                        _condition(current(origin), "=", True),
+                        _condition("authority", "<", -delta if delta < 0 else 0),
+                    ],
+                    "比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益",
+                )
+
+    for law, effects in POLICING_EFFECTS.items():
+        for origin, old_effects in POLICING_EFFECTS.items():
+            if law == origin:
+                continue
+            transition = [_condition(current(origin), "=", True)]
+            if origin == "law_no_police":
+                for fact, value in (("bureaucracy", -6), ("default", -8)):
+                    add(
+                        law,
+                        f"new_institution_{fact}",
+                        f"law_police_new_institution_{fact}",
+                        value,
+                        [
+                            *transition,
+                            _condition(
+                                fact,
+                                "<" if fact == "bureaucracy" else "=",
+                                0 if fact == "bureaucracy" else True,
+                            ),
+                        ],
+                        "从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本",
+                    )
+            for index, mechanism in enumerate(
+                ("turmoil_protection", "movement_radicalization", "mortality")
+            ):
+                difference = effects[index] - old_effects[index]
+                if difference == 0:
+                    continue
+                for tier, investment in (("base", 1), ("invested", 3)):
+                    improving = difference < 0
+                    if mechanism == "movement_radicalization":
+                        value = (12 if tier == "base" else 14) if improving else -6
+                        group = "law_observed_agenda" if improving else "law_police_movement_loss"
+                        exposure = [
+                            _condition(f"law_context_{law}_movement_base", "=", True),
+                            _condition("radical_share", ">=", 0.25),
+                        ]
+                    else:
+                        magnitude = (
+                            (8 if tier == "base" else 12)
+                            if mechanism == "mortality"
+                            else (6 if tier == "base" else 9)
+                        )
+                        value = magnitude if improving else -magnitude
+                        group = f"law_police_{mechanism}"
+                        exposure = [_condition("owned_state_turmoil", "=", True)]
+                    add(
+                        law,
+                        f"{origin}_{mechanism}_{tier}",
+                        group,
+                        value,
+                        [*transition, _condition("police_investment", ">=", investment), *exposure],
+                        "现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数",
+                    )
+
+    for law, (radicalization, union_strength) in LABOUR_EFFECTS.items():
+        for origin, (old_radicalization, old_union_strength) in LABOUR_EFFECTS.items():
+            if origin == law:
+                continue
+            transition = [_condition(current(origin), "=", True)]
+            if radicalization != old_radicalization:
+                add(
+                    law,
+                    f"{origin}_movement_radicalization",
+                    "law_observed_agenda"
+                    if radicalization < old_radicalization
+                    else "law_movement_radicalization_loss",
+                    14 if radicalization < old_radicalization else -6,
+                    [
+                        *transition,
+                        _condition(f"law_context_{law}_movement_base", "=", True),
+                        _condition("radical_share", ">=", 0.25),
+                    ],
+                    "比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失",
+                )
+            if union_strength > old_union_strength:
+                for tier, cost in (("base", -6), ("government", -9)):
+                    conditions = [
+                        *transition,
+                        _condition("union_approval", "<", 0),
+                        _condition("union_clout", ">=", 0.2),
+                    ]
+                    if tier == "government":
+                        conditions.append(_condition("union_government", "=", True))
+                    add(
+                        law,
+                        f"{origin}_union_adjustment_{tier}",
+                        "law_union_transition_adjustment",
+                        cost,
+                        conditions,
+                        "实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测",
+                    )
 
     # Moving away from consumption taxation loses its explicit population
     # administration discount. No wage/dividend/poll/land tax base is invented.

@@ -451,7 +451,10 @@ def _native_country_case(technology, purpose):
             }
         },
         "has_law_or_variant": {},
-        "market": {f"mg:{identity}": {"market_goods_delta": 0} for identity in catalog["goods"]},
+        "market": {
+            f"mg:{identity}": {"market_goods_delta": 0, "market_goods_pricier": 0}
+            for identity in catalog["goods"]
+        },
     }
     for method in catalog["methods"].values():
         for law in method["law_gates"]["disallowing_laws"]:
@@ -503,6 +506,8 @@ def _native_country_case(technology, purpose):
         ("automatic_bottle_blowers", "labor_ready"),
         ("central_archives", "administration"),
         ("analytical_philosophy", "knowledge"),
+        ("dialectics", "knowledge_ready"),
+        ("analytical_philosophy", "knowledge_ready"),
         ("compression_ignition", "infrastructure"),
         ("combustion_engine", "local_supply"),
         ("cotton_gin", "throughput"),
@@ -618,6 +623,7 @@ def test_every_derived_query_has_an_independent_real_object_positive_fixture():
         "labor_ready",
         "administration",
         "knowledge",
+        "knowledge_ready",
         "infrastructure",
         "local_supply",
         "throughput",
@@ -638,3 +644,28 @@ def test_ready_tier_preserves_short_output_of_the_actual_displaced_recipe():
     assert _query_values("chemical_bleaching", "productive_ready", country) == (False, False)
     country["market"]["mg:glass"]["market_goods_delta"] = 0
     assert _query_values("chemical_bleaching", "productive_ready", country) == (True, True)
+
+
+@pytest.mark.parametrize("technology", ["dialectics", "analytical_philosophy"])
+def test_knowledge_ready_exact_prior_and_paper_unknown_are_local(technology):
+    country = _native_country_case(technology, "knowledge_ready")
+    country["any_scope_building"] = [
+        _building_object("building_university", "pm_scholastic_education")
+    ]
+    assert _query_values(technology, "knowledge_ready", country) == (True, True)
+    country["market"]["mg:paper"]["market_goods_pricier"] = 0.26
+    assert _query_values(technology, "knowledge_ready", country) == (False, False)
+    assert _query_values(technology, "knowledge", country) == (True, True)
+    country["market"]["mg:paper"] = {"market_goods_delta": -1, "market_goods_pricier": 0.1}
+    assert _query_values(technology, "knowledge_ready", country) == (False, False)
+    country["market"].pop("mg:paper")
+    assert _query_values(technology, "knowledge_ready", country) == (None, None)
+    assert _query_values(technology, "knowledge", country) == (True, True)
+    country["any_scope_building"] = [
+        _building_object("building_university", "pm_analytical_philosophy_department")
+    ]
+    assert _query_values(technology, "knowledge_ready", country) == (False, False)
+    country["any_scope_building"] = [
+        _building_object("building_paper_mill", "pm_scholastic_education")
+    ]
+    assert _query_values(technology, "knowledge_ready", country) == (False, False)

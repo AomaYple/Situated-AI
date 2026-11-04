@@ -672,11 +672,173 @@ def test_event_evidence_cannot_become_a_mutable_consumer(tmp_path):
         decision_adapters.load(source)
 
 
+def _expanded_law_negative_contracts():
+    """Independent finite G1-G3 contracts, pinned to native transition effects."""
+    contracts = {}
+
+    def add(law, suffix, value, group, *conditions):
+        contracts[f"law_context_{law}_{suffix}"] = (value, group, set(conditions))
+
+    def current(law):
+        return (f"law_context_current_{law}", "=", True)
+
+    # Native authority constants: current-only subjecthood has no score writer.
+    authority_families = (
+        {
+            "law_subjecthood": 100,
+            "law_ethnostate": 200,
+            "law_national_supremacy": 150,
+            "law_racial_segregation": 100,
+            "law_cultural_exclusion": 50,
+            "law_multicultural": 0,
+        },
+        {
+            "law_state_religion": 200,
+            "law_millet_system": 200,
+            "law_people_of_the_book": 200,
+            "law_freedom_of_conscience": 100,
+            "law_total_separation": 0,
+            "law_state_atheism": 200,
+        },
+    )
+    labour = {
+        "law_guild_system": (0, 0),
+        "law_combination_acts": (0.25, -0.25),
+        "law_anti_strike_laws": (0.10, -0.10),
+        "law_right_to_associate": (-0.10, 0.10),
+        "law_corporatized_unions": (0, 0),
+        "law_factory_councils": (0, 0.25),
+    }
+    police = {
+        "law_no_police": (0, 0, 0),
+        "law_local_police": (-0.05, 0, 0),
+        "law_dedicated_police": (0, -0.05, 0),
+        "law_militarized_police": (0, -0.05, 0.004),
+    }
+    expanded_laws = (set().union(*authority_families) | labour.keys() | police.keys()) - {
+        "law_subjecthood"
+    }
+    for law in expanded_laws:
+        for tier, value in (("base", -6), ("strong", -10)):
+            add(
+                law,
+                f"adopted_agenda_{tier}",
+                value,
+                "law_observed_agenda",
+                (f"law_context_{law}_movement_{tier}", "=", True),
+                current(law),
+            )
+    for family in authority_families:
+        for law, candidate_authority in family.items():
+            if law == "law_subjecthood":
+                continue
+            for origin, original_authority in family.items():
+                loss = original_authority - candidate_authority
+                if loss > 0:
+                    add(
+                        law,
+                        f"{origin}_authority_transition",
+                        -8,
+                        "law_authority_transition",
+                        current(origin),
+                        ("authority", "<", loss),
+                    )
+    for law, effects in police.items():
+        for origin, previous in police.items():
+            if law == origin:
+                continue
+            if origin == "law_no_police":
+                for fact, op, threshold, value in (
+                    ("bureaucracy", "<", 0, -6),
+                    ("default", "=", True, -8),
+                ):
+                    add(
+                        law,
+                        f"new_institution_{fact}",
+                        value,
+                        f"law_police_new_institution_{fact}",
+                        current(origin),
+                        (fact, op, threshold),
+                    )
+            for mechanism, candidate, old in zip(
+                ("turmoil_protection", "movement_radicalization", "mortality"),
+                effects,
+                previous,
+                strict=True,
+            ):
+                if candidate <= old:
+                    continue
+                for tier, investment in (("base", 1), ("invested", 3)):
+                    exposure: tuple[tuple[str, str, bool | float], ...]
+                    if mechanism == "movement_radicalization":
+                        value, group = -6, "law_police_movement_loss"
+                        exposure = (
+                            (f"law_context_{law}_movement_base", "=", True),
+                            ("radical_share", ">=", 0.25),
+                        )
+                    else:
+                        value = {
+                            ("turmoil_protection", "base"): -6,
+                            ("turmoil_protection", "invested"): -9,
+                            ("mortality", "base"): -8,
+                            ("mortality", "invested"): -12,
+                        }[mechanism, tier]
+                        group = f"law_police_{mechanism}"
+                        exposure = (("owned_state_turmoil", "=", True),)
+                    add(
+                        law,
+                        f"{origin}_{mechanism}_{tier}",
+                        value,
+                        group,
+                        current(origin),
+                        ("police_investment", ">=", investment),
+                        *exposure,
+                    )
+    for law, (radicalization, union_strength) in labour.items():
+        for origin, (old_radicalization, old_union_strength) in labour.items():
+            if radicalization > old_radicalization:
+                add(
+                    law,
+                    f"{origin}_movement_radicalization",
+                    -6,
+                    "law_movement_radicalization_loss",
+                    current(origin),
+                    (f"law_context_{law}_movement_base", "=", True),
+                    ("radical_share", ">=", 0.25),
+                )
+            if union_strength > old_union_strength:
+                for tier, value in (("base", -6), ("government", -9)):
+                    conditions: tuple[tuple[str, str, bool | float], ...] = (
+                        current(origin),
+                        ("union_approval", "<", 0),
+                        ("union_clout", ">=", 0.2),
+                    )
+                    if tier == "government":
+                        conditions += (("union_government", "=", True),)
+                    add(
+                        law,
+                        f"{origin}_union_adjustment_{tier}",
+                        value,
+                        "law_union_transition_adjustment",
+                        *conditions,
+                    )
+    return contracts
+
+
 def test_declared_sources_have_consumers_and_real_bounded_conditions():
     adapters = decision_adapters.load()
     rules = [rule for _, policy in adapters.policies for rule in policy.rules]
     declared = tomllib.loads(decision_adapters.SOURCE.read_text(encoding="utf-8"))["rules"]
     actual = {rule.id: rule for rule in rules}
+    expanded_negative = _expanded_law_negative_contracts()
+    assert set(expanded_negative) <= actual.keys()
+    for identity, contract in expanded_negative.items():
+        rule = actual[identity]
+        assert (
+            rule.value,
+            rule.contribution_group,
+            {(c.fact, c.op, c.value) for c in rule.conditions},
+        ) == contract
     # Native company/recipe/equipment/treaty/mobilization derivations add real consumers;
     # they are not hand-written TOML rows. Keep every authored identity exact,
     # and admit only the registered derived namespaces checked in their own
@@ -812,7 +974,9 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                         ("social_reform_", "welfare_", "labor_", "school_", "child_")
                     )
                 elif rule.id.startswith("law_context_") and rule.value < 0:
-                    if rule.id.endswith("_crisis_cost"):
+                    if rule.id in expanded_negative:
+                        assert rule.value < 0
+                    elif rule.id.endswith("_crisis_cost"):
                         assert (rule.value, rule.contribution_group) == (
                             -10,
                             "law_political_pressure",
@@ -1768,7 +1932,7 @@ def _adapter_collection_observations(seed):
             "level": rng.choice([None, 0, 1, 2, 5]),
             "weekly_profit": rng.choice([None, -1, 0, 1, 100]),
             "occupancy": rng.choice([None, 0, 0.74, 0.75, 0.89, 0.9, 1]),
-            "cash_reserves_ratio": rng.choice([None, 0, 0.5, 0.6, 1]),
+            "cash_reserves_ratio": rng.choice([None, 0, 0.24, 0.25, 0.26, 0.5, 0.6, 1]),
         }
 
     def buildings():
@@ -1858,7 +2022,7 @@ def _adapter_query_reference(reader, observations, root_facts=None):
     def capacity(member, kind):
         return conjunction(
             identity(member, "is_building_type", kind),
-            compare(member["level"], operator.ge, 1),
+            compare(member.get("level"), operator.ge, 1),
         )
 
     parameters = dict(reader.parameters)
@@ -1870,6 +2034,14 @@ def _adapter_query_reference(reader, observations, root_facts=None):
     if reader.engine == "any_scope_building":
 
         def building(member):
+            if query == "trade_business_pressure":
+                return conjunction(
+                    capacity(member, "building_trade_center"),
+                    compare(member.get("weekly_profit"), operator.lt, 0),
+                    compare(member.get("cash_reserves_ratio"), operator.lt, 0.25)
+                    if parameters["tier"] == "strong"
+                    else True,
+                )
             if query == "existing_business":
                 strong = parameters["tier"] == "strong"
                 return conjunction(

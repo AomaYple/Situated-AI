@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -93,15 +94,19 @@ def build_manifest() -> dict[str, object]:
     for key, p in iter_docs():
         try:
             raw = p.read_bytes()
-        except OSError:
-            continue
+        except OSError as exc:
+            raise OSError(f"无法读取官方文档 {key} ({p}): {exc}") from exc
+        try:
+            decoded = raw.decode("utf-8-sig")
+        except UnicodeError as exc:
+            raise UnicodeError(f"官方文档不是有效UTF-8 {key} ({p}): {exc}") from exc
+        mirror = text_bytes(decoded)
         entries[key] = {
             "字节": len(raw),
-            "行数": raw.decode("utf-8", errors="replace").count("\n")
-            + (0 if raw.endswith(b"\n") else 1),
+            "行数": decoded.count("\n") + (0 if raw.endswith(b"\n") else 1),
             "sha256": hashlib.sha256(raw).hexdigest(),
-            "镜像字节": len(text_bytes(raw.decode("utf-8-sig"))),
-            "镜像sha256": hashlib.sha256(text_bytes(raw.decode("utf-8-sig"))).hexdigest(),
+            "镜像字节": len(mirror),
+            "镜像sha256": hashlib.sha256(mirror).hexdigest(),
         }
     return {
         "说明": "游戏自带官方 .md 的清单与指纹。原文不入库，见 tools/README.md 的「官方文档清单」。",
@@ -113,14 +118,23 @@ def build_manifest() -> dict[str, object]:
 
 
 def write_manifest() -> Path:
-    """把清单写入 ``research/official-docs.manifest.json``。"""
+    """完整构建非空清单后原子替换；读取或写入失败保留旧权威清单。"""
     path = manifest_path()
+    data = build_manifest()
+    if not data["文档"]:
+        roots = ", ".join(f"{name}={base}" for name, base in _ROOTS)
+        raise ValueError(f"官方文档清单为空，拒绝覆盖权威清单；检查输入目录：{roots}")
+    text = json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(build_manifest(), ensure_ascii=False, indent=1, sort_keys=True),
-        encoding="utf-8",
-        newline="\n",
-    )
+    with tempfile.NamedTemporaryFile(
+        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False
+    ) as stream:
+        temporary = Path(stream.name)
+    try:
+        temporary.write_text(text, encoding="utf-8", newline="\n")
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
     return path
 
 

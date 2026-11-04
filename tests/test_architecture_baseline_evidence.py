@@ -8,11 +8,11 @@ source snapshot and installed-native scope; it never publishes a partial session
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
 import struct
-import subprocess
 from collections import Counter, defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -337,29 +337,27 @@ def test_s0_archive_identity(
         for path, sha, size in ARCHIVES
     ]
     observed = []
-    for path, _, _ in ARCHIVES:
-        completed = subprocess.run(
-            ["git", "-C", str(ROOT), "show", f"{ARCHIVE_COMMIT}:{path}"],
-            capture_output=True,
-            check=True,
-            timeout=30,
+    for path, expected_sha, _ in ARCHIVES:
+        # Independent storage reader: no production loader, Git object or network.
+        raw = gzip.decompress(
+            (ROOT / f"docs/design/archive/objects/{ARCHIVE_COMMIT}/{expected_sha}.gz").read_bytes()
         )
         observed.append(
             {
                 "path": path,
-                "sha256": _sha(completed.stdout),
-                "bytes": len(completed.stdout),
+                "sha256": _sha(raw),
+                "bytes": len(raw),
                 "commit": ARCHIVE_COMMIT,
             }
         )
     assert data["schema"] == 1
     assert data["role"] == "historical_reference_only"
     baseline_capture.artifact(requirement, manifest)
-    baseline_capture.observation(requirement, "archive-git-observation.json", observed)
+    baseline_capture.observation(requirement, "archive-bytes-observation.json", observed)
     baseline_capture.record(
         requirement,
         request,
-        "frozen-seven-git-blobs",
+        "frozen-seven-originals",
         {"commit": ARCHIVE_COMMIT, "manifest": manifest.relative_to(ROOT).as_posix()},
         expected,
         data["files"],

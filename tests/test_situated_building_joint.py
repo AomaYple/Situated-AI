@@ -25,6 +25,7 @@ def _generate(source, field):
         readers=tuple(reader for reader in original.readers if reader.key in keys),
         semantic_ir=(),
         consumer_programs=(),
+        enabled_domains=frozenset(rule.domain for rule in rules),
     )
     model = compiler.load_model()
     compiled, _ = compiler.compile_policy(policy, source, model)

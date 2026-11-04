@@ -190,6 +190,15 @@ def _engine_facts(policy: Any, values: dict[str, Any], *, is_ai: bool = True) ->
             current.setdefault(reader.engine, {}).setdefault(params["building_type"], {})[
                 params["production_method"]
             ] = observed_value
+        elif reader.argument is not None or reader.parameters:
+            # Parameter identity remains explicit; the E4 native defeat memory
+            # is one observed argument, never the result of another variable.
+            parameters = dict(reader.parameters)
+            if reader.argument is not None:
+                parameters["argument"] = reader.argument
+            current.setdefault(reader.engine, {})[tuple(sorted(parameters.items()))] = (
+                observed_value
+            )
         else:
             current[reader.engine] = observed_value
     owner = root.setdefault("owner", {})

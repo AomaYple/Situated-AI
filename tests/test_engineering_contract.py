@@ -57,8 +57,12 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "已授权实施" in plan
     assert "[架构子计划](架构子计划.md)" in plan
     assert "[架构主计划](架构主计划.md)" in subplans
-    assert re.findall(r"^\| (S\d+) ", plan, re.MULTILINE) == [f"S{i}" for i in range(7)]
-    assert re.findall(r"^## (B\d+) ", subplans, re.MULTILINE) == [f"B{i}" for i in range(9)]
+    assert re.findall(r"^\| (X\d+) ", plan, re.MULTILINE) == [f"X{i}" for i in range(7)]
+    assert re.findall(r"^## ([DGE]\d+) ", subplans, re.MULTILINE) == [
+        *(f"D{i}" for i in range(1, 5)),
+        *(f"G{i}" for i in range(1, 4)),
+        *(f"E{i}" for i in range(1, 5)),
+    ]
     assert "具体实现随证据调整" in subplans
     assert "不是新架构完成门" in (root / "CONTRIBUTING.md").read_text(encoding="utf-8")
     archive = root / "docs/design/archive"
@@ -80,7 +84,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
     assert "唯一当前计划" in checklist
-    assert "架构主计划 A2" in checklist
+    assert "架构主计划 X1" in checklist
     assert "长期行为" in checklist
     assert distribution.RELEASE_VERSION in checklist
     assert "发布" in checklist

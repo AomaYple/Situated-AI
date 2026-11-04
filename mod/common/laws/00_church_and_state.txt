@@ -102,8 +102,29 @@ law_state_religion = {
 				# political_capacity_law_state_religion [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_f7cf1397de7cf6d3_law_authority_transition_positive
+			add = { value = 0
+				# law_context_law_state_religion_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
+				# law_context_law_state_religion_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
+			}
+			# GROUP program_f7cf1397de7cf6d3_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_state_religion_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_religion value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_state_religion_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_religion value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_f7cf1397de7cf6d3_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_state_religion_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_religion value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_state_religion } } add = -10 }
+				# law_context_law_state_religion_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_religion value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_state_religion } } add = -6 }
+			}
+			min = -20
+			max = 16
 		} }
 		# SITAI END information:law_state_religion.ai_enact_weight_modifier
 	}
@@ -257,8 +278,29 @@ law_millet_system = { # Ottoman Empire
 				# political_capacity_law_millet_system [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_9df07ba771f8d939_law_authority_transition_positive
+			add = { value = 0
+				# law_context_law_millet_system_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
+				# law_context_law_millet_system_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
+			}
+			# GROUP program_9df07ba771f8d939_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_millet_system_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_millet_system_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_9df07ba771f8d939_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_millet_system_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_millet_system } } add = -10 }
+				# law_context_law_millet_system_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_millet_system } } add = -6 }
+			}
+			min = -20
+			max = 16
 		} }
 		# SITAI END information:law_millet_system.ai_enact_weight_modifier
 	}
@@ -381,8 +423,29 @@ law_people_of_the_book = { # Other Muslim states
 				# political_capacity_law_people_of_the_book [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_e800d71a9436f6b2_law_authority_transition_positive
+			add = { value = 0
+				# law_context_law_people_of_the_book_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
+				# law_context_law_people_of_the_book_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
+			}
+			# GROUP program_e800d71a9436f6b2_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_people_of_the_book_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_people_of_the_book_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_e800d71a9436f6b2_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_people_of_the_book_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_people_of_the_book } } add = -10 }
+				# law_context_law_people_of_the_book_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_people_of_the_book } } add = -6 }
+			}
+			min = -20
+			max = 16
 		} }
 		# SITAI END information:law_people_of_the_book.ai_enact_weight_modifier
 	}
@@ -489,8 +552,38 @@ law_freedom_of_conscience = {
 				# political_capacity_law_freedom_of_conscience [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_c0c707ed4f336ad4_law_authority_transition_positive
+			add = { value = 0
+				# law_context_law_freedom_of_conscience_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
+			}
+			# GROUP program_c0c707ed4f336ad4_law_authority_transition_negative
+			add = { value = 0
+				# law_context_law_freedom_of_conscience_law_state_atheism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_atheism authority < 100 } } add = -8 }
+				# law_context_law_freedom_of_conscience_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 100 } } add = -8 }
+				# law_context_law_freedom_of_conscience_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 100 } } add = -8 }
+				# law_context_law_freedom_of_conscience_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 100 } } add = -8 }
+			}
+			# GROUP program_c0c707ed4f336ad4_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_freedom_of_conscience_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_freedom_of_conscience value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_freedom_of_conscience_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_freedom_of_conscience value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_c0c707ed4f336ad4_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_freedom_of_conscience_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_freedom_of_conscience value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_freedom_of_conscience } } add = -10 }
+				# law_context_law_freedom_of_conscience_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_freedom_of_conscience value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_freedom_of_conscience } } add = -6 }
+			}
+			min = -28
+			max = 16
 		} }
 		# SITAI END information:law_freedom_of_conscience.ai_enact_weight_modifier
 	}
@@ -579,8 +672,35 @@ law_total_separation = {
 				# political_capacity_law_total_separation [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_651af39974214858_law_authority_transition_negative
+			add = { value = 0
+				# law_context_law_total_separation_law_state_atheism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_atheism authority < 200 } } add = -8 }
+				# law_context_law_total_separation_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 100 } } add = -8 }
+				# law_context_law_total_separation_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 200 } } add = -8 }
+				# law_context_law_total_separation_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 200 } } add = -8 }
+				# law_context_law_total_separation_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 200 } } add = -8 }
+			}
+			# GROUP program_651af39974214858_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_total_separation_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_total_separation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_total_separation_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_total_separation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_651af39974214858_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_total_separation_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_total_separation value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_total_separation } } add = -10 }
+				# law_context_law_total_separation_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_total_separation value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_total_separation } } add = -6 }
+			}
+			min = -28
+			max = 10
 		} }
 		# SITAI END information:law_total_separation.ai_enact_weight_modifier
 	}
@@ -685,8 +805,29 @@ law_state_atheism = {
 				# political_capacity_law_state_atheism [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_ed719ebdea61f906_law_authority_transition_positive
+			add = { value = 0
+				# law_context_law_state_atheism_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
+				# law_context_law_state_atheism_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
+			}
+			# GROUP program_ed719ebdea61f906_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_state_atheism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_atheism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_state_atheism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_atheism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_ed719ebdea61f906_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_state_atheism_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_atheism value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_state_atheism } } add = -10 }
+				# law_context_law_state_atheism_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_state_atheism value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_state_atheism } } add = -6 }
+			}
+			min = -20
+			max = 16
 		} }
 		# SITAI END information:law_state_atheism.ai_enact_weight_modifier
 	}

@@ -763,6 +763,7 @@ _PURPOSES = frozenset(
         "labor_ready",
         "administration",
         "knowledge",
+        "knowledge_ready",
         "infrastructure",
         "local_supply",
         "throughput",
@@ -892,8 +893,15 @@ def query_members(
             take = row["labor_saved"] > 0 and bool(row["prior"])
         elif query.purpose == "administration":
             take = row["kind"] == "method" and services.get("country_bureaucracy_add", 0) > 0
-        elif query.purpose == "knowledge":
+        elif query.purpose in {"knowledge", "knowledge_ready"}:
             take = row["kind"] == "method" and services.get("country_weekly_innovation_add", 0) > 0
+            if query.purpose == "knowledge_ready":
+                take = (
+                    take
+                    and row["building"] == "building_university"
+                    and bool(row["prior"])
+                    and row["inputs"].get("paper", 0) > 0
+                )
         elif query.purpose == "infrastructure":
             take = services.get("state_infrastructure_add", 0) > 0
         elif query.purpose == "local_supply":
@@ -1200,6 +1208,10 @@ def render_query(query: TechnologyQuery) -> str:
                 if _QUERY_CATALOG["goods"][good]["market"]:
                     expression = f"market = {{ mg:{good} = {{ market_goods_delta >= 0 }} }}"
                     clauses.append(f"ROOT = {{ {expression} }}" if is_state else expression)
+                    if purpose == "knowledge_ready":
+                        clauses.append(
+                            f"market = {{ mg:{good} = {{ market_goods_pricier <= 0.25 }} }}"
+                        )
                 elif _QUERY_CATALOG["goods"][good]["local"]:
                     expression = f"sg:{good} = {{ state_goods_pricier <= 0.25 }}"
                     if is_state:
@@ -1694,6 +1706,12 @@ def derive(
         use(
             "knowledge",
             chosen["option_base"],
+            "university_method_option",
+            [_condition("literacy", "<", chosen["literacy_threshold"])],
+        )
+        use(
+            "knowledge_ready",
+            chosen["option_pressure"],
             "university_method_option",
             [_condition("literacy", "<", chosen["literacy_threshold"])],
         )

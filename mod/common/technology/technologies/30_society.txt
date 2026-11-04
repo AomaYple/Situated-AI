@@ -1115,11 +1115,13 @@ dialectics = {
 			}
 			# GROUP program_3683d4824b307f15_university_method_option_positive
 			add = { value = 0
+				# technology_dialectics_knowledge_ready [economy]; 锁定真实knowledge_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } market = { mg:paper = { market_goods_delta >= 0 } } market = { mg:paper = { market_goods_pricier <= 0.25 } } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.12 }
 				# technology_dialectics_knowledge [economy]; 锁定真实knowledge机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.08 }
 			}
 			min = 1
-			max = 1.2000000000000002
+			max = 1.2400000000000002
 		} }
 		# SITAI END information:dialectics.ai_weight
 	}
@@ -2803,11 +2805,13 @@ analytical_philosophy = {
 			}
 			# GROUP program_207e8d977c4bdb06_university_method_option_positive
 			add = { value = 0
+				# technology_analytical_philosophy_knowledge_ready [economy]; 锁定真实knowledge_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_philosophy_department level >= 1 } market = { mg:paper = { market_goods_delta >= 0 } } market = { mg:paper = { market_goods_pricier <= 0.25 } } } AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } market = { mg:paper = { market_goods_delta >= 0 } } market = { mg:paper = { market_goods_pricier <= 0.25 } } } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.12 }
 				# technology_analytical_philosophy_knowledge [economy]; 锁定真实knowledge机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_philosophy_department level >= 1 } } AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_philosophy_department level >= 1 } } AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.08 }
 			}
 			min = 1
-			max = 1.33
+			max = 1.37
 		} }
 		# SITAI END information:analytical_philosophy.ai_weight
 	}

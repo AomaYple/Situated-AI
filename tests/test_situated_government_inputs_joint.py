@@ -193,7 +193,7 @@ def test_actual_government_recipe_effects_and_reader_parameters_remain_exact(pro
     }
     consumer = next(p for p in policy.consumer_programs if ".".join(p.field) == FIELD)
     expected_ids = {r.id for r in source.rules if ".".join(r.field) == FIELD}
-    assert len(expected_ids) == 10
+    assert len(expected_ids) == 11
     assert len(expected_ids) < decision_rules.STATIC_BUDGET["candidates_per_field"]
     assert {v.action_id for v in consumer.variants} == expected_ids
     for method in PAPER_METHODS:
@@ -262,3 +262,57 @@ def test_foreign_market_and_wrong_building_method_cannot_supply_input_pressure(p
     ] = True
     root["market"] = {"mg:paper": {"market_goods_pricier": 0.6, "market_goods_delta": -1}}
     assert pdx_eval.select(_overlay(generated), facts).delta == pytest.approx(1.25)
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({}, 1.1),
+        ({"state_tax_capacity": 20}, 1.0),
+        ({"state_is_incorporated": False}, 1.0),
+        ({"state_is_incorporated": None}, 1.0),
+        ({"state_tax_capacity": None}, 1.0),
+        ({"state_tax_capacity_usage": None}, 1.0),
+        ({"state_owner_bureaucracy": -1}, 1.35),
+        ({"state_owner_bureaucracy": -1, "state_tax_capacity": 20}, 1.25),
+        ({**SWITCH, **PAPER_PRESSURE, **TELEPHONE_PRESSURE, "state_owner_default": True}, 0.5),
+    ],
+)
+def test_local_tax_repair_independent_of_national_administration(production, changes, expected):
+    _source, policy, _native, generated, _disabled, _model = production
+    values = _values(
+        policy,
+        {
+            "state_owner_bureaucracy": 100,
+            "state_is_incorporated": True,
+            "state_tax_capacity": 10,
+            "state_tax_capacity_usage": 20,
+            **changes,
+        },
+    )
+    reference = decision_rules.evaluate(policy, values, is_ai=True).get(FIELD)
+    actual = pdx_eval.select(_overlay(generated), _facts(policy, values))
+    assert (reference[1] if reference else 1) == pytest.approx(expected)
+    assert (actual.delta if actual.operation else 1) == pytest.approx(expected)
+    # An unrelated owned state's shortage cannot become the candidate's shortage.
+    facts = _facts(policy, values)
+    facts["ROOT"]["owner"]["owned_states"] = [
+        {"is_incorporated": True, "tax_capacity": 0, "tax_capacity_usage": 100}
+    ]
+    assert (pdx_eval.select(_overlay(generated), facts).delta or 1) == pytest.approx(expected)
+
+
+def test_local_tax_source_drift_fails(production):
+    from pdx import observation_queries
+
+    _source, _policy, native, _generated, _disabled, _model = production
+    inputs = decision_adapters.read_inputs(decision_adapters.load())
+    inputs[SOURCE] = native.replace(
+        "state.tax_capacity < state.tax_capacity_usage",
+        "state.tax_capacity > state.tax_capacity_usage",
+    )
+    query = observation_queries.from_reader(
+        "any_scope_state", {"state_query": "tax_capacity_shortfall"}
+    )
+    with pytest.raises(ValueError):
+        observation_queries.compile_query(query, inputs)

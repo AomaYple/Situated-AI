@@ -103,19 +103,19 @@ def _factor(policy: Any, field: str, **changes: Any) -> float:
 @pytest.mark.parametrize(
     ("changes", "expected"),
     [
-        ({}, (1.3, 1.3)),
+        ({}, (1.3, 1.1)),
         ({"state_unemployment": 0.099}, (1.0, 1.0)),
         ({"state_unemployment": None}, (1.0, 1.0)),
         ({"state_owner_default": True}, (1.0, 1.0)),
-        ({"state_owner_loans": True}, (1.0, 1.3)),
+        ({"state_owner_loans": True}, (1.0, 1.1)),
         ({"state_owner_loans": None}, (1.0, 1.0)),
-        ({"state_owner_reserves": 0}, (1.0, 1.3)),
-        ({"state_owner_reserves": None}, (1.0, 1.3)),
-        ({"state_owner_grain_price": 0.251}, (1.0, 1.3)),
-        ({"state_owner_grain_balance": -1}, (1.3, 1.3)),
-        ({"state_owner_grain_balance": None}, (1.3, 1.3)),
+        ({"state_owner_reserves": 0}, (1.0, 1.1)),
+        ({"state_owner_reserves": None}, (1.0, 1.1)),
+        ({"state_owner_grain_price": 0.251}, (1.0, 1.1)),
+        ({"state_owner_grain_balance": -1}, (1.3, 1.1)),
+        ({"state_owner_grain_balance": None}, (1.3, 1.1)),
         ({"state_infrastructure": -1}, (1.0, 1.0)),
-        ({"candidate_selected": True, "construction_queued": True}, (1.3, 1.3)),
+        ({"candidate_selected": True, "construction_queued": True}, (1.3, 1.1)),
     ],
 )
 def test_lj06_actual_unemployment_pressure_is_local_and_candidate_does_not_complete(
@@ -242,7 +242,7 @@ def generated(policies: dict[str, Any]) -> tuple[dict[str, str], dict[str, str]]
 
 WRITERS = [
     (INDUSTRY, FOOD, FOOD_EMPLOYMENT, {}, 1.30),
-    (INDUSTRY, TEXTILE, "lj06_employment_textile_unemployment_support", {}, 1.30),
+    (INDUSTRY, TEXTILE, "lj06_employment_textile_unemployment_support", {}, 1.10),
     (STRATEGY, HEALTH, "lj07_grain_health_foundation", {"average_sol": 8}, 1.08),
     (STRATEGY, HEALTH, "lj07_grain_health_social_capacity", {}, 1.16),
     (INFO, SOCIAL, "lj07_grain_social_foundation", {"average_sol": 8}, 1.06),
@@ -557,7 +557,7 @@ def complete_industry_field_pdx() -> tuple[Any, str]:
         # Basic observed demand +0.12 remains when actual PM input cost -0.20
         # removes the affordable advanced tier: 1 + .12 - .20 = .92.
         ({"state_owner_grain_price": 0.6, "state_owner_grain_balance": -1}, (0.92, 1.3)),
-        ({"state_owner_fabric_price": 0.6, "state_owner_fabric_balance": -1}, (1.3, 0.92)),
+        ({"state_owner_fabric_price": 0.6, "state_owner_fabric_balance": -1}, (1.3, 0.98)),
         (
             {
                 "state_owner_grain_price": 0.6,
@@ -570,13 +570,13 @@ def complete_industry_field_pdx() -> tuple[Any, str]:
         ),
         # Default removes the capacity tiers, but independent observed basic
         # demand remains: 1 + .12 - .15 = .97, rather than a global veto.
-        ({"state_owner_default": True}, (0.97, 0.97)),
-        ({"state_infrastructure": -1}, (1.02, 1.02)),
-        ({"state_infrastructure": -1, "state_owner_default": True}, (0.87, 0.87)),
+        ({"state_owner_default": True}, (0.97, 1.03)),
+        ({"state_infrastructure": -1}, (1.02, 1.08)),
+        ({"state_infrastructure": -1, "state_owner_default": True}, (0.87, 0.93)),
         ({"state_owner_groceries_price": None}, (1.08, 1.3)),
         ({"state_owner_grain_price": None}, (1.12, 1.3)),
         ({"pm_active_building_food_industry_pm_bakery": None}, (1.12, 1.3)),
-        ({"state_owner_loans": True}, (1.12, 1.3)),
+        ({"state_owner_loans": True}, (1.12, 1.22)),
         ({"state_unemployment": None}, (1.2, 1.2)),
         ({"candidate_selected": True, "construction_queued": True}, (1.3, 1.3)),
     ],

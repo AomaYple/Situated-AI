@@ -44,6 +44,9 @@ MARKET_CONSUMPTION_SOURCES = (_ATHEISM, _GFX, _GOODS)
 # Normalized UTF-8, matching the production adapter input contract. These are
 # source identities, not a claim that normalized strings retain raw BOM bytes.
 SOURCE_HASHES = {
+    "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
+    "common/laws/00_citizenship.txt": "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f",
+    "common/laws/00_church_and_state.txt": "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174",
     "common/laws/01_land_reform.txt": "8576c5bb769ca0bc9c2e3e2d89fb2e2dffcd9b4d479c08b43ca00c639e98e82f",
     "common/laws/01_taxation.txt": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
     "common/laws/02_labour_associations.txt": "47ec5d950de0c1fd409203b83aa3a56849a02c6977e69d7e21a4bacc2ca4ce45",
@@ -66,6 +69,21 @@ SOURCE_HASHES = {
     _GFX: "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
 }
 LAW_SOURCES = {
+    "law_no_police": "common/laws/01_policing.txt",
+    "law_local_police": "common/laws/01_policing.txt",
+    "law_dedicated_police": "common/laws/01_policing.txt",
+    "law_militarized_police": "common/laws/01_policing.txt",
+    "law_ethnostate": "common/laws/00_citizenship.txt",
+    "law_national_supremacy": "common/laws/00_citizenship.txt",
+    "law_racial_segregation": "common/laws/00_citizenship.txt",
+    "law_cultural_exclusion": "common/laws/00_citizenship.txt",
+    "law_multicultural": "common/laws/00_citizenship.txt",
+    "law_state_religion": "common/laws/00_church_and_state.txt",
+    "law_millet_system": "common/laws/00_church_and_state.txt",
+    "law_people_of_the_book": "common/laws/00_church_and_state.txt",
+    "law_freedom_of_conscience": "common/laws/00_church_and_state.txt",
+    "law_total_separation": "common/laws/00_church_and_state.txt",
+    "law_state_atheism": "common/laws/00_church_and_state.txt",
     "law_anti_strike_laws": "common/laws/02_labour_associations.txt",
     "law_canton_system": "common/laws/01_trade_policy.txt",
     "law_closed_borders": "common/laws/02_migration.txt",
