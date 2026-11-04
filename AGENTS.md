@@ -16,8 +16,9 @@
 | 工程持续约束 | [工程原则](docs/principles/工程原则.md) |
 | Mod 目标、设计和验收边界 | [Mod 开发原则](docs/principles/Mod开发原则.md) |
 | 生成、包结构、证据和恢复合同 | [工程交付基线](docs/design/exec/工程基线-1.0.md) |
-| 当前架构与计划归档入口 | [架构主计划](docs/design/架构主计划.md) |
-| 子计划状态与历史方向入口 | [架构子计划](docs/design/架构子计划.md) |
+| 当前架构、战略计划与历史入口 | [架构主计划](docs/design/架构主计划.md) |
+| 领域与联动子计划 | [架构子计划](docs/design/架构子计划.md) |
+| 当前深化目标与逐项验收合同 | [架构深化计划](docs/design/架构深化计划.md) |
 | 当前事实与下一动作 | [当前工作清单](docs/design/当前工作清单.md) |
 | 阶段事实和交付收据 | `docs/design/exec/*-结果.md` |
 | 安全问题报告 | [SECURITY.md](SECURITY.md) |

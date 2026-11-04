@@ -2,8 +2,9 @@
 
 当前实施状态见[工作清单](docs/design/当前工作清单.md)和[拓展结果](docs/design/exec/广度深度拓展-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
-当前架构与已完成计划入口见[架构主计划](docs/design/架构主计划.md)；方向归档见[架构子计划](docs/design/架构子计划.md)。
-本轮X1扩展已完成并随3.2.0正式交付；工程与实际安装证据见[交付结果](docs/design/exec/3.2.0-交付结果.md)。旧计划只作历史参考，长期行为和平衡由用户验收。
+当前战略见[架构主计划](docs/design/架构主计划.md)，领域与联动目标见[架构子计划](docs/design/架构子计划.md)，
+深化目标与验收合同见[架构深化计划](docs/design/架构深化计划.md)。新计划已授权实施，当前状态见工作清单；生产版本仍为3.2.0。
+X1扩展已完成并随3.2.0正式交付；工程与实际安装证据见[交付结果](docs/design/exec/3.2.0-交付结果.md)。旧计划只作历史参考，长期行为和平衡由用户验收。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
@@ -28,8 +29,8 @@ Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [架构主计划](docs/design/架构主计划.md)、[架构子计划](docs/design/架构子计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
-5. [3.2.0交付结果](docs/design/exec/3.2.0-交付结果.md)：本轮功能、最终回归、发布、部署与验收边界；旧上下文见[历史归档](docs/design/archive/README.md)。
+4. [架构主计划](docs/design/架构主计划.md)、[架构子计划](docs/design/架构子计划.md)、[架构深化计划](docs/design/架构深化计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+5. [3.2.0交付结果](docs/design/exec/3.2.0-交付结果.md)：当前交付的功能、最终回归、发布、部署与验收边界；旧上下文见[历史归档](docs/design/archive/README.md)。
 
 ## 目录
 
