@@ -468,6 +468,14 @@ def _query_reference(reader, collections, root_facts=None):
     if reader.engine == "any_scope_building":
 
         def building(member):
+            if query == "trade_business_pressure":
+                return conjunction(
+                    capacity(member, "building_trade_center"),
+                    compare(member.get("weekly_profit"), operator.lt, 0),
+                    compare(member.get("cash_reserves_ratio"), operator.lt, 0.25)
+                    if params["tier"] == "strong"
+                    else True,
+                )
             if query == "existing_business":
                 strong = params["tier"] == "strong"
                 return conjunction(
@@ -645,6 +653,12 @@ def _observed_values(index, requested):
                 strong=params.get("tier") == "strong",
             )
             member["level"] = int(params.get("min_level", "1"))
+            if query == "trade_business_pressure":
+                member["is_building_type"] = {
+                    (("argument", item),): item == "building_trade_center" for item in types
+                }
+                member["weekly_profit"] = -1
+                member["cash_reserves_ratio"] = 0 if params["tier"] == "strong" else 0.5
             owned = state()
             owned["any_scope_building"].append(member)
             collections["any_scope_state"].append(owned)
