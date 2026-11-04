@@ -2,28 +2,28 @@
 
 [h2]Amaç[/h2]
 
-Situated AI, her ülkenin gözlemlenebilir bilgileri kullanarak kendi durumuna, kısıtlarına ve çıkarlarına uygun kararlar vermesine yardımcı olur. Bunu Victoria 3'ün özgün mekanikleri içinde yapar.
+Situated AI, her ülkenin gözlemlenebilir bilgilerden yararlanarak kendi durumuna, kısıtlarına ve çıkarlarına uygun kararlar vermesine yardımcı olur. Bunu Victoria 3’ün özgün mekanikleri içinde yapar.
 
-İhtiyaçlar, fırsatlar, faydalar ve maliyetler birlikte değerlendirilir. Mod, yapay zekâ tercihlerine sınırlı ayarlamalar uygular; seçenekleri karşılaştırmak ve eylemleri gerçekleştirmek özgün yapay zekâya aittir. Ülke adına göre sabit bir tarihsel yol belirlenmez.
+Gelişme tercihleri; iç ihtiyaçları, fırsatları, siyasi direnci, mali durumu ve dış tehditleri birlikte dikkate alır. Ülkeler, adlarına göre belirlenmiş sabit bir tarihsel yolu izlemek yerine farklı yollar seçebilir ve koşullar değiştikçe yön değiştirebilir.
 
 [h2]İçerik[/h2]
 
 [list]
-[*][b]Maliye, inşaat ve sanayi:[/b] yönetim, yerel vergi kapasitesi, elektrik ve ulaşım talebi, pazar olanakları ve istihdam; girdiler ve mali risklerle birlikte değerlendirilir. Hazırlık eksikliği, tüm temel gelişme ihtiyaçlarını engellemez.
-[*][b]Teknoloji ve eğitim:[/b] belirli teknolojiler, üniversiteler ve kurumlar gerçek etkilerine ve mevcut koşullara göre değerlendirilir. Kullanıma geçiş hazırlığı bir seçeneği güçlendirir; araştırma tercihi, teknolojinin zaten kullanılmaya başlandığı anlamına gelmez.
-[*][b]Politika ve toplum:[/b] aday yasalar yürürlükteki yasalar, siyasi hareketlerin talepleri ve geçiş maliyetleriyle karşılaştırılır. Eğitim, sağlık, sosyal yardım, çalışma, vatandaşlık, din ve polislik alanlarının farklı etkileri korunur.
-[*][b]Ticaret ve şirketler:[/b] mallara, limanlara ve şirketlere ilişkin fırsatlar; gerçek üretim yöntemlerini, gözlemlenen maliyetleri ve işletme baskılarını dikkate alır.
-[*][b]Diplomasi, bağlı devletler ve güvenlik:[/b] taahhütler, kullanılabilir nüfuz, ordu ve donanma ihtiyaçları, seferberlik ve yenilgi sonrası toparlanma mevcut duruma göre değerlendirilir. Savaş, bağımsız maliyetleri ortadan kaldırmaz.
-[*][b]Birbiriyle bağlantılı kararlar:[/b] birden çok ihtiyaç aynı anda var olabilir. Gözlemlenmiş gerçekler sonraki değerlendirmelere aktarılır; aynı nedenin farklı şiddetleri tekrar tekrar sayılmaz. Eksik bilgi yalnızca kendisine bağlı katkıyı etkiler.
+[*][b]Maliye, inşaat ve sanayi:[/b] İnşaat ihtiyaçlarını, pazar fırsatlarını ve girdi maliyetlerini; mali baskı, yönetim, yerel vergi kapasitesi, elektrik, ulaşım ve istihdamla birlikte değerlendirir. Normal finansmanı temerrütten ayırır; temel gelişme, tek bir ek koşullar listesine bağlanmaz.
+[*][b]Teknoloji ve eğitim:[/b] Teknoloji, üniversite, eğitim yasası ve kurum tercihlerini ülkenin ihtiyaçlarına, bilinen teknolojilere ve mevcut girdilere bağlar. Okuryazarlığı düşük ülkeler temel gelişme fırsatlarını korur; daha iyi hazırlık ilgili iyileştirmeleri destekler.
+[*][b]Politika ve toplum:[/b] Yeni ve mevcut yasaların gerçek faydalarını, siyasi hareketleri, direnci ve geçiş maliyetlerini karşılaştırır. Eğitim, sağlık, sosyal yardım, çalışma, vatandaşlık, din ve polislik alanlarını ayrı ayrı ele alır.
+[*][b]Ticaret ve şirketler:[/b] Ticaret fırsatlarını ve şirketleri belirli mallar, üretim yöntemleri, limanlar ve pazarlar üzerinden değerlendirir. Girdi kıtlığı, ticaret merkezi zararları ve nakit sıkıntısı da hesaba katılır.
+[*][b]Diplomasi, bağlı devletler ve güvenlik:[/b] Diplomasi, bağlılık ilişkileri, ordu, donanma ve seferberlik tercihlerini; hedefler, mevcut taahhütler, nüfuz ve ödeme gücüyle ilişkilendirir. Savaş ihtiyaçları yine maliyetlerle tartılır; zarar görmüş bölgelerin savaş sonrası altyapı onarımı daha fazla önem kazanır.
+[*][b]Alanlar arası bağlantılar:[/b] Eğitim, politika, sanayi ve güvenlik ihtiyaçları ilgili tercihleri aynı anda etkileyebilir. Yürürlükteki yasalar, mevcut kurumlar ve yerel koşullar başka alanlara da yansır. Aynı sorunun tekrar değerlendirilmesi etkisini sınırsız büyütmez; tercihler koşullarla birlikte değişir.
 [/list]
 
-Mod ücretsiz kaynak vermez ve eylemleri zorlamaz. Özgün uygunluk koşulları, maliyetler, siyasi destek, retler, rastlantısallık ve uygulama süreçleri korunur. Oyuncunun karar yolları değiştirilmez.
+Mod, özgün eylem koşullarını ve gerçek maliyetleri koruyarak yapay zekânın tercihlerini ayarlar. Ücretsiz kaynak vermez, eylemleri zorlamaz ve oyuncunun karar verme biçimini değiştirmez.
 
 [h2]Uyumluluk[/h2]
 
-Temel oyun için tasarlanmıştır ve Windows, macOS ile Linux'ta standart mod yapısını kullanır. Oyun sırasında harici bir program gerekmez. Ayrı bir mod oynatma listesi ve yeni oyun önerilir; önceki kayıtlarınızın yedeklerini saklayın.
+Windows, macOS ve Linux’taki temel Victoria 3 için tasarlanmıştır. Oyun sırasında ek bir program çalıştırmak gerekmez. Ayrı bir mod oynatma listesi ve yeni oyun ya da yedeklenmiş bir kayıt önerilir.
 
-Aynı yapay zekâ veya içerik dosyalarını değiştiren başka modlar çakışmalara yol açabilir; bu birleşimlerin uyumluluğu garanti edilmez. Uzun vadeli ülke davranışları, denge ve oyun içi performans oynayarak değerlendirilmelidir.
+Aynı yapay zekâ stratejisi, yasa, bina, teknoloji, diplomasi, askerî içerik veya ilgili dosyaları değiştiren diğer modlar çakışmalara yol açabilir. Bu birleşimlerin uyumluluğu garanti edilmez.
 
 [h2]Desteklenen diller[/h2]
 

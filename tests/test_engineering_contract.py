@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import gzip
+import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -47,13 +50,21 @@ def test_unknown_or_empty_skip_reason_is_rejected() -> None:
         require_skip_category("some unexplained condition")
 
 
-def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
+def test_plan_archival_and_quality_gate_are_explicit() -> None:
     root = Path(__file__).resolve().parents[1]
-    plan = (root / "docs/design/架构主计划.md").read_text(encoding="utf-8")
-    subplans = (root / "docs/design/架构子计划.md").read_text(encoding="utf-8")
+    plan_entry = (root / "docs/design/架构主计划.md").read_text(encoding="utf-8")
+    subplan_entry = (root / "docs/design/架构子计划.md").read_text(encoding="utf-8")
+    plan = (root / "docs/design/archive/X1/架构主计划.md").read_text(encoding="utf-8")
+    subplans = (root / "docs/design/archive/X1/架构子计划.md").read_text(encoding="utf-8")
     previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
+    assert "当前没有待执行的开发计划" in plan_entry
+    assert "当前没有待执行的方向子计划" in subplan_entry
+    assert "(archive/X1/架构主计划.md)" in plan_entry
+    assert "(archive/X1/架构子计划.md)" in subplan_entry
+    assert "已完成并归档" in plan
+    assert "已完成并归档" in subplans
     assert "已授权实施" in plan
     assert "[架构子计划](架构子计划.md)" in plan
     assert "[架构主计划](架构主计划.md)" in subplans
@@ -68,6 +79,17 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     archive = root / "docs/design/archive"
     assert (archive / "manifest.json").is_file()
     assert "历史" in (archive / "README.md").read_text(encoding="utf-8")
+    manifest = json.loads((archive / "X1-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["status"] == "archived_reference_only"
+    assert {row["path"] for row in manifest["originals"]} == {
+        "docs/design/架构主计划.md",
+        "docs/design/架构子计划.md",
+    }
+    for row in manifest["originals"]:
+        raw = gzip.decompress((archive / row["object"]).read_bytes())
+        assert len(raw) == row["bytes"]
+        assert hashlib.sha256(raw).hexdigest() == row["sha256"]
+        assert (archive / row["readable"]).is_file()
     assert "# Situated AI 处境行动决策内核实施计划" in previous
     assert "旧计划已暂停，未完成" in previous
     version = re.search(r"计划版本：(\d+)\.(\d+)", previous)
@@ -83,7 +105,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "由用户验收" in plan
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
-    assert "唯一当前计划" in checklist
+    assert "当前没有待执行的开发计划" in checklist
     assert "架构主计划 X1" in checklist
     assert "长期行为" in checklist
     assert distribution.RELEASE_VERSION in checklist

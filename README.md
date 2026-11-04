@@ -2,7 +2,7 @@
 
 当前实施状态见[工作清单](docs/design/当前工作清单.md)和[拓展结果](docs/design/exec/广度深度拓展-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
-当前架构的战略设计见[架构主计划](docs/design/架构主计划.md)；方向拆解见[架构子计划](docs/design/架构子计划.md)。
+当前架构与已完成计划入口见[架构主计划](docs/design/架构主计划.md)；方向归档见[架构子计划](docs/design/架构子计划.md)。
 本轮X1扩展已完成并随3.2.0正式交付；工程与实际安装证据见[交付结果](docs/design/exec/3.2.0-交付结果.md)。旧计划只作历史参考，长期行为和平衡由用户验收。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
@@ -12,7 +12,7 @@ Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基
 
 底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。
 
-当前范围与验收以架构主计划及3.2.0交付结果为准；[处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)仅作旧计划参考，旧设计与原始证据由[历史归档](docs/design/archive/README.md)导航，只解释对应历史快照。
+当前范围与验收以工程基线及3.2.0交付结果为准；[处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)仅作旧计划参考，旧设计与原始证据由[历史归档](docs/design/archive/README.md)导航，只解释对应历史快照。
 长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 当前决策方式

@@ -2,28 +2,28 @@
 
 [h2]Ziel[/h2]
 
-Situated AI hilft jedem Land, auf Grundlage beobachtbarer Informationen Entscheidungen zu treffen, die zur eigenen Lage, zu seinen Einschränkungen und Interessen passen. Dabei bleiben die ursprünglichen Spielmechaniken von Victoria 3 maßgeblich.
+Situated AI hilft jedem Land, anhand beobachtbarer Informationen Entscheidungen zu treffen, die zur eigenen Lage, zu seinen Einschränkungen und Interessen passen – innerhalb der ursprünglichen Spielmechaniken von Victoria 3.
 
-Bedarf, Chancen und Kosten werden gemeinsam bewertet. Die Mod verändert KI-Präferenzen innerhalb fester Grenzen; die ursprüngliche KI vergleicht und führt die Handlungen weiterhin aus. Historische Wege werden nicht anhand des Ländernamens vorgeschrieben.
+Entwicklungsentscheidungen berücksichtigen innere Bedürfnisse, Chancen, politischen Widerstand, Finanzen und äußere Bedrohungen gemeinsam. Länder können unterschiedliche Wege einschlagen und sich veränderten Umständen anpassen, statt einem durch ihren Namen vorgegebenen historischen Kurs zu folgen.
 
 [h2]Inhalt[/h2]
 
 [list]
-[*][b]Finanzen, Bau und Industrie:[/b] Verwaltung und örtliche Steuerkapazität, Strom- und Transportbedarf, Absatz und Beschäftigung werden gegen Betriebsmittel und Finanzrisiken abgewogen. Fehlende Vorbereitung sperrt nicht sämtliche grundlegenden Entwicklungsmöglichkeiten.
-[*][b]Technologie und Bildung:[/b] Technologien, Universitäten und Institutionen werden nach ihren tatsächlichen Wirkungen und vorhandenen Voraussetzungen bewertet. Bereitschaft zur Einführung verstärkt eine Option, bedeutet aber keine bereits erfolgte Einführung.
-[*][b]Politik und Gesellschaft:[/b] Gesetzeskandidaten werden mit geltendem Recht, politischen Forderungen und Umstellungskosten verglichen. Bildung, Gesundheit, Sozialschutz, Arbeit, Staatsbürgerschaft, Religion und Polizeiwesen behalten ihre unterschiedlichen Wirkungen.
-[*][b]Handel und Unternehmen:[/b] Waren-, Hafen- und Unternehmensmöglichkeiten berücksichtigen echte Produktionsrezepte sowie beobachtete Kosten und betriebliche Belastungen.
-[*][b]Diplomatie, Untertanen und Sicherheit:[/b] Verpflichtungen, verfügbare Einflusskapazität, Heeres- und Marinebedarf, Mobilisierung und Wiederaufbau nach Niederlagen werden im jeweiligen Zusammenhang bewertet. Krieg hebt unabhängige Kosten nicht auf.
-[*][b]Verknüpfte Entscheidungen:[/b] Mehrere Bedürfnisse können gleichzeitig bestehen. Bereits beobachtete Tatsachen fließen in spätere Bewertungen ein. Verschiedene Stärkegrade derselben Ursache werden nicht doppelt gezählt; fehlende Angaben betreffen nur die davon abhängigen Beiträge.
+[*][b]Finanzen, Bau und Industrie:[/b] Wägt Baubedarf, Absatzchancen und Betriebsmittelkosten gegen Finanzdruck, Verwaltung, örtliche Steuerkapazität, Strom, Verkehr und Beschäftigung ab. Normale Finanzierung wird von Zahlungsausfällen unterschieden; grundlegende Entwicklung hängt nicht von einer gemeinsamen Liste zusätzlicher Bedingungen ab.
+[*][b]Technologie und Bildung:[/b] Verknüpft Entscheidungen über Technologien, Universitäten, Bildungsgesetze und Institutionen mit Landesbedarf, vorhandener Technik und verfügbaren Betriebsmitteln. Geringe Alphabetisierung verhindert keine grundlegende Entwicklung; bessere Voraussetzungen begünstigen passende Verbesserungen.
+[*][b]Politik und Gesellschaft:[/b] Vergleicht die tatsächlichen Vorteile neuer und geltender Gesetze, politische Bewegungen, Widerstände und Umstellungskosten. Bildung, Gesundheit, Sozialschutz, Arbeit, Staatsbürgerschaft, Religion und Polizeiwesen werden dabei unterschiedlich berücksichtigt.
+[*][b]Handel und Unternehmen:[/b] Bewertet Handels- und Unternehmensmöglichkeiten anhand konkreter Waren, Produktionsmethoden, Häfen und Märkte. Engpässe, Verluste von Handelszentren und knappe Geldreserven fließen ebenfalls ein.
+[*][b]Diplomatie, Untertanen und Sicherheit:[/b] Verknüpft Diplomatie, Untertanenbeziehungen, Heer, Marine und Mobilisierung mit Zielen, Verpflichtungen, Einfluss und Zahlungsfähigkeit. Kriegsbedarf wird weiterhin gegen Kosten abgewogen; der Wiederaufbau der Infrastruktur in geschädigten Gebieten erhält nach dem Krieg mehr Gewicht.
+[*][b]Verknüpfung der Bereiche:[/b] Bildung, Politik, Industrie und Sicherheit können gleichzeitig auf die jeweiligen Entscheidungen einwirken. Geltende Gesetze, bestehende Institutionen und örtliche Bedingungen beeinflussen andere Bereiche. Ein mehrfach berücksichtigtes Problem wird nicht unbegrenzt verstärkt; Präferenzen ändern sich mit der Lage.
 [/list]
 
-Die Mod verschenkt keine Ressourcen und erzwingt keine Handlungen. Voraussetzungen, Kosten, politische Unterstützung, Ablehnungen, Zufall und Ausführung des Grundspiels bleiben erhalten. Entscheidungen des Spielers bleiben unverändert.
+Die Mod verändert KI-Präferenzen und bewahrt dabei die ursprünglichen Handlungsvoraussetzungen und tatsächlichen Kosten. Sie verschenkt keine Ressourcen, erzwingt keine Handlungen und verändert nicht die Entscheidungen des Spielers.
 
 [h2]Kompatibilität[/h2]
 
-Für das unveränderte Grundspiel mit der üblichen Mod-Struktur unter Windows, macOS und Linux entwickelt. Während des Spiels ist kein externes Programm erforderlich. Ein eigenes Playset und ein neues Spiel werden empfohlen; vorhandene Spielstände sollten gesichert werden.
+Für das unveränderte Victoria 3 unter Windows, macOS und Linux entwickelt. Während des Spiels muss kein zusätzliches Programm laufen. Ein eigenes Playset und ein neues Spiel oder ein gesicherter Spielstand werden empfohlen.
 
-Andere Mods, die dieselben KI- oder Inhaltsdateien ersetzen, können Konflikte verursachen. Ihre Kompatibilität wird nicht garantiert. Langfristiges Verhalten, Balance und Leistung im Spiel müssen im Spielbetrieb beurteilt werden.
+Mods, die dieselben Dateien für KI-Strategien, Gesetze, Gebäude, Technologien, Diplomatie, Militär oder verwandte Inhalte verändern, können Konflikte verursachen. Die Kompatibilität solcher Kombinationen wird nicht garantiert.
 
 [h2]Unterstützte Sprachen[/h2]
 
