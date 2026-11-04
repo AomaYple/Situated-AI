@@ -122,6 +122,7 @@ kind = "number"
 minimum = 0
 
 [actors]
+"common/buildings/06_urban_center.txt" = ["owner"]
 "common/buildings/01_industry.txt" = ["owner"]
 "common/buildings/02_agro.txt" = ["owner"]
 "common/buildings/03_mines.txt" = ["owner"]
@@ -23636,3 +23637,17 @@ conditions = [
 ]
 why = "已整合候选州的征税容量真实低于同州使用量；独立于全国官僚缺口，不要求现有PM或财政健康"
 counterexample = "未整合、容量相等或任一事实未知仅退出地方税收机会；融资与实际纸电话成本继续独立联合，原版资格、玩家和尾部保留；不保证实际税收收益"
+
+
+[[rules]]
+id = "local_power_plant_observed_default_cost"
+source = "common/buildings/06_urban_center.txt"
+field = "building_power_plant.ai_value"
+domain = "fiscal"
+priority = 20620
+contribution_group = "building_fiscal_default"
+operation = "multiply"
+value = 0.85
+conditions = [{ fact = "state_owner_default", op = "=", value = true }]
+why = "电厂真实违约融资成本独立于同州电价供给需求"
+counterexample = "正常借款不扣；违约未知只退出本项；保留首座电厂引导、资格、费用、玩家与原版终结零分"

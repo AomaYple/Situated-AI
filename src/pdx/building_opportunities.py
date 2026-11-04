@@ -360,6 +360,112 @@ def derive(
                         "counterexample": "该成本未知只撤回本项，不声称财政或承载健康；需求与其他已知成本继续联合，保留玩家与关闭路径",
                     }
                 )
+    # Local goods have a separate audited state-goods price contract. They do
+    # not enter the ordinary-market output inference above, and this path only
+    # extends explicitly registered native consumers.
+    for building, good in (
+        ("building_power_plant", "electricity"),
+        ("building_railway", "transportation"),
+    ):
+        field = f"{building}.ai_value"
+        if field not in fields:
+            continue
+        sector = buildings[building]
+        methods = [m for g in sector["groups"] if g["base"] for m in g["methods"]]
+        if not methods or any(good not in m["outputs"] for m in methods):
+            raise ValueError("本地供给机会缺少完整基础PMG共同产出证据")
+        price_key = f"state_local_{good}_price"
+        readers[price_key] = {
+            "engine": "state_goods_pricier",
+            "scope": "root",
+            "kind": "number",
+            "unit": "price_above_base_ratio",
+            "path": [f"sg:{good}"],
+        }
+
+        def local_rule(
+            suffix,
+            value,
+            conditions,
+            group="building_local_goods_demand",
+            *,
+            building=building,
+            field=field,
+        ):
+            rules.append(
+                {
+                    "id": f"building_local_{building}_{suffix}".replace("-", "_"),
+                    "source": fields[field],
+                    "field": field,
+                    "domain": "market",
+                    "operation": "multiply",
+                    "value": value,
+                    "priority": int(chosen["priority_base"]) + len(rules),
+                    "contribution_group": group,
+                    "conditions": conditions,
+                    "why": "同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合",
+                    "counterexample": "未知仅退出对应分量；不推断未来PM、订单或利润，原版首座引导、资格、成本、玩家和尾部保留",
+                }
+            )
+
+        demand = {"fact": price_key, "op": ">", "value": 0.25}
+        local_rule("demand", 1.1, [demand])
+        local_rule("pressure", 1.15, [{"fact": price_key, "op": ">", "value": 0.5}])
+        for method in methods:
+            pm_key = f"pm_active_{building}_{method['id']}".replace("-", "_")
+            readers[pm_key] = {
+                "engine": "is_production_method_active",
+                "scope": "root",
+                "kind": "boolean",
+                "unit": "boolean",
+                "parameters": {"building_type": building, "production_method": method["id"]},
+            }
+            active = {"fact": pm_key, "op": "=", "value": True}
+            ready = [demand, active]
+            for material in method["inputs"]:
+                if material == "electricity":
+                    key = "state_electricity_price"
+                    expected = {
+                        "engine": "state_goods_pricier",
+                        "scope": "root",
+                        "kind": "number",
+                        "unit": "price_above_base_ratio",
+                        "path": ["sg:electricity"],
+                    }
+                    readers[key] = expected
+                    ready.append({"fact": key, "op": "<=", "value": 0.25})
+                    continue
+                for tier in ("balance", "price"):
+                    key = f"state_owner_{material}_{tier}"
+                    expected = _reader(material, tier)
+                    if key in old_readers and old_readers[key] != expected:
+                        raise ValueError("本地供给投入reader身份漂移")
+                    readers[key] = expected
+                    ready.append(
+                        {
+                            "fact": key,
+                            "op": ">=" if tier == "balance" else "<=",
+                            "value": 0 if tier == "balance" else 0.25,
+                        }
+                    )
+                # Railway already owns these exact material-cost groups.
+                if building == "building_power_plant":
+                    local_rule(
+                        f"{method['id']}_{material}_cost",
+                        0.9,
+                        [
+                            active,
+                            {"fact": f"state_owner_{material}_balance", "op": "<", "value": 0},
+                            {"fact": f"state_owner_{material}_price", "op": ">", "value": 0.5},
+                        ],
+                        f"building_active_input_{material}",
+                    )
+            # Principle variants retain their existing infrastructure-ready
+            # and exact cost rules. Avoid duplicating that auxiliary readiness
+            # across this additional local demand; basic/pressure tiers cover
+            # every variant and leave room for the recovery refinement.
+            if not method["id"].endswith("_principle_transport_3"):
+                local_rule(f"{method['id']}_ready", 1.2, ready)
     return {
         "sources": dict(frozen["sources"]),
         "readers": dict(sorted(readers.items())),

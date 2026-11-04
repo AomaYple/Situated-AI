@@ -1,0 +1,168 @@
+# URBANIZATION
+
+building_urban_center = {
+	building_group = bg_service
+	icon = "gfx/interface/icons/building_icons/urban_center.dds"
+	city_type = city
+	residence_points_per_level = 0
+
+	unlocking_technologies = {
+		urbanization
+	}
+
+	production_method_groups = {
+		pmg_amenities
+		pmg_street_lighting
+		pmg_public_transport
+		pmg_urban_clergy
+	}
+
+	buildable = no
+	expandable = no
+	downsizeable = no
+	can_switch_owner = no
+
+	terrain_manipulator = urban_city
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_monuments.dds"
+}
+
+building_art_academy = {
+	aliases = { building_arts_academy }
+	building_group = bg_arts
+
+	city_type = city
+
+	levels_per_mesh = 50
+
+	unlocking_technologies = {
+		romanticism
+	}
+
+	production_method_groups = {
+		pmg_base_building_art_academy
+		pmg_ownership_building_art_academy
+		pmg_principle_freedom_of_movement_3
+	}
+
+	icon = "gfx/interface/icons/building_icons/building_arts_academy.dds"
+
+	required_construction = construction_cost_medium
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_monuments.dds"
+	ai_value = {
+		value = 1000
+		if = { # AI Metternich really wants arts academies
+			limit = {
+				owner ?= {
+					c:AUS ?= this
+					has_journal_entry = je_metternich
+				}
+			}
+            add = 500
+		}
+	}
+}
+
+building_power_plant = {
+	building_group = bg_power
+	icon = "gfx/interface/icons/building_icons/power_plant.dds"
+	levels_per_mesh = 50
+
+	city_type = city
+
+	unlocking_technologies = {
+		electrical_generation
+	}
+
+	production_method_groups = {
+		pmg_base_building_power_plant
+	}
+
+	required_construction = construction_cost_medium
+
+	ai_value = {
+		value = 1000
+
+		# Need 1 level of Power Plants everywhere as its a local good and a prerequisite to enabling electricity PMs to begin with
+		if = {
+			limit = {
+				NOR = {
+					has_building = building_power_plant
+					any_scope_building = {
+						is_building_type = building_power_plant
+						is_under_construction = yes
+					}
+				}
+			}
+			add = 4000
+		}
+
+		# SITAI BEGIN information:building_power_plant.ai_value
+		# ACTION program_87fefb772d9b55ab [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_87fefb772d9b55ab_building_active_input_coal_negative
+			add = { value = 0
+				# building_local_building_power_plant_pm_coal_fired_plant_coal_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+				# building_local_building_power_plant_pm_early_power_plant_coal_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+			}
+			# GROUP program_87fefb772d9b55ab_building_active_input_engines_negative
+			add = { value = 0
+				# building_local_building_power_plant_pm_oil_fired_plant_engines_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+				# building_local_building_power_plant_pm_coal_fired_plant_engines_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+				# building_local_building_power_plant_pm_early_power_plant_engines_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+			}
+			# GROUP program_87fefb772d9b55ab_building_active_input_oil_negative
+			add = { value = 0
+				# building_local_building_power_plant_pm_oil_fired_plant_oil_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+			}
+			# GROUP program_87fefb772d9b55ab_building_active_input_wood_negative
+			add = { value = 0
+				# building_local_building_power_plant_pm_early_power_plant_wood_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+			}
+			# GROUP program_87fefb772d9b55ab_building_fiscal_default_negative
+			add = { value = 0
+				# local_power_plant_observed_default_cost [fiscal]; 电厂真实违约融资成本独立于同州电价供给需求
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } add = -0.15 }
+			}
+			# GROUP program_87fefb772d9b55ab_building_local_goods_demand_positive
+			add = { value = 0
+				# building_local_building_power_plant_pm_oil_fired_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# building_local_building_power_plant_pm_coal_fired_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# building_local_building_power_plant_pm_early_power_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:wood mg:wood = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# building_local_building_power_plant_pressure [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.5 } } } add = 0.15 }
+				# building_local_building_power_plant_demand [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.1 }
+			}
+			min = 0.5
+			max = 1.2
+		} }
+		# SITAI END information:building_power_plant.ai_value
+	}
+
+	possible = {
+		owner = {
+			NOT = { has_law_or_variant = law_type:law_industry_banned }
+		}
+	}
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_monuments.dds"
+}

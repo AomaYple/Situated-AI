@@ -267,6 +267,21 @@ building_railway = {
 				# infrastructure_railway_observed_default_cost [fiscal]; 所有者实际违约对新增铁路承诺提供独立偿付成本；不屏蔽本州基础设施修复需求
 				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } add = -0.15 }
 			}
+			# GROUP program_4e3945f519d8b3e6_building_local_goods_demand_positive
+			add = { value = 0
+				# building_local_building_railway_pm_diesel_trains_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# building_local_building_railway_pm_electric_trains_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_electric_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier <= 0.25 } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# building_local_building_railway_pm_steam_trains_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_steam_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# building_local_building_railway_pm_early_trains_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# building_local_building_railway_pressure [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.5 } } } add = 0.15 }
+				# building_local_building_railway_demand [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.1 }
+			}
 			# GROUP program_4e3945f519d8b3e6_building_output_demand_positive
 			add = { value = 0
 				# infrastructure_railway_prepared_pm_diesel_trains_principle_transport_3 [economy]; 本州基础设施缺口且实际启用对应铁路基础PM，其所有真实商品投入均供应充足时升档同一修复需求；不套用煤炭到电力或柴油配方
@@ -288,7 +303,7 @@ building_railway = {
 				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 exists = owner owner = { is_ai = yes } } } add = 0.1 }
 			}
 			min = 0.5
-			max = 1.2
+			max = 1.4
 		} }
 		# SITAI END information:building_railway.ai_value
 	}

@@ -1064,7 +1064,13 @@ def patch(
         if reader.key not in used_reader_keys:
             continue
         path_proven = all(
-            part in words or (part.startswith("mg:") and part[3:] in words and "mg:grain" in words)
+            part in words
+            or (part.startswith("mg:") and part[3:] in words and "mg:grain" in words)
+            or (
+                part in {"sg:electricity", "sg:transportation"}
+                and part[3:] in words
+                and "sg:transportation" in words
+            )
             for part in reader.path
         )
         if reader.key in coordination_readers:
