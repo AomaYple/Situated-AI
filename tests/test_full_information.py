@@ -1201,9 +1201,9 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert b"# SITAI SUBJECTS BEGIN" not in archive.read(
             "common/ai_strategies/00_default_strategy.txt"
         )
-        # The expanded candidate includes all 70 physical adapter sources;
-        # 38 described the earlier, incomplete production set.
-        assert contract["consumer_count"] == 70
+        # X1 adds the local power-plant source and three treaty sources
+        # to the 70-source A2 baseline; these are physical files, not cards.
+        assert contract["consumer_count"] == 74
         assert "information_rules" in contract["enabled_modules"]
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt")
         assert strategy.startswith(codecs.BOM_UTF8)
