@@ -32,7 +32,7 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.research]
-production_instances = 73
+production_instances = 75
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
