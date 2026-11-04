@@ -9,12 +9,12 @@ Entwicklungsentscheidungen berücksichtigen innere Bedürfnisse, Chancen, politi
 [h2]Inhalt[/h2]
 
 [list]
-[*][b]Finanzen, Bau und Industrie:[/b] Wägt Baubedarf, Absatzchancen und Betriebsmittelkosten gegen Finanzdruck, Verwaltung, örtliche Steuerkapazität, Strom, Verkehr und Beschäftigung ab. Normale Finanzierung wird von Zahlungsausfällen unterschieden; grundlegende Entwicklung hängt nicht von einer gemeinsamen Liste zusätzlicher Bedingungen ab.
-[*][b]Technologie und Bildung:[/b] Verknüpft Entscheidungen über Technologien, Universitäten, Bildungsgesetze und Institutionen mit Landesbedarf, vorhandener Technik und verfügbaren Betriebsmitteln. Geringe Alphabetisierung verhindert keine grundlegende Entwicklung; bessere Voraussetzungen begünstigen passende Verbesserungen.
-[*][b]Politik und Gesellschaft:[/b] Vergleicht die tatsächlichen Vorteile neuer und geltender Gesetze, politische Bewegungen, Widerstände und Umstellungskosten. Bildung, Gesundheit, Sozialschutz, Arbeit, Staatsbürgerschaft, Religion und Polizeiwesen werden dabei unterschiedlich berücksichtigt.
-[*][b]Handel und Unternehmen:[/b] Bewertet Handels- und Unternehmensmöglichkeiten anhand konkreter Waren, Produktionsmethoden, Häfen und Märkte. Engpässe, Verluste von Handelszentren und knappe Geldreserven fließen ebenfalls ein.
-[*][b]Diplomatie, Untertanen und Sicherheit:[/b] Verknüpft Diplomatie, Untertanenbeziehungen, Heer, Marine und Mobilisierung mit Zielen, Verpflichtungen, Einfluss und Zahlungsfähigkeit. Kriegsbedarf wird weiterhin gegen Kosten abgewogen; der Wiederaufbau der Infrastruktur in geschädigten Gebieten erhält nach dem Krieg mehr Gewicht.
-[*][b]Verknüpfung der Bereiche:[/b] Bildung, Politik, Industrie und Sicherheit können gleichzeitig auf die jeweiligen Entscheidungen einwirken. Geltende Gesetze, bestehende Institutionen und örtliche Bedingungen beeinflussen andere Bereiche. Ein mehrfach berücksichtigtes Problem wird nicht unbegrenzt verstärkt; Präferenzen ändern sich mit der Lage.
+[*][b]Wirtschaft und Finanzen:[/b] Wägt Bau-, Industrie- und Infrastrukturvorhaben anhand von Entwicklungsbedarf, Ressourcen, Marktchancen und finanzieller Tragfähigkeit ab.
+[*][b]Technologie und Bildung:[/b] Verknüpft Forschung und Bildung mit dem Bedarf des Landes, seinen vorhandenen Grundlagen und seinen Investitionsmöglichkeiten. Berücksichtigt werden unmittelbare Probleme ebenso wie langfristige Entwicklung.
+[*][b]Politik und Gesellschaft:[/b] Bewertet Gesetze, Institutionen und öffentliche Dienste anhand gesellschaftlicher Bedürfnisse, politischer Kräfte, des Widerstands gegen Reformen und der Übergangskosten.
+[*][b]Handel und Unternehmen:[/b] Wägt Chancen und Kosten von Handel und Unternehmen anhand von Angebot, Nachfrage, Marktverbindungen und wirtschaftlichen Bedingungen ab.
+[*][b]Diplomatie und Sicherheit:[/b] Wägt Diplomatie, Beziehungen zu Untertanen, militärische Vorbereitung und Entscheidungen im Krieg anhand nationaler Interessen, äußerer Bedrohungen, bestehender Verpflichtungen und verfügbarer Fähigkeiten ab.
+[*][b]Verbindungen zwischen Bereichen:[/b] Bezieht relevante innen- und außenpolitische Faktoren gemeinsam ein. Entwicklungs-, Reform- und Sicherheitsbedarf können gleichzeitig in Entscheidungen einfließen; Präferenzen passen sich veränderten Umständen an.
 [/list]
 
 Die Mod verändert KI-Präferenzen und bewahrt dabei die ursprünglichen Handlungsvoraussetzungen und tatsächlichen Kosten. Sie verschenkt keine Ressourcen, erzwingt keine Handlungen und verändert nicht die Entscheidungen des Spielers.

@@ -9,12 +9,12 @@ Gelişme tercihleri; iç ihtiyaçları, fırsatları, siyasi direnci, mali durum
 [h2]İçerik[/h2]
 
 [list]
-[*][b]Maliye, inşaat ve sanayi:[/b] İnşaat ihtiyaçlarını, pazar fırsatlarını ve girdi maliyetlerini; mali baskı, yönetim, yerel vergi kapasitesi, elektrik, ulaşım ve istihdamla birlikte değerlendirir. Normal finansmanı temerrütten ayırır; temel gelişme, tek bir ek koşullar listesine bağlanmaz.
-[*][b]Teknoloji ve eğitim:[/b] Teknoloji, üniversite, eğitim yasası ve kurum tercihlerini ülkenin ihtiyaçlarına, bilinen teknolojilere ve mevcut girdilere bağlar. Okuryazarlığı düşük ülkeler temel gelişme fırsatlarını korur; daha iyi hazırlık ilgili iyileştirmeleri destekler.
-[*][b]Politika ve toplum:[/b] Yeni ve mevcut yasaların gerçek faydalarını, siyasi hareketleri, direnci ve geçiş maliyetlerini karşılaştırır. Eğitim, sağlık, sosyal yardım, çalışma, vatandaşlık, din ve polislik alanlarını ayrı ayrı ele alır.
-[*][b]Ticaret ve şirketler:[/b] Ticaret fırsatlarını ve şirketleri belirli mallar, üretim yöntemleri, limanlar ve pazarlar üzerinden değerlendirir. Girdi kıtlığı, ticaret merkezi zararları ve nakit sıkıntısı da hesaba katılır.
-[*][b]Diplomasi, bağlı devletler ve güvenlik:[/b] Diplomasi, bağlılık ilişkileri, ordu, donanma ve seferberlik tercihlerini; hedefler, mevcut taahhütler, nüfuz ve ödeme gücüyle ilişkilendirir. Savaş ihtiyaçları yine maliyetlerle tartılır; zarar görmüş bölgelerin savaş sonrası altyapı onarımı daha fazla önem kazanır.
-[*][b]Alanlar arası bağlantılar:[/b] Eğitim, politika, sanayi ve güvenlik ihtiyaçları ilgili tercihleri aynı anda etkileyebilir. Yürürlükteki yasalar, mevcut kurumlar ve yerel koşullar başka alanlara da yansır. Aynı sorunun tekrar değerlendirilmesi etkisini sınırsız büyütmez; tercihler koşullarla birlikte değişir.
+[*][b]Ekonomi ve maliye:[/b] İnşaat, sanayi ve altyapı önceliklerini gelişme ihtiyaçları, kaynaklar, pazar fırsatları ve mali kapasiteyle birlikte değerlendirir.
+[*][b]Teknoloji ve eğitim:[/b] Araştırma ve eğitim tercihlerini ülkenin ihtiyaçlarına, mevcut temellere ve yatırım kapasitesine bağlar; güncel sorunları ve uzun vadeli gelişmeyi birlikte dikkate alır.
+[*][b]Politika ve toplum:[/b] Yasaları, kurumları ve kamu hizmetlerini toplumsal ihtiyaçlar, siyasi güçler, reforma direnç ve geçiş maliyetleri açısından değerlendirir.
+[*][b]Ticaret ve şirketler:[/b] Ticaret ve şirketlerin fırsatlarını ve maliyetlerini arz, talep, pazar bağlantıları ve faaliyet koşulları üzerinden değerlendirir.
+[*][b]Diplomasi ve güvenlik:[/b] Diplomasi, bağlılık ilişkileri, askerî hazırlık ve savaş sırasındaki tercihleri ulusal çıkarlar, dış tehditler, mevcut taahhütler ve kullanılabilir kapasiteyle birlikte değerlendirir.
+[*][b]Alanlar arası bağlantılar:[/b] İlgili iç ve dış etkenleri birlikte ele alır. Gelişme, reform ve güvenlik ihtiyaçları kararları aynı anda etkileyebilir; tercihler koşullara göre değişir.
 [/list]
 
 Mod, özgün eylem koşullarını ve gerçek maliyetleri koruyarak yapay zekânın tercihlerini ayarlar. Ücretsiz kaynak vermez, eylemleri zorlamaz ve oyuncunun karar verme biçimini değiştirmez.

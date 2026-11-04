@@ -9,12 +9,12 @@ Las decisiones de desarrollo consideran conjuntamente las necesidades internas, 
 [h2]Contenido[/h2]
 
 [list]
-[*][b]Finanzas, construcción e industria:[/b] Sopesa las necesidades de construcción, las oportunidades de mercado y los costes de los insumos junto con la presión fiscal, la administración, la capacidad tributaria local, la electricidad, el transporte y el empleo. Distingue la financiación normal del impago; el desarrollo básico no depende de una única lista de condiciones adicionales.
-[*][b]Tecnología y educación:[/b] Relaciona las elecciones de tecnologías, universidades, leyes educativas e instituciones con las necesidades del país, las técnicas conocidas y los insumos disponibles. Los países con baja alfabetización conservan oportunidades básicas de desarrollo, mientras que una mejor preparación favorece las mejoras correspondientes.
-[*][b]Política y sociedad:[/b] Compara las ventajas reales de las leyes propuestas y vigentes, los movimientos políticos, la resistencia y los costes de transición, considerando por separado educación, sanidad, bienestar, trabajo, ciudadanía, religión y policía.
-[*][b]Comercio y compañías:[/b] Evalúa las oportunidades comerciales y las compañías a partir de bienes, métodos de producción, puertos y mercados concretos, junto con la escasez de insumos, las pérdidas de los centros de comercio y la falta de liquidez.
-[*][b]Diplomacia, súbditos y seguridad:[/b] Relaciona la diplomacia, las relaciones de dependencia, el ejército, la marina y la movilización con objetivos, compromisos existentes, influencia y solvencia. Las necesidades de guerra siguen sopesándose con los costes, mientras que la recuperación de infraestructuras en regiones devastadas recibe más atención tras la guerra.
-[*][b]Conexiones entre ámbitos:[/b] Las necesidades educativas, políticas, industriales y de seguridad pueden influir a la vez en las decisiones correspondientes. Las leyes vigentes, las instituciones existentes y las condiciones locales afectan a otros ámbitos. Considerar varias veces el mismo problema no amplifica su peso sin límite; las preferencias cambian con la situación.
+[*][b]Economía y finanzas:[/b] Sopesa las prioridades de construcción, industria e infraestructuras según las necesidades de desarrollo, los recursos, las oportunidades de mercado y la capacidad fiscal.
+[*][b]Tecnología y educación:[/b] Relaciona las elecciones de investigación y educación con las necesidades del país, sus bases existentes y su capacidad de inversión, considerando los problemas inmediatos y el crecimiento a largo plazo.
+[*][b]Política y sociedad:[/b] Evalúa leyes, instituciones y servicios públicos según las necesidades sociales, las fuerzas políticas, la resistencia a las reformas y los costes de transición.
+[*][b]Comercio y compañías:[/b] Sopesa las oportunidades y los costes del comercio y las compañías a partir de la oferta, la demanda, las conexiones entre mercados y las condiciones de actividad.
+[*][b]Diplomacia y seguridad:[/b] Sopesa la diplomacia, las relaciones de dependencia, la preparación militar y las decisiones en tiempos de guerra según los intereses nacionales, las amenazas externas, los compromisos existentes y las capacidades disponibles.
+[*][b]Conexiones entre ámbitos:[/b] Considera conjuntamente los factores internos y externos relevantes. Las necesidades de desarrollo, reforma y seguridad pueden influir a la vez en las decisiones, y las preferencias se adaptan a las circunstancias.
 [/list]
 
 El mod ajusta las preferencias de la IA y conserva los requisitos y costes reales de las acciones originales. No concede recursos gratuitos, no fuerza acciones ni cambia la forma en que el jugador toma sus decisiones.

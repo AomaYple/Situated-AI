@@ -9,12 +9,12 @@ Les choix de développement tiennent compte à la fois des besoins intérieurs, 
 [h2]Contenu[/h2]
 
 [list]
-[*][b]Finances, construction et industrie:[/b] Met en balance les besoins de construction, les débouchés et le coût des intrants avec la situation financière, l’administration, la fiscalité locale, l’électricité, les transports et l’emploi. Le financement normal est distingué du défaut de paiement ; les besoins fondamentaux ne dépendent pas tous d’une même série de conditions supplémentaires.
-[*][b]Technologie et éducation:[/b] Relie les choix de technologies, d’universités, de lois scolaires et d’institutions aux besoins du pays, aux techniques connues et aux ressources disponibles. Une faible alphabétisation n’interdit pas le développement de base ; une meilleure préparation favorise les améliorations correspondantes.
-[*][b]Politique et société:[/b] Compare les avantages réels des lois proposées et en vigueur, les mouvements politiques, les résistances et les coûts de transition, en distinguant éducation, santé, protection sociale, travail, citoyenneté, religion et police.
-[*][b]Commerce et entreprises:[/b] Évalue les possibilités commerciales et les entreprises selon les marchandises, les méthodes de production, les ports et les marchés, tout en tenant compte des pénuries, des pertes des centres de commerce et du manque de liquidités.
-[*][b]Diplomatie, dépendances et sécurité:[/b] Relie la diplomatie, les relations de dépendance, l’armée, la marine et la mobilisation aux objectifs, aux engagements, à l’influence et à la solvabilité. Les besoins de guerre restent confrontés à leurs coûts ; les régions dévastées bénéficient d’une attention accrue pour la reconstruction des infrastructures après la guerre.
-[*][b]Liens entre les domaines:[/b] Les besoins éducatifs, politiques, industriels et sécuritaires peuvent peser simultanément sur les choix concernés. Les lois en vigueur, les institutions et les conditions locales influencent les autres domaines. Un même problème n’est pas amplifié sans limite lorsqu’il intervient plusieurs fois ; les préférences évoluent avec la situation.
+[*][b]Économie et finances :[/b] Met en balance les priorités de construction, d’industrie et d’infrastructure avec les besoins de développement, les ressources, les possibilités du marché et les capacités financières.
+[*][b]Technologie et éducation :[/b] Relie les choix de recherche et d’éducation aux besoins du pays, à ses acquis et à sa capacité d’investissement, en tenant compte des problèmes immédiats comme du développement à long terme.
+[*][b]Politique et société :[/b] Évalue les lois, les institutions et les services publics selon les besoins sociaux, les forces politiques, la résistance aux réformes et les coûts de transition.
+[*][b]Commerce et compagnies :[/b] Évalue les possibilités et les coûts du commerce et des compagnies à partir de l’offre, de la demande, des liens entre marchés et des conditions d’activité.
+[*][b]Diplomatie et sécurité :[/b] Met en balance la diplomatie, les relations de dépendance, la préparation militaire et les choix en temps de guerre avec les intérêts nationaux, les menaces extérieures, les engagements existants et les capacités disponibles.
+[*][b]Liens entre domaines :[/b] Considère ensemble les facteurs intérieurs et extérieurs pertinents, afin que les besoins de développement, de réforme et de sécurité puissent peser simultanément sur les décisions et évoluer avec la situation.
 [/list]
 
 Le mod ajuste les préférences de l’IA tout en conservant les conditions et les coûts réels des actions du jeu d’origine. Il ne donne aucune ressource gratuite, ne force aucune action et ne change pas la manière dont le joueur prend ses décisions.

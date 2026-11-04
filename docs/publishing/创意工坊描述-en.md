@@ -9,12 +9,12 @@ Development choices take domestic needs, opportunities, political resistance, fi
 [h2]Content[/h2]
 
 [list]
-[*][b]Finance, construction and industry:[/b] Weighs construction needs, market opportunities and input costs against fiscal pressure, administration, local taxation, electricity, transportation and employment. Normal financing is treated separately from default, and basic development is not locked behind a single checklist of extra conditions.
-[*][b]Technology and education:[/b] Connects choices about specific technologies, universities, education laws and institutions to national needs, existing technology and available inputs. Low-literacy countries retain basic development opportunities, while better preparation strengthens relevant upgrades.
-[*][b]Politics and society:[/b] Compares the actual benefits of proposed and existing laws, political movements, resistance and transition costs, with distinct considerations for education, healthcare, welfare, labor, citizenship, religion and policing.
-[*][b]Trade and companies:[/b] Evaluates trade and company opportunities using specific goods, production methods, ports and market conditions, alongside input shortages, trade-center losses and cash pressure.
-[*][b]Diplomacy, subjects and security:[/b] Links diplomatic, subject, army, navy and mobilization choices to actual goals, existing commitments, influence and solvency. Wartime needs still compete with costs, while damaged areas receive more attention for postwar infrastructure recovery.
-[*][b]Connections between areas:[/b] Education, politics, industry and security needs can influence relevant choices at the same time. Enacted laws, existing institutions and local conditions affect other areas. Repeated consideration of the same problem does not amplify it without limit, and preferences change with the situation.
+[*][b]Economy and finance:[/b] Weighs construction, industry and infrastructure priorities against development needs, resources, market opportunities and fiscal capacity.
+[*][b]Technology and education:[/b] Connects research and education choices to national needs, existing foundations and the capacity to invest, considering both immediate problems and long-term growth.
+[*][b]Politics and society:[/b] Evaluates laws, institutions and public services in light of social needs, political forces, resistance to reform and transition costs.
+[*][b]Trade and companies:[/b] Weighs opportunities and costs for trade and companies using supply, demand, market connections and business conditions.
+[*][b]Diplomacy and security:[/b] Weighs diplomacy, subject relations, military preparation and wartime choices against national interests, external threats, existing commitments and available capabilities.
+[*][b]Connections between areas:[/b] Considers relevant domestic and external factors together, allowing development, reform and security needs to influence decisions alongside one another as circumstances change.
 [/list]
 
 The mod adjusts AI preferences while preserving vanilla action requirements and actual costs. It grants no free resources, forces no actions and leaves the player's own decision-making unchanged.

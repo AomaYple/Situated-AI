@@ -9,12 +9,12 @@ Wybory rozwojowe uwzględniają jednocześnie potrzeby wewnętrzne, możliwości
 [h2]Zawartość[/h2]
 
 [list]
-[*][b]Finanse, budownictwo i przemysł:[/b] Zestawia potrzeby budowlane, możliwości rynkowe i koszty nakładów z presją finansową, administracją, lokalną zdolnością podatkową, energią, transportem i zatrudnieniem. Zwykłe finansowanie jest odróżniane od niewypłacalności; podstawowy rozwój nie wymaga spełnienia jednej wspólnej listy dodatkowych warunków.
-[*][b]Technologia i edukacja:[/b] Łączy wybory dotyczące technologii, uniwersytetów, praw oświatowych i instytucji z potrzebami państwa, znanymi technologiami i dostępnymi nakładami. Niska alfabetyzacja nie odbiera podstawowych możliwości rozwoju; lepsze przygotowanie sprzyja odpowiednim ulepszeniom.
-[*][b]Polityka i społeczeństwo:[/b] Porównuje rzeczywiste korzyści nowych i obecnych praw, ruchy polityczne, opór i koszty zmian, osobno uwzględniając edukację, zdrowie, opiekę społeczną, pracę, obywatelstwo, religię i policję.
-[*][b]Handel i kompanie:[/b] Ocenia szanse handlowe i kompanie na podstawie konkretnych towarów, metod produkcji, portów i rynków. Bierze też pod uwagę niedobory nakładów, straty centrów handlowych i brak gotówki.
-[*][b]Dyplomacja, poddani i bezpieczeństwo:[/b] Wiąże dyplomację, stosunki z poddanymi, armię, flotę i mobilizację z celami, zobowiązaniami, wpływami i wypłacalnością. Potrzeby wojenne nadal są porównywane z kosztami, a odbudowa infrastruktury zniszczonych regionów po wojnie zyskuje na znaczeniu.
-[*][b]Powiązania między dziedzinami:[/b] Potrzeby edukacji, polityki, przemysłu i bezpieczeństwa mogą jednocześnie wpływać na odpowiednie wybory. Obowiązujące prawa, istniejące instytucje i lokalne warunki oddziałują na inne dziedziny. Wielokrotne uwzględnienie tego samego problemu nie wzmacnia go bez końca; preferencje zmieniają się wraz z sytuacją.
+[*][b]Gospodarka i finanse:[/b] Zestawia priorytety budownictwa, przemysłu i infrastruktury z potrzebami rozwoju, zasobami, możliwościami rynkowymi i zdolnością finansową.
+[*][b]Technologia i edukacja:[/b] Łączy wybory badawcze i edukacyjne z potrzebami państwa, istniejącymi podstawami i możliwościami inwestycyjnymi, uwzględniając bieżące problemy oraz długofalowy rozwój.
+[*][b]Polityka i społeczeństwo:[/b] Ocenia prawa, instytucje i usługi publiczne na podstawie potrzeb społecznych, sił politycznych, oporu wobec reform i kosztów przejścia.
+[*][b]Handel i kompanie:[/b] Rozważa szanse i koszty handlu oraz kompanii w oparciu o podaż, popyt, powiązania rynkowe i warunki działalności.
+[*][b]Dyplomacja i bezpieczeństwo:[/b] Rozważa dyplomację, stosunki z poddanymi, przygotowania wojskowe i wybory podczas wojny w świetle interesów państwa, zagrożeń zewnętrznych, istniejących zobowiązań i dostępnych możliwości.
+[*][b]Powiązania między dziedzinami:[/b] Uwzględnia łącznie istotne czynniki wewnętrzne i zewnętrzne. Potrzeby rozwoju, reform i bezpieczeństwa mogą jednocześnie wpływać na decyzje, a preferencje zmieniają się wraz z sytuacją.
 [/list]
 
 Mod zmienia preferencje SI, zachowując oryginalne wymagania działań i rzeczywiste koszty. Nie przyznaje darmowych zasobów, nie wymusza działań i nie zmienia sposobu podejmowania decyzji przez gracza.
