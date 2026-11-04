@@ -63,6 +63,10 @@ def _values(policy, target, pm):
 def test_named_production_employment_tiers(production, generated, target, pm, case, expected):
     if target == "food_industry" and case == "aux_unknown":
         expected = 1.2
+    elif target == "textile_mill" and case == "aux_proven":
+        # This intentionally selected slice contains only output .05 and the
+        # LJ06 prepared employment .10; the full consumer is tested separately.
+        expected = 1.15
     source = "common/buildings/01_industry.txt"
     policy = production[1][source]
     values = _values(policy, target, pm)
@@ -133,6 +137,8 @@ def test_handwritten_real_tier_boundaries(
         # Unknown unemployment skips this exact variant; the demand base remains.
         # Grain balance is intentionally absent from both canonical conditions.
         expected = 1.2
+    if target == "textile_mill" and case in {"edge", "above"}:
+        expected = 1.15  # selected output .05 + prepared employment .10
     source = "common/buildings/01_industry.txt"
     policy = production[1][source]
     values = _values(policy, target, pm)
@@ -559,6 +565,8 @@ def test_known_financing_respects_each_production_employment_contract(
 ):
     if target == "food_industry":
         expected = 1 if loans else (1.3 if auxiliary == 0.1 else 1.2)
+    elif loans and auxiliary == 0.1:
+        expected = 1.15  # selected output .05 + prepared employment .10
     source = "common/buildings/01_industry.txt"
     policy = production[1][source]
     values = _values(policy, target, pm)

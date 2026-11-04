@@ -50,7 +50,13 @@ def _values(policy, target, pm):
     values: dict[str, Any] = {r.key: False if r.kind == "boolean" else 0 for r in policy.readers}
     values.update({r.key: 0.2 for r in policy.readers if r.key.endswith("_price")})
     values.update(
-        state_owner_loans=True, state_owner_academia_completed=True, state_owner_literacy=0.3
+        state_owner_loans=True,
+        state_owner_academia_completed=True,
+        state_owner_literacy=0.3,
+        # This fixture isolates the existing demand/input foundation. Known
+        # abundant peasants exclude the independent D3 tight-labor cost, which
+        # has separate full-consumer boundary/unknown witnesses.
+        state_peasants_share=0.5,
     )
     values[f"pm_active_building_{target}_{pm}"] = True
     if target == "railway":

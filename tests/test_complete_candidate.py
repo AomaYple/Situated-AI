@@ -119,7 +119,7 @@ def test_正式候选包含所有生产模块且不修改生成源():
         "consumer_adapters",
         "country_state",
     }
-    assert metadata["status"] == "candidate"
+    assert metadata["status"] == "released"
     assert policy.aggression == 0
     assert extra.security_enabled
     assert extra.economy_enabled
