@@ -59,7 +59,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 
 ## 标准包
 
-包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明，不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。`package` 按生产源中的版本打包，不代表该版本已经发布。已发布基线与目标版本的标签、包哈希和 GitHub Release 状态只在[版本交付索引](docs/design/exec/版本交付-结果.md)维护；Workshop 页面由发布者在固定包上单独验收和发布。
+包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明，不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。`package` 按生产源中的版本打包，不代表该版本已经发布。已发布基线与目标版本的标签、包哈希和 GitHub Release 状态只在[版本交付索引](docs/design/exec/版本交付-结果.md)维护。固定包部署、Steam 工坊上传与全部语言正文同步可使用 `v3 publish`；参数和平台范围见[发布指南](docs/publishing/README.md)。
 
 安装时将 ZIP 解压到 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset；不要覆盖游戏本体。游戏文本只在打包边界使用 UTF-8 BOM，仓库源统一 UTF-8 无 BOM、LF。
 

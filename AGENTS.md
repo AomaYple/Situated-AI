@@ -42,6 +42,7 @@
 | 工程检查 | `tools/ci/run_check.py` | 使用仓库 `.venv`，无需激活；再生输出写入忽略的 `tools/out/` |
 | 文档和机械表格 | 对应 CLI、`pdx.doc_tables`、`pdx.docgen` | 修改唯一来源后重新生成；不手改指纹、统计和 manifest |
 | 标准包 | `src/pdx/distribution.py`、`v3 package` | 依据工程基线；不得将探针、日志、缓存或历史实验放入生产包 |
+| 本地部署与工坊发布 | `src/pdx/publishing.py`、`deployment.py`、`steam_workshop.py`、`v3 publish` | 固定标准包；默认预览，执行和恢复见[发布指南](docs/publishing/README.md)；不创建常驻任务 |
 | 历史实验 | Git 历史；可再生输出在 `tools/out/` | 不进入当前工作树、计划、默认 CLI 路径或发布包 |
 
 具体命令、检查范围和 Git 操作统一按 [CONTRIBUTING.md](CONTRIBUTING.md) 执行。当前阶段和版本不在本文件维护，避免

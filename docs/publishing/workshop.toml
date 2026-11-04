@@ -1,0 +1,16 @@
+# 工坊条目身份及各语言正文的唯一机器配置；App ID 使用 pdx.config.APP_ID。
+schema = 1
+published_file_id = 3826910830
+
+[descriptions]
+simp_chinese = { steam = "schinese", file = "创意工坊描述.md" }
+english = { steam = "english", file = "创意工坊描述-en.md" }
+french = { steam = "french", file = "创意工坊描述-fr.md" }
+german = { steam = "german", file = "创意工坊描述-de.md" }
+japanese = { steam = "japanese", file = "创意工坊描述-ja.md" }
+korean = { steam = "koreana", file = "创意工坊描述-ko.md" }
+polish = { steam = "polish", file = "创意工坊描述-pl.md" }
+braz_por = { steam = "brazilian", file = "创意工坊描述-pt-BR.md" }
+russian = { steam = "russian", file = "创意工坊描述-ru.md" }
+spanish = { steam = "spanish", file = "创意工坊描述-es.md" }
+turkish = { steam = "turkish", file = "创意工坊描述-tr.md" }

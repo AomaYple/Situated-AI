@@ -80,6 +80,7 @@ from pdx import (
     lockfile,
     observe,
     political_surface,
+    publishing,
     situated,
     snapshot,
     tables_offline,
@@ -2717,6 +2718,52 @@ def package_cmd(
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
     console.print(f"[green]已生成[/] {escape(str(target))}")
+
+
+@app.command("publish")
+def publish_cmd(
+    archive: Annotated[
+        Path, typer.Option("--archive", help="已经生成的固定标准 ZIP")
+    ] = distribution.DEFAULT_PACKAGE_PATH,
+    target: Annotated[
+        Literal["all", "local", "workshop", "descriptions"],
+        typer.Option("--target", help="发布全部、本地、工坊内容或仅描述"),
+    ] = "all",
+    execute: Annotated[bool, typer.Option("--execute", help="实际写入；默认只预检和预览")] = False,
+    changenote: Annotated[
+        str, typer.Option("--changenote", help="工坊内容更新说明；描述更新不重复写更新说明")
+    ] = "",
+    userdir: Annotated[
+        Path | None, typer.Option("--userdir", help="游戏用户目录；默认使用 V3_USERDIR 解析结果")
+    ] = None,
+    run_dir: Annotated[
+        Path | None,
+        typer.Option("--run-dir", help="新的运行/收据目录；默认 tools/out/publishing/run-*"),
+    ] = None,
+) -> None:
+    """从同一标准包部署并上传，逐语言同步正文；需要本机 Steam 登录。"""
+    try:
+        report = publishing.publish(
+            archive=archive,
+            target=target,
+            execute=execute,
+            changenote=changenote,
+            userdir=userdir,
+            run_dir=run_dir,
+        )
+    except (ValueError, OSError) as exc:
+        receipt = getattr(exc, "receipt", None)
+        location = f"；收据：{receipt}" if receipt is not None else ""
+        _fail(f"发布失败：{exc}{location}；部分成功不代表全部完成", EXIT_FAILED)
+    console.print(f"发布状态：{report['status']}；目标：{report['target']}")
+    console.print(f"收据：{escape(report['receipt'])}")
+    if "package" in report:
+        console.print(f"固定包 SHA-256：{report['package']['sha256']}")
+    if report["status"] == "preview":
+        for item in report["plan"]:
+            console.print(f"{item['name']}：{item['action']}")
+    for operation in report["operations"]:
+        console.print(f"{operation['name']}：{operation['status']}")
 
 
 @app.command("citations")
