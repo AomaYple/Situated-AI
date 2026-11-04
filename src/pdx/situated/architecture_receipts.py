@@ -8,7 +8,6 @@ import hashlib
 import json
 import math
 import re
-import subprocess
 import zipfile
 import zlib
 from collections import Counter
@@ -449,47 +448,96 @@ def _evidence_kind(stage: str, requirement: str) -> str:
     }.get((stage, requirement), "delivery")
 
 
-def _archive_bytes(root: Path, commit: str, name: str) -> bytes:
-    """Read the frozen Git object without changing the worktree or refs."""
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(root), "show", f"{commit}:{name}"],
-            capture_output=True,
-            check=False,
-            timeout=30,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise ValueError("historical Git object read timed out") from exc
-    if result.returncode:
-        raise ValueError(f"historical Git object unavailable:{commit}:{name}")
-    return result.stdout
+_ARCHIVE_MANIFESTS = (
+    "docs/design/archive/manifest.json",
+    "docs/design/archive/A2-manifest.json",
+)
+_ARCHIVE_MAX_BYTES = 16 * 1024 * 1024
 
 
-def _archive_identity(root: Path, ref: Any) -> None:
-    if not isinstance(ref, dict) or ref.get("path") != "docs/design/archive/manifest.json":
-        raise ValueError("archive evidence must bind the authoritative archive manifest")
-    manifest = _json(_artifact(root, ref))
-    files = manifest.get("files")
+def _archive_entries(root: Path, manifest: dict[str, Any], *, a2: bool) -> list[dict[str, Any]]:
+    files = manifest.get("originals" if a2 else "files")
     if (
         manifest.get("schema") != 1
-        or manifest.get("role") != "historical_reference_only"
+        or (
+            (manifest.get("plan"), manifest.get("status")) != ("A2", "archived_reference_only")
+            if a2
+            else manifest.get("role") != "historical_reference_only"
+        )
         or not isinstance(files, list)
         or not files
     ):
         raise ValueError("archive manifest identity/files missing")
-    identities: set[tuple[str, str]] = set()
+    identities = set()
+    entries = []
     for item in files:
         if not isinstance(item, dict):
             raise ValueError("invalid archive identity")
         name = _path(root, item.get("path")).relative_to(root).as_posix()
-        commit = item.get("commit")
+        commit = manifest.get("commit") if a2 else item.get("commit")
         if not isinstance(commit, str) or not re.fullmatch(r"[a-f0-9]{40}", commit):
             raise ValueError("archive requires a frozen commit identity")
+        if not isinstance(item.get("sha256"), str) or not _HASH.fullmatch(item["sha256"]):
+            raise ValueError("archive requires a canonical SHA-256")
+        if type(item.get("bytes")) is not int or not 0 < item["bytes"] <= _ARCHIVE_MAX_BYTES:
+            raise ValueError("archive byte count outside bounded storage contract")
         identity = commit, name
         if identity in identities:
             raise ValueError("duplicate archive identity")
         identities.add(identity)
-        raw = _archive_bytes(root, commit, name)
+        entries.append({**item, "commit": commit, "path": name})
+    return entries
+
+
+def _archive_bytes(root: Path, commit: str, name: str) -> bytes:
+    """Read exact frozen bytes from controlled storage, without Git or network."""
+    _path(root, name)
+    if not isinstance(commit, str) or not re.fullmatch(r"[a-f0-9]{40}", commit):
+        raise ValueError("archive requires a frozen commit identity")
+    matches: list[dict[str, Any]] = []
+    for manifest_name in _ARCHIVE_MANIFESTS:
+        manifest_path = _path(root, manifest_name)
+        if not manifest_path.is_file():
+            continue
+        matches.extend(
+            item
+            for item in _archive_entries(
+                root, _json(manifest_path), a2=manifest_name.endswith("A2-manifest.json")
+            )
+            if (item["commit"], item["path"]) == (commit, name)
+        )
+    if len(matches) != 1:
+        raise ValueError(f"historical archive identity missing or ambiguous:{commit}:{name}")
+    item = matches[0]
+    object_path = _path(root, f"docs/design/archive/objects/{commit}/{item['sha256']}.gz")
+    try:
+        with object_path.open("rb") as stream:
+            packed = stream.read(_ARCHIVE_MAX_BYTES + 1)
+        if len(packed) > _ARCHIVE_MAX_BYTES:
+            raise ValueError("compressed archive exceeds storage limit")
+        decoder = zlib.decompressobj(wbits=31)
+        raw = decoder.decompress(packed, item["bytes"] + 1)
+        if (
+            len(raw) != item["bytes"]
+            or not decoder.eof
+            or decoder.unused_data
+            or decoder.unconsumed_tail
+            or hashlib.sha256(raw).hexdigest() != item["sha256"]
+        ):
+            raise ValueError("historical archive bytes or gzip boundary mismatch")
+    except (OSError, EOFError, zlib.error, ValueError) as exc:
+        raise ValueError(f"historical archive object invalid:{commit}:{name}") from exc
+    return raw
+
+
+def _archive_identity(root: Path, ref: Any, *, a2: bool = False) -> None:
+    manifest_name = _ARCHIVE_MANIFESTS[1 if a2 else 0]
+    if not isinstance(ref, dict) or ref.get("path") != manifest_name:
+        raise ValueError("archive evidence must bind the authoritative archive manifest")
+    manifest = _json(_artifact(root, ref))
+    for item in _archive_entries(root, manifest, a2=a2):
+        name = item["path"]
+        raw = _archive_bytes(root, item["commit"], name)
         if (
             type(item.get("bytes")) is not int
             or item["bytes"] != len(raw)

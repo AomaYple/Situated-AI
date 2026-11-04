@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -95,14 +98,122 @@ def test_S0归档核对真实历史字节且无需生成消费者(archive_eviden
 
 def test_仓库归档manifest匹配实际冻结Git对象():
     root = Path(__file__).resolve().parents[1]
-    name = "docs/design/archive/manifest.json"
-    receipts._archive_identity(
-        root,
-        {
-            "path": name,
-            "sha256": hashlib.sha256((root / name).read_bytes()).hexdigest(),
-        },
-    )
+    for name, expected in (
+        ("manifest.json", "7534d0d45f7c1aa2ebefec699ece385f5d61cdf793332eda6c9b8318aca65440"),
+        ("A2-manifest.json", "500f6b57180a9ae57a6977c26f8ee32c17a64b56543b3f79bc1a7fb7f0cbfbb9"),
+    ):
+        relative = f"docs/design/archive/{name}"
+        assert hashlib.sha256((root / relative).read_bytes()).hexdigest() == expected
+        receipts._archive_identity(
+            root,
+            {
+                "path": relative,
+                "sha256": hashlib.sha256((root / relative).read_bytes()).hexdigest(),
+            },
+            a2=name == "A2-manifest.json",
+        )
+
+
+def test_全部归档原字节在没有Git对象的源码副本可核验(tmp_path, monkeypatch, request):
+    source = Path(__file__).resolve().parents[1] / "docs/design/archive"
+    target = tmp_path / "docs/design/archive"
+    shutil.copytree(source, target)
+    assert not (tmp_path / ".git").exists()
+
+    def no_process(*_args, **_kwargs):
+        pytest.fail("archive validation must not invoke Git or any external process")
+
+    monkeypatch.setattr(subprocess, "run", no_process)
+    total = 0
+    for filename in ("manifest.json", "A2-manifest.json"):
+        manifest = target / filename
+        data = json.loads(manifest.read_bytes())
+        receipts._archive_identity(
+            tmp_path,
+            {
+                "path": manifest.relative_to(tmp_path).as_posix(),
+                "sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+            },
+            a2=filename == "A2-manifest.json",
+        )
+        for item in data.get("files", data.get("originals", [])):
+            commit = item.get("commit", data.get("commit"))
+            # Independent original-byte observation, without the production decoder.
+            raw = gzip.decompress(
+                (target / "objects" / commit / f"{item['sha256']}.gz").read_bytes()
+            )
+            assert len(raw) == item["bytes"]
+            assert hashlib.sha256(raw).hexdigest() == item["sha256"]
+            total += 1
+    assert total == 12
+    import test_architecture_baseline_evidence as baseline
+
+    monkeypatch.setattr(baseline, "ROOT", tmp_path)
+    capture = baseline.BaselineCapture(None)
+    baseline.test_s0_archive_identity(capture, request)
+    assert len(capture.cases["archive_identity"]) == 1
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing",
+        "damaged",
+        "truncated",
+        "changed",
+        "trailing",
+        "concatenated",
+        "oversized",
+        "compressed_oversized",
+        "commit",
+        "sha",
+        "size",
+        "boolean_size",
+        "path",
+        "duplicate",
+    ],
+)
+def test_本地归档对象拒绝损坏篡改和不规范身份(tmp_path, fault):
+    raw = b"frozen evidence\n"
+    digest = hashlib.sha256(raw).hexdigest()
+    commit = "a" * 40
+    row = {"path": "docs/design/old.md", "commit": commit, "sha256": digest, "bytes": len(raw)}
+    files = [row]
+    manifest = {"schema": 1, "role": "historical_reference_only", "files": files}
+    target = tmp_path / f"docs/design/archive/objects/{commit}/{digest}.gz"
+    target.parent.mkdir(parents=True)
+    packed = gzip.compress(raw, mtime=0)
+    if fault == "damaged":
+        packed = b"broken gzip"
+    elif fault == "truncated":
+        packed = packed[:-1]
+    elif fault == "changed":
+        packed = gzip.compress(b"changed bytes!!\n", mtime=0)
+    elif fault == "trailing":
+        packed += b"\x00"
+    elif fault == "concatenated":
+        packed += gzip.compress(b"extra", mtime=0)
+    elif fault == "oversized":
+        packed = gzip.compress(b"x" * (len(raw) + 1), mtime=0)
+    elif fault == "compressed_oversized":
+        packed = b"x" * (receipts._ARCHIVE_MAX_BYTES + 1)
+    elif fault == "commit":
+        row["commit"] = "../escape"
+    elif fault == "sha":
+        row["sha256"] = "A" * 64
+    elif fault == "size":
+        row["bytes"] = receipts._ARCHIVE_MAX_BYTES + 1
+    elif fault == "boolean_size":
+        row["bytes"] = True
+    elif fault == "path":
+        row["path"] = "../escape"
+    elif fault == "duplicate":
+        files.append(dict(row))
+    if fault != "missing":
+        target.write_bytes(packed)
+    reference = _write(tmp_path, "docs/design/archive/manifest.json", manifest)
+    with pytest.raises(ValueError):
+        receipts._archive_identity(tmp_path, reference)
 
 
 @pytest.mark.parametrize(
