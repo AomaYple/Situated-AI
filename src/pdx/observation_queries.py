@@ -44,6 +44,7 @@ MARKET_CONSUMPTION_SOURCES = (_ATHEISM, _GFX, _GOODS)
 # Normalized UTF-8, matching the production adapter input contract. These are
 # source identities, not a claim that normalized strings retain raw BOM bytes.
 SOURCE_HASHES = {
+    "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
     "common/laws/00_citizenship.txt": "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f",
     "common/laws/00_church_and_state.txt": "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174",
     "common/laws/01_land_reform.txt": "8576c5bb769ca0bc9c2e3e2d89fb2e2dffcd9b4d479c08b43ca00c639e98e82f",
@@ -68,6 +69,10 @@ SOURCE_HASHES = {
     _GFX: "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
 }
 LAW_SOURCES = {
+    "law_no_police": "common/laws/01_policing.txt",
+    "law_local_police": "common/laws/01_policing.txt",
+    "law_dedicated_police": "common/laws/01_policing.txt",
+    "law_militarized_police": "common/laws/01_policing.txt",
     "law_ethnostate": "common/laws/00_citizenship.txt",
     "law_national_supremacy": "common/laws/00_citizenship.txt",
     "law_racial_segregation": "common/laws/00_citizenship.txt",

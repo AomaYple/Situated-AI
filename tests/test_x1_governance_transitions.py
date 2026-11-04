@@ -338,3 +338,162 @@ def test_g2_unknown_agenda_preserves_authority_cost_and_parent_variants_do_not_d
                 ),
                 {**focused[2], source: focused[2][source] + "\n"},
             )
+
+
+@pytest.mark.parametrize(
+    ("origin", "candidate", "expected"),
+    [
+        ("local", "no", 0),
+        ("local", "local", 0),
+        ("local", "dedicated", 6),
+        ("local", "militarized", -2),
+        ("dedicated", "no", 0),
+        ("dedicated", "local", 6),
+        ("dedicated", "dedicated", 0),
+        ("dedicated", "militarized", -2),
+        ("militarized", "no", 8),
+        ("militarized", "local", 14),
+        ("militarized", "dedicated", 14),
+        ("militarized", "militarized", 0),
+    ],
+)
+def test_g3_full_existing_transition_matrix(focused, origin, candidate, expected):
+    witness(
+        focused,
+        f"law_{candidate}_police",
+        {
+            f"law_context_current_law_{origin}_police": True,
+            "owned_state_turmoil": True,
+            "radical_share": 0.3,
+            "police_investment": 1,
+        },
+        expected,
+    )
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({"police_investment": 0}, 6),
+        ({"police_investment": 1}, -2),
+        ({"police_investment": 3}, -6),
+        ({"police_investment": 5}, -6),  # No assertion that three is the maximum.
+        ({"police_investment": None}, 6),
+        ({"owned_state_turmoil": False}, 6),
+        ({"owned_state_turmoil": None}, 6),
+        ({"law_context_current_law_dedicated_police": None}, 6),
+        ({"bureaucracy": -1, "default": True}, -2),  # Existing same-price institution.
+    ],
+)
+def test_g3_militarized_risk_uses_actual_investment_and_local_unknown(focused, changes, expected):
+    witness(
+        focused,
+        "law_militarized_police",
+        {
+            "law_context_current_law_dedicated_police": True,
+            "owned_state_turmoil": True,
+            "police_investment": 1,
+            **changes,
+        },
+        expected,
+    )
+
+
+@pytest.mark.parametrize(
+    ("origin", "candidate", "investment", "turmoil", "expected"),
+    [
+        ("local", "dedicated", 0, True, 6),
+        ("local", "dedicated", 1, True, 0),
+        ("local", "dedicated", 3, True, -3),
+        ("local", "dedicated", 1, False, 6),
+        ("local", "dedicated", 1, None, 6),
+        ("militarized", "dedicated", 0, True, 6),
+        ("militarized", "dedicated", 1, True, 14),
+        ("militarized", "dedicated", 3, True, 18),
+        ("militarized", "dedicated", 1, False, 6),
+        ("dedicated", "militarized", 3, False, 6),
+    ],
+)
+def test_g3_protection_and_mortality_are_distinct_actual_differences(
+    focused, origin, candidate, investment, turmoil, expected
+):
+    witness(
+        focused,
+        f"law_{candidate}_police",
+        {
+            f"law_context_current_law_{origin}_police": True,
+            "owned_state_turmoil": turmoil,
+            "police_investment": investment,
+        },
+        expected,
+    )
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({}, 6),
+        ({"bureaucracy": -1}, 0),
+        ({"default": True}, -2),
+        ({"bureaucracy": -1, "default": True}, -8),
+        ({"bureaucracy": 0}, 6),
+        ({"bureaucracy": None, "default": True}, -2),
+        ({"bureaucracy": -1, "default": None}, 0),
+        ({"law_context_current_law_no_police": None, "bureaucracy": -1, "default": True}, 6),
+    ],
+)
+def test_g3_new_institution_administration_and_default_are_independent(focused, changes, expected):
+    witness(
+        focused,
+        "law_dedicated_police",
+        {
+            "law_context_current_law_no_police": True,
+            "police_investment": 0,
+            **changes,
+        },
+        expected,
+    )
+
+
+def test_g3_unknown_agenda_preserves_risk_and_native_refusals(focused):
+    law = "law_militarized_police"
+    witness(
+        focused,
+        law,
+        {
+            "law_context_current_law_local_police": True,
+            "police_investment": 1,
+            "owned_state_turmoil": True,
+            f"law_context_{law}_movement_base": None,
+        },
+        -14,
+        support=None,
+    )
+    witness(
+        focused,
+        law,
+        {
+            "law_context_current_law_local_police": True,
+            "police_investment": 3,
+            "owned_state_turmoil": True,
+            "radical_share": 0.3,
+            "legitimacy": 24,
+            "insurrection": True,
+        },
+        -17,
+    )
+    for law in (
+        "law_no_police",
+        "law_local_police",
+        "law_dedicated_police",
+        "law_militarized_police",
+    ):
+        witness(focused, law, {}, 0, support=None)
+        witness(focused, law, {}, 0, is_ai=False)
+        witness(focused, law, {f"law_context_current_{law}": True}, 0, support=0.25)
+    source = "common/laws/01_policing.txt"
+    with pytest.raises(ValueError, match="漂移"):
+        observation_queries.compile_query(
+            observation_queries.LawMovementSupport(law),
+            {**focused[2], source: focused[2][source] + "\n"},
+        )

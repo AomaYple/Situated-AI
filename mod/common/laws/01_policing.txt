@@ -34,8 +34,47 @@ law_no_police = {
 				# political_capacity_law_no_police [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_2159008e7b60305b_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_no_police_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_no_police_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_2159008e7b60305b_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_no_police_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_no_police } } add = -10 }
+				# law_context_law_no_police_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_no_police } } add = -6 }
+			}
+			# GROUP program_2159008e7b60305b_law_police_mortality_positive
+			add = { value = 0
+				# law_context_law_no_police_law_militarized_police_mortality_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = 12 }
+				# law_context_law_no_police_law_militarized_police_mortality_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = 8 }
+			}
+			# GROUP program_2159008e7b60305b_law_police_movement_loss_negative
+			add = { value = 0
+				# law_context_law_no_police_law_militarized_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				# law_context_law_no_police_law_militarized_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				# law_context_law_no_police_law_dedicated_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				# law_context_law_no_police_law_dedicated_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_no_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+			}
+			# GROUP program_2159008e7b60305b_law_police_turmoil_protection_negative
+			add = { value = 0
+				# law_context_law_no_police_law_local_police_turmoil_protection_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -9 }
+				# law_context_law_no_police_law_local_police_turmoil_protection_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = -6 }
+			}
+			min = -35
+			max = 22
 		} }
 		# SITAI END information:law_no_police.ai_enact_weight_modifier
 	}
@@ -110,8 +149,65 @@ law_local_police = {
 				# political_capacity_law_local_police [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_3bc4301d2294caae_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_local_police_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_local_police_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_3bc4301d2294caae_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_local_police_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_local_police } } add = -10 }
+				# law_context_law_local_police_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_local_police } } add = -6 }
+			}
+			# GROUP program_3bc4301d2294caae_law_police_mortality_positive
+			add = { value = 0
+				# law_context_law_local_police_law_militarized_police_mortality_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = 12 }
+				# law_context_law_local_police_law_militarized_police_mortality_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = 8 }
+			}
+			# GROUP program_3bc4301d2294caae_law_police_movement_loss_negative
+			add = { value = 0
+				# law_context_law_local_police_law_militarized_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				# law_context_law_local_police_law_militarized_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				# law_context_law_local_police_law_dedicated_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				# law_context_law_local_police_law_dedicated_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_local_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+			}
+			# GROUP program_3bc4301d2294caae_law_police_new_institution_bureaucracy_negative
+			add = { value = 0
+				# law_context_law_local_police_new_institution_bureaucracy [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police bureaucracy < 0 } } add = -6 }
+			}
+			# GROUP program_3bc4301d2294caae_law_police_new_institution_default_negative
+			add = { value = 0
+				# law_context_law_local_police_new_institution_default [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police in_default = yes } } add = -8 }
+			}
+			# GROUP program_3bc4301d2294caae_law_police_turmoil_protection_positive
+			add = { value = 0
+				# law_context_law_local_police_law_militarized_police_turmoil_protection_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = 9 }
+				# law_context_law_local_police_law_dedicated_police_turmoil_protection_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = 9 }
+				# law_context_law_local_police_law_no_police_turmoil_protection_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = 9 }
+				# law_context_law_local_police_law_militarized_police_turmoil_protection_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = 6 }
+				# law_context_law_local_police_law_dedicated_police_turmoil_protection_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = 6 }
+				# law_context_law_local_police_law_no_police_turmoil_protection_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = 6 }
+			}
+			min = -40
+			max = 31
 		} }
 		# SITAI END information:law_local_police.ai_enact_weight_modifier
 	}
@@ -218,8 +314,54 @@ law_dedicated_police = {
 				# political_capacity_law_dedicated_police [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_8e3c8ebc19563fec_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_dedicated_police_law_local_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				# law_context_law_dedicated_police_law_no_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				# law_context_law_dedicated_police_law_local_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 12 }
+				# law_context_law_dedicated_police_law_no_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 12 }
+				# law_context_law_dedicated_police_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_dedicated_police_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_8e3c8ebc19563fec_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_dedicated_police_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_dedicated_police } } add = -10 }
+				# law_context_law_dedicated_police_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_dedicated_police value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_dedicated_police } } add = -6 }
+			}
+			# GROUP program_8e3c8ebc19563fec_law_police_mortality_positive
+			add = { value = 0
+				# law_context_law_dedicated_police_law_militarized_police_mortality_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = 12 }
+				# law_context_law_dedicated_police_law_militarized_police_mortality_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_militarized_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = 8 }
+			}
+			# GROUP program_8e3c8ebc19563fec_law_police_new_institution_bureaucracy_negative
+			add = { value = 0
+				# law_context_law_dedicated_police_new_institution_bureaucracy [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police bureaucracy < 0 } } add = -6 }
+			}
+			# GROUP program_8e3c8ebc19563fec_law_police_new_institution_default_negative
+			add = { value = 0
+				# law_context_law_dedicated_police_new_institution_default [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police in_default = yes } } add = -8 }
+			}
+			# GROUP program_8e3c8ebc19563fec_law_police_turmoil_protection_negative
+			add = { value = 0
+				# law_context_law_dedicated_police_law_local_police_turmoil_protection_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -9 }
+				# law_context_law_dedicated_police_law_local_police_turmoil_protection_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = -6 }
+			}
+			min = -43
+			max = 26
 		} }
 		# SITAI END information:law_dedicated_police.ai_enact_weight_modifier
 	}
@@ -324,8 +466,62 @@ law_militarized_police = {
 				# political_capacity_law_militarized_police [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 0
+			# GROUP program_7193bf2e0dafdc8f_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_militarized_police_law_local_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				# law_context_law_militarized_police_law_no_police_movement_radicalization_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				# law_context_law_militarized_police_law_local_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 12 }
+				# law_context_law_militarized_police_law_no_police_movement_radicalization_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 12 }
+				# law_context_law_militarized_police_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_militarized_police_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_7193bf2e0dafdc8f_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_militarized_police_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_militarized_police } } add = -10 }
+				# law_context_law_militarized_police_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_militarized_police value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_militarized_police } } add = -6 }
+			}
+			# GROUP program_7193bf2e0dafdc8f_law_police_mortality_negative
+			add = { value = 0
+				# law_context_law_militarized_police_law_dedicated_police_mortality_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -12 }
+				# law_context_law_militarized_police_law_local_police_mortality_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -12 }
+				# law_context_law_militarized_police_law_no_police_mortality_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -12 }
+				# law_context_law_militarized_police_law_dedicated_police_mortality_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_dedicated_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = -8 }
+				# law_context_law_militarized_police_law_local_police_mortality_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = -8 }
+				# law_context_law_militarized_police_law_no_police_mortality_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = -8 }
+			}
+			# GROUP program_7193bf2e0dafdc8f_law_police_new_institution_bureaucracy_negative
+			add = { value = 0
+				# law_context_law_militarized_police_new_institution_bureaucracy [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police bureaucracy < 0 } } add = -6 }
+			}
+			# GROUP program_7193bf2e0dafdc8f_law_police_new_institution_default_negative
+			add = { value = 0
+				# law_context_law_militarized_police_new_institution_default [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police in_default = yes } } add = -8 }
+			}
+			# GROUP program_7193bf2e0dafdc8f_law_police_turmoil_protection_negative
+			add = { value = 0
+				# law_context_law_militarized_police_law_local_police_turmoil_protection_invested [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -9 }
+				# law_context_law_militarized_police_law_local_police_turmoil_protection_base [political]; 现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_local_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } any_scope_state = { turmoil > 0.1 } } } add = -6 }
+			}
+			min = -50
+			max = 14
 		} }
 		# SITAI END information:law_militarized_police.ai_enact_weight_modifier
 	}
