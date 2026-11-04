@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "plan": "X1",
+  "status": "archived_reference_only",
+  "commit": "5a3c627867c1e5b3097d50e34418a7559615f1da",
+  "originals": [
+    {
+      "path": "docs/design/架构主计划.md",
+      "sha256": "a430d3f8b754712ac9b5815cd3d1883a5cfab774ba615d88c0f46f21c5abcb93",
+      "bytes": 5391,
+      "object": "objects/5a3c627867c1e5b3097d50e34418a7559615f1da/a430d3f8b754712ac9b5815cd3d1883a5cfab774ba615d88c0f46f21c5abcb93.gz",
+      "readable": "X1/架构主计划.md"
+    },
+    {
+      "path": "docs/design/架构子计划.md",
+      "sha256": "0ad86cb820c7ac0287c084ca623de18c239114b2b3e137eb01a0c93cf3b14b42",
+      "bytes": 6804,
+      "object": "objects/5a3c627867c1e5b3097d50e34418a7559615f1da/0ad86cb820c7ac0287c084ca623de18c239114b2b3e137eb01a0c93cf3b14b42.gz",
+      "readable": "X1/架构子计划.md"
+    }
+  ]
+}
