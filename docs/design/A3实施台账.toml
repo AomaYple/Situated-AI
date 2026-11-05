@@ -6,6 +6,127 @@ schema = 1
 plan = "A3"
 freeze = "2026-11-05 / Victoria 3 1.14.5 / A3-0 initial-direction-freeze"
 
+# 最终接口/业务复核新增；原80项保留，不删除或缩小分母。
+[[obligations]]
+id = "B05.5.4"
+parent = "B05.5"
+title = "紧急救济政令的真实灾害需要与承受代价"
+status = "pending"
+question = "紧急救济已有州灾害资格，但平均SOL不低于期望时AI权重仍为零，是否遗漏独立灾害需要？"
+acceptance = "锁定政令州ROOT与owner上下文，在共享程序中让真实灾害需要独立参与，相关成本联合；保留原资格、效果、rank缩放成本和政治尾部；有独立参考、实际PDX、对象隔离、未知及关闭见证。"
+source_paths = ["src/pdx/decision_adapters.py", "src/pdx/decision_interfaces.py", "src/pdx/situated/compiler.py"]
+consumer_investigation = "common/decrees/00_decree.txt:179 decree_emergency_relief.ai_weight；起始value0不是拒绝尾零；原政治multiply0.5仍执行。"
+existing_state = "完整原版资格含饥荒/受创/收成/饥饿人口，但唯一add100依赖average_sol<average_expected_sol。"
+gap = "实际灾害与平均生活差不等价；精确政令上下文、消费者角色及新需要尚须实施。"
+evidence = []
+
+[[obligations]]
+id = "B10.4.2"
+parent = "B10.4"
+title = "本国多场低支持战争与新增扩张承诺"
+status = "pending"
+question = "本国至少两场各自低战争支持的真实负担，是否遗漏于新增征服目标机会成本？"
+acceptance = "本国战争集合、逐战本国支持过滤后count、阈值两侧和缺失三值精确；有界成本进入既有征服消费者，与原战败恢复同因取强、融资独立，保留原版尾部和对象资格。"
+source_paths = ["src/pdx/observation_queries.py", "src/pdx/situated/pdx_eval.py", "src/pdx/decision_adapters.py"]
+consumer_investigation = "原版any_scope_war/has_war_support(target=root/owner)及count语法具有真实调用和文档，不能泛称未暴露。"
+existing_state = "现有at_war/战败/军力不是本国过滤后的低支持战争数量。"
+gap = "新增有限查询与一个真实新增扩张承诺的共享因果成本，不伪造和平writer或胜率。"
+evidence = []
+
+# 2026-11-05 C1补盘新增义务；独立common8856面不覆盖events全部AI选项。
+# 不删除初始方向项、不将pending改为完成；证据详见tools/out/a3/scope-disposition-audit.md。
+
+[[obligations]]
+id = "B12.4.2"
+parent = "B12.4"
+title = "自主外交提案独立融资与恢复代价"
+status = "pending"
+question = "da_increase_autonomy_of_self.ai.propose_score原版100及匈牙利JE倍率之外，是否遗漏本国融资与已观察恢复成本？"
+acceptance = "证明外交提案ROOT及目标身份，新增有界独立成本并保留possible/will_propose/accept/effects；同目标正反、未知、玩家、关闭、原版尾部与真实PDX见证。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
+consumer_investigation = "原件common/diplomatic_actions/38_subjects_increase_autonomy.txt:352，da_increase_autonomy_of_self.ai.propose_score；独立于已有wargoal_scores.increase_autonomy风险。"
+existing_state = "原版提案分100，仅特定匈牙利JE乘3；现有A3自主战争目标成本不能代替外交行动提案。"
+gap = "已确认合法数值面存在、原版该分量遗漏融资和恢复观察；需精确外交数值适配/上下文合同，不能复用错误target或改资格。"
+evidence = []
+
+[[obligations]]
+id = "B12.2.2"
+parent = "B12.2"
+title = "降低附属付款的宗主机会成本"
+status = "pending"
+question = "decrease_payments.ai.propose_score固定10，宗主融资压力应如何与保护关系及附属自主需要共同参与？"
+acceptance = "精确宗主ROOT和目标附属；原关系/保护/liberty资格不改，独立融资机会成本有界且未知保守；实际参考/PDX、对象互换、退出与尾部见证。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
+consumer_investigation = "common/diplomatic_actions/33_subjects_decrease_payments.txt:79，decrease_payments.ai.propose_score；现原版will_propose已处理关系/态度/liberty/策略。"
+existing_state = "原版提案分固定10，无本国收支/违约分量；资格和减免支付效果仍由原版管理。"
+gap = "新增本国已观察融资的独立有界机会成本，不能把付款宽免当创造收入；需新精确外交适配。"
+evidence = []
+
+[[obligations]]
+id = "B08.3.2"
+parent = "B08.3"
+title = "苏伊士运河勘测的持续承诺代价"
+status = "pending"
+question = "suez_survey_decision.ai_chance仅以produced_bureaucracy总量及原版战争/策略条件判断，是否应另计净官僚和融资负担？"
+acceptance = "保留原版总官僚/地理/利益/科技和终结零，仅在真实合法决议数值端表达净官僚/融资成本；局部未知、玩家、关闭、原版效果及PDX正反见证。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
+consumer_investigation = "common/decisions/canal_decisions.txt，suez_survey_decision.ai_chance；produced_bureaucracy>5000不等于可用bureaucracy充足。"
+existing_state = "原版已保护科技/利益/地理、孤立主义、战争和博弈状态；未观察净官僚、违约和收支。"
+gap = "精确决议ai_chance上下文/单位适配与独立持续承诺成本；不授予运河建成或购买资格。"
+evidence = []
+
+[[obligations]]
+id = "B08.3.3"
+parent = "B08.3"
+title = "巴拿马运河勘测的持续承诺代价"
+status = "pending"
+question = "panama_survey_decision.ai_chance的独立候选对象是否遗漏净官僚和融资负担？"
+acceptance = "独立核对巴拿马原版资格、零与效果；同一produced_bureaucracy下仅改变净官僚/融资应改变有界成本；对象隔离、未知、关闭及真实PDX见证。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
+consumer_investigation = "common/decisions/canal_decisions.txt，panama_survey_decision.ai_chance；不得仅用苏伊士样例代签第二候选。"
+existing_state = "原版已有总官僚阈值、战争和孤立主义零；没有净融资/可用官僚独立分量。"
+gap = "在共享参数化实现中保留精确对象身份和各自资格；新增成本，不复制通用海外倍率。"
+evidence = []
+
+[[obligations]]
+id = "B05.5.2"
+parent = "B05.5"
+title = "events根全部AI选项与可选评分槽补盘"
+status = "pending"
+question = "common-only8856面未覆盖events；723个显式ai_chance及4840个option候选的作用域、资格和决策价值如何逐项闭合？"
+acceptance = "扩展唯一独立发现流程并冻结新增原版身份；显式AI字段、无字段可选槽和顶层ai开头事件ID分开；精确合法性/价值逐项分类，有价值缺口实施，未证接口保留待确认。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/parser.py", "docs/design/架构子计划.md"]
+consumer_investigation = "328个events txt AST无解析失败；723显式ai_chance位于116文件，3顶层ai开头事件名不是AI字段；4840 option包括无显式权重候选。"
+existing_state = "独立基线content_roots仅common，少数events只作参数证据；现不具全events消费者分母。"
+gap = "C1范围缺口；不得将历史/剧情标签等同无决策价值，也不得把所有options当已合法数值端。"
+evidence = []
+
+[[obligations]]
+id = "B05.5.3"
+parent = "B05.5"
+title = "公共医疗改革事件的处境与政治成本"
+status = "pending"
+question = "healthcare_laws.5的两个50基权重只在忽视反对者分支按IG approval扣分，是否遗漏真实支持/反对规模及社会受益？"
+acceptance = "先证country_event内option.ai_chance的实际调用ROOT与base/modifier语法，保留转法取消/已存IG/随机效果资格；只用可证事实的独立收益/政治成本，不把law候选当已生效制度。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/decision_adapters.py", "src/pdx/situated/compiler.py"]
+consumer_investigation = "events/law_events/healthcare_laws.txt，healthcare_laws.5 options healthcare_laws.5.a/.b，country_event、placement ROOT，ai_chance行413/448。"
+existing_state = "原版触发限当前转公共医疗、现慈善/私保、有非边缘反对IG；a按该IG approval<-5扣25，b固定50。"
+gap = "有实质改革/政治取舍的精确事件选项候选，接口语义及新增因果仍待确认；不能以现law适配器代签。"
+evidence = []
+
+[[obligations]]
+id = "B06.3.2"
+parent = "B06.3"
+title = "疫情响应事件的健康与经济代价"
+status = "pending"
+question = "plague.5封锁/措施/无响应三选项无显式ai_chance，默认措施选项；能否合法表达实际疫情暴露与经济成本的处境取舍？"
+acceptance = "证明合法新增AIWeight槽、真实AI调用及country ROOT，显式三选项政策以独立设计和原版事实验收；不声称等价于未证的缺省权重。保留疾病事件、6月修正、冷却、原作用域和实际响应标记可并存的边界；未知必要授权保持未完成。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/decision_adapters.py", "src/pdx/situated/compiler.py"]
+consumer_investigation = "events/spanish_flu_events.txt plague.5 country_event placement ROOT，options plague.5.a/.b/.c；由spanish_flu_response触发，b为default。"
+existing_state = "三选项实际设置plague_lockdown/plague_measures及患病州6月修正，c移除措施；现无显式AI权重。"
+gap = "真实健康/经济取舍需纳入调查，不因缺ai_chance静默遗漏；接口和可读成本未证前保持待确认。"
+evidence = []
+
 [[obligations]]
 id = "B01.1.1"
 parent = "B01.1"
@@ -834,7 +955,7 @@ question = "待逐边调查实际事实端口、对象映射、合法影响端�
 acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
 source_paths = ["mod/decisions/relations.toml", "mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml", "mod/decisions/technology_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml", "mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/diplomatic_goals.toml"]
 consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
-existing_state = "财政迟滞/62日TTL与recently_lost_war已用于部分重建/建设/扩张消费者。"
+existing_state = "A3-0基线曾含财政迟滞/62日TTL及recently_lost_war。当前集成改为消费者按需重读财政，移除无消费者更新生成，保留原版战败有限记忆；验收仍待本链逐边完成。"
 gap = "待向遗漏新承诺接战败成本和恢复退出；改革需要仍受真实政治资格，不伪造失败学习。"
 evidence = []
 
@@ -857,7 +978,7 @@ parent = "C2"
 title = "类型化事实和领域端口"
 status = "pending"
 question = "Signal/Reader已有部分身份字段；待让原始来源闭包、实体映射、单位、有效时机和未知策略真正进入规则/显式卡共用的生产端口。"
-acceptance = "至少一个真实writer贯穿精确Reader与类型端口lowering；拒绝死端口、未声明依赖、错对象/单位和派生环。"
+acceptance = "全部实际端口使用及适配家族贯穿精确Reader、类型端口和生产lowering；逐家族验证数值语法、ROOT/owner/target/saved scope、未知/关闭/玩家和原版尾部，拒绝死端口、未声明依赖、错对象/单位和派生环。单个writer仅验证方法，不代签全合同。"
 source_paths = ["src/pdx/situated/signals.py", "src/pdx/situated/schema.py", "src/pdx/situated/decision_ir.py"]
 consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
 existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
