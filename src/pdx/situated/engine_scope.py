@@ -12,9 +12,9 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 REPO = Path(__file__).resolve().parents[3]
-MANIFEST = REPO / "research/situated/victoria3-1.14.5-technology-scope.json"
-MANIFEST_ID = "research/situated/victoria3-1.14.5-technology-scope.json"
-MANIFEST_SHA256 = "de12ca6de8d06b54f40f78e3fe807e15c271b987fafb45b576b896bc21284c90"
+MANIFEST_ID = "research/situated/victoria3-1.15.0-technology-scope.json"
+MANIFEST = REPO / MANIFEST_ID
+MANIFEST_SHA256 = "1c928bf462a07b399f9058256c1c97cd85cda6a036aea73bac47eae6dcd44336"
 STRATEGY_MANIFEST_ID = "research/situated/victoria3-1.14.5-strategy-scope-r7.json"
 STRATEGY_MANIFEST = REPO / STRATEGY_MANIFEST_ID
 STRATEGY_MANIFEST_SHA256 = "3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1"
@@ -914,9 +914,9 @@ def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologySc
         hashes,
         (
             f"{MANIFEST_ID}:sha256={manifest_hash}",
-            "@engine/binaries/victoria3.exe:0x141783e29",  # exact technology parser
-            "@engine/binaries/victoria3.exe:0x14161a8c0",  # Country scope tag
-            "@engine/binaries/victoria3.exe:0x141538b90",  # base formula evaluation
+            "@engine/binaries/victoria3.exe:0x141902e89",  # exact technology parser
+            "@engine/binaries/victoria3.exe:0x141791890",  # Country scope tag
+            "@engine/binaries/victoria3.exe:0x1415d0690",  # base formula evaluation
         ),
         tuple(
             sorted(

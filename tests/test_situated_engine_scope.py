@@ -162,13 +162,30 @@ def test_manifest_retains_raw_scope_and_formula_evidence():
         "capability": "direct",
     }
     assert data["exe"]["sha256"] == (
-        "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54"
+        "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"
     )
     points = {item["label"]: item for item in data["observations"]}
-    assert points["Country scope type tag getter"]["bytes"] == "b805000000c3"
-    assert points["AI candidate base script value evaluation"]["va"] == "0x141538b79"
-    assert len(data["limits"]) == 4
+    assert points["country scope tag5 getter"]["bytes"] == "b805000000c3"
+    assert points["AI three country scope slots context and value evaluator call"]["va"] == (
+        "0x1415d0656"
+    )
+    assert data["interpretation"]["qualifier"].startswith("eligibility pre-check occurs BEFORE")
+    assert len(data["limits"]) == 6
     assert all(not Path(key).is_absolute() for key in data["script_hashes"])
+
+
+@pytest.mark.integration
+def test_current_technology_scope_rechecks_actual_executable_and_all_sources():
+    from pdx import config
+
+    manifest = json.loads(engine_scope.MANIFEST.read_bytes())
+    inputs = {source: (config.GAME / source).read_bytes() for source in manifest["script_hashes"]}
+    proof = engine_scope.technology_evidence(config.GAME, inputs)
+    assert proof.verified
+    assert dict(proof.source_hashes)["@engine/binaries/victoria3.exe"] == manifest["exe"]["sha256"]
+    assert proof.technology_sources == tuple(
+        sorted(source for source in inputs if source.startswith("common/technology/technologies/"))
+    )
 
 
 def _discover_fixture(proof_fixture, monkeypatch):
