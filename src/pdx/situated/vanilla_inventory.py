@@ -12,6 +12,7 @@ import json
 import re
 from collections import Counter
 from dataclasses import asdict, dataclass, replace
+from dataclasses import field as dataclass_field
 from itertools import pairwise
 from math import isfinite
 from pathlib import PurePosixPath, PureWindowsPath
@@ -25,7 +26,7 @@ from ..textio import normalized_text  # noqa: TID252
 from . import engine_scope
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
 SCHEMA = 1
@@ -322,6 +323,87 @@ class VanillaInventory:
             ),
             "event_default_semantics": "unknown; default_option is recorded, not interpreted as AI weight",
         }
+
+
+@dataclass(frozen=True, slots=True)
+class VanillaDefinition:
+    """Physical definition ownership, independent of merge or scope semantics."""
+
+    source: str
+    directory: str
+    definition: str
+    definition_index: int
+    source_line: int
+    declaration_occurrence: int
+    operator: str
+    prefix: str | None
+    is_block: bool
+    surface_declaration_ids: tuple[str, ...] = ()
+
+    @property
+    def declaration_id(self) -> str:
+        return _digest((self.source, self.definition, self.declaration_occurrence))
+
+
+@dataclass(frozen=True, slots=True)
+class VanillaEventSlot:
+    """Physical slot ownership; identity is independent of inferred scope."""
+
+    slot_id: str
+    owner_declaration_id: str
+    owner_definition_index: int
+    owner_declaration_occurrence: int
+    source: str
+    definition: str
+    option_index: int
+    source_line: int
+    surface_declaration_ids: tuple[str, ...]
+    surface_ids: tuple[str, ...] = ()
+    ambiguities: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class UnverifiedVanillaInventory(VanillaInventory):
+    """Discovery only: this result cannot establish reader or writer authority."""
+
+    target_version: str = ""
+    actual_version: dict[str, str] | None = None
+    definitions: tuple[VanillaDefinition, ...] = ()
+    unsupported_structures: tuple[dict[str, Any], ...] = ()
+    source_syntax: dict[str, dict[str, Any]] = dataclass_field(default_factory=dict)
+    event_slots: tuple[VanillaEventSlot, ...] = ()
+
+    def as_dict(self) -> dict[str, Any]:
+        payload = VanillaInventory.as_dict(self)
+        payload.update(
+            discovery_mode="unverified",
+            authorization="none",
+            evidence="unverified_native_discovery_not_scope_or_getter_authorization",
+            target_version=self.target_version,
+            actual_version=self.actual_version,
+            definitions=[
+                {**asdict(item), "declaration_id": item.declaration_id} for item in self.definitions
+            ],
+            definition_count=len(self.definitions),
+            unsupported_structures=list(self.unsupported_structures),
+            scope_hash_semantics="unverified_discovery_result_identity_only",
+            source_syntax=self.source_syntax,
+            syntax_retention_policy="all_parsed_txt_and_dlc_nodes; preserved syntax is not semantic classification",
+            syntax_node_position_policy="zero_based_block_item_indexes; assignment_value_step_is_minus_one",
+            event_slots=[asdict(item) for item in self.event_slots],
+        )
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
+class _Discovery:
+    surfaces: list[VanillaSurface]
+    parsed_files: int
+    parse_failures: tuple[str, ...]
+    event_options: tuple[VanillaEventOption, ...]
+    definitions: tuple[VanillaDefinition, ...]
+    unsupported_structures: tuple[dict[str, Any], ...]
+    event_slots: tuple[VanillaEventSlot, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -2879,55 +2961,100 @@ def parameter_evidence_hashes(game: Path) -> dict[str, str]:
     return hashes
 
 
-def discover(*, game: Path | None = None) -> VanillaInventory:
-    """现读原版完整相关 common 定义；解析不完整或版本漂移均显式失败。"""
-    root = game if game is not None else config.GAME
-    version = config.game_version(root.parent)
-    if version["caligula_branch"] != f"release/{LOCKED_VERSION}":
-        raise ValueError(f"原版版本必须锁定 {LOCKED_VERSION}：{version['caligula_branch']!r}")
-    missing_version = [name for name, value in version.items() if not value]
-    if missing_version:
-        raise ValueError(f"原版版本指纹缺失：{', '.join(missing_version)}")
-    inputs, directories, content_roots = _inputs(root)
-    event_roots = tuple(name for name in content_roots if PurePosixPath(name).name == "events")
-    hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in inputs.items()}
-    hashes.update(parameter_evidence_hashes(root))
-    technology_proof = engine_scope.technology_evidence(root, inputs)
-    hashes.update(technology_proof.source_hashes)
-    strategy_proof = engine_scope.strategy_evidence(root, inputs)
-    hashes.update(strategy_proof.source_hashes)
-    country_proof = engine_scope.country_evidence(root, inputs)
-    hashes.update(country_proof.source_hashes)
-    company_proof = engine_scope.company_evidence(root, inputs)
-    hashes.update(company_proof.source_hashes)
-    company_default_proof = engine_scope.company_default_evidence(root, inputs)
-    hashes.update(company_default_proof.source_hashes)
-    law_proof = engine_scope.law_evidence(root, inputs)
-    hashes.update(law_proof.source_hashes)
-    for name in version:
-        hashes[f"@version/{name}.txt"] = hashlib.sha256(
-            (root.parent / f"{name}.txt").read_bytes()
-        ).hexdigest()
-    strategies = _strategy_scopes(inputs)
-    trigger_definition_scope = _scripted_trigger_definition_scope(inputs)
-    company_construction = (
-        _declared_type_keys(inputs, "buildings"),
-        _company_construction_doc(inputs),
-    )
-    company_selection = _company_selection_doc(inputs)
-    ship_modification_formula = _ship_modification_formula_doc(inputs)
-    subject_value_minimum = (_subject_value_minimum(inputs),)
-    building_group_keys = _declared_type_keys(inputs, "building_groups")
-    strategy_building_groups = (
-        building_group_keys,
-        _building_group_weight_doc(inputs, building_group_keys),
-    )
-    interest_group_keys = _declared_type_keys(inputs, "interest_groups")
-    strategy_interest_groups = (
-        interest_group_keys,
-        _interest_group_list_docs(inputs, interest_group_keys),
-    )
-    references = _references(inputs)
+def _record_surface_ownership(
+    definitions: list[VanillaDefinition],
+    surfaces: list[VanillaSurface],
+    occurrences: Counter[tuple[str, str, str]],
+) -> None:
+    identities = []
+    for item in surfaces:
+        declaration = (item.source, item.definition, item.field)
+        occurrences[declaration] += 1
+        identities.append(_digest((*declaration, occurrences[declaration])))
+    definitions[-1] = replace(definitions[-1], surface_declaration_ids=tuple(identities))
+
+
+def _syntax(node: Assignment | Block | Scalar | None) -> dict[str, Any]:
+    """Lossless parser structure for an unclassified candidate, without semantics."""
+    if isinstance(node, Assignment):
+        return {
+            "kind": "assignment",
+            "key": node.key,
+            "operator": node.op,
+            "prefix": node.prefix,
+            "line": node.line,
+            "value": _syntax(node.value),
+        }
+    if isinstance(node, Block):
+        return {"kind": "block", "line": node.line, "items": [_syntax(item) for item in node.items]}
+    if isinstance(node, Scalar):
+        return {"kind": "scalar", "line": node.line, "text": node.text, "quoted": node.quoted}
+    return {"kind": "missing_value"}
+
+
+def _retained_source_syntax(source: str, raw: bytes, root: Block) -> dict[str, Any]:
+    """Retain every parsed node once, including shapes candidate traversal skips."""
+    syntax = _syntax(root)
+    stack: list[tuple[dict[str, Any], tuple[int, ...]]] = [(syntax, ())]
+    node_count = 0
+    while stack:
+        node, position = stack.pop()
+        node_count += 1
+        node["node_position"] = list(position)
+        node["node_id"] = _digest((source, position))
+        if node["kind"] == "assignment":
+            stack.append((node["value"], (*position, -1)))
+        elif node["kind"] == "block":
+            stack.extend((child, (*position, index)) for index, child in enumerate(node["items"]))
+    encoded = json.dumps(syntax, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return {
+        "source_sha256": hashlib.sha256(raw).hexdigest(),
+        "syntax_sha256": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+        "node_count": node_count,
+        "syntax_json": encoded,
+    }
+
+
+def _event_slot_records(
+    owner: VanillaDefinition, options: tuple[VanillaEventOption, ...]
+) -> list[VanillaEventSlot]:
+    result = []
+    offset = 0
+    for option in options:
+        count = max(1, len(option.weight_lines))
+        declaration_ids = owner.surface_declaration_ids[offset : offset + count]
+        if len(declaration_ids) != count:
+            raise ValueError(
+                f"事件槽位缺少物理 surface 所有权：{owner.source}:{option.source_line}"
+            )
+        result.append(
+            VanillaEventSlot(
+                slot_id=_digest((owner.declaration_id, option.option_index)),
+                owner_declaration_id=owner.declaration_id,
+                owner_definition_index=owner.definition_index,
+                owner_declaration_occurrence=owner.declaration_occurrence,
+                source=owner.source,
+                definition=owner.definition,
+                option_index=option.option_index,
+                source_line=option.source_line,
+                surface_declaration_ids=declaration_ids,
+                ambiguities=(option.ambiguity,) if option.ambiguity else (),
+            )
+        )
+        offset += count
+    if offset != len(owner.surface_declaration_ids):
+        raise ValueError(f"事件槽位存在未归属的 surface：{owner.source}:{owner.source_line}")
+    return result
+
+
+def _scan_declarations(
+    inputs: dict[str, bytes],
+    event_roots: tuple[str, ...],
+    surface_scope: Callable[[str, tuple[str, ...], Assignment, Assignment, str], _Scope],
+    *,
+    retain_source: Callable[[str, bytes, Block], None] | None = None,
+) -> _Discovery:
+    """One parser/candidate/duplicate pipeline; authorization belongs to its caller."""
     surfaces: list[VanillaSurface] = []
     technology_owners: dict[str, set[tuple[str, int]]] = {}
     strategy_owners: dict[str, set[tuple[str, int]]] = {}
@@ -2938,6 +3065,11 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     parsed_files = 0
     parse_failures: list[str] = []
     event_options: list[VanillaEventOption] = []
+    event_slots: list[VanillaEventSlot] = []
+    definitions: list[VanillaDefinition] = []
+    unsupported: list[dict[str, Any]] = []
+    definition_occurrences: Counter[tuple[str, str]] = Counter()
+    declaration_occurrences: Counter[tuple[str, str, str]] = Counter()
     for source, raw in sorted(inputs.items()):
         if not source.endswith(".txt"):
             continue
@@ -2948,16 +3080,48 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
             failure = f"{source}: {'; '.join(parsed.errors)}"
             parse_failures.append(failure)
             raise ValueError(f"原版解析失败：{failure}")
+        if retain_source is not None:
+            retain_source(source, raw, parsed.root)
         directory = source.removeprefix("common/").split("/common/")[-1].split("/")[0]
         event_source = any(source.startswith(name + "/") for name in event_roots)
+        unsupported.extend(
+            {
+                "source": source,
+                "line": node.line,
+                "kind": "unsupported_top_level_" + type(node).__name__.lower(),
+                "syntax": _syntax(node),
+                "node_position": [index],
+                "node_id": _digest((source, (index,))),
+            }
+            for index, node in enumerate(parsed.root.items)
+            if not isinstance(node, Assignment)
+        )
         for definition_index, definition in enumerate(parsed.top_assignments):
             if definition.is_variable:
                 continue
+            definition_occurrences[(source, definition.key)] += 1
+            record = VanillaDefinition(
+                source,
+                directory,
+                definition.key,
+                definition_index,
+                definition.line,
+                definition_occurrences[(source, definition.key)],
+                definition.op,
+                definition.prefix,
+                isinstance(definition.value, Block),
+            )
+            definitions.append(record)
+            before_surfaces = len(surfaces)
             if event_source:
                 event_owners.setdefault(definition.key, set()).add((source, definition_index))
                 options, candidates = _event_candidates(source, definition)
                 event_options.extend(options)
                 surfaces.extend(candidates)
+                _record_surface_ownership(
+                    definitions, surfaces[before_surfaces:], declaration_occurrences
+                )
+                event_slots.extend(_event_slot_records(definitions[-1], options))
                 continue
             if "/technology/technologies/" in "/" + source:
                 # 多个定义可同处一行；行号不能替代声明位置。
@@ -2973,25 +3137,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                     (source, definition_index)
                 )
             if directory in _OBSERVATION_DIRS:
-                scope = (
-                    _doc_scope(
-                        inputs,
-                        "common/script_values/script_values.md",
-                        ("Formulas", "scope you're currently in"),
-                        "caller_scope",
-                        "caller_derived",
-                        "read",
-                        "observation",
-                    )
-                    if directory == "script_values"
-                    else (
-                        trigger_definition_scope
-                        if isinstance(definition.value, Block)
-                        and definition.op == "="
-                        and definition.prefix is None
-                        else _Scope(operation="read")
-                    )
-                )
+                scope = surface_scope(directory, ("__body__",), definition, definition, source)
                 surfaces.append(
                     _surface(
                         source,
@@ -3008,13 +3154,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                         definition.key,
                         assignment.key,
                         assignment.line,
-                        _Scope(
-                            "global",
-                            "none",
-                            "global_parameter",
-                            "observation",
-                            (f"{source}:{assignment.line}",),
-                        ),
+                        surface_scope(directory, (assignment.key,), definition, assignment, source),
                     )
                     for assignment in definition.value.assignments()
                     if definition.key == "NAI" or assignment.key.startswith("AI_")
@@ -3027,27 +3167,36 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                             definition.key,
                             ".".join(field),
                             assignment.line,
-                            _scope(
-                                directory,
-                                field,
-                                inputs,
-                                strategies,
-                                definition,
-                                source,
-                                company_construction,
-                                strategy_building_groups,
-                                strategy_interest_groups,
-                                company_selection,
-                                ship_modification_formula,
-                                subject_value_minimum,
-                                technology_proof,
-                                strategy_proof,
-                                country_proof,
-                                company_proof,
-                                law_proof,
-                            ),
+                            surface_scope(directory, field, definition, assignment, source),
                         )
                     )
+                    if (
+                        directory == "ai_strategies"
+                        and len(field) == 1
+                        and field[0] not in _MAP_FIELDS
+                        and isinstance(assignment.value, Block)
+                        and assignment.value.items
+                        and not any(
+                            child.key in _EXPRESSION_KEYS or child.key.startswith("scope:")
+                            for child in assignment.value.assignments()
+                        )
+                    ):
+                        unsupported.append(
+                            {
+                                "kind": "unexpanded_strategy_structure",
+                                "source": source,
+                                "definition": definition.key,
+                                "field": ".".join(field),
+                                "source_line": assignment.line,
+                                "reason": "unclassified nonnumeric strategy block; no map or scope contract inferred",
+                                "child_keys": assignment.value.keys(),
+                                "syntax": _syntax(assignment.value),
+                                "surface_index": len(surfaces) - 1,
+                            }
+                        )
+            _record_surface_ownership(
+                definitions, surfaces[before_surfaces:], declaration_occurrences
+            )
     # Declaration IDs must survive changes to inferred capability/scope. Count
     # syntax occurrences before semantic identity (including REPLACE) is used.
     counts = Counter((item.source, item.definition, item.field) for item in surfaces)
@@ -3120,6 +3269,139 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                 responsibility_step="D0.03",
             )
         resolved.append(item)
+    for observation in unsupported:
+        if "surface_index" in observation:
+            observation["declaration_id"] = resolved[
+                observation.pop("surface_index")
+            ].declaration_id
+    event_slots = [
+        replace(
+            slot,
+            ambiguities=(*slot.ambiguities, "duplicate_event_definition_merge_semantics_unknown"),
+        )
+        if len(event_owners[slot.definition]) > 1
+        else slot
+        for slot in event_slots
+    ]
+    return _Discovery(
+        resolved,
+        parsed_files,
+        tuple(sorted(parse_failures)),
+        tuple(event_options),
+        tuple(definitions),
+        tuple(unsupported),
+        tuple(event_slots),
+    )
+
+
+def discover(*, game: Path | None = None) -> VanillaInventory:
+    """现读原版完整相关 common 定义；解析不完整或版本漂移均显式失败。"""
+    root = game if game is not None else config.GAME
+    version = config.game_version(root.parent)
+    if version["caligula_branch"] != f"release/{LOCKED_VERSION}":
+        raise ValueError(f"原版版本必须锁定 {LOCKED_VERSION}：{version['caligula_branch']!r}")
+    missing_version = [name for name, value in version.items() if not value]
+    if missing_version:
+        raise ValueError(f"原版版本指纹缺失：{', '.join(missing_version)}")
+    inputs, directories, content_roots = _inputs(root)
+    event_roots = tuple(name for name in content_roots if PurePosixPath(name).name == "events")
+    hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in inputs.items()}
+    hashes.update(parameter_evidence_hashes(root))
+    technology_proof = engine_scope.technology_evidence(root, inputs)
+    hashes.update(technology_proof.source_hashes)
+    strategy_proof = engine_scope.strategy_evidence(root, inputs)
+    hashes.update(strategy_proof.source_hashes)
+    country_proof = engine_scope.country_evidence(root, inputs)
+    hashes.update(country_proof.source_hashes)
+    company_proof = engine_scope.company_evidence(root, inputs)
+    hashes.update(company_proof.source_hashes)
+    company_default_proof = engine_scope.company_default_evidence(root, inputs)
+    hashes.update(company_default_proof.source_hashes)
+    law_proof = engine_scope.law_evidence(root, inputs)
+    hashes.update(law_proof.source_hashes)
+    for name in version:
+        hashes[f"@version/{name}.txt"] = hashlib.sha256(
+            (root.parent / f"{name}.txt").read_bytes()
+        ).hexdigest()
+    strategies = _strategy_scopes(inputs)
+    trigger_definition_scope = _scripted_trigger_definition_scope(inputs)
+    company_construction = (
+        _declared_type_keys(inputs, "buildings"),
+        _company_construction_doc(inputs),
+    )
+    company_selection = _company_selection_doc(inputs)
+    ship_modification_formula = _ship_modification_formula_doc(inputs)
+    subject_value_minimum = (_subject_value_minimum(inputs),)
+    building_group_keys = _declared_type_keys(inputs, "building_groups")
+    strategy_building_groups = (
+        building_group_keys,
+        _building_group_weight_doc(inputs, building_group_keys),
+    )
+    interest_group_keys = _declared_type_keys(inputs, "interest_groups")
+    strategy_interest_groups = (
+        interest_group_keys,
+        _interest_group_list_docs(inputs, interest_group_keys),
+    )
+    references = _references(inputs)
+
+    def verified_scope(
+        directory: str,
+        field: tuple[str, ...],
+        definition: Assignment,
+        assignment: Assignment,
+        source: str,
+    ) -> _Scope:
+        if directory in _OBSERVATION_DIRS:
+            if directory == "script_values":
+                return _doc_scope(
+                    inputs,
+                    "common/script_values/script_values.md",
+                    ("Formulas", "scope you're currently in"),
+                    "caller_scope",
+                    "caller_derived",
+                    "read",
+                    "observation",
+                )
+            return (
+                trigger_definition_scope
+                if isinstance(definition.value, Block)
+                and definition.op == "="
+                and definition.prefix is None
+                else _Scope(operation="read")
+            )
+        if directory == "defines":
+            return _Scope(
+                "global",
+                "none",
+                "global_parameter",
+                "observation",
+                (f"{source}:{assignment.line}",),
+            )
+        return _scope(
+            directory,
+            field,
+            inputs,
+            strategies,
+            definition,
+            source,
+            company_construction,
+            strategy_building_groups,
+            strategy_interest_groups,
+            company_selection,
+            ship_modification_formula,
+            subject_value_minimum,
+            technology_proof,
+            strategy_proof,
+            country_proof,
+            company_proof,
+            law_proof,
+        )
+
+    discovery = _scan_declarations(inputs, event_roots, verified_scope)
+    resolved = discovery.surfaces
+    parsed_files = discovery.parsed_files
+    parse_failures = discovery.parse_failures
+    event_options = discovery.event_options
     surfaces_tuple = tuple(
         sorted(_proven_event_surfaces(inputs, resolved), key=lambda item: item.surface_id)
     )
@@ -3145,13 +3427,146 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     )
 
 
+def discover_unverified(
+    *, target_version: str, game: Path | None = None
+) -> UnverifiedVanillaInventory:
+    """Inventory a complete explicit native version without running scope proofs.
+
+    This is a separate discovery API, never a relaxed mode of ``discover``.
+    Installed documentation and even independently proven native fields remain
+    pending here. The result hashes identify observations, not authorization.
+    """
+    if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", target_version) is None:
+        raise ValueError(f"目标版本必须是完整数字版本：{target_version!r}")
+    root = game if game is not None else config.GAME
+    _contained(root.parent, root)
+    version = config.game_version(root.parent)
+    missing = [name for name, value in version.items() if not value]
+    if missing:
+        raise ValueError(f"原版版本指纹缺失：{', '.join(missing)}")
+    if (
+        version["caligula_branch"] != f"release/{target_version}"
+        or version["clausewitz_branch"] != f"caligula/release/{target_version}"
+    ):
+        raise ValueError(f"原版版本与目标版本 {target_version} 不符：{version}")
+    hashes = {}
+    for name, value in version.items():
+        path = root.parent / f"{name}.txt"
+        _contained(root.parent, path)
+        raw = path.read_bytes()
+        if raw.decode("utf-8-sig").strip() != value:
+            raise ValueError(f"原版版本读取期间漂移：{name}")
+        hashes[f"@version/{name}.txt"] = hashlib.sha256(raw).hexdigest()
+    inputs, directories, content_roots = _inputs(root)
+    hashes.update({name: hashlib.sha256(raw).hexdigest() for name, raw in inputs.items()})
+    event_roots = tuple(name for name in content_roots if PurePosixPath(name).name == "events")
+
+    def unverified_scope(
+        _directory: str,
+        _field: tuple[str, ...],
+        _definition: Assignment,
+        _assignment: Assignment,
+        _source: str,
+    ) -> _Scope:
+        return _Scope()
+
+    source_syntax = {}
+
+    def retain_source(source: str, raw: bytes, root: Block) -> None:
+        source_syntax[source] = _retained_source_syntax(source, raw, root)
+
+    # DLC metadata uses the same parser; descriptor safety and mounts have
+    # already been validated by _inputs. Preserve its otherwise unclassified
+    # syntax as well, without treating Markdown documentation as PDX syntax.
+    for source, raw in inputs.items():
+        if source.endswith(".dlc"):
+            raw.decode("utf-8-sig")
+            parsed = parse_bytes(raw, path=source)
+            if parsed.errors:
+                raise ValueError(f"DLC 描述符解析失败：{source}: {'; '.join(parsed.errors)}")
+            retain_source(source, raw, parsed.root)
+    discovery = _scan_declarations(
+        inputs, event_roots, unverified_scope, retain_source=retain_source
+    )
+    # Event candidate generation records slot syntax, not scope evidence. Strip
+    # even those syntactic evidence labels from every unverified surface.
+    surfaces = tuple(
+        sorted(
+            (
+                replace(
+                    item,
+                    actor_scope="unknown",
+                    target_scope="unknown",
+                    operation="declared_field",
+                    surface_id=_digest((item.declaration_id, "unverified")),
+                    capability="pending",
+                    status="pending",
+                    getter=None,
+                    scope_evidence=(),
+                    responsibility_step="D0.03",
+                )
+                for item in discovery.surfaces
+            ),
+            key=lambda item: item.surface_id,
+        )
+    )
+    references = _references(inputs)
+    surface_ids = {item.declaration_id: item.surface_id for item in surfaces}
+    event_slots = tuple(
+        replace(
+            slot,
+            surface_ids=tuple(surface_ids[identity] for identity in slot.surface_declaration_ids),
+        )
+        for slot in discovery.event_slots
+    )
+    result_hash = _digest(
+        {
+            "discovery_mode": "unverified",
+            "target_version": target_version,
+            "actual_version": version,
+            "source_hashes": hashes,
+            "scanned_directories": directories,
+            "content_roots": content_roots,
+            "surfaces": [asdict(item) for item in surfaces],
+            "references": [asdict(item) for item in references],
+            "event_options": [asdict(item) for item in discovery.event_options],
+            "definitions": [asdict(item) for item in discovery.definitions],
+            "unsupported_structures": discovery.unsupported_structures,
+            "source_syntax": source_syntax,
+            "event_slots": [asdict(item) for item in event_slots],
+        }
+    )
+    return UnverifiedVanillaInventory(
+        baseline_id=f"victoria3-{target_version}:{_digest(hashes)}",
+        source_hashes=dict(sorted(hashes.items())),
+        scope_hash=result_hash,
+        surfaces=surfaces,
+        scanned_directories=directories,
+        content_roots=content_roots,
+        parsed_files=discovery.parsed_files,
+        references=references,
+        parse_failures=discovery.parse_failures,
+        event_options=discovery.event_options,
+        target_version=target_version,
+        actual_version=version,
+        definitions=discovery.definitions,
+        unsupported_structures=discovery.unsupported_structures,
+        source_syntax=source_syntax,
+        event_slots=event_slots,
+    )
+
+
 __all__ = [
     "CAPABILITIES",
     "LOCKED_VERSION",
     "MIGRATION_DENOMINATOR",
     "SCHEMA",
+    "UnverifiedVanillaInventory",
+    "VanillaDefinition",
+    "VanillaEventSlot",
     "VanillaInventory",
     "VanillaReference",
     "VanillaSurface",
     "discover",
+    "discover_unverified",
 ]

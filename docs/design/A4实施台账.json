@@ -1172,7 +1172,7 @@
       },
       {
         "path": "src/pdx/situated/vanilla_inventory.py",
-        "sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+        "sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
         "identity": "whole_file",
         "kind": "file"
       },
@@ -4987,7 +4987,7 @@
       "identity": "checkpoint:src/pdx/situated/vanilla_inventory.py",
       "source": {
         "path": "src/pdx/situated/vanilla_inventory.py",
-        "sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+        "sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
         "identity": "whole_file",
         "kind": "file"
       },
@@ -6523,7 +6523,7 @@
       "identity": "production_delta:src/pdx/situated/vanilla_inventory.py",
       "source": {
         "path": "src/pdx/situated/vanilla_inventory.py",
-        "sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+        "sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
         "identity": "whole_file",
         "kind": "file"
       },
@@ -11788,7 +11788,7 @@
       "identity": "src/pdx/situated/vanilla_inventory.py",
       "source": {
         "path": "src/pdx/situated/vanilla_inventory.py",
-        "sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+        "sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
         "identity": "whole_file",
         "kind": "file"
       },
@@ -64616,7 +64616,7 @@
       "input_hashes": [
         {
           "path": "src/pdx/situated/vanilla_inventory.py",
-          "sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+          "sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
           "identity": "whole_file",
           "kind": "file"
         }
@@ -86408,7 +86408,7 @@
       "input_hashes": [
         {
           "path": "src/pdx/situated/vanilla_inventory.py",
-          "sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+          "sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
           "identity": "whole_file",
           "kind": "file"
         }
@@ -157084,7 +157084,7 @@
       "input_hashes": [
         {
           "path": "src/pdx/situated/vanilla_inventory.py",
-          "sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+          "sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
           "identity": "whole_file",
           "kind": "file"
         }
@@ -161920,7 +161920,7 @@
       "id": "checkpoint:src/pdx/situated/vanilla_inventory.py",
       "path": "src/pdx/situated/vanilla_inventory.py",
       "checkpoint_sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
-      "current_sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
+      "current_sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
       "diff_sha256": "f4c3eb077910d80e2e95ded0121b906e00bbb3e12eefd1a609c7f6bad9e48f92",
       "decision": "reverify",
       "row_ids": [
@@ -162149,7 +162149,7 @@
       "path": "mod/decisions/action_bindings.toml",
       "checkpoint_sha256": "9fff7c7af0bceda6ba3d67d9f1233f7c8ebb4fcb4e5335c6388bfa2b8fe99e11",
       "current_sha256": "9fff7c7af0bceda6ba3d67d9f1233f7c8ebb4fcb4e5335c6388bfa2b8fe99e11",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/action_bindings.toml"
@@ -162161,7 +162161,7 @@
       "path": "mod/decisions/adapters.toml",
       "checkpoint_sha256": "564388fc8b775f17d359e8984aeaab8222e78776423b199c43491568e25f44c6",
       "current_sha256": "564388fc8b775f17d359e8984aeaab8222e78776423b199c43491568e25f44c6",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/adapters.toml"
@@ -162173,7 +162173,7 @@
       "path": "mod/decisions/building_opportunities.toml",
       "checkpoint_sha256": "dc9cfcf292c73471e0ccf48c76fdf99664e6b5c7b54be2e9551178c17c059f8a",
       "current_sha256": "dc9cfcf292c73471e0ccf48c76fdf99664e6b5c7b54be2e9551178c17c059f8a",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/building_opportunities.toml"
@@ -162185,7 +162185,7 @@
       "path": "mod/decisions/canal_opportunities.toml",
       "checkpoint_sha256": "37046585e9f52fa14b4e5bc401b37bba7ce431a8dbc1e0c5b2eee29116e39955",
       "current_sha256": "37046585e9f52fa14b4e5bc401b37bba7ce431a8dbc1e0c5b2eee29116e39955",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/canal_opportunities.toml"
@@ -162197,7 +162197,7 @@
       "path": "mod/decisions/colonial_opportunities.toml",
       "checkpoint_sha256": "53f650a4f3e1e3af4b1e1fa4bf9bad1cd0b159d75033690aa25b97fe2ea74cdc",
       "current_sha256": "53f650a4f3e1e3af4b1e1fa4bf9bad1cd0b159d75033690aa25b97fe2ea74cdc",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/colonial_opportunities.toml"
@@ -162209,7 +162209,7 @@
       "path": "mod/decisions/cooperation_opportunities.toml",
       "checkpoint_sha256": "c4ebfbdd19414c6a4e94d1f830e705bb29d20cef6851433440e9bf2ff2d4bd43",
       "current_sha256": "c4ebfbdd19414c6a4e94d1f830e705bb29d20cef6851433440e9bf2ff2d4bd43",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/cooperation_opportunities.toml"
@@ -162221,7 +162221,7 @@
       "path": "mod/decisions/cost_policies.toml",
       "checkpoint_sha256": "e7eb635f6834439dc9f4bad5538d0e8a820a3de81e360628ef1d045a60a14786",
       "current_sha256": "e7eb635f6834439dc9f4bad5538d0e8a820a3de81e360628ef1d045a60a14786",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/cost_policies.toml"
@@ -162233,7 +162233,7 @@
       "path": "mod/decisions/culture_opportunities.toml",
       "checkpoint_sha256": "57d6237b62a5f688e9d60a183296f5ef96c6e1ed8893d4a7a5af784f32d6e5e1",
       "current_sha256": "57d6237b62a5f688e9d60a183296f5ef96c6e1ed8893d4a7a5af784f32d6e5e1",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/culture_opportunities.toml"
@@ -162245,7 +162245,7 @@
       "path": "mod/decisions/decree_opportunities.toml",
       "checkpoint_sha256": "7848b942ad88fda26cbb9abc8e5ce0214842071d1445ed24bdfd64a559b1d235",
       "current_sha256": "7848b942ad88fda26cbb9abc8e5ce0214842071d1445ed24bdfd64a559b1d235",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/decree_opportunities.toml"
@@ -162257,7 +162257,7 @@
       "path": "mod/decisions/domain_actions.toml",
       "checkpoint_sha256": "68468f1d45213d511af82356c1b5f54506dfa684bf5709f97b168603a05e4ac9",
       "current_sha256": "68468f1d45213d511af82356c1b5f54506dfa684bf5709f97b168603a05e4ac9",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/domain_actions.toml"
@@ -162269,7 +162269,7 @@
       "path": "mod/decisions/domain_ports.toml",
       "checkpoint_sha256": "5441edeae328da6baa8e1393173c7cba083bbd95b3401317f8971e02841a9b77",
       "current_sha256": "5441edeae328da6baa8e1393173c7cba083bbd95b3401317f8971e02841a9b77",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/domain_ports.toml"
@@ -162281,7 +162281,7 @@
       "path": "mod/decisions/event_opportunities.toml",
       "checkpoint_sha256": "a34293b92d5362a062a9c10a53adf625d539b0b167342900af5a3307c2445623",
       "current_sha256": "a34293b92d5362a062a9c10a53adf625d539b0b167342900af5a3307c2445623",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/event_opportunities.toml"
@@ -162293,7 +162293,7 @@
       "path": "mod/decisions/famine_opportunities.toml",
       "checkpoint_sha256": "0e38e6d9ffc131557d6b1e9c9057c654443f05e2c758382f65e25cff035e28a8",
       "current_sha256": "0e38e6d9ffc131557d6b1e9c9057c654443f05e2c758382f65e25cff035e28a8",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/famine_opportunities.toml"
@@ -162305,7 +162305,7 @@
       "path": "mod/decisions/import_blockade_opportunities.toml",
       "checkpoint_sha256": "a5b364179281da8487f21a2032655e3cd1eb3b74e77f36285944651ca108f002",
       "current_sha256": "a5b364179281da8487f21a2032655e3cd1eb3b74e77f36285944651ca108f002",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/import_blockade_opportunities.toml"
@@ -162317,7 +162317,7 @@
       "path": "mod/decisions/information.toml",
       "checkpoint_sha256": "ecc932a8a03a901b64aef993cb5f785e8a933fbc6cf6bcffe9973754e45a2207",
       "current_sha256": "ecc932a8a03a901b64aef993cb5f785e8a933fbc6cf6bcffe9973754e45a2207",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/information.toml"
@@ -162329,7 +162329,7 @@
       "path": "mod/decisions/institution_opportunities.toml",
       "checkpoint_sha256": "2dd6ff9700a4b35c1f3c32993ad57689e34d1b0b1d602c27b325a470c92f6286",
       "current_sha256": "2dd6ff9700a4b35c1f3c32993ad57689e34d1b0b1d602c27b325a470c92f6286",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/institution_opportunities.toml"
@@ -162341,7 +162341,7 @@
       "path": "mod/decisions/internal_security_opportunities.toml",
       "checkpoint_sha256": "0a4a7daad7375f130779c2c77632c0b5585aa7e22f5c8e20040b35f5c549cce1",
       "current_sha256": "0a4a7daad7375f130779c2c77632c0b5585aa7e22f5c8e20040b35f5c549cce1",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/internal_security_opportunities.toml"
@@ -162353,7 +162353,7 @@
       "path": "mod/decisions/law_opportunities.toml",
       "checkpoint_sha256": "595a1f7e2fc4ab492f5f1dc02087d3a46c266c788105460a2e0ee615987eed5c",
       "current_sha256": "595a1f7e2fc4ab492f5f1dc02087d3a46c266c788105460a2e0ee615987eed5c",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/law_opportunities.toml"
@@ -162365,7 +162365,7 @@
       "path": "mod/decisions/migration_opportunities.toml",
       "checkpoint_sha256": "77554abb5a8c700915aa64b9eabdddfba1b53f6afad70fa6636aba4e270a00a1",
       "current_sha256": "77554abb5a8c700915aa64b9eabdddfba1b53f6afad70fa6636aba4e270a00a1",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/migration_opportunities.toml"
@@ -162377,7 +162377,7 @@
       "path": "mod/decisions/native_action_opportunities.toml",
       "checkpoint_sha256": "ba65133ced2564c218d055e215ed9473defb155416c2860ed63d241b1dde7d56",
       "current_sha256": "ba65133ced2564c218d055e215ed9473defb155416c2860ed63d241b1dde7d56",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/native_action_opportunities.toml"
@@ -162389,7 +162389,7 @@
       "path": "mod/decisions/native_button_opportunities.toml",
       "checkpoint_sha256": "a6662d07f78218cc0cbde576ea327edde9c067ff5d69e792a64e9ca1274c60ca",
       "current_sha256": "a6662d07f78218cc0cbde576ea327edde9c067ff5d69e792a64e9ca1274c60ca",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/native_button_opportunities.toml"
@@ -162401,7 +162401,7 @@
       "path": "mod/decisions/native_decision_opportunities.toml",
       "checkpoint_sha256": "204d6e730fdca9e196ff8f1a892a908238a59137aa3d1fa41c2211097c4a2425",
       "current_sha256": "204d6e730fdca9e196ff8f1a892a908238a59137aa3d1fa41c2211097c4a2425",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/native_decision_opportunities.toml"
@@ -162413,7 +162413,7 @@
       "path": "mod/decisions/regional_resource_opportunities.toml",
       "checkpoint_sha256": "245bbd80b13c4888acc3b86a9dd57708c1a58c9f5cb42316cdffd85202c422c5",
       "current_sha256": "245bbd80b13c4888acc3b86a9dd57708c1a58c9f5cb42316cdffd85202c422c5",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/regional_resource_opportunities.toml"
@@ -162425,7 +162425,7 @@
       "path": "mod/decisions/relations.toml",
       "checkpoint_sha256": "d8fee107c6eba8a03fe8f541de25bee83ee28f526ffd7cd95a0d9c0d2a6da104",
       "current_sha256": "d8fee107c6eba8a03fe8f541de25bee83ee28f526ffd7cd95a0d9c0d2a6da104",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/relations.toml"
@@ -162437,7 +162437,7 @@
       "path": "mod/decisions/static_resources.toml",
       "checkpoint_sha256": "aec6ea212d88a54e26638018b845cffedcdcd898294647fd61745fd17a472709",
       "current_sha256": "aec6ea212d88a54e26638018b845cffedcdcd898294647fd61745fd17a472709",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/static_resources.toml"
@@ -162449,7 +162449,7 @@
       "path": "mod/decisions/subject_dependence_opportunities.toml",
       "checkpoint_sha256": "2560caffbdc19277aa177089ca46d575cb7328727bf230c59c3880d81e4421c3",
       "current_sha256": "2560caffbdc19277aa177089ca46d575cb7328727bf230c59c3880d81e4421c3",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/subject_dependence_opportunities.toml"
@@ -162461,7 +162461,7 @@
       "path": "mod/decisions/treaty_acceptance_opportunities.toml",
       "checkpoint_sha256": "d0eedabbc1399b06a90d479cb450ca7cd2fd3350e8935a763c17432d322e1b0f",
       "current_sha256": "d0eedabbc1399b06a90d479cb450ca7cd2fd3350e8935a763c17432d322e1b0f",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/treaty_acceptance_opportunities.toml"
@@ -162473,7 +162473,7 @@
       "path": "mod/decisions/war_pressure_opportunities.toml",
       "checkpoint_sha256": "9e74023c97b674f3128d01928420546a0c39192eb4e29394bc52c9a94e088b3e",
       "current_sha256": "9e74023c97b674f3128d01928420546a0c39192eb4e29394bc52c9a94e088b3e",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:mod/decisions/war_pressure_opportunities.toml"
@@ -162485,7 +162485,7 @@
       "path": "src/pdx/building_opportunities.py",
       "checkpoint_sha256": "97cd48a3f69daa41b43ae88948d487a6b98739219625b8362e49aea0f943dcd0",
       "current_sha256": "97cd48a3f69daa41b43ae88948d487a6b98739219625b8362e49aea0f943dcd0",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/building_opportunities.py"
@@ -162497,7 +162497,7 @@
       "path": "src/pdx/canal_opportunities.py",
       "checkpoint_sha256": "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d",
       "current_sha256": "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/canal_opportunities.py"
@@ -162509,7 +162509,7 @@
       "path": "src/pdx/cli.py",
       "checkpoint_sha256": "63238d44afade46b2faaa2e3e618877f16057ff109c01c5ae042d650a32ce3dd",
       "current_sha256": "63238d44afade46b2faaa2e3e618877f16057ff109c01c5ae042d650a32ce3dd",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/cli.py"
@@ -162521,7 +162521,7 @@
       "path": "src/pdx/colonial_opportunities.py",
       "checkpoint_sha256": "5dca554cc707f51c799fc3978e5c7c5c19de41d8c7e3fc5bb125573f580044dd",
       "current_sha256": "5dca554cc707f51c799fc3978e5c7c5c19de41d8c7e3fc5bb125573f580044dd",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/colonial_opportunities.py"
@@ -162533,7 +162533,7 @@
       "path": "src/pdx/cooperation_opportunities.py",
       "checkpoint_sha256": "213c4ac7dd7ae11b5c66a5922227fe68e2925f9baa5ecc44f43c6697ba83a95e",
       "current_sha256": "213c4ac7dd7ae11b5c66a5922227fe68e2925f9baa5ecc44f43c6697ba83a95e",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/cooperation_opportunities.py"
@@ -162545,7 +162545,7 @@
       "path": "src/pdx/culture_opportunities.py",
       "checkpoint_sha256": "11d55cbd80d7e66e6616d0cafbe6f4877dad6034d935f943011d6c198511ca75",
       "current_sha256": "11d55cbd80d7e66e6616d0cafbe6f4877dad6034d935f943011d6c198511ca75",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/culture_opportunities.py"
@@ -162557,7 +162557,7 @@
       "path": "src/pdx/decision_adapters.py",
       "checkpoint_sha256": "b399878236c598a5910308018f9cb764d84151ab0adada12b0abf7c0faf8f1d4",
       "current_sha256": "b399878236c598a5910308018f9cb764d84151ab0adada12b0abf7c0faf8f1d4",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/decision_adapters.py"
@@ -162569,7 +162569,7 @@
       "path": "src/pdx/decision_interfaces.py",
       "checkpoint_sha256": "bb2f997ba08281b9b067368e7a320e15248e4e30ca842d00bd6874a0edfeeb42",
       "current_sha256": "bb2f997ba08281b9b067368e7a320e15248e4e30ca842d00bd6874a0edfeeb42",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/decision_interfaces.py"
@@ -162581,7 +162581,7 @@
       "path": "src/pdx/decision_report.py",
       "checkpoint_sha256": "bf3502e4a7f8a2c7f5635063ad922dc95072e090f8621841163af85c01961188",
       "current_sha256": "bf3502e4a7f8a2c7f5635063ad922dc95072e090f8621841163af85c01961188",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/decision_report.py"
@@ -162593,7 +162593,7 @@
       "path": "src/pdx/decision_rules.py",
       "checkpoint_sha256": "f2ab5a26f78ad34b1cab48f584c9dbfb21dc259eb630998113372e8dd5a6c87c",
       "current_sha256": "f2ab5a26f78ad34b1cab48f584c9dbfb21dc259eb630998113372e8dd5a6c87c",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/decision_rules.py"
@@ -162605,7 +162605,7 @@
       "path": "src/pdx/decisions.py",
       "checkpoint_sha256": "47a825ef98d83900b56e949bc89d3c156efc8e6071f62b81ded25010c8b12c06",
       "current_sha256": "47a825ef98d83900b56e949bc89d3c156efc8e6071f62b81ded25010c8b12c06",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/decisions.py"
@@ -162617,7 +162617,7 @@
       "path": "src/pdx/decree_opportunities.py",
       "checkpoint_sha256": "1e16610ffc9a7b3639e643017cb10391e047f742a1fb11837f13249d26e143a8",
       "current_sha256": "1e16610ffc9a7b3639e643017cb10391e047f742a1fb11837f13249d26e143a8",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/decree_opportunities.py"
@@ -162629,7 +162629,7 @@
       "path": "src/pdx/deployment.py",
       "checkpoint_sha256": "cb542b78f56f4f4e2bf48070090ec11531cd7ea571efcd639bb4bb76f1520b1b",
       "current_sha256": "cb542b78f56f4f4e2bf48070090ec11531cd7ea571efcd639bb4bb76f1520b1b",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/deployment.py"
@@ -162641,7 +162641,7 @@
       "path": "src/pdx/distribution.py",
       "checkpoint_sha256": "648e1da93e83dfda64173e1f74abf40aeec305abb8a940192549184c2aa34112",
       "current_sha256": "648e1da93e83dfda64173e1f74abf40aeec305abb8a940192549184c2aa34112",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/distribution.py"
@@ -162653,7 +162653,7 @@
       "path": "src/pdx/event_opportunities.py",
       "checkpoint_sha256": "c1e5bb88a34b35feba28c3204ea0941de032db723200ff6eb70ac5318d0fbee6",
       "current_sha256": "c1e5bb88a34b35feba28c3204ea0941de032db723200ff6eb70ac5318d0fbee6",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/event_opportunities.py"
@@ -162665,7 +162665,7 @@
       "path": "src/pdx/famine_opportunities.py",
       "checkpoint_sha256": "b7b1201f099e99f7a5c45a134734ece99cf4d9386a3fb60d931e6079dafdd8f3",
       "current_sha256": "b7b1201f099e99f7a5c45a134734ece99cf4d9386a3fb60d931e6079dafdd8f3",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/famine_opportunities.py"
@@ -162677,7 +162677,7 @@
       "path": "src/pdx/import_blockade_opportunities.py",
       "checkpoint_sha256": "16a3c435d6712ad4446651240c56f9f3034fc03d0eeee23cad8664cea514012a",
       "current_sha256": "16a3c435d6712ad4446651240c56f9f3034fc03d0eeee23cad8664cea514012a",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/import_blockade_opportunities.py"
@@ -162689,7 +162689,7 @@
       "path": "src/pdx/institution_opportunities.py",
       "checkpoint_sha256": "cb71ce30579b4ea3eb0879bb8da2b284003ba74275caf84fa15896dd1e7f8be3",
       "current_sha256": "cb71ce30579b4ea3eb0879bb8da2b284003ba74275caf84fa15896dd1e7f8be3",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/institution_opportunities.py"
@@ -162701,7 +162701,7 @@
       "path": "src/pdx/internal_security_opportunities.py",
       "checkpoint_sha256": "5bbfc3df243afb27063d169ca9b3a54edbeb3024f699bd49610fef7299e65bed",
       "current_sha256": "5bbfc3df243afb27063d169ca9b3a54edbeb3024f699bd49610fef7299e65bed",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/internal_security_opportunities.py"
@@ -162713,7 +162713,7 @@
       "path": "src/pdx/law_opportunities.py",
       "checkpoint_sha256": "b92d9ce53ca10278c3a999ef1144c79e264e51414865358187d30d9164fef774",
       "current_sha256": "b92d9ce53ca10278c3a999ef1144c79e264e51414865358187d30d9164fef774",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/law_opportunities.py"
@@ -162725,7 +162725,7 @@
       "path": "src/pdx/migration_opportunities.py",
       "checkpoint_sha256": "7337063ddd94b495bafc63fbbfac8d868129c4775fad2439558027ac8b11630d",
       "current_sha256": "7337063ddd94b495bafc63fbbfac8d868129c4775fad2439558027ac8b11630d",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/migration_opportunities.py"
@@ -162737,7 +162737,7 @@
       "path": "src/pdx/native_action_opportunities.py",
       "checkpoint_sha256": "4e595c0db41470c18d0aeeed52604fcc86c21aa69e90922d63a01a2a5f3e837e",
       "current_sha256": "4e595c0db41470c18d0aeeed52604fcc86c21aa69e90922d63a01a2a5f3e837e",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/native_action_opportunities.py"
@@ -162749,7 +162749,7 @@
       "path": "src/pdx/native_button_opportunities.py",
       "checkpoint_sha256": "7c418436c2b87cffb89a8d4ead7a1c3c4dd1bb5cab5cb57ef5187451162f3ff6",
       "current_sha256": "7c418436c2b87cffb89a8d4ead7a1c3c4dd1bb5cab5cb57ef5187451162f3ff6",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/native_button_opportunities.py"
@@ -162761,7 +162761,7 @@
       "path": "src/pdx/native_decision_opportunities.py",
       "checkpoint_sha256": "b393af20af773509b3106ad63f819eae07e82d5c1545c9696a3ecda5f2390ec3",
       "current_sha256": "b393af20af773509b3106ad63f819eae07e82d5c1545c9696a3ecda5f2390ec3",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/native_decision_opportunities.py"
@@ -162773,7 +162773,7 @@
       "path": "src/pdx/observation_queries.py",
       "checkpoint_sha256": "f5fc4d440954181a8c12e74be64765159841286d7d158b0e7ae63efe729da7f6",
       "current_sha256": "f5fc4d440954181a8c12e74be64765159841286d7d158b0e7ae63efe729da7f6",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/observation_queries.py"
@@ -162785,7 +162785,7 @@
       "path": "src/pdx/publishing.py",
       "checkpoint_sha256": "b73fb739b6a1f60a6e92ec39a3084e9ee020d51e84677c7bc9c1f97c596638cf",
       "current_sha256": "b73fb739b6a1f60a6e92ec39a3084e9ee020d51e84677c7bc9c1f97c596638cf",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/publishing.py"
@@ -162797,7 +162797,7 @@
       "path": "src/pdx/publishing_contract.py",
       "checkpoint_sha256": "b8a0f6b305bd6553fe918990e7e803662a7ac7fb37e88350df3790cea1fbbbf3",
       "current_sha256": "b8a0f6b305bd6553fe918990e7e803662a7ac7fb37e88350df3790cea1fbbbf3",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/publishing_contract.py"
@@ -162809,7 +162809,7 @@
       "path": "src/pdx/regional_resource_opportunities.py",
       "checkpoint_sha256": "3526070dd988f61ace34d92db7fd1bd49aed9c6ae9f5e3d6848611967c156b18",
       "current_sha256": "3526070dd988f61ace34d92db7fd1bd49aed9c6ae9f5e3d6848611967c156b18",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/regional_resource_opportunities.py"
@@ -162821,7 +162821,7 @@
       "path": "src/pdx/situated/action_instances.py",
       "checkpoint_sha256": "2f7d4e2a1c8b606776cd61caf6109fd1e2ec69a24f10028c60a47ddce1450928",
       "current_sha256": "2f7d4e2a1c8b606776cd61caf6109fd1e2ec69a24f10028c60a47ddce1450928",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/action_instances.py"
@@ -162833,7 +162833,7 @@
       "path": "src/pdx/situated/actions.py",
       "checkpoint_sha256": "936501be1f43957a095735000d54d552dfa69cc6c822f14e256ec0ac3c7e4a41",
       "current_sha256": "936501be1f43957a095735000d54d552dfa69cc6c822f14e256ec0ac3c7e4a41",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/actions.py"
@@ -162845,7 +162845,7 @@
       "path": "src/pdx/situated/audit.py",
       "checkpoint_sha256": "e4e1ae16c08c16f4489d406c3652f3ab2d5ed0ad991c72f3bceaf1b0d087b8ae",
       "current_sha256": "e4e1ae16c08c16f4489d406c3652f3ab2d5ed0ad991c72f3bceaf1b0d087b8ae",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/audit.py"
@@ -162857,7 +162857,7 @@
       "path": "src/pdx/situated/bindings.py",
       "checkpoint_sha256": "a1a37b60030a2f22ec4b309a3398de1ee7e9e2a09c1d5aac5335b7035896d0a4",
       "current_sha256": "a1a37b60030a2f22ec4b309a3398de1ee7e9e2a09c1d5aac5335b7035896d0a4",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/bindings.py"
@@ -162869,7 +162869,7 @@
       "path": "src/pdx/situated/business_review.py",
       "checkpoint_sha256": "aeedda2f8fb756d96dc1538f4d03cfb1133dc6e66283b30b8eb82bae71fb0d9e",
       "current_sha256": "aeedda2f8fb756d96dc1538f4d03cfb1133dc6e66283b30b8eb82bae71fb0d9e",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/business_review.py"
@@ -162881,7 +162881,7 @@
       "path": "src/pdx/situated/compiler.py",
       "checkpoint_sha256": "5abd003e244ad119589d1c03c2742de2c75da10b06b26ab3caf6065e820a76f7",
       "current_sha256": "5abd003e244ad119589d1c03c2742de2c75da10b06b26ab3caf6065e820a76f7",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/compiler.py"
@@ -162893,7 +162893,7 @@
       "path": "src/pdx/situated/cost_policies.py",
       "checkpoint_sha256": "31fd7e63b1683fd73fb1251ece8ed29fddbb13275fbc4e057f52797a8eeb2965",
       "current_sha256": "31fd7e63b1683fd73fb1251ece8ed29fddbb13275fbc4e057f52797a8eeb2965",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/cost_policies.py"
@@ -162905,7 +162905,7 @@
       "path": "src/pdx/situated/decision_ir.py",
       "checkpoint_sha256": "95f07673d9c660dd48ea6a6910bbc318825e28565c0c1734cd647242814c4635",
       "current_sha256": "95f07673d9c660dd48ea6a6910bbc318825e28565c0c1734cd647242814c4635",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/decision_ir.py"
@@ -162917,7 +162917,7 @@
       "path": "src/pdx/situated/domain_coverage.py",
       "checkpoint_sha256": "8b65ef69da6243d5d40843438dbac8a067a3217b185c8e4a9eafe28a773075e0",
       "current_sha256": "8b65ef69da6243d5d40843438dbac8a067a3217b185c8e4a9eafe28a773075e0",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/domain_coverage.py"
@@ -162929,7 +162929,7 @@
       "path": "src/pdx/situated/engine_scope.py",
       "checkpoint_sha256": "7927126b859b4d598cc72d8e13b94f448cca79ea04ab66a91782ebc49edb99e3",
       "current_sha256": "cb30bdd3a8427dcac608855605aa4f1b523ba2f44198a663f73af01a0e6d7bf3",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/engine_scope.py"
@@ -162941,7 +162941,7 @@
       "path": "src/pdx/situated/interface_boundaries.py",
       "checkpoint_sha256": "ac574e9fa36e7f88ae1ec4cc3fcd4fc6bdeb321bc18fabd9653d06757091a8ab",
       "current_sha256": "ac574e9fa36e7f88ae1ec4cc3fcd4fc6bdeb321bc18fabd9653d06757091a8ab",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/interface_boundaries.py"
@@ -162953,7 +162953,7 @@
       "path": "src/pdx/situated/ir.py",
       "checkpoint_sha256": "ef8f17ec1ff35c3b3743844fc203d43732506ecbed7b900b444b6bd46d37b349",
       "current_sha256": "ef8f17ec1ff35c3b3743844fc203d43732506ecbed7b900b444b6bd46d37b349",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/ir.py"
@@ -162965,7 +162965,7 @@
       "path": "src/pdx/situated/joint_chain_contract.py",
       "checkpoint_sha256": "065ba4af694437ed9ec3005dbb39d936b62516844de107787a12f693b9d9d71b",
       "current_sha256": "065ba4af694437ed9ec3005dbb39d936b62516844de107787a12f693b9d9d71b",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/joint_chain_contract.py"
@@ -162977,7 +162977,7 @@
       "path": "src/pdx/situated/migration_baseline.py",
       "checkpoint_sha256": "0f8f5a56cd6eac542e1cde1de697af9cef9f92704801bc3f29de7d172400ee1a",
       "current_sha256": "0f8f5a56cd6eac542e1cde1de697af9cef9f92704801bc3f29de7d172400ee1a",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/migration_baseline.py"
@@ -162989,7 +162989,7 @@
       "path": "src/pdx/situated/native_treatments.py",
       "checkpoint_sha256": "1e371964b9e0288682220b8f32b03d729e341ac792ed13a16042118890539733",
       "current_sha256": "1e371964b9e0288682220b8f32b03d729e341ac792ed13a16042118890539733",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/native_treatments.py"
@@ -163001,7 +163001,7 @@
       "path": "src/pdx/situated/pdx_eval.py",
       "checkpoint_sha256": "96da265657244633613f9d8838edafdc64db192e779fb98e1ec08d1f26874a9d",
       "current_sha256": "96da265657244633613f9d8838edafdc64db192e779fb98e1ec08d1f26874a9d",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/pdx_eval.py"
@@ -163013,7 +163013,7 @@
       "path": "src/pdx/situated/ports.py",
       "checkpoint_sha256": "b2c682b7a925efef1ea3d87920b739423e5196946eb813bd8193dafe40798c26",
       "current_sha256": "b2c682b7a925efef1ea3d87920b739423e5196946eb813bd8193dafe40798c26",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/ports.py"
@@ -163025,7 +163025,7 @@
       "path": "src/pdx/situated/programs.py",
       "checkpoint_sha256": "b940a6540205c3714e7815c8b60ea15b129d7504eaaf8d5ce4ce6302067dc2a2",
       "current_sha256": "b940a6540205c3714e7815c8b60ea15b129d7504eaaf8d5ce4ce6302067dc2a2",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/programs.py"
@@ -163037,7 +163037,7 @@
       "path": "src/pdx/situated/relations.py",
       "checkpoint_sha256": "4ac9d82d6f17ab26f4a2a211dc86010394f9195c709070eac042ab97bc3b5402",
       "current_sha256": "4ac9d82d6f17ab26f4a2a211dc86010394f9195c709070eac042ab97bc3b5402",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/relations.py"
@@ -163049,7 +163049,7 @@
       "path": "src/pdx/situated/resources.py",
       "checkpoint_sha256": "19b9f9356a344f0bc5e43f47d93a678ab84473c08641bcfefc2825444fd969a0",
       "current_sha256": "19b9f9356a344f0bc5e43f47d93a678ab84473c08641bcfefc2825444fd969a0",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/resources.py"
@@ -163061,7 +163061,7 @@
       "path": "src/pdx/situated/schema.py",
       "checkpoint_sha256": "c91d17fa41a70ac6e83c47f324b203a00f4e737cfbeef4f8c32ffbb5aa524339",
       "current_sha256": "c91d17fa41a70ac6e83c47f324b203a00f4e737cfbeef4f8c32ffbb5aa524339",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/schema.py"
@@ -163072,8 +163072,8 @@
       "id": "production_delta:src/pdx/situated/vanilla_inventory.py",
       "path": "src/pdx/situated/vanilla_inventory.py",
       "checkpoint_sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
-      "current_sha256": "b72b811adcbedcdfaea20e3c6c22c0ffed776fd3622663921341acafb88ae8a9",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "current_sha256": "e0cc0e6d1962dabadbab021d3ad2ce0318c8dacbbcf6d50fc08217a2fd6a8e78",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/situated/vanilla_inventory.py"
@@ -163085,7 +163085,7 @@
       "path": "src/pdx/steam_workshop.py",
       "checkpoint_sha256": "ce3b4785c576f1b247ca8eb304407bb753f3c75fb29ff8b1dbe1f678f7d47d28",
       "current_sha256": "ce3b4785c576f1b247ca8eb304407bb753f3c75fb29ff8b1dbe1f678f7d47d28",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/steam_workshop.py"
@@ -163097,7 +163097,7 @@
       "path": "src/pdx/subject_dependence_opportunities.py",
       "checkpoint_sha256": "d6ddb72e5e5417b012697197d0c9671c9bdae0b29738d35a86a2882945f3e981",
       "current_sha256": "d6ddb72e5e5417b012697197d0c9671c9bdae0b29738d35a86a2882945f3e981",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/subject_dependence_opportunities.py"
@@ -163109,7 +163109,7 @@
       "path": "src/pdx/treaty_acceptance_opportunities.py",
       "checkpoint_sha256": "818ec68fcdb826ba9271c33101159dd59c6929029c62ed5887a90dced23e5fff",
       "current_sha256": "818ec68fcdb826ba9271c33101159dd59c6929029c62ed5887a90dced23e5fff",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/treaty_acceptance_opportunities.py"
@@ -163121,7 +163121,7 @@
       "path": "src/pdx/war_pressure_opportunities.py",
       "checkpoint_sha256": "edec29092ec5b252f8772689a5e986f5c468a4de7e5007f137e767e6535174c0",
       "current_sha256": "edec29092ec5b252f8772689a5e986f5c468a4de7e5007f137e767e6535174c0",
-      "diff_sha256": "88e89575cd64146aefa464ff5cc95726c44695e39fb68276bda11c3b723be935",
+      "diff_sha256": "ebd5d17a61915351d617a4a9c92f272e5b6be392b1ac15178fcb6884bb34a80c",
       "decision": "reverify",
       "row_ids": [
         "O:D:candidate:production_delta:src/pdx/war_pressure_opportunities.py"
