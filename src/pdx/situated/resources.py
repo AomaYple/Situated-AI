@@ -157,6 +157,9 @@ def verify_inherited_writes(files: Mapping[str, str]) -> None:
     inherited = {
         canal_opportunities.SOURCE: canal_opportunities.frozen_inputs()[canal_opportunities.SOURCE],
         event_opportunities.PLAGUE: event_opportunities.frozen_inputs()[event_opportunities.PLAGUE],
+        event_opportunities.DISASTERS: event_opportunities.frozen_inputs()[
+            event_opportunities.DISASTERS
+        ],
         famine_opportunities.SOURCE: famine_opportunities.frozen_inputs()[
             famine_opportunities.SOURCE
         ],

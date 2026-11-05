@@ -124,6 +124,7 @@ kind = "number"
 minimum = 0
 
 [actors]
+# 该完整州源也包含艺术学院；新机会复用原版state ROOT的实际owner，不猜测已启用PM。
 "common/buildings/06_urban_center.txt" = ["owner"]
 "common/buildings/01_industry.txt" = ["owner"]
 "common/buildings/02_agro.txt" = ["owner"]

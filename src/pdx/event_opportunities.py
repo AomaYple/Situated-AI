@@ -41,6 +41,34 @@ PLAGUE_MODIFIERS = "common/static_modifiers/02_event_modifiers.txt"
 PLAGUE_EFFECTS = "common/scripted_effects/00_spanish_flu_effects.txt"
 PLAGUE_JOURNAL = "common/journal_entries/00_plague.txt"
 FINANCE = "events/brazil/amazonas.txt"
+DISASTERS = "events/natural_disasters_events.txt"
+YEARLY = "common/on_actions/00_on_actions_yearly.txt"
+EVENT_VALUES = "common/script_values/event_values.txt"
+STATE_POPULATION = "events/american_civil_war/acw_wild_west_events.txt"
+DISASTER_QUERY_PARAMETER = "event_disaster_query"
+DISASTER_EVENTS = tuple(f"natural_disaster_events.{i}" for i in range(1, 9))
+DISASTER_OPTIONS = tuple(f"{name}.{suffix}" for name in DISASTER_EVENTS for suffix in ("a", "b"))
+DISASTER_SCOPES = (
+    "earthquake_state",
+    "flood_state",
+    "mega_flood_state",
+    "mega_earthquake_state",
+    "crop_fail_state",
+    "cyclone_state",
+    "volcanic_state",
+    "mega_volcanic_state",
+)
+DISASTER_SAVED_LINES = (40, 105, 178, 267, 359, 440, 503, 592)
+DISASTER_RELIEF = (
+    "earthquake",
+    "flood",
+    "mega_flood",
+    "mega_earthquake",
+    "crop_failure",
+    "cyclone",
+    "volcano",
+    "mega_volcanic",
+)
 PLAGUE_EVENT = "plague.5"
 PLAGUE_OPTIONS = ("plague.5.a", "plague.5.b", "plague.5.c")
 QUERY_PARAMETER = "event_plague_query"
@@ -52,7 +80,7 @@ DOMAIN = "political"
 def load() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
     if (
-        set(data) != {"schema", "sources", "tuning", "plague_policy"}
+        set(data) != {"schema", "sources", "tuning", "plague_policy", "disaster_policy"}
         or type(data["schema"]) is not int
         or data["schema"] != 1
         or set(data["sources"])
@@ -68,6 +96,10 @@ def load() -> dict[str, Any]:
             PLAGUE_EFFECTS,
             PLAGUE_JOURNAL,
             FINANCE,
+            DISASTERS,
+            YEARLY,
+            EVENT_VALUES,
+            STATE_POPULATION,
         }
         or set(data["tuning"]) != {"reform_need", "ignored_opponent_cost", "heard_opponent_benefit"}
     ):
@@ -104,6 +136,37 @@ def load() -> dict[str, Any]:
         for axis in ("health", "throughput", "financing")
     ):
         raise ValueError("较强封锁的已声明健康/吞吐/融资档不能小于较轻措施")
+    disaster = data["disaster_policy"]
+    if (
+        set(disaster)
+        != {
+            "base",
+            "ordinary_relief",
+            "mega_relief",
+            "crop_throughput_relief",
+            "crop_welfare",
+            "ordinary_high_exposure",
+            "mega_high_exposure",
+            "crop_high_exposure",
+            "small_recurring_cost",
+            "medium_recurring_cost",
+            "large_recurring_cost",
+            "solvent_cost_fraction",
+        }
+        or any(
+            type(v) not in {int, float} or not math.isfinite(v) or not 0 < v <= 50
+            for v in disaster.values()
+        )
+        or not 0 < disaster["solvent_cost_fraction"] <= 1
+    ):
+        raise ValueError("灾害完整配对显式政策参数无效")
+    if not (
+        disaster["small_recurring_cost"]
+        < disaster["medium_recurring_cost"]
+        < disaster["large_recurring_cost"]
+        and disaster["ordinary_relief"] < disaster["mega_relief"]
+    ):
+        raise ValueError("灾害减损及经常费用档方向漂移")
     return data
 
 
@@ -226,6 +289,95 @@ def _verify_plague(roots: Mapping[str, Block]) -> None:
     _scalar(_block(finance, "trigger"), "in_default", "no")
 
 
+DISASTER_PARENT_SHAPES = {
+    "natural_disaster_events.1": "ed4e78199a230ec3ac0f1cfa0cbebbc9ed28e605efa34169010da3d0fa6c4b51",
+    "natural_disaster_events.2": "e686360f7dac53f71da43e87442043cad50cae24481837b14795667d236effb1",
+    "natural_disaster_events.3": "a930c3f25f2081aa07ad5c030efaa077fa42ecba47d4f96a3a01fa7dfc68b5ae",
+    "natural_disaster_events.4": "416c4812ba63d9e30f5cb6bf1ba61f659bafa1aec6ca1473e3e510ec7c769abe",
+    "natural_disaster_events.5": "4f552a0153352c9ca213a12b9e0da7b166918440fa03a55514d019ba53566bec",
+    "natural_disaster_events.6": "b8cf95270870ad224463d71c1d45491e0db8eac4e61dfbd6c7d1b5defdce4694",
+    "natural_disaster_events.7": "e78554a0131cd1348b105c235c06223fdaf850a4b75415ad33e3dbea840aed11",
+    "natural_disaster_events.8": "baeb53117e82bc69c96c024725efe984985801a817c551993631e514cf87c418",
+}
+
+
+def _verify_disasters(roots: Mapping[str, Block], inputs: Mapping[str, str]) -> None:
+    from pdx.situated.native_treatments import _digest  # noqa: PLC0415
+
+    for index, name in enumerate(DISASTER_EVENTS):
+        event = _block(roots[DISASTERS], name)
+        digest = _digest(roots[DISASTERS].all(name)[0])
+        if digest != DISASTER_PARENT_SHAPES[name]:
+            raise ValueError(f"灾害完整父事件AST漂移：{name}")
+        _scalar(event, "type", "country_event")
+        _scalar(event, "placement", "scope:" + DISASTER_SCOPES[index])
+        options = _options(event)
+        if tuple(options) != (name + ".a", name + ".b") or any(
+            option.all("ai_chance") for option in options.values()
+        ):
+            raise ValueError("灾害完整双选项未声明权重底本漂移")
+        _scalar(
+            _block(roots[PLAGUE_MODIFIERS], "modifier_" + DISASTER_RELIEF[index] + "_relief"),
+            "country_expenses_add",
+            "1",
+        )
+    for modifier, amount in (
+        ("modifier_crop_failure", "-0.6"),
+        ("modifier_crop_failure_relief_effect", "-0.3"),
+    ):
+        for group in ("agriculture", "plantations"):
+            _scalar(
+                _block(roots[PLAGUE_MODIFIERS], modifier),
+                f"building_group_bg_{group}_throughput_add",
+                amount,
+            )
+    _scalar(
+        _block(roots[PLAGUE_MODIFIERS], "modifier_crop_failure_relief_effect"),
+        "state_welfare_payments_add",
+        "0.15",
+    )
+    values = roots[EVENT_VALUES]
+    _scalar(values, "short_modifier_time", "913")
+    _scalar(values, "normal_modifier_time", "1825")
+    for size, divisor, factor, rounded in (
+        ("small", "100000", "0.15", "100"),
+        ("medium", "100000", "0.25", "100"),
+        ("large", "1000000", "0.5", "1000"),
+    ):
+        expected = (
+            ("value", "=", "root.gdp"),
+            ("divide", "=", divisor),
+            ("multiply", "=", factor),
+            ("round", "=", "yes"),
+            ("multiply", "=", rounded),
+            ("min", "=", "100"),
+        )
+        if _shape(_block(values, "money_amount_multiplier_" + size)) != expected:
+            raise ValueError("灾害GDP经常费用脚本值AST漂移")
+    yearly = _block(_block(roots[YEARLY], "on_yearly_events"), "random_events")
+    _scalar(yearly, "chance_to_happen", "65")
+    for name, weight in zip(
+        DISASTER_EVENTS, ("3", "3", "1", "1", "20", "3", "3", "1"), strict=True
+    ):
+        if (
+            sum(
+                row.key == weight and isinstance(row.value, Scalar) and row.value.unquoted == name
+                for row in yearly.assignments()
+            )
+            != 1
+        ):
+            raise ValueError("灾害实际年度国家调用权重漂移")
+    pulse = _block(_block(roots[ON_ACTIONS], "on_yearly_pulse_country"), "on_actions")
+    if sum(
+        isinstance(row, Scalar) and row.unquoted == "on_yearly_events" for row in pulse.items
+    ) != 1 or not inputs[YEARLY].startswith("# Fired off on_yearly_pulse_country"):
+        raise ValueError("灾害年度国家ROOT调用链漂移")
+    population = _block(
+        _block(_block(roots[STATE_POPULATION], "wild_west.1"), "trigger"), "any_scope_state"
+    )
+    _scalar(population, "state_population", "100000", "<")
+
+
 def verify_inputs(inputs: Mapping[str, str]) -> None:
     roots = {}
     for name, digest in load()["sources"].items():
@@ -304,6 +456,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
     ):
         raise ValueError("事件AIWeight独立语法证据漂移")
     _verify_plague(roots)
+    _verify_disasters(roots, inputs)
     _scalar(
         _block(_block(roots[HEALTH], "law_public_health_insurance"), "institution_modifier"),
         "state_standard_of_living_add",
@@ -328,17 +481,44 @@ def frozen_inputs() -> dict[str, str]:
 
 
 @dataclass(frozen=True, slots=True)
+class EventPolicyIdentity:
+    source: str
+    event: str
+    family: str
+    explicit: bool
+    saved_state: str | None = None
+
+
+POLICIES = {
+    **{name: EventPolicyIdentity(SOURCE, EVENT, "healthcare", False) for name in OPTIONS},
+    **{name: EventPolicyIdentity(PLAGUE, PLAGUE_EVENT, "plague", True) for name in PLAGUE_OPTIONS},
+    **{
+        option: EventPolicyIdentity(DISASTERS, name, "disaster", True, scope)
+        for name, scope in zip(DISASTER_EVENTS, DISASTER_SCOPES, strict=True)
+        for option in (name + ".a", name + ".b")
+    },
+}
+
+
+@dataclass(frozen=True, slots=True)
 class EventProgram:
     option: str
     scalar: programs.ScalarProgram
 
     @property
+    def identity(self) -> EventPolicyIdentity:
+        try:
+            return POLICIES[self.option]
+        except KeyError as exc:
+            raise ValueError("事件选项没有精确注册政策身份") from exc
+
+    @property
     def source(self) -> str:
-        return PLAGUE if self.option in PLAGUE_OPTIONS else SOURCE
+        return self.identity.source
 
     @property
     def event(self) -> str:
-        return PLAGUE_EVENT if self.option in PLAGUE_OPTIONS else EVENT
+        return self.identity.event
 
     @property
     def field_path(self) -> tuple[str, ...]:
@@ -364,7 +544,27 @@ class EventProgram:
     def evaluation_context(self) -> EvaluationContext:
         from pdx.situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
 
-        if self.option in PLAGUE_OPTIONS:
+        if self.identity.family == "disaster":
+            line = DISASTER_SAVED_LINES[DISASTER_EVENTS.index(self.event)]
+            return EvaluationContext(
+                actor_scope=ContextBinding("root", "country", "actor", ON_ACTIONS, 1580),
+                auxiliary_scopes=(
+                    ContextBinding(
+                        cast("str", self.identity.saved_state),
+                        "state",
+                        "auxiliary",
+                        DISASTERS,
+                        line,
+                    ),
+                ),
+                evidence=(
+                    f"{ON_ACTIONS}:1580",
+                    f"{ON_ACTIONS}:1840",
+                    f"{YEARLY}:4",
+                    f"{DISASTERS}:{line}",
+                ),
+            )
+        if self.identity.family == "plague":
             return EvaluationContext(
                 actor_scope=ContextBinding("root", "country", "actor", PLAGUE_DECISION, 1),
                 evidence=(f"{PLAGUE_DECISION}:1", f"{PLAGUE_DECISION}:25", f"{PLAGUE}:365"),
@@ -380,7 +580,17 @@ class EventProgram:
         )
 
     def reader_bindings(self) -> tuple[tuple[str, str, str, str], ...]:
-        if self.option in PLAGUE_OPTIONS:
+        if self.identity.family == "disaster":
+            return tuple(
+                (
+                    reader.key,
+                    reader.scope,
+                    "country" if reader.scope == "root" else "state",
+                    "actor" if reader.scope == "root" else "auxiliary",
+                )
+                for reader in self.readers()
+            )
+        if self.identity.family == "plague":
             return tuple((reader.key, "root", "country", "actor") for reader in self.readers())
         return (
             ("average_sol", "root", "country", "actor"),
@@ -394,12 +604,50 @@ class EventProgram:
 
         if type(is_ai) is not bool or type(enabled) is not bool:
             raise ValueError("事件AI身份与开关必须为已知布尔")
-        return programs.evaluate_scalar(self.scalar, _guards(values)) if is_ai and enabled else 0.0
+        return (
+            programs.evaluate_scalar(self.scalar, _guards(values, self))
+            if is_ai and enabled
+            else 0.0
+        )
 
     def readers(self) -> tuple[Reader, ...]:
         from pdx.decision_rules import Reader  # noqa: PLC0415
 
-        if self.option in PLAGUE_OPTIONS:
+        if self.identity.family == "disaster":
+            scope = cast("str", self.identity.saved_state)
+            readers: tuple[Reader, ...] = (
+                Reader(
+                    "disaster_" + scope + "_exists",
+                    "exists",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    argument="scope:" + scope,
+                ),
+                Reader(
+                    "disaster_" + scope + "_population",
+                    "state_population",
+                    scope,
+                    "persons",
+                    "number",
+                    minimum=0,
+                ),
+                Reader("disaster_default", "in_default", "root", "boolean", "boolean"),
+            )
+            if self.event == "natural_disaster_events.5":
+                readers += tuple(
+                    Reader(
+                        "disaster_" + scope + "_farm_" + mode,
+                        "any_scope_building",
+                        scope,
+                        "boolean",
+                        "boolean",
+                        parameters=((DISASTER_QUERY_PARAMETER, mode),),
+                    )
+                    for mode in ("qualified", "high")
+                )
+            return readers
+        if self.identity.family == "plague":
             return (
                 *(
                     Reader(
@@ -484,9 +732,13 @@ class EventProgram:
             "reader_context_bindings": [list(row) for row in self.reader_bindings()],
             "readers": [asdict(reader) for reader in self.readers()],
             "source_hashes": load()["sources"],
-            "policy": "explicit_new_three_option_policy_native_default_unknown"
-            if self.option in PLAGUE_OPTIONS
-            else "additive_to_explicit_native_weight",
+            "policy": (
+                "explicit_new_three_option_policy_native_default_unknown"
+                if self.identity.family == "plague"
+                else "explicit_new_paired_policy_native_default_unknown"
+                if self.identity.explicit
+                else "additive_to_explicit_native_weight"
+            ),
         }
 
 
@@ -532,7 +784,7 @@ def compile_programs() -> tuple[EventProgram, ...]:
             ),
         )
         result.append(EventProgram(option, scalar))
-    return (*result, *_compile_plague_programs())
+    return (*result, *_compile_plague_programs(), *_compile_disaster_programs())
 
 
 def _compile_plague_programs() -> tuple[EventProgram, ...]:
@@ -641,6 +893,92 @@ def _compile_plague_programs() -> tuple[EventProgram, ...]:
     return tuple(result)
 
 
+def _compile_disaster_programs() -> tuple[EventProgram, ...]:
+    from pdx.situated import programs  # noqa: PLC0415
+
+    policy = load()["disaster_policy"]
+    result = []
+    for index, event in enumerate(DISASTER_EVENTS):
+        mega, crop = index in {2, 3, 7}, index == 4
+        size = "large" if mega else "medium" if index in {0, 1} else "small"
+        prefix = event.replace(".", "_")
+        for suffix, sign in (("a", -1), ("b", 1)):
+            groups = []
+            axes = (
+                (
+                    ("crop_throughput_relief", "actual_saved_crop_throughput"),
+                    ("crop_welfare", "actual_saved_crop_welfare"),
+                )
+                if crop
+                else (
+                    (
+                        "mega_relief" if mega else "ordinary_relief",
+                        "actual_saved_region_devastation",
+                    ),
+                )
+            )
+            for key, cause in axes:
+                groups.append(
+                    programs.ScalarGroup(
+                        cause,
+                        (
+                            programs.ScalarTerm(
+                                prefix + "_exposed",
+                                f"{prefix}_{suffix}_{cause}",
+                                sign * policy[key],
+                            ),
+                        ),
+                    )
+                )
+            high = policy[
+                "crop_high_exposure"
+                if crop
+                else "mega_high_exposure"
+                if mega
+                else "ordinary_high_exposure"
+            ]
+            groups.append(
+                programs.ScalarGroup(
+                    "observed_exact_saved_exposure",
+                    (
+                        programs.ScalarTerm(
+                            prefix + "_high", f"{prefix}_{suffix}_exposure", sign * high
+                        ),
+                    ),
+                )
+            )
+            if suffix == "b":
+                cost = policy[size + "_recurring_cost"]
+                refund = cost * (1 - policy["solvent_cost_fraction"])
+                groups.append(
+                    programs.ScalarGroup(
+                        "independent_country_recurring_expense",
+                        (
+                            programs.ScalarTerm(
+                                prefix + "_exposed",
+                                f"{prefix}_{suffix}_financing",
+                                -cost,
+                                (programs.ScalarEffect("disaster_solvent", refund),),
+                            ),
+                        ),
+                    )
+                )
+            result.append(
+                EventProgram(
+                    event + "." + suffix,
+                    programs.ScalarProgram(
+                        f"event_disaster_{index + 1}_{suffix}",
+                        "add",
+                        policy["base"],
+                        0,
+                        100,
+                        tuple(groups),
+                    ),
+                )
+            )
+    return tuple(result)
+
+
 def _valid_number(value: object, minimum: float, maximum: float = math.inf) -> bool:
     if type(value) not in {int, float}:
         return False
@@ -650,11 +988,11 @@ def _valid_number(value: object, minimum: float, maximum: float = math.inf) -> b
         return False
 
 
-def _guards(values: Mapping[str, object]) -> dict[str, bool]:
+def _guards(values: Mapping[str, object], program: EventProgram) -> dict[str, bool]:
     sol, clout = values.get("average_sol"), values.get("opponent_clout")
     exists = values.get("opponent_exists") is True
     infected = values.get("plague_infected")
-    return {
+    result = {
         "social_need": _valid_number(sol, 0) and cast("float", sol) < 8,
         "opponent_exists": exists,
         "opponent_cheap": exists and _valid_number(clout, 0, 1) and cast("float", clout) < 0.2,
@@ -673,6 +1011,24 @@ def _guards(values: Mapping[str, object]) -> dict[str, bool]:
             or values.get("plague_response_measures") is True
         ),
     }
+    result["disaster_solvent"] = values.get("disaster_default") is False
+    for index, event in enumerate(DISASTER_EVENTS):
+        fact_prefix = "disaster_" + DISASTER_SCOPES[index]
+        population = values.get(fact_prefix + "_population")
+        exposed = (
+            program.event == event
+            and values.get(fact_prefix + "_exists") is True
+            and _valid_number(population, 1)
+            and (index != 4 or values.get(fact_prefix + "_farm_qualified") is True)
+        )
+        prefix = event.replace(".", "_")
+        result[prefix + "_exposed"] = exposed
+        result[prefix + "_high"] = exposed and (
+            values.get(fact_prefix + "_farm_high") is True
+            if index == 4
+            else _valid_number(population, 100000)
+        )
+    return result
 
 
 def evaluate(
@@ -703,6 +1059,78 @@ GUARDS = {
     "plague_continue_measures": "any_scope_state = { has_modifier = plague_modifier } has_variable = plague_measures",
     "plague_recovered_response": "NOT = { any_scope_state = { has_modifier = plague_modifier } } OR = { has_variable = plague_lockdown has_variable = plague_measures }",
 }
+
+for _event, _saved in zip(DISASTER_EVENTS, DISASTER_SCOPES, strict=True):
+    _prefix = _event.replace(".", "_")
+    _core = f"exists = scope:{_saved} scope:{_saved} = {{ state_population >= 1 }}"
+    if _event == "natural_disaster_events.5":
+        _core += f" scope:{_saved} = {{ any_scope_building = {{ is_farm_building = yes occupancy >= 0.1 }} }}"
+    GUARDS[_prefix + "_exposed"] = _core
+    _high = (
+        "any_scope_building = { is_farm_building = yes occupancy >= 0.5 }"
+        if _event == "natural_disaster_events.5"
+        else "state_population >= 100000"
+    )
+    GUARDS[_prefix + "_high"] = _core + f" scope:{_saved} = {{ {_high} }}"
+GUARDS["disaster_solvent"] = "in_default = no"
+
+
+@dataclass(frozen=True, slots=True)
+class DisasterFarmQuery:
+    observation: Literal["qualified", "high"]
+
+
+@dataclass(frozen=True, slots=True)
+class CompiledDisasterFarmQuery:
+    expression: str
+    references: tuple[str, ...]
+    source_hashes: tuple[tuple[str, str], ...]
+    local_collections: tuple[str, ...] = ("saved_state_buildings",)
+    actor: str = "state"
+    kind: str = "boolean"
+    unknown_policy: str = (
+        "known_farm_above_threshold=true; complete_empty=false; no_true_with_unknown=unknown"
+    )
+    world_scans: int = 0
+    runtime_cost: str = (
+        "bounded exact saved-state building existential; no world scan or persistent state"
+    )
+
+
+def disaster_query_from_reader(engine: str, parameters: Mapping[str, str]) -> DisasterFarmQuery:
+    if (
+        engine != "any_scope_building"
+        or set(parameters) != {DISASTER_QUERY_PARAMETER}
+        or parameters[DISASTER_QUERY_PARAMETER] not in {"qualified", "high"}
+    ):
+        raise ValueError("灾害农业查询必须是固定已保存州的真实农场占用率")
+    return DisasterFarmQuery(
+        cast("Literal['qualified', 'high']", parameters[DISASTER_QUERY_PARAMETER])
+    )
+
+
+def render_disaster_query(query: DisasterFarmQuery) -> str:
+    if type(query) is not DisasterFarmQuery or query.observation not in {"qualified", "high"}:
+        raise ValueError("灾害农业查询身份无效")
+    threshold = "0.1" if query.observation == "qualified" else "0.5"
+    return f"any_scope_building = {{ is_farm_building = yes occupancy >= {threshold} }}"
+
+
+def required_disaster_query_sources(query: DisasterFarmQuery) -> tuple[str, ...]:
+    render_disaster_query(query)
+    return tuple(sorted(load()["sources"]))
+
+
+def compile_disaster_query(
+    query: DisasterFarmQuery, inputs: Mapping[str, str]
+) -> CompiledDisasterFarmQuery:
+    expression = render_disaster_query(query)
+    verify_inputs(inputs)
+    return CompiledDisasterFarmQuery(
+        expression,
+        (f"{DISASTERS}:334", f"{DISASTERS}:349"),
+        tuple(sorted(load()["sources"].items())),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -770,7 +1198,7 @@ def render(program: EventProgram) -> str:
     from pdx.situated import programs  # noqa: PLC0415
 
     scalar = program.scalar
-    new_policy = program.option in PLAGUE_OPTIONS
+    new_policy = program.identity.explicit
     if (
         scalar.operation != "add"
         or (scalar.neutral != 0 and not new_policy)
@@ -855,7 +1283,7 @@ def patch(
     selected = compile_programs() if consumer_programs is None else consumer_programs
     if {row.option: row for row in selected} != {
         row.option: row for row in compile_programs()
-    } or len(selected) != len(OPTIONS) + len(PLAGUE_OPTIONS):
+    } or len(selected) != len(POLICIES):
         raise ValueError("事件选项程序集合缺失、重复或漂移")
     result = {}
     for source in sorted({program.source for program in selected}):
@@ -867,7 +1295,7 @@ def patch(
                 continue
             event = _block(parsed, program.event)
             options = _options(event)
-            if program.option in PLAGUE_OPTIONS:
+            if program.identity.explicit:
                 option = next(
                     row for row in event.all("option") if row.value is options[program.option]
                 )
@@ -948,5 +1376,43 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
             "unknown_policy": "health_unknown=local_exit; restriction_unknown=local_exit; financing_unknown=retain_cost; response_flags_independent",
             "default_weight": "unknown_not_inferred; intentional_new_explicit_ai_policy",
             "source_sha256": load()["sources"][PLAGUE],
+        }
+    disaster_root = parse_text(inputs[DISASTERS]).root
+    for name in DISASTER_OPTIONS:
+        identity = POLICIES[name]
+        parent = _block(disaster_root, identity.event)
+        option = _options(parent)[name]
+        line = next(row.line for row in parent.all("option") if row.value is option)
+        index = DISASTER_EVENTS.index(identity.event)
+        size = "large" if index in {2, 3, 7} else "medium" if index in {0, 1} else "small"
+        catalog[name] = {
+            "source": DISASTERS,
+            "definition": identity.event,
+            "field": f"option[{name}].ai_chance",
+            "selector": {"event": identity.event, "option_name": name},
+            "native_root": "country",
+            "actor": "root",
+            "target_scope": "none",
+            "native_unit": "event_option_weight",
+            "operation": "add",
+            "placement": "new_explicit_complete_paired_ai_policy",
+            "scope_evidence": [
+                f"{ON_ACTIONS}:1580",
+                f"{ON_ACTIONS}:1840",
+                f"{YEARLY}:{98 + index}",
+                f"{DISASTERS}:{line}",
+            ],
+            "source_line": line,
+            "auxiliary_entity": f"scope:{identity.saved_state}=state; exact event immediate random_scope_state",
+            "unknown_policy": "saved_exposure_unknown=pair_neutral; farm_qualification_unknown=pair_neutral; financing_unknown=retain_declared_recurring_cost",
+            "default_weight": "unknown_not_inferred; intentional_new_explicit_ai_policy",
+            "cost_semantics": {
+                "kind": "country_expenses_add",
+                "modifier_value": 1,
+                "gdp_multiplier": "money_amount_multiplier_" + size,
+                "duration_days": 1825 if size == "large" else 913,
+                "applies_to": identity.event + ".b",
+            },
+            "source_sha256": load()["sources"][DISASTERS],
         }
     return catalog

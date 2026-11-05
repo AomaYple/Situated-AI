@@ -65,6 +65,32 @@ building_art_academy = {
 			}
             add = 500
 		}
+
+		# SITAI BEGIN information:building_art_academy.ai_value
+		# ACTION program_4907b0733b4b1b47 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_4907b0733b4b1b47_building_financing_pressure_negative
+			add = { value = 0
+				# building_opportunity_building_art_academy_default_cost [market]; 所有者已实际违约，增加建设筹资压力；正常借款不触发，不是实际付款或资源预留
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = yes } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_4907b0733b4b1b47_building_infrastructure_pressure_negative
+			add = { value = 0
+				# building_opportunity_building_art_academy_infrastructure_cost [market]; 候选州基础设施余额为负，增加建设承载压力；静态偏好代价不改变原版费用或资格
+				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 exists = owner owner = { is_ai = yes } } } add = -0.1 }
+			}
+			# GROUP program_4907b0733b4b1b47_building_output_demand_positive
+			add = { value = 0
+				# building_opportunity_building_art_academy_fine_art_pressure [market]; 必选基础PMG全部方法共同正产出fine_art；所有者市场缺口为基础机会，高价只升档同一需求
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
+				# building_opportunity_building_art_academy_fine_art_demand [market]; 必选基础PMG全部方法共同正产出fine_art；所有者市场缺口为基础机会，高价只升档同一需求
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+			}
+			min = 0.75
+			max = 1.12
+		} }
+		# SITAI END information:building_art_academy.ai_value
 	}
 }
 

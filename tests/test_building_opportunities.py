@@ -516,8 +516,9 @@ def test_locked_recipe_consensus_keeps_actual_building_output_differences():
     assert "building_shipyard" not in covered
     assert "building_gold_mine" not in covered
     assert "building_railway" not in covered
-    assert len(covered) == 41
-    assert len([r for r in derived["rules"] if not r["id"].startswith("building_local_")]) == 174
+    assert covered["building_art_academy"] == ["fine_art"]
+    assert len(covered) == 42
+    assert len([r for r in derived["rules"] if not r["id"].startswith("building_local_")]) == 178
     assert len(derived["readers"]) >= 78
     assert {(row["method"], row["good"]) for row in derived["conditional_covered"]} == {
         ("pm_basic_shipbuilding", "clippers"),
@@ -525,7 +526,9 @@ def test_locked_recipe_consensus_keeps_actual_building_output_differences():
         ("pm_metal_shipbuilding", "steamers"),
         ("pm_arc_welding_shipbuilding", "steamers"),
     }
-    assert {rule["field"] for rule in derived["rules"]} <= {rule["field"] for rule in raw["rules"]}
+    assert {rule["field"] for rule in derived["rules"]} <= {
+        rule["field"] for rule in raw["rules"]
+    } | {"building_art_academy.ai_value"}
     for key, reader in derived["readers"].items():
         if (
             key not in {"state_owner_default", "state_infrastructure"}

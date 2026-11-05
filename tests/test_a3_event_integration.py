@@ -58,7 +58,7 @@ def test_real_compiler_and_adapter_emit_the_same_frozen_event_instances(producti
     model = compiler.load_model()
     assert model.consumer_ir is not None
     programs = decision_adapters._event_programs(configured, model.consumer_ir, enabled=True)
-    assert len(programs) == 5
+    assert len(programs) == 21
     writers = [row for row in model.consumer_ir.writers if row.kind == "event_program"]
     assert all(row.event_program is program for row, program in zip(writers, programs, strict=True))
     instances = tuple(row for row in model.action_instances if row.kind == "event_program")
@@ -77,7 +77,7 @@ def test_real_compiler_and_adapter_emit_the_same_frozen_event_instances(producti
                 100,
                 "absolute_new_aiweight_native_default_unknown",
             )
-            for option in event.PLAGUE_OPTIONS
+            for option in event.PLAGUE_OPTIONS + event.DISASTER_OPTIONS
         },
     }
     actual_bounds = {
@@ -105,11 +105,11 @@ def test_real_compiler_and_adapter_emit_the_same_frozen_event_instances(producti
     generated, metadata = decision_adapters.build(
         adapters, texts=inputs, enabled_domains=frozenset({"political"}), consumer_ir=bundle
     )
-    assert set(generated) == {event.SOURCE, event.PLAGUE}
+    assert set(generated) == {event.SOURCE, event.PLAGUE, event.DISASTERS}
     assert generated == event.patch(inputs, consumer_programs=programs)
     assert metadata["event_programs"] == [program.as_dict() for program in programs]
     assert isinstance(metadata["field_owners"], list)
-    assert len(metadata["field_owners"]) == 5
+    assert len(metadata["field_owners"]) == 21
     assert action_instances.missing_witnesses(instances, generated) == ()
     assert action_instances.missing_witnesses(instances, {}) == tuple(
         row.action_id for row in instances
@@ -211,16 +211,16 @@ def test_disabled_event_emits_nothing_and_standalone_freezes_the_same_explicit_i
         )
 
 
-def test_independent_complete_sources_authorize_only_the_five_exact_options(production):
+def test_independent_complete_sources_authorize_only_the_twenty_one_exact_options(production):
     inputs, _, bundle = production
     raw = {source: text.encode("utf-8") for source, text in inputs.items()}
     surfaces: list[vanilla_inventory.VanillaSurface] = []
-    for source in (event.SOURCE, event.PLAGUE):
+    for source in (event.SOURCE, event.PLAGUE, event.DISASTERS):
         for definition in parse_text(inputs[source]).top_assignments:
             _, rows = vanilla_inventory._event_candidates(source, definition)
             surfaces.extend(rows)
     proven = vanilla_inventory._proven_event_surfaces(raw, surfaces)
-    assert sum(row.legal for row in proven) == 5
+    assert sum(row.legal for row in proven) == 21
     assert sum(row.legal for row in proven if row.source == event.PLAGUE) == 3
     inventory = vanilla_inventory.VanillaInventory(
         "independent_complete_event_context",
@@ -250,7 +250,7 @@ def test_independent_complete_sources_authorize_only_the_five_exact_options(prod
         for writer in bundle.writers
     )
     report = domain_coverage.native_coverage(inventory, instances, native_sources=raw)
-    assert report["counts"]["actual_covered"] == 5
+    assert report["counts"]["actual_covered"] == 21
     assert report["binding_issue_count"] == 0
     assert all(
         row["coverage_status"] == "actual_covered"
@@ -260,5 +260,5 @@ def test_independent_complete_sources_authorize_only_the_five_exact_options(prod
     changed = tuple(replace(row, evaluation_context=None) for row in instances)
     failed = domain_coverage.native_coverage(inventory, changed, native_sources=raw)
     assert failed["counts"]["actual_covered"] == 0
-    assert failed["binding_issue_count"] == 5
+    assert failed["binding_issue_count"] == 21
     assert not any(row.legal for row in vanilla_inventory._proven_event_surfaces({}, surfaces))

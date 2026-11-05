@@ -6,12 +6,18 @@ import copy
 import hashlib
 import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
+from test_native_parameter_closure import support_case  # noqa: F401
+from test_native_parameter_contract_reuse import _wire_contract
 from test_situated_native_treatments import _coverage
 
-from pdx import config
+from pdx import config, decision_adapters, decision_rules, production_inputs
 from pdx.situated import business_review as business
+from pdx.situated import programs
+from pdx.situated.action_instances import _id
+from pdx.situated.ir import from_rule
 from pdx.situated.native_treatments import (
     _Dependencies,
     _digest,
@@ -475,5 +481,235 @@ def test_composed_parent_rejects_stale_or_incomplete_child_and_source_proofs(
             b"conquer_state = { value = 11 } other = { value = native_policy }",
             b"other = { value = native_policy } conquer_state = { value = 11 }",
         )
+    result = business.review(inventory, native, output, treatment, data=data)
+    assert result["counts"] == {"production_protection_unproven": 1}
+
+
+def _changed_business_data(inventory, native):
+    surface = inventory.surfaces[0]
+    roots = _Sources(native)
+    parent, _ = _resolve(roots.roots[surface.source], surface.definition, "__body__")
+    node, _ = _resolve(roots.roots[surface.source], surface.definition, surface.field)
+    return {
+        "rows": [
+            {
+                "surface_id": surface.surface_id,
+                "field": surface.field,
+                "source_line": surface.source_line,
+                "declaration_occurrence": surface.declaration_occurrence,
+                "field_ast_sha256": _digest(node),
+                "parent_context": "current",
+                "business_family": "native_specialized_strategy_additive",
+                "reason_index": 0,
+            }
+        ],
+        "parent_contexts": {
+            "current": {
+                "source": surface.source,
+                "definition": surface.definition,
+                "source_sha256": inventory.source_hashes[surface.source],
+                "parent_ast_sha256": _digest(parent),
+                "named_reference_proof_ids": [],
+            }
+        },
+        "groups": {
+            "native_specialized_strategy_additive": {
+                "reasons": ["Original native policy rationale remains recorded."]
+            }
+        },
+        "reference_proofs": {},
+        "retained_event_rows": [],
+        "unresolved_common_ids": ["pending"],
+        "unresolved_event_option_rows": [],
+        "limitations": ["static proof only"],
+    }
+
+
+@pytest.fixture(params=["protect", "reconcile"])
+def registered_changed_goal(request, monkeypatch):
+    source = "common/ai_strategies/00_default_strategy.txt"
+    field = f"secret_goal_scores.{request.param}.score"
+    native = {
+        source: f"ai_strategy_default={{secret_goal_scores={{{request.param}={{trigger={{always=yes}} score={{value=10}}}}}}}}".encode()
+    }
+    raw = native[source]
+    policy = decision_rules.RuleSet(
+        (decision_rules.Reader("default", "in_default", "root", "boolean", "boolean"),),
+        (
+            decision_rules.Rule(
+                "cooperation_fixture",
+                "diplomacy",
+                ("ai_strategy_default", *field.split(".")),
+                10,
+                -2,
+                (decision_rules.Predicate("default", "=", True),),
+                "fixture",
+                "fixture",
+                operation="add",
+            ),
+        ),
+        hashlib.sha256(raw).hexdigest(),
+        "b" * 64,
+        frozenset({"diplomacy"}),
+    )
+    adapters = decision_adapters.AdapterSet(
+        ((source, hashlib.sha256(raw).hexdigest()),), ((source, policy),), "a" * 64
+    )
+    monkeypatch.setattr(decision_adapters, "load", lambda: adapters)
+    joint = programs.enable(
+        replace(policy, semantic_ir=tuple(from_rule(r, source=source) for r in policy.rules)),
+        source=source,
+    )
+    output = {
+        source: decision_rules.patch(
+            raw.decode(),
+            joint,
+            baseline=raw.decode(),
+            default_strategy=False,
+            reader_words=frozenset({"in_default"}),
+        ).encode()
+    }
+    output[".metadata/metadata.json"] = json.dumps(
+        {
+            "consumer_adapters": {
+                "schema": 1,
+                "source_sha256": adapters.source_sha256,
+                "generator_sha256": hashlib.sha256(
+                    Path(decision_adapters.__file__).read_bytes()
+                ).hexdigest(),
+                "production_inputs_generator_sha256": hashlib.sha256(
+                    Path(production_inputs.__file__).read_bytes()
+                ).hexdigest(),
+                "sources": dict(adapters.sources),
+                "consumers": [_wire_contract(source, policy, True)],
+            }
+        }
+    ).encode()
+    surface = VanillaSurface(
+        f"fixture_{request.param}",
+        source,
+        "ai_strategy_default",
+        field,
+        "country",
+        "none",
+        "additive_score",
+        "direct",
+        "pending",
+        None,
+        "fixture registration",
+        (f"{source}:1",),
+        "D0",
+        1,
+    )
+    inventory = VanillaInventory(
+        "registered_fixture",
+        {source: hashlib.sha256(raw).hexdigest()},
+        "a" * 64,
+        (surface,),
+        ("ai_strategies",),
+        ("common",),
+        1,
+    )
+    coverage = _coverage(inventory)
+    action = _id(source, policy.rules[0].id)
+    coverage["rows"][0].update(covered_actions=[action], matched_actions=[action])
+    treatment = native_treatments(
+        inventory, native, output, coverage=coverage, production_complete=True
+    )
+    assert treatment["rows"][0]["status"] == "implemented_numeric"
+    return _changed_business_data(inventory, native), inventory, native, output, treatment
+
+
+def test_changed_registered_goal_is_implementation_and_never_exact_native_retention(
+    registered_changed_goal,
+):
+    data, inventory, native, output, treatment = registered_changed_goal
+    result = business.review(inventory, native, output, treatment, data=data)
+    assert result["counts"] == {"verified_numeric_implementation_preserving_native_context": 1}
+    assert result["common_review_rows"][0]["counts_as_new_capability"] is False
+    assert result["unresolved_common_ids"] == ["pending"]
+    assert result["business_complete"] is False
+
+
+@pytest.mark.parametrize(
+    "fault", ["action", "metadata", "numeric_body", "sibling", "dependency", "scope", "manifest"]
+)
+def test_changed_numeric_disposition_requires_registered_current_program_and_context(
+    registered_changed_goal, fault
+):
+    data, inventory, native, output, treatment = registered_changed_goal
+    source = inventory.surfaces[0].source
+    if fault == "action":
+        treatment["rows"][0]["numeric_actions"] = ["unregistered"]
+    elif fault == "metadata":
+        metadata = json.loads(output[".metadata/metadata.json"])
+        metadata["consumer_adapters"]["consumers"][0]["rules"] = []
+        output[".metadata/metadata.json"] = json.dumps(metadata).encode()
+    elif fault == "numeric_body":
+        output[source] = (
+            output[source].replace(b"value=10", b"value=90").replace(b"value = 10", b"value = 90")
+        )
+    elif fault == "sibling":
+        output[source] = output[source].replace(b"always=yes", b"always=no")
+    elif fault == "dependency":
+        treatment["rows"][0]["dependencies"].append({"status": "unproven"})
+    elif fault == "scope":
+        treatment["rows"][0]["interface"]["known"] = False
+    else:
+        treatment["production_manifest_complete_asserted"] = False
+    # Updating a manifest cannot sign changed semantics or a different native context.
+    treatment["production_hashes"] = {
+        name: hashlib.sha256(raw).hexdigest() for name, raw in output.items()
+    }
+    result = business.review(inventory, native, output, treatment, data=data)
+    assert result["counts"] == {"production_protection_unproven": 1}
+
+
+def test_exact_support_writer_gets_a_distinct_changed_implementation_disposition(support_case):  # noqa: F811
+    inventory, native, output, _ = support_case
+    coverage = _coverage(inventory)
+    coverage["rows"][0].update(
+        covered_actions=["diplomatic_play_support_program"],
+        matched_actions=["diplomatic_play_support_program"],
+    )
+    treatment = native_treatments(
+        inventory, native, output, coverage=coverage, production_complete=True
+    )
+    assert treatment["rows"][0]["status"] == "implemented_numeric"
+    data = _changed_business_data(inventory, native)
+    result = business.review(inventory, native, output, treatment, data=data)
+    assert result["counts"] == {"verified_numeric_implementation_preserving_native_context": 1}
+
+
+@pytest.mark.parametrize("fault", ["action", "program", "tail", "helper"])
+def test_changed_support_classification_rechecks_current_exact_writer(support_case, fault):  # noqa: F811
+    inventory, native, output, _ = support_case
+    coverage = _coverage(inventory)
+    coverage["rows"][0].update(
+        covered_actions=["diplomatic_play_support_program"],
+        matched_actions=["diplomatic_play_support_program"],
+    )
+    treatment = native_treatments(
+        inventory, native, output, coverage=coverage, production_complete=True
+    )
+    assert treatment["rows"][0]["status"] == "implemented_numeric"
+    data = _changed_business_data(inventory, native)
+    if fault == "action":
+        treatment["rows"][0]["numeric_actions"] = ["other_program"]
+    elif fault == "program":
+        metadata = json.loads(output[".metadata/metadata.json"])
+        metadata["situated_actions"]["consumer_ir"]["writers"][0]["program"][
+            "consumer_max_delta"
+        ] = 99
+        output[".metadata/metadata.json"] = json.dumps(metadata).encode()
+    elif fault == "tail":
+        source = inventory.surfaces[0].source
+        output[source] = output[source].replace(b"value = 0", b"value = 1", 1)
+    else:
+        source = "common/scripted_triggers/sitai_security_triggers.txt"
+        output[source] = output[source].replace(b"binds = $PARTNER$", b"binds = ROOT")
+    treatment["production_hashes"] = {
+        name: hashlib.sha256(raw).hexdigest() for name, raw in output.items()
+    }
     result = business.review(inventory, native, output, treatment, data=data)
     assert result["counts"] == {"production_protection_unproven": 1}

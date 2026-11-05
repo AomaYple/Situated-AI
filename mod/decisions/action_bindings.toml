@@ -10837,6 +10837,50 @@ disposition = "migrate"
 consumer = "building_power_plant.ai_value"
 
 [[bindings]]
+binding_id = "binding_common_buildings_06_urban_center_txt_building_opportunity_building_art_academy_default_cost"
+source = "common/buildings/06_urban_center.txt"
+definition = "building_opportunity_building_art_academy_default_cost"
+field = "building_art_academy.ai_value"
+actor = "owner"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "building_art_academy.ai_value"
+
+[[bindings]]
+binding_id = "binding_common_buildings_06_urban_center_txt_building_opportunity_building_art_academy_fine_art_demand"
+source = "common/buildings/06_urban_center.txt"
+definition = "building_opportunity_building_art_academy_fine_art_demand"
+field = "building_art_academy.ai_value"
+actor = "owner"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "building_art_academy.ai_value"
+
+[[bindings]]
+binding_id = "binding_common_buildings_06_urban_center_txt_building_opportunity_building_art_academy_fine_art_pressure"
+source = "common/buildings/06_urban_center.txt"
+definition = "building_opportunity_building_art_academy_fine_art_pressure"
+field = "building_art_academy.ai_value"
+actor = "owner"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "building_art_academy.ai_value"
+
+[[bindings]]
+binding_id = "binding_common_buildings_06_urban_center_txt_building_opportunity_building_art_academy_infrastructure_cost"
+source = "common/buildings/06_urban_center.txt"
+definition = "building_opportunity_building_art_academy_infrastructure_cost"
+field = "building_art_academy.ai_value"
+actor = "owner"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "building_art_academy.ai_value"
+
+[[bindings]]
 binding_id = "binding_common_buildings_06_urban_center_txt_local_power_plant_observed_default_cost"
 source = "common/buildings/06_urban_center.txt"
 definition = "local_power_plant_observed_default_cost"

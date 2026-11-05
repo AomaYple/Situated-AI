@@ -223,16 +223,19 @@ def review(
         checked = [reference(identity) for identity in ids]
         return all(checked)
 
-    def composed_container(surface, proof: Mapping[str, Any]) -> bool:
-        """Compose registered children; the parent receives no Reader authority."""
+    def source_projection(surface, proof: Mapping[str, Any], *, container: bool) -> bool:
+        """Recheck all registered leaves and the entire ordered current source."""
         source = "common/ai_strategies/00_default_strategy.txt"
         if (
             surface.source != source
             or surface.definition != "ai_strategy_default"
-            or surface.field
-            not in {"wargoal_scores", "treaty_category_scores", "institution_scores"}
-            or proof.get("native_role") != "structural_container"
-            or proof.get("interface", {}).get("control_authorized") is not False
+            or (
+                container
+                and surface.field
+                not in {"wargoal_scores", "treaty_category_scores", "institution_scores"}
+            )
+            or (container and proof.get("native_role") != "structural_container")
+            or (container and proof.get("interface", {}).get("control_authorized") is not False)
             or treatments.get("production_manifest_complete_asserted") is not True
             or not candidate_bound
         ):
@@ -243,15 +246,20 @@ def review(
             generated_sources.get(source, native_sources[source])
         ).hexdigest()
         if (
-            not isinstance(composition, dict)
-            or composition.get("family") != "structural_composition"
-            or composition.get("definition") != f"{surface.definition}.{surface.field}"
-            or composition.get("native_source") != source
-            or composition.get("effective_source") != source
-            or composition.get("status") != "proven_generated"
-            or composition.get("interface_authorized") is not False
-            or protection.get("proven") is not True
-            or protection.get("structural_projection") is not True
+            (
+                container
+                and (
+                    not isinstance(composition, dict)
+                    or composition.get("family") != "structural_composition"
+                    or composition.get("definition") != f"{surface.definition}.{surface.field}"
+                    or composition.get("native_source") != source
+                    or composition.get("effective_source") != source
+                    or composition.get("status") != "proven_generated"
+                    or composition.get("interface_authorized") is not False
+                    or protection.get("proven") is not True
+                    or protection.get("structural_projection") is not True
+                )
+            )
             or protection.get("context_closed") is not True
             or protection.get("dependencies_closed") is not True
             or protection.get("native_source_sha256") != source_hashes[source]
@@ -312,7 +320,9 @@ def review(
                         )
                     }
                 )
-        if not expected_children or composition.get("children") != expected_children:
+        if container and (
+            not expected_children or composition.get("children") != expected_children
+        ):
             return False
         if sorted(masks_before.values()) != protection.get("controlled_numeric_declarations"):
             return False
@@ -365,11 +375,91 @@ def review(
         after, astate = _resolve(effective.roots[source], surface.definition, surface.field)
         return (
             bstate == astate == "found"
-            and composition.get("native_ast_sha256") == _digest(before)
-            and composition.get("effective_ast_sha256") == _digest(after)
+            and (
+                not container
+                or (
+                    composition.get("native_ast_sha256") == _digest(before)
+                    and composition.get("effective_ast_sha256") == _digest(after)
+                )
+            )
             and proof.get("effective_ast_sha256") == _digest(after)
             and boundary(native.roots[source], masks_before)
             == boundary(effective.roots[source], masks_after)
+        )
+
+    def changed_numeric_implementation(
+        surface, proof: Mapping[str, Any], row: Mapping[str, Any]
+    ) -> bool:
+        """Accept a changed frozen field only as a verified numeric implementation.
+
+        This disposition preserves the frozen native-policy rationale while
+        explicitly recording that the current field changed. It requires the
+        current registered action mapping and complete source/dependency closure;
+        it never turns the changed field into exact native retention.
+        """
+        if (
+            row.get("business_family") != "native_specialized_strategy_additive"
+            or surface.source != "common/ai_strategies/00_default_strategy.txt"
+            or surface.definition != "ai_strategy_default"
+            or surface.field
+            not in {
+                "secret_goal_scores.protect.score",
+                "secret_goal_scores.reconcile.score",
+                "diplomatic_play_support",
+            }
+            or proof.get("status") != "implemented_numeric"
+            or proof.get("implemented_numeric") is not True
+            or not proof.get("numeric_actions")
+            or proof.get("interface", {}).get("known") is not True
+            or proof.get("interface", {}).get("control_authorized") is not True
+        ):
+            return False
+        before, bstate = _resolve(native.roots[surface.source], surface.definition, surface.field)
+        after, astate = _resolve(effective.roots[surface.source], surface.definition, surface.field)
+        if before is None or after is None or bstate != "found" or astate != "found":
+            return False
+        if surface.field == "diplomatic_play_support":
+            registered = _support_program_proof(
+                surface, inventory, child_dependencies, generated_sources
+            )
+            if not registered or proof["numeric_actions"] != [registered["definition"]]:
+                return False
+        else:
+            from .action_instances import _id  # noqa: PLC0415
+
+            contract = child_dependencies._parameter_contract(surface.source)
+            if contract is None:
+                return False
+            _policy, groups, identity = contract
+            path = (surface.definition, *surface.field.split("."))
+            rules = groups.get(path, ())
+            if not rules or sorted(proof["numeric_actions"]) != sorted(
+                _id(surface.source, rule.id) for rule in rules
+            ):
+                return False
+            # Compare the whole actually emitted field, not just the Reader
+            # occurrences or an action-ID label copied from a coverage receipt.
+            expected_root = child_dependencies._parameter_program_root(surface.source, identity)
+            if expected_root is None:
+                return False
+            expected, state = _resolve(expected_root, surface.definition, surface.field)
+            if state != "found" or _ast(after) != _ast(expected):
+                return False
+        protection = proof.get("source_protection", {})
+        return (
+            protection.get("proven") is False
+            and protection.get("context_closed") is True
+            and protection.get("dependencies_closed") is True
+            and protection.get("structural_projection") is False
+            and "native_declaration_changed_or_unresolved" in protection.get("issues", [])
+            and proof.get("native_ast_sha256") == row.get("field_ast_sha256")
+            and proof.get("effective_ast_sha256") != row.get("field_ast_sha256")
+            and all(
+                dependency.get("status")
+                in {"retained", "retained_opaque", "proven_generated", "proven_parameter_reader"}
+                for dependency in proof.get("dependencies", [])
+            )
+            and source_projection(surface, proof, container=False)
         )
 
     parents = {}
@@ -410,7 +500,10 @@ def review(
             and proof.get("effective_ast_sha256") == row["field_ast_sha256"]
             and references_preserved
         )
-        composed = references_preserved and composed_container(surface, proof)
+        composed = references_preserved and source_projection(surface, proof, container=True)
+        changed_numeric = references_preserved and changed_numeric_implementation(
+            surface, proof, row
+        )
         result.append(
             {
                 "surface_id": surface.surface_id,
@@ -420,6 +513,8 @@ def review(
                 if preserved
                 else "retained_native_structure_with_verified_numeric_children"
                 if composed
+                else "verified_numeric_implementation_preserving_native_context"
+                if changed_numeric
                 else "production_protection_unproven",
                 "counts_as_new_capability": False,
             }

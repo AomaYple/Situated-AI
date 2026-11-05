@@ -1725,8 +1725,6 @@ def _production_inventory(
     information: decision_rules.RuleSet | None = None,
     adapters: decision_adapters.AdapterSet | None = None,
 ) -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
-    from pdx import event_opportunities  # noqa: PLC0415
-
     consumers: list[ProductionConsumer] = []
     fingerprints: dict[str, str] = {}
     total = 0
@@ -1791,7 +1789,7 @@ def _production_inventory(
                     vanilla_tail="preserve",
                     numeric_policy=(
                         "absolute_new_aiweight_native_default_unknown"
-                        if program.source == event_opportunities.PLAGUE
+                        if program.identity.explicit
                         else "delta_to_explicit_native_aiweight"
                     ),
                     scalar_neutral=float(program.scalar.neutral),

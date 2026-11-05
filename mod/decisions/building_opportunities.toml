@@ -1,6 +1,11 @@
 # 普通市场商品的基础建设机会；不推断当前PM、利润或实际可执行资格。
 schema = 1
 
+[[consumers]]
+# 精确原版字段已存在；state ROOT -> owner country，不使用虚构基础评分规则。
+source = "common/buildings/06_urban_center.txt"
+field = "building_art_academy.ai_value"
+
 [parameters]
 priority_base = 80000
 shortage_balance = 0.0

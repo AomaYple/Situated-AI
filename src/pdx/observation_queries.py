@@ -215,6 +215,7 @@ CountryQuery = (
     | culture_opportunities.CulturalExposureQuery
     | subject_dependence_opportunities.ActualOverlordDependenceQuery
     | event_opportunities.PlagueStateQuery
+    | event_opportunities.DisasterFarmQuery
     | famine_opportunities.FamineStateQuery
     | war_pressure_opportunities.OwnMultiwarLowSupportQuery
 )
@@ -268,6 +269,8 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         return culture_opportunities.query_from_reader(engine, parameters)
     if subject_dependence_opportunities.QUERY_PARAMETER in parameters:
         return subject_dependence_opportunities.query_from_reader(engine, parameters)
+    if event_opportunities.DISASTER_QUERY_PARAMETER in parameters:
+        return event_opportunities.disaster_query_from_reader(engine, parameters)
     if event_opportunities.QUERY_PARAMETER in parameters:
         return event_opportunities.query_from_reader(engine, parameters)
     if famine_opportunities.QUERY_PARAMETER in parameters:
@@ -320,6 +323,8 @@ def render(query: CountryQuery) -> str:
         return culture_opportunities.render_query(query)
     if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
         return subject_dependence_opportunities.render_query(query)
+    if isinstance(query, event_opportunities.DisasterFarmQuery):
+        return event_opportunities.render_disaster_query(query)
     if isinstance(query, event_opportunities.PlagueStateQuery):
         return event_opportunities.render_query(query)
     if isinstance(query, famine_opportunities.FamineStateQuery):
@@ -380,6 +385,8 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
         return culture_opportunities.required_query_sources(query)
     if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
         return subject_dependence_opportunities.required_query_sources(query)
+    if isinstance(query, event_opportunities.DisasterFarmQuery):
+        return event_opportunities.required_disaster_query_sources(query)
     if isinstance(query, event_opportunities.PlagueStateQuery):
         return event_opportunities.required_query_sources(query)
     if isinstance(query, famine_opportunities.FamineStateQuery):
@@ -535,6 +542,7 @@ def compile_query(
     | culture_opportunities.CompiledReligiousExposureQuery
     | subject_dependence_opportunities.CompiledActualOverlordDependenceQuery
     | event_opportunities.CompiledPlagueStateQuery
+    | event_opportunities.CompiledDisasterFarmQuery
     | famine_opportunities.CompiledFamineStateQuery
     | war_pressure_opportunities.CompiledOwnMultiwarLowSupportQuery
 ):
@@ -556,6 +564,8 @@ def compile_query(
         return culture_opportunities.compile_query(query, texts)
     if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
         return subject_dependence_opportunities.compile_query(query, texts)
+    if isinstance(query, event_opportunities.DisasterFarmQuery):
+        return event_opportunities.compile_disaster_query(query, texts)
     if isinstance(query, event_opportunities.PlagueStateQuery):
         return event_opportunities.compile_query(query, texts)
     if isinstance(query, famine_opportunities.FamineStateQuery):

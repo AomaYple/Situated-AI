@@ -194,6 +194,7 @@ _STATE_NUMBER = frozenset(
         "infrastructure_delta",
         "market_access",
         "state_unemployment_rate",
+        "state_population",
         "tax_capacity",
         "tax_capacity_usage",
         "devastation",
@@ -241,6 +242,7 @@ _UNITS = {
     "liberty_desire": "liberty_0_100",
     "literacy_rate": "ratio",
     "total_population": "persons",
+    "state_population": "persons",
     "pop_type_percent_country": "ratio",
     "radical_fraction": "ratio",
     "scaled_debt": "debt_to_credit_ratio",
@@ -272,6 +274,45 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine == "state_population":
+        from . import event_opportunities  # noqa: PLC0415
+
+        if (
+            root != "country"
+            or actor_path
+            or reader.scope not in event_opportunities.DISASTER_SCOPES
+            or reader.key != "disaster_" + reader.scope + "_population"
+            or reader.kind != "number"
+            or reader.unit != "persons"
+            or reader.minimum != 0
+            or reader.maximum is not None
+            or reader.path
+            or reader.argument is not None
+            or reader.parameters
+            or reader.value_field is not None
+        ):
+            raise ValueError("灾害人口读取器必须是精确保存州的state_population合同")
+        return "state"
+    if "event_disaster_query" in dict(reader.parameters):
+        from . import event_opportunities  # noqa: PLC0415
+
+        mode = dict(reader.parameters)["event_disaster_query"]
+        if (
+            root != "country"
+            or actor_path
+            or reader.scope != "crop_fail_state"
+            or reader.key != "disaster_crop_fail_state_farm_" + mode
+            or reader.kind != "boolean"
+            or reader.unit != "boolean"
+            or reader.minimum is not None
+            or reader.maximum is not None
+            or reader.path
+            or reader.argument is not None
+            or reader.value_field is not None
+        ):
+            raise ValueError("灾害农业暴露必须是精确保存作物歉收州的固定查询")
+        event_opportunities.disaster_query_from_reader(reader.engine, dict(reader.parameters))
+        return "state"
     if reader.engine == "is_mass_migration_target" and (
         root != "state"
         or actor_path != ("owner",)

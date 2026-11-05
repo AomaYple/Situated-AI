@@ -36,7 +36,17 @@ def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
         famine_opportunities.frozen_inputs()[famine_opportunities.SOURCE]
     )
     assert famine["persistent_write_sites"] == 3
-    assert data["limits"]["persistent_write_sites"] == 31 + 6 + 23 + 3
+    disaster = resources.pdx_metrics(
+        event_opportunities.frozen_inputs()[event_opportunities.DISASTERS]
+    )
+    assert disaster["persistent_write_sites"] == 16
+    assert disaster["persistent_write_keys"] == {
+        "set_variable": 11,
+        "change_global_variable": 3,
+        "set_global_variable": 2,
+    }
+    assert sum(disaster["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
+    assert data["limits"]["persistent_write_sites"] == 31 + 6 + 23 + 3 + 16
     assert data["limits"]["reader_path_length"] == 3
 
 
@@ -113,3 +123,22 @@ def test_famine_inherited_button_state_cannot_change_name_duration_or_parent():
     ):
         with pytest.raises(ValueError, match="继承变量"):
             resources.verify_inherited_writes({famine.SOURCE: changed})
+
+
+def test_disaster_inherited_state_counters_and_original_parents_are_exact():
+    from pdx import event_opportunities as event
+
+    native = event.frozen_inputs()[event.DISASTERS]
+    generated = event.patch(event.frozen_inputs())[event.DISASTERS]
+    resources.verify_inherited_writes({event.DISASTERS: generated})
+    for changed in (
+        native.replace("name = natural_disaster_cooldown", "name = wrong_cooldown", 1),
+        native.replace("days = normal_modifier_time", "days = short_modifier_time", 1),
+        native.replace("name = number_of_mega_floods", "name = wrong_counter", 1),
+        native.replace("change_global_variable", "set_global_variable", 1),
+        native + "\nset_variable = forged\n",
+        native + "\nany_country = { always = yes }\n",
+        "other = { " + native + " }",
+    ):
+        with pytest.raises(ValueError, match="继承变量或世界扫描"):
+            resources.verify_inherited_writes({event.DISASTERS: changed})

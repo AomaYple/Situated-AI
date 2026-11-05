@@ -13,6 +13,14 @@ schema = 1
 "events/law_events/healthcare_laws.txt" = "5d0276d1b6ef3942e6107721117e14299b19ed3033e57842549c78aa3148d65b"
 "events/spanish_flu_events.txt" = "cca18ec49ac4b448fc8f7998696512c57dbcc651b84715ea621ab952036412b7"
 
+"events/natural_disasters_events.txt" = "cf63ca4ff4dbbdb72e9454eaf568f81c87d18abe57180522c55e74ad80545b69"
+
+"common/on_actions/00_on_actions_yearly.txt" = "302c832abd4275b9ac53fa600b7f91a93d1df188436643d95e7c547f58a0da16"
+
+"common/script_values/event_values.txt" = "99e2dfc8e07c8b91a6f9c6bf4616444b4c973fc07c281b057b48b2594280067a"
+
+"events/american_civil_war/acw_wild_west_events.txt" = "df8b4654e5c289e4c878fd8f6dc902dfd5b77ca2d34b9c8cf6e6fac3d3238915"
+
 [tuning]
 reform_need = 8
 ignored_opponent_cost = 10
@@ -29,3 +37,17 @@ lockdown_financing = 12
 measures_financing = 6
 response_continuity = 4
 recovery_exit = 6
+
+[disaster_policy]
+base = 50
+ordinary_relief = 10
+mega_relief = 20
+crop_throughput_relief = 9
+crop_welfare = 3
+ordinary_high_exposure = 4
+mega_high_exposure = 8
+crop_high_exposure = 6
+small_recurring_cost = 4
+medium_recurring_cost = 8
+large_recurring_cost = 20
+solvent_cost_fraction = 0.5

@@ -126,7 +126,8 @@ class NativeConsumerBinding:
             or not (
                 self.source.startswith("common/")
                 or "/common/" in self.source
-                or self.source in {event_opportunities.SOURCE, event_opportunities.PLAGUE}
+                or self.source
+                in {identity.source for identity in event_opportunities.POLICIES.values()}
             )
             or not self.definition
             or any(not part for part in self.field.split("."))
@@ -783,6 +784,7 @@ class _NativeBindingProofs:
         if instance.kind == "event_program" or surface.source in {
             event_opportunities.SOURCE,
             event_opportunities.PLAGUE,
+            event_opportunities.DISASTERS,
         }:
             program = next(
                 (

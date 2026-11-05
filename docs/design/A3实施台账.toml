@@ -25,14 +25,15 @@ rationale = "仅关闭三项精确饥荒按钮的实现义务；真实效果与�
 id = "B05.5.6"
 parent = "B05.5"
 title = "八个自然灾害事件的十六选项完整处境政策"
-status = "pending"
+status = "in_progress"
 question = "自然灾害1至8事件未声明ai_chance，救灾效果、金额尺度及经常费用期限却不同，是否可加入完整显式处境选择？"
 acceptance = "逐事件country ROOT/实际AI调用与保存州身份取证；全16选项定义有意显式政策，不冒充未知缺省概率等价；普通/巨灾/农业及Krakatoa分支分别核对真实效果和913/1825日费用，有正反、未知、尾部、玩家、关闭、参考/PDX见证。"
 source_paths = ["src/pdx/event_opportunities.py", "src/pdx/situated/vanilla_inventory.py", "mod/decisions/event_opportunities.toml"]
 consumer_investigation = "events/natural_disasters_events.txt natural_disaster_events.1–.8全部成对选项；原实际.6条件为coastal+earthquake，不按名称改资格。"
-existing_state = "事件业务审计已给出全父结构/选项/费用及调用证据，原省略权重语义未知；尚未实现。"
-gap = "不能用所有灾害统一倍率；须分清经常费用与一次扣款、实际减灾与农业吞吐福利收益。"
+existing_state = "八个完整事件十六选项已接入共享EventProgram/ScalarProgram、各自保存州及真实经常费用；独立审查与生成模型/PDX见证已通过。完整原版审计仍不能解析事件option物理路径，必须补齐精确来源保护证明后才能签完整实现。"
+gap = "缺少事件option[NAME].ai_chance的当前物理声明与完整生产来源保护证明；不得以21个coverage接线、标准包或局部AST恢复代签完整审计出口。"
 evidence = []
+
 
 [[obligations]]
 id = "B09.3.2"
@@ -1129,3 +1130,17 @@ consumer_investigation = "待核对该合同的全部生产消费方与现有规
 existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
 gap = "待记录当前表达式/候选扫描/关系展开/状态规模与Python生成路径基线，再冻结可执行资源预算；报告成本本身不等于预算通过。"
 evidence = []
+
+[[obligations]]
+id = "B02.5.2"
+parent = "B02.5"
+title = "艺术学院的独立艺术品需求与建设成本"
+status = "implemented"
+question = "四种必选基础PM均产fine_art，但艺术学院ai_value未接入实际所属市场的供需与独立建设成本，如何保留原版文化机会并增加处境差异？"
+acceptance = "精确building_art_academy.ai_value和state ROOT/owner身份；基础供需缺口独立成立、高价仅升档，违约与本州基础设施成本联合；保留romanticism、原1000和Metternich+500、资格及完整顺序；实际适配PDX、对象隔离、未知/关闭/玩家及完整包接线核对。"
+source_paths = ["src/pdx/building_opportunities.py", "mod/decisions/building_opportunities.toml", "tests/test_a3_art_academy.py"]
+consumer_investigation = "common/buildings/06_urban_center.txt building_art_academy.ai_value；全部四个必选基础艺术PM共有fine_art产出，使用候选州owner的实际市场，不推定当前启用PM。"
+existing_state = "新增四条规则进入统一标量生产链及5902条绑定；实际原版审计该字段implemented_numeric、context_closed和dependencies_closed成立；104文件标准包已重建。"
+gap = "无需求不发奖励；高价未知仍保留基础缺口，已知独立成本不被需求遮蔽；不预测利润、不创造资格、不覆盖玩家路径。"
+evidence = [{"role" = "source", "path" = "src/pdx/building_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "97cd48a3f69daa41b43ae88948d487a6b98739219625b8362e49aea0f943dcd0"}, {"role" = "consumer", "path" = "src/pdx/building_opportunities.py", "kind" = "python_symbol", "identity" = "_configuration", "sha256" = "97cd48a3f69daa41b43ae88948d487a6b98739219625b8362e49aea0f943dcd0"}, {"role" = "witness", "path" = "tests/test_a3_art_academy.py", "kind" = "python_symbol", "identity" = "test_hand_numbers_match_actual_production_pdx_with_independent_owner_facts", "sha256" = "46db93a3632326100b55eee5a0419b59cd855182b85ae96b6e5603ee5e7a0eeb"}, {"role" = "witness", "path" = "tests/test_a3_art_academy.py", "kind" = "python_symbol", "identity" = "test_native_full_definition_order_romanticism_metternich_and_other_buildings_preserved", "sha256" = "46db93a3632326100b55eee5a0419b59cd855182b85ae96b6e5603ee5e7a0eeb"}]
+rationale = "限定关闭艺术学院一个精确消费者的新增需要；83项局部见证与独立审查、统一生成、模型集成及完整原版当前字段证明已核对。集中回归228通过1失败的材料未知期待另经独立配方调查修复，修后整文件15通过；不将其冒充整套全绿或B02/C1/A3完成。"

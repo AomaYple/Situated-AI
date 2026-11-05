@@ -66,7 +66,7 @@ def test_统一生产bundle包含全部legacy和显式writer():
     assert payload["legacy_semantic_count"] == len(production_policy_sources().rules)
     assert payload["action_card_writer_count"] == len(model.actions)
     assert payload["supply_program_writer_count"] == len(supply)
-    assert payload["event_program_writer_count"] == 5
+    assert payload["event_program_writer_count"] == 21
     assert payload["acceptance_program_writer_count"] == 1
     assert all(
         row.event_program is not None for row in bundle.writers if row.kind == "event_program"

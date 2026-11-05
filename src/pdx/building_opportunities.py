@@ -39,6 +39,9 @@ _KEYS = frozenset(
     }
 )
 _FIELD = re.compile(r"([a-z][a-z0-9_]*)\.ai_value\Z")
+_EXTRA_CONSUMERS = {
+    "building_art_academy.ai_value": "common/buildings/06_urban_center.txt",
+}
 
 
 def _parameters(values: Mapping[str, object]) -> dict[str, float]:
@@ -70,17 +73,36 @@ def _parameters(values: Mapping[str, object]) -> dict[str, float]:
     return dict(sorted(result.items()))
 
 
-def load_parameters(path: Path = PARAMETERS) -> dict[str, float]:
-    """Read the sole adjustable parameter source; never write generated output."""
+def _configuration(path: Path) -> tuple[dict[str, float], tuple[dict[str, str], ...]]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if (
-        set(data) != {"schema", "parameters"}
+        set(data) - {"consumers"} != {"schema", "parameters"}
         or type(data["schema"]) is not int
         or data["schema"] != 1
         or not isinstance(data["parameters"], dict)
     ):
         raise ValueError("建筑基础机会参数schema无效")
-    return _parameters(data["parameters"])
+    consumers = data.get("consumers", [])
+    if not isinstance(consumers, list):
+        raise ValueError("建筑额外消费者必须是精确记录集合")
+    seen = set()
+    for row in consumers:
+        if (
+            not isinstance(row, dict)
+            or set(row) != {"source", "field"}
+            or not isinstance(row["field"], str)
+            or row["field"] not in _EXTRA_CONSUMERS
+            or row["source"] != _EXTRA_CONSUMERS[row["field"]]
+            or row["field"] in seen
+        ):
+            raise ValueError("建筑额外消费者身份无效或重复")
+        seen.add(row["field"])
+    return _parameters(data["parameters"]), tuple(consumers)
+
+
+def load_parameters(path: Path = PARAMETERS) -> dict[str, float]:
+    """Read the sole adjustable parameter source; never write generated output."""
+    return _configuration(path)[0]
 
 
 def _reader(good: str, tier: str) -> dict[str, Any]:
@@ -243,6 +265,29 @@ def derive(
         sector = buildings.get(match[1])
         if sector is not None and sector["source"] != source:
             raise ValueError("建筑基础机会消费者与底本定义来源不一致")
+    for row in _configuration(PARAMETERS)[1]:
+        source, field = row["source"], row["field"]
+        # A fixture baseline without this source has no applicable registration.
+        # The complete production baseline includes it; missing adapter source
+        # or mismatched actor must fail rather than silently omit the consumer.
+        if source not in frozen["sources"]:
+            continue
+        sector = buildings.get(field.split(".")[0])
+        actors = adapters.get("actors")
+        if (
+            source not in sources
+            or sources[source] != frozen["sources"][source]
+            or sector is None
+            or sector["source"] != source
+            or not isinstance(actors, Mapping)
+            or actors.get(source) != ["owner"]
+        ):
+            raise ValueError("建筑额外消费者源、配方或state-owner身份漂移")
+        if field in fields:
+            raise ValueError("建筑额外消费者与已有规则登记冲突")
+        if _outputs(sector)[0] != ["fine_art"]:
+            raise ValueError("艺术学院缺少完整必选PMG共同fine_art产出证据")
+        fields[field] = source
     readers: dict[str, Any] = {}
     rules: list[dict[str, Any]] = []
     covered: list[dict[str, Any]] = []

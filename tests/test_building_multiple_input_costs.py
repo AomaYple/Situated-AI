@@ -77,6 +77,49 @@ def _overlay(text):
                 "state_owner_tools_price": None,
                 "state_owner_tools_balance": -1,
             },
+            # The active pump consumes tools. Unknown price cannot waive its
+            # declared .2 cost when the known balance supplies no cheap case.
+            # Coal joins once despite its use by both PMs: 1 - .2 - .2 = .6.
+            0.6,
+        ),
+        (
+            {
+                "state_owner_coal_price": 0.6,
+                "state_owner_coal_balance": -1,
+                "state_owner_tools_price": 0.6,
+                "state_owner_tools_balance": None,
+            },
+            0.6,
+        ),
+        (
+            {
+                "state_owner_coal_price": 0.6,
+                "state_owner_coal_balance": -1,
+                "state_owner_tools_price": None,
+                "state_owner_tools_balance": None,
+            },
+            0.6,
+        ),
+        (
+            {
+                "state_owner_coal_price": 0.6,
+                "state_owner_coal_balance": -1,
+                "state_owner_tools_price": None,
+                "state_owner_tools_balance": 0,
+            },
+            # A known nonnegative balance waives this conjunctive tools cost,
+            # even when price is unknown. The independent coal cost remains.
+            0.8,
+        ),
+        (
+            {
+                "state_owner_coal_price": 0.6,
+                "state_owner_coal_balance": -1,
+                "state_owner_tools_price": 0.5,
+                "state_owner_tools_balance": None,
+            },
+            # Price at the strict threshold proves the tools cost is absent;
+            # unknown balance cannot override that known cheap counterexample.
             0.8,
         ),
         (
