@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
 from pdx import config
 from pdx.situated import engine_scope
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
 
 FAMILIES = {
     "STRATEGY": "strategy_evidence",
@@ -428,11 +433,14 @@ def test_live_family_gates_reject_changed_complete_source_sets(
         if source in data["script_hashes"]:
             data["script_hashes"][source] = sources[source]
     _repin(tmp_path, monkeypatch, family, data)
-    api = {
-        "COMPANY": engine_scope.verify_company_game,
-        "COUNTRY": engine_scope.verify_country_game,
-        "LAW": engine_scope.verify_law_game,
-    }[family]
+    api = cast(
+        "Callable[[Path], engine_scope.CompanyScopeEvidence | engine_scope.CountryScopeEvidence | engine_scope.LawScopeEvidence]",
+        {
+            "COMPANY": engine_scope.verify_company_game,
+            "COUNTRY": engine_scope.verify_country_game,
+            "LAW": engine_scope.verify_law_game,
+        }[family],
+    )
     assert api(game).verified
     # Law tests deliberately damage one of the four files without ai_will_do.
     source = next(iter(set(sources) - set(data["script_hashes"])), next(iter(sources)))

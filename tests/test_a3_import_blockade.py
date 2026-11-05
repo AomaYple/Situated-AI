@@ -35,9 +35,9 @@ def test_exact_native_full_sources_current_installation_and_scope_proofs(frozen)
     }
     assert frozen == actual
     refs = exposure.verify_inputs(frozen)
-    assert f"{exposure.TRADE}:28" in refs
-    assert f"{exposure.OPIUM}:38" in refs
-    assert f"{exposure.ALERTS}:344" in refs
+    assert f"{exposure.TRADE}:29" in refs
+    assert f"{exposure.OPIUM}:47" in refs
+    assert f"{exposure.ALERTS}:316" in refs
     for mode, engine, expected in (
         (
             "arms_import_volume",
@@ -96,7 +96,7 @@ def test_reader_rejects_foreign_market_free_goods_threshold_and_wrong_scope(engi
         (exposure.TRADE, "goods = wine value >= 0.1", "target = prev goods = wine value >= 0.1"),
         (exposure.OPIUM, "market_goods_imports >= 200", "market_goods_exports >= 200"),
         (exposure.ALERTS, "script_context = player_state", "script_context = player_country"),
-        (exposure.PULSE, "blockade_level >= 1", "blockade_level >= 0.1"),
+        (exposure.PULSE_EFFECTS, "blockade_level >= 1", "blockade_level >= 0.1"),
     ],
 )
 def test_resigned_hash_does_not_hide_semantic_ast_role_or_getter_drift(

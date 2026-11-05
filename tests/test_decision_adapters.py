@@ -691,6 +691,7 @@ def _expanded_law_negative_contracts():
             "law_protected_speech": 0,
         },
         {
+            "law_official_nationality": 100,
             "law_subjecthood": 100,
             "law_ethnostate": 200,
             "law_national_supremacy": 150,
@@ -700,6 +701,7 @@ def _expanded_law_negative_contracts():
         },
         {
             "law_state_religion": 200,
+            "law_caesaropapism": 200,
             "law_millet_system": 200,
             "law_people_of_the_book": 200,
             "law_freedom_of_conscience": 100,
@@ -860,6 +862,17 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
     # Register the two finite additions by exact identity and independent
     # business contract, rather than letting a new namespace admit any tuning.
     new_contracts = {
+        "culture_multicultural_observed_ethnostate_exposure": (
+            ("law_multicultural", "ai_enact_weight_modifier"),
+            "add",
+            6,
+            "law_observed_cultural_exposure",
+            {
+                ("culture_owned_nonprimary_acceptance_exposure", "=", True),
+                ("culture_current_law_ethnostate", "=", True),
+                ("culture_current_law_multicultural", "=", False),
+            },
+        ),
         "culture_freedom_of_conscience_observed_religious_exposure": (
             ("law_freedom_of_conscience", "ai_enact_weight_modifier"),
             "add",
@@ -868,6 +881,7 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
             {
                 ("culture_nonstate_religious_exposure", "=", True),
                 ("culture_current_law_state_religion", "=", True),
+                ("culture_current_law_caesaropapism", "=", False),
                 ("culture_current_law_millet_system", "=", False),
                 ("culture_current_law_people_of_the_book", "=", False),
                 ("culture_current_law_freedom_of_conscience", "=", False),
@@ -916,6 +930,10 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                 "import_blockade_",
                 "culture_",
                 "subject_actual_",
+                "war_pressure_",
+                "olympic_",
+                "decree_relief_",
+                "famine_",
             )
         )
         for rule in rules
@@ -938,6 +956,12 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
         if "/buildings/" in name:
             assert policy.actor_path == ("owner",)
             assert all(rule.field[-1] == "ai_value" for rule in policy.rules)
+        elif name == "common/decrees/00_decree.txt":
+            assert policy.native_root == "state"
+            assert policy.actor_path == ("owner",)
+            assert {rule.field for rule in policy.rules} == {
+                ("decree_emergency_relief", "ai_weight")
+            }
         elif name == "common/mobilization_options/00_mobilization_option.txt":
             from pdx.mobilization_opportunities import CANDIDATE_IDS
 
@@ -1075,6 +1099,11 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                     assert 0 < rule.value <= 30
         else:
             for rule in policy.rules:
+                # Current derived consumers have independent complete native
+                # source/business suites and the exact namespace gate above.
+                # These historical generic tuning bounds describe authored rows.
+                if rule.id not in authored:
+                    continue
                 if rule.operation == "add":
                     assert rule.id.startswith(
                         (
@@ -1086,6 +1115,7 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                             "remaining_",
                             "target_strategy_",
                             "cooperation_",
+                            "war_pressure_",
                         )
                     )
                     assert -10 <= rule.value <= 30
@@ -1177,6 +1207,12 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
             flags=re.DOTALL,
         )
         restored = re.sub(
+            r"\n# SITAI BEGIN regional_resource_opportunity\n.*?# SITAI END regional_resource_opportunity\n",
+            "",
+            restored,
+            flags=re.DOTALL,
+        )
+        restored = re.sub(
             r"\{ value = ([0-9]+(?:\.[0-9]+)?) # SITAI wrapped-scalar:[^\n]+\n\}",
             r"\1",
             restored,
@@ -1236,43 +1272,19 @@ def implicit_building_adapter():
     return adapters, {name: text, defines: definition}, name
 
 
-def test_implicit_building_value_comes_from_locked_define_and_is_fully_reversible(
+def test_unknown_building_cannot_gain_initializer_rights_from_a_numeric_define(
     implicit_building_adapter,
 ):
-    adapters, inputs, name = implicit_building_adapter
-    files, contract = decision_adapters.build(adapters, texts=inputs)
-    building = parse_text(files[name]).root.first("building_example")
-    assert building is not None
-    assert isinstance(building.value, Block)
-    assignment = building.value.first("ai_value")
-    assert assignment is not None
-    value = assignment.value
-    assert isinstance(value, Block)
-    base = value.first("value")
-    assert base is not None
-    assert isinstance(base.value, Scalar)
-    assert base.value.unquoted == "1200"
-    assert "owner = { is_ai = yes" in files[name]
-    initialized = contract["initialized_consumers"]
-    assert isinstance(initialized, list)
-    assert initialized[0]["define"] == "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-    restored = re.sub(
-        r"\n\t# SITAI BEGIN initialized:[^\n]+\n.*?# SITAI END initialized:[^\n]+\n",
-        "",
-        files[name],
-        flags=re.DOTALL,
-    )
-    assert restored == inputs[name]
+    # The current native proof authorizes eleven complete historical parents;
+    # this synthetic building is deliberately outside that finite set.
+    adapters, inputs, _name = implicit_building_adapter
+    with pytest.raises(ValueError, match="唯一缺省父结构"):
+        decision_adapters.build(adapters, texts=inputs)
     disabled, contract = decision_adapters.build(
         adapters, texts=inputs, enabled_domains=frozenset()
     )
     assert disabled == {}
     assert contract["initialized_consumers"] == []
-    # 原件常量即使未被本次规则读取，也必须校验漂移，不能默认为 1000。
-    with pytest.raises(ValueError, match="漂移"):
-        decision_adapters.build(
-            adapters, texts={key: value.replace("1200", "1000") for key, value in inputs.items()}
-        )
 
 
 @pytest.mark.parametrize("extra", [" ai_value = 900 ", " ai_value = { value = 900 } "])
@@ -1299,7 +1311,7 @@ def test_initializer_refuses_unknown_or_non_numeric_native_defaults(
         adapters,
         sources=(adapters.sources[0], (defines, hashlib.sha256(changed.encode()).hexdigest())),
     )
-    with pytest.raises(ValueError, match=r"常量|数值"):
+    with pytest.raises(ValueError, match=r"缺省|常量|数值"):
         decision_adapters.build(adapters, texts={**inputs, defines: changed})
 
 
@@ -2211,6 +2223,30 @@ def _adapter_collection_observations(seed):
             for country in ("ACTUAL", "CHANGED", "CANDIDATE", "TOP", "FOREIGN")
         },
     }
+    observations["_root"]["country_id"] = "SELF"
+    observations["any_scope_war"] = (
+        None
+        if extra_rng.randrange(5) == 0
+        else [
+            {"war_support": {"SELF": extra_rng.choice([None, 0, 49.999, 50, 100]), "ENEMY": 0}}
+            for _ in range(extra_rng.randrange(4))
+        ]
+    )
+    observations["_root"]["primary_cultures"] = extra_rng.choice(
+        [None, [], ["russian"], ["polish"]]
+    )
+    for member in owned_states or ():
+        member["has_famine"] = extra_rng.choice([None, False, True])
+        member["has_building"] = {
+            (("argument", "building_railway"),): extra_rng.choice([None, False, True])
+        }
+        member["any_scope_culture"] = extra_rng.choice(
+            [None, [], ["russian"], ["polish"], ["russian", "polish"]]
+        )
+        member["culture_pop_acceptance"] = {
+            culture: extra_rng.choice([None, 0, 79.999, 80, 100])
+            for culture in ("russian", "polish")
+        }
     return observations
 
 
@@ -2254,6 +2290,15 @@ def _adapter_query_reference(reader, observations, root_facts=None):
 
     parameters = dict(reader.parameters)
     root = {} if root_facts is None else root_facts
+    if "war_pressure_query" in parameters:
+        assert parameters == {"war_pressure_query": "two_own_wars_below_50"}
+        wars = observations["any_scope_war"]
+        if wars is None:
+            return None
+        supports = [war["war_support"].get(root.get("country_id")) for war in wars]
+        known_low = sum(support is not None and support < 50 for support in supports)
+        possible_low = known_low + sum(support is None for support in supports)
+        return True if known_low >= 2 else False if possible_low < 2 else None
     if "colonial_query" in parameters:
         assert reader.engine == "any_scope_state"
         assert parameters == {"colonial_query": "active_projects"}
@@ -2296,6 +2341,24 @@ def _adapter_query_reference(reader, observations, root_facts=None):
             0.25,
         )
     if "culture_query" in parameters:
+        if parameters == {"culture_query": "owned_cultural_exposure"}:
+            assert reader.engine == "any_scope_state"
+
+            def exposed_state(state):
+                def exposed_culture(culture):
+                    primary = root.get("primary_cultures")
+                    return conjunction(
+                        None if primary is None else culture not in primary,
+                        compare(
+                            state.get("culture_pop_acceptance", {}).get(culture),
+                            operator.lt,
+                            80,
+                        ),
+                    )
+
+                return existential(state.get("any_scope_culture"), exposed_culture)
+
+            return existential(observations["any_scope_state"], exposed_state)
         assert reader.engine == "OR"
         assert parameters == {"culture_query": "nonstate_religious_exposure"}
 
@@ -2315,6 +2378,23 @@ def _adapter_query_reference(reader, observations, root_facts=None):
             )
 
         return existential(_ADAPTER_RELIGIONS, exposed)
+    if "famine_query" in parameters:
+        assert reader.engine == "any_scope_state"
+        mode = parameters["famine_query"]
+        assert mode in {"affected", "railway", "nonrailway"}
+
+        def affected_state(state):
+            rail = state.get("has_building", {}).get((("argument", "building_railway"),))
+            return conjunction(
+                state.get("has_famine"),
+                True
+                if mode == "affected"
+                else rail
+                if mode == "railway"
+                else (None if rail is None else not rail),
+            )
+
+        return existential(observations["any_scope_state"], affected_state)
     if "subject_dependence_query" in parameters:
         assert reader.engine == "AND"
         assert parameters == {"subject_dependence_query": "actual_overlord_above_neutral"}
@@ -2653,7 +2733,7 @@ def test_supply_cannot_replace_existing_stance_or_reference_unknown_good(supply_
 
 
 def _relative_data():
-    baseline = "ai_strategy_default = { subject_value = { value = 50 if = { limit = { OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } } } add = 0 } gdp = 0 } }\n"
+    baseline = "ai_strategy_default = { subject_value = { value = 50 if = { limit = { OR = { scope:target_country = { is_subject_of = root } can_reach_target_country_to_subjugate = { TARGET_COUNTRY = scope:target_country } } } add = 0 } gdp = 0 } }\n"
     return baseline, {
         "schema": 1,
         "baseline_sha256": hashlib.sha256(baseline.encode()).hexdigest(),
@@ -2951,15 +3031,16 @@ def test_same_political_resistance_uses_observed_political_space_in_generated_as
         candidate_ig_clout=0.2,
         candidate_ig_approval=-1,
         candidate_ig_government=False,
+        negotiation_amenability=0.5,
         radical_share=0.3,
     )
     paired = {
-        "funded": (facts, ("multiply", 1.25)),
-        "no_surplus": ({**facts, "net_surplus": -1}, ("multiply", 1.25)),
-        "high_debt": ({**facts, "debt_ratio": 0.41}, ("multiply", 1.25)),
-        "loan_dependent": ({**facts, "loans": True}, ("multiply", 1.25)),
-        "political_space_unknown": ({**facts, "legitimacy": None}, ("multiply", 1.1)),
-        "candidate_unknown": ({**facts, "candidate_ig_clout": None}, None),
+        "funded": (facts, ("add", 0.25)),
+        "no_surplus": ({**facts, "net_surplus": -1}, ("add", 0.25)),
+        "high_debt": ({**facts, "debt_ratio": 0.41}, ("add", 0.25)),
+        "loan_dependent": ({**facts, "loans": True}, ("add", 0.25)),
+        "political_space_unknown": ({**facts, "legitimacy": None}, ("add", 0.1)),
+        "candidate_unknown": ({**facts, "negotiation_amenability": None}, None),
     }
     rule_by_id = {rule.id: rule for rule in policy.rules}
     for name, (values, expected) in paired.items():

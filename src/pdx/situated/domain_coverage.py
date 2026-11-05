@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from pdx import (
+    building_defaults,
     decision_adapters,
     decision_rules,
     event_opportunities,
@@ -197,7 +198,7 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
     ):
         return "continuous_writer_contract_mismatch"
     context = writer.evaluation_context
-    source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+    source = "research/vanilla-ai/1.15.0/00_default_strategy.txt"
     if context is None or context.status != "observed" or context.actor_scope is None:
         return "evaluation_context_unproven"
     if asdict(context.actor_scope) != {
@@ -205,7 +206,7 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
         "kind": "country",
         "role": "actor",
         "source": source,
-        "line": 183,
+        "line": 210,
     }:
         return "actor_type_mismatch"
     expected_targets = (
@@ -214,20 +215,20 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
             "kind": "country",
             "role": "target",
             "source": source,
-            "line": 184,
+            "line": 211,
         },
         {
             "name": "enemy_country",
             "kind": "country",
             "role": "target",
             "source": source,
-            "line": 185,
+            "line": 212,
         },
     )
     if (
         tuple(asdict(row) for row in context.targets) != expected_targets
         or context.auxiliary_scopes
-        or context.evidence != tuple(f"{source}:{line}" for line in (183, 184, 185))
+        or context.evidence != tuple(f"{source}:{line}" for line in (210, 211, 212))
     ):
         return "target_type_mismatch"
     return None
@@ -428,7 +429,7 @@ def _native_context_issue(
         "diplomatic_play_boldness": ("native_randomized_additive_boldness", {"add"}),
         "min_law_chance_to_pass": ("override_pass_chance_threshold", {"add"}),
         "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
-        "change_law_chance": ("additive_percentage_chance", {"add"}),
+        "change_law_chance": ("override_percentage_chance", {"add"}),
         "max_progressiveness": ("override_progressiveness_limit", {"add"}),
         "max_regressiveness": ("override_regressiveness_limit", {"add"}),
         "recklessness": ("additive_strength_estimate_multiplier", {"add"}),
@@ -1209,13 +1210,29 @@ class _NativeBindingProofs:
             or definition.value.all("ai_value")
         ):
             return None
+        native = json.loads(building_defaults.snapshot())
+        rows = [
+            row
+            for row in native["initializers"]
+            if row["source"] == binding.source and row["id"] == binding.definition
+        ]
+        if (
+            len(rows) != 1
+            or building_defaults._digest(building_defaults._shape(definition))
+            != rows[0]["parent_sha256"]
+        ):
+            return None
         return {
             **asdict(binding),
             "actor_scope": "state",
             "target_scope": "none",
             "operation": "score",
-            "default": "NAI.BUILDING_BASE_VALUE_or_NAI.GOVERNMENT_BUILDING_BASE_VALUE",
-            "evidence": [*evidence, f"{binding.source}:{definition.line}"],
+            "default": "NAI.PRODUCTION_BUILDING_BASE_VALUE=1000; exact_absent_native_kind0",
+            "evidence": [
+                *evidence,
+                f"{building_defaults.MANIFEST_ID}:sha256={building_defaults.MANIFEST_SHA256}",
+                f"{binding.source}:{definition.line}",
+            ],
         }
 
     def implicit_company(self, binding: NativeConsumerBinding) -> dict[str, Any] | None:
@@ -1364,7 +1381,7 @@ def _continuous_native_issue(
         return "continuous_native_context_unproven", {}
     evidence: dict[str, Any] = {
         "native_source_sha256": hashlib.sha256(raw).hexdigest(),
-        "scope_evidence": [f"{source}:{line}" for line in (183, 184, 185, 187, node.line)],
+        "scope_evidence": [f"{source}:{line}" for line in (210, 211, 212, 216, node.line)],
         "actor": "ROOT=country",
         "targets": ["scope:country=country", "scope:enemy_country=country"],
         "operation": "additive_score",

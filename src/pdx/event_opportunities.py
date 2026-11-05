@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from pdx.situated.decision_ir import EvaluationContext, WriterDecisionIR
 
 PARAMETERS = config.REPO / "mod/decisions/event_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/event-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/event-opportunities.json"
 SOURCE = "events/law_events/healthcare_laws.txt"
 MODIFIERS = "common/static_modifiers/content_4_modifiers.txt"
 ON_ACTIONS = "common/on_actions/00_code_on_actions.txt"
@@ -52,7 +52,7 @@ SOL_JOURNAL_GROUP = "common/journal_entry_groups/00_journal_entries.txt"
 SOL_OWNER = "events/tech_events/nursing_events.txt"
 SOL_EVENT = "sol_events.6"
 SOL_OPTIONS = ("sol_events.6.a", "sol_events.6.b")
-SOL_PARENT_SHAPE = "042dd023917f3320d3641e83b783df0c69bee9f208f1d9f003dd63950fae7ece"
+SOL_PARENT_SHAPE = "46e09d1737ef7caf53446896f2bea78e547523305bc0753ae4978df2ee59b9fb"
 LEGACY_SOURCES = frozenset(
     {
         SOURCE,
@@ -385,12 +385,12 @@ def _verify_plague(roots: Mapping[str, Block]) -> None:
 DISASTER_PARENT_SHAPES = {
     "natural_disaster_events.1": "ed4e78199a230ec3ac0f1cfa0cbebbc9ed28e605efa34169010da3d0fa6c4b51",
     "natural_disaster_events.2": "e686360f7dac53f71da43e87442043cad50cae24481837b14795667d236effb1",
-    "natural_disaster_events.3": "a930c3f25f2081aa07ad5c030efaa077fa42ecba47d4f96a3a01fa7dfc68b5ae",
-    "natural_disaster_events.4": "416c4812ba63d9e30f5cb6bf1ba61f659bafa1aec6ca1473e3e510ec7c769abe",
+    "natural_disaster_events.3": "2525f39b6214078d51c895e7cdb6afa7d676b4e2150a570282596f4c9c323fea",
+    "natural_disaster_events.4": "a420602ccb9b3f954052f6d676faeca2f88ee0226dc6aa1fa3aade4273075bda",
     "natural_disaster_events.5": "4f552a0153352c9ca213a12b9e0da7b166918440fa03a55514d019ba53566bec",
     "natural_disaster_events.6": "b8cf95270870ad224463d71c1d45491e0db8eac4e61dfbd6c7d1b5defdce4694",
     "natural_disaster_events.7": "e78554a0131cd1348b105c235c06223fdaf850a4b75415ad33e3dbea840aed11",
-    "natural_disaster_events.8": "baeb53117e82bc69c96c024725efe984985801a817c551993631e514cf87c418",
+    "natural_disaster_events.8": "e5d8b2c0114b36c986f0c290311954e7787e4cb056cbc7a1a00483aae3cb892c",
 }
 
 
@@ -580,8 +580,14 @@ def verify_sol_inputs(inputs: Mapping[str, str]) -> None:
     _scalar(_block(saved, "limit"), "is_capital", "yes")
     _scalar(saved, "save_scope_as", "slums_state")
     options = _options(event)
-    if tuple(options) != SOL_OPTIONS or any(option.all("ai_chance") for option in options.values()):
-        raise ValueError("面包骚乱完整双选项未声明AI权重底本漂移")
+    if tuple(options) != SOL_OPTIONS:
+        raise ValueError("面包骚乱完整双选项身份漂移")
+    for name, trigger in zip(SOL_OPTIONS, ("ai_avoids_radicals", "ai_wants_radicals"), strict=True):
+        if _shape(_block(options[name], "ai_chance")) != (
+            ("base", "=", "1"),
+            ("modifier", "=", (("trigger", "=", ((trigger, "=", "yes"),)), ("add", "=", "10"))),
+        ):
+            raise ValueError("面包骚乱当前显式原版权重完整AST漂移")
     _scalar(options[SOL_OPTIONS[0]], "default_option", "yes")
     expense = _block(options[SOL_OPTIONS[0]], "add_modifier")
     _scalar(expense, "name", "starvation_palliative_modifier")
@@ -627,7 +633,7 @@ def verify_sol_inputs(inputs: Mapping[str, str]) -> None:
         raise ValueError("面包骚乱JE月度调用分布漂移")
     _scalar(_block(roots[SOL_JOURNAL_GROUP], "je_group_crises"), "context", "country")
     doc = inputs[SOL_JOURNAL_DOC].splitlines()
-    if doc[365:367] != [
+    if doc[333:335] != [
         "        # root = owning country or no scope",
         "        on_monthly_pulse = {",
     ]:
@@ -694,7 +700,7 @@ POLICIES = {
         for option in (name + ".a", name + ".b")
     },
     **{
-        name: EventPolicyIdentity(SOL, SOL_EVENT, "sol_response", True, "slums_state")
+        name: EventPolicyIdentity(SOL, SOL_EVENT, "sol_response", False, "slums_state")
         for name in SOL_OPTIONS
     },
 }
@@ -783,7 +789,7 @@ class EventProgram:
                 auxiliary_scopes=(ContextBinding("slums_state", "state", "auxiliary", SOL, 622),),
                 evidence=(
                     f"{SOL_JOURNAL_GROUP}:108",
-                    f"{SOL_JOURNAL_DOC}:366",
+                    f"{SOL_JOURNAL_DOC}:334",
                     f"{SOL_JOURNAL}:4",
                     f"{SOL_JOURNAL}:78",
                     f"{SOL}:622",
@@ -1571,9 +1577,15 @@ def render(program: EventProgram) -> str:
     new_policy = program.identity.explicit
     if (
         scalar.operation != "add"
-        or (scalar.neutral != 0 and not new_policy)
+        or (scalar.neutral != 0 and not new_policy and program.identity.family != "sol_response")
         or len(scalar.groups)
-        > (3 if program.identity.family == "hokkaido" else 4 if new_policy else 2)
+        > (
+            3
+            if program.identity.family == "hokkaido"
+            else 4
+            if new_policy or program.identity.family == "sol_response"
+            else 2
+        )
     ):
         raise ValueError("事件AIWeight桥只支持已证有限线性加法")
     chunks = [
@@ -1584,6 +1596,10 @@ def render(program: EventProgram) -> str:
             "\t\tai_chance = {\n\t\t\tbase = 0\n"
             "\t\t\t# Intentional AI-only policy; omitted native default is unknown.\n"
             f"\t\t\tmodifier = {{ trigger = {{ is_ai = yes }} add = {programs.numeric_literal(scalar.neutral)} }}\n"
+        )
+    if program.identity.family == "sol_response":
+        chunks.append(
+            f"\t\tmodifier = {{ trigger = {{ is_ai = yes }} add = {programs.numeric_literal(scalar.neutral)} }}\n"
         )
     minimum = maximum = Decimal(str(scalar.neutral))
     for group in scalar.groups:
@@ -1793,7 +1809,7 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
     sol_event = _block(parse_text(inputs[SOL]).root, SOL_EVENT)
     sol_options = _options(sol_event)
     for name in SOL_OPTIONS:
-        line = next(row.line for row in sol_event.all("option") if row.value is sol_options[name])
+        line = sol_options[name].all("ai_chance")[0].line
         catalog[name] = {
             "source": SOL,
             "definition": SOL_EVENT,
@@ -1804,10 +1820,10 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
             "target_scope": "none",
             "native_unit": "event_option_weight",
             "operation": "add",
-            "placement": "new_explicit_complete_paired_ai_policy",
+            "placement": "after_complete_native_aiweight",
             "scope_evidence": [
                 f"{SOL_JOURNAL_GROUP}:108",
-                f"{SOL_JOURNAL_DOC}:366",
+                f"{SOL_JOURNAL_DOC}:334",
                 f"{SOL_JOURNAL}:78",
                 f"{SOL}:622",
                 f"{SOL}:{line}",
@@ -1815,7 +1831,7 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
             "source_line": line,
             "auxiliary_entity": "scope:slums_state=state; exact event immediate random_scope_state capital; require current owner=ROOT",
             "unknown_policy": "saved_state_missing_or_owner_or_population_unknown=state_benefits_exit_country_cost_retained; high_exposure_unknown=base_welfare_only; financing_unknown=retain_declared_recurring_cost",
-            "default_weight": "unknown_not_inferred; intentional_new_explicit_ai_policy",
+            "default_weight": "native_base_1_plus_contextual_radicalization_10_preserved; paired_ai_baseline_50_added",
             "benefit_semantics": {
                 "relief_option": SOL_OPTIONS[0],
                 "lower_strata_standard_of_living_add": 1,

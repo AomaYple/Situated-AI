@@ -26,8 +26,8 @@ if TYPE_CHECKING:
     from .situated.decision_ir import EvaluationContext
 
 PARAMETERS = config.REPO / "mod/decisions/native_button_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/native-button-opportunities.json"
-FROZEN_SHA256 = "8e5abf1cb64228bcb4c3dbe47e4e3558e1739acd673c87bd1477eaa88d09b51a"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/native-button-opportunities.json"
+FROZEN_SHA256 = "e96069841231c8382fca4c89d63cb258fa5195f86dbde474271fcf9cf043675a"
 ACTOR_SOURCE = "common/decisions/west_america_expidition_decision.txt"
 HELP = "common/scripted_buttons/scripted_buttons.md"
 HAITI = "common/scripted_buttons/00_hispaniola_buttons.txt"

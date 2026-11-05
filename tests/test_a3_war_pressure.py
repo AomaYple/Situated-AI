@@ -143,11 +143,11 @@ def test_complete_native_freeze_query_contract_and_no_installation_dependency(
     assert set(dict(compiled.source_hashes)) == pressure.SOURCES
     assert set(observation_queries.required_sources(query)) == pressure.SOURCES
     assert compiled.references == (
-        f"{pressure.IDEOLOGIES}:2625",
-        f"{pressure.EFFECTS}:2972",
-        f"{pressure.REGIONS}:37",
+        f"{pressure.IDEOLOGIES}:2764",
+        f"{pressure.EFFECTS}:2762",
+        f"{pressure.REGIONS}:35",
         f"{pressure.TRIGGER_DOC}:110",
-        f"{pressure.SOURCE}:8339",
+        f"{pressure.SOURCE}:9558",
     )
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     assert observation_queries.compile_query(query, frozen) == compiled
@@ -180,7 +180,11 @@ def test_complete_native_source_drift_hard_fails(source):
     [
         (pressure.IDEOLOGIES, "target = root.owner", "target = attacker_warleader"),
         (pressure.EFFECTS, "target = root value > 80", "target = prev value > 80"),
-        (pressure.REGIONS, "count >", "count <"),
+        (
+            pressure.REGIONS,
+            "aro_is_acquire_states_target = yes",
+            "aro_is_acquire_states_target = no",
+        ),
         (pressure.TRIGGER_DOC, "count >= 5", "count = 5"),
         (pressure.SOURCE, "max = 100", "max = 200"),
     ],
@@ -304,11 +308,13 @@ def test_full_native_ordered_ast_zero_disable_and_own_collection_preservation(pr
         ),
         "conquer_state",
     )
-    zero = native.all("if")[1]
+    zeroes = native.all("if")[1:3]
+    assert len(zeroes) == 2
     clamps = "\n".join(_render(native.first(key)) for key in ("min", "max"))
     # Execute actual native zero/clamp statements after the overlay in their
     # original order. The additive overlay by itself is not a complete score.
-    body = overlay + "\n" + _render(zero) + "\n" + clamps
+    body = overlay + "\n" + "\n".join(_render(zero) for zero in zeroes) + "\n" + clamps
+    facts["ROOT"]["ai_russia_gendarme_spares_china"] = False
     facts["ROOT"]["has_variable"][(("argument", "attack_bolivia"),)] = False
     assert _native_number(0, body, facts) == 0
     assert _native_number(1, body, facts) == 0
@@ -319,9 +325,15 @@ def test_full_native_ordered_ast_zero_disable_and_own_collection_preservation(pr
         has_variable={(("argument", "pbc_member"),): True},
     )
     assert _native_number(100, body, facts) == 0
+    facts["ROOT"]["has_variable"][(("argument", "attack_bolivia"),)] = False
+    facts["ROOT"]["ai_russia_gendarme_spares_china"] = True
+    assert _native_number(100, body, facts) == 0
     candidate = text[text.index("\t\tconquer_state = {") : text.index("\t\treturn_state = {")]
-    assert candidate.index("# SITAI END information:") < candidate.index(
+    assert candidate.index("# SITAI END information:") < candidate.rindex(
         "has_variable = attack_bolivia"
+    )
+    assert candidate.index("# SITAI END information:") < candidate.index(
+        "ai_russia_gendarme_spares_china = yes"
     )
     assert decision_rules.evaluate(policy, {}, is_ai=True, enabled_domains=frozenset()) == {}
     assert (

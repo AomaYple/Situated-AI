@@ -2,7 +2,7 @@
 schema = 1
 
 [sources]
-"common/ai_strategies/00_default_strategy.txt" = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+"common/ai_strategies/00_default_strategy.txt" = "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431"
 
 [tuning]
 reconcile_default = 8

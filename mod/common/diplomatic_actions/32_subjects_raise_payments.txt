@@ -1,0 +1,152 @@
+raise_payments = {
+	requires_approval = no
+	groups= { overlord subject } # this is a subject action only for the sake of breaking it if LD is high enough
+
+	texture = "gfx/interface/icons/diplomatic_action_icons/raise_payments.dds"
+	confirmation_sound = "event:/SFX/UI/MapInteraction/SubjectInteractions/diplomatic_action_subjects_01_raise_payments_benign"
+
+	selectable = {
+		has_dlc_feature = subject_and_bloc_actions
+	}
+
+	potential = {
+		any_scope_diplomatic_pact = {
+			"diplomatic_pact_other_country(root)" = scope:target_country
+			income_transfer > 0
+		}
+		OR = {
+			scope:target_country = {
+				is_subject_of = root
+				NOT = { is_diplomatic_play_enemy_of = root }
+				NOR = {
+					is_subject_type = subject_type_protectorate
+					is_subject_type = subject_type_personal_union
+				}
+			}
+			AND = {	# only valid for subject countries if a pact is already established
+				is_subject_of = scope:target_country
+				has_diplomatic_pact = { who = scope:target_country type = raise_payments }
+			}
+		}
+	}
+
+	possible = {
+		scope:target_country = {
+			liberty_desire < 75
+		}
+		scope:target_country = {
+			in_default = no
+		}
+		NOT = {
+			has_diplomatic_pact = {
+				who = scope:target_country
+				type = decrease_payments
+			}
+		}
+	}
+
+	pact = {
+		cost = 25
+
+		maintenance_paid_by = first_country
+		relations_progress_per_day = -1
+		income_transfer = 0.1
+		second_country_gets_income_transfer = no
+		income_transfer_based_on_second_country = yes
+
+		second_modifier = {
+			country_liberty_desire_add = 0.10
+		}
+
+		requirement_to_maintain = {
+			trigger = {
+				custom_tooltip = {
+					text = "DIPLOMATIC_PACT_REQUIREMENT_AT_PEACE"
+					NOT = { has_war_with = scope:target_country }
+				}
+			}
+		}
+
+		requirement_to_maintain = {
+			trigger = {
+				custom_tooltip = {
+					text = "DIPLOMATIC_PACT_REQUIREMENT_SUBJECT_WITH_INCOME_TRANSFER"
+					any_scope_diplomatic_pact = {
+						"diplomatic_pact_other_country(root)" = scope:target_country
+						income_transfer > 0
+					}
+				}
+			}
+		}
+	}
+
+	ai = {
+		max_influence_spending_fraction = 0.1
+
+		evaluation_chance = {
+			value = 0.25
+		}
+
+		propose_score = {
+			value = 10
+
+		# SITAI BEGIN information:raise_payments.ai.propose_score
+		# ACTION program_5c02763f04c97ac7 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5c02763f04c97ac7_raise_payments_actor_income_need_positive
+			add = { value = 0
+				# native_action_raise_income_need [diplomacy]; 本国实际net_total_income赤字增加抽取收入的有限需求；同一合法目标自由欲望50至75区间对持续+0.10自由欲望形成独立可持续风险，65以上同因升档。目标违约及>=75已由原资格排除，25影响力配额不重复；不将10%抽取率当作已知税基或英镑收益。
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income < 0 } } add = 0.12 }
+			}
+			# GROUP program_5c02763f04c97ac7_raise_payments_target_instability_negative
+			add = { value = 0
+				# native_action_raise_liberty_high [diplomacy]; 本国实际net_total_income赤字增加抽取收入的有限需求；同一合法目标自由欲望50至75区间对持续+0.10自由欲望形成独立可持续风险，65以上同因升档。目标违约及>=75已由原资格排除，25影响力配额不重复；不将10%抽取率当作已知税基或英镑收益。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = scope:target_country scope:target_country = { liberty_desire >= 0 liberty_desire <= 100 } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = scope:target_country scope:target_country = { liberty_desire >= 0 liberty_desire <= 100 NOT = { liberty_desire >= 65 } } } } }  } else = { add = -0.18 } } } }
+				# native_action_raise_liberty_risk [diplomacy]; 本国实际net_total_income赤字增加抽取收入的有限需求；同一合法目标自由欲望50至75区间对持续+0.10自由欲望形成独立可持续风险，65以上同因升档。目标违约及>=75已由原资格排除，25影响力配额不重复；不将10%抽取率当作已知税基或英镑收益。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 } } add = -0.1 } }
+			}
+			min = 0.82
+			max = 1.12
+		} }
+		# SITAI END information:raise_payments.ai.propose_score
+	}
+
+		will_propose = {
+			exists = scope:target_country
+			"relations(scope:target_country)" < relations_threshold:cordial
+			has_attitude = {
+				who = scope:target_country
+				attitude = domineering
+			}
+			OR = {
+				has_strategy = ai_strategy_economic_imperialism
+				has_strategy = ai_strategy_territorial_expansion
+				has_strategy = ai_strategy_world_revolution
+			}
+			scope:target_country ?= { "potential_diplomatic_play_power_ratio(root)" <= 0.5 }
+			NAND = {
+				ai_russia_is_holding_poland = yes
+				scope:target_country = { liberty_desire >= 25 }
+			}
+		}
+
+		will_break = {
+			OR = {
+				has_attitude = {
+					who = scope:target_country
+					attitude = protective
+				}
+				AND = {
+					scope:target_country ?= { liberty_desire >= 50 }
+					"relations(scope:target_country)" >= relations_threshold:friendly
+					NOR = {
+						has_strategy = ai_strategy_economic_imperialism
+						has_strategy = ai_strategy_territorial_expansion
+						has_strategy = ai_strategy_world_revolution
+					}
+				}
+			}
+		}
+	}
+}

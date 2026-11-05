@@ -1,6 +1,6 @@
 """Victoria 3 本体语言目录与 Mod 本地化覆盖契约。
 
-语言集合来自当前锁定的 Victoria 3 1.14.5 本地化快照；如果提供实际游戏目录，
+语言集合来自当前锁定的 Victoria 3 1.15.0 本地化快照；如果提供实际游戏目录，
 则优先从 ``localization/`` 的语言头重新发现集合。生成器不允许静默丢掉本体语言：
 未知语言会进入结果并要求调用方提供文本，缺失语言文件由生成检查报告。
 """
@@ -35,7 +35,7 @@ class Language:
         return self.header
 
 
-# Victoria 3 release/1.14.5 的 localization_digest（按目录名稳定排序）。
+# Victoria 3 release/1.15.0 的 localization_digest（按目录名稳定排序）。
 DEFAULT_LANGUAGES: tuple[Language, ...] = tuple(
     Language(directory, f"l_{directory}")
     for directory in (

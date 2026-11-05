@@ -38,6 +38,9 @@ def test_complete_native_effect_inventory_preserves_mechanism_units_and_variant_
         "law_national_guard",
         "law_secret_police",
         "law_shinsengumi",
+        "law_third_section",
+        "law_okhrana",
+        "law_extraordinary_commission",
         "law_guaranteed_liberties",
     }
     assert laws["law_no_home_affairs"]["effects"] == []
@@ -361,7 +364,7 @@ def test_player_disabled_missing_and_wrong_country_do_not_supply_political_expos
 def test_source_derivation_has_only_existing_finite_consumers(native_inputs):
     adapters = tomllib.loads(decision_adapters.SOURCE.read_text(encoding="utf-8"))
     derived = security.derive(adapters, native_inputs)
-    assert len(derived["covered"]) == 5
+    assert len(derived["covered"]) == 8
     assert all(rule["contribution_group"] for rule in derived["rules"])
     assert all(rule["operation"] == "add" for rule in derived["rules"])
     assert all(rule["source"] == SOURCE for rule in derived["rules"])

@@ -51,7 +51,7 @@ _NUMERIC_OPERATIONS = frozenset(
         "base_candidate_score",
         "additive_spending_balance",
         "additive_subject_valuation",
-        "additive_percentage_chance",
+        "override_percentage_chance",
         "additive_aggression",
         "additive_active_stance_limit",
         "additive_supply_ship_count_target",

@@ -2,7 +2,7 @@
 schema = 1
 
 [sources]
-"events/paralegal_discrimination_events.txt" = "6035008b9af5c24f5b41dc8cfac5b3ff878ea56f2071228caa8c2c9f73672e39"
+"events/paralegal_discrimination_events.txt" = "681da2be740046fbbf07922d2959098c7e5c21c451ac5dd23973ecfb260b618b"
 
 [tuning]
 absorption_target = 1.10

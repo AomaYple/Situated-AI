@@ -24,13 +24,13 @@ if TYPE_CHECKING:
 
 
 _LJ10_EVIDENCE = Path(__file__).resolve().parents[2] / (
-    "research/situated/victoria3-1.14.5-defensive-pact-reader.json"
+    "research/situated/victoria3-1.15.0-defensive-pact-reader.json"
 )
-_LJ10_EVIDENCE_SHA256 = "2237b33ebdb232e2c2061a995d471e98ca015ce06725cc00f4e7d252c63c20c6"
+_LJ10_EVIDENCE_SHA256 = "28233903a12affc8b5478a3484d2f73f3c930e3ea6fb601d9899d0193ea10d8e"
 SCRIPTED_PREDICATE_SOURCE = Path(__file__).resolve().parents[2] / (
-    "research/situated/victoria3-1.14.5-scripted-predicate.json"
+    "research/situated/victoria3-1.15.0-scripted-predicate.json"
 )
-SCRIPTED_PREDICATE_SHA256 = "128c85f83fdc007a42d19c97dad7bf8d61351be42121095e680ed1028a38918c"
+SCRIPTED_PREDICATE_SHA256 = "e96d22eb906bc39bced42bc6d17b1690fac5959e916f9de4defe8639d4c52a7d"
 
 
 def scripted_trigger_snapshot() -> bytes:
@@ -46,7 +46,7 @@ def scripted_trigger_snapshot() -> bytes:
         "result": "boolean",
         "unit": "boolean",
         "source": "common/scripted_triggers/00_scripted_triggers.txt",
-        "line": 1117,
+        "line": 1243,
         "definition": (
             "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
         ),
@@ -116,7 +116,7 @@ def verify_scripted_trigger_game(game: Path) -> tuple[tuple[str, str], ...]:
 
 
 def proven_reader_words() -> frozenset[str]:
-    """Pinned 1.14.5 static reader evidence; current game identity is a separate gate.
+    """Pinned 1.15.0 static reader evidence; current game identity is a separate gate.
 
     The manifest contains verified executable observations and original script
     hashes. It extends token discovery only; reader_scope still enforces exact
@@ -126,14 +126,76 @@ def proven_reader_words() -> frozenset[str]:
     if hashlib.sha256(raw).hexdigest() != _LJ10_EVIDENCE_SHA256:
         raise ValueError("LJ10 读取器冻结证据字节漂移")
     manifest = json.loads(raw)
+    semantic = {
+        key: value
+        for key, value in manifest.items()
+        if key
+        not in {"exe", "observations", "script_hashes", "lineage", "supplemental_guard_evidence"}
+    }
+    if (
+        hashlib.sha256(
+            json.dumps(semantic, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+        ).hexdigest()
+        != "6b4a321d90617a95af89a04285f8cad6895f6ccf78a0e7e2ecc07b9d73cc5972"
+    ):
+        raise ValueError("LJ10 当前读取器/同ROOT严格比较合同漂移")
     if manifest["exe"]["sha256"] != (
-        "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54"
+        "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"
     ):
         raise ValueError("LJ10 读取器原版引擎身份漂移")
     return frozenset(
         [manifest["reader"]["engine"]]
         + [item["engine"] for item in manifest["positive_native_guard"]["readers"]]
     )
+
+
+def verify_lj10_game(game: Path) -> tuple[tuple[str, str], ...]:
+    """Recheck current native spans and exact original scripts at production gates."""
+    from .situated import engine_scope  # noqa: PLC0415
+
+    proven_reader_words()
+    manifest = json.loads(_LJ10_EVIDENCE.read_bytes())
+    _, hashes, verified = engine_scope._verified_manifest(
+        game,
+        {source: (game / source).read_bytes() for source in manifest["script_hashes"]},
+        _LJ10_EVIDENCE,
+        _LJ10_EVIDENCE.relative_to(Path(__file__).resolve().parents[2]).as_posix(),
+        _LJ10_EVIDENCE_SHA256,
+        "LJ10 当前读取器与严格比较证据",
+    )
+    if not verified:
+        raise ValueError("LJ10 当前原版脚本或EXE与锁定证据不一致")
+    from .situated.native_treatments import _digest  # noqa: PLC0415
+
+    for source, field, expected in (
+        (
+            "common/script_values/ai_script_values.txt",
+            ("wanted_army_size_script_value",),
+            "18a212ac494c4fafcde60204027574fc8c85cbf096215a4b74319dbc9129a413",
+        ),
+        (
+            "common/script_values/ai_script_values.txt",
+            ("wanted_marines_size_script_value",),
+            "d667859e1e8f50b41a0dd3060d0f3940a052164fe7d45cb1d1704718fe9c2988",
+        ),
+        (
+            "common/ai_strategies/00_default_strategy.txt",
+            ("ai_strategy_default", "wanted_army_size"),
+            "392c3d8c378e6f6b40947ae539dbf219b64753561028eb51a8c80a6e11e6a8a8",
+        ),
+    ):
+        parsed = parse_text((game / source).read_text(encoding="utf-8-sig"))
+        if parsed.errors:
+            raise ValueError("LJ10 当前原版比较公式无法解析")
+        block = parsed.root
+        for part in field:
+            rows = block.all(part)
+            if len(rows) != 1 or not isinstance(rows[0].value, Block):
+                raise ValueError("LJ10 当前原版比较公式缺失或重复")
+            block = rows[0].value
+        if _digest(rows[0]) != expected:
+            raise ValueError("LJ10 当前原版比较公式完整AST漂移")
+    return hashes
 
 
 _COUNTRY_BOOLEAN = frozenset(
@@ -265,8 +327,8 @@ _UNITS = {
     "tax_capacity": "tax_capacity_points",
     "tax_capacity_usage": "tax_capacity_points",
     "num_defensive_pacts": "treaty_article_count",
-    "wanted_army_size_script_value": "battalions",
-    "wanted_marines_size_script_value": "battalions",
+    "wanted_army_size_script_value": "barracks_levels",
+    "wanted_marines_size_script_value": "barracks_levels",
     "state_goods_pricier": "price_above_base_ratio",
     "market_goods_pricier": "price_above_base_ratio",
     "market_goods_delta": "sell_minus_buy_orders",
@@ -285,6 +347,12 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine.startswith("scope:") or reader.key == "negotiation_amenability":
+        from . import negotiation_context  # noqa: PLC0415
+
+        if reader.engine != "scope:target_region":
+            negotiation_context.validate_reader(reader, actor_path, root)
+            return "country"
     if reader.key.startswith("commitment_") or "military_commitment_query" in dict(
         reader.parameters
     ):
@@ -610,8 +678,8 @@ def reader_scope(
         )
     ):
         raise ValueError(f"公司容量与权威余额仅支持已证明的国家 ROOT 数值合同：{reader.key}")
-    # 1.14.5 Windows reader/consumer证据只授权本国根；条款数量不是履约或军力。
-    # 固定依据见 research/situated/victoria3-1.14.5-defensive-pact-reader.json。
+    # 1.15.0 Windows reader/consumer证据只授权本国根；条款数量不是履约或军力。
+    # 固定依据见 research/situated/victoria3-1.15.0-defensive-pact-reader.json。
     if reader.engine == "num_defensive_pacts" and (
         reader.scope != "root"
         or actor_path
@@ -700,6 +768,26 @@ def validate(rules: RuleSet) -> None:
         reader_scope(reader, rules.actor_path, native_root=rules.native_root)
     for rule in rules.rules:
         field = rule.field[1:] if rule.field[0] == "ai_strategy_default" else rule.field
+        if any(readers[key].engine == "scope:amenability" for key in rule.input_keys()):
+            negotiation_values = {
+                "remaining_organized_negotiation_need": 0.1,
+                "lj08_negotiation_local_political_capacity": 0.25,
+            }
+            conditions = {(p.fact, p.op, p.value) for p in rule.conditions}
+            if (
+                field != ("negotiation_chance",)
+                or rule.id not in negotiation_values
+                or rule.operation != "add"
+                or rule.value != negotiation_values[rule.id]
+                or rule.contribution_group != "organized_negotiation_need"
+                or not {
+                    ("negotiation_amenability", ">", 0),
+                    ("negotiation_amenability", "<=", 1),
+                    ("radical_share", ">=", 0.25),
+                }
+                <= conditions
+            ):
+                raise ValueError("谈判amenability只授权有界迁移政策及精确接受窗口")
         if any(
             readers[key].engine == "modifier:country_tech_spread_mult" for key in rule.input_keys()
         ) and (
@@ -810,7 +898,7 @@ def validate(rules: RuleSet) -> None:
             named.add("target_state")
         if field[0] == "become_subject_value":
             named.add("overlord")
-        if field[0] in {"negotiation_chance", "interest_group_government_weight"}:
+        if field[0] == "interest_group_government_weight":
             named.add("interest_group")
         if any(readers[key].scope not in named for key in rule.input_keys()):
             raise ValueError(f"消费者没有提供读取器的具名作用域：{rule.id}")
@@ -980,7 +1068,7 @@ def consumer(
         evidence, role = "common/laws/readme.md", "vanilla_law_candidate_weight"
     elif leaf == "ai_weight" and source is not None and source.startswith("common/company_types/"):
         evidence, role = (
-            "research/situated/victoria3-1.14.5-company-scope.json",
+            "research/situated/victoria3-1.15.0-company-scope.json",
             "vanilla_company_base_candidate_weight",
         )
     elif leaf == "ai_weight" and source == "common/mobilization_options/00_mobilization_option.txt":
@@ -1087,6 +1175,12 @@ def _retained_reason(field: str) -> dict[str, str]:
     """保留原版是明确设计选择，既不是新增实现也不是接口不支持。"""
     policies = (
         (("icon",), "presentation", "保留原版策略图标，不把显示资源作为决策输入", "无行为影响"),
+        (
+            ("cossack_host_scores",),
+            "native_cossack_host_scores_pending",
+            "逐字保留当前原版哥萨克军团评分映射、资格与尾部；本阶段不扩展写入许可",
+            "候选身份、评分与编制执行仍归原版；后续扩展须单独证明消费者与成本边界",
+        ),
         (
             ("colonial_interest_ratio",),
             "native_consumer_context_unknown",
@@ -1211,7 +1305,7 @@ def coverage(baseline: str, owners: dict[tuple[str, ...], str]) -> list[dict[str
 
 
 STATE_DEVASTATION_SOURCE = "common/ideologies/01_character_ideologies.txt"
-STATE_DEVASTATION_SHA256 = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
+STATE_DEVASTATION_SHA256 = "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4"
 
 
 def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
@@ -1224,7 +1318,7 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
 
     sources = {
         STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
-        "common/on_actions/00_code_on_actions.txt": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
+        "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
     }
     parsed = {}
     for source, expected in sources.items():
@@ -1250,7 +1344,9 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
 
     ideology = parsed[STATE_DEVASTATION_SOURCE].first("ideology_pacifist")
     expected = shape(
-        parse_text("owner = { any_scope_state = { is_incorporated = yes devastation > 0.2 } }").root
+        parse_text(
+            "owner ?= { any_scope_state = { is_incorporated = yes devastation > 0.2 } }"
+        ).root
     )
     references = []
     if ideology is None or not isinstance(ideology.value, Block):

@@ -106,7 +106,7 @@ def _sha256(path: Path) -> str:
 
 
 def _baseline_id(path: Path) -> str:
-    return f"victoria3-1.14.5:{_sha256(path)}"
+    return f"victoria3-1.15.0:{_sha256(path)}"
 
 
 def _scope_hash(surfaces: tuple[Surface, ...], source_hashes: dict[str, str]) -> str:

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/culture_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/culture-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/culture-opportunities.json"
 SOURCE = "common/laws/00_church_and_state.txt"
 LOBBIES = "events/soi_events/00_lobbies_events_04.txt"
 ALGERIA = "common/journal_entries/01_algeria.txt"
@@ -56,7 +56,7 @@ RELIGIONS = (
 )
 CANDIDATE = "law_freedom_of_conscience"
 ORIGIN = "law_state_religion"
-VARIANTS = ("law_millet_system", "law_people_of_the_book")
+VARIANTS = ("law_caesaropapism", "law_millet_system", "law_people_of_the_book")
 FIELD = f"{CANDIDATE}.ai_enact_weight_modifier"
 QUERY_PARAMETER = "culture_query"
 READER = "culture_nonstate_religious_exposure"
@@ -90,6 +90,7 @@ CHANNELS = (
 )
 EFFECTS = {
     "law_state_religion": (25, 0, -10, -25),
+    "law_caesaropapism": (25, 0, -10, -25),
     "law_millet_system": (25, 10, 10, -25),
     "law_people_of_the_book": (25, 5, 5, -25),
     "law_freedom_of_conscience": (20, 15, 5, 0),
@@ -242,7 +243,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
     if _shape(share) != (("target", "=", "rel:hindu"), ("value", ">=", "0.50")):
         raise ValueError("宗教人口份额固定宗教参数AST漂移")
     refs.append(f"{HIERARCHY}:{share.all('target')[0].line}")
-    complete = _child(_child(roots[ALGERIA], "je_the_algerian_departements"), "complete")
+    complete = _child(roots[ALGERIA], "je_the_algerian_departements")
     acceptance = [
         block.all("country_average_religious_acceptance")[0]
         for block in _blocks(complete)

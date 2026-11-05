@@ -1,7 +1,7 @@
 # 全域规则的唯一参数来源；方向和倍率仍待用户长期行为与平衡验收。
 # 只补充原版数值消费者，不能把静态用例或继承的原版能力写成新增实现。
 schema = 1
-baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+baseline_sha256 = "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431"
 
 [domains]
 political = true
@@ -160,13 +160,13 @@ minimum = 0
 [readers.native_army_capacity]
 engine = "wanted_army_size_script_value"
 scope = "root"
-unit = "battalions"
+unit = "barracks_levels"
 kind = "number"
 
 [readers.native_marine_capacity]
 engine = "wanted_marines_size_script_value"
 scope = "root"
-unit = "battalions"
+unit = "barracks_levels"
 kind = "number"
 
 [readers.bureaucracy]

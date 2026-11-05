@@ -71,7 +71,7 @@ def _country_state_module():
 
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
 PRODUCT = config.REPO / "mod"
-BASELINE = config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+BASELINE = config.REPO / "research" / "vanilla-ai" / "1.15.0" / "00_default_strategy.txt"
 RISK_VAR = "sitai_fiscal_risk"
 ACTIVE_TRIGGER = "sitai_fiscal_external_risk"
 TOOL_VERSION = __version__
@@ -746,7 +746,7 @@ def load(source: Path = SOURCE) -> Policy:
         raise ValueError("决策数据源的 schema 或字段无效")
     if (
         not isinstance(data["game_version"], str)
-        or data["game_version"] != "1.14.5"
+        or data["game_version"] != "1.15.0"
         or not isinstance(data["baseline_sha256"], str)
         or len(data["baseline_sha256"]) != 64
         or any(c not in "0123456789abcdef" for c in data["baseline_sha256"])
@@ -1331,7 +1331,7 @@ def build(
         bundle = situated_model.consumer_ir
         if bundle is None:
             raise ValueError("支持程序缺少统一消费者IR")
-        source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+        source = "research/vanilla-ai/1.15.0/00_default_strategy.txt"
         support_writer = WriterDecisionIR(
             writer_id=support.writer_id,
             kind="support_program",
@@ -1346,12 +1346,12 @@ def build(
             owner="situated_kernel",
             program=support,
             evaluation_context=EvaluationContext(
-                actor_scope=ContextBinding("root", "country", "actor", source, 183),
+                actor_scope=ContextBinding("root", "country", "actor", source, 210),
                 targets=(
-                    ContextBinding("target_country", "country", "target", source, 184),
-                    ContextBinding("enemy_country", "country", "target", source, 185),
+                    ContextBinding("target_country", "country", "target", source, 211),
+                    ContextBinding("enemy_country", "country", "target", source, 212),
                 ),
-                evidence=tuple(f"{source}:{line}" for line in (183, 184, 185)),
+                evidence=tuple(f"{source}:{line}" for line in (210, 211, 212)),
             ),
         )
         situated_model = replace(

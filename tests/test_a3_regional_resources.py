@@ -285,7 +285,7 @@ def test_proof_uses_trigger_scope_not_effect_only_and_rejects_mutation(regional,
     assert compiled.world_scans == 0
     assert compiled.local_collections == ("target_region.any_scope_state",)
     assert compiled.target == "scope:target_region=strategic_region"
-    assert any(ref.endswith(":5104") for ref in compiled.references)
+    assert any(ref.endswith(":5671") for ref in compiled.references)
     assert regional.compile_program().evaluation_context().targets[0].kind == "strategic_region"
     for key in regional.SOURCES:
         changed = dict(native)
@@ -444,6 +444,11 @@ def regional_exact_proof(regional, native):
     from pdx.parser import parse_bytes
     from pdx.situated import engine_scope
 
+    current_proof = json.loads(engine_scope.strategy_snapshot())
+    inputs.update(
+        {name: bytes.fromhex(raw) for name, raw in current_proof["stance_definition_bytes"].items()}
+    )
+
     definition = parse_bytes(inputs[regional.SOURCE], path=regional.SOURCE).root.first(
         "ai_strategy_default"
     )
@@ -478,7 +483,7 @@ def regional_exact_proof(regional, native):
         regional.SOURCE,
         "ai_strategy_default",
         regional.FIELD.removeprefix("ai_strategy_default."),
-        5088,
+        5860,
         scope,
     )
     inventory = vanilla_inventory.VanillaInventory(

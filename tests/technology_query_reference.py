@@ -264,7 +264,11 @@ def realize_query_world(reader):
             candidate
             for candidate in candidates
             if not purpose.endswith("_ready")
-            or all(CATALOG["goods"][good]["market"] for good in candidate["inputs"])
+            or all(
+                CATALOG["goods"][good]["market"]
+                or (purpose == "labor_ready" and CATALOG["goods"][good]["local"])
+                for good in candidate["inputs"]
+            )
         )
         building, method = row["building"], row["prior"]
         if row["method"]:
@@ -396,7 +400,9 @@ def evaluate(reader, collections, root_facts=None):
     answers = []
     for row in members:
         if purpose.endswith("_ready") and any(
-            amount > 0 and not CATALOG["goods"][good]["market"]
+            amount > 0
+            and not CATALOG["goods"][good]["market"]
+            and not (purpose == "labor_ready" and CATALOG["goods"][good]["local"])
             for good, amount in (row["inputs"] | row.get("losses", {})).items()
         ):
             continue
@@ -404,7 +410,7 @@ def evaluate(reader, collections, root_facts=None):
             _all(
                 _market(root, good, ">=", 0)
                 for good, amount in (row["inputs"] | row.get("losses", {})).items()
-                if amount > 0
+                if amount > 0 and CATALOG["goods"][good]["market"]
             )
             if purpose.endswith("_ready")
             else True
@@ -446,6 +452,15 @@ def evaluate(reader, collections, root_facts=None):
         candidates = []
         for state in collection:
             terms = list(common)
+            if purpose == "labor_ready":
+                for good, amount in (row["inputs"] | row.get("losses", {})).items():
+                    if amount > 0 and CATALOG["goods"][good]["local"]:
+                        observation = state.get(f"sg:{good}")
+                        terms.append(
+                            _number(observation.get("state_goods_pricier"), "<=", 0.25)
+                            if isinstance(observation, Mapping)
+                            else None
+                        )
             if purpose.startswith("labor"):
                 terms.extend(
                     (

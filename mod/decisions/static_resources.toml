@@ -1,18 +1,18 @@
 # A3-0 independent frozen AST baseline. Candidate/predicate budgets remain in
 # decision_intents.STATIC_BUDGET; typed DAG budgets remain in domain_ports.toml.
 schema = 1
-baseline = "A3-0 2026-11-05: 126657 assignments, 55028 blocks, 73623 scalars, depth15, 2038 scans, 31 persistent write sites, 2123 reader declarations/898 signatures/path3, 2 explicit relations"
-basis = "A3-0 independent baseline plus reviewed finite expansion. A3-1 common conservative cost lowering measured 192375 assignments/97540 blocks/96839 scalars/5204513 script bytes after equivalent guard compression (before:208100/104541/105563/5418887). The previous 18 percent allowance was inadequate for explicit three-valued guards across the real 5844-rule denominator; reviewed ceilings leave less than five percent AST headroom. No added world scans or Mod persistent writers. Newly included complete native canal source retains exactly six original variable writes, with full write-identity/parent-path validation; the newly overlaid complete Spanish Flu event source additionally retains exactly 23 native variable writes and 9 native world-country scan sites. Exact operation ASTs and occurrence-qualified parent paths are checked for both sources. The complete famine button source retains three exact native set_variable operations under their original button/effect paths. The newly included complete natural-disaster event source retains exactly 16 native persistent write sites (11 set_variable, 3 change_global_variable, 2 set_global_variable), all under exact operation AST and occurrence-qualified original parent-path validation; it introduces no native world-country scan sites. The newly overlaid complete 00_decisions source retains exactly three native writes (two set_variable, one set_global_variable), including unchanged sibling decisions, under the same exact operation AST and occurrence-qualified parent-path check. The newly overlaid complete standard-of-living source inherits seven original set_variable operations, checked with exact operation AST and occurrence-qualified paths. The local-object scan ceiling adds only its 21 native scans, the military-assistance source's 19 native scans and four new bounded own-treaty/article query sites to the previous 2300 ceiling (2344); none is a new world scan. Total inherited-plus-Mod write ceiling is 89 (31+6+23+3+16+3+7), and world-country scan ceiling is 10 (1+9); none of the extra allowance permits new Mod state or world scans. Candidate/predicate, scope, byte, scan, path and depth gates remain independent. Three newly overlaid complete native button sources add exactly 26 inherited object scans, ten inherited persistent writes and one inherited any_country scan; the exact original operation AST and parent paths are verified, with no new Mod scan or persistent writer. Their limits are 2370 object scans, 99 persistent writes and eleven world-country scans; no spare original write or world-scan slots are granted. The complete Hokkaido source adds 23 inherited local/region object scans and 16 inherited writes (three change_variable, eight set_global_variable, five set_variable); its five new own-state queries add five local scan sites. The regional resource program adds one candidate-region state query, 29 assignments, 16 blocks, 13 scalars and one reader, with no world scan or persistent write. Ceilings become 2405 object scans (2370+23+5+1+6) including six inherited native diplomatic scans (four sovereignty, two raise-payments) and 115 inherited writes (99+16), with world-country scans unchanged at eleven; all original write and world-scan operation identities remain exact. These syntax budgets do not measure game performance."
+baseline = "A4-1 current Victoria 3 1.15.0: 210499 assignments, 106304 blocks, 106366 scalars, depth18, 2358 scans, 113 inherited writes, 14 inherited world scans, 2444 reader declarations/1035 signatures/path3, 2 explicit relations"
+basis = "Current complete-source migration measured by the producer and independently recounted by the controller. The reviewed current production-resources snapshot freezes all 17 native operation sources and exact source identities; every generated script must preserve occurrence-qualified operation ASTs, while unknown and Mod-owned sources have no write or world-scan rights. Assignment/block/scalar ceilings retain less than five percent headroom. World scans and persistent writes equal exact native totals with no Mod allowance. Byte, depth, local scan, candidate/predicate, DAG, reader/path and relation limits remain independent. Syntax counts are not runtime timing or memory evidence."
 
 [limits]
 script_bytes = 6000000
-assignment_nodes = 200000
-block_nodes = 102000
-scalar_nodes = 102000
+assignment_nodes = 220000
+block_nodes = 111000
+scalar_nodes = 111000
 max_depth = 18
 object_scan_sites = 2405
-persistent_write_sites = 115
-world_country_scan_sites = 11
+persistent_write_sites = 113
+world_country_scan_sites = 14
 reader_declarations = 2500
 unique_reader_signatures = 1100
 reader_path_length = 3

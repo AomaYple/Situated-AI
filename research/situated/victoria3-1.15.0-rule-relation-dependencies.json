@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "evidence": "existing_compiled_rule_relation_dependencies_not_new_relations",
+  "version": "1.15.0",
+  "sources": {
+    "mod/decisions/actions.toml": "242467a779cdf99692b959cce72e8da25ba1a734c76478f876e83dbe779f270b",
+    "mod/decisions/action_families.toml": "8dc294d5d2f148fe3a8efd1e4b32574bc434aa72aaf1ae604a814436c9799d7c",
+    "mod/decisions/action_layers.toml": "f22cfe2b6eefc6f046323750e4d85e8f39415a72d2b754910d7821643ff362dc",
+    "mod/decisions/adapters.toml": "6ea2c602d03c6b19122c742cc0c30c2a3dfc701854b255d6469deae0392894d3",
+    "mod/decisions/building_opportunities.toml": "dc9cfcf292c73471e0ccf48c76fdf99664e6b5c7b54be2e9551178c17c059f8a",
+    "mod/decisions/canal_opportunities.toml": "33c4ad3f4cdecd0cef1ca2df9574b69bbacdd2d4b56324dbb643a5fe8e6a3a0b",
+    "mod/decisions/capacities.toml": "90571ea955b465d8b3a68c4ea88aa536f399fc52f3a19015d7451b1da255318d",
+    "mod/decisions/colonial_opportunities.toml": "53f650a4f3e1e3af4b1e1fa4bf9bad1cd0b159d75033690aa25b97fe2ea74cdc",
+    "mod/decisions/commitments.toml": "bbe2ac21aeff2463f796594f6296088c6fd83be2e703487d23bf3a11b86de3c3",
+    "mod/decisions/company_sectors.toml": "d99e1c8e603c4f01dd3c5f81c5173f990b7246b899f06d91fb3349e8bdd22bc8",
+    "mod/decisions/consumers.toml": "05ff7f028fe81ad7c7cf5d23b4ba259e25ee0252c1fb4b137a3da229da7bbdc1",
+    "mod/decisions/cooperation_opportunities.toml": "c81801ad9976a13da809a1247fec32a56f6642b21045fe245a0080287abac197",
+    "mod/decisions/cost_policies.toml": "e7eb635f6834439dc9f4bad5538d0e8a820a3de81e360628ef1d045a60a14786",
+    "mod/decisions/country_state.toml": "2a7f83b6d48a9ecc97af8298041775882d6f09a23e1b26b728170b6bc0705af4",
+    "mod/decisions/culture_opportunities.toml": "39af43877774ac73a3c4e7f9e19cd4f023932c9622ecc249f55effbd62e5c0c4",
+    "mod/decisions/decree_opportunities.toml": "a13f63f5d12f2de00941f5a5698f8b15626c66457f9cebc32b28f8b76903e54a",
+    "mod/decisions/diplomatic_goals.toml": "cd771cbdd84da2f85d44b223dd489a968320910e73d526316b256bb6c8eb0319",
+    "mod/decisions/domain_ports.toml": "5441edeae328da6baa8e1393173c7cba083bbd95b3401317f8971e02841a9b77",
+    "mod/decisions/economy.toml": "1df101cd289aaac2e0263409591cb3b6780350df60e6d12d870d6c3bb1bdd313",
+    "mod/decisions/equipment_opportunities.toml": "64b58575583c5003354b3713259335b8b670caeb9deb405512aac1b3129aa882",
+    "mod/decisions/event_opportunities.toml": "5d8100ad6cb155248545d47bc58748e616635df68f15f3779ed673fd0bd59aad",
+    "mod/decisions/extensions.toml": "6c77a21e5854b77d87edcd8cce880b02035dbca2c6a1964fb4340522c577ebeb",
+    "mod/decisions/facts.toml": "79b98e52c31cea0fd1b75d441a93a01ae76f90259328bcc3ebba187479e04866",
+    "mod/decisions/famine_opportunities.toml": "2ef63321db8c768cc718fc5719070caa989f2b63daa42a61373db4f9348b2f4c",
+    "mod/decisions/fiscal.toml": "7417068f2a4b23240fd11060db5df477049d1e53ce787669e4a1923173124bcd",
+    "mod/decisions/goals.toml": "a666d9024939a576baa71fa9c0cb6adf35675b1f7996aed33befb5a860fc32f6",
+    "mod/decisions/import_blockade_opportunities.toml": "d34d004a40dcc926a268282d6e7ed3633755c3591c5710dbe23aefaf458fd400",
+    "mod/decisions/information.toml": "ba8797304a57997691df1559e573636955a9f5b70d82e00ccb54c5c59dbc92d4",
+    "mod/decisions/institution_opportunities.toml": "3c7ee70db77c35be29a156dd7a08d963606775c89bb386699ac34884254852de",
+    "mod/decisions/internal_security_opportunities.toml": "e0f2406b3ba19b080349d1b31242ff586a583a588b4b21e2530526a8af2da99c",
+    "mod/decisions/law_opportunities.toml": "a29ada6ade58feadc6505717f884541cf0b374951d833dc61fcd42de80971ad6",
+    "mod/decisions/localization.toml": "a056f2f2bde2ba356b00457d1d88d298b0ccfea07a4599b7155a4f1be828d94a",
+    "mod/decisions/migration_opportunities.toml": "9d5546b6c445a5f8544f8d2c22677301b9c0492aa1e7f159bf00fdf9c10dcf34",
+    "mod/decisions/mobilization_opportunities.toml": "fc235ecb86bdcc1f6072962767a580e0b17eda5d6af2b84febcf2995081f3975",
+    "mod/decisions/native_action_opportunities.toml": "00377a43fb5ebe5e5695a1dae4d7510dbbf02d91c8a097eaab9ae9cf1546df25",
+    "mod/decisions/native_button_opportunities.toml": "7febadffe77bdfae16670e4eac1487796464b5b56167fd68d32a2c67f56e7fe1",
+    "mod/decisions/native_decision_opportunities.toml": "7f801ec3bbc0ae31474c1b5a38db7f6be6dfcf0ea9cf2aa9b125b1073969ade0",
+    "mod/decisions/opportunities.toml": "525008b8d61b7a70bc816a542ec9293867a3d2023f3c49c9fc0f9add472d9014",
+    "mod/decisions/pressures.toml": "281b0c0f18b7981176478cf11193b00cfadc1dd069f315f5c12e96db3ccaee69",
+    "mod/decisions/regional_resource_opportunities.toml": "9c3d4bb44af7662e5d9afd989ec141d8de721ecf7d1ad22d83488a7c5750c262",
+    "mod/decisions/relations.toml": "d8fee107c6eba8a03fe8f541de25bee83ee28f526ffd7cd95a0d9c0d2a6da104",
+    "mod/decisions/strategic.toml": "74bb1156320daa300c1ee2244f82e38694fbc07735eb4d058182d562efbba7cd",
+    "mod/decisions/subject_dependence_opportunities.toml": "bb79d8f601077122be7d441e73229652d253e2ea26bb98f626b1851b207b5bb3",
+    "mod/decisions/technology_opportunities.toml": "294ab0c15f88a039c14e9bcbda31698e188b0aad1322505f409ce372ce207094",
+    "mod/decisions/treaty_acceptance_opportunities.toml": "0ef6a8095eab36d7999bab086b4f57bf3f5d5c7d23282b68d323c5cbcd237631",
+    "mod/decisions/treaty_opportunities.toml": "074e69772e39b8fadff9706ad64dac1bdec470511ea8c7d15b46d463adf7234e",
+    "mod/decisions/war_pressure_opportunities.toml": "810ecab99cac536532dc49fa1187a2a3eb44e5ff8d063aed50ce2f00731e2553"
+  },
+  "rule_relations": {
+    "mod/decisions/information.toml": [
+      {
+        "source": "mod/decisions/information.toml",
+        "definition": "remaining_industrial_construction_need",
+        "writer_id": "rule_action_mod_decisions_information_toml_remaining_industrial_construction_need",
+        "port": "education_production_feedback",
+        "cause_id": "school_knowledge_foundation",
+        "amount": 0.025,
+        "output_unit": "multiplier_delta",
+        "dependency_domain": "political",
+        "origins": [
+          "b11d84cddc5833a4f364f753850202dca7ef77cc516971e6be6c64faf4f2e91b",
+          "b7ade6e9aaa7be20b5ff68caa49a3ff9573cc9bf367f9cf307622fd4a3c583a3",
+          "ddf88b573a206795037c566ae0d2210a5816e40f35975c3a9ad56e671cc1703f"
+        ],
+        "readers": [
+          {
+            "source": "mod/decisions/information.toml",
+            "key": "literacy",
+            "signature": "{\"engine\":\"literacy_rate\",\"kind\":\"number\",\"maximum\":1,\"minimum\":0,\"parameters\":[],\"path\":[],\"scope\":\"root\",\"unit\":\"ratio\"}",
+            "entity": "root",
+            "entity_kind": "country"
+          },
+          {
+            "source": "common/laws/01_education_system.txt",
+            "key": "schools_present",
+            "signature": "{\"argument\":\"institution_schools\",\"engine\":\"has_institution\",\"kind\":\"boolean\",\"parameters\":[],\"path\":[],\"scope\":\"root\",\"unit\":\"boolean\"}",
+            "entity": "root",
+            "entity_kind": "country"
+          },
+          {
+            "source": "common/laws/01_education_system.txt",
+            "key": "current_public_schools",
+            "signature": "{\"argument\":\"law_type:law_public_schools\",\"engine\":\"has_law_or_variant\",\"kind\":\"boolean\",\"parameters\":[],\"path\":[],\"scope\":\"root\",\"unit\":\"boolean\"}",
+            "entity": "root",
+            "entity_kind": "country"
+          }
+        ]
+      }
+    ]
+  }
+}

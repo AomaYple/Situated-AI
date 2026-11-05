@@ -21,7 +21,7 @@ from .model import Assignment, Block, Scalar
 from .parser import parse_text
 
 PARAMETERS = config.REPO / "mod/decisions/famine_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/famine-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/famine-opportunities.json"
 SOURCE = "common/scripted_buttons/04_indian_famines_buttons.txt"
 JOURNAL = "common/journal_entries/04_indian_famines.txt"
 HELP = "common/scripted_buttons/scripted_buttons.md"
@@ -105,6 +105,8 @@ def _shape(block: Block) -> list[Any]:
     for row in block.items:
         if isinstance(row, Scalar):
             result.append(row.unquoted)
+        elif isinstance(row, Block):
+            result.append(["anonymous_block", _shape(row)])
         elif (
             isinstance(row, Assignment)
             and row.prefix is None

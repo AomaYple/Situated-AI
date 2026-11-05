@@ -1,0 +1,154 @@
+southamerica_migration_button = {
+	name = southamerica_migration_button
+	desc = southamerica_migration_button_desc
+
+	visible = { always = yes }
+
+	cooldown = { days = normal_modifier_time }
+
+	possible = {
+		hidden_trigger = {
+			has_variable = enable_sa_migration_button
+		}
+		# Note that this closely reflects triggers in the event. Do not change one without changing both
+		average_sol >= 10
+		any_country = {
+			country_rank <= rank_value:major_power
+			custom_tooltip = {
+				text = is_in_europe_tt
+				is_in_geographic_region = geographic_region_europe
+			}
+			custom_tooltip = {
+				text = same_state_religion
+				religion = root.religion
+			}
+			custom_tooltip = {
+				text = average_sol_below_root_tt
+				average_sol <= root.average_sol
+			}
+			any_primary_culture = {
+				culture_can_have_mass_migration_to_country = ROOT
+			}
+			any_scope_state = {
+				is_incorporated = yes
+				custom_tooltip = {
+					text = is_in_europe_tt
+					is_in_geographic_region = geographic_region_europe
+				}
+				count >= 3
+			}
+		}
+		any_scope_state = {
+			trigger_if = {
+				limit = {
+					owner = { has_journal_entry = je_south_america_migration }
+				}
+				custom_tooltip = {
+					text = is_in_sa_tt
+					is_in_geographic_region = geographic_region_south_america
+				}
+			}
+			trigger_else_if = {
+				limit = {
+					owner = { has_journal_entry = je_central_america_migration }
+				}
+				region = sr:region_central_america
+			}
+			trigger_else_if = {
+				limit = {
+					owner = { has_journal_entry = je_american_west_migration }
+				}
+				OR = {
+					region = sr:region_pacific_coast
+					region = sr:region_great_plains
+				}
+			}
+			state_is_eligible_as_mass_migration_target = yes
+		}
+		OR = {
+			has_law_or_variant = law_type:law_racial_segregation
+			has_law_or_variant = law_type:law_cultural_exclusion
+			has_law_or_variant = law_type:law_multicultural
+		}
+		NOR = {
+			has_law_or_variant = law_type:law_closed_borders
+			has_law_or_variant = law_type:law_isolationism
+		}
+	}
+
+	effect = {
+		custom_tooltip = {
+			text = mass_migration_button_tt
+		}
+		trigger_event = { id = sa_migration.1 popup = yes }
+		show_as_tooltip = {
+			add_modifier = {
+				name = sa_migration_cost
+				days = normal_modifier_time
+			}
+		}
+	}
+
+	ai_chance = {
+		value = 50 # Always press this button
+
+		# SITAI BEGIN information:southamerica_migration_button.ai_chance
+		# ACTION program_75780f86d505fd04 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_75780f86d505fd04_native_button_migration_authority_commitment_negative
+			add = { value = 0
+				# native_button_migration_authority_short [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { authority >= 0 NOT = { authority >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { authority < 100 } } } } }  } else = { add = -0.15 } } } }
+				# native_button_migration_authority_thin [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 200 } } add = -0.05 } }
+			}
+			# GROUP program_75780f86d505fd04_native_button_migration_influence_commitment_negative
+			add = { value = 0
+				# native_button_migration_influence_short [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { influence >= 0 NOT = { influence >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { influence < 0 } } } } }  } else = { add = -0.15 } } } }
+				# native_button_migration_influence_thin [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes influence < 200 } } add = -0.05 } }
+			}
+			min = 0.7
+			max = 1
+		} }
+		# SITAI END information:southamerica_migration_button.ai_chance
+	}
+}
+
+patagonia_button = {
+	name = patagonia_button
+	desc = patagonia_button_desc
+
+	visible = { always = yes }
+
+	possible = {
+		has_technology_researched = logistics
+		army_size >= 10
+		ig:ig_armed_forces ?= {
+			ig_counts_as_marginal = no
+		}
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_ARAUCANIA
+				state_region = s:STATE_PATAGONIA
+				state_region = s:STATE_RIO_NEGRO
+			}
+			is_under_colonization = yes
+		}
+		NOT = { has_modifier = patagonia_campaign }
+	}
+
+	effect = {
+		change_infamy = 15
+		add_modifier = {
+			name = patagonia_campaign
+			days = long_modifier_time
+		}
+	}
+
+	ai_chance = {
+		value = 10
+	}
+}

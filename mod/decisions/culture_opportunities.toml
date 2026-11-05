@@ -2,15 +2,15 @@
 schema = 1
 
 [sources]
-"common/journal_entries/01_algeria.txt" = "4c62d922b8de894ff1e5e22ea66f055f7da1f928a2e756bedecc603d3dc89a55"
-"common/laws/00_church_and_state.txt" = "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174"
+"common/journal_entries/01_algeria.txt" = "520eb7c9007f41786119d83f95fa93760564be16a97ee0dc64155d96618571aa"
+"common/laws/00_church_and_state.txt" = "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50"
 "common/religions/religion.txt" = "1f1816ecf630205eb158ee0c5227a60b149378bca3aecc179c97bdeb332fd238"
-"common/script_values/event_values.txt" = "99e2dfc8e07c8b91a6f9c6bf4616444b4c973fc07c281b057b48b2594280067a"
-"events/india_events/set_hierarchy_events.txt" = "6b6e19147d86f59bf19a2958190bd074c2259bff7f14bc0861c084a7cc23ba42"
-"events/soi_events/00_lobbies_events_04.txt" = "2af9b7ec1fdd28021aeb7af837033ac4f665a5468af6c6a68aa231de57ac5bc6"
+"common/script_values/event_values.txt" = "e4f89480bf30ae78d29d10d1912fa2b1b07e24a20372dcc27de01924c03331a2"
+"events/india_events/set_hierarchy_events.txt" = "26e935c3cf1407db24a89da06be3098ce9b4f6975b515c042ff125df4afe9032"
+"events/soi_events/00_lobbies_events_04.txt" = "a2e252031968ef3b1c41bab8c83b3e0c3f7c95a2e028ab2847ef7a1bd20fca27"
 
-"common/laws/00_citizenship.txt" = "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f"
-"events/cultural_homeland_events.txt" = "7adb75ce3082a6826f9f203f74f3b4069319eb98dc9812bbaf0442a6fd67de6a"
+"common/laws/00_citizenship.txt" = "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76"
+"events/cultural_homeland_events.txt" = "d866a5c3570d23e3a08eb26c5bdc3a44586d08f5a4b690a080909f7f43b17024"
 
 [tuning]
 observed_religious_need = 6

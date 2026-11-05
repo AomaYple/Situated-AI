@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/colonial_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/colonial-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/colonial-opportunities.json"
 QUERY_SOURCE = "common/power_bloc_principles/00_power_bloc_principles.txt"
 INSTITUTION_SOURCE = "common/institutions/00_institutions.txt"
 SOURCE = "common/ai_strategies/00_default_strategy.txt"

@@ -9,17 +9,30 @@ law_state_religion = {
 
 	progressiveness = -50
 
-	is_visible = { # Turkey should only unlock this as a possibility if it abolishes the Millet System, likewise other Muslim nations
-		NOR = {
+	is_visible = {
+		NOR = { # Turkey should only unlock this as a possibility if it abolishes the Millet System, likewise other Muslim nations
 			has_law = law_type:law_millet_system
 			has_law = law_type:law_people_of_the_book
+		}
+		NAND = {
+			OR = {
+				c:RUS ?= this
+				AND = {
+					exists = c:RUS
+					is_subject_of = c:RUS
+					country_is_subject_type_valid_for_caesaropapism = yes
+				}
+			}
+			NOT = {
+				has_law_or_variant = law_type:law_theocracy
+			}
 		}
 	}
 
 	on_activate = {
 		if = {
 			limit = {
-				has_law_or_variant = law_type:law_state_atheism
+				country_has_state_religion = rel:atheist
 			}
 			set_state_religion = root.country_definition.religion
 		}
@@ -167,6 +180,143 @@ law_state_religion = {
 	}
 }
 
+law_caesaropapism = {
+	group = lawgroup_church_and_state
+	parent = law_state_religion # Inherits ideological stances from parent
+
+	icon = "gfx/interface/icons/law_icons/caesaropapism.dds"
+
+	progressiveness = -50
+
+	is_visible = {
+		OR = {
+			c:RUS ?= this
+			AND = {
+				exists = c:RUS
+				is_subject_of = c:RUS
+				country_is_subject_type_valid_for_caesaropapism = yes
+			}
+		}
+		NOT = {
+			has_law_or_variant = law_type:law_theocracy
+		}
+	}
+
+	on_activate = {
+		if = {
+			limit = {
+				has_modifier = antireligious_policies
+			}
+			remove_modifier = antireligious_policies
+		}
+		recalculate_pop_ig_support = yes
+	}
+
+	modifier = {
+		interest_group_ig_devout_pol_str_mult = 0.15
+		country_bureaucrats_pol_str_mult = 0.5
+		country_authority_add = 200
+		country_state_religion_wages_mult = 0.1
+		country_non_state_religion_wages_mult = -0.1
+
+		country_acceptance_state_religion_add = 25
+		country_acceptance_shared_religious_trait_add = 0
+		country_acceptance_shared_religious_trait_group_add = -10
+		country_acceptance_no_shared_religious_trait_add = -25
+
+		country_allow_conversion_violent_hostility_bool = yes
+		country_allow_conversion_cultural_erasure_bool = yes
+		country_allow_conversion_open_prejudice_bool = yes
+		country_allow_conversion_second_rate_citizen_bool = yes
+		country_allow_conversion_full_acceptance_bool = yes
+	}
+
+	can_impose = {
+		OR = {
+			AND = {
+				is_in_same_power_bloc = scope:target_country
+				AND = {
+					modifier:country_can_impose_same_lawgroup_church_and_state_in_power_bloc_bool = yes
+					has_law = scope:law
+				}
+			}
+			can_impose_law_default = yes
+		}
+	}
+
+	ai_will_do = {
+		exists = ruler
+		ruler = {
+			OR = {
+				has_ideology = ideology:ideology_theocrat
+				has_ideology = ideology:ideology_traditionalist
+			}
+		}
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_caesaropapism.ai_enact_weight_modifier
+		# ACTION program_b6b57fcc81e6cb6b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_b6b57fcc81e6cb6b_law_authority_transition_positive
+			add = { value = 0
+				# law_context_law_caesaropapism_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
+				# law_context_law_caesaropapism_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
+			}
+			# GROUP program_b6b57fcc81e6cb6b_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_caesaropapism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_caesaropapism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_caesaropapism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_caesaropapism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_b6b57fcc81e6cb6b_law_observed_agenda_negative
+			add = { value = 0
+				# law_context_law_caesaropapism_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_caesaropapism value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_caesaropapism } } add = -10 }
+				# law_context_law_caesaropapism_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_caesaropapism value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_caesaropapism } } add = -6 }
+			}
+			min = -10
+			max = 16
+		} }
+		# SITAI END information:law_caesaropapism.ai_enact_weight_modifier
+	}
+
+	ai_impose_chance = {
+		value = 0
+
+		if = {
+			limit = {
+				has_law = law_type:law_caesaropapism
+				power_bloc ?= { has_identity = identity:identity_religious }
+				religion = scope:target_country.religion
+			}
+
+			add = base_impose_law_weight
+
+			# Very important for religious blocs
+			if = {
+				limit = { scope:target_country = { has_law_or_variant = law_type:law_freedom_of_conscience } }
+				multiply = 2
+			}
+			else = {
+				multiply = 5
+			}
+		}
+	}
+}
+
 law_millet_system = { # Ottoman Empire
 	group = lawgroup_church_and_state
 	parent = law_state_religion # Inherits ideological stances from parent
@@ -188,7 +338,7 @@ law_millet_system = { # Ottoman Empire
 	on_activate = {
 		if = {
 			limit = {
-				has_law_or_variant = law_type:law_state_atheism
+				country_has_state_religion = rel:atheist
 			}
 			set_state_religion = root.country_definition.religion
 		}
@@ -334,7 +484,7 @@ law_people_of_the_book = { # Other Muslim states
 	on_activate = {
 		if = {
 			limit = {
-				has_law_or_variant = law_type:law_state_atheism
+				country_has_state_religion = rel:atheist
 			}
 			set_state_religion = root.country_definition.religion
 		}
@@ -473,7 +623,7 @@ law_freedom_of_conscience = {
 	on_activate = {
 		if = {
 			limit = {
-				has_law_or_variant = law_type:law_state_atheism
+				country_has_state_religion = rel:atheist
 			}
 			set_state_religion = root.country_definition.religion
 		}
@@ -565,6 +715,8 @@ law_freedom_of_conscience = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 100 } } add = -8 }
 				# law_context_law_freedom_of_conscience_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 100 } } add = -8 }
+				# law_context_law_freedom_of_conscience_law_caesaropapism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_caesaropapism authority < 100 } } add = -8 }
 				# law_context_law_freedom_of_conscience_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 100 } } add = -8 }
 			}
@@ -585,7 +737,7 @@ law_freedom_of_conscience = {
 			# GROUP program_c0c707ed4f336ad4_law_observed_religious_exposure_positive
 			add = { value = 0
 				# culture_freedom_of_conscience_observed_religious_exposure [political]; 真实现行国教法且排除效果不同的两变体，固定完整宗教字典中同一非国教宗教占本国人口至少10%且宗教接受分量低于0；具体候选三非国教分量严格改善，给予有限改革需要，独立保留政治/权威成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { NOT = { country_has_state_religion = rel:catholic } religion_percent_country = { target = rel:catholic value >= 0.1 } country_average_religious_acceptance = { target = rel:catholic value < 0 } } AND = { NOT = { country_has_state_religion = rel:protestant } religion_percent_country = { target = rel:protestant value >= 0.1 } country_average_religious_acceptance = { target = rel:protestant value < 0 } } AND = { NOT = { country_has_state_religion = rel:orthodox } religion_percent_country = { target = rel:orthodox value >= 0.1 } country_average_religious_acceptance = { target = rel:orthodox value < 0 } } AND = { NOT = { country_has_state_religion = rel:oriental_orthodox } religion_percent_country = { target = rel:oriental_orthodox value >= 0.1 } country_average_religious_acceptance = { target = rel:oriental_orthodox value < 0 } } AND = { NOT = { country_has_state_religion = rel:sunni } religion_percent_country = { target = rel:sunni value >= 0.1 } country_average_religious_acceptance = { target = rel:sunni value < 0 } } AND = { NOT = { country_has_state_religion = rel:shiite } religion_percent_country = { target = rel:shiite value >= 0.1 } country_average_religious_acceptance = { target = rel:shiite value < 0 } } AND = { NOT = { country_has_state_religion = rel:ibadi } religion_percent_country = { target = rel:ibadi value >= 0.1 } country_average_religious_acceptance = { target = rel:ibadi value < 0 } } AND = { NOT = { country_has_state_religion = rel:jewish } religion_percent_country = { target = rel:jewish value >= 0.1 } country_average_religious_acceptance = { target = rel:jewish value < 0 } } AND = { NOT = { country_has_state_religion = rel:mahayana } religion_percent_country = { target = rel:mahayana value >= 0.1 } country_average_religious_acceptance = { target = rel:mahayana value < 0 } } AND = { NOT = { country_has_state_religion = rel:gelugpa } religion_percent_country = { target = rel:gelugpa value >= 0.1 } country_average_religious_acceptance = { target = rel:gelugpa value < 0 } } AND = { NOT = { country_has_state_religion = rel:theravada } religion_percent_country = { target = rel:theravada value >= 0.1 } country_average_religious_acceptance = { target = rel:theravada value < 0 } } AND = { NOT = { country_has_state_religion = rel:confucian } religion_percent_country = { target = rel:confucian value >= 0.1 } country_average_religious_acceptance = { target = rel:confucian value < 0 } } AND = { NOT = { country_has_state_religion = rel:hindu } religion_percent_country = { target = rel:hindu value >= 0.1 } country_average_religious_acceptance = { target = rel:hindu value < 0 } } AND = { NOT = { country_has_state_religion = rel:shinto } religion_percent_country = { target = rel:shinto value >= 0.1 } country_average_religious_acceptance = { target = rel:shinto value < 0 } } AND = { NOT = { country_has_state_religion = rel:sikh } religion_percent_country = { target = rel:sikh value >= 0.1 } country_average_religious_acceptance = { target = rel:sikh value < 0 } } AND = { NOT = { country_has_state_religion = rel:animist } religion_percent_country = { target = rel:animist value >= 0.1 } country_average_religious_acceptance = { target = rel:animist value < 0 } } AND = { NOT = { country_has_state_religion = rel:atheist } religion_percent_country = { target = rel:atheist value >= 0.1 } country_average_religious_acceptance = { target = rel:atheist value < 0 } } } has_law_or_variant = law_type:law_state_religion NOT = { has_law_or_variant = law_type:law_millet_system } NOT = { has_law_or_variant = law_type:law_people_of_the_book } NOT = { has_law_or_variant = law_type:law_freedom_of_conscience } } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { NOT = { country_has_state_religion = rel:catholic } religion_percent_country = { target = rel:catholic value >= 0.1 } country_average_religious_acceptance = { target = rel:catholic value < 0 } } AND = { NOT = { country_has_state_religion = rel:protestant } religion_percent_country = { target = rel:protestant value >= 0.1 } country_average_religious_acceptance = { target = rel:protestant value < 0 } } AND = { NOT = { country_has_state_religion = rel:orthodox } religion_percent_country = { target = rel:orthodox value >= 0.1 } country_average_religious_acceptance = { target = rel:orthodox value < 0 } } AND = { NOT = { country_has_state_religion = rel:oriental_orthodox } religion_percent_country = { target = rel:oriental_orthodox value >= 0.1 } country_average_religious_acceptance = { target = rel:oriental_orthodox value < 0 } } AND = { NOT = { country_has_state_religion = rel:sunni } religion_percent_country = { target = rel:sunni value >= 0.1 } country_average_religious_acceptance = { target = rel:sunni value < 0 } } AND = { NOT = { country_has_state_religion = rel:shiite } religion_percent_country = { target = rel:shiite value >= 0.1 } country_average_religious_acceptance = { target = rel:shiite value < 0 } } AND = { NOT = { country_has_state_religion = rel:ibadi } religion_percent_country = { target = rel:ibadi value >= 0.1 } country_average_religious_acceptance = { target = rel:ibadi value < 0 } } AND = { NOT = { country_has_state_religion = rel:jewish } religion_percent_country = { target = rel:jewish value >= 0.1 } country_average_religious_acceptance = { target = rel:jewish value < 0 } } AND = { NOT = { country_has_state_religion = rel:mahayana } religion_percent_country = { target = rel:mahayana value >= 0.1 } country_average_religious_acceptance = { target = rel:mahayana value < 0 } } AND = { NOT = { country_has_state_religion = rel:gelugpa } religion_percent_country = { target = rel:gelugpa value >= 0.1 } country_average_religious_acceptance = { target = rel:gelugpa value < 0 } } AND = { NOT = { country_has_state_religion = rel:theravada } religion_percent_country = { target = rel:theravada value >= 0.1 } country_average_religious_acceptance = { target = rel:theravada value < 0 } } AND = { NOT = { country_has_state_religion = rel:confucian } religion_percent_country = { target = rel:confucian value >= 0.1 } country_average_religious_acceptance = { target = rel:confucian value < 0 } } AND = { NOT = { country_has_state_religion = rel:hindu } religion_percent_country = { target = rel:hindu value >= 0.1 } country_average_religious_acceptance = { target = rel:hindu value < 0 } } AND = { NOT = { country_has_state_religion = rel:shinto } religion_percent_country = { target = rel:shinto value >= 0.1 } country_average_religious_acceptance = { target = rel:shinto value < 0 } } AND = { NOT = { country_has_state_religion = rel:sikh } religion_percent_country = { target = rel:sikh value >= 0.1 } country_average_religious_acceptance = { target = rel:sikh value < 0 } } AND = { NOT = { country_has_state_religion = rel:animist } religion_percent_country = { target = rel:animist value >= 0.1 } country_average_religious_acceptance = { target = rel:animist value < 0 } } AND = { NOT = { country_has_state_religion = rel:atheist } religion_percent_country = { target = rel:atheist value >= 0.1 } country_average_religious_acceptance = { target = rel:atheist value < 0 } } } has_law_or_variant = law_type:law_state_religion NOT = { has_law_or_variant = law_type:law_caesaropapism } NOT = { has_law_or_variant = law_type:law_millet_system } NOT = { has_law_or_variant = law_type:law_people_of_the_book } NOT = { has_law_or_variant = law_type:law_freedom_of_conscience } } } add = 6 }
 			}
 			min = -28
 			max = 22
@@ -621,7 +773,7 @@ law_total_separation = {
 	on_activate = {
 		if = {
 			limit = {
-				has_law_or_variant = law_type:law_state_atheism
+				country_has_state_religion = rel:atheist
 			}
 			set_state_religion = root.country_definition.religion
 		}
@@ -687,6 +839,8 @@ law_total_separation = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 200 } } add = -8 }
 				# law_context_law_total_separation_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 200 } } add = -8 }
+				# law_context_law_total_separation_law_caesaropapism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_caesaropapism authority < 200 } } add = -8 }
 				# law_context_law_total_separation_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 200 } } add = -8 }
 			}

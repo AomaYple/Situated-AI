@@ -35,13 +35,11 @@ company_ludwig_moser_and_sons = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_BOHEMIA
+		has_building_levels_in_state_region = {
+			region = STATE_BOHEMIA
+			building = building_glassworks
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_glassworks
-				level >= 5
-			}
 		}
 	}
 
@@ -136,13 +134,11 @@ company_compania_sansinena_de_carnes_congeladas = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_BUENOS_AIRES
+		has_building_levels_in_state_region = {
+			region = STATE_BUENOS_AIRES
+			building = building_food_industry
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_food_industry
-				level >= 5
-			}
 		}
 		any_scope_state = {
 			region = sr:region_la_plata
@@ -269,13 +265,11 @@ company_konigliche_porzellan_manufaktur_meissen = {
 
 	possible = {
 		has_technology_researched = chemical_bleaching
-		any_scope_state = {
-			state_region = s:STATE_SAXONY
+		has_building_levels_in_state_region = {
+			region = STATE_SAXONY
+			building = building_glassworks
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_glassworks
-				level >= 5
-			}
 		}
 	}
 
@@ -700,13 +694,11 @@ company_maison_worth = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_ILE_DE_FRANCE
+		has_building_levels_in_state_region = {
+			region = STATE_ILE_DE_FRANCE
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -734,6 +726,12 @@ company_maison_worth = {
 
 	ai_weight = {
 		value = 3 # Higher base value for flavored companies
+		if = {
+			limit = {
+				divided_monarchists_ai_backs_orleanist = yes
+			}
+			add = 6
+		}
 
 		# SITAI BEGIN information:company_maison_worth.ai_weight
 		# ACTION program_efaf101aa488ef40 [joint]; signed-envelope consumer action
@@ -924,13 +922,11 @@ company_colt_firearms = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_CONNECTICUT
+		has_building_levels_in_state_region = {
+			region = STATE_CONNECTICUT
+			building = building_arms_industry
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_arms_industry
-				level >= 5
-			}
 		}
 	}
 
@@ -1028,13 +1024,11 @@ company_gebruder_thonet = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_AUSTRIA
+		has_building_levels_in_state_region = {
+			region = STATE_AUSTRIA
+			building = building_furniture_manufactory
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_furniture_manufactory
-				level >= 5
-			}
 		}
 	}
 
@@ -1138,13 +1132,11 @@ company_kinkozan_sobei = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_KANSAI
+		has_building_levels_in_state_region = {
+			region = STATE_KANSAI
+			building = building_glassworks
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_glassworks
-				level >= 5
-			}
 		}
 	}
 
@@ -1238,13 +1230,11 @@ company_maple_and_co = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_HOME_COUNTIES
+		has_building_levels_in_state_region = {
+			region = STATE_HOME_COUNTIES
+			building = building_furniture_manufactory
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_furniture_manufactory
-				level >= 5
-			}
 		}
 	}
 
@@ -1448,13 +1438,11 @@ company_anglo_sicilian_sulphur_company = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_SICILY
+		has_building_levels_in_state_region = {
+			region = STATE_SICILY
+			building = building_sulfur_mine
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_sulfur_mine
-				level >= 5
-			}
 		}
 		NOT = {
 			c:GBR ?= {
@@ -1655,6 +1643,7 @@ company_norsk_hydro = {
 
 	extension_building_types = {
 		building_sulfur_mine
+		building_copper_mine
 	}
 
 	potential = {
@@ -1725,6 +1714,11 @@ company_norsk_hydro = {
 			add = { value = 0
 				# company_sector_company_norsk_hydro_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_9eed7e1b52474f91_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_norsk_hydro_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_9eed7e1b52474f91_company_mandatory_input_engines_negative
 			add = { value = 0
@@ -1809,13 +1803,11 @@ company_massey_harris = {
 
 	possible = {
 		has_technology_researched = railways
-		any_scope_state = {
-			state_region = s:STATE_ONTARIO
+		has_building_levels_in_state_region = {
+			region = STATE_ONTARIO
+			building = building_motor_industry
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_motor_industry
-				level >= 5
-			}
 		}
 	}
 
@@ -2434,15 +2426,15 @@ company_paradox = {
 				# company_sector_company_paradox_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
+			# GROUP program_6083af4717c8b72c_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_paradox_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
 			# GROUP program_6083af4717c8b72c_company_mandatory_input_iron_negative
 			add = { value = 0
 				# company_sector_company_paradox_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
-			}
-			# GROUP program_6083af4717c8b72c_company_mandatory_input_lead_negative
-			add = { value = 0
-				# company_sector_company_paradox_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:lead mg:lead = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:lead mg:lead = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_6083af4717c8b72c_company_mandatory_input_paper_negative
 			add = { value = 0

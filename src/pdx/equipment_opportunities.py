@@ -26,8 +26,8 @@ from .textio import normalized_text
 if TYPE_CHECKING:
     from pathlib import Path
 
-BASELINE = config.REPO / "research/situated/equipment-opportunities.json"
-BASELINE_SHA256 = "b5138db9717db003e5415708faadae1f91088e8e8f18ca661b0df800a4fa67ae"
+BASELINE = config.REPO / "research/vanilla-ai/1.15.0/equipment-opportunities.json"
+BASELINE_SHA256 = "f971f5f2aea6ba802e30480b68ff539757a20dc64746b16e705a7f65a71596d5"
 PARAMETERS = config.REPO / "mod/decisions/equipment_opportunities.toml"
 _DOC = "common/ship_modifications/ship_modifications.md"
 _HELPER = "common/script_values/ai_script_values.txt"

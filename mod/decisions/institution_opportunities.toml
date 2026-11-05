@@ -3,7 +3,7 @@ schema = 1
 
 [sources]
 "common/institutions/00_institutions.txt" = "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f"
-"common/laws/01_education_system.txt" = "b20bb365d145c484cf4b2d659f794213893640963b8de1eed9dedc2466b9e346"
+"common/laws/01_education_system.txt" = "8d89d5e97c2ba9bedca17ea234840af6f02cc90eb9acef0699e3296f3e25157f"
 "common/laws/01_health_system.txt" = "bcf990006c7545240604e1fab78091462ac86efcd505b8c03119af24018c58f9"
 
 [tuning]

@@ -40,13 +40,11 @@ company_da_afghan_nassaji_sherkat = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_BALKH
+		has_building_levels_in_state_region = {
+			region = STATE_BALKH
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -361,13 +359,11 @@ company_west_ural_petroleum = {
 
 	possible = {
 		has_technology_researched = pumpjacks
-		any_scope_state = {
-			state_region = s:STATE_URALSK
+		has_building_levels_in_state_region = {
+			region = STATE_URALSK
+			building = building_oil_rig
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_oil_rig
-				level >= 5
-			}
 		}
 	}
 
@@ -461,13 +457,11 @@ company_sherkat_shemali = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_BALKH
+		has_building_levels_in_state_region = {
+			region = STATE_BALKH
+			building = building_cotton_plantation
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_cotton_plantation
-				level >= 5
-			}
 		}
 	}
 
@@ -673,13 +667,11 @@ company_sherkate_eslamiya = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_ISFAHAN
+		has_building_levels_in_state_region = {
+			region = STATE_ISFAHAN
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -770,13 +762,11 @@ company_nicolas_portalis = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_LEBANON
+		has_building_levels_in_state_region = {
+			region = STATE_LEBANON
+			building = building_silk_plantation
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_silk_plantation
-				level >= 5
-			}
 		}
 	}
 
@@ -868,13 +858,11 @@ company_hanseong_jeongi_hoesa = {
 
 	possible = {
 		has_technology_researched = electrical_generation
-		any_scope_state = {
-			state_region = s:STATE_SEOUL
+		has_building_levels_in_state_region = {
+			region = STATE_SEOUL
+			building = building_power_plant
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_power_plant
-				level >= 5
-			}
 		}
 	}
 
@@ -912,6 +900,11 @@ company_hanseong_jeongi_hoesa = {
 				# company_sector_company_hanseong_jeongi_hoesa_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
+			# GROUP program_603ca34d381b96b8_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_hanseong_jeongi_hoesa_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
 			# GROUP program_603ca34d381b96b8_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_hanseong_jeongi_hoesa_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
@@ -929,7 +922,7 @@ company_hanseong_jeongi_hoesa = {
 				# company_sector_company_hanseong_jeongi_hoesa_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_hanseong_jeongi_hoesa.ai_weight
@@ -969,13 +962,11 @@ company_kirgizian_mining_company= {
 	possible = {
 		has_technology_researched = steam_donkey
 		has_technology_researched = railways
-		any_scope_state = {
-			state_region = s:STATE_SEMIRECHE
+		has_building_levels_in_state_region = {
+			region = STATE_SEMIRECHE
+			building = building_coal_mine
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_coal_mine
-				level >= 5
-			}
 		}
 	}
 
@@ -1322,13 +1313,11 @@ company_moscow_irrigation_company = {
 				}
 			}
 		}
-		any_scope_state = {
-			state_region = s:STATE_FERGANA
+		has_building_levels_in_state_region = {
+			region = STATE_FERGANA
+			building = building_cotton_plantation
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_cotton_plantation
-				level >= 5
-			}
 		}
 	}
 
@@ -1441,13 +1430,11 @@ company_guinness = {
 
 	possible = {
 		has_technology_researched = corporate_charters
-		any_scope_state = {
-			state_region = s:STATE_LEINSTER
+		has_building_levels_in_state_region = {
+			region = STATE_LEINSTER
+			building = building_food_industry
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_food_industry
-				level >= 5
-			}
 		}
 	}
 
@@ -1826,13 +1813,11 @@ company_anglo_persian_oil = {
 				has_company = company_type:company_national_iranian_oil
 			}
 		}
-		any_scope_state = {
-			state_region = s:STATE_KHUZESTAN
+		has_building_levels_in_state_region = {
+			region = STATE_KHUZESTAN
+			building = building_oil_rig
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_oil_rig
-				level >= 5
-			}
 		}
 	}
 
@@ -1949,13 +1934,11 @@ company_national_iranian_oil = {
 				has_company = company_type:company_anglo_persian_oil
 			}
 		}
-		any_scope_state = {
-			state_region = s:STATE_KHUZESTAN
+		has_building_levels_in_state_region = {
+			region = STATE_KHUZESTAN
+			building = building_oil_rig
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_oil_rig
-				level >= 5
-			}
 		}
 	}
 

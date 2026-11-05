@@ -11,6 +11,7 @@ trade_privilege = {
 	icon = "gfx/interface/icons/diplomatic_treaties_articles_icons/trade_agreement_treaties.dds"
 
 	flags = {
+		show_in_lens
 		is_trade_privilege
 		can_be_enforced
 		ai_consider_threaten_naval_hostilities
@@ -87,12 +88,17 @@ trade_privilege = {
     }
 
     on_entry_into_force = {
-		add_lobby_appeasement_from_diplomacy_bidirectional = {
-			FIRST = scope:article_options.source_country
-			SECOND = scope:article_options.target_country
-			PRO_AMOUNT = 1
-			ANTI_AMOUNT = -1
-			FACTOR = appeasement_trade_agreement_formed
+		if = {
+			limit = {
+				NOT = { exists = scope:is_renegotiation }
+			}
+			add_lobby_appeasement_from_diplomacy_bidirectional = {
+				FIRST = scope:article_options.source_country
+				SECOND = scope:article_options.target_country
+				PRO_AMOUNT = 1
+				ANTI_AMOUNT = -1
+				FACTOR = appeasement_trade_agreement_formed
+			}
 		}
 	}
 
@@ -120,6 +126,14 @@ trade_privilege = {
 		evaluation_chance = {
 			value = 0.1
 
+			if = {
+				limit = {
+					c:RUS ?= this
+					has_variable = ai_russia_client_bloc_pending
+				}
+				add = 0.15
+			}
+
 		# SITAI BEGIN information:trade_privilege.ai.evaluation_chance
 		# ACTION program_a6c0b2e8d73050b3 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
@@ -136,6 +150,21 @@ trade_privilege = {
 		} }
 		# SITAI END information:trade_privilege.ai.evaluation_chance
 	}
+
+		proposal_weight = {
+			value = 1
+
+			if = {
+				limit = {
+					c:RUS ?= this
+					ai_russia_article_partner_is_pending_client = yes
+					scope:other_country = {
+						is_subject = yes
+					}
+				}
+				add = 5
+			}
+		}
 
 		article_ai_usage = {
 			request

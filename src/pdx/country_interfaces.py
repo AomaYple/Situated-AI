@@ -18,7 +18,7 @@ from .model import Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
 
-EVIDENCE = config.REPO / "research/vanilla-ai/1.14.5/country-interfaces.json"
+EVIDENCE = config.REPO / "research/vanilla-ai/1.15.0/country-interfaces.json"
 BASELINE = EVIDENCE.parent / "00_default_strategy.txt"
 
 

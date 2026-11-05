@@ -44,7 +44,7 @@ def controlled_output():
     """A declared unit fixture; the separate integration test must prove build()."""
     extra = replace(decisions.Extensions(), market_enabled=True, security_enabled=True)
     program = SupportProgram.from_extensions(extra)
-    source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+    source = "research/vanilla-ai/1.15.0/00_default_strategy.txt"
     writer = WriterDecisionIR(
         writer_id=program.writer_id,
         kind="support_program",
@@ -59,12 +59,12 @@ def controlled_output():
         owner="situated_kernel",
         program=program,
         evaluation_context=EvaluationContext(
-            actor_scope=ContextBinding("root", "country", "actor", source, 183),
+            actor_scope=ContextBinding("root", "country", "actor", source, 210),
             targets=(
-                ContextBinding("target_country", "country", "target", source, 184),
-                ContextBinding("enemy_country", "country", "target", source, 185),
+                ContextBinding("target_country", "country", "target", source, 211),
+                ContextBinding("enemy_country", "country", "target", source, 212),
             ),
-            evidence=tuple(f"{source}:{line}" for line in (183, 184, 185)),
+            evidence=tuple(f"{source}:{line}" for line in (210, 211, 212)),
         ),
     )
     metadata = {
@@ -196,6 +196,11 @@ def test_report_consumes_same_package_metadata_and_keeps_its_output_hashes(
         return {"denominator": inventory.discovered_count, "business_complete": False}
 
     monkeypatch.setattr(audit.native_treatments, "native_treatments", treatments)
+    monkeypatch.setattr(
+        audit.business_review,
+        "review",
+        lambda *_args, **_kwargs: {"business_complete": False},
+    )
     result = audit.native_report()
     assert result["production_output_contract"] == {
         "mode": "engineering_package_inputs",

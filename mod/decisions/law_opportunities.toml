@@ -10,18 +10,20 @@ trade_strong = 15
 administration_change = 6
 
 [sources]
-"common/laws/02_free_speech.txt" = "535b73670d2029a2b68a842542b8df5995d7b238418eeab73f48c81d07458c97"
+"common/laws/02_free_speech.txt" = "4f684e9219d3ab1bedba83ab93f50b2ea3a436be854ecc37c77709bc4977808a"
 "common/laws/01_policing.txt" = "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e"
-"common/laws/00_citizenship.txt" = "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f"
-"common/laws/00_church_and_state.txt" = "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174"
+"common/laws/00_citizenship.txt" = "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76"
+"common/laws/00_church_and_state.txt" = "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50"
 "common/laws/01_taxation.txt" = "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae"
 "common/laws/01_trade_policy.txt" = "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3"
-"common/laws/02_labour_associations.txt" = "47ec5d950de0c1fd409203b83aa3a56849a02c6977e69d7e21a4bacc2ca4ce45"
+"common/laws/02_labour_associations.txt" = "5b50400f5e9be0d70a75f1b13c902ee817384473c64ab12bf52935ea98cf23b5"
 "common/laws/02_migration.txt" = "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5"
-"common/laws/01_land_reform.txt" = "8576c5bb769ca0bc9c2e3e2d89fb2e2dffcd9b4d479c08b43ca00c639e98e82f"
-"common/laws/01_economic_system.txt" = "5622b68492a6f57913ead582011980d2ea5c5f5d41c715261bc228b8b7f9f0e9"
+"common/laws/01_land_reform.txt" = "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174"
+"common/laws/01_economic_system.txt" = "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194"
 
 [candidates]
+"law_official_nationality" = "common/laws/00_citizenship.txt"
+law_caesaropapism = "common/laws/00_church_and_state.txt"
 law_outlawed_dissent = "common/laws/02_free_speech.txt"
 law_censorship = "common/laws/02_free_speech.txt"
 law_right_of_assembly = "common/laws/02_free_speech.txt"

@@ -748,11 +748,11 @@ _SLAVE = "common/political_movements/05_slave_revolt_movements.txt"
 _COMPANY = "common/company_types/00_companies_soi.txt"
 _OPIUM = "common/journal_entries/00_opium.txt"
 QUERY_SOURCE_HASHES = {
-    _ART: "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
-    _CULTURE: "1aaedb1f2760af4e991dc587416d1c3c68f7dc2beea5f825319e6cb660491402",
-    _SLAVE: "14ea7992d4905c694faf204c644f71ae96bcc5be757a57e3d9cf4a7bab2b2303",
-    _COMPANY: "59546f6105092bad8935498d917a6012aa508c58bea873e462dd66a5850f2f1d",
-    _OPIUM: "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8",
+    _ART: "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+    _CULTURE: "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30",
+    _SLAVE: "8ce8f69cdf1ca623ed84e475f1721e9c7945998a687a1f099da0c70f44431968",
+    _COMPANY: "5d96e85f5fb786240b201e98d900d9a1e88fff9287389a4a12886e874130f46f",
+    _OPIUM: "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1",
 }
 UNKNOWN_POLICY = company_observations.UNKNOWN_POLICY
 _PURPOSES = frozenset(
@@ -1078,6 +1078,46 @@ def render_query(query: TechnologyQuery) -> str:
         raise ValueError("科技查询类型未登记")
     expressions = []
     purpose = query.purpose
+    if purpose == "labor_ready" and any(
+        _QUERY_CATALOG["goods"][good]["local"]
+        for row in query_members(query)
+        for good, amount in (row["inputs"] | row["losses"]).items()
+        if amount > 0
+    ):
+        # Group only identical local-input baskets. Each alternative still
+        # binds its exact building, prior PM and all market inputs together.
+        local_groups: dict[tuple[str, ...], list[str]] = {}
+        for row in query_members(query):
+            country = [_law_and_technology_gates(row)]
+            local = []
+            for good, amount in (row["inputs"] | row["losses"]).items():
+                if amount <= 0:
+                    continue
+                identity = _QUERY_CATALOG["goods"][good]
+                if identity["market"]:
+                    country.append(f"market = {{ mg:{good} = {{ market_goods_delta >= 0 }} }}")
+                elif identity["local"]:
+                    local.append(good)
+                else:
+                    raise ValueError("省工准备档输入既非市场商品也非已证明的本地商品")
+            conditions = " ".join(value for value in country if value)
+            local_groups.setdefault(tuple(sorted(local)), []).append(
+                f"AND = {{ is_building_type = {row['building']} "
+                f"has_active_production_method = {row['prior']} ROOT = {{ {conditions} }} }}"
+            )
+        for goods, members in local_groups.items():
+            prices = " ".join(f"sg:{good} = {{ state_goods_pricier <= 0.25 }}" for good in goods)
+            expressions.append(
+                f"AND = {{ {prices} any_scope_building = {{ level >= 1 occupancy >= 0.9 "
+                + _or(members)
+                + " } }"
+            )
+        return (
+            "any_scope_state = { state_unemployment_rate < 0.02 "
+            "pop_type_percent_state = { target = pop_type:peasants value < 0.02 } "
+            + _or(expressions)
+            + " }"
+        )
     if purpose in {"labor", "labor_ready", "productive", "productive_ready"}:
         labor = purpose.startswith("labor")
         for row in query_members(query):
@@ -1335,8 +1375,8 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
         roots[source] = parsed.root
         hashes.append((source, digest))
     references = []
-    native = company_observations._child(
-        company_observations._child(roots[_ART], "je_romanticism"), "complete"
+    native = company_observations.journal_completion(
+        company_observations._child(roots[_ART], "je_romanticism")
     )
     line = company_observations._exact(
         native,

@@ -1,0 +1,11 @@
+{
+  "文档": {
+    "game/common/laws/readme.md": {
+      "sha256": "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c",
+      "镜像sha256": "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
+    }
+  },
+  "evidence": "static_check",
+  "baseline": "1.15.0",
+  "source": "common/laws/readme.md"
+}

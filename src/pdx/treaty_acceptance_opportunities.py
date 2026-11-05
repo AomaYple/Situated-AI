@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from .situated.decision_ir import EvaluationContext, WriterDecisionIR
 
 PARAMETERS = config.REPO / "mod/decisions/treaty_acceptance_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/treaty-acceptance-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/treaty-acceptance-opportunities.json"
 SOURCE = "common/treaty_articles/21_no_tariffs.txt"
 DOC = "common/treaty_articles/treaty_articles.md"
 GOODS_TRANSFER = "common/treaty_articles/13_goods_transfer.txt"
@@ -304,9 +304,9 @@ def _verify_military(roots: Mapping[str, Block], doc: str) -> None:
         raise ValueError("军事援助真实target军需减费漂移")
     native = _block(_block(article, "ai"), "inherent_accept_score")
     # The first native if is the ROOT/source branch; the later if owns the
-    # native binding-period tail, which must remain untouched.
+    # binding-period tail is now a separate contextual field and remains native.
     branches = native.all("if")
-    if len(branches) != 2 or not isinstance(branches[0].value, Block):
+    if len(branches) != 1 or not isinstance(branches[0].value, Block):
         raise ValueError("军事援助完整inherent父结构漂移")
     source_branch = branches[0].value
     _scalar(_block(source_branch, "limit"), "scope:source_country", "this", "?=")

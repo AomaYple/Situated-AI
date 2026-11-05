@@ -264,6 +264,11 @@ company_rheinmetall = {
 				# company_sector_company_rheinmetall_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
+			# GROUP program_e03930428c691c04_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_rheinmetall_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
 			# GROUP program_e03930428c691c04_company_mandatory_input_explosives_negative
 			add = { value = 0
 				# company_sector_company_rheinmetall_explosives_input [market]; 主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单
@@ -465,13 +470,11 @@ company_siemens_and_halske = {
 
 	possible = {
 		has_technology_researched = electric_telegraph
-		any_scope_state = {
-			state_region = s:STATE_BRANDENBURG
+		has_building_levels_in_state_region = {
+			region = STATE_BRANDENBURG
+			building = building_electrics_industry
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_electrics_industry
-				level >= 5
-			}
 		}
 	}
 
@@ -508,15 +511,15 @@ company_siemens_and_halske = {
 				# company_sector_company_siemens_and_halske_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
+			# GROUP program_53461b2aad065716_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_siemens_and_halske_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
 			# GROUP program_53461b2aad065716_company_mandatory_input_iron_negative
 			add = { value = 0
 				# company_sector_company_siemens_and_halske_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
-			}
-			# GROUP program_53461b2aad065716_company_mandatory_input_lead_negative
-			add = { value = 0
-				# company_sector_company_siemens_and_halske_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:lead mg:lead = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:lead mg:lead = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_53461b2aad065716_company_mandatory_input_rubber_negative
 			add = { value = 0
@@ -680,13 +683,11 @@ company_basf = {
 
 	possible = {
 		has_technology_researched = aniline
-		any_scope_state = {
-			state_region = s:STATE_BADEN
+		has_building_levels_in_state_region = {
+			region = STATE_BADEN
+			building = building_synthetics_plant
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_synthetics_plant
-				level >= 5
-			}
 		}
 	}
 

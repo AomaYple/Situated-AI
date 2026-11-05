@@ -18,7 +18,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from .. import config, decision_adapters, decision_interfaces, decision_rules  # noqa: TID252
+from .. import (  # noqa: TID252
+    building_defaults,
+    config,
+    decision_adapters,
+    decision_interfaces,
+    decision_rules,
+    negotiation_context,
+)
 from ..model import Block  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
 from . import (
@@ -37,6 +44,7 @@ from . import (
     ports,
     programs,
     relations,
+    resources,
     state,
     support_signals,
     vanilla_inventory,
@@ -59,9 +67,9 @@ FACTS = DECISIONS / "facts.toml"
 ACTIONS = DECISIONS / "actions.toml"
 LAYERS = DECISIONS / "action_layers.toml"
 BINDINGS = DECISIONS / "action_bindings.toml"
-BASELINE = REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
-_LAW_DOC = REPO / "research/situated/victoria3-1.14.5-law-enact-context.md"
-_LAW_DOC_MANIFEST = REPO / "research/official-docs.manifest.json"
+BASELINE = REPO / "research" / "vanilla-ai" / "1.15.0" / "00_default_strategy.txt"
+_LAW_DOC = REPO / "research/situated/victoria3-1.15.0-law-enact-context.md"
+_LAW_DOC_MANIFEST = REPO / "research/vanilla-ai/1.15.0/law-document-context.json"
 _LAW_DOC_SHA256 = "706098c2cb35770cbe477c84620940b716e60d8708f30f7ae72d46ed1e2091d8"
 _LAW_MIRROR_SHA256 = "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
 _LAW_NATIVE_SHA256 = "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c"
@@ -258,6 +266,7 @@ def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
                 if child.op == "=" and child.prefix is None and isinstance(child.value, Block)
                 else decision_ir.EvaluationContext(status="unknown")
             )
+    result["negotiation_chance"] = negotiation_context.evaluation_context(text)
     return result
 
 
@@ -329,40 +338,40 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             "target_country",
             "additive_strength_estimate_multiplier",
             "multiplier",
-            "0x1416452bf",
+            "0x14182761f",
         ),
         "wargoal_maneuvers_fraction": (
             "enemy_country",
             "additive_maneuvers_fraction",
             "fraction",
-            "0x141647b8f",
+            "0x141829eef",
         ),
         "wanted_construction_output": (
             None,
             "additive_construction_output_target",
             "construction_output",
-            "0x141646580",
+            "0x1418288e0",
         ),
-        "institution_scores": (None, "additive_score", "score", "0x141644a3a"),
+        "institution_scores": (None, "additive_score", "score", "0x141826d9a"),
         "min_law_chance_to_pass": (
             None,
             "override_pass_chance_threshold",
             "pass_chance",
-            "0x141646d23",
+            "0x141829083",
         ),
-        "wargoal_scores": ("target_country", "additive_score", "score", "0x1416438ea"),
-        "secret_goal_scores": ("target_country", "additive_score", "score", "0x1416436fd"),
+        "wargoal_scores": ("target_country", "additive_score", "score", "0x141825c4a"),
+        "secret_goal_scores": ("target_country", "additive_score", "score", "0x141825a5d"),
         "wanted_navy_size": (
             None,
             "additive_navy_size_target",
             "naval_administration_levels",
-            "0x1415ad3b7",
+            "0x1416139a7",
         ),
         "ship_construction_output_multiplier": (
             None,
             "additive_ship_construction_output_multiplier",
             "multiplier",
-            "0x1415adadb",
+            "0x1416140cb",
         ),
     }
     specs.update(
@@ -371,56 +380,56 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 "target_country",
                 "additive_aggression",
                 "play_start_tendency",
-                "0x14164546f",
+                "0x1418277cf",
             ),
             "nationalization_desire": (
                 None,
                 "additive_nationalization_desire",
                 "desire",
-                "0x141647ecd",
+                "0x14182a22d",
             ),
-            "max_active_stances": (None, "additive_active_stance_limit", "count", "0x14164805c"),
+            "max_active_stances": (None, "additive_active_stance_limit", "count", "0x14182a3bc"),
             "wanted_marines": (
                 None,
                 "additive_marine_size_target",
                 "barracks_levels",
-                "0x14164441d",
+                "0x14182677d",
             ),
             "economic_vs_government_spending_balance": (
                 None,
                 "additive_spending_balance",
                 "debt_threshold_ratio",
-                "0x14164684d",
+                "0x141828bad",
             ),
             "target_marine_formation_size": (
                 None,
                 "additive_marine_formation_size_target",
                 "units_per_formation",
-                "0x1416445ad",
+                "0x14182690d",
             ),
             "unacceptable_infamy_level": (
                 None,
                 "first_positive_infamy_limit_override",
                 "infamy",
-                "0x1416440fd",
+                "0x14182645d",
             ),
             "undesirable_infamy_level": (
                 None,
                 "first_positive_infamy_limit_override",
                 "infamy",
-                "0x141643f6d",
+                "0x1418262cd",
             ),
             "diplomatic_play_neutrality": (
                 None,
                 "additive_positive_active_neutrality",
                 "score",
-                "0x14164783c",
+                "0x141829b9c",
             ),
             "diplomatic_play_boldness": (
                 None,
                 "native_randomized_additive_boldness",
                 "score",
-                "0x1416476aa",
+                "0x141829a0a",
             ),
         }
     )
@@ -430,28 +439,53 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 None,
                 "additive_treaty_category_score",
                 "score",
-                "0x141643aa9",
+                "0x141825e09",
             ),
             "strategic_region_stance_type_scores": (
                 None,
                 "additive_region_stance_score",
                 "score",
-                "0x14164842a",
+                "0x14182a78a",
             ),
             "wanted_num_supply_ships": (
                 None,
                 "additive_supply_ship_count_target",
                 "ships",
-                "0x1415ad63f",
+                "0x141613c2f",
             ),
             "max_ship_design_complexity": (
                 None,
                 "additive_ship_design_complexity_limit",
                 "modification_levels",
-                "0x1414b716c",
+                "0x14165f81b",
             ),
         }
     )
+    parser_members = {
+        "recklessness": ("0x141823b41", "0x10c0"),
+        "wargoal_maneuvers_fraction": ("0x141823c67", "0x798"),
+        "wanted_construction_output": ("0x141823bbf", "0x16c0"),
+        "institution_scores": ("0x141823b2a", "0x3f0"),
+        "min_law_chance_to_pass": ("0x141823c13", "0x9d8"),
+        "wargoal_scores": ("0x14182358f", "0x1d8"),
+        "secret_goal_scores": ("0x1418237bd", "0x2c0"),
+        "wanted_navy_size": ("0x141823be9", "0x1a80"),
+        "ship_construction_output_multiplier": ("0x141823f32", "0x1c00"),
+        "aggression": ("0x141823886", "0x1180"),
+        "nationalization_desire": ("0x141823dc6", "0xd98"),
+        "max_active_stances": ("0x141824094", "0x4b8"),
+        "wanted_marines": ("0x141823ecc", "0x1900"),
+        "economic_vs_government_spending_balance": ("0x141823eb7", "0x1780"),
+        "target_marine_formation_size": ("0x141823ee1", "0x19c0"),
+        "unacceptable_infamy_level": ("0x141823799", "0x1000"),
+        "undesirable_infamy_level": ("0x1418237ab", "0xf40"),
+        "diplomatic_play_neutrality": ("0x141823b95", "0x628"),
+        "diplomatic_play_boldness": ("0x141823baa", "0x6e0"),
+        "treaty_category_scores": ("0x141823119", "0x1f0"),
+        "strategic_region_stance_type_scores": ("0x141823dfa", "0x490"),
+        "wanted_num_supply_ships": ("0x141823ef6", "0x1b40"),
+        "max_ship_design_complexity": ("0x141823f20", "0x1d80"),
+    }
     result = {}
     source = engine_scope.STRATEGY_MANIFEST_ID
     for field, (target, operation, unit, address) in specs.items():
@@ -476,6 +510,8 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             "capability": "direct",
             "unit": unit,
             "consumer_va": address,
+            "parser_va": parser_members[field][0],
+            "member_offset": parser_members[field][1],
         }
         actual = data.get("consumers", {}).get(field, {})
         if (
@@ -653,12 +689,12 @@ def _frozen_company_context() -> decision_ir.EvaluationContext:
             "target": "definition_only:company_type",
             "operation": "base_candidate_score",
             "capability": "direct",
-            "consumer": "0x14169a3b0",
-            "actual_call": "0x1415c9855",
+            "consumer": "0x141732900",
+            "actual_call": "0x141632075",
             "numeric_member": "0x390",
-            "parser": "0x141698300",
+            "parser": "0x141730850",
             "parser_receiver": "0x598",
-            "nonpositive_rejection": "0x141510b30",
+            "nonpositive_rejection": "0x141641350",
         }.items()
     ):
         raise ValueError("公司基础评分作用域合同漂移")
@@ -778,7 +814,7 @@ def _frozen_canal_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCont
     from .. import canal_opportunities as canal  # noqa: PLC0415, TID252
 
     raw = canal.FROZEN.read_bytes()
-    frozen_hash = "3aba522ae0d84dcc01d69c2ee0beb2300646b22fd0ebf71098c157490827ebc4"
+    frozen_hash = "ca02454ecea092a5c5bbe8d7e28017355e75af6442d68e4d673ce9c5207b4faf"
     if hashlib.sha256(raw).hexdigest() != frozen_hash:
         raise ValueError("运河冻结完整源身份漂移，必须独立复核后重新pin")
     inputs = canal.frozen_inputs()
@@ -818,7 +854,7 @@ def _frozen_native_decision_contexts() -> dict[tuple[str, str], decision_ir.Eval
     from .. import native_decision_opportunities as native_decision  # noqa: PLC0415, TID252
 
     raw = native_decision.FROZEN.read_bytes()
-    frozen_hash = "767347dd9504deb6355aece0721b9f42c97f94cf9d60a414d400ae3a5e7489f7"
+    frozen_hash = "d74209b763b0646fdde8eea6e90a80cf4289398ea190b08ae2a743489af1f4fe"
     if hashlib.sha256(raw).hexdigest() != frozen_hash:
         raise ValueError("赛事冻结完整源身份漂移，必须独立复核后重新pin")
     inputs = native_decision.frozen_inputs()
@@ -868,7 +904,7 @@ def _frozen_famine_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCon
     """Three exact JE buttons share documented country ROOT, never a target alias."""
     from .. import famine_opportunities as famine  # noqa: PLC0415, TID252
 
-    frozen_hash = "bdce4a7fb98080e3bbc858484187079706d1cbbaacf62f057cdf69c14a96cbc5"
+    frozen_hash = "06de326b4af09b357adefe399187595077ca2a00de4ab8968863b0492de5c112"
     if hashlib.sha256(famine.FROZEN.read_bytes()).hexdigest() != frozen_hash:
         raise ValueError("饥荒完整原版冻结身份漂移，须独立复核后重新pin")
     famine.verify_inputs(famine.frozen_inputs())
@@ -899,7 +935,7 @@ def _frozen_decree_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCon
 
     if (
         hashlib.sha256(decree.FROZEN.read_bytes()).hexdigest()
-        != "802ffd32070f27ce09049aadac770f6f4c13b21b6fa79ec749d557922894b3de"
+        != "f27c726c1f203ee52e715d3181cdd7f1f6fe96aae501e450658d89b4706bb867"
     ):
         raise ValueError("救济政令冻结完整源身份漂移，必须独立复核后重新pin")
     return {(decree.SOURCE, decree.FIELD): decree.evaluation_context()}
@@ -1185,8 +1221,10 @@ def validate_context_readers(
         },
         "negotiation_chance": {
             "root": ("country", "actor"),
-            "interest_group": ("interest_group", "candidate"),
             "law": ("law", "auxiliary"),
+            "amenability": ("scalar", "auxiliary"),
+            "advance_chance": ("scalar", "auxiliary"),
+            "stall_chance": ("scalar", "auxiliary"),
         },
         "state_value": {
             "root": ("country", "actor"),
@@ -1351,6 +1389,12 @@ def validate_context_readers(
         # Existing interface signatures keep output kind, unit and every path
         # conversion authoritative; an observed law is not a new law getter.
         decision_interfaces.reader_scope(reader, actor_path, native_root=native_root)
+        if reader.engine == "scope:amenability":
+            if field != "negotiation_chance" or context != negotiation_context.evaluation_context(
+                BASELINE.read_text(encoding="utf-8")
+            ):
+                raise ValueError("具名amenability数值仅在实际谈判帧可读")
+            bind(key, "amenability", argument_kind="scalar")
         if reader.argument is not None:
             bind_argument(reader, reader.argument)
         for parameter, literal in reader.parameters:
@@ -2329,6 +2373,18 @@ def load_model(
         "law_enact_context_document": _LAW_DOC_SHA256,
         "strategy_context_snapshot": engine_scope.STRATEGY_MANIFEST_SHA256,
         "company_context_snapshot": engine_scope.COMPANY_MANIFEST_SHA256,
+        "building_defaults_snapshot": hashlib.sha256(building_defaults.snapshot()).hexdigest(),
+        "current_native_resource_snapshot": resources._NATIVE_SHA256,
+        "negotiation_native_snapshot": hashlib.sha256(negotiation_context.snapshot()).hexdigest(),
+        "negotiation_native_generator": hashlib.sha256(
+            Path(negotiation_context.__file__).read_bytes()
+        ).hexdigest(),
+        "building_defaults_generator": hashlib.sha256(
+            Path(building_defaults.__file__).read_bytes()
+        ).hexdigest(),
+        "lj10_reader_snapshot": hashlib.sha256(
+            decision_interfaces._LJ10_EVIDENCE.read_bytes()
+        ).hexdigest(),
         "migration_baseline": hashlib.sha256(
             migration_baseline.DEFAULT_SOURCE.read_bytes()
         ).hexdigest(),

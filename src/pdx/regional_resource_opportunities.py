@@ -19,6 +19,7 @@ from . import config
 from .lexer import LBRACE, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
+from .situated import engine_scope
 
 if TYPE_CHECKING:
     from .decision_rules import Reader
@@ -30,14 +31,14 @@ REGIONS = "common/ai_regional_objectives/00_ai_regional_objectives.txt"
 DOC = "common/ai_regional_objectives/ai_regional_objectives.md"
 BUILDINGS = "common/buildings/09_misc_resource.txt"
 STANCES = "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt"
-R7 = "research/situated/victoria3-1.14.5-strategy-scope-r7.json"
+R7 = engine_scope.STRATEGY_MANIFEST_ID
 SOURCES = frozenset({SOURCE, REGIONS, DOC, BUILDINGS, STANCES, R7})
 FIELD = "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region"
 ACTION = "colonial_candidate_region_resource_opportunity"
 DOMAIN = "economy"
 PARAMETERS = config.REPO / "mod/decisions/regional_resource_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/regional-resource-opportunities.json"
-FROZEN_SHA256 = "4ac65bd16af792d2beadc3e975f6d5e6936c9615022c3e7be11051adeefb8fad"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/regional-resource-opportunities.json"
+FROZEN_SHA256 = "74f54f29abfa27ebfa19ff62d3c7fadfc06718dc4aac035d503c14ac3f49e04e"
 QUERY_PARAMETER = "regional_resource_query"
 RESOURCE_TECHNOLOGIES = (
     ("building_oil_rig", "pumpjacks"),
@@ -190,9 +191,9 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
     if (
         context["target_scope"] != "scope:target_region=strategic_region;scope:region_score=scalar"
         or context["operation"] != "additive_region_stance_score"
-        or context["consumer_va"] != "0x14164842a"
+        or context["consumer_va"] != "0x14182a78a"
         or r7["strategy_field_merges"]["strategic_region_stance_type_scores"]["add_va"]
-        != "0x1415ca666"
+        != "0x141632e86"
     ):
         raise ValueError("区域立场R7消费者/scope/additive合并漂移")
 
@@ -262,9 +263,9 @@ def compile_query(
     return CompiledRegionalResourceQuery(
         render_query(query),
         (
-            f"{SOURCE}:5104",
-            f"{SOURCE}:1473",
-            f"{SOURCE}:1479",
+            f"{SOURCE}:5671",
+            f"{SOURCE}:1849",
+            f"{SOURCE}:1855",
             f"{BUILDINGS}:27",
             f"{BUILDINGS}:96",
             f"{DOC}:1",
@@ -368,10 +369,10 @@ class RegionalResourceProgram:
         from .situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
 
         return EvaluationContext(
-            actor_scope=ContextBinding("root", "country", "actor", R7, 299),
-            targets=(ContextBinding("target_region", "strategic_region", "target", R7, 300),),
-            auxiliary_scopes=(ContextBinding("region_score", "scalar", "auxiliary", R7, 300),),
-            evidence=(f"{R7}:299", f"{R7}:300", f"{DOC}:1", f"{DOC}:2", f"{SOURCE}:5104"),
+            actor_scope=ContextBinding("root", "country", "actor", R7, 323),
+            targets=(ContextBinding("target_region", "strategic_region", "target", R7, 324),),
+            auxiliary_scopes=(ContextBinding("region_score", "scalar", "auxiliary", R7, 324),),
+            evidence=(f"{R7}:323", f"{R7}:324", f"{DOC}:1", f"{DOC}:2", f"{SOURCE}:5671"),
         )
 
     def readers(self) -> tuple[Reader, ...]:

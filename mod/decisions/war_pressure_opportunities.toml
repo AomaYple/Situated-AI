@@ -1,10 +1,10 @@
 schema = 1
 
 [sources]
-"common/ai_regional_objectives/00_ai_regional_objectives.txt" = "4cf75c09ebf4f275b77a015bd0c6e829e0c08d589a859d90c9cc18a44832755a"
-"common/ai_strategies/00_default_strategy.txt" = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
-"common/ideologies/01_character_ideologies.txt" = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
-"common/scripted_effects/00_victoria_scripted_effects.txt" = "243790fbcb837393d40e311e6a8aa3ccee5bb5d36e7e81f58075c7caf3aa0bc1"
+"common/ai_regional_objectives/00_ai_regional_objectives.txt" = "ecf891e41a37209e388c576b2696410d70ceec1647db3a43ff2febe256776306"
+"common/ai_strategies/00_default_strategy.txt" = "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431"
+"common/ideologies/01_character_ideologies.txt" = "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4"
+"common/scripted_effects/00_victoria_scripted_effects.txt" = "89b66a43b4470aa5982a9d7e0093b193be6793b9433a9c5a46dfd88a60896040"
 "common/trigger_localization/trigger_localization.md" = "491d2c31dcf81ecb62c250f6bb26ff75e4d8501bfcb0a1ad5f6b0bf96d542e08"
 
 [tuning]

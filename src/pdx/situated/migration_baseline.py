@@ -244,12 +244,32 @@ def _retired_identities(
             replacement = current.get((row["source"], definition))
             if replacement is None:
                 raise ValueError(f"历史规则退役替代身份缺失：{identity} -> {definition}")
+            expected_operation = row["operation"]
+            if (
+                row["source"] == "common/ai_strategies/00_default_strategy.txt"
+                and row["field"] == "ai_strategy_default.negotiation_chance"
+                and row["actor"] == "root"
+                and row["target"] == "none"
+                and row["operation"] == "multiply"
+                and row["definition"]
+                in {"coordinated_layered_political_negotiation", "structural_organized_negotiation"}
+                and definition
+                in {
+                    "remaining_organized_negotiation_need",
+                    "lj08_negotiation_local_political_capacity",
+                }
+            ):
+                from pdx import negotiation_context  # noqa: PLC0415
+
+                negotiation_context.snapshot()
+                expected_operation = "add"
             if (
                 any(
                     getattr(replacement, field) != row[field]
                     for field in _FIELDS
-                    if field != "definition"
+                    if field not in {"definition", "operation"}
                 )
+                or replacement.operation != expected_operation
                 or not replacement.owner.strip()
                 or replacement.vanilla_tail != _TAIL
                 or (replacement.legacy is not None and replacement.legacy.vanilla_tail != _TAIL)

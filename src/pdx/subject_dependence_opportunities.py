@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/subject_dependence_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/subject-dependence-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/subject-dependence-opportunities.json"
 SOURCE = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
 FIELD = "ai_strategy_subject_overlord_compliance.weight"
 GRANT = "common/diplomatic_actions/36_subjects_grant_own_market.txt"

@@ -22,8 +22,8 @@ from .textio import normalized_text
 if TYPE_CHECKING:
     from pathlib import Path
 
-BASELINE = config.REPO / "research/situated/mobilization-opportunities.json"
-BASELINE_SHA256 = "b731aa77f0c58d5123b748978f825b1980572b988afa2e78ff8d23e62f0000eb"
+BASELINE = config.REPO / "research/vanilla-ai/1.15.0/mobilization-opportunities.json"
+BASELINE_SHA256 = "7085339294016d23d2e78d7cd85954f3a8328d71fdf599b05c13659f8591777d"
 PARAMETERS = config.REPO / "mod/decisions/mobilization_opportunities.toml"
 SOURCE = "common/mobilization_options/00_mobilization_option.txt"
 _DOC = "common/mobilization_options/mobilization_options.md"

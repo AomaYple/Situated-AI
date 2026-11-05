@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/native_decision_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/native-decision-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/native-decision-opportunities.json"
 SOURCE = "common/decisions/00_decisions.txt"
 HELP = "common/decisions/000_decisions_help.txt"
 MODIFIERS = "common/static_modifiers/04_decision_modifiers.txt"

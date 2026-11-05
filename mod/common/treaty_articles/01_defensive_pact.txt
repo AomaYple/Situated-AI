@@ -11,6 +11,7 @@ defensive_pact = {
 	icon = "gfx/interface/icons/diplomatic_treaties_articles_icons/defensive_pact_treaties.dds"
 
 	flags = {
+		show_in_lens
 		is_defensive_pact
 		can_be_renegotiated
 		friendly
@@ -113,13 +114,18 @@ defensive_pact = {
 	}
 
 	on_entry_into_force = {
-		scope:article_options.first_country = {
-			add_lobby_appeasement_from_diplomacy_bidirectional = {
-				FIRST = scope:article_options.first_country
-				SECOND = scope:article_options.second_country
-				PRO_AMOUNT = 3
-				ANTI_AMOUNT = -3
-				FACTOR = appeasement_defensive_pact_formed
+		if = {
+			limit = {
+				NOT = { exists = scope:is_renegotiation }
+			}
+			scope:article_options.first_country = {
+				add_lobby_appeasement_from_diplomacy_bidirectional = {
+					FIRST = scope:article_options.first_country
+					SECOND = scope:article_options.second_country
+					PRO_AMOUNT = 3
+					ANTI_AMOUNT = -3
+					FACTOR = appeasement_defensive_pact_formed
+				}
 			}
 		}
 	}
@@ -174,6 +180,14 @@ defensive_pact = {
 				multiply = 0.05
 			}
 
+			if = {
+				limit = {
+					c:RUS ?= this
+					has_variable = ai_russia_client_bloc_pending
+				}
+				add = 0.15
+			}
+
 			if =  {
 				limit = {
 					num_defensive_pacts < 1
@@ -192,6 +206,16 @@ defensive_pact = {
 		proposal_weight = {
 			value = 1
 
+			if = {
+				limit = {
+					c:RUS ?= this
+					ai_russia_article_partner_is_pending_client = yes
+					scope:other_country = {
+						is_subject = no
+					}
+				}
+				add = 5
+			}
 			if = {
 				limit = {
 					ai_is_regional_objective_protect_target = { TARGET = scope:other_country }
@@ -482,6 +506,21 @@ defensive_pact = {
 					add = -1000
 				}
 			}
+
+		# SITAI BEGIN treaty_acceptance:defensive_pact
+		# ACTION treaty_acceptance_defensive_pact [diplomacy];
+# ACTION treaty_acceptance_defensive_pact [diplomacy]; joint consumer contribution
+if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:article exists = scope:first_country exists = scope:second_country }
+	add = {
+		value = 0
+		if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } in_default = yes } add = { value = -6 } }
+		else_if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } net_total_income < 0 } add = { value = -3 } }
+		if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } has_variable = recently_lost_war } add = { value = -2 } }
+		min = -8
+		max = 0
+	}
+}
+		# SITAI END treaty_acceptance:defensive_pact
 		}
 
 		contextual_accept_score = {
@@ -561,7 +600,8 @@ defensive_pact = {
 				subtract = {
 					desc = "DIPLOMATIC_ACCEPTANCE_BINDING_PERIOD"
 					value = scope:treaty.binding_period
-					divide = 3650
+					divide = 365
+					multiply = 5
 					subtract = 25
 					max = 50
 				}

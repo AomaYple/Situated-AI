@@ -29,13 +29,11 @@ company_bengal_coal_company = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_WEST_BENGAL
+		has_building_levels_in_state_region = {
+			region = STATE_WEST_BENGAL
+			building = building_coal_mine
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_coal_mine
-				level >= 5
-			}
 		}
 	}
 
@@ -139,13 +137,11 @@ company_bombay_dyeing_company = {
 
 	possible = {
 		has_technology_researched = cotton_gin
-		any_scope_state = {
-			state_region = s:STATE_BOMBAY
+		has_building_levels_in_state_region = {
+			region = STATE_BOMBAY
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -251,13 +247,11 @@ company_david_sassoon = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_BOMBAY
+		has_building_levels_in_state_region = {
+			region = STATE_BOMBAY
+			building = building_cotton_plantation
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_cotton_plantation
-				level >= 5
-			}
 		}
 		any_scope_state = {
 			is_in_geographic_region = geographic_region_india
@@ -521,13 +515,11 @@ company_madura_mills = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_MADRAS
+		has_building_levels_in_state_region = {
+			region = STATE_MADRAS
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 		has_technology_researched = cotton_gin
 	}
@@ -624,13 +616,11 @@ company_assam_company = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_ASSAM
+		has_building_levels_in_state_region = {
+			region = STATE_ASSAM
+			building = building_tea_plantation
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_tea_plantation
-				level >= 5
-			}
 		}
 	}
 
@@ -719,13 +709,11 @@ company_wadia_shipbuilders = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_BOMBAY
+		has_building_levels_in_state_region = {
+			region = STATE_BOMBAY
+			building = building_shipyard
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_shipyard
-				level >= 5
-			}
 		}
 		has_technology_researched = gantry_cranes
 	}
@@ -1094,13 +1082,11 @@ company_calcutta_electric = {
 
 	possible = {
 		has_technology_researched = electrical_generation
-		any_scope_state = {
-			state_region = s:STATE_WEST_BENGAL
+		has_building_levels_in_state_region = {
+			region = STATE_WEST_BENGAL
+			building = building_power_plant
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_power_plant
-				level >= 5
-			}
 		}
 	}
 
@@ -1138,6 +1124,11 @@ company_calcutta_electric = {
 				# company_sector_company_calcutta_electric_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
+			# GROUP program_3b43264522ecf3c2_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_calcutta_electric_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
 			# GROUP program_3b43264522ecf3c2_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_calcutta_electric_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
@@ -1155,7 +1146,7 @@ company_calcutta_electric = {
 				# company_sector_company_calcutta_electric_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_calcutta_electric.ai_weight

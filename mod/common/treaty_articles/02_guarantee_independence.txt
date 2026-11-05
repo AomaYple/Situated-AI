@@ -11,6 +11,7 @@ guarantee_independence = {
 	icon = "gfx/interface/icons/diplomatic_treaties_articles_icons/guarantee_independence_treaties.dds"
 
 	flags = {
+		show_in_lens
 		is_guarantee_independence
 		can_be_renegotiated
 		giftable
@@ -184,6 +185,13 @@ guarantee_independence = {
 
 			if = {
 				limit = {
+					c:RUS ?= this
+					has_variable = ai_russia_client_bloc_pending
+				}
+				add = 0.15
+			}
+			if = {
+				limit = {
 					any_scope_regional_objective = {
 						type = aro:ai_regional_objective_protect_country
 						is_active = yes
@@ -196,6 +204,16 @@ guarantee_independence = {
 		proposal_weight = {
 			value = 1
 
+			if = {
+				limit = {
+					c:RUS ?= this
+					ai_russia_article_partner_is_pending_client = yes
+					scope:other_country = {
+						is_subject = no
+					}
+				}
+				add = 5
+			}
 			if = {
 				limit = {
 					scope:source_country ?= this
@@ -385,22 +403,28 @@ guarantee_independence = {
 				}
 			}
 
-			if = {
-				limit = {
-					NOT = { exists = scope:is_treaty_active }
-					exists = scope:treaty
-					scope:treaty.binding_period >= 1825
-				}
-				multiply = {
-					desc = "DIPLOMATIC_ACCEPTANCE_BINDING_PERIOD"
-					value = 1
-					add = {
-						value = scope:treaty.binding_period
-						min = 365
-						divide = 3650
-					}
-					max = 2
-				}
+		# SITAI BEGIN treaty_acceptance:guarantee_independence
+		# ACTION treaty_acceptance_guarantee_independence [diplomacy];
+# ACTION treaty_acceptance_guarantee_independence [diplomacy]; joint consumer contribution
+if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:article exists = scope:source_country exists = scope:target_country }
+	add = {
+		value = 0
+		if = { limit = { scope:source_country ?= this NOT = { scope:target_country ?= this } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { any_scope_treaty = { binds = scope:target_country any_scope_article = { has_type = guarantee_independence OR = { NOT = { exists = source_country } source_country = ROOT } } } } in_default = yes } add = { value = -6 } }
+		else_if = { limit = { scope:source_country ?= this NOT = { scope:target_country ?= this } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { any_scope_treaty = { binds = scope:target_country any_scope_article = { has_type = guarantee_independence OR = { NOT = { exists = source_country } source_country = ROOT } } } } net_total_income < 0 } add = { value = -3 } }
+		if = { limit = { scope:source_country ?= this NOT = { scope:target_country ?= this } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { any_scope_treaty = { binds = scope:target_country any_scope_article = { has_type = guarantee_independence OR = { NOT = { exists = source_country } source_country = ROOT } } } } has_variable = recently_lost_war } add = { value = -2 } }
+		min = -8
+		max = 0
+	}
+}
+		# SITAI END treaty_acceptance:guarantee_independence
+		}
+
+		contextual_accept_score = {
+			value = 0
+
+			add = {
+				desc = "DIPLOMATIC_ACCEPTANCE_BINDING_PERIOD"
+				value = treaty_binding_period_commitment_acceptance
 			}
 		}
 	}

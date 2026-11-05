@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/war_pressure_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/war-pressure-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/war-pressure-opportunities.json"
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
 FIELD = "ai_strategy_default.wargoal_scores.conquer_state"
 IDEOLOGIES = "common/ideologies/01_character_ideologies.txt"
@@ -174,7 +174,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
     complete = _child(_child(roots[REGIONS], "ai_regional_objective_acquire_states"), "complete")
     expected_count = (
         ("owner", "=", "root"),
-        ("count", ">", "root.variable_map(aro_acquire_states_map|scope:target_region)"),
+        ("aro_is_acquire_states_target", "=", "yes"),
     )
     line = _find_shape(complete, "any_scope_state", expected_count)
     references.append(f"{REGIONS}:{line}")
@@ -210,7 +210,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(references)
 
 
-CONQUEST_AST_SHA256 = "04162e5940bad62506685fc8665e4ccca66969cf15555b8d22e9c3f90d55eb57"
+CONQUEST_AST_SHA256 = "4a3a46d7b28c7f55347639b41ad921be4102740b949ecf98e9e9fe8404990f36"
 
 
 @dataclass(frozen=True, slots=True)

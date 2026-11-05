@@ -40,10 +40,10 @@ def test_complete_native_sources_exact_legal_effect_delta_and_finite_aggregate_q
         for source in culture.SOURCES
     }
     refs = culture.verify_inputs(frozen)
-    assert f"{culture.LOBBIES}:1140" in refs
-    assert f"{culture.LOBBIES}:1144" in refs
-    assert f"{culture.ALGERIA}:168" in refs
-    assert f"{culture.VALUES}:166" in refs
+    assert f"{culture.LOBBIES}:1146" in refs
+    assert f"{culture.LOBBIES}:1150" in refs
+    assert f"{culture.ALGERIA}:193" in refs
+    assert f"{culture.VALUES}:169" in refs
     query = observation_queries.from_reader("OR", {"culture_query": "nonstate_religious_exposure"})
     compiled = observation_queries.compile_query(query, frozen)
     assert compiled.references == refs

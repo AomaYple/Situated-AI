@@ -20,13 +20,22 @@ building_rye_farm = {
 
 	required_construction = construction_cost_low
 
-	terrain_manipulator = farmland_rye
-	ownership_type = self
+	ai_value = {
+		value = 1000
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_agriculture_var
+					}
+					five_year_plan_agriculture_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
-	# SITAI BEGIN initialized:building_rye_farm.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_rye_farm.ai_value
 		# ACTION program_29cc5d074cff9678 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -106,7 +115,11 @@ building_rye_farm = {
 		} }
 		# SITAI END information:building_rye_farm.ai_value
 	}
-	# SITAI END initialized:building_rye_farm.ai_value
+
+	terrain_manipulator = farmland_rye
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
 }
 
 building_wheat_farm = {
@@ -129,13 +142,22 @@ building_wheat_farm = {
 
 	required_construction = construction_cost_low
 
-	terrain_manipulator = farmland_wheat
-	ownership_type = self
+	ai_value = {
+		value = 1000
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_agriculture_var
+					}
+					five_year_plan_agriculture_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
-	# SITAI BEGIN initialized:building_wheat_farm.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_wheat_farm.ai_value
 		# ACTION program_3617e73e0a3bce75 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -224,7 +246,11 @@ building_wheat_farm = {
 		} }
 		# SITAI END information:building_wheat_farm.ai_value
 	}
-	# SITAI END initialized:building_wheat_farm.ai_value
+
+	terrain_manipulator = farmland_wheat
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
 }
 
 building_rice_farm = {
@@ -247,13 +273,22 @@ building_rice_farm = {
 
 	required_construction = construction_cost_low
 
-	terrain_manipulator = farmland_rice
-	ownership_type = self
+	ai_value = {
+		value = 1000
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_agriculture_var
+					}
+					five_year_plan_agriculture_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
-	# SITAI BEGIN initialized:building_rice_farm.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_rice_farm.ai_value
 		# ACTION program_1c0b9764c5e1e8f4 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -328,7 +363,11 @@ building_rice_farm = {
 		} }
 		# SITAI END information:building_rice_farm.ai_value
 	}
-	# SITAI END initialized:building_rice_farm.ai_value
+
+	terrain_manipulator = farmland_rice
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
 }
 
 building_maize_farm = {
@@ -351,13 +390,22 @@ building_maize_farm = {
 
 	required_construction = construction_cost_low
 
-	terrain_manipulator = farmland_maize
-	ownership_type = self
+	ai_value = {
+		value = 1000
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_agriculture_var
+					}
+					five_year_plan_agriculture_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
-	# SITAI BEGIN initialized:building_maize_farm.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_maize_farm.ai_value
 		# ACTION program_e5ec2af21ace8c67 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -437,7 +485,11 @@ building_maize_farm = {
 		} }
 		# SITAI END information:building_maize_farm.ai_value
 	}
-	# SITAI END initialized:building_maize_farm.ai_value
+
+	terrain_manipulator = farmland_maize
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
 }
 
 building_millet_farm = {
@@ -460,13 +512,22 @@ building_millet_farm = {
 
 	required_construction = construction_cost_low
 
-	terrain_manipulator = farmland_millet
-	ownership_type = self
+	ai_value = {
+		value = 1000
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_agriculture_var
+					}
+					five_year_plan_agriculture_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
-	# SITAI BEGIN initialized:building_millet_farm.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_millet_farm.ai_value
 		# ACTION program_e2b4fcb035f7cd46 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -546,7 +607,11 @@ building_millet_farm = {
 		} }
 		# SITAI END information:building_millet_farm.ai_value
 	}
-	# SITAI END initialized:building_millet_farm.ai_value
+
+	terrain_manipulator = farmland_millet
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_farming.dds"
 }
 
 building_livestock_ranch = {
@@ -677,23 +742,22 @@ building_vineyard = {
 	icon = "gfx/interface/icons/building_icons/vineyards.dds"
 	required_construction = construction_cost_low
 
-	unlocking_technologies = {
-		enclosure
-	}
+	ai_value = {
+		value = 1000
 
-	city_type = farm
-	levels_per_mesh = 50
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_agriculture_var
+					}
+					five_year_plan_agriculture_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
-	production_method_groups = {
-		pmg_base_building_vineyard
-		pmg_train_automation_building_vineyard
-	}
-	ownership_type = self
-
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
-
-	# SITAI BEGIN initialized:building_vineyard.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_vineyard.ai_value
 		# ACTION program_fc5808eddfc8fc47 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -740,5 +804,19 @@ building_vineyard = {
 		} }
 		# SITAI END information:building_vineyard.ai_value
 	}
-	# SITAI END initialized:building_vineyard.ai_value
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_vineyard
+		pmg_train_automation_building_vineyard
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
 }

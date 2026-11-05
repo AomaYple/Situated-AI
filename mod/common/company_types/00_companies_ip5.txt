@@ -1,0 +1,1122 @@
+# Dobrushskaya Pische-Bumazhnaya Fabrika
+company_dobrush_paper = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_dobrushskaya_pische_bumazhnaya_fabrika.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_MOGILEV }
+
+	building_types = {
+		building_paper_mill
+	}
+
+	extension_building_types = {
+		building_logging_camp
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_paper
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_paper_complete_tt
+			has_variable = prestige_good_generic_paper_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_MOGILEV
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_MOGILEV
+			building = building_paper_mill
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		country_institution_cost_institution_schools_mult = -0.05
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_MOGILEV
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_paper_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_MOGILEV
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_dobrush_paper.ai_weight
+		# ACTION program_ffcc8b9ac3da8945 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ffcc8b9ac3da8945_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_dobrush_paper_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_ffcc8b9ac3da8945_company_mandatory_input_wood_negative
+			add = { value = 0
+				# company_sector_company_dobrush_paper_wood_input [market]; 主业某必选基础配方组所有方法共同需要wood；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_ffcc8b9ac3da8945_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_dobrush_paper_paper_pressure [market]; paper缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_dobrush_paper_paper_need [market]; 主业基础配方可能产出paper；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_ffcc8b9ac3da8945_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_dobrush_paper_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_dobrush_paper.ai_weight
+	}
+}
+
+# Tabachnaya Manufaktura Leyba Shereshevskogo
+company_grodno_tobacco = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_tabachnaya_manufaktura_leyba_shereshevskogo.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BREST }
+
+	building_types = {
+		building_tobacco_plantation
+	}
+
+	extension_building_types = {
+		building_railway
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_BREST
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			state_region = s:STATE_BREST
+			is_incorporated = yes
+		}
+		country_has_building_type_levels = {
+			target = bt:building_tobacco_plantation
+			value  >= 5
+		}
+	}
+
+	prosperity_modifier = {
+		# Focused on tobacco processing rather than growing
+		building_group_bg_light_industry_throughput_add = 0.05
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_MOGILEV
+			is_incorporated = yes
+		}
+		any_scope_state = {
+			is_incorporated = yes
+			has_potential_resource = building_tobacco_plantation
+			count >= 4
+		}
+	}
+
+	ai_construction_targets = {
+		building_tobacco_plantation = {
+			level = 5
+			state_trigger = {
+				has_potential_resource = building_tobacco_plantation
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_grodno_tobacco.ai_weight
+		# ACTION program_544993fe48a5da36 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_544993fe48a5da36_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_grodno_tobacco_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_544993fe48a5da36_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_grodno_tobacco_tobacco_pressure [market]; tobacco缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tobacco mg:tobacco = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_grodno_tobacco_tobacco_need [market]; 主业基础配方可能产出tobacco；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tobacco mg:tobacco = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_544993fe48a5da36_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_grodno_tobacco_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_grodno_tobacco.ai_weight
+	}
+}
+
+# Russisch-Baltische Waggon-Fabrik
+company_russo-baltic_wagon_factory = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_russisch_baltische_waggon_fabrik.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_RIGA }
+
+	building_types = {
+		building_automotive_industry
+	}
+
+	extension_building_types = {
+		building_motor_industry
+	}
+
+	possible_prestige_goods = {
+		prestige_good_sikorsky_aeroplanes
+	}
+
+	potential = {
+		has_dlc_feature = ip5_content
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_RIGA
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_RIGA
+			building = building_automotive_industry
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		country_military_tech_spread_mult = 0.05
+		country_weekly_innovation_max_add = 15
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_RIGA
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_automotive_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_RIGA
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_russo-baltic_wagon_factory.ai_weight
+		# ACTION program_214ea4f9d0115e8f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_214ea4f9d0115e8f_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_russo_hyphen_baltic_wagon_factory_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_214ea4f9d0115e8f_company_mandatory_input_engines_negative
+			add = { value = 0
+				# company_sector_company_russo_hyphen_baltic_wagon_factory_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_214ea4f9d0115e8f_company_mandatory_input_oil_negative
+			add = { value = 0
+				# company_sector_company_russo_hyphen_baltic_wagon_factory_oil_input [market]; 主业某必选基础配方组所有方法共同需要oil；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:oil mg:oil = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:oil mg:oil = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_214ea4f9d0115e8f_company_mandatory_input_rubber_negative
+			add = { value = 0
+				# company_sector_company_russo_hyphen_baltic_wagon_factory_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:rubber mg:rubber = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:rubber mg:rubber = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_214ea4f9d0115e8f_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_russo_hyphen_baltic_wagon_factory_automobiles_pressure [market]; automobiles缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_russo_hyphen_baltic_wagon_factory_automobiles_need [market]; 主业基础配方可能产出automobiles；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_214ea4f9d0115e8f_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_russo_hyphen_baltic_wagon_factory_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_russo-baltic_wagon_factory.ai_weight
+	}
+}
+
+# Maslosoyuz Co-op
+company_maslosoyuz = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_maslosoyuz.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_farm_wheat.dds"
+
+	category = shopkeeper_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_EAST_GALICIA }
+
+	building_types = {
+		building_livestock_ranch
+		building_food_industry
+	}
+
+	extension_building_types = {
+		building_wheat_farm
+	}
+
+	possible_prestige_goods = {
+		prestige_good_maslosoyuz_butter
+	}
+
+	potential = {
+		has_dlc_feature = ip5_content
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_EAST_GALICIA
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_EAST_GALICIA
+			building = building_livestock_ranch
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		# Formed from a Ukrainian Prosvita organization
+		state_peasants_education_access_add = 0.10
+		country_fervor_target_ukrainian_add = 5
+		building_group_bg_ranching_standard_of_living_add = 1
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_EAST_GALICIA
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_livestock_ranch = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_EAST_GALICIA
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_maslosoyuz.ai_weight
+		# ACTION program_d16479866dce77fc [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d16479866dce77fc_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_maslosoyuz_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_d16479866dce77fc_company_mandatory_input_grain_negative
+			add = { value = 0
+				# company_sector_company_maslosoyuz_grain_input [market]; 主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_d16479866dce77fc_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_maslosoyuz_meat_pressure [market]; meat缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_maslosoyuz_groceries_pressure [market]; groceries缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_maslosoyuz_fertilizer_pressure [market]; fertilizer缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_maslosoyuz_fabric_pressure [market]; fabric缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_maslosoyuz_meat_need [market]; 主业基础配方可能产出meat；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_maslosoyuz_groceries_need [market]; 主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_maslosoyuz_fertilizer_need [market]; 主业基础配方可能产出fertilizer；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_maslosoyuz_fabric_need [market]; 主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_d16479866dce77fc_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_maslosoyuz_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_maslosoyuz.ai_weight
+	}
+}
+
+# Kreenholmi Manufaktuur
+company_kreenholmi_manufaktuur = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_kreenholmi_manufaktuur.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_TALINN }
+
+	building_types = {
+		building_textile_mill
+		building_livestock_ranch
+	}
+
+	extension_building_types = {
+		building_cotton_plantation
+		building_power_plant
+	}
+
+	possible_prestige_goods = {
+		prestige_good_sateen_clothes
+	}
+
+	potential = {
+		has_dlc_feature = ip5_content
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_TALINN
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = mechanized_workshops
+		has_building_levels_in_state_region = {
+			region = STATE_TALINN
+			building = building_textile_mill
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		country_production_tech_spread_mult = 0.1
+		# Location of major strike action
+		interest_group_ig_trade_unions_pop_attraction_mult = 0.1
+
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_TALINN
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_textile_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_TALINN
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_kreenholmi_manufaktuur.ai_weight
+		# ACTION program_9cf288e38338688c [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9cf288e38338688c_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_kreenholmi_manufaktuur_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_9cf288e38338688c_company_mandatory_input_fabric_negative
+			add = { value = 0
+				# company_sector_company_kreenholmi_manufaktuur_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_9cf288e38338688c_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_kreenholmi_manufaktuur_meat_pressure [market]; meat缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kreenholmi_manufaktuur_fertilizer_pressure [market]; fertilizer缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kreenholmi_manufaktuur_fabric_pressure [market]; fabric缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kreenholmi_manufaktuur_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kreenholmi_manufaktuur_meat_need [market]; 主业基础配方可能产出meat；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_kreenholmi_manufaktuur_fertilizer_need [market]; 主业基础配方可能产出fertilizer；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_kreenholmi_manufaktuur_fabric_need [market]; 主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_kreenholmi_manufaktuur_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_9cf288e38338688c_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_kreenholmi_manufaktuur_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_kreenholmi_manufaktuur.ai_weight
+	}
+}
+
+# Kharitonenko and Son
+company_kharitonenko_and_son = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_kharitonenko_i_sin.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_farm_wheat.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_KHARKOV }
+
+	building_types = {
+		building_wheat_farm
+		building_rye_farm
+	}
+
+	extension_building_types = {
+		building_logging_camp
+		building_art_academy
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_grain
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_grain_complete_tt
+			has_variable = prestige_good_generic_grain_var
+		}
+	}
+
+	potential = {
+		has_dlc_feature = ip5_content
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_KHARKOV
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_KHARKOV
+			building = building_wheat_farm
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		state_aristocrats_investment_pool_efficiency_mult = 0.15
+		# Patron of the arts
+		building_art_academy_throughput_add = 0.05
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_KHARKOV
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_wheat_farm = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_KHARKOV
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_kharitonenko_and_son.ai_weight
+		# ACTION program_3c98dacdabace7d7 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3c98dacdabace7d7_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_kharitonenko_and_son_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_3c98dacdabace7d7_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_kharitonenko_and_son_grain_pressure [market]; grain缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kharitonenko_and_son_grain_need [market]; 主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_3c98dacdabace7d7_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_kharitonenko_and_son_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_kharitonenko_and_son.ai_weight
+	}
+}
+
+# Fiskars
+company_fiskars = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_fiskars_aktiebolag.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_UUSIMAA }
+
+	building_types = {
+		building_tooling_workshop
+		building_motor_industry
+		building_iron_mine
+	}
+
+	extension_building_types = {
+		building_steel_mill
+		building_livestock_ranch
+	}
+
+	possible_prestige_goods = {
+		prestige_good_fiskars_tools
+	}
+
+	potential = {
+		has_dlc_feature = ip5_content
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_UUSIMAA
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_UUSIMAA
+			building = building_tooling_workshop
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		building_group_bg_agriculture_throughput_add = 0.15
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_UUSIMAA
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_tooling_workshop = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_UUSIMAA
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_fiskars.ai_weight
+		# ACTION program_d427a6d9c262cd20 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d427a6d9c262cd20_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_fiskars_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_d427a6d9c262cd20_company_mandatory_input_steel_negative
+			add = { value = 0
+				# company_sector_company_fiskars_steel_input [market]; 主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steel mg:steel = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steel mg:steel = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_d427a6d9c262cd20_company_mandatory_input_tools_negative
+			add = { value = 0
+				# company_sector_company_fiskars_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_d427a6d9c262cd20_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_fiskars_tools_pressure [market]; tools缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_fiskars_iron_pressure [market]; iron缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_fiskars_engines_pressure [market]; engines缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_fiskars_tools_need [market]; 主业基础配方可能产出tools；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_fiskars_iron_need [market]; 主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_fiskars_engines_need [market]; 主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_d427a6d9c262cd20_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_fiskars_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_fiskars.ai_weight
+	}
+}
+
+# I. K. Poznański Cotton Products
+company_poznanski_cotton_products = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_ik_poznanski_cotton_products.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_GREATER_POLAND }
+
+	building_types = {
+		building_textile_mill
+	}
+
+	extension_building_types = {
+		building_cotton_plantation
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_clothes
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_clothes_complete_tt
+			has_variable = prestige_good_generic_clothes_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_GREATER_POLAND
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_GREATER_POLAND
+			building = building_textile_mill
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		building_construction_sector_throughput_add = 0.05
+		country_ashkenazi_cultural_acceptance_add = 10
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_GREATER_POLAND
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_textile_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_GREATER_POLAND
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_poznanski_cotton_products.ai_weight
+		# ACTION program_7426ca76c6cf9043 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7426ca76c6cf9043_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_poznanski_cotton_products_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_7426ca76c6cf9043_company_mandatory_input_fabric_negative
+			add = { value = 0
+				# company_sector_company_poznanski_cotton_products_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_7426ca76c6cf9043_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_poznanski_cotton_products_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_poznanski_cotton_products_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_7426ca76c6cf9043_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_poznanski_cotton_products_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_poznanski_cotton_products.ai_weight
+	}
+}
+
+# Uzinele de Fier și Domeniile Reșița
+company_resita_works = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_uzinele_de_fier_si_domeniile_resita.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BANAT }
+
+	building_types = {
+		building_iron_mine
+		building_tooling_workshop
+		building_steel_mill
+	}
+
+	extension_building_types = {
+		building_motor_industry
+		building_electrics_industry
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_steel
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_steel_complete_tt
+			has_variable = prestige_good_generic_steel_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_BANAT
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_BANAT
+			building = building_tooling_workshop
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		building_railway_throughput_add = 0.1
+		building_artillery_foundry_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_BANAT
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_tooling_workshop = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_BANAT
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_resita_works.ai_weight
+		# ACTION program_9f4245bd5afa8178 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9f4245bd5afa8178_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_resita_works_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_9f4245bd5afa8178_company_mandatory_input_coal_negative
+			add = { value = 0
+				# company_sector_company_resita_works_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:coal mg:coal = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_9f4245bd5afa8178_company_mandatory_input_iron_negative
+			add = { value = 0
+				# company_sector_company_resita_works_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_9f4245bd5afa8178_company_mandatory_input_tools_negative
+			add = { value = 0
+				# company_sector_company_resita_works_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_9f4245bd5afa8178_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_resita_works_tools_pressure [market]; tools缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_resita_works_steel_pressure [market]; steel缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_resita_works_iron_pressure [market]; iron缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_resita_works_tools_need [market]; 主业基础配方可能产出tools；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_resita_works_steel_need [market]; 主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_resita_works_iron_need [market]; 主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_9f4245bd5afa8178_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_resita_works_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_resita_works.ai_weight
+	}
+}
+
+
+# MALAXA
+company_malaxa = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_malaxa.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_WALLACHIA }
+
+	building_types = {
+		building_motor_industry
+		building_steel_mill
+	}
+
+	extension_building_types = {
+		building_automotive_industry
+		building_railway
+		building_arms_industry
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_steel
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_steel_complete_tt
+			has_variable = prestige_good_generic_steel_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_WALLACHIA
+			}
+		}
+	}
+
+	possible = {
+		has_building_levels_in_state_region = {
+			region = STATE_WALLACHIA
+			building = building_automotive_industry
+			levels >= 5
+			is_incorporated = yes
+		}
+	}
+
+	prosperity_modifier = {
+		country_production_tech_research_speed_mult = 0.05
+		interest_group_ig_industrialists_pol_str_mult = 0.1
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_WALLACHIA
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_automotive_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_WALLACHIA
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_malaxa.ai_weight
+		# ACTION program_a59273574cc1a2db [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a59273574cc1a2db_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_malaxa_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_a59273574cc1a2db_company_mandatory_input_coal_negative
+			add = { value = 0
+				# company_sector_company_malaxa_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:coal mg:coal = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_a59273574cc1a2db_company_mandatory_input_iron_negative
+			add = { value = 0
+				# company_sector_company_malaxa_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_a59273574cc1a2db_company_mandatory_input_steel_negative
+			add = { value = 0
+				# company_sector_company_malaxa_steel_input [market]; 主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steel mg:steel = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steel mg:steel = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
+			# GROUP program_a59273574cc1a2db_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_malaxa_steel_pressure [market]; steel缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_malaxa_engines_pressure [market]; engines缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_malaxa_steel_need [market]; 主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_malaxa_engines_need [market]; 主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_a59273574cc1a2db_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_malaxa_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_malaxa.ai_weight
+	}
+}

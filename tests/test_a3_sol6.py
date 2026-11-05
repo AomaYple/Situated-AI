@@ -35,6 +35,10 @@ def production():
     return inputs, plans, outputs, options
 
 
+def _sol(plans):
+    return tuple(p for p in plans if p.identity.family == "sol_response")
+
+
 def _observations(population=99999, default=False, *, exists=True, owned=True):
     return {
         "sol_response_state_exists": exists,
@@ -81,6 +85,10 @@ def _trigger(block, values, *, is_ai, state=False):
             assert row.op == "="
             assert operand == "yes"
             if is_ai is not True:
+                return False
+        elif row.key in {"ai_avoids_radicals", "ai_wants_radicals"}:
+            assert operand == "yes"
+            if values.get(row.key) is not True:
                 return False
         elif row.key == "exists":
             assert row.op == "="
@@ -139,6 +147,13 @@ def _generated_weight(option, values, *, is_ai=True):
     return total
 
 
+def _generated_contribution(option, values, *, is_ai=True):
+    name = option.first("name").value.unquoted
+    native_trigger = "ai_avoids_radicals" if name.endswith(".a") else "ai_wants_radicals"
+    native = 1 + (10 if values.get(native_trigger) is True else 0)
+    return _generated_weight(option, values, is_ai=is_ai) - native
+
+
 @pytest.mark.parametrize(
     ("population", "default", "expected"),
     [
@@ -154,9 +169,9 @@ def test_finance_and_exact_exposure_change_the_real_pair(production, population,
     values = _observations(population, default)
     reference = _reference(values)
     assert tuple(reference.values()) == expected
-    for plan in plans[-2:]:
+    for plan in _sol(plans):
         assert plan.evaluate(values, is_ai=True) == reference[plan.option]
-        assert _generated_weight(options[plan.option], values) == reference[plan.option]
+        assert _generated_contribution(options[plan.option], values) == reference[plan.option]
 
 
 @pytest.mark.parametrize("projection", ["reference", "generated_pdx"])
@@ -183,8 +198,8 @@ def test_missing_state_benefit_preserves_independent_country_expense(
     actual = tuple(
         plan.evaluate(values, is_ai=True)
         if projection == "reference"
-        else _generated_weight(options[plan.option], values)
-        for plan in plans[-2:]
+        else _generated_contribution(options[plan.option], values)
+        for plan in _sol(plans)
     )
     assert actual == expected
 
@@ -214,10 +229,10 @@ def test_independent_boundary_unknown_matrix_equals_actual_generated_ast(product
     ):
         values = _observations(population, default, exists=exists, owned=owned)
         reference = _reference(values)
-        for plan in plans[-2:]:
+        for plan in _sol(plans):
             actual = plan.evaluate(values, is_ai=True)
             assert actual == reference[plan.option]
-            assert _generated_weight(options[plan.option], values) == reference[plan.option]
+            assert _generated_contribution(options[plan.option], values) == reference[plan.option]
             seen.append(actual)
         assert sum(reference.values()) == 100
     assert (min(seen), max(seen)) == (18, 82)
@@ -225,7 +240,7 @@ def test_independent_boundary_unknown_matrix_equals_actual_generated_ast(product
 
 def test_independent_causes_keep_welfare_and_radicals_when_finance_reverses(production):
     _, plans, _, _ = production
-    plan = plans[-2]
+    plan = _sol(plans)[0]
     assert len(plan.scalar.groups) == 3
     assert len({group.id for group in plan.scalar.groups}) == 3
     assert [float(group.terms[0].amount) for group in plan.scalar.groups] == [18, 6, -32]
@@ -259,17 +274,18 @@ def test_exact_saved_scope_isolated_from_unrelated_health_and_country(production
         }
     )
     assert _reference(values) == baseline
-    for plan in plans[-2:]:
+    for plan in _sol(plans):
         assert plan.evaluate(values, is_ai=True) == baseline[plan.option]
-        assert _generated_weight(options[plan.option], values) == baseline[plan.option]
+        assert _generated_contribution(options[plan.option], values) == baseline[plan.option]
 
 
 @pytest.mark.parametrize("is_ai", [False, None])
 def test_player_or_unknown_ai_emits_no_policy(production, is_ai):
     _, plans, _, options = production
-    assert event.evaluate(_observations(), is_ai=is_ai, consumer_programs=plans[-2:]) == {}
+    assert event.evaluate(_observations(), is_ai=is_ai, consumer_programs=_sol(plans)) == {}
     assert all(
-        _generated_weight(option, _observations(), is_ai=is_ai) == 0 for option in options.values()
+        _generated_contribution(option, _observations(), is_ai=is_ai) == 0
+        for option in options.values()
     )
 
 
@@ -310,7 +326,14 @@ def test_every_overlay_removal_restores_native_and_exact_player_effects(producti
                 if not isinstance(row, Assignment) or row.key != "ai_chance"
             ]
         )
-        assert event._shape(preserved) == event._shape(native[name])
+        native_effects = Block(
+            [
+                row
+                for row in native[name].items
+                if not isinstance(row, Assignment) or row.key != "ai_chance"
+            ]
+        )
+        assert event._shape(preserved) == event._shape(native_effects)
     assert event._shape(event._block(options["sol_events.6.a"], "add_modifier")) == (
         ("name", "=", "starvation_palliative_modifier"),
         ("multiplier", "=", "money_amount_multiplier_small"),
@@ -324,17 +347,17 @@ def test_every_overlay_removal_restores_native_and_exact_player_effects(producti
 
 def test_exact_source_context_and_legacy_contracts(production):
     inputs, plans, _, _ = production
-    assert len(plans) == 23
+    assert len(plans) == 28
     assert len(event.LEGACY_SOURCES) == 15
     assert len(event.SOL_SOURCES) == 9
-    assert len(inputs) == 20
+    assert len(inputs) == 40
     legacy_inputs = {name: inputs[name] for name in event.LEGACY_SOURCES}
     query = event.PlagueStateQuery("infected")
     assert set(event.required_query_sources(query)) == event.LEGACY_SOURCES
     assert len(event.compile_query(query, legacy_inputs).source_hashes) == 15
-    for plan in plans[:21]:
+    for plan in (p for p in plans if p.identity.family in {"healthcare", "plague", "disaster"}):
         assert set(plan.as_dict()["source_hashes"]) == event.LEGACY_SOURCES
-    for plan in plans[-2:]:
+    for plan in _sol(plans):
         assert set(plan.as_dict()["source_hashes"]) == event.SOL_SOURCES
         assert plan.identity.saved_state == "slums_state"
         assert plan.writer_id == "event_sol_response_" + plan.option[-1]
@@ -408,7 +431,7 @@ def test_pair_is_atomic_and_renderer_proves_conservative_interval(production):
     ]:
         with pytest.raises(ValueError, match="集合"):
             event.patch(inputs, consumer_programs=selected)
-    for plan in plans[-2:]:
+    for plan in _sol(plans):
         assert isinstance(plan.scalar, programs.ScalarProgram)
         assert (plan.scalar.lower, plan.scalar.upper) == (12, 88)
         event.render(plan)
@@ -418,3 +441,17 @@ def test_pair_is_atomic_and_renderer_proves_conservative_interval(production):
         narrowed = replace(plan, scalar=replace(plan.scalar, lower=lower, upper=upper))
         with pytest.raises(ValueError, match="最终限幅"):
             event.render(narrowed)
+
+
+@pytest.mark.parametrize(
+    ("avoids", "wants"), [(False, False), (True, False), (False, True), (True, True)]
+)
+def test_current_native_political_weight_and_actual_mod_contributions_are_independent(
+    production, avoids, wants
+):
+    _, _, _, options = production
+    values = {**_observations(), "ai_avoids_radicals": avoids, "ai_wants_radicals": wants}
+    assert _generated_weight(options["sol_events.6.a"], values) == 63 + 10 * avoids
+    assert _generated_weight(options["sol_events.6.b"], values) == 39 + 10 * wants
+    assert _generated_weight(options["sol_events.6.a"], values, is_ai=False) == 1 + 10 * avoids
+    assert _generated_weight(options["sol_events.6.b"], values, is_ai=False) == 1 + 10 * wants

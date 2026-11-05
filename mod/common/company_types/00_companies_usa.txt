@@ -131,13 +131,11 @@ company_united_fruit = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_LOUISIANA
+		has_building_levels_in_state_region = {
+			region = STATE_LOUISIANA
+			building = building_sugar_plantation
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_sugar_plantation
-				level >= 5
-			}
 		}
 		any_state_in_latin_america = {
 			any_scope_building = {
@@ -273,13 +271,11 @@ company_us_steel = {
 
 	possible = {
 		has_technology_researched = open_hearth_process
-		any_scope_state = {
-			state_region = s:STATE_PENNSYLVANIA
+		has_building_levels_in_state_region = {
+			region = STATE_PENNSYLVANIA
+			building = building_steel_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_steel_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -375,6 +371,7 @@ company_general_electric = {
 
 	extension_building_types = {
 		building_motor_industry
+		building_copper_mine
 	}
 
 	possible_prestige_goods = {
@@ -452,6 +449,11 @@ company_general_electric = {
 				# company_sector_company_general_electric_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
+			# GROUP program_88bc9c467f31156c_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_general_electric_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
+			}
 			# GROUP program_88bc9c467f31156c_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_general_electric_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
@@ -461,11 +463,6 @@ company_general_electric = {
 			add = { value = 0
 				# company_sector_company_general_electric_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
-			}
-			# GROUP program_88bc9c467f31156c_company_mandatory_input_lead_negative
-			add = { value = 0
-				# company_sector_company_general_electric_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:lead mg:lead = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:lead mg:lead = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_88bc9c467f31156c_company_mandatory_input_rubber_negative
 			add = { value = 0
@@ -662,13 +659,11 @@ company_ford_motor = {
 
 	possible = {
 		has_technology_researched = combustion_engine
-		any_scope_state = {
-			state_region = s:STATE_MICHIGAN
+		has_building_levels_in_state_region = {
+			region = STATE_MICHIGAN
+			building = building_motor_industry
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_motor_industry
-				level >= 5
-			}
 		}
 	}
 

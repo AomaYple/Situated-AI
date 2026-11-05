@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/internal_security_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/internal-security-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/internal-security-opportunities.json"
 LAW_SOURCE = "common/laws/00_internal_security.txt"
 QUERY_SOURCE = "common/scripted_triggers/00_ai_triggers.txt"
 _CANDIDATES = frozenset(
@@ -33,6 +33,9 @@ _CANDIDATES = frozenset(
         "law_national_guard",
         "law_secret_police",
         "law_shinsengumi",
+        "law_third_section",
+        "law_okhrana",
+        "law_extraordinary_commission",
         "law_guaranteed_liberties",
     }
 )
@@ -54,6 +57,11 @@ _CHANNELS = {
     "state_loyalists_from_political_movements_mult": "movement_conversion",
 }
 _NO_EXPOSURE = {
+    "country_soldiers_pol_str_mult": "soldier_population_power_exposure_not_registered",
+    "state_political_strength_from_wealth_mult": "population_wealth_power_exposure_not_registered",
+    "state_mortality_wealth_mult": "wealth_dependent_mortality_exposure_not_registered",
+    "country_institution_cost_institution_home_affairs_mult": "actual_institution_cost_exposure_not_registered",
+    "country_institution_home_affairs_max_investment_add": "institution_cap_not_actual_investment_demand",
     "country_officers_pol_str_mult": "officer_population_power_exposure_not_registered",
     "country_shopkeepers_pol_str_mult": "shopkeeper_population_power_exposure_not_registered",
     "interest_group_ig_petty_bourgeoisie_pol_str_mult": "petty_bourgeoisie_power_transition_not_registered",

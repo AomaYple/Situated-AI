@@ -1230,6 +1230,12 @@ def _initialize(
             raise ValueError("建筑缺省评分父块不唯一")
         if parent.value.first(item.field[1]) is not None:
             raise ValueError("建筑评分已经存在，不能覆写或使用缺省值")
+        if item.source.startswith("common/buildings/"):
+            from . import building_defaults  # noqa: PLC0415
+
+            building_defaults.validate_initializer(
+                item.source, item.field, item.define_source, item.define, parent
+            )
         if item.source.startswith("common/company_types/"):
             from .situated import engine_scope  # noqa: PLC0415
 
@@ -1318,6 +1324,36 @@ def reader_evidence(inputs: Mapping[str, str]) -> dict[str, dict[str, object]]:
         for token in tokenize(text):
             if token.kind == ATOM and token.value not in evidence:
                 evidence[token.value] = {"source": name, "line": token.line}
+    # A typed law reference can be absent from vanilla uses even though its
+    # definition is present (notably the current internal-security variants).
+    # Derive only registered identities from their complete pinned law source;
+    # an arbitrary law_* token never grants a law_type reference.
+    law_roots: dict[str, Block] = {}
+    for catalog in (law_opportunities.load(), internal_security_opportunities.load()):
+        for law, name in catalog["candidates"].items():
+            law_text = inputs.get(name)
+            if (
+                law_text is None
+                or hashlib.sha256(normalized_text(law_text).encode()).hexdigest()
+                != catalog["sources"][name]
+            ):
+                continue
+            if name not in law_roots:
+                parsed = parse_text(law_text)
+                if parsed.errors:
+                    raise ValueError(f"法律读取器来源无法解析：{name}")
+                law_roots[name] = parsed.root
+            rows = law_roots[name].all(law)
+            if len(rows) != 1 or not isinstance(rows[0].value, Block):
+                raise ValueError(f"法律读取器缺少唯一锁定定义：{law}")
+            groups = rows[0].value.all("group")
+            if (
+                len(groups) != 1
+                or not isinstance(groups[0].value, Scalar)
+                or not groups[0].value.unquoted.startswith("lawgroup_")
+            ):
+                raise ValueError(f"法律读取器缺少类型化法律组：{law}")
+            evidence.setdefault(f"law_type:{law}", {"source": name, "line": rows[0].line})
     return evidence
 
 

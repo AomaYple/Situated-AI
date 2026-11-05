@@ -28,7 +28,7 @@ def load() -> dict[str, Any]:
         or type(data["schema"]) is not int
         or data["schema"] != 1
         or data["sources"]
-        != {EVIDENCE_SOURCE: "6035008b9af5c24f5b41dc8cfac5b3ff878ea56f2071228caa8c2c9f73672e39"}
+        != {EVIDENCE_SOURCE: "681da2be740046fbbf07922d2959098c7e5c21c451ac5dd23973ecfb260b618b"}
         or set(data["tuning"]) != {"absorption_target"}
     ):
         raise ValueError("迁移就业机会schema或原版来源无效")

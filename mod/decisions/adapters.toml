@@ -2,109 +2,109 @@
 schema = 1
 
 [sources]
-"common/ideologies/01_character_ideologies.txt" = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
-"common/journal_entries/00_acw_entries.txt" = "6132f262affcfc038df2549a0d5cb6ae059bc9e7fb90a8a1fe2c14db5263ff3e"
-"events/law_events/children_rights_events.txt" = "1b8a75290df30ea93fcf1948fd09fffc2175ecd932f7faef585b6952e3d068e2"
-"common/achievements/ip2_pivot_of_empire_achievements.txt" = "42a9c8cec20b6add6332b19a1354640d66fb7cfc45e464b95913315e824a4a04"
+"common/ideologies/01_character_ideologies.txt" = "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4"
+"common/journal_entries/00_acw_entries.txt" = "3a3c170784d191f4c3835e3144e66546121f10eaadc7e1a62fd99af92d42f2a4"
+"events/law_events/children_rights_events.txt" = "5f735e048c3da9e3bb1a362af1a0e2916e0e2461625c225f4d5e18b7b6f076b7"
+"common/achievements/ip2_pivot_of_empire_achievements.txt" = "a69d95c55fc6dbe0d558273325569266a82bfa628e1a38bb05cc18514d7c7460"
 "common/scripted_triggers/00_gfx_route_graphics_triggers.txt" = "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b"
-"common/journal_entries/00_communism.txt" = "fbe2ce3af236a3f49e146f445ba56957952ac910b68022cc0f69e94e8010072f"
-"events/law_events/state_atheism.txt" = "cb39c1a5badc168a6480bd3a19fb67dc82cfa80c8da7bd830b2fad747e80cf8e"
-"common/ideologies/00_ig_ideologies.txt" = "2e3f1940ebe12e8a36230f57710a81f7b14e84b221438ed41c9b6cffdf7277d4"
-"common/interest_groups/00_trade_unions.txt" = "b1759c80f901533b7b83495da8958a2f13edb88be7c007ccd1e5af798bd66c43"
-"common/journal_entries/00_art_jes.txt" = "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5"
-"common/production_methods/06_urban_center.txt" = "d9f0e653d3d0c1783fd4e9880fb58a6ada795d0ed3a3fdec011f0d1ce28da71f"
-"common/treaty_articles/00_alliance.txt" = "505cfc849cb7d66a460b95c36a4e1c4794cae4c4c8e48f3c1a7c6b55dd56564b"
+"common/journal_entries/00_communism.txt" = "107fa64a7e5587d8459eab2404b504b06042d1fffb7a8918eb49b5a4654512c2"
+"events/law_events/state_atheism.txt" = "79e17bbdbe7e20a98a488baaefafe9978eee0329e042c09b1cfeac8bbf728e85"
+"common/ideologies/00_ig_ideologies.txt" = "9637ce7b900e671af5880f1876be7b086e913d9caf5031aae84e3bf080f2c660"
+"common/interest_groups/00_trade_unions.txt" = "dd11f29ac662a390d0ddeafe5de5e6e63ef91fd7b885892670fa6b3c89896201"
+"common/journal_entries/00_art_jes.txt" = "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f"
+"common/production_methods/06_urban_center.txt" = "c1b86160eda21483015fc6e052bab2a038f06b060fb59e22ea97d7a08fab8759"
+"common/treaty_articles/00_alliance.txt" = "78d6a82a728271e6da09016f6fd6995df665d88a42e8c49feee1f63f7f02cad1"
 "common/institutions/00_institutions.txt" = "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f"
-"common/achievements/base_achievements.txt" = "2d3e7fa2cc1239682b12377605e03aea4b530d2eeffcfb9d7c6ec2f73c8fef3d"
-"common/political_movements/00_ideological_movements.txt" = "4462653e5fa326f3d84f03b6a551ddc76e9dead91409678adad56dcdb7f11035"
-"common/alert_types/00_alert_types.txt" = "399eaa0ed4bb11e29bac7d0de29e2fa1e191cbdbf3b1290fba5abac9b622f912"
-"common/journal_entries/00_tutorial.txt" = "dbd90b3993566ccb0c777912a9429013186367449b2d6b6e88b91acdb4e356da"
-"common/character_interactions/01_additional_interactions.txt" = "d7cfbfccdd9b7b0b504908e4db43e38646838c26cb29c834abe5595210a22b53"
-"common/company_types/00_companies_europe.txt" = "e2c92439747665afbc3114af2dd5dcf5427b6823cef27203c1c8dfdbd165c1e6"
-"common/company_types/00_companies_mp1.txt" = "6b7f02c5d109b68477fae6a2c16bbbc0de96b9a974da1e2eb7050df8740a62ba"
-"common/scripted_triggers/00_diplomacy_triggers.txt" = "6c5b17b5e88d81e5cab3bce8a7e0d5a6d3ebaa92cb32cb8d069be824fa591832"
-"common/ai_regional_objectives/00_ai_regional_objectives.txt" = "4cf75c09ebf4f275b77a015bd0c6e829e0c08d589a859d90c9cc18a44832755a"
+"common/achievements/base_achievements.txt" = "d073f27521c4d459410b61dea9f82b785603748ebd1a133e067ac029ec450414"
+"common/political_movements/00_ideological_movements.txt" = "17f682b4c10a64139c19230dbda69c212669319cb7e50e893e47bf2ea1f90dfb"
+"common/alert_types/00_alert_types.txt" = "06099e868214b521f615cac1b5cf1f0d410aff5c8809484e44e56f66213545da"
+"common/journal_entries/00_tutorial.txt" = "0fb0757ac536ac0ef76f0b925ec8754056feaef14511de947028be2125ca541a"
+"common/character_interactions/01_additional_interactions.txt" = "1ae63b1785cc7df424b487192561c220d603d24ad8921c0b3d7759b4f75262e9"
+"common/company_types/00_companies_europe.txt" = "7e6094f94b24c56dfdb59eb80c8df7063f099a0aa467dabf292b13c6ab251696"
+"common/company_types/00_companies_mp1.txt" = "3036ef7e8d00a35798bfaa061f56455a8d773dd08100e8bc75cd22ad96cb5ec5"
+"common/scripted_triggers/00_diplomacy_triggers.txt" = "0c8749e9187d200d67f4a73ebc4926100d9ff0476dfc5dea408cc6cb45654d49"
+"common/ai_regional_objectives/00_ai_regional_objectives.txt" = "ecf891e41a37209e388c576b2696410d70ceec1647db3a43ff2febe256776306"
 "common/diplomatic_actions/25_colonization_rights.txt" = "16fca6be8a75fc4de4c14171031b5039f0640a9a8b711cef8ce7df99cc0f35b1"
-"common/ai_strategies/02_diplomatic_strategies.txt" = "2b0ce7b4430d970eba2e878c8cff6fd38f6ee49274431721025819c0d646ccb4"
+"common/ai_strategies/02_diplomatic_strategies.txt" = "989d701d573d934d8206ee639f4dc037ba3833f8c119feaf3511c3d067c72e66"
 "common/production_method_groups/06_urban_center.txt" = "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871"
 "common/production_methods/11_private_infrastructure.txt" = "b1be6179a07bc71150ec45fd5c7b7fd14b88d6cba8068775c5e29cd364ccbbec"
-"common/production_methods/07_government.txt" = "e6123941b73acd7414bac2e0d1ddef33f5f4eeb2789a37ff3025cd6050711b91"
-"common/production_methods/03_mines.txt" = "80eaa71892c2c6da5b5c4e1d954161ec7d4172386a35a6b4fd47603a0565fb39"
+"common/production_methods/07_government.txt" = "d9942ca514034b07a092f7f225861d823166511331c2745bff99d8eda3809389"
+"common/production_methods/03_mines.txt" = "dd7ac9300a2b3c551894e186624984d5f3791bdf08462694fcaf3acda97ec276"
 "common/production_method_groups/11_private_infrastructure.txt" = "188b1828634d7ec7e8673df9fea33799e67cbfe9abfcfe5fcb4ef93f765f2186"
-"common/production_method_groups/07_government.txt" = "e1ea7e0286546ca4b2e5ad8bafa35de4e6dec6af59c93b1ff91c99d5815dd6da"
-"common/production_method_groups/03_mines.txt" = "995d2a9a19c99c5b64c3136c886be439c9a7e578d0a796980a1eebdbeddba0bd"
-"common/treaty_articles/04_take_on_debt.txt" = "62303a4e50e1fd9fc3149399f7d2a3820ca100215e88325201d59cb38afece8f"
-"common/ai_strategies/00_default_strategy.txt" = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
-"common/ai_strategies/01_admin_strategies.txt" = "38a7dc32f3c0fbc372c92080860bcf223c16436067dfe56fc51845d6c4e33cf2"
-"common/ai_strategies/02_subject_diplomatic_strategies.txt" = "0afec614df77afc07c26d39aa6e560f7d0c1cf51058f0ae2ca5ef7e92f839129"
-"common/buildings/01_industry.txt" = "6f80935a4fb6ccaf56ff900848a090f9ba4fa442b4cb93aec9ec1b3692616c1d"
-"common/buildings/02_agro.txt" = "78cc7634d66fd5c6c68b5e9863c6208cd04a1ba3a8c274c4439374a2587cd0de"
-"common/buildings/03_mines.txt" = "6b3e9846022b6e4f998be0b131fc7c465a2a592d70c7c6ff6786e158aec68992"
+"common/production_method_groups/07_government.txt" = "6b257b5bde8d4e5b9728555c1510cbb111a2bfa74602f42a2d0f29f5057ff7cd"
+"common/production_method_groups/03_mines.txt" = "3e9a26aec1edeb6d58a2ca9c62bab946ecb1c8a362d4c8bb18ee538229bb6425"
+"common/treaty_articles/04_take_on_debt.txt" = "256aedaac47c67aaabb64c2ad2bd99db33d8e50a63bbb3581d1df3022cca78d4"
+"common/ai_strategies/00_default_strategy.txt" = "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431"
+"common/ai_strategies/01_admin_strategies.txt" = "376ebad73fb16d6029b95ed4faaa9835f8dfda359eb7eff526a418ad7e6f0b88"
+"common/ai_strategies/02_subject_diplomatic_strategies.txt" = "bb958826ac9ac8c75064ed58771f82e55b0266fbd7b215a49a439ba718f67d18"
+"common/buildings/01_industry.txt" = "b7b8a4ba8ccf832869fb434cf287e0dc6e6463ab2d90a4781a6ca309888380a2"
+"common/buildings/02_agro.txt" = "271ccbd2e6d02e941a92553bddf70d08ab8b72154fe6b5e7cbbc3d6197bb554d"
+"common/buildings/03_mines.txt" = "122b78e126dec4044da5e78b86d5e8edd06d6581483efba9e7d0c9404091b655"
 "common/buildings/04_plantations.txt" = "785248f30a4c7fa6857ee1ea5f1cfae897a6ed27f6219d8c0a18ef6df46aacd8"
-"common/buildings/06_urban_center.txt" = "c41ed5adb63e8f626e6394ce4f2f619bc8f229cafa3d8994271e2a66d1c2b0c5"
-"common/buildings/07_government.txt" = "01867816e5cf623ebf50927c94b0c2b92b189c8ed31d78fd55fa79ab67976872"
+"common/buildings/06_urban_center.txt" = "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9"
+"common/buildings/07_government.txt" = "8c2213c705a739c06eb34287e3632e2e9d42a06564237c0556d7468624e6b211"
 "common/buildings/09_misc_resource.txt" = "cdb01907f4e00fe2ce089ea2270dcd5954235df4671683fc74812e4debdfc8e7"
-"common/buildings/11_private_infrastructure.txt" = "3438f826295bb37ae52823121209734042e759c64c453754bde6876d44f9f35b"
+"common/buildings/11_private_infrastructure.txt" = "b56e1c971a13604681bd11b374170eed0b4887f534b3f10f98fa875e7b67703b"
 "common/buildings/buildings.md" = "505a51262ae1b118a6d30f305b8ab4169e78666eadffd996a7d2524d614b9097"
 "common/decisions/japan_decisions.txt" = "a89f6851feff626669d1a4271a472a7f94f58d0a45dfc563946bd8768368c4db"
-"common/defines/00_ai.txt" = "c26be7de60d06cb65a652b14abfb20d812d6c39b12bbab52f721824a1b1f7057"
-"common/goods/00_goods.txt" = "496810f9b21012cb3ae764e4c0cd65aafa85b6079f96d3d2a6b3dece92a0afcc"
-"common/journal_entries/00_corn_laws.txt" = "af260e3b2d4825d15bee505c4105597446fadbffc490e2c279f5d1e7d65d4587"
-"common/journal_entries/00_greek_nationalism.txt" = "54ae31ee5aec299a89288a56a660a737b81debf24abf7a5611e99d85c982c7e5"
-"common/journal_entries/00_liberalism.txt" = "560666da54d2c206dda7f0b1e338ae4362e0821768cbe33e96af6c8513b64d54"
-"common/journal_entries/00_strike_je.txt" = "a3be1ecae49d794e9dd4c3f2e8938f00800c7054bd4ec96423901fd8fd219b08"
-"common/journal_entries/00_urbanization.txt" = "6964cdcb70bf3b8b4a66026aa02414910f86f4e1f4c2175f8a31499a2fed155e"
-"common/journal_entries/06_portugal_politics.txt" = "3419343456182541870fc8de7c7c52c23bb6c9e7ec1deded06a7744d61e04316"
-"common/laws/00_army_model.txt" = "879d2a9b16701b53693eb07f94ccfce40a1142f5691135a9b83d5acdeeb6fcb1"
-"common/laws/00_bureaucracy.txt" = "49ff3d2af4dc91e39754828520ad2381ccb3b4124f071ca8e83d34028e5e3ab3"
+"common/defines/00_ai.txt" = "e73869e67621e325ce6da97e6c3e8cbd95596699cb6c7a6d67af3b1e1e7b1bd5"
+"common/goods/00_goods.txt" = "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49"
+"common/journal_entries/00_corn_laws.txt" = "75b1ad344408c473cf8347e52eb811a1b751631e8a83b1375db0d20b0ce842da"
+"common/journal_entries/00_greek_nationalism.txt" = "7d422f0fb96786f69e8d114dff1f2d7aec1b6c978628f907f18b5db1ed404b3c"
+"common/journal_entries/00_liberalism.txt" = "6b6b5dcf8eb10ee36b42162e5ea941afee9f86478a44ebdbae6cbb4c8f1d3265"
+"common/journal_entries/00_strike_je.txt" = "bf6e6ddd8f50083d78fba5cef9d1694d9f132720f7fd7417a9a2ee171a2ca630"
+"common/journal_entries/00_urbanization.txt" = "b9e6531f86e816018fb1384b03fa864afcea8d894ece3205ccae076150e0451e"
+"common/journal_entries/06_portugal_politics.txt" = "5d0a31d587f9d2ce137a879a0992748c25dd738b958f83b0ca875d0ea6a51a5f"
+"common/laws/00_army_model.txt" = "4924234c33dc8bdd12e7317bd82de29532e2af28ca7bad4cc4a44d7130d995aa"
+"common/laws/00_bureaucracy.txt" = "2ed264b5112e3bbc8634b79d8287c4a28d25cc844f2c191667195047ddda113b"
 "common/laws/00_caste_hegemony.txt" = "13ed1a31acd63f9ccb2aea285d546e1bf7199a4a2911f07bda07513f39072ada"
-"common/laws/00_church_and_state.txt" = "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174"
-"common/laws/00_citizenship.txt" = "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f"
-"common/laws/00_distribution_of_power.txt" = "b16b4f8103ade4f61cf2890af6fd2834f8782856bab8b08c6ec5942522a00855"
-"common/laws/00_governance_principles.txt" = "481a2c32a6873a0d5d5682e50b056a91ffd1d41017742f171a105737d59be0f8"
-"common/laws/00_internal_security.txt" = "4b74ea0b9172813596b903507cda213133f08e43215331750be364db37b719c1"
+"common/laws/00_church_and_state.txt" = "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50"
+"common/laws/00_citizenship.txt" = "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76"
+"common/laws/00_distribution_of_power.txt" = "c99d7a71a1d6f75385a35afb3f5d1887f50604f47cc73cb6ca3752da8127c478"
+"common/laws/00_governance_principles.txt" = "c487020a20e305bf5a8c66b7ad45c429f4e67daa1cd6cdcf2208f421708365ed"
+"common/laws/00_internal_security.txt" = "d1faa617a0cd77c0ae0facac3c576b4019fe3b04d8e1e2b370852b1da91ac31e"
 "common/laws/00_navy_model.txt" = "acc050c5e250f76e3851dc2723bf43910e1fbd4b156ecd2c39edbcaefe218b32"
-"common/laws/01_colonial_affairs.txt" = "a27bfdbbcd5a8075279d648cd6f474be85aee200b9215461d176956ae27eec61"
-"common/laws/01_economic_system.txt" = "5622b68492a6f57913ead582011980d2ea5c5f5d41c715261bc228b8b7f9f0e9"
-"common/laws/01_education_system.txt" = "b20bb365d145c484cf4b2d659f794213893640963b8de1eed9dedc2466b9e346"
+"common/laws/01_colonial_affairs.txt" = "7785b477cd0aa1f2ec5c95b69733ee08b7cbf54982e1b57f24643c577ddb2a4f"
+"common/laws/01_economic_system.txt" = "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194"
+"common/laws/01_education_system.txt" = "8d89d5e97c2ba9bedca17ea234840af6f02cc90eb9acef0699e3296f3e25157f"
 "common/laws/01_health_system.txt" = "bcf990006c7545240604e1fab78091462ac86efcd505b8c03119af24018c58f9"
-"common/laws/01_land_reform.txt" = "8576c5bb769ca0bc9c2e3e2d89fb2e2dffcd9b4d479c08b43ca00c639e98e82f"
+"common/laws/01_land_reform.txt" = "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174"
 "common/laws/01_policing.txt" = "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e"
 "common/laws/01_taxation.txt" = "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae"
 "common/laws/01_trade_policy.txt" = "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3"
 "common/laws/02_childrens_rights.txt" = "5b8bd22e27d7afea8dfd47d26c6a353275d10710335ebe37fcd46bd02390457e"
-"common/laws/02_free_speech.txt" = "535b73670d2029a2b68a842542b8df5995d7b238418eeab73f48c81d07458c97"
+"common/laws/02_free_speech.txt" = "4f684e9219d3ab1bedba83ab93f50b2ea3a436be854ecc37c77709bc4977808a"
 "common/laws/02_labor_rights.txt" = "70a05689bb667ecab63077332fbb952a498a9c5692aef3b98aa5c07a15e0e264"
-"common/laws/02_labour_associations.txt" = "47ec5d950de0c1fd409203b83aa3a56849a02c6977e69d7e21a4bacc2ca4ce45"
+"common/laws/02_labour_associations.txt" = "5b50400f5e9be0d70a75f1b13c902ee817384473c64ab12bf52935ea98cf23b5"
 "common/laws/02_migration.txt" = "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5"
-"common/laws/02_rights_of_women.txt" = "f0c963ca8b131f39f47619b89769c3acada4fa94a1088bfb1e2e132a5da87f54"
-"common/laws/02_slavery.txt" = "a33b9378ece993c63fc90ff54de4080ceea420df06051e03cc5754999a8bf263"
+"common/laws/02_rights_of_women.txt" = "d8dc08bc6fbecad91d90c21ba31541b9c7ce9101c4da9b98a2a7ac37c90e145f"
+"common/laws/02_slavery.txt" = "9efc9dd2960fcae034765c88ba6ad7252724d5d91577f71bf70cc36745a205d0"
 "common/laws/02_welfare.txt" = "d1b78d84eec4bccd13166cbb3ef98eb8c41ad886856a4cde4c429f6164f5568b"
 "common/laws/readme.md" = "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
-"common/mobilization_options/00_mobilization_option.txt" = "5b69e5c13fe0278122fc34b256838c5ae76c7db893404184b855accc34672a09"
-"common/on_actions/00_code_on_actions.txt" = "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46"
-"common/objective_subgoals/00_subgoals_tutorial.txt" = "fa0a1d4bd3135cfb8e534bbef2b599a0b4e03fcde16c8df9df7ebdf8ce67c02b"
-"common/production_method_groups/01_industry.txt" = "80c5ecf3875752526b91be0d5d22f24fe16f59d79206e3885bdca546963a0ecd"
+"common/mobilization_options/00_mobilization_option.txt" = "4dce33c917b2f2a323de96b7e51602d5d52262207af5f2736de3f17008537296"
+"common/on_actions/00_code_on_actions.txt" = "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e"
+"common/objective_subgoals/00_subgoals_tutorial.txt" = "48a239919488c1dd9cb1f010d40b20ced9b26710aec7e2961ac59e2076658b72"
+"common/production_method_groups/01_industry.txt" = "69de9a696bf8e6e91e08f739008c8169cc67454c91abbc81956eb61d90cc5152"
 "common/production_method_groups/02_agro.txt" = "a4f21d31cb98eeb3caaff7cbc44a19007028fc66c824bcba8247b4b618b92bc7"
-"common/production_method_groups/04_plantations.txt" = "7d165e1529ac97336193e787017824e503d44dedad8772fef8fddd6e1ebd3d14"
+"common/production_method_groups/04_plantations.txt" = "6add76a10c76b64b187e48e2323e6da776c7ded72872c46f5c400de7264c9259"
 "common/production_method_groups/09_misc_resource.txt" = "29676d89f63d05d659b2cbb69eea2361b81e7eeecb016a35d4e7cd1c09c368a2"
-"common/production_methods/01_industry.txt" = "98b5bce603ac098d0b0f18c41de09afe31c3c8e6553363857efd013624783b87"
+"common/production_methods/01_industry.txt" = "dd08ec865b0a9e5d65dde0e882fc5fbc338bcf1abc0d3f701103dd3459b76405"
 "common/production_methods/02_agro.txt" = "9d2c9be74569e39a05896b618c3d843880f3ba9dc4958f418250139242eb134f"
 "common/production_methods/04_plantations.txt" = "377e247f8ce334cc5c300ac27c91bffb25f3a84891fdbc678bfddf1bef022184"
-"common/production_methods/09_misc_resource.txt" = "4bc777873c8a6f116e2c6184e5782b4977b7d6ba9d6bec61f8d1f598087dbdcf"
+"common/production_methods/09_misc_resource.txt" = "eda05c4f7df4101d48459c1b077bf9b2a40b3f5e71aaaa26699bbaa9ba5e985e"
 "common/production_methods/production_methods.md" = "7f1d3f42a7b62efa846ece45a9c58c408d7614219500d2a2d952c77e1ce5d892"
-"common/script_values/cultural_community_values.txt" = "1aaedb1f2760af4e991dc587416d1c3c68f7dc2beea5f825319e6cb660491402"
-"common/script_values/war_support_values.txt" = "547594557cd7cdcfd7cc3599f680aa2dfb2422a94bd7a23e4a8ff0c2fb637898"
-"common/scripted_buttons/05_struggle_for_the_highveld_buttons.txt" = "a2036599eb7c08e9b313c412c5dde4e6b9f7e56bc32cb49326bb4bd7869eed08"
-"common/scripted_triggers/00_ai_triggers.txt" = "d8da988122619e26e16ce17e8ac196337cdb8d1592f357c45ded4f8cb85d3698"
-"common/scripted_triggers/00_ip3_victoria_scripted_triggers.txt" = "d4765bbff7b101be760d6b782b678f72819a1959629502be2f253684e85fc291"
-"common/scripted_triggers/00_scripted_triggers.txt" = "a4956f5188970963ca62de10a6b856a7000bc87efbebd26784050620b53003b2"
-"common/scripted_triggers/00_victoria_scripted_triggers.txt" = "fbab86ef6bdce62de6ceffed4a96688bd8209422b5342329dc66878ab3d2c96c"
+"common/script_values/cultural_community_values.txt" = "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30"
+"common/script_values/war_support_values.txt" = "75f2b11933f93db68907db5d2516d9296d01fc2850f21b7e8c74f45440a12416"
+"common/scripted_buttons/05_struggle_for_the_highveld_buttons.txt" = "1e8fba0619d496ef4c23c167931b656ab1b91771df2f3ccc400ea212183de449"
+"common/scripted_triggers/00_ai_triggers.txt" = "ffca2b8deef024a9d2703d1297a0bea3a3e931a0b1710e2daea74c48a9dd248b"
+"common/scripted_triggers/00_ip3_victoria_scripted_triggers.txt" = "f08eb3dcfad10219ef5e00d470483f06cb2f6c0c844631c33fc49bdf14180952"
+"common/scripted_triggers/00_scripted_triggers.txt" = "8520d5bdd70d10ebacc56bbe85fc62ff774f229b85d87f7f4325e7ad5b12fea7"
+"common/scripted_triggers/00_victoria_scripted_triggers.txt" = "0eebd886a2d9f8bcc3b1f62881d54a84c3cf0944ffcac9914e71cf42862ab29b"
 "common/technology/technologies/10_production.txt" = "f5b9dd18a3b4b3fd0d3779e85e90294cd7d580b33df662620c4240f3ae6ca6a4"
-"common/technology/technologies/20_military.txt" = "ea78bc29d654cf49173b0631b66436313951a99e51caac28fe95d2f7ada2def4"
-"common/technology/technologies/30_society.txt" = "52c0b085e7429cf3961dfeacc4e1891056e2a2e80c740ce7ebcca6f61124e880"
-"common/treaty_articles/35_non_piracy_agreement.txt" = "3e1398d390881b9630c1a7731e5a49548eba4a5040d095b0727e22aad35af402"
-"events/french_pretenders_pulse.txt" = "ba4f039bc10c2bc7680a4014c3c8521b986e95aee560b88468873a1cf519bd39"
+"common/technology/technologies/20_military.txt" = "97edc59c3dbf387e0b40ac90a4c1ebede6653915480337dedf4c3a31ac91caec"
+"common/technology/technologies/30_society.txt" = "9e4a9ec6b2df956da8104339460b87f2d78b8ae038e394f9dfaebb74e44052ad"
+"common/treaty_articles/35_non_piracy_agreement.txt" = "e7c1cd95f280a570ae2f885182524993739b701bb03480a7d4738a1b3a9440f4"
+"events/french_pretenders_pulse.txt" = "13201057f4b66190c4870ae7a9dc635fbcfacf3867532b9410051187212fc84c"
 
 [domains]
 "diplomacy" = true
@@ -1715,84 +1715,6 @@ kind = "boolean"
 
 [[initial_values]]
 source = "common/buildings/01_industry.txt"
-field = "building_food_industry.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_textile_mill.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_furniture_manufactory.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_glassworks.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_paper_mill.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_chemical_plant.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_explosives_factory.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_synthetics_plant.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_steel_mill.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_motor_industry.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_shipyard.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_automotive_industry.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_electrics_industry.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/01_industry.txt"
 field = "building_arms_industry.ai_value"
 define_source = "common/defines/00_ai.txt"
 define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
@@ -1804,50 +1726,8 @@ define_source = "common/defines/00_ai.txt"
 define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
 
 [[initial_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_munition_plant.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/02_agro.txt"
-field = "building_rye_farm.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/02_agro.txt"
-field = "building_wheat_farm.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/02_agro.txt"
-field = "building_rice_farm.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/02_agro.txt"
-field = "building_maize_farm.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/02_agro.txt"
-field = "building_millet_farm.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
 source = "common/buildings/02_agro.txt"
 field = "building_livestock_ranch.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/02_agro.txt"
-field = "building_vineyard.ai_value"
 define_source = "common/defines/00_ai.txt"
 define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
 
@@ -1898,13 +1778,6 @@ source = "common/buildings/04_plantations.txt"
 field = "building_banana_plantation.ai_value"
 define_source = "common/defines/00_ai.txt"
 define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
-
-[[initial_values]]
-source = "common/buildings/07_government.txt"
-field = "building_government_administration.ai_value"
-define_source = "common/defines/00_ai.txt"
-define = "NAI.GOVERNMENT_BUILDING_BASE_VALUE"
-
 
 [readers.debt_ratio]
 engine = "scaled_debt"
@@ -3088,9 +2961,6 @@ kind = "number"
 unit = "price_above_base_ratio"
 path = [ "owner", "market", "mg:transportation" ]
 
-[[scalar_values]]
-source = "common/buildings/01_industry.txt"
-field = "building_tooling_workshop.ai_value"
 
 [[scalar_values]]
 source = "common/buildings/03_mines.txt"
@@ -21649,12 +21519,12 @@ domain = "political"
 field = "ai_strategy_default.negotiation_chance"
 contribution_group = "organized_negotiation_need"
 priority = 1001
-value = 1.1
-conditions = [ { fact = "candidate_ig_clout", op = ">=", value = 0.1 }, { fact = "candidate_ig_approval", op = "<", value = 0 }, { fact = "radical_share", op = ">=", value = 0.25 } ]
-why = "同一候选IG有组织且反对、国家激进压力共同证明谈判需求；合法性与无叛乱只支持已证政治空间升档，不作为财政健康总门"
-counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+value = 0.1
+conditions = [ { fact = "negotiation_amenability", op = ">", value = 0 }, { fact = "negotiation_amenability", op = "<=", value = 1 }, { fact = "radical_share", op = ">=", value = 0.25 } ]
+why = "有意迁移旧候选IG组织与反对目标：只在实际具名amenability处于政策接受窗口0<值<=1且本国激进比例至少25%时给予有限谈判倾向；合法性至少50且无叛乱只升档。不将amenability称为clout或approval，数值为原生fixed-point值的add而非百分比"
+counterexample = "amenability缺值、零、负或大于1（含零除raw4294967295）局部退出；窗口是产品政策而非原生全范围。两档同原因只取最大，不叠加；保留完整原生表达式和max1、默认与活跃策略相加、inclusive随机门、冷却、排名及命令验证，不宣称通过率或行为等价"
 source = "common/ai_strategies/00_default_strategy.txt"
-operation = "multiply"
+operation = "add"
 
 [[rules]]
 id = "lj08_negotiation_local_political_capacity"
@@ -21662,13 +21532,13 @@ domain = "political"
 field = "ai_strategy_default.negotiation_chance"
 contribution_group = "organized_negotiation_need"
 priority = 1002
-value = 1.25
-conditions = [ { fact = "candidate_ig_clout", op = ">=", value = 0.1 }, { fact = "candidate_ig_approval", op = "<", value = 0 }, { fact = "radical_share", op = ">=", value = 0.25 }, { fact = "legitimacy", op = ">=", value = 50 }, { fact = "insurrection", op = "=", value = false } ]
-why = "同一候选IG有组织且反对、国家激进压力共同证明谈判需求；合法性与无叛乱只支持已证政治空间升档，不作为财政健康总门"
-counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+value = 0.25
+conditions = [ { fact = "negotiation_amenability", op = ">", value = 0 }, { fact = "negotiation_amenability", op = "<=", value = 1 }, { fact = "radical_share", op = ">=", value = 0.25 }, { fact = "legitimacy", op = ">=", value = 50 }, { fact = "insurrection", op = "=", value = false } ]
+why = "有意迁移旧候选IG组织与反对目标：只在实际具名amenability处于政策接受窗口0<值<=1且本国激进比例至少25%时给予有限谈判倾向；合法性至少50且无叛乱只升档。不将amenability称为clout或approval，数值为原生fixed-point值的add而非百分比"
+counterexample = "amenability缺值、零、负或大于1（含零除raw4294967295）局部退出；窗口是产品政策而非原生全范围。两档同原因只取最大，不叠加；保留完整原生表达式和max1、默认与活跃策略相加、inclusive随机门、冷却、排名及命令验证，不宣称通过率或行为等价"
 auxiliary_facts = [ "legitimacy", "insurrection" ]
 source = "common/ai_strategies/00_default_strategy.txt"
-operation = "multiply"
+operation = "add"
 
 [readers.has_workplace_safety_institution]
 engine = "has_institution"
@@ -23833,3 +23703,9 @@ conditions = [
 ]
 why = "衣物真实市场需求与候选州失业形成独立有限就业吸纳机会；全部PMG最坏组合仍有正劳工岗位，不要求PM、储备、低价投入或全面健康"
 counterexample = "未知只退出本项；配方岗位不保证实际招聘、资格、工资或盈利，成本与原版资格执行继续保留"
+
+[readers.negotiation_amenability]
+engine = "scope:amenability"
+scope = "root"
+kind = "number"
+unit = "normalized_amenability_input"

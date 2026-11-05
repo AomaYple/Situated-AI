@@ -2,23 +2,23 @@
 schema = 1
 
 [sources]
-"common/diplomatic_actions/00_relations_actions.txt" = "da0af78d69d4d862b15f9181ef70f2df75e6fcfa94c99a8eb171a115ab13bd6d"
-"common/diplomatic_actions/03_violate_sovereignty.txt" = "7e34682aa4f54d39d046f4f2d32bb8cb76b48a9a78cee6375abd2ff66f39efc0"
+"common/diplomatic_actions/00_relations_actions.txt" = "71b29f5d0c160cb178cdf45fea2af6591449f0f99aefda67a0747aee59ed7104"
+"common/diplomatic_actions/03_violate_sovereignty.txt" = "82f1b0cf35891986e024b571cd0b08162ad665a703c5dff6423f38a9effb0a81"
 "common/diplomatic_actions/26_join_power_bloc.txt" = "a66a61d5ee5a86282cec8f09b38bd0e58f3f12ac170f080499b3126370a9c28e"
-"common/diplomatic_actions/32_subjects_raise_payments.txt" = "a8a6721398b8449cb2fd00ee3e4cd53034d24172552db8bf520a3a3e3212c38f"
+"common/diplomatic_actions/32_subjects_raise_payments.txt" = "7dc051b8613e44d3c5831e0bed185ee042fbd17db20e36f4b0f099e3ecc6a890"
 "common/diplomatic_actions/33_subjects_decrease_payments.txt" = "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df"
 "common/diplomatic_actions/34_subjects_exempt_from_service.txt" = "ccf74b2d6b2fa89aed685c441c4731e3ccdcec1aca13ea47990bcec543295335"
-"common/diplomatic_actions/38_subjects_increase_autonomy.txt" = "533689cd0cb50a664fc7c9b35a9b7ee125080aae27d12c60e2060fbdaa786a0c"
-"common/diplomatic_actions/39_subjects_support_regime.txt" = "f14b3d4606b5ba8bda5b0efd1b05bb632c6ca5c0f4527475864771b2e30d0c90"
-"common/diplomatic_actions/40_subjects_knowledge_sharing.txt" = "0e8d089a62180b570dfba7b1bb644238fa3dab6f936d12af9f21b5cedcc5afcd"
-"common/diplomatic_actions/41_subjects_evangelize.txt" = "7104ac353e71f57ab33f953c6c6ad38ebcee6eee2af6dd7946b7c253e126c88c"
+"common/diplomatic_actions/38_subjects_increase_autonomy.txt" = "78f5829b7d9b32ae93880b890bfb1b1a40d7606b670b29a9e60804c8ab5f989f"
+"common/diplomatic_actions/39_subjects_support_regime.txt" = "7fc411abe56a7068b47752d572b20a217e98c8155cc6d8447025ea64a3ea74d7"
+"common/diplomatic_actions/40_subjects_knowledge_sharing.txt" = "bbbb6e12e9dea1f48a0e3226b895c3854554b8ed1435ae071f17b2e72a3a102e"
+"common/diplomatic_actions/41_subjects_evangelize.txt" = "f6f34c2169b69e35a16370edc56fc2c5d52a49f9f1c8bb510f1f85bb4bc3133a"
 "common/diplomatic_actions/52_nationalism_actions.txt" = "6609ecafba7c840685c9716b8a1d414a2043c06ed1f6e79327679b13d9cce9ed"
 "common/diplomatic_actions/diplomatic_action.md" = "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c"
-"common/on_actions/00_code_on_actions.txt" = "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46"
+"common/on_actions/00_code_on_actions.txt" = "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e"
 "common/script_values/building_values.txt" = "ad61e13b0762f6c174c091c76f406d4bca1d27fddea94b185eba3139dbcc6cf0"
-"events/iberia_events/negotiation_events.txt" = "57f65c934f27c60dd3439fa6868c4adb4edea56627384dbd7f3997672571fe49"
-"common/trigger_localization/00_trigger_localization.txt" = "8eaba9c4ae1e025de16ddc3384e53459182f0de88aabf05937b8ac421e397817"
-"localization/english/triggers_l_english.yml" = "27b0e3eb719daa61e103b87716a932200eeab36b7e9995b6677f2ff56bf5cabe"
+"events/iberia_events/negotiation_events.txt" = "f738d3fe8d5d828460033d4d4b6b39437021a7f76dc80a2f9e48620a4cccc6ee"
+"common/trigger_localization/00_trigger_localization.txt" = "1f2de59b73a1649f5ba37e1ab0824c5b826acf7e538e84d941a7dc18ab88a070"
+"localization/english/triggers_l_english.yml" = "26ef51fe5dbab2e5009191087329b54bef84fdf28e68e4c2dc0f0e670b1301d6"
 
 [tuning]
 autonomy_need = 1.18

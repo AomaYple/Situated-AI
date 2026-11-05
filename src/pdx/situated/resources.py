@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import tomllib
 from collections import Counter
 from pathlib import Path
@@ -150,84 +152,98 @@ def check(files: Mapping[str, str], model: SituatedModel) -> dict[str, object]:
     }
 
 
-def verify_inherited_writes(files: Mapping[str, str]) -> None:
-    """Inherited state and world scans are exact operations, never spare slots."""
-    from pdx import (  # noqa: PLC0415
-        canal_opportunities,
-        event_opportunities,
-        famine_opportunities,
-        native_action_opportunities,
-        native_button_opportunities,
-        native_decision_opportunities,
-        regional_resource_opportunities,
-    )
+_NATIVE_SOURCE = SOURCE.parents[2] / "research/situated/victoria3-1.15.0-production-resources.json"
+_NATIVE_SHA256 = "b7ca11e4210306601e6e86bfc363987985104b95b2bbc06e0ed144ebc4b72da0"
+_NATIVE_SOURCES_SHA256 = "efbe20cb38a7d4531e9f2cd60c4e091490d33c98f9b319cb7620d1c65199f892"
 
-    inherited = {
-        canal_opportunities.SOURCE: canal_opportunities.frozen_inputs()[canal_opportunities.SOURCE],
-        event_opportunities.PLAGUE: event_opportunities.frozen_inputs()[event_opportunities.PLAGUE],
-        event_opportunities.DISASTERS: event_opportunities.frozen_inputs()[
-            event_opportunities.DISASTERS
-        ],
-        event_opportunities.SOL: event_opportunities.frozen_inputs()[event_opportunities.SOL],
-        event_opportunities.HOKKAIDO: event_opportunities.frozen_inputs()[
-            event_opportunities.HOKKAIDO
-        ],
-        famine_opportunities.SOURCE: famine_opportunities.frozen_inputs()[
-            famine_opportunities.SOURCE
-        ],
-        native_decision_opportunities.SOURCE: native_decision_opportunities.frozen_inputs()[
-            native_decision_opportunities.SOURCE
-        ],
-    }
 
-    inherited[regional_resource_opportunities.SOURCE] = (
-        regional_resource_opportunities.frozen_inputs()[regional_resource_opportunities.SOURCE]
-    )
-    import json  # noqa: PLC0415
-
-    action_inputs = json.loads(native_action_opportunities.FROZEN.read_bytes())["texts"]
-    for source in (
-        "common/diplomatic_actions/34_subjects_exempt_from_service.txt",
-        "common/diplomatic_actions/03_violate_sovereignty.txt",
-        "common/diplomatic_actions/32_subjects_raise_payments.txt",
+def native_baseline() -> dict[str, Any]:
+    """Pinned current sources authorize only their exact inherited operations."""
+    raw = _NATIVE_SOURCE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _NATIVE_SHA256:
+        raise ValueError("当前原版资源基线漂移")
+    data: dict[str, Any] = json.loads(raw)
+    if (
+        set(data)
+        != {
+            "schema",
+            "evidence",
+            "version",
+            "candidate_files_sha256",
+            "production_inputs_sha256",
+            "metrics",
+            "source_hashes",
+            "inputs",
+            "inherited_totals",
+        }
+        or data["schema"] != 1
+        or data["version"] != "1.15.0"
+        or data["evidence"] != "static_exact_current_native_operations_not_runtime"
+        or data["inherited_totals"]
+        != {"source_files": 17, "persistent_write_sites": 113, "world_country_scan_sites": 14}
+        or set(data["metrics"]) != METRICS
+        or hashlib.sha256(
+            json.dumps(data["source_hashes"], sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        != _NATIVE_SOURCES_SHA256
+        or set(data["inputs"]) != set(data["source_hashes"])
+        or any(
+            hashlib.sha256(text.encode()).hexdigest() != data["source_hashes"][source]
+            for source, text in data["inputs"].items()
+        )
     ):
-        inherited[source] = action_inputs[source]
-    button_inputs = native_button_opportunities.frozen_inputs()
-    inherited.update(
-        {spec.source: button_inputs[spec.source] for spec in native_button_opportunities.SPECS}
-    )
+        raise ValueError("当前原版资源基线来源或语义合同无效")
+    return data
 
-    def shape(node: Node) -> tuple:
+
+def _operations(text: str) -> Counter:
+    def shape(node: Node | None) -> tuple | None:
+        if node is None:
+            return None
         if isinstance(node, Assignment):
-            return (node.key, node.op, node.prefix, shape(node.value) if node.value else None)
+            return (node.key, node.op, node.prefix, shape(node.value))
         if isinstance(node, Block):
             return tuple(shape(item) for item in node.items)
         return (node.text, node.quoted)
 
-    def operations(text: str) -> Counter:
-        parsed = parse_text(text)
-        if parsed.errors:
-            raise ValueError("继承原版变量写入的来源解析失败")
-        result: Counter = Counter()
-        stack: list[tuple[Node, tuple]] = [(parsed.root, ())]
-        while stack:
-            node, path = stack.pop()
-            if isinstance(node, Assignment):
-                if node.key in PERSISTENT_WRITES | WORLD_SCANS:
-                    result[(path, shape(node))] += 1
-                if node.value is not None:
-                    stack.append((node.value, path))
-            elif isinstance(node, Block):
-                occurrences: Counter[str] = Counter()
-                for item in node.items:
-                    if isinstance(item, Assignment):
-                        occurrences[item.key] += 1
-                        identity = (item.key, item.op, item.prefix, occurrences[item.key])
-                        stack.append((item, (*path, identity)))
-        return result
+    parsed = parse_text(text)
+    if parsed.errors:
+        raise ValueError("继承原版变量写入的来源解析失败")
+    result: Counter = Counter()
+    stack: list[tuple[Node, tuple]] = [(parsed.root, ())]
+    while stack:
+        node, path = stack.pop()
+        if isinstance(node, Assignment):
+            if node.key in PERSISTENT_WRITES | WORLD_SCANS:
+                result[(path, shape(node))] += 1
+            if node.value is not None:
+                stack.append((node.value, path))
+        elif isinstance(node, Block):
+            occurrences: Counter[str] = Counter()
+            for index, item in enumerate(node.items):
+                if isinstance(item, Assignment):
+                    occurrences[item.key] += 1
+                    identity = (item.key, item.op, item.prefix, occurrences[item.key])
+                    stack.append((item, (*path, identity)))
+                elif isinstance(item, Block):
+                    # Anonymous blocks retain their exact sibling identity too.
+                    stack.append((item, (*path, ("@anonymous", index))))
+    return result
 
-    for source, native in inherited.items():
-        if source in files and operations(files[source]) != operations(native):
+
+def verify_inherited_writes(files: Mapping[str, str]) -> None:
+    """Every supplied script keeps exact native operations or has none.
+
+    The 17 current native sources are finite identities, never spare slots.
+    Unknown and Mod-owned scripts have no inherited write or world-scan rights.
+    """
+    inherited = native_baseline()["inputs"]
+    for source, text in files.items():
+        if not source.endswith(".txt") or not source.startswith(("common/", "events/")):
+            continue
+        actual = _operations(text)
+        expected = _operations(inherited[source]) if source in inherited else Counter()
+        if actual != expected:
             raise ValueError(
                 f"继承变量或世界扫描身份、值或父路径改变：{source}；禁止借用原版额度新增状态或扫描"
             )

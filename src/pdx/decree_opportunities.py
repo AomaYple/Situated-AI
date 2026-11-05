@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from .situated.decision_ir import EvaluationContext
 
 PARAMETERS = config.REPO / "mod/decisions/decree_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/decree-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/decree-opportunities.json"
 SOURCE = "common/decrees/00_decree.txt"
 FINANCE = "events/brazil/amazonas.txt"
 AUTHORITY = "common/tutorial_lessons/00_tutorial_lessons_promote_ig.txt"

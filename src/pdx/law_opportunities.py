@@ -41,6 +41,7 @@ AUTHORITY_EFFECTS = {
         "law_protected_speech": 0,
     },
     "common/laws/00_citizenship.txt": {
+        "law_official_nationality": 100,
         "law_subjecthood": 100,  # Current origin only: no native score field.
         "law_ethnostate": 200,
         "law_national_supremacy": 150,
@@ -50,6 +51,7 @@ AUTHORITY_EFFECTS = {
     },
     "common/laws/00_church_and_state.txt": {
         "law_state_religion": 200,
+        "law_caesaropapism": 200,
         "law_millet_system": 200,
         "law_people_of_the_book": 200,
         "law_freedom_of_conscience": 100,
@@ -98,8 +100,8 @@ def load() -> dict[str, Any]:
         and 0 < tuning["administration_change"] <= 10
     ):
         raise ValueError("具体法律机会参数越界")
-    if len(data["sources"]) != 10 or len(data["candidates"]) != 56:
-        raise ValueError("具体法律机会必须保留原52候选并覆盖完整4项言论法律")
+    if len(data["sources"]) != 10 or len(data["candidates"]) != 58:
+        raise ValueError("具体法律机会必须保留原56候选并覆盖当前新增政教和国籍变体")
     if {law for law, name in data["candidates"].items() if name == POLICING_SOURCE} != set(
         POLICING_EFFECTS
     ):

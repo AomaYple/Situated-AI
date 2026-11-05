@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from pdx import country_state, decision_adapters, decision_intents, decision_report, decision_rules
+from pdx.situated import compiler
 
 
 @pytest.fixture(scope="module")
@@ -167,15 +168,75 @@ def test_offline_metadata_reuses_the_shared_rule_contract(
     strategy = decision_intents.load()
     information = decision_rules.load(strategy=strategy)
     adapters = decision_adapters.load(strategy=strategy)
+    compiled, compiled_contract = compiler.compile_sources(information, adapters)
+    policies = dict(compiled)
 
-    assert engineering_metadata["decision_rules"] == decision_rules.contract(information)
+    assert engineering_metadata["decision_rules"] == decision_rules.contract(
+        policies["mod/decisions/information.toml"]
+    )
     assert engineering_metadata["consumer_adapters"]["consumers"] == [
         {
             "source": source,
-            **decision_rules.contract(rules, owner="consumer_adapters", source=source),
+            **decision_rules.contract(policies[source], owner="consumer_adapters", source=source),
         }
-        for source, rules in adapters.policies
+        for source, _rules in adapters.policies
     ]
+    assert engineering_metadata["situated_actions"]["compiled_sources"] == compiled_contract
+
+
+def test_existing_relation_readers_remain_separate_from_condition_inputs(engineering_metadata):
+    report = decision_report.build(engineering_metadata)
+    (binding,) = report["rule_relation_bindings"]
+    assert (binding["definition"], binding["cause_id"], binding["amount"]) == (
+        "remaining_industrial_construction_need",
+        "school_knowledge_foundation",
+        0.025,
+    )
+    field = next(
+        row
+        for row in report["consumer_fields"]
+        if row["owner"] == "information_rules" and row["field"] == "wanted_construction_output"
+    )
+    candidate = next(row for row in field["candidates"] if row["id"] == binding["definition"])
+    assert candidate["relation_bindings"] == [binding]
+    assert "current_public_schools" not in {row["key"] for row in candidate["input_facts"]}
+    extra = next(
+        row
+        for row in report["facts"]
+        if row["module"] == "information_rules" and row["key"] == "current_public_schools"
+    )
+    assert extra["engine"] == "has_law_or_variant"
+    assert extra["used_by"]
+
+
+@pytest.mark.parametrize(
+    "mutation", ["binding", "extra_leaf", "disconnected", "reader", "extra_reader"]
+)
+def test_report_rejects_forged_or_disconnected_relation_dependencies(
+    engineering_metadata, mutation
+):
+    broken = json.loads(json.dumps(engineering_metadata))
+    reports = broken["situated_actions"]["compiled_sources"]["reports"]
+    source = next(row for row in reports if row["rule_relations"])
+    binding = source["rule_relations"][0]
+    if mutation == "binding":
+        binding["definition"] = "another_consumer"
+    elif mutation == "extra_leaf":
+        binding["readers"].append(binding["readers"][0].copy())
+    elif mutation == "disconnected":
+        source["rule_relations"] = []
+    elif mutation == "reader":
+        next(
+            row
+            for row in broken["decision_rules"]["readers"]
+            if row["key"] == "current_public_schools"
+        )["argument"] = "law_type:law_private_schools"
+    else:
+        forged = broken["decision_rules"]["readers"][0].copy()
+        forged["key"] = "disconnected_relation_decoy"
+        broken["decision_rules"]["readers"].append(forged)
+    with pytest.raises(ValueError, match=r"规则关系|未使用或未连接"):
+        decision_report.build(broken)
 
 
 def test_decision_report_rejects_missing_rationale(engineering_metadata: dict[str, Any]) -> None:
@@ -469,7 +530,7 @@ def test_real_trade_and_research_consumers_use_their_actual_inputs(
     assert trade["higher_priority_rules"]
     assert all(rule["priority"] > trade["priority"] for rule in trade["higher_priority_rules"])
     assert all(rule["conditions"] and rule["unknown"] for rule in trade["higher_priority_rules"])
-    assert trade["unknown"] == "preserve_vanilla_and_block_lower_priority_if_not_known_false"
+    assert trade["unknown"] == "unknown_local_variant_skipped_independent_groups_continue"
 
 
 def test_provenance_has_stateless_coordination_and_native_war_memory(

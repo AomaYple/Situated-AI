@@ -44,7 +44,7 @@ def test_full_native_documentation_roles_optional_goods_and_actual_effects(input
     assert row["field"] == "no_tariffs.ai.inherent_accept_score"
     assert row["treaty_scope"] == "unavailable_not_consumed"
     assert "unknown_finance=worst_cost" in row["unknown_policy"]
-    assert f"{accept.DOC}:558" in row["scope_evidence"]
+    assert f"{accept.DOC}:585" in row["scope_evidence"]
     assert f"{accept.SOURCE}:159" in row["scope_evidence"]
 
 

@@ -23,13 +23,14 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/import_blockade_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/import-blockade-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/import-blockade-opportunities.json"
 TRADE = "events/trade_route_events.txt"
 OPIUM = "common/journal_entries/00_opium.txt"
 ALERTS = "common/alert_types/00_alert_types.txt"
 PULSE = "common/on_actions/00_code_on_actions.txt"
 GOODS = "common/goods/00_goods.txt"
-SOURCES = frozenset({TRADE, OPIUM, ALERTS, PULSE, GOODS})
+PULSE_EFFECTS = "common/scripted_effects/00_victoria_on_actions_effects.txt"
+SOURCES = frozenset({TRADE, OPIUM, ALERTS, PULSE, PULSE_EFFECTS, GOODS})
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
 FIELD = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
 QUERY_PARAMETER = "import_blockade_query"
@@ -229,7 +230,10 @@ def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
         raise ValueError("本国市场总依赖路径漂移")
     references.append(f"{TRADE}:{line}")
     imports = _child(
-        _child(_child(_child(roots[OPIUM], "je_opium"), "complete"), "any_market"), "mg:opium"
+        _child(
+            _child(_child(_child(roots[OPIUM], "je_opium"), "outcome"), "trigger"), "any_market"
+        ),
+        "mg:opium",
     )
     line = _scalar(imports, "market_goods_imports", ">=", "200")
     references.append(f"{OPIUM}:{line}")
@@ -248,8 +252,17 @@ def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
         ("num_world_market_hub_trade_center_levels", ">=", "100"),
         ("blockade_level", ">=", "1"),
     )
-    line = _find_shape(pulse, "any_scope_state", expected)
-    references.append(f"{PULSE}:{line}")
+    _find_shape(
+        pulse,
+        "if",
+        (
+            ("limit", "=", (("is_player", "=", "yes"),)),
+            ("on_monthly_pulse_country_achievement_variable_effects", "=", "yes"),
+        ),
+    )
+    effect = _child(roots[PULSE_EFFECTS], "on_monthly_pulse_country_achievement_variable_effects")
+    line = _find_shape(effect, "any_scope_state", expected)
+    references.append(f"{PULSE_EFFECTS}:{line}")
     # An own-state collection occurs under the country event, independently of enemies.
     own = _child(_child(_child(trade, "trade_route_events.1"), "trigger"), "NOT")
     if _shape(own) != (

@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 SCHEMA = 1
-LOCKED_VERSION = "1.14.5"
+LOCKED_VERSION = "1.15.0"
 # 冻结旧集合的迁移分母，绝不作为本模块原版消费者分母。
 MIGRATION_DENOMINATOR = 1401
 CAPABILITIES = ("direct", "indirect", "observation", "unexposed", "pending")
@@ -73,29 +73,29 @@ _INFRASTRUCTURE_DIRS = frozenset({"scripted_effects", "on_actions", "trigger_loc
 # These declarations establish goods, unit, law and observation arguments; they
 # never enter consumer discovery merely because a Mod reader uses them.
 _PARAMETER_EVIDENCE_HASHES = {
-    "events/brazil/amazonas.txt": "1841eee77acbbea074ca4d9506cce0b3aa391f08bbda21394610af287e9943d2",
+    "events/brazil/amazonas.txt": "208b4b76dd1776b951c9ee3b018de73c77e74d86916c894af072041e2d00b7ca",
     "common/tutorial_lessons/00_tutorial_lessons_promote_ig.txt": "554a34f763aad704582a610450c88f03a009951724c4088f409111543163cd55",
-    "common/achievements/base_achievements.txt": "dc5a50c8313fffbe50d68f0a6b8c9b9d05f1794f46725d23f2c0e67f7369799f",
-    "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
-    "common/achievements/ip2_pivot_of_empire_achievements.txt": "9ce0330dab546239369a8b916b5ee8fc85ad6de28d5ec5cc60c47c798d271de8",
+    "common/achievements/base_achievements.txt": "276ed2057159ccc2c2b6ebe874e4e97a935300b9707d9b110e553f3c9c68602e",
+    "common/achievements/ep1_sphere_of_influence_achievements.txt": "323263f0483c14145c79b2a054bc7dd04aee5783731e5204604861d602cd4969",
+    "common/achievements/ip2_pivot_of_empire_achievements.txt": "bf84a18412b573a3e141b42c192de3c4bfaa203bd3e95f843abcbcd81c79aba4",
     "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
-    "common/alert_types/00_alert_types.txt": "14ff4bb983f84c17fc2825d79ce93620bc68cde7284f8d1fa2dbba6845420aea",
+    "common/alert_types/00_alert_types.txt": "ca60cb0f7425744d2695560d905f4ec58bbeb9dd3e6f1aedfcc891ceb23a55e3",
     "common/combat_unit_types/00_land_combat_unit_types.txt": "ad3ed3d68533cbe6ef05ce014cd88b920b58dc4a42b3e566077cdccee072d86c",
-    "common/goods/00_goods.txt": "e5d8ed5e5deaf3d2c7193bc6b749555c63c78631aecaf87784a2e34051ddfa48",
-    "common/ideologies/00_ig_ideologies.txt": "4c8bc020d2d1060795e5a615b850736b731a31193862399363ec2e1829639b05",
-    "common/ideologies/01_character_ideologies.txt": "ee996f042b387707e5bc305c32bd7e83d9b706aec784cb4e4f35ade0dae98bee",
-    "common/journal_entries/00_urbanization.txt": "0be06294448f31679d2b14280b4e6c1991f0d2fa34f97ccc0452068c7cdc5ee6",
-    "common/objective_subgoals/00_subgoals_tutorial.txt": "ca2052a10b208fb311e219b9ec2589875b4b0876cc86d92c5728cabaaba080ed",
-    "common/political_movements/00_ideological_movements.txt": "834a1b97f09c65b9b64eafdaffe4ee68965aaac262066140793a482eefd23a6b",
-    "common/political_movements/05_slave_revolt_movements.txt": "903ca4c58fcbc0a4eded9e0e710ffbf55b27c60fa80ec56d36dca3b4045b0918",
-    "common/pop_types/laborers.txt": "90e109f061ca04c308d3d60cf6ba6d91cbe3769759ff28f0a9a0bd34e169a2d5",
-    "common/pop_types/machinists.txt": "e0ddad8032fd6be5d0eb77533cf9f711a5baf5fe275d20819bc5ba8e3f6785ee",
+    "common/goods/00_goods.txt": "5ef25e76d498cd4a8603732712a8248e03cb782d9e41bb95daba6dfd87feb0ab",
+    "common/ideologies/00_ig_ideologies.txt": "c2ef71fe0b3f880e84be534bcaee21335902a23747105365544a8c210c2f3e00",
+    "common/ideologies/01_character_ideologies.txt": "e11c0062b3a634e91ad177480c08e84b16aaa974519b17db575420d20f445c09",
+    "common/journal_entries/00_urbanization.txt": "dff544be003ef9c6283132b38696bf2b765f170aa0a06771a6ce4afc820fd622",
+    "common/objective_subgoals/00_subgoals_tutorial.txt": "68267cce9b75ec0a54b0b2d1d5aa08e20966a7b313f091d54484d8490d38ed36",
+    "common/political_movements/00_ideological_movements.txt": "6c1c4ae0a9b3d3f65165093fc3f52b32beb20cfebfd955e797053de8db119d8c",
+    "common/political_movements/05_slave_revolt_movements.txt": "69114fd9f15b4861239e665a80a70ffdc2a2183566b2e55ab64d1bee0554dcd4",
+    "common/pop_types/laborers.txt": "3b136e31556cd483ea213c82eef47c93f9774490775870622331f6139160d9f2",
+    "common/pop_types/machinists.txt": "5960f8b6cc15e67b1305bf5d0d74368d2004572099b87ce4c6c827818497c39f",
     "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
     "common/religions/religion.txt": "96ee8ddca57de6957b1a1501f91896e37a086319468312952a1843e5892d1814",
-    "events/french_pretenders_pulse.txt": "3ed2ebf66cef1b0159ae352177cebd0a8d5c6e6de1bbab8732ef6a17e82d94bb",
-    "events/law_events/children_rights_events.txt": "13414a1a5e817c98a2f2e8244c9ae997bf9d89cf96d1d68b3bd9244bcfaf50b8",
-    "events/law_events/state_atheism.txt": "156c7e20ba3326e8aacb0bc3c91acdb9b6bf84988a15d9357467e707ee9e30ec",
-    "events/tech_events/trench_warfare.txt": "d859e625e0843d5d56d515b647e7833a0cb5eb3e5d85b233d4d1be697be1a93e",
+    "events/french_pretenders_pulse.txt": "b1d254844b314f0c7f171bd61527b3775c5e97807896f49a6dfcf34ef5720e6b",
+    "events/law_events/children_rights_events.txt": "bdb5ea9473b80f219f95b339a3a86cd59eb19bc57b03a21aea6d8f17a0383a49",
+    "events/law_events/state_atheism.txt": "8fbd174607585f541ffa30a5ad9233aa148fbb499de63d227b38312bb7249d44",
+    "events/tech_events/trench_warfare.txt": "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d",
 }
 _MAP_FIELDS = frozenset(
     {
@@ -2028,7 +2028,7 @@ def _scope(
         if (
             raw is None
             or hashlib.sha256(normalized_text(raw.decode("utf-8-sig")).encode()).hexdigest()
-            != "c0d0ca00271ae9a69a1119122e3392e74040f88c7097ddc5e357654d7a40e883"
+            != "064009967bc866782695ed8f9f4ee2ddc9d97d6686584abf07c43c8091564aa4"
         ):
             return _Scope()
         # Full source identity plus explicit field-local state/AI comments;

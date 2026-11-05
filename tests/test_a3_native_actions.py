@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import re
 import tomllib
 from dataclasses import replace
@@ -189,8 +190,14 @@ def test_catalog_and_complete_source_contract_do_not_authorize_other_diplomatic_
     frozen = actions.load_baseline()
     actions.verify_inputs(frozen["texts"])
     catalog = actions.consumer_catalog()
-    assert set(catalog) == {*LEGACY_CANDIDATES, "da_knowledge_sharing"}
-    assert len(derived["rules"]) == 9
+    assert set(catalog) == {
+        *LEGACY_CANDIDATES,
+        "da_knowledge_sharing",
+        "exempt_from_service",
+        "violate_sovereignty",
+        "raise_payments",
+    }
+    assert len(derived["rules"]) == 16
     assert set(derived["readers"]) == {
         "liberty",
         "war_defeat",
@@ -198,6 +205,10 @@ def test_catalog_and_complete_source_contract_do_not_authorize_other_diplomatic_
         "net_surplus",
         "knowledge_donor_spread",
         "knowledge_donor_population",
+        "war",
+        "cost_country_population",
+        "raise_target_liberty",
+        "raise_target_population",
     }
     assert all(row["scope_evidence_line"] == 118 for row in catalog.values())
     assert all(row["score_evidence_line"] == 140 for row in catalog.values())
@@ -207,8 +218,13 @@ def test_catalog_and_complete_source_contract_do_not_authorize_other_diplomatic_
     assert all(
         row["native_unit"] == "score" and row["operation"] == "multiply" for row in catalog.values()
     )
-    assert all(row["target_binding"] == "unsupported_not_consumed" for row in catalog.values())
-    assert len({row["field"] for row in derived["rules"]}) == 4
+    assert catalog["raise_payments"]["target_binding"] == "target_country_exact_raise_parent"
+    assert all(
+        row["target_binding"] == "unsupported_not_consumed"
+        for identity, row in catalog.items()
+        if identity != "raise_payments"
+    )
+    assert len({row["field"] for row in derived["rules"]}) == 7
     # No loans boolean means neither ordinary low-debt borrowing nor an
     # unmeasured principal transfer is invented as an additional penalty.
     assert "loans" not in derived["readers"]
@@ -247,12 +263,22 @@ def test_complete_input_hash_drift_rejected(source):
         (actions.README, actions.DOCUMENTATION["actor"], "# AI country scope is unknown"),
     ],
 )
-def test_resigned_hash_cannot_hide_wrong_role_scope_or_effect(monkeypatch, source, old, new):
-    inputs = copy.deepcopy(actions.load_baseline()["texts"])
+def test_resigned_hash_cannot_hide_wrong_role_scope_or_effect(
+    monkeypatch, tmp_path, source, old, new
+):
+    frozen = copy.deepcopy(actions.load_baseline())
+    inputs = frozen["texts"]
     assert old in inputs[source]
     inputs[source] = inputs[source].replace(old, new)
     config = copy.deepcopy(actions.load())
     config["sources"][source] = hashlib.sha256(inputs[source].encode()).hexdigest()
+    frozen["sources"] = config["sources"]
+    frozen["raw_sources"][source] = config["sources"][source]
+    raw = json.dumps(frozen).encode()
+    path = tmp_path / "resigned-current.json"
+    path.write_bytes(raw)
+    monkeypatch.setattr(actions, "FROZEN", path)
+    monkeypatch.setattr(actions, "FROZEN_SHA256", hashlib.sha256(raw).hexdigest())
     monkeypatch.setattr(actions, "load", lambda: config)
     with pytest.raises(ValueError, match="漂移"):
         actions.verify_inputs(inputs)

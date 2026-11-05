@@ -2,10 +2,13 @@
 schema = 1
 
 [sources]
-"common/laws/00_internal_security.txt" = "4b74ea0b9172813596b903507cda213133f08e43215331750be364db37b719c1"
-"common/scripted_triggers/00_ai_triggers.txt" = "d8da988122619e26e16ce17e8ac196337cdb8d1592f357c45ded4f8cb85d3698"
+"common/laws/00_internal_security.txt" = "d1faa617a0cd77c0ae0facac3c576b4019fe3b04d8e1e2b370852b1da91ac31e"
+"common/scripted_triggers/00_ai_triggers.txt" = "ffca2b8deef024a9d2703d1297a0bea3a3e931a0b1710e2daea74c48a9dd248b"
 
 [candidates]
+law_third_section = "common/laws/00_internal_security.txt"
+law_okhrana = "common/laws/00_internal_security.txt"
+law_extraordinary_commission = "common/laws/00_internal_security.txt"
 law_no_home_affairs = "common/laws/00_internal_security.txt"
 law_national_guard = "common/laws/00_internal_security.txt"
 law_secret_police = "common/laws/00_internal_security.txt"

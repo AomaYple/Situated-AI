@@ -244,6 +244,7 @@ law_womens_suffrage = {
 		law_universal_suffrage
 		law_single_party_state
 		law_anarchy
+		law_labour_suffrage
 	}
 
 	on_enact = {

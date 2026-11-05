@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from dataclasses import replace
 
@@ -36,7 +38,7 @@ def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
     plague = resources.pdx_metrics(event_opportunities.frozen_inputs()[event_opportunities.PLAGUE])
     assert plague["persistent_write_sites"] == 23
     assert sum(plague["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 9
-    assert data["limits"]["world_country_scan_sites"] == 1 + 9 + 1
+    assert data["limits"]["world_country_scan_sites"] == 1 + 9 + 1 + 3
     famine = resources.pdx_metrics(
         famine_opportunities.frozen_inputs()[famine_opportunities.SOURCE]
     )
@@ -44,9 +46,9 @@ def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
     disaster = resources.pdx_metrics(
         event_opportunities.frozen_inputs()[event_opportunities.DISASTERS]
     )
-    assert disaster["persistent_write_sites"] == 16
+    assert disaster["persistent_write_sites"] == 14
     assert disaster["persistent_write_keys"] == {
-        "set_variable": 11,
+        "set_variable": 9,
         "change_global_variable": 3,
         "set_global_variable": 2,
     }
@@ -61,8 +63,56 @@ def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
     assert (
         sum(native_decisions["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
     )
-    assert data["limits"]["persistent_write_sites"] == 31 + 6 + 23 + 3 + 16 + 3 + 7 + 10 + 16
+    assert data["limits"]["persistent_write_sites"] == 113
     assert data["limits"]["reader_path_length"] == 3
+
+
+@pytest.mark.parametrize("source", sorted(resources.native_baseline()["inputs"]))
+def test_all_current_native_operation_sources_reject_add_replace_and_move(source):
+    native = resources.native_baseline()["inputs"][source]
+    resources.verify_inherited_writes({source: native})
+    for changed in (
+        native + "\nany_country = { always = yes }\n",
+        native + "\nset_variable = forged\n",
+        "forged = { " + native + " }",
+    ):
+        with pytest.raises(ValueError, match="继承变量或世界扫描"):
+            resources.verify_inherited_writes({source: changed})
+    replaced, count = re.subn(
+        r"\b(set_variable|change_variable|remove_variable|clamp_variable|set_global_variable|change_global_variable|remove_global_variable|any_country|every_country|random_country|ordered_country)(\s*=)",
+        r"forged_operation\2",
+        native,
+        count=1,
+    )
+    assert count == 1
+    with pytest.raises(ValueError, match="继承变量或世界扫描"):
+        resources.verify_inherited_writes({source: replaced})
+
+
+@pytest.mark.parametrize(
+    "source", ["common/scripted_values/sitai_values.txt", "events/unknown.txt"]
+)
+@pytest.mark.parametrize("operation", ["set_variable = forged", "any_country = { always = yes }"])
+def test_unknown_and_mod_owned_sources_cannot_borrow_native_allowances(source, operation):
+    resources.verify_inherited_writes({source: "a = { value = 1 }"})
+    with pytest.raises(ValueError, match="继承变量或世界扫描"):
+        resources.verify_inherited_writes({source: "a = { " + operation + " }"})
+
+
+def test_current_operation_source_corruption_cannot_be_authorized_by_outer_repin(
+    tmp_path, monkeypatch
+):
+    data = resources.native_baseline()
+    source = "common/laws/01_economic_system.txt"
+    data["inputs"][source] = data["inputs"][source].replace("every_country", "any_country", 1)
+    data["source_hashes"][source] = hashlib.sha256(data["inputs"][source].encode()).hexdigest()
+    raw = json.dumps(data).encode()
+    path = tmp_path / "repinned.json"
+    path.write_bytes(raw)
+    monkeypatch.setattr(resources, "_NATIVE_SOURCE", path)
+    monkeypatch.setattr(resources, "_NATIVE_SHA256", hashlib.sha256(raw).hexdigest())
+    with pytest.raises(ValueError, match="来源或语义合同"):
+        resources.native_baseline()
 
 
 def test_missing_counts_or_invalid_numbers_cannot_pass():

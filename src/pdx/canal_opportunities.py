@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/canal_opportunities.toml"
-FROZEN = config.REPO / "research/vanilla-ai/1.14.5/canal-opportunities.json"
+FROZEN = config.REPO / "research/vanilla-ai/1.15.0/canal-opportunities.json"
 SOURCE = "common/decisions/canal_decisions.txt"
 HELP = "common/decisions/000_decisions_help.txt"
 MODIFIERS = "common/static_modifiers/02_event_modifiers.txt"

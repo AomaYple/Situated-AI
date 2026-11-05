@@ -57,10 +57,14 @@ law_no_home_affairs = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_secret_police NOT = { has_law_or_variant = law_type:law_no_home_affairs } NOT = { has_law_or_variant = law_type:law_shinsengumi } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
 				# internal_security_law_no_home_affairs_from_law_national_guard_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_no_home_affairs } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
+				# internal_security_law_no_home_affairs_from_law_extraordinary_commission_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_no_home_affairs } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
 				# internal_security_law_no_home_affairs_from_law_secret_police_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_secret_police NOT = { has_law_or_variant = law_type:law_no_home_affairs } NOT = { has_law_or_variant = law_type:law_shinsengumi } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
 				# internal_security_law_no_home_affairs_from_law_national_guard_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_no_home_affairs } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
+				# internal_security_law_no_home_affairs_from_law_extraordinary_commission_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_no_home_affairs } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
 			}
 			min = -38
 			max = 10
@@ -97,9 +101,13 @@ law_national_guard = {
 
 	# Don't return to national guard we have something more advanced
 	ai_will_do = {
-		NOR = {
-			has_law_or_variant = law_type:law_secret_police
-			has_law_or_variant = law_type:law_guaranteed_liberties
+		OR = {
+			has_journal_entry = je_tp_tsar_crown_of_perfection
+			has_journal_entry = je_tp_tsar_great_reform
+			NOR = {
+				has_law_or_variant = law_type:law_secret_police
+				has_law_or_variant = law_type:law_guaranteed_liberties
+			}
 		}
 	}
 
@@ -116,6 +124,11 @@ law_national_guard = {
 				has_journal_entry = je_hawaii
 			}
 			add = 10000
+		}
+
+		if = {
+			limit = { congress_poland_ai_rejects_law = yes }
+			add = -750
 		}
 
 		# SITAI BEGIN information:law_national_guard.ai_enact_weight_modifier
@@ -169,8 +182,12 @@ law_national_guard = {
 			add = { value = 0
 				# internal_security_law_national_guard_from_law_secret_police_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_secret_police NOT = { has_law_or_variant = law_type:law_national_guard } NOT = { has_law_or_variant = law_type:law_shinsengumi } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
+				# internal_security_law_national_guard_from_law_extraordinary_commission_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_national_guard } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
 				# internal_security_law_national_guard_from_law_secret_police_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_secret_police NOT = { has_law_or_variant = law_type:law_national_guard } NOT = { has_law_or_variant = law_type:law_shinsengumi } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
+				# internal_security_law_national_guard_from_law_extraordinary_commission_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_national_guard } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
 			}
 			# GROUP program_6b332265818376bc_law_security_new_institution_administration_negative
 			add = { value = 0
@@ -194,6 +211,13 @@ law_secret_police = {
 	icon = "gfx/interface/icons/law_icons/secret_police.dds"
 
 	progressiveness = 0
+
+	is_visible = {
+		NAND = {
+			c:RUS ?= this
+			country_has_monarchy_law = yes
+		}
+	}
 
 	unlocking_technologies = {
 		central_archives
@@ -230,6 +254,11 @@ law_secret_police = {
 				has_journal_entry = je_hawaii
 			}
 			add = 10000
+		}
+
+		if = {
+			limit = { divided_monarchists_ai_rejects_law = yes }
+			add = -750
 		}
 
 		# SITAI BEGIN information:law_secret_police.ai_enact_weight_modifier
@@ -380,6 +409,146 @@ law_shinsengumi = {
 	}
 }
 
+law_third_section = {
+	group = lawgroup_internal_security
+	parent = law_secret_police # Inherits ideological stances from parent
+	icon = "gfx/interface/icons/law_icons/secret_police.dds"
+
+	progressiveness = -25
+
+	is_visible = {
+		c:RUS ?= this
+		country_has_monarchy_law = yes
+		NAND = {
+			has_technology_researched = central_archives # If has central archives, will not be available unless it's active
+			NOT = {
+				has_law = law_type:law_third_section
+			}
+		}
+	}
+
+	unlocking_technologies = {
+		law_enforcement
+	}
+
+	modifier = {
+		country_officers_pol_str_mult = 0.25
+		country_institution_home_affairs_max_investment_add = -2
+		country_institution_cost_institution_home_affairs_mult = -0.25
+	}
+
+	institution = institution_home_affairs
+	institution_modifier = {
+		country_suppression_attraction_factor = -0.03
+		political_movement_radicalism_add = -0.03
+		country_coup_resistance_add = 0.5
+	}
+
+	on_enact = {
+		custom_tooltip = unlock_arrange_accident_tt
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_third_section.ai_enact_weight_modifier
+		# ACTION program_cc81c69f631c42f1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_cc81c69f631c42f1_law_observed_agenda_positive
+			add = { value = 0
+				# internal_security_law_third_section_agenda_strong [political]; 本国真实政治运动支持这个具体内部安全候选，按已证支持档回应；不将诉求冒充资格，也不预设镇压或自由路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_third_section value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# internal_security_law_third_section_agenda_base [political]; 本国真实政治运动支持这个具体内部安全候选，按已证支持档回应；不将诉求冒充资格，也不预设镇压或自由路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_third_section value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_cc81c69f631c42f1_law_observed_agenda_negative
+			add = { value = 0
+				# internal_security_law_third_section_adopted_agenda_strong [political]; 候选法已实际生效时撤回同档已观察议程偏好；未知现行法不抹去独立已知的国内诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_third_section value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_third_section } } add = -10 }
+				# internal_security_law_third_section_adopted_agenda_base [political]; 候选法已实际生效时撤回同档已观察议程偏好；未知现行法不抹去独立已知的国内诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_third_section value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_third_section } } add = -6 }
+			}
+			min = -10
+			max = 10
+		} }
+		# SITAI END information:law_third_section.ai_enact_weight_modifier
+	}
+}
+
+law_okhrana = {
+	group = lawgroup_internal_security
+	parent = law_secret_police # Inherits ideological stances from parent
+	icon = "gfx/interface/icons/law_icons/okhrana.dds"
+
+	progressiveness = -25
+
+	is_visible = {
+		c:RUS ?= this
+		country_has_monarchy_law = yes
+	}
+
+	unlocking_technologies = {
+		central_archives
+	}
+
+	modifier = {
+		country_officers_pol_str_mult = 0.25
+	}
+
+	institution = institution_home_affairs
+	institution_modifier = {
+		country_suppression_attraction_factor = 0.03 # Less effectiveness at suppressing, but better at bolstering
+		country_suppression_attraction_factor = -0.03
+		political_movement_radicalism_add = -0.05
+		country_support_separatism_resistance_mult = 0.05
+		country_support_separatism_strength_mult = 0.05
+		country_amenability_add = 3
+		country_coup_resistance_add = 0.75
+	}
+
+	on_enact = {
+		custom_tooltip = unlock_arrange_accident_tt
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_okhrana.ai_enact_weight_modifier
+		# ACTION program_2984b28419d1551d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_2984b28419d1551d_law_observed_agenda_positive
+			add = { value = 0
+				# internal_security_law_okhrana_agenda_strong [political]; 本国真实政治运动支持这个具体内部安全候选，按已证支持档回应；不将诉求冒充资格，也不预设镇压或自由路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_okhrana value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# internal_security_law_okhrana_agenda_base [political]; 本国真实政治运动支持这个具体内部安全候选，按已证支持档回应；不将诉求冒充资格，也不预设镇压或自由路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_okhrana value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_2984b28419d1551d_law_observed_agenda_negative
+			add = { value = 0
+				# internal_security_law_okhrana_adopted_agenda_strong [political]; 候选法已实际生效时撤回同档已观察议程偏好；未知现行法不抹去独立已知的国内诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_okhrana value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_okhrana } } add = -10 }
+				# internal_security_law_okhrana_adopted_agenda_base [political]; 候选法已实际生效时撤回同档已观察议程偏好；未知现行法不抹去独立已知的国内诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_okhrana value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_okhrana } } add = -6 }
+			}
+			min = -10
+			max = 10
+		} }
+		# SITAI END information:law_okhrana.ai_enact_weight_modifier
+	}
+}
+
 law_guaranteed_liberties = {
 	group = lawgroup_internal_security
 	icon = "gfx/interface/icons/law_icons/guaranteed_liberties.dds"
@@ -404,6 +573,11 @@ law_guaranteed_liberties = {
 		if = {
 			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
 			add = 750
+		}
+
+		if = {
+			limit = { congress_poland_ai_rejects_law = yes }
+			add = -750
 		}
 
 		# SITAI BEGIN information:law_guaranteed_liberties.ai_enact_weight_modifier
@@ -443,6 +617,10 @@ law_guaranteed_liberties = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 12 }
 				# internal_security_law_guaranteed_liberties_from_law_national_guard_state_radicals_from_political_movements_mult_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 12 }
+				# internal_security_law_guaranteed_liberties_from_law_extraordinary_commission_state_loyalists_from_political_movements_mult_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 12 }
+				# internal_security_law_guaranteed_liberties_from_law_extraordinary_commission_state_radicals_from_political_movements_mult_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 12 }
 				# internal_security_law_guaranteed_liberties_from_law_secret_police_state_loyalists_from_political_movements_mult_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_secret_police NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } NOT = { has_law_or_variant = law_type:law_shinsengumi } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
 				# internal_security_law_guaranteed_liberties_from_law_secret_police_state_radicals_from_political_movements_mult_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
@@ -455,6 +633,10 @@ law_guaranteed_liberties = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
 				# internal_security_law_guaranteed_liberties_from_law_national_guard_state_radicals_from_political_movements_mult_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
+				# internal_security_law_guaranteed_liberties_from_law_extraordinary_commission_state_loyalists_from_political_movements_mult_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
+				# internal_security_law_guaranteed_liberties_from_law_extraordinary_commission_state_radicals_from_political_movements_mult_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
 			}
 			# GROUP program_ab34a44a4fdbdf30_law_security_movement_intensity_loss_negative
 			add = { value = 0
@@ -462,10 +644,14 @@ law_guaranteed_liberties = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_secret_police NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } NOT = { has_law_or_variant = law_type:law_shinsengumi } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
 				# internal_security_law_guaranteed_liberties_from_law_national_guard_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
+				# internal_security_law_guaranteed_liberties_from_law_extraordinary_commission_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
 				# internal_security_law_guaranteed_liberties_from_law_secret_police_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_secret_police NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } NOT = { has_law_or_variant = law_type:law_shinsengumi } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
 				# internal_security_law_guaranteed_liberties_from_law_national_guard_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
+				# internal_security_law_guaranteed_liberties_from_law_extraordinary_commission_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_extraordinary_commission NOT = { has_law_or_variant = law_type:law_guaranteed_liberties } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
 			}
 			# GROUP program_ab34a44a4fdbdf30_law_security_new_institution_administration_negative
 			add = { value = 0
@@ -481,5 +667,111 @@ law_guaranteed_liberties = {
 			max = 22
 		} }
 		# SITAI END information:law_guaranteed_liberties.ai_enact_weight_modifier
+	}
+}
+
+law_extraordinary_commission = {
+	group = lawgroup_internal_security
+	icon = "gfx/interface/icons/law_icons/extraordinary_commission.dds"
+
+	progressiveness = 50
+
+	unlocking_technologies = {
+		political_agitation
+	}
+
+	modifier = {
+		country_soldiers_pol_str_mult = 0.15
+	}
+
+	institution = institution_home_affairs
+	institution_modifier = {
+		country_suppression_attraction_factor = -0.05
+		state_political_strength_from_wealth_mult = -0.10
+		state_mortality_wealth_mult = 0.001
+		political_movement_radicalism_add = -0.05
+		country_support_separatism_resistance_mult = 0.05
+		country_support_separatism_strength_mult = 0.05
+		country_amenability_add = 3
+		country_coup_resistance_add = 0.75
+	}
+
+	on_enact = {
+		custom_tooltip = unlock_arrange_accident_tt
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		if = {
+			limit = {
+				OR = {
+					any_revolution_ongoing = yes
+					any_secession_ongoing = yes
+				}
+			}
+			add = 500
+		}
+
+		# SITAI BEGIN information:law_extraordinary_commission.ai_enact_weight_modifier
+		# ACTION program_5f475808c696187b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_5f475808c696187b_law_observed_agenda_positive
+			add = { value = 0
+				# internal_security_law_extraordinary_commission_from_law_no_home_affairs_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_home_affairs NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 12 }
+				# internal_security_law_extraordinary_commission_from_law_national_guard_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 12 }
+				# internal_security_law_extraordinary_commission_from_law_guaranteed_liberties_political_movement_radicalism_add_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guaranteed_liberties NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 12 }
+				# internal_security_law_extraordinary_commission_agenda_strong [political]; 本国真实政治运动支持这个具体内部安全候选，按已证支持档回应；不将诉求冒充资格，也不预设镇压或自由路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_extraordinary_commission value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# internal_security_law_extraordinary_commission_from_law_no_home_affairs_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_home_affairs NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
+				# internal_security_law_extraordinary_commission_from_law_national_guard_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_guard NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
+				# internal_security_law_extraordinary_commission_from_law_guaranteed_liberties_political_movement_radicalism_add_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guaranteed_liberties NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = 8 }
+				# internal_security_law_extraordinary_commission_agenda_base [political]; 本国真实政治运动支持这个具体内部安全候选，按已证支持档回应；不将诉求冒充资格，也不预设镇压或自由路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_extraordinary_commission value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_5f475808c696187b_law_observed_agenda_negative
+			add = { value = 0
+				# internal_security_law_extraordinary_commission_adopted_agenda_strong [political]; 候选法已实际生效时撤回同档已观察议程偏好；未知现行法不抹去独立已知的国内诉求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_extraordinary_commission value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_extraordinary_commission } } add = -10 }
+				# internal_security_law_extraordinary_commission_adopted_agenda_base [political]; 候选法已实际生效时撤回同档已观察议程偏好；未知现行法不抹去独立已知的国内诉求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_extraordinary_commission value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_extraordinary_commission } } add = -6 }
+			}
+			# GROUP program_5f475808c696187b_law_security_movement_conversion_loss_negative
+			add = { value = 0
+				# internal_security_law_extraordinary_commission_from_law_guaranteed_liberties_state_loyalists_from_political_movements_mult_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guaranteed_liberties NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
+				# internal_security_law_extraordinary_commission_from_law_guaranteed_liberties_state_radicals_from_political_movements_mult_invested [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guaranteed_liberties NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -9 }
+				# internal_security_law_extraordinary_commission_from_law_guaranteed_liberties_state_loyalists_from_political_movements_mult_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guaranteed_liberties NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
+				# internal_security_law_extraordinary_commission_from_law_guaranteed_liberties_state_radicals_from_political_movements_mult_base [political]; 比较现行与候选的原版实际制度修正差，并消费已投入等级及本国真实政治运动激进化；运动强度与运动来源激进/忠诚转换分开，收益损失同时权衡，不将全国激进人口冒充运动来源
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guaranteed_liberties NOT = { has_law_or_variant = law_type:law_extraordinary_commission } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } any_political_movement = { political_movement_radicalism >= 0.25 } } } add = -6 }
+			}
+			# GROUP program_5f475808c696187b_law_security_new_institution_administration_negative
+			add = { value = 0
+				# internal_security_law_extraordinary_commission_new_institution_administration [political]; 从无内政制度建立新制度，真实行政短缺或违约分别形成新增承诺成本；既存同一制度间转法不重复收取
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_home_affairs NOT = { has_law_or_variant = law_type:law_extraordinary_commission } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -6 } } } }
+			}
+			# GROUP program_5f475808c696187b_law_security_new_institution_financing_negative
+			add = { value = 0
+				# internal_security_law_extraordinary_commission_new_institution_financing [political]; 从无内政制度建立新制度，真实行政短缺或违约分别形成新增承诺成本；既存同一制度间转法不重复收取
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_home_affairs NOT = { has_law_or_variant = law_type:law_extraordinary_commission } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -8 } } } }
+			}
+			min = -33
+			max = 12
+		} }
+		# SITAI END information:law_extraordinary_commission.ai_enact_weight_modifier
 	}
 }

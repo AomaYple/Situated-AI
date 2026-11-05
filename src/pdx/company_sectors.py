@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/company_sectors.toml"
-BASELINE = config.REPO / "research/situated/company-sector-baseline.json"
+BASELINE = config.REPO / "research/vanilla-ai/1.15.0/company-sector-baseline.json"
 _FAMILIES = frozenset(
     {
         "company_types",
@@ -447,7 +447,7 @@ def _rules(profile, parameters):
     def add(suffix, cause, value, conditions, why):
         rows.append(
             {
-                "id": f"company_sector_{company}_{suffix}",
+                "id": f"company_sector_{company.replace('-', '_hyphen_')}_{suffix}",
                 "source": profile["source"],
                 "field": profile["field"],
                 "domain": "market",
@@ -769,7 +769,7 @@ def _frozen_profile(profile, sources):
         raise ValueError("公司部门冻结画像键无效")
     if (
         not isinstance(profile["id"], str)
-        or not re.fullmatch("[a-z][a-z0-9_]*", profile["id"])
+        or not re.fullmatch("[a-z][a-z0-9_-]*", profile["id"])
         or profile["source"] not in sources
         or _family(profile["source"]) != "company_types"
         or type(profile["line"]) is not int

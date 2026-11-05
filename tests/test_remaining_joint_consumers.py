@@ -244,41 +244,39 @@ CASES = [
     (PORT, {"target_embargo": True, "navy": 0}, 0),
     (
         NEGOTIATION,
-        {"candidate_ig_clout": 0.1, "candidate_ig_approval": -1, "radical_share": 0.25},
-        1.10,
+        {"negotiation_amenability": 0.5, "radical_share": 0.25},
+        0.10,
     ),
     (
         NEGOTIATION,
         {
-            "candidate_ig_clout": 0.1,
-            "candidate_ig_approval": -1,
+            "negotiation_amenability": 0.5,
             "radical_share": 0.25,
             "legitimacy": 50,
         },
-        1.25,
+        0.25,
     ),
     (
         NEGOTIATION,
         {
-            "candidate_ig_clout": 0.1,
-            "candidate_ig_approval": -1,
+            "negotiation_amenability": 0.5,
             "radical_share": 0.25,
             "legitimacy": None,
             "insurrection": None,
             "default": True,
             "war": True,
         },
-        1.10,
+        0.10,
     ),
     (
         NEGOTIATION,
-        {"candidate_ig_clout": 0.099999, "candidate_ig_approval": -1, "radical_share": 0.25},
-        1,
+        {"negotiation_amenability": 0, "radical_share": 0.25},
+        0,
     ),
     (
         NEGOTIATION,
-        {"candidate_ig_clout": 0.1, "candidate_ig_approval": 0, "radical_share": 0.25},
-        1,
+        {"negotiation_amenability": 1.00001, "radical_share": 0.25},
+        0,
     ),
 ]
 
@@ -289,7 +287,7 @@ def test_complete_need_cost_and_capacity_match_generated_pdx(production, field, 
     source = DEFAULT if field.startswith("ai_strategy_default.") else INFO
     policy = policies[source]
     values = _values(policy, changes)
-    neutral = 0 if field in (SUBJECT, OVERLORD, PORT) else 1
+    neutral = 0 if field in (SUBJECT, OVERLORD, PORT, NEGOTIATION) else 1
     result = decision_rules.evaluate(policy, values, is_ai=True).get(field)
     assert (result[1] if result else neutral) == pytest.approx(expected)
     observed = pdx_eval.select(_overlay(generated[source], field), _facts(policy, values))
@@ -336,7 +334,7 @@ def test_every_consumer_retains_native_ast_and_player_and_missing_boundaries(pro
                 overlay, {"ROOT": {"is_ai": True}, "other_country": {"in_default": True}}
             )
             assert missing.operation is None or missing.delta == (
-                0 if field in (SUBJECT, OVERLORD, PORT) else 1
+                0 if field in (SUBJECT, OVERLORD, PORT, NEGOTIATION) else 1
             )
             assert (
                 pdx_eval.select(overlay, _facts(policy, _values(policy, {}), is_ai=False)).operation
@@ -405,12 +403,11 @@ def test_original_construction_zero_and_negotiation_and_overlord_clamps_still_ex
         body = _render(terminal) + "\n" + _overlay(generated[INFO], CONSTRUCTION)
         assert _native_number(100, body, facts) == pytest.approx(construction_expected)
     native_strategy = _block(parse_text(native[DEFAULT]).root, "ai_strategy_default")
-    for initial, expected in ((0, 0), (0.4, 0.5), (0.9, 1)):
+    for initial, expected in ((0, 0.25), (0.4, 0.65), (0.9, 1)):
         values = _values(
             policies[DEFAULT],
             {
-                "candidate_ig_clout": 0.1,
-                "candidate_ig_approval": -1,
+                "negotiation_amenability": 0.5,
                 "radical_share": 0.25,
                 "legitimacy": 50,
             },

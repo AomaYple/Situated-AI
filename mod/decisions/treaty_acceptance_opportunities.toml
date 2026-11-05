@@ -1,25 +1,25 @@
 schema = 1
 
 [sources]
-"common/journal_entries/06_portugal_politics.txt" = "3419343456182541870fc8de7c7c52c23bb6c9e7ec1deded06a7744d61e04316"
-"common/treaty_articles/05_transfer_money.txt" = "9920550c6c4367b70b96ff5b936d37aeb560a15c1aa406785502e32c595fe2c1"
+"common/journal_entries/06_portugal_politics.txt" = "5d0a31d587f9d2ce137a879a0992748c25dd738b958f83b0ca875d0ea6a51a5f"
+"common/treaty_articles/05_transfer_money.txt" = "76de90c006e875f097d3df75f00fd545c4a6519dd936f2a2a5671a5cd33be948"
 "common/treaty_articles/13_goods_transfer.txt" = "351863a506c4d78012ee79d88ce490a9439e94107bbefca77808c0a7e1edfc1b"
 "common/treaty_articles/21_no_tariffs.txt" = "4e361356002dd9d440b767bad998b20e73eb4af1a5a0d1999e566a8923e5afab"
-"common/treaty_articles/treaty_articles.md" = "8aa3024c68f12761eec43461dcfd9a0e747f74513d1d3f0d6bd3a369e3aef613"
+"common/treaty_articles/treaty_articles.md" = "0db1a61cedd888ff29685838fd5338c6802f0f5f4e2dcb3940de8cb086fe38c9"
 
-"common/treaty_articles/12_military_assistance.txt" = "c4499d86dfa5b8fb0a4eccd54bb180f649367a2c47bc2d0f530d581e9775cecc"
+"common/treaty_articles/12_military_assistance.txt" = "2c13b8a53ac2eb74343a14b3a8e314bcbafb03def69b319212485b8615bde9d1"
 
 "common/script_values/01_power_bloc_values.txt" = "57ef445cfa211e8c2bd040145997a302183ceb827294e878a87ff76db81bf8fe"
 
-"common/treaty_articles/09_join_power_bloc.txt" = "97956072d6ef9891d48cce6673916bcee519447b64d9b9253deba6ea9ff74384"
+"common/treaty_articles/09_join_power_bloc.txt" = "751ca0543e8dc12a30fa09e82a9abeeed9037ad7664f95229f6ee069c9e16988"
 
-"common/treaty_articles/10_host_power_bloc_embassy.txt" = "65cc94ccdb6479a5dfc04e56f060cd6b560bdc39ecf0cb96744d0fd5705ed38e"
+"common/treaty_articles/10_host_power_bloc_embassy.txt" = "0f1e33c06aa8a89297222b982cfd6c08d5521a2b02261e8723133b45626b0ad2"
 
-"common/treaty_articles/00_alliance.txt" = "505cfc849cb7d66a460b95c36a4e1c4794cae4c4c8e48f3c1a7c6b55dd56564b"
-"common/treaty_articles/01_defensive_pact.txt" = "78959100428405cc5530db74f15a221e9b1b432e7d50a176aca3592f54f2e1e5"
-"common/treaty_articles/02_guarantee_independence.txt" = "8bda978a27918bf7653fb881f762664478b456ec183888f3933515a682b7091f"
-"common/treaty_articles/03_support_independence.txt" = "2a2ba67f9fbc7055d7e1ffc9a0e0f44d44a8d1ebaafcb866b91c6dff4f52b9eb"
-"common/on_actions/00_code_on_actions.txt" = "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46"
+"common/treaty_articles/00_alliance.txt" = "78d6a82a728271e6da09016f6fd6995df665d88a42e8c49feee1f63f7f02cad1"
+"common/treaty_articles/01_defensive_pact.txt" = "9bf85289b4b8098f86ac20f2ccf0087ff84f2bfd38c13aaee0f2de0b20f6095a"
+"common/treaty_articles/02_guarantee_independence.txt" = "a0a4beea6f090d998516c6118b94555b04261f451adb5b4462d68ab731b42a12"
+"common/treaty_articles/03_support_independence.txt" = "bc83cb413b3cb393bfa8436ef28fe9d7b96a63a6c14084ecc1871583b9b8032f"
+"common/on_actions/00_code_on_actions.txt" = "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e"
 
 [tuning]
 target_input_need = 6
@@ -36,7 +36,7 @@ deficit_cost = 3
 recovery_cost = 2
 
 [parent_hashes]
-"alliance" = "78687080cc7917d34b2488408605e32e8d80507ac77916ba3d1554f7d391ce69"
-"defensive_pact" = "249246a1f195c242ac03647291f45840e22c91cddce5cde78b2e964597024ab6"
-"guarantee_independence" = "5c761a54bdf19f4576fb612d88abd9100113a1b9bf60ce232d8305f1492527b6"
-"support_independence" = "1231a67a09aa5346b2c2ed460d49ad168117c7c57b920859977fb28bfa03e15a"
+"alliance" = "10a03836d26cb530b1a556a3e816272561d1cd0d2e1dbf05a7ef421102bcaebe"
+"defensive_pact" = "8e8878b7de9625b37199dc180dd453612552f712fef300aebb3f652e5d2d79f2"
+"guarantee_independence" = "1c98cdd78c671774753fee630946684233d4dfea3ce693adade64b1fcccf9e9c"
+"support_independence" = "8d2f72be3f3d12cecea8ab5e2c3ae6d1366af1203c73f51ce3551d4a6c0ae0fe"

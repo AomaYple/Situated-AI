@@ -2,12 +2,12 @@
 schema = 1
 
 [sources]
-"common/journal_entries/04_indian_famines.txt" = "a1a371a730d02ce5911873f835340d89766e44d6b823604040aeb41881844e30"
-"common/script_values/event_values.txt" = "99e2dfc8e07c8b91a6f9c6bf4616444b4c973fc07c281b057b48b2594280067a"
+"common/journal_entries/04_indian_famines.txt" = "157fc4b84f56708a7423ef5f76dc3181819784b565f3048b557d49bf11ae9875"
+"common/script_values/event_values.txt" = "e4f89480bf30ae78d29d10d1912fa2b1b07e24a20372dcc27de01924c03331a2"
 "common/scripted_buttons/04_indian_famines_buttons.txt" = "223404898f416fea74ac849416212409e2f3c1394aefe3b2501c290daa036db4"
-"common/scripted_buttons/scripted_buttons.md" = "bb1028f7b843e43dc42473968307ad340e2960099cc50e6907f3cff9a47c2d4d"
+"common/scripted_buttons/scripted_buttons.md" = "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26"
 "common/static_modifiers/00_ip2_02_modifiers.txt" = "74cd0627025f5e35ded042a3a120507783d92b214e030337c71c67054047ef51"
-"events/brazil/amazonas.txt" = "b224b57ce1ea1f2ee9de0b3844b03e1731b9a54877de88e5c1dc1f5289138135"
+"events/brazil/amazonas.txt" = "d9f7a9db0442e589ef0d3b8be3f1ef931ce659e8c02e31ce051cbed10fab353a"
 
 [tuning.relief_kitchens]
 benefit = 1.22

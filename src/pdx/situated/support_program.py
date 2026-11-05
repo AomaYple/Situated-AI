@@ -171,7 +171,7 @@ class SupportProgram:
             "defense_direction": "target_positive_initiator_negative",
             "defense_partner": "country_if_target_enemy_country_if_initiator",
             "direction_fact": "exists = scope:is_initiator",
-            "native_source": "research/vanilla-ai/1.14.5/00_default_strategy.txt:180-188",
+            "native_source": "research/vanilla-ai/1.15.0/00_default_strategy.txt:180-188",
             "unknown_policy": "core_vanilla_auxiliary_local",
             "single_clamp": True,
             "vanilla_tail": "preserve",

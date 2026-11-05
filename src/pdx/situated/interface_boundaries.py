@@ -23,7 +23,7 @@ from pdx.textio import normalized_text
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-CONTRACT = config.REPO / "research/vanilla-ai/1.14.5/interface-boundaries.json"
+CONTRACT = config.REPO / "research/vanilla-ai/1.15.0/interface-boundaries.json"
 TOPICS = frozenset(
     {
         "strata_tax_amounts",

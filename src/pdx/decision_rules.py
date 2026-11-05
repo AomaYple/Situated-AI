@@ -284,7 +284,8 @@ def from_data(
             or not isinstance(item["engine"], str)
             or (
                 not _NAME.fullmatch(item["engine"])
-                and item["engine"] not in {"relations:root", "modifier:country_tech_spread_mult"}
+                and item["engine"]
+                not in {"relations:root", "modifier:country_tech_spread_mult", "scope:amenability"}
                 and item["engine"] not in observation_queries.QUERY_ENGINES
             )
         ):
@@ -749,7 +750,7 @@ def from_data(
         # no other consumer or baseline receives this local allowance.
         if (
             policy.baseline_sha256
-            == "6f80935a4fb6ccaf56ff900848a090f9ba4fa442b4cb93aec9ec1b3692616c1d"
+            == "b7b8a4ba8ccf832869fb434cf287e0dc6e6463ab2d90a4781a6ca309888380a2"
             and policy.native_root == "state"
             and policy.actor_path == ("owner",)
             and candidates[0].field == ("building_textile_mill", "ai_value")
@@ -943,7 +944,7 @@ def _protected_offsets(
                 raise ValueError("属国消费者缺少原版常规可达性保护块")
             limit = branch.value.first("limit")
             # 除源 SHA 外逐字核对门的词法形状，禁止误选另一个 if。
-            expected = "OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } }"
+            expected = "OR = { scope:target_country = { is_subject_of = root } can_reach_target_country_to_subjugate = { TARGET_COUNTRY = scope:target_country } }"
             if limit is None or not isinstance(limit.value, Block):
                 raise ValueError("属国消费者可达性保护形状漂移")
 
@@ -978,17 +979,24 @@ def _protected_offsets(
                 (index for index, item in enumerate(statements) if item.key in {"min", "max"}),
                 0,
             )
-            gate = statements[clamp_index - 1] if clamp_index else None
-            if gate is None or gate.key != "if" or not isinstance(gate.value, Block):
-                raise ValueError("战争目标缺少原版终结归零保护")
-            zero = gate.value.first("multiply")
-            if (
-                zero is None
-                or not isinstance(zero.value, Scalar)
-                or zero.value.text not in {"0", "0.0"}
-            ):
+            first_zero = clamp_index
+            while first_zero:
+                gate = statements[first_zero - 1]
+                if gate.key != "if" or not isinstance(gate.value, Block):
+                    break
+                zero = gate.value.first("multiply")
+                if (
+                    zero is None
+                    or not isinstance(zero.value, Scalar)
+                    or zero.value.text not in {"0", "0.0"}
+                ):
+                    break
+                first_zero -= 1
+            if first_zero == clamp_index:
                 raise ValueError("战争目标终结归零保护形状漂移")
-            ordinal = sum(item.key == "if" for item in statements[:clamp_index]) - 1
+            # Several independent vetoes may form the native tail. Every one
+            # must execute after our additive contribution, in native order.
+            ordinal = sum(item.key == "if" for item in statements[:first_zero])
             targets[(*address, ("if", ordinal))] = (field, "start")
         elif mode == "before_native_aggression_terminal_zero_tail":
             branches = block.all("if")

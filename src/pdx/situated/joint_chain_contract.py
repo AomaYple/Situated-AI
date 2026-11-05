@@ -264,7 +264,7 @@ _STRICT_TARGETS = (
         "ai_strategy_default.negotiation_chance",
         "root",
         "none",
-        "multiply",
+        "add",
     ),
     (
         "LJ12",
@@ -541,8 +541,8 @@ _EXPECTED_CONDITIONS = {
         ("insurrection", "=", False),
     ),
     "lj08_negotiation_local_political_capacity": (
-        ("candidate_ig_clout", ">=", 0.1),
-        ("candidate_ig_approval", "<", 0),
+        ("negotiation_amenability", ">", 0),
+        ("negotiation_amenability", "<=", 1),
         ("radical_share", ">=", 0.25),
         ("legitimacy", ">=", 50),
         ("insurrection", "=", False),
@@ -802,6 +802,19 @@ def _reader_copy(reader: Any) -> ChainReaderSpec:
 
 
 def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
+    if key == "negotiation_amenability":
+        return (
+            "scope:amenability",
+            "number",
+            "root",
+            (),
+            None,
+            (),
+            None,
+            "normalized_amenability_input",
+            None,
+            None,
+        )
     """Frozen field-level contract for the observed local writer links."""
     if key == "country_goods_paper_balance":
         return (
@@ -849,7 +862,7 @@ def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
             None,
             (),
             None,
-            "battalions",
+            "barracks_levels",
             None,
             None,
         ),
@@ -861,7 +874,7 @@ def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
             None,
             (),
             None,
-            "battalions",
+            "barracks_levels",
             None,
             None,
         ),
@@ -1398,8 +1411,11 @@ def build_strict(
         readers_by_key: dict[str, list[Any]] = {}
         for reader in policy.readers:
             readers_by_key.setdefault(reader.key, []).append(reader)
-        if len(set(facts)) != len(facts):
+        if len(set(facts)) != len(facts) and rule_id != "lj08_negotiation_local_political_capacity":
             raise ValueError(f"联合链证据事实重复：{chain_id}:{rule_id}")
+        # The exact accepted numeric interval uses both lower and upper bounds
+        # of one observation. Its complete predicates were checked above.
+        facts = tuple(dict.fromkeys(facts))
         invalid = [
             fact
             for fact in facts
@@ -1484,10 +1500,14 @@ def validate_links(evidence: tuple[ChainEvidence, ...], bundle: Any | None = Non
         expected_known = _EXPECTED_REQUIRED_KNOWN.get(spec.rule_id, ())
         if spec.required_known_facts != expected_known:
             raise ValueError(f"联合链核心知识声明漂移：{spec.link_id}")
-        if tuple(reader.key for reader in spec.readers) != (
-            *tuple(fact for fact, _operator, _value in expected_semantics),
-            *_EXPECTED_REFERENCE_FACTS.get(spec.rule_id, ()),
-            *expected_known,
+        if tuple(reader.key for reader in spec.readers) != tuple(
+            dict.fromkeys(
+                (
+                    *tuple(fact for fact, _operator, _value in expected_semantics),
+                    *_EXPECTED_REFERENCE_FACTS.get(spec.rule_id, ()),
+                    *expected_known,
+                )
+            )
         ):
             raise ValueError(f"联合链条件顺序与读取器映射漂移：{spec.link_id}")
         for reader in spec.readers:

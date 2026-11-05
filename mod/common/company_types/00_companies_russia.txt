@@ -280,12 +280,10 @@ company_branobel = {
 
 	possible = {
 		has_technology_researched = pumpjacks
-		any_scope_state = {
-			state_region = s:STATE_AZERBAIJAN
-			any_scope_building = {
-				is_building_type = building_oil_rig
-				level >= 5
-			}
+		has_building_levels_in_state_region = {
+			region = STATE_AZERBAIJAN
+			building = building_oil_rig
+			levels >= 5
 		}
 	}
 
@@ -392,13 +390,11 @@ company_izhevsk_arms_plant = {
 
 	possible = {
 		has_technology_researched = rifling # corresponds roughly with the Izhevsk plant's incorporation as a private commercial enterprise, and not a state arsenal.
-		any_scope_state = {
-			state_region = s:STATE_PERM
+		has_building_levels_in_state_region = {
+			region = STATE_PERM
+			building = building_arms_industry
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_arms_industry
-				level >= 5
-			}
 		}
 	}
 
@@ -434,6 +430,11 @@ company_izhevsk_arms_plant = {
 			add = { value = 0
 				# company_sector_company_izhevsk_arms_plant_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_2823b52977fcc192_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_izhevsk_arms_plant_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_2823b52977fcc192_company_mandatory_input_explosives_negative
 			add = { value = 0
@@ -515,13 +516,11 @@ company_savva_morozov = {
 
 	possible = {
 		has_technology_researched = joint_stock_companies
-		any_scope_state = {
-			state_region = s:STATE_MOSCOW
+		has_building_levels_in_state_region = {
+			region = STATE_MOSCOW
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 

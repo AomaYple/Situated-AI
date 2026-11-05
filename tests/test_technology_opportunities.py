@@ -481,11 +481,16 @@ def _native_country_case(technology, purpose):
             row
             for row in candidates
             if not purpose.endswith("_ready")
+            or purpose == "labor_ready"
             or all(catalog["goods"][good]["market"] for good in row["inputs"])
         )
         building = _building_object(row["building"], row["prior"])
         country["any_scope_building"] = [building]
         state["any_scope_building"] = [building]
+        if purpose == "labor_ready":
+            for good in row["inputs"]:
+                if catalog["goods"][good]["local"]:
+                    state[f"sg:{good}"] = {"state_goods_pricier": 0.25}
         if purpose.startswith("productive") or purpose == "throughput":
             good = next(g for g in row["outputs"] if catalog["goods"][g]["market"])
             country["market"][f"mg:{good}"]["market_goods_delta"] = -1
@@ -570,6 +575,28 @@ def test_query_labor_and_local_goods_are_not_joined_across_owned_states():
             },
         ]
         assert _query_values(technology, purpose, country) == (False, False)
+
+
+def test_current_dough_rollers_requires_copper_tools_and_same_state_electricity():
+    country = _native_country_case("dough_rollers", "labor_ready")
+    assert _query_values("dough_rollers", "labor_ready", country) == (True, True)
+    state = country["any_scope_state"][0]
+    state["sg:electricity"]["state_goods_pricier"] = 0.26
+    assert _query_values("dough_rollers", "labor_ready", country) == (False, False)
+    state.pop("sg:electricity")
+    assert _query_values("dough_rollers", "labor_ready", country) == (None, None)
+    state["sg:electricity"] = {"state_goods_pricier": 0.25}
+    country["market"]["mg:copper"]["market_goods_delta"] = -1
+    assert _query_values("dough_rollers", "labor_ready", country) == (False, False)
+    country["market"]["mg:copper"]["market_goods_delta"] = 0
+    country["market"]["mg:tools"]["market_goods_delta"] = -1
+    assert _query_values("dough_rollers", "labor_ready", country) == (False, False)
+    country["market"]["mg:tools"]["market_goods_delta"] = 0
+    state.pop("sg:electricity")
+    country["any_scope_state"].append(
+        {**state, "any_scope_building": [], "sg:electricity": {"state_goods_pricier": 0}}
+    )
+    assert _query_values("dough_rollers", "labor_ready", country) == (None, None)
 
 
 def test_complexity_rejects_real_expansion_and_rule_boundaries(monkeypatch):

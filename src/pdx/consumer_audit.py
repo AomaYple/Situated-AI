@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
 
-BASELINE = config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+BASELINE = config.REPO / "research" / "vanilla-ai" / "1.15.0" / "00_default_strategy.txt"
 OUTPUT = config.OUT / "f1-consumer-audit"
 
 

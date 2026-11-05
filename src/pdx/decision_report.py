@@ -7,12 +7,15 @@ AI 已经按预期行动；行为质量仍需用户在标准包上长期观察�
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from collections import defaultdict
 from collections.abc import Mapping
 from typing import Any
 
 from . import (
+    config,
     country_coordination,
     country_state,
     decision_adapters,
@@ -235,6 +238,7 @@ PROFILE_ROLES = {
             "devastation",
         ),
         "structure": (
+            "scope:amenability",
             "has_law_or_variant",
             "has_strategy",
             "has_technology_researched",
@@ -315,11 +319,17 @@ def source_metadata() -> dict[str, Any]:
     strategy = decision_intents.load()
     information = decision_rules.load(strategy=strategy)
     adapters = decision_adapters.load(strategy=strategy)
+    from .situated import compiler  # noqa: PLC0415
+
+    compiled, compiled_contract = compiler.compile_sources(information, adapters)
+    compiled_by_source = dict(compiled)
+    information = compiled_by_source["mod/decisions/information.toml"]
 
     information_contract = decision_rules.contract(information)
 
     consumers: list[dict[str, object]] = []
-    for source, rules in adapters.policies:
+    for source, _policy in adapters.policies:
+        rules = compiled_by_source[source]
         contract = decision_rules.contract(rules, owner="consumer_adapters", source=source)
         contract["source"] = source
         consumers.append(contract)
@@ -331,11 +341,16 @@ def source_metadata() -> dict[str, Any]:
         complete_localization=True,
         country_policy=country_policy,
     )
+    # This offline path reports configured source modules. Actual legacy
+    # fiscal deployment still depends on the final generated strategy token,
+    # which is checked by build; do not invent a second deployment inference.
+    decisions.attach_country_metadata(metadata, country_policy)
     enabled_modules = metadata["enabled_modules"]
     if not isinstance(enabled_modules, list):
         raise TypeError("元数据的 enabled_modules 必须是列表")
     enabled_modules.extend(("information_rules", "consumer_adapters"))
     metadata["decision_rules"] = information_contract
+    metadata["situated_actions"] = {"compiled_sources": compiled_contract}
     metadata["consumer_adapters"] = {
         "schema": 1,
         "evidence": "static_source_contract",
@@ -343,15 +358,6 @@ def source_metadata() -> dict[str, Any]:
         "source_sha256": adapters.source_sha256,
         "sources": dict(adapters.sources),
         "consumers": consumers,
-    }
-    metadata["country_state"] = country_state.contract(country_policy)
-    metadata["country_coordination"] = {
-        "runtime_state": "stateless_consumer_observations"
-        if country_policy.enabled
-        else "disabled",
-        "state_contract": metadata["country_state"],
-        "behavior_verified": False,
-        "evidence": "static_check",
     }
     return metadata
 
@@ -602,10 +608,59 @@ def _contracts(metadata: Mapping[str, Any]) -> list[tuple[str, str, Mapping[str,
     ]
 
 
+_RELATION_BASELINE = (
+    config.REPO / "research/situated/victoria3-1.15.0-rule-relation-dependencies.json"
+)
+_RELATION_BASELINE_SHA256 = "3c922508abb3dcf26e6d0ee1eaecf0646a33413dd43a23ce2efa9d53ed4f41a6"
+
+
+def _relation_contracts(metadata: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Attest the existing compiled relation and its exact raw-reader closure.
+
+    The independent current snapshot grants no new edges. Ordinary condition
+    inputs and relation inputs retain their separate roles in the report.
+    """
+    raw = _RELATION_BASELINE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _RELATION_BASELINE_SHA256:
+        raise ValueError("规则关系依赖基线漂移")
+    baseline = json.loads(raw)
+    if (
+        baseline.get("schema") != 1
+        or baseline.get("version") != "1.15.0"
+        or any(
+            hashlib.sha256((config.REPO / source).read_bytes()).hexdigest() != digest
+            for source, digest in baseline["sources"].items()
+        )
+    ):
+        raise ValueError("规则关系依赖基线与当前生产源不一致")
+    compiled = _mapping(
+        _mapping(metadata.get("situated_actions"), "situated_actions").get("compiled_sources"),
+        "compiled_sources",
+    )
+    actual: dict[str, list[dict[str, Any]]] = {}
+    seen = set()
+    for report in _rows(compiled.get("reports"), "compiled_sources.reports"):
+        source = _text(report.get("source"), "compiled_sources.source")
+        if source in seen:
+            raise ValueError("规则关系编译来源重复")
+        seen.add(source)
+        guards = _rows(report.get("rule_relations"), "rule_relations")
+        if guards:
+            actual[source] = [dict(row) for row in guards]
+    if actual != baseline["rule_relations"]:
+        raise ValueError("规则关系绑定、原始叶子或依赖边与当前精确合同不一致")
+    return actual
+
+
 def validate(metadata: Mapping[str, Any]) -> list[str]:
     """返回可机械检查的合同问题；不把未实测行为当作错误。"""
 
     issues: list[str] = []
+    try:
+        relation_contracts = _relation_contracts(metadata)
+    except (KeyError, TypeError, ValueError, OSError) as exc:
+        issues.append(f"规则关系依赖合同无效：{exc}")
+        relation_contracts = {}
     if metadata.get("id") != "situated-ai":
         issues.append("metadata 身份不是 situated-ai")
     issues.extend(
@@ -669,6 +724,24 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
         costs = _mapping(rule_contract.get("cost_by_field"), f"{source}.cost_by_field")
         fields: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
         used_readers: set[str] = set()
+        relation_source = (
+            "mod/decisions/information.toml" if owner == "information_rules" else source
+        )
+        for binding in relation_contracts.get(relation_source, []):
+            if binding["definition"] not in {row["id"] for row in rules}:
+                issues.append(f"{source} 规则关系缺少真实消费者")
+            for leaf in binding["readers"]:
+                key = leaf["key"]
+                reader = readers.get(key)
+                expected = json.loads(leaf["signature"])
+                actual = {name: reader.get(name) for name in expected} if reader is not None else {}
+                if reader is not None:
+                    actual["parameters"] = [
+                        list(pair) for pair in sorted(reader.get("parameters", {}).items())
+                    ]
+                if actual != expected:
+                    issues.append(f"{source}:{key} 规则关系叶子完整身份漂移或断边")
+                used_readers.add(key)
         for rule in rules:
             rule_id = _text(rule.get("id"), "rule.id")
             label = f"{source}:{rule_id}"
@@ -830,10 +903,18 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
     information_reader_count = consumer_reader_count = 0
     information_rule_count = consumer_rule_count = 0
     contracts = _contracts(metadata)
+    relation_contracts = _relation_contracts(metadata)
     for source, owner, rule_contract in contracts:
         readers = {row["key"]: row for row in _rows(rule_contract["readers"], source)}
         rules_by_field: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
         usages: dict[str, list[str]] = defaultdict(list)
+        relation_source = (
+            "mod/decisions/information.toml" if owner == "information_rules" else source
+        )
+        relation_bindings = relation_contracts.get(relation_source, [])
+        for binding in relation_bindings:
+            for leaf in binding["readers"]:
+                usages[leaf["key"]].append(binding["definition"])
         for rule in _rules(rule_contract, source):
             rules_by_field[rule["field"]].append(rule)
             domains[rule["domain"]][
@@ -879,6 +960,11 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
                                     "profile_dimension": PROFILE_ROLES[readers[key]["engine"]],
                                 }
                                 for key in rule["inputs"]
+                            ],
+                            "relation_bindings": [
+                                binding
+                                for binding in relation_bindings
+                                if binding["definition"] == rule["id"]
                             ],
                             "bounds": [-50, 50] if rule["operation"] == "add" else [0.5, 1.5],
                         }
@@ -935,6 +1021,7 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "field_count": len(consumer_fields),
         "information_reader_count": information_reader_count,
         "consumer_reader_count": consumer_reader_count,
+        "rule_relation_bindings": [row for rows in relation_contracts.values() for row in rows],
         "reader_count": len(facts),
         "consumer_count": len(contracts) - 1,
         "information_rule_count": information_rule_count,

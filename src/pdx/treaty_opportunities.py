@@ -26,8 +26,8 @@ from .textio import normalized_text
 if TYPE_CHECKING:
     from pathlib import Path
 
-BASELINE = config.REPO / "research/situated/treaty-opportunities.json"
-BASELINE_SHA256 = "705c51d333ddde9f0f84791e885ad5ac67a7d0e21e32f993cccf231bbcc546cc"
+BASELINE = config.REPO / "research/vanilla-ai/1.15.0/treaty-opportunities.json"
+BASELINE_SHA256 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
 PARAMETERS = config.REPO / "mod/decisions/treaty_opportunities.toml"
 _DOC = "common/treaty_articles/treaty_articles.md"
 _INFLUENCE = "common/diplomatic_actions/01_expel_diplomats.txt"

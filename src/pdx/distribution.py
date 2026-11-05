@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "3.2.0"
+RELEASE_VERSION = "4.0.0"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -240,7 +240,7 @@ def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object])
     if (
         metadata.get("id") != MOD_ID
         or metadata.get("version") != RELEASE_VERSION
-        or metadata.get("supported_game_version") != "1.14.5"
+        or metadata.get("supported_game_version") != "1.15.0"
         or metadata.get("picture") != THUMBNAIL_NAME
     ):
         raise ValueError("正式包版本与锁定游戏不符")
@@ -573,6 +573,10 @@ def package_inputs(
     try:
         engine_scope.verify_strategy_game(config.GAME)
         decision_interfaces.verify_scripted_trigger_game(config.GAME)
+        decision_interfaces.verify_lj10_game(config.GAME)
+        from . import building_defaults  # noqa: PLC0415
+
+        building_defaults.verify_game(config.GAME)
         engine_scope.verify_company_defaults_game(config.GAME)
         company_sectors.verify_game(config.GAME)
         equipment_opportunities.verify_game(config.GAME)

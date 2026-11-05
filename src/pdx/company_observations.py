@@ -33,20 +33,20 @@ _MINES_BUILDING = "common/buildings/03_mines.txt"
 _MINES_GROUP = "common/production_method_groups/03_mines.txt"
 _MINES_METHOD = "common/production_methods/03_mines.txt"
 SOURCE_HASHES = {
-    _COMPANY: "59546f6105092bad8935498d917a6012aa508c58bea873e462dd66a5850f2f1d",
-    _PRIVATE_BUILDING: "3438f826295bb37ae52823121209734042e759c64c453754bde6876d44f9f35b",
-    _POWER_BUILDING: "c41ed5adb63e8f626e6394ce4f2f619bc8f229cafa3d8994271e2a66d1c2b0c5",
+    _COMPANY: "5d96e85f5fb786240b201e98d900d9a1e88fff9287389a4a12886e874130f46f",
+    _PRIVATE_BUILDING: "b56e1c971a13604681bd11b374170eed0b4887f534b3f10f98fa875e7b67703b",
+    _POWER_BUILDING: "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9",
     _RAIL_GROUP: "188b1828634d7ec7e8673df9fea33799e67cbfe9abfcfe5fcb4ef93f765f2186",
-    _PORT_GROUP: "e1ea7e0286546ca4b2e5ad8bafa35de4e6dec6af59c93b1ff91c99d5815dd6da",
+    _PORT_GROUP: "6b257b5bde8d4e5b9728555c1510cbb111a2bfa74602f42a2d0f29f5057ff7cd",
     _POWER_GROUP: "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
     _PRIVATE_METHOD: "b1be6179a07bc71150ec45fd5c7b7fd14b88d6cba8068775c5e29cd364ccbbec",
-    _POWER_METHOD: "d9f0e653d3d0c1783fd4e9880fb58a6ada795d0ed3a3fdec011f0d1ce28da71f",
-    _GOODS: "496810f9b21012cb3ae764e4c0cd65aafa85b6079f96d3d2a6b3dece92a0afcc",
-    _ART: "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
-    _OPIUM: "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8",
-    _MINES_BUILDING: "6b3e9846022b6e4f998be0b131fc7c465a2a592d70c7c6ff6786e158aec68992",
-    _MINES_GROUP: "995d2a9a19c99c5b64c3136c886be439c9a7e578d0a796980a1eebdbeddba0bd",
-    _MINES_METHOD: "80eaa71892c2c6da5b5c4e1d954161ec7d4172386a35a6b4fd47603a0565fb39",
+    _POWER_METHOD: "c1b86160eda21483015fc6e052bab2a038f06b060fb59e22ea97d7a08fab8759",
+    _GOODS: "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49",
+    _ART: "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+    _OPIUM: "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1",
+    _MINES_BUILDING: "122b78e126dec4044da5e78b86d5e8edd06d6581483efba9e7d0c9404091b655",
+    _MINES_GROUP: "3e9a26aec1edeb6d58a2ca9c62bab946ecb1c8a362d4c8bb18ee538229bb6425",
+    _MINES_METHOD: "dd7ac9300a2b3c551894e186624984d5f3791bdf08462694fcaf3acda97ec276",
 }
 PORT_METHODS = frozenset({"pm_basic_port", "pm_industrial_port", "pm_modern_port"})
 QUERY_ENGINES = frozenset({"any_scope_state", "any_scope_building"})
@@ -294,6 +294,23 @@ def _child(block: Block, key: str) -> Block:
     return row.value
 
 
+def journal_completion(block: Block) -> Block:
+    """Select the unique current completion outcome, preserving other outcomes."""
+    matches = []
+    for row in block.all("outcome"):
+        if not isinstance(row.value, Block):
+            continue
+        headers = row.value.all("header")
+        if len(headers) != 1:
+            continue
+        header = headers[0].value
+        if isinstance(header, Scalar) and header.unquoted == "je_standard_completion_header":
+            matches.append(row.value)
+    if len(matches) != 1:
+        raise ValueError("日志缺少唯一当前完成outcome，不能沿用旧complete路径")
+    return _child(matches[0], "trigger")
+
+
 def _scalar(block: Block, key: str) -> str:
     row = _entry(block, key)
     if not isinstance(row.value, Scalar):
@@ -384,7 +401,7 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
         building_id = (
             query.building_id if isinstance(query, ExistingBusiness) else "building_trade_center"
         )
-        native = _child(reference(_OPIUM, "je_opium"), "complete")
+        native = journal_completion(reference(_OPIUM, "je_opium"))
         line = _exact(
             native,
             "any_scope_building",
@@ -464,7 +481,7 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
                 "reverse_comparison:finite_numeric_ordering;cash_ratio_threshold=.25_design_parameter",
             )
     elif isinstance(query, PortMethod):
-        native = _child(reference(_ART, "je_romanticism"), "complete")
+        native = journal_completion(reference(_ART, "je_romanticism"))
         line = _exact(
             native,
             "any_scope_building",

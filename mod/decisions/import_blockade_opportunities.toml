@@ -1,11 +1,12 @@
 schema = 1
 
 [sources]
-"common/alert_types/00_alert_types.txt" = "399eaa0ed4bb11e29bac7d0de29e2fa1e191cbdbf3b1290fba5abac9b622f912"
-"common/goods/00_goods.txt" = "496810f9b21012cb3ae764e4c0cd65aafa85b6079f96d3d2a6b3dece92a0afcc"
-"common/journal_entries/00_opium.txt" = "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8"
-"common/on_actions/00_code_on_actions.txt" = "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46"
-"events/trade_route_events.txt" = "92c99a87a04577b27f02ec5c6604571a3f4291675d2208aa65cbd1655cb99d8c"
+"common/scripted_effects/00_victoria_on_actions_effects.txt" = "10f4a91ffb8e183a1e27934baa897cfcef864e658160c3dfd74e40625dbc035a"
+"common/alert_types/00_alert_types.txt" = "06099e868214b521f615cac1b5cf1f0d410aff5c8809484e44e56f66213545da"
+"common/goods/00_goods.txt" = "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49"
+"common/journal_entries/00_opium.txt" = "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1"
+"common/on_actions/00_code_on_actions.txt" = "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e"
+"events/trade_route_events.txt" = "2354ccf692fa444614d970aab4ebd15d5a8d24dfc29e85d3ecbce5b4e1a76f3a"
 
 [tuning]
 arms_exposure = 1.12
