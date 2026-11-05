@@ -24,6 +24,7 @@ from typing import Any
 
 from pdx.config import ROOT as GAME_ROOT
 from pdx.config import game_version
+from tools.ci import a4_discovery, a4_history
 from tools.ci.a4_schema import (
     INVESTIGATION,
     RECEIPT,
@@ -44,12 +45,14 @@ SUMMARY = "research/vanilla-ai/1.15.0/update-summary.json"
 DISCOVERY_INDEX = "docs/design/A4发现源.json"
 CANDIDATE = "e14028745e1563fdbbb34141c2ff2d2999d32f04"
 PRODUCTION_BASE = "v3.2.0"
-GATE_INPUTS = (
+GATE_INPUTS: tuple[str, ...] = (
     "tools/ci/a4_scope.py",
     "tools/ci/a4_schema.py",
     "tools/ci/run_check.py",
     "tests/test_a4_scope.py",
+    *a4_discovery.PROJECTOR_INPUTS,
 )
+GATE_INPUTS = tuple(dict.fromkeys(GATE_INPUTS))
 TERMINAL = {"verified", "retained", "unsupported"}
 
 
@@ -72,31 +75,41 @@ def safe_path(root: Path, raw: str) -> Path:
 class Sources:
     """Parse and hash each shared input once per gate, rather than once per row."""
 
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, overrides: dict[str, bytes] | None = None):
         self.root = root
-        self.bytes: dict[str, bytes] = {}
+        self.bytes: dict[str, bytes] = dict(overrides or {})
+        self.hashes: dict[str, str] = {}
         self.jsons: dict[str, Any] = {}
         self.python: dict[str, set[str]] = {}
         self.replayed: set[str] = set()
 
     def read(self, path: str) -> bytes:
         if path not in self.bytes:
-            self.bytes[path] = safe_path(self.root, path).read_bytes()
+            source = safe_path(self.root, path)
+            if source.stat().st_size >= a4_discovery.MAX_FILE_BYTES:
+                raise ValueError(f"oversized controlled source: {path}")
+            self.bytes[path] = source.read_bytes()
         return self.bytes[path]
 
     def json(self, path: str) -> Any:
         if path not in self.jsons:
-            self.jsons[path] = json.loads(self.read(path))
+            self.jsons[path] = a4_discovery.strict_json(self.read(path))
         return self.jsons[path]
+
+    def hash(self, path: str) -> str:
+        """Hash each session's immutable byte snapshot once; identities still validate separately."""
+        if path not in self.hashes:
+            self.hashes[path] = sha(self.read(path))
+        return self.hashes[path]
 
     def reference(
         self, path: str, identity: str = "whole_file", kind: str = "file"
     ) -> dict[str, str]:
-        return {"path": path, "sha256": sha(self.read(path)), "identity": identity, "kind": kind}
+        return {"path": path, "sha256": self.hash(path), "identity": identity, "kind": kind}
 
     def verify(self, reference: dict[str, str]) -> None:
         path = reference["path"]
-        if reference["sha256"] != sha(self.read(path)):
+        if reference["sha256"] != self.hash(path):
             raise ValueError(f"stale hash: {path}")
         identity = reference["identity"]
         if reference["kind"] == "file":
@@ -185,65 +198,18 @@ def plan_goals(sources: Sources) -> dict[str, str]:
 
 
 def production_paths(root: Path) -> list[str]:
-    return sorted(
-        git(root, "ls-files", "src/pdx", "mod/decisions", "mod/generation-lock.json")
-        .decode("utf8")
-        .splitlines()
-    )
+    return a4_history.production_paths(git, root)
 
 
-def changes(root: Path) -> list[dict[str, str]]:
-    result = []
-    checkpoint = (
-        git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", CANDIDATE)
-        .decode()
-        .splitlines()
-    )
-    current = (
-        git(root, "diff", "--name-only", PRODUCTION_BASE, "--", "src/pdx", "mod/decisions")
-        .decode()
-        .splitlines()
-    )
-    paths = sorted(set(checkpoint + current))
-    process = subprocess.run(
-        ["git", "cat-file", "--batch"],
-        cwd=root,
-        input="".join(f"{CANDIDATE}:{path}\n" for path in paths).encode(),
-        capture_output=True,
-        check=False,
-    )
-    if process.returncode:
-        raise ValueError("candidate blob discovery failed")
-    blobs = {}
-    offset = 0
-    for path in paths:
-        end = process.stdout.index(b"\n", offset)
-        header = process.stdout[offset:end].split()
-        if len(header) != 3 or header[1] != b"blob":
-            raise ValueError(f"candidate blob missing: {path}")
-        size = int(header[2])
-        blobs[path] = process.stdout[end + 1 : end + 1 + size]
-        offset = end + size + 2
-    diffs = {
-        "checkpoint": sha(git(root, "diff", f"{CANDIDATE}^", CANDIDATE)),
-        "production_delta": sha(
-            git(root, "diff", PRODUCTION_BASE, "--", "src/pdx", "mod/decisions")
-        ),
-    }
-    for origin, paths in (("checkpoint", checkpoint), ("production_delta", current)):
-        for path in sorted(paths):
-            candidate = blobs[path]
-            now = safe_path(root, path).read_bytes()
-            result.append(
-                {
-                    "id": f"{origin}:{path}",
-                    "path": path,
-                    "checkpoint_sha256": sha(candidate),
-                    "current_sha256": sha(now),
-                    "diff_sha256": diffs[origin],
-                }
-            )
-    return result
+def changes(root: Path) -> list[dict[str, Any]]:
+    return a4_history.changes(git, root, CANDIDATE, PRODUCTION_BASE)
+
+
+def historical_reference(sources: Sources, path: str) -> dict[str, str]:
+    if (sources.root / path).is_file():
+        return sources.reference(path)
+    token = path.replace("~", "~0").replace("/", "~1")
+    return sources.reference(a4_history.HISTORY_PATH, f"paths/{token}", "json")
 
 
 def discover(
@@ -258,7 +224,7 @@ def discover(
                 "kind": "discovery",
                 "origin": origin,
                 "identity": identity,
-                "source": sources.reference(path),
+                "source": historical_reference(sources, path),
                 "goal_ids": goals,
             }
         )
@@ -271,7 +237,10 @@ def discover(
         add("candidate", item["id"], item["path"], ["G01", "C1"])
     for section in sorted(sources.json(SNAPSHOT)["域"]):
         add("snapshot_section", section, SNAPSHOT, ["G02", "C1", "C10"])
-    for path in production_paths(sources.root):
+    for path in sorted(
+        set(production_paths(sources.root))
+        | set(sources.json(a4_history.HISTORY_PATH)["registered_paths"])
+    ):
         add("production_input", path, path, ["G01", "G07", "C1"])
     return found
 
@@ -342,7 +311,12 @@ def bootstrap(
     target = version["caligula_branch"].removeprefix("release/")
     if sources.json(SNAPSHOT)["版本"] != version:
         raise ValueError("installation drift: update target plans and source snapshot first")
-    rows = [pending_row(item, target) for item in discoveries]
+    investigation_refs, reports, catalogs = load_investigations(sources, target)
+    discoveries.extend(item for report in reports for item in report["discoveries"])
+    rows = [
+        pending_row(item, target) for item in discoveries if item["origin"] != "native_projection"
+    ]
+    compact = compact_pending(catalogs, discoveries)
     original_hash = sha(gzip.decompress(sources.read(original["path"])))
     row_hashes = original_row_hashes(sources, original)
     migrations = [
@@ -376,10 +350,11 @@ def bootstrap(
             original["path"],
             *production_paths(root),
             *GATE_INPUTS,
+            a4_history.HISTORY_PATH,
         }
     )
     data = {
-        "schema": 1,
+        "schema": 2,
         "plan": "A4",
         "freeze": {
             "target_version": target,
@@ -399,11 +374,13 @@ def bootstrap(
             "unrecognized": ["A4-1 full parsing and reference crosscheck pending"],
             "duplicates": [],
             "crosscheck_receipts": [],
-            "investigation_sources": [],
+            "investigation_sources": investigation_refs,
             "dlc_ids": [],
         },
         "discoveries": discoveries,
         "rows": rows,
+        "pending_rows": compact,
+        "stale_history": [],
         "migrations": migrations,
         "candidate_changes": candidates,
         "receipts": [],
@@ -411,6 +388,7 @@ def bootstrap(
         "ports": [],
         "causes": [],
     }
+    merge_inventory(data, reports)
     check_shape(data, SCHEMA)
     return data
 
@@ -437,6 +415,128 @@ def investigation_references(
     return references
 
 
+def load_investigations(
+    sources: Sources, version: str, references: list[dict[str, str]] | None = None
+) -> tuple[list[dict[str, str]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """The independent index is authoritative for bootstrap, validation and reconciliation."""
+    index = sources.json(DISCOVERY_INDEX)
+    check_shape(index, {"schema": {1}, "plan": {"A4"}, "investigations": [REFERENCE]})
+    refs = investigation_references(
+        sources, index["investigations"] if references is None else references
+    )
+    if a4_discovery.REPORT_PATH not in {ref["path"] for ref in refs}:
+        raise ValueError("independent native projection report coverage missing")
+    reports, catalogs = [], []
+    for reference in refs:
+        sources.verify(reference)
+        report = sources.json(reference["path"])
+        check_shape(report, INVESTIGATION)
+        if report["source_version"] != version:
+            raise ValueError("investigation mixed source version")
+        if not report["source_inputs"] or not report["scanned_directories"]:
+            raise ValueError("independent investigation source identity missing")
+        for ref in report["source_inputs"]:
+            if ref["path"] in {reference["path"], DISCOVERY_INDEX, LEDGER}:
+                raise ValueError("self-referential investigation hash cycle")
+            sources.verify(ref)
+        if reference["path"] == a4_discovery.REPORT_PATH:
+            catalogs.append(a4_discovery.validate_projection(sources, report))
+        elif any(item["origin"] == "native_projection" for item in report["discoveries"]):
+            raise ValueError("native projection report identity mismatch")
+        reports.append(report)
+    return refs, reports, catalogs
+
+
+def compact_pending(
+    catalogs: list[dict[str, Any]], discoveries: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    by_id = unique(discoveries, "id", "discovery")
+    return [
+        {
+            "domain": group,
+            "discovery_ids": members,
+            "goal_ids": sorted({goal for member in members for goal in by_id[member]["goal_ids"]}),
+            "source": by_id[members[0]]["source"],
+        }
+        for catalog in catalogs
+        for group, members in catalog["groups"].items()
+    ]
+
+
+def expanded_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Compact records can only express pending; terminal states require explicit full ROWs."""
+    rows = list(data["rows"])
+    for item in data["pending_rows"]:
+        discovery = {
+            "id": item["domain"],
+            "identity": item["domain"],
+            "origin": "native_projection",
+            "goal_ids": item["goal_ids"],
+            "source": item["source"],
+        }
+        row = pending_row(discovery, data["freeze"]["target_version"])
+        row.update(
+            id=f"O:{item['domain']}", discovery_ids=item["discovery_ids"], domain=item["domain"]
+        )
+        rows.append(row)
+    return rows
+
+
+def validate_unresolved(rows: dict[str, dict[str, Any]], catalogs: list[dict[str, Any]]) -> None:
+    mapped_domains: dict[str, set[str]] = {}
+    for row in rows.values():
+        for identity in row["discovery_ids"]:
+            mapped_domains.setdefault(identity, set()).add(row["domain"])
+    for catalog in catalogs:
+        members = {
+            identity
+            for group in catalog["unresolved_groups"]
+            for identity in catalog["groups"][group]
+        }
+        for row in rows.values():
+            if members.intersection(row["discovery_ids"]) and conclusion(row) in TERMINAL:
+                raise ValueError("unresolved aggregate/native member cannot be terminal")
+        for domain, identities in catalog["groups"].items():
+            if any(domain not in mapped_domains.get(identity, set()) for identity in identities):
+                raise ValueError("raw-to-canonical triage mapping coverage mismatch")
+
+
+def merge_inventory(data: dict[str, Any], reports: list[dict[str, Any]]) -> None:
+    inventory = data["inventory"]
+    for key in ("scanned_directories", "parse_failures", "unrecognized", "duplicates", "dlc_ids"):
+        inventory[key] = sorted({item for report in reports for item in report[key]})
+    inventory["status"] = "pending"
+    inventory["reason"] = (
+        "完整独立发现已登记；未知分类、生产writer调查、crosscheck与产品功能仍pending；投影不授予原生权限。"
+    )
+
+
+def validate_crosschecks(
+    sources: Sources, data: dict[str, Any], reports: list[dict[str, Any]], stage: str
+) -> None:
+    receipts = unique(data["receipts"], "id", "receipt")
+    required_ids = {identity for report in reports for identity in report["crosscheck_receipt_ids"]}
+    if required_ids != set(data["inventory"]["crosscheck_receipts"]):
+        raise ValueError("inventory/report crosscheck receipt mapping mismatch")
+    if stage != "A4-0" and not required_ids:
+        raise ValueError("independent crosscheck explicitly pending")
+    for reference, report in zip(data["inventory"]["investigation_sources"], reports, strict=True):
+        for identity in report["crosscheck_receipt_ids"]:
+            if identity not in receipts:
+                raise ValueError("missing inventory crosscheck receipt")
+            needed = [reference, *report["source_inputs"]]
+            # Selection is a controlled report input, never an arbitrary receipt-declared expected set.
+            witnesses = [
+                ref
+                for ref in report["source_inputs"]
+                if ref["kind"] == "python" and ref["path"].startswith("tests/")
+            ]
+            if not witnesses:
+                raise ValueError("crosscheck lacks independent projector witness identities")
+            nodes = [f"{ref['path']}::{ref['identity']}" for ref in witnesses]
+            verify_receipt(sources, receipts[identity], needed, nodes)
+
+
 def delivery_gate(stage: str) -> None:
     """Fail closed until actual external Git/CI/release/deployment verification exists."""
     if stage in {"A4-8", "all"}:
@@ -448,22 +548,24 @@ def delivery_gate(stage: str) -> None:
 def inventory_mappings(
     rows: dict[str, dict[str, Any]], reports: list[dict[str, Any]], stage: str
 ) -> None:
-    """Require complete discovery mapping; only the selected phase must be terminal."""
+    """Index complete existence mappings even at A4-0; terminal checks follow selection."""
+    indexes: dict[str, dict[str, list[dict[str, Any]]]] = {"consumer": {}, "writer": {}}
+    for row in rows.values():
+        for kind, index in indexes.items():
+            identities = {row["domain"]}
+            if kind == "consumer":
+                identities.add(row["consumer"]["value"])
+            else:
+                identities.update(
+                    f"{binding['writer']['path']}::{binding['writer']['identity']}"
+                    for binding in row["writer_bindings"]
+                )
+            for identity in identities:
+                index.setdefault(identity, []).append(row)
     for report in reports:
-        for kind in ("consumer", "writer"):
+        for kind, index in indexes.items():
             for identity in report[f"{kind}_ids"]:
-                matched = []
-                for row in rows.values():
-                    identities = {row["domain"]}
-                    if kind == "consumer":
-                        identities.add(row["consumer"]["value"])
-                    else:
-                        identities.update(
-                            f"{binding['writer']['path']}::{binding['writer']['identity']}"
-                            for binding in row["writer_bindings"]
-                        )
-                    if identity in identities:
-                        matched.append(row)
+                matched = index.get(identity, [])
                 if not matched:
                     raise ValueError(f"independent {kind} mapping coverage missing: {identity}")
                 for row in matched:
@@ -789,12 +891,22 @@ def terminal_evidence(
 
 
 def validate(
-    data: dict[str, Any], root: Path, *, stage: str = "all", check_installation: bool = False
+    data: dict[str, Any],
+    root: Path,
+    *,
+    stage: str = "all",
+    check_installation: bool = False,
+    source_overrides: dict[str, bytes] | None = None,
 ) -> dict[str, Any]:
     check_shape(data, SCHEMA)
     if stage not in {"all", *(f"A4-{number}" for number in range(9))}:
         raise ValueError("unknown A4 stage")
-    sources = Sources(root)
+    if stage != "A4-0" and data["inventory"]["status"] != "verified":
+        raise ValueError(
+            "nonterminal inventory: A4-1 independent full inventory is pending or unresolved"
+        )
+    sources = Sources(root, source_overrides)
+    a4_history.verify_history(sources, git, CANDIDATE, PRODUCTION_BASE)
     freeze = data["freeze"]
     if freeze["candidate_commit"] != CANDIDATE or freeze["production_base"] != PRODUCTION_BASE:
         raise ValueError("candidate / production base identity mismatch")
@@ -811,6 +923,7 @@ def validate(
         original["path"],
         *production_paths(root),
         *GATE_INPUTS,
+        a4_history.HISTORY_PATH,
     }
     if {ref["path"] for ref in freeze["inputs"]} != expected_inputs or {
         ref["path"] for ref in freeze["plan_inputs"]
@@ -828,19 +941,10 @@ def validate(
         raise ValueError("live installation identity hash drift")
     delta = changes(root)
     expected_discoveries = discover(sources, old, delta)
-    investigations = []
-    for reference in investigation_references(sources, data["inventory"]["investigation_sources"]):
-        sources.verify(reference)
-        report = sources.json(reference["path"])
-        check_shape(report, INVESTIGATION)
-        if report["source_version"] != freeze["target_version"]:
-            raise ValueError("investigation mixed source version")
-        for source_input in report["source_inputs"]:
-            sources.verify(source_input)
-        if not report["source_inputs"] or not report["scanned_directories"]:
-            raise ValueError("independent investigation source identity missing")
-        expected_discoveries.extend(report["discoveries"])
-        investigations.append(report)
+    _, investigations, catalogs = load_investigations(
+        sources, freeze["target_version"], data["inventory"]["investigation_sources"]
+    )
+    expected_discoveries.extend(item for report in investigations for item in report["discoveries"])
     actual = unique(data["discoveries"], "id", "discovery")
     expected = unique(expected_discoveries, "id", "discovery")
     # Investigation additions are allowed but cannot replace any independently derived seed.
@@ -865,22 +969,31 @@ def validate(
         ):
             raise ValueError("A3 historical identity hash drift")
     candidate = unique(data["candidate_changes"], "id", "candidate")
+    for item in candidate.values():
+        a4_history.validate_state(item["checkpoint"])
+        a4_history.validate_state(item["current"])
     if set(candidate) != {item["id"] for item in delta}:
         raise ValueError("candidate change coverage missing")
     for item in delta:
         if any(candidate[item["id"]][key] != value for key, value in item.items()):
             raise ValueError("candidate change identity hash drift")
-    rows = unique(data["rows"], "id", "row")
+    rows = unique(expanded_rows(data), "id", "row")
+    validate_unresolved(rows, catalogs)
+    inventory_mappings(rows, investigations, "A4-0")
     mapped = {identity for row in rows.values() for identity in row["discovery_ids"]}
     if mapped != set(actual) or any(not row["discovery_ids"] for row in rows.values()):
         raise ValueError("discovery to obligation mapping coverage missing / dangling")
     goals = set(plan_goals(sources))
     if {goal for row in rows.values() for goal in row["goal_ids"]} != goals:
         raise ValueError("goal mapping coverage missing / dangling")
+    related_rows: dict[str, list[dict[str, Any]]] = {}
+    for row in rows.values():
+        for discovery_id in row["discovery_ids"]:
+            related_rows.setdefault(discovery_id, []).append(row)
     for discovery in actual.values():
         if set(discovery["goal_ids"]) - goals:
             raise ValueError("dangling discovery goal ID")
-        related = [row for row in rows.values() if discovery["id"] in row["discovery_ids"]]
+        related = related_rows[discovery["id"]]
         if set(discovery["goal_ids"]) - {goal for row in related for goal in row["goal_ids"]}:
             raise ValueError("discovery goal mapping lost")
     for mapping in [*migrations.values(), *candidate.values()]:
@@ -952,6 +1065,7 @@ def validate(
         or not data["inventory"]["crosscheck_receipts"]
     ):
         raise ValueError("A4-1 independent full inventory is pending or unresolved")
+    validate_crosschecks(sources, data, investigations, stage)
     if stage != "A4-0":
         if not investigations or any(
             report["parse_failures"] or report["unrecognized"] or report["duplicates"]
@@ -963,11 +1077,6 @@ def validate(
         }:
             raise ValueError("independent DLC coverage mismatch")
         inventory_mappings(rows, investigations, stage)
-        for identity in data["inventory"]["crosscheck_receipts"]:
-            if identity not in receipts:
-                raise ValueError("missing inventory crosscheck receipt")
-            receipt = sources.json(receipts[identity]["path"])
-            verify_receipt(sources, receipts[identity], receipt["bindings"], receipt["selection"])
     delivery_gate(stage)
     return {
         "plan": "A4",
@@ -990,7 +1099,10 @@ def validate(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("bootstrap", "validate", "witness"))
+    parser.add_argument("action", choices=("bootstrap", "validate", "witness", "reconcile"))
+    parser.add_argument(
+        "--execute", action="store_true", help="Publish a validated reconcile; default is preview"
+    )
     parser.add_argument("--ledger", default=LEDGER)
     parser.add_argument("--stage", default="all")
     parser.add_argument(
@@ -1016,6 +1128,19 @@ def main() -> int:
                 json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf8", newline="\n"
             )
             print(json.dumps(validate(data, ROOT, stage="A4-0"), ensure_ascii=False))
+        elif args.action == "reconcile":
+            from tools.ci.a4_reconcile import publish, reconcile  # noqa: PLC0415
+
+            data = a4_discovery.strict_json(safe_path(ROOT, args.ledger).read_bytes())
+            candidate, summary = reconcile(data, ROOT)
+            if args.execute:
+                if args.ledger != LEDGER:
+                    raise ValueError("execute reconcile requires the authoritative ledger path")
+                publish(ROOT, candidate, Sources(ROOT).json(DISCOVERY_INDEX))
+            else:
+                output = ROOT / "tools/out/a4-reconcile-preview.json"
+                a4_discovery.write_json(output, candidate)
+            print(json.dumps(summary, ensure_ascii=False))
         elif args.action == "witness":
             if not args.request:
                 raise ValueError("witness requires --request")

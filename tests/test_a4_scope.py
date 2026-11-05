@@ -3,11 +3,103 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+DLC_CONTRACT = sorted(
+    path
+    for path in json.loads(
+        (ROOT / "research/vanilla-ai/1.15.0/discovery/capture.json").read_bytes()
+    )["source_hashes"]
+    if path.startswith("dlc/") and path.endswith(".dlc")
+)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def bounded_discovery():
+    """Use the full gate and raw projection contracts with a small controlled capture.
+
+    Only the independent native input/index and its locked raw identity are
+    substituted. Plans, A3 originals, production Git edges, Sources, schemas,
+    ownership, mapping, terminal evidence and real receipt replays stay active.
+    The full frozen capture is exercised once by the registration pipeline.
+    """
+    import json
+    import tempfile
+
+    from tests.test_a4_discovery import captured_fixture
+    from tools.ci import a4_discovery as discovery
+    from tools.ci import a4_scope
+
+    original_root = json.loads((ROOT / discovery.ROOT_PATH).read_bytes())
+    dlc_ids = sorted(
+        path
+        for path in original_root["source_hashes"]
+        if path.startswith("dlc/") and path.endswith(".dlc")
+    )
+    raw = captured_fixture()
+    old_dlc = "dlc/example/example.dlc"
+    template = raw["source_syntax"].pop(old_dlc)
+    del raw["source_hashes"][old_dlc]
+    for source in dlc_ids:
+        raw["source_hashes"][source] = discovery.digest(("synthetic DLC descriptor", source))
+        tree = json.loads(template["syntax_json"])
+        stack = [tree]
+        while stack:
+            node = stack.pop()
+            node["node_id"] = discovery.digest((source, tuple(node["node_position"])))
+            if node["kind"] == "assignment":
+                stack.append(node["value"])
+            elif node["kind"] == "block":
+                stack.extend(node["items"])
+        text = discovery.encoded(tree).decode()
+        raw["source_syntax"][source] = {
+            **template,
+            "source_sha256": raw["source_hashes"][source],
+            "syntax_json": text,
+            "syntax_sha256": discovery.sha(text.encode()),
+        }
+    raw["baseline_id"] = "victoria3-1.15.0:" + discovery.digest(raw["source_hashes"])
+    output = ROOT / "tools/out/a4-scope-fixtures"
+    output.mkdir(parents=True, exist_ok=True)
+    directory = Path(tempfile.mkdtemp(prefix="bounded-", dir=output))
+    relative = directory.relative_to(ROOT).as_posix()
+    capture = directory / "input.json"
+    capture.write_bytes(discovery.encoded(raw))
+    patch = pytest.MonkeyPatch()
+    patch.setattr(discovery, "DIRECTORY", relative + "/discovery")
+    patch.setattr(discovery, "ROOT_PATH", relative + "/discovery/capture.json")
+    patch.setattr(discovery, "CATALOG_PATH", relative + "/discovery/catalog.json")
+    patch.setattr(discovery, "REPORT_PATH", relative + "/discovery/investigation.json")
+    patch.setattr(discovery, "CAPTURE_SHA256", discovery.sha(capture.read_bytes()))
+    patch.setattr(a4_scope, "DISCOVERY_INDEX", relative + "/index.json")
+    try:
+        discovery.import_capture(ROOT, capture, expected_sha256=discovery.CAPTURE_SHA256)
+        discovery.write_json(
+            ROOT / a4_scope.DISCOVERY_INDEX,
+            {
+                "schema": 1,
+                "plan": "A4",
+                "investigations": [a4_scope.Sources(ROOT).reference(discovery.REPORT_PATH)],
+            },
+        )
+        assert len(capture.read_bytes()) < 100_000
+        assert discovery.project(raw)["dlc_ids"] == dlc_ids
+        discovery.write_json(
+            directory / "fixture-metadata.json",
+            {
+                "evidence": "synthetic controlled native fixture; full production/A3/plan/receipt gates remain active",
+                "raw_bytes": capture.stat().st_size,
+                "nodes": discovery.project(raw)["node_count"],
+                "selected_dlc_ids": dlc_ids,
+            },
+        )
+        yield
+    finally:
+        patch.undo()
 
 
 def synthetic_installation() -> dict:
@@ -157,8 +249,14 @@ def terminal(initial):
     row["configurations"] = [
         {"id": "base", "dlc_ids": [], "enabled": True, "case_ids": ["case-1"]},
         {"id": "disabled", "dlc_ids": [], "enabled": False, "case_ids": ["case-1"]},
-        {"id": "dlc", "dlc_ids": ["dlc-a"], "enabled": True, "case_ids": ["case-1"]},
+        {
+            "id": "dlc",
+            "dlc_ids": initial["inventory"]["dlc_ids"],
+            "enabled": True,
+            "case_ids": ["case-1"],
+        },
     ]
+    assert row["configurations"][-1]["dlc_ids"] == DLC_CONTRACT
     source = a4_scope.Sources(ROOT)
     row["evidence_hashes"] = [source.reference("tools/ci/a4_scope.py", "validate", "python")]
     row["boundary_evidence"] = [source.reference("tools/ci/a4_scope.py", "validate", "python")]
@@ -188,7 +286,7 @@ def test_terminal_missing_applicable_dimension_is_rejected(terminal, dimension: 
 
     terminal["applicability"][dimension]["status"] = "pending"
     with pytest.raises(ValueError, match="applicability"):
-        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, ["dlc-a"])
+        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, list(DLC_CONTRACT))
 
 
 @pytest.mark.parametrize("configuration", ["disabled", "dlc"])
@@ -199,7 +297,7 @@ def test_terminal_missing_concrete_configuration_is_rejected(terminal, configura
         item for item in terminal["configurations"] if item["id"] != configuration
     ]
     with pytest.raises(ValueError, match="configuration"):
-        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, ["dlc-a"])
+        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, list(DLC_CONTRACT))
 
 
 def test_unwired_implement_is_rejected(terminal) -> None:
@@ -209,7 +307,7 @@ def test_unwired_implement_is_rejected(terminal) -> None:
         disposition="implement", interface_status="verified", obligation_status="verified"
     )
     with pytest.raises(ValueError, match="unwired writer"):
-        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, ["dlc-a"])
+        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, list(DLC_CONTRACT))
 
 
 def test_receipt_rejects_failed_and_forged_passed(tmp_path) -> None:
@@ -360,7 +458,7 @@ def test_terminal_retain_requires_precise_boundary_not_file_only(terminal) -> No
 
     terminal["boundary_evidence"] = terminal["input_hashes"]
     with pytest.raises(ValueError, match="exact boundary"):
-        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, ["dlc-a"])
+        a4_scope.terminal_evidence(terminal, a4_scope.Sources(ROOT), {}, list(DLC_CONTRACT))
 
 
 def test_terminal_validates_real_run_not_just_passed_claim(terminal, initial) -> None:
@@ -393,7 +491,7 @@ def test_terminal_validates_real_run_not_just_passed_claim(terminal, initial) ->
             "sha256": a4_scope.sha(path.read_bytes()),
         }
         a4_scope.terminal_evidence(
-            terminal, a4_scope.Sources(ROOT), {receipt["id"]: stub}, ["dlc-a"]
+            terminal, a4_scope.Sources(ROOT), {receipt["id"]: stub}, list(DLC_CONTRACT)
         )
         data = copy.deepcopy(initial)
         data["rows"][0] = terminal

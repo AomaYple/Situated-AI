@@ -1,5 +1,1 @@
-{
-  "schema": 1,
-  "plan": "A4",
-  "investigations": []
-}
+{"investigations":[{"identity":"whole_file","kind":"file","path":"research/vanilla-ai/1.15.0/discovery/investigation.json","sha256":"4420780e0ba4b5ab769f5a8f7e5a002ccb2046f054b9f6012fe4651d28189eec"}],"plan":"A4","schema":1}

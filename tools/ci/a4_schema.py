@@ -141,15 +141,15 @@ INVESTIGATION = {
 CHANGE = {
     "id": TEXT,
     "path": TEXT,
-    "checkpoint_sha256": HASH,
-    "current_sha256": HASH,
+    "checkpoint": {"presence": {"present", "absent"}, "hashes": [HASH]},
+    "current": {"presence": {"present", "absent"}, "hashes": [HASH]},
     "decision": {"migrate", "reverify", "retain", "replace", "withdraw"},
     "row_ids": STRINGS,
     "reason": TEXT,
     "diff_sha256": HASH,
 }
 SCHEMA: dict[str, Any] = {
-    "schema": {1},
+    "schema": {2},
     "plan": {"A4"},
     "freeze": {
         "target_version": TEXT,
@@ -182,6 +182,10 @@ SCHEMA: dict[str, Any] = {
     },
     "discoveries": [DISCOVERY],
     "rows": [ROW],
+    "pending_rows": [
+        {"domain": TEXT, "discovery_ids": STRINGS, "goal_ids": STRINGS, "source": REFERENCE}
+    ],
+    "stale_history": [{"row": ROW, "reason": TEXT}],
     "migrations": [
         {
             "old_id": TEXT,
