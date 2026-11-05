@@ -1,0 +1,11 @@
+schema = 1
+
+[sources]
+"common/ai_regional_objectives/00_ai_regional_objectives.txt" = "4cf75c09ebf4f275b77a015bd0c6e829e0c08d589a859d90c9cc18a44832755a"
+"common/ai_strategies/00_default_strategy.txt" = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+"common/ideologies/01_character_ideologies.txt" = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
+"common/scripted_effects/00_victoria_scripted_effects.txt" = "243790fbcb837393d40e311e6a8aa3ccee5bb5d36e7e81f58075c7caf3aa0bc1"
+"common/trigger_localization/trigger_localization.md" = "491d2c31dcf81ecb62c250f6bb26ff75e4d8501bfcb0a1ad5f6b0bf96d542e08"
+
+[tuning]
+conquest_opportunity_cost = -3

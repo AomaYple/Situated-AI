@@ -268,7 +268,10 @@ CASES = [
         [],
         1.10,
     ),
-    (SUPPLY, {"war": True, "navy": 1, "net_surplus": 1, "default": None}, [], 1.10),
+    # C2: known war/fleet proves the commitment; unknown financing retains
+    # the .15 cost, while the funded .20 benefit needs observed non-default.
+    # Base need .10 minus financing .15 gives 1 + .10 - .15 = .95.
+    (SUPPLY, {"war": True, "navy": 1, "net_surplus": 1, "default": None}, [], 0.95),
     (SUPPLY, {"war": None, "navy": 1}, [], 1),
     (SUPPLY, {"war": True, "navy": None}, [], 1),
 ]
@@ -298,11 +301,25 @@ def test_no_other_writers_and_full_native_ast_remain_in_each_physical_consumer(p
     )
     native_root = _block(parse_text(native).root, "ai_strategy_default")
     generated_root = _block(parse_text(stripped).root, "ai_strategy_default")
-    expected_counts = {SAFETY: 6, POLICE: 6, HOME: 6, SUPPLY: 3}
+    expected_counts = {SAFETY: 8, POLICE: 8, HOME: 8, SUPPLY: 3}
+    names = {SAFETY: "workplace_safety", POLICE: "police", HOME: "home_affairs"}
     for field in FIELDS:
         rules = [rule for rule in policy.rules if ".".join(rule.field) == field]
         assert len(rules) == expected_counts[field]
-        assert all(rule.id.startswith("institution_supply_") for rule in rules)
+        withdrawals = (
+            {
+                f"institution_priority_{names[field]}_0_{tier}"
+                for tier in ("invested", "deeply_invested")
+            }
+            if field in names
+            else set()
+        )
+        assert {
+            rule.id for rule in rules if not rule.id.startswith("institution_supply_")
+        } == withdrawals
+        assert len([rule for rule in rules if rule.id.startswith("institution_supply_")]) == (
+            3 if field == SUPPLY else 6
+        )
         assert all(rule.intent is None and not rule.contexts for rule in rules)
         before, after = native_root, generated_root
         for part in field.split(".")[1:]:

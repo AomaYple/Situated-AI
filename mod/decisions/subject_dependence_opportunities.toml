@@ -1,0 +1,10 @@
+schema = 1
+
+[sources]
+"common/ai_strategies/02_subject_diplomatic_strategies.txt" = "0afec614df77afc07c26d39aa6e560f7d0c1cf51058f0ae2ca5ef7e92f839129"
+"common/defines/00_defines.txt" = "e724f25896e13f8d19457b0b0699ba825a11b4d6e0ad39b58c0ce3d9d233e6af"
+"common/diplomatic_actions/36_subjects_grant_own_market.txt" = "8d7b67c13e1029aed59fe825c1f724f595796eb26cb5c0b22a3bef403daf09d2"
+"common/journal_entries/04_india_non_cooperation.txt" = "9d9437b35f0c356e2dadcf40f23470712a1c6f436ef4b2abdf64caae81a13288"
+
+[tuning]
+economic_relationship_continuity = 1.08

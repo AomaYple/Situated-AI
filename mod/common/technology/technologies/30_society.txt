@@ -31,7 +31,7 @@ urbanization = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.1800000000000002
+			max = 1.18
 		} }
 		# SITAI END information:urbanization.ai_weight
 	}
@@ -71,7 +71,7 @@ urban_planning = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.1800000000000002
+			max = 1.18
 		} }
 		# SITAI END information:urban_planning.ai_weight
 	}
@@ -837,7 +837,7 @@ modern_sewerage = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_construction_sector level >= 1 occupancy >= 0.75 } } } } add = 0.08 }
 			}
 			min = 1
-			max = 1.2000000000000002
+			max = 1.2
 		} }
 		# SITAI END information:modern_sewerage.ai_weight
 	}
@@ -1121,7 +1121,7 @@ dialectics = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.08 }
 			}
 			min = 1
-			max = 1.2400000000000002
+			max = 1.24
 		} }
 		# SITAI END information:dialectics.ai_weight
 	}
@@ -1196,7 +1196,7 @@ realism = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_traditional_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
 			}
 			min = 1
-			max = 1.1600000000000001
+			max = 1.16
 		} }
 		# SITAI END information:realism.ai_weight
 	}
@@ -1568,7 +1568,7 @@ steel_frame_buildings = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.1800000000000002
+			max = 1.18
 		} }
 		# SITAI END information:steel_frame_buildings.ai_weight
 	}
@@ -2034,7 +2034,7 @@ camera = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_realist_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
 			}
 			min = 1
-			max = 1.1600000000000001
+			max = 1.16
 		} }
 		# SITAI END information:camera.ai_weight
 	}
@@ -2148,7 +2148,7 @@ elevator = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.1800000000000002
+			max = 1.18
 		} }
 		# SITAI END information:elevator.ai_weight
 	}
@@ -2492,7 +2492,7 @@ film = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_photographic_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
 			}
 			min = 1
-			max = 1.1600000000000001
+			max = 1.16
 		} }
 		# SITAI END information:film.ai_weight
 	}
@@ -2538,7 +2538,7 @@ multilateral_alliances = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_target = yes } } add = 0.08 }
 			}
 			min = 1
-			max = 1.1600000000000001
+			max = 1.16
 		} }
 		# SITAI END information:multilateral_alliances.ai_weight
 	}

@@ -31,6 +31,7 @@ _SCOPES = frozenset(
         "scope:target_country",
         "scope:overlord",
         "scope:interest_group",
+        "scope:anti_public_healthcare_ig",
         "scope:country",
         "scope:enemy_country",
     }
@@ -49,6 +50,8 @@ _PARAMETER_QUERIES = frozenset(
         "has_treaty_alliance_with",
         "has_truce_with",
         "has_variable",
+        "has_modifier",
+        "has_building",
         "is_homeland_of_country_cultures",
         "owner",
         "is_production_method_active",
@@ -59,6 +62,7 @@ _PARAMETER_QUERIES = frozenset(
         "radical_fraction",
         "has_institution",
         "has_journal_entry",
+        "is_involved_in_journal_entry",
         "sitai_defense_commitment",
         "sitai_neighbor_defense",
         "institution_investment_level",
@@ -66,6 +70,10 @@ _PARAMETER_QUERIES = frozenset(
         "has_active_production_method",
         "law_enactment_stance",
         "law_stance",
+        "market_imports_reliance",
+        "country_has_state_religion",
+        "religion_percent_country",
+        "country_average_religious_acceptance",
     }
 )
 _PARAMETER_QUERY_BLOCKS: dict[str, tuple[frozenset[str], str | None]] = {
@@ -78,6 +86,9 @@ _PARAMETER_QUERY_BLOCKS: dict[str, tuple[frozenset[str], str | None]] = {
     "institution_investment_level": (frozenset({"institution"}), "value"),
     "law_enactment_stance": (frozenset({"law"}), "value"),
     "law_stance": (frozenset({"law"}), "value"),
+    "market_imports_reliance": (frozenset({"goods"}), "value"),
+    "religion_percent_country": (frozenset({"target"}), "value"),
+    "country_average_religious_acceptance": (frozenset({"target"}), "value"),
     "sitai_defense_commitment": (frozenset({"PARTNER"}), None),
     "sitai_neighbor_defense": (frozenset({"PARTNER", "OPPONENT"}), None),
 }
@@ -292,6 +303,208 @@ def _compare(left: object, operator: str, right: object) -> Truth:
     return left_number >= right_number
 
 
+def _actual_overlord_dependence(anchor: Mapping[str, object | None]) -> float | None:
+    """Resolve a concrete current overlord identity, never a prospective alias.
+
+    Independent fixtures store observations by country identity. Merely placing
+    a value at a symbolic getter key cannot impersonate the actual relationship.
+    """
+    actor = anchor.get("ROOT")
+    if actor is None:
+        return None
+    if not isinstance(actor, Mapping):
+        raise UnsupportedPdxError("宗主依赖ROOT必须是国家映射")
+    overlord = actor.get("overlord")
+    if overlord is None:
+        return None
+    if not isinstance(overlord, Mapping):
+        raise UnsupportedPdxError("实际overlord必须是国家映射")
+    identity = overlord.get("country_id")
+    dependence = actor.get("economic_dependence")
+    if identity is None or dependence is None:
+        return None
+    if not isinstance(identity, str) or not identity or not isinstance(dependence, Mapping):
+        raise UnsupportedPdxError("实际宗主依赖必须绑定具体国家identity和参数映射")
+    value = dependence.get(identity)
+    if value is None:
+        return None
+    if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 5:
+        raise UnsupportedPdxError("实际宗主economic_dependence必须是0到5的有限指数")
+    return float(value)
+
+
+def _own_low_support_wars(
+    item: Assignment,
+    facts: Mapping[str, object | None],
+    anchor: Mapping[str, object | None],
+) -> Truth:
+    """Only the frozen own-list count >= 2 / own support < 50 query.
+
+    War fixtures hold per-country observations. The comparison target is
+    resolved by ROOT identity, never by an aggregate flag or the enemy's value.
+    """
+    if item.op != "=" or item.prefix is not None or not isinstance(item.value, Block):
+        raise UnsupportedPdxError("本国战争查询必须是精确普通赋值块")
+    rows = list(item.value.assignments())
+    if (
+        len(rows) != 2
+        or len(item.value.items) != 2
+        or any(row.prefix is not None for row in rows)
+        or rows[0].key != "count"
+        or rows[0].op != ">="
+        or not isinstance(rows[0].value, Scalar)
+        or rows[0].value.unquoted != "2"
+        or rows[1].key != "has_war_support"
+        or rows[1].op != "="
+        or not isinstance(rows[1].value, Block)
+    ):
+        raise UnsupportedPdxError("本国战争仅支持过滤后count>=2的有限查询")
+    support = list(rows[1].value.assignments())
+    if (
+        len(support) != 2
+        or len(rows[1].value.items) != 2
+        or any(row.prefix is not None or not isinstance(row.value, Scalar) for row in support)
+    ):
+        raise UnsupportedPdxError("本国战争支持度只接受精确target=root/value<50")
+    if tuple((row.key, row.op, _scalar(row, label=row.key).unquoted) for row in support) != (
+        ("target", "=", "root"),
+        ("value", "<", "50"),
+    ):
+        raise UnsupportedPdxError("本国战争支持度只接受精确target=root/value<50")
+    actor = anchor.get("ROOT")
+    if actor is None:
+        return None
+    if not isinstance(actor, Mapping):
+        raise UnsupportedPdxError("本国战争ROOT必须是国家映射")
+    if facts is not actor:
+        raise UnsupportedPdxError("本国战争集合不得切换为外国或其他对象")
+    collection = actor.get("any_scope_war")
+    if collection is None:
+        return None
+    if not isinstance(collection, (tuple, list)) or any(
+        not isinstance(war, Mapping) for war in collection
+    ):
+        raise UnsupportedPdxError("本国战争观测必须是完整对象列表，不能预聚合布尔")
+    identity = actor.get("country_id")
+    if identity is not None and (not isinstance(identity, str) or not identity):
+        raise UnsupportedPdxError("本国战争国家身份必须是非空字符串")
+    known_low = unknown = 0
+    for war in collection:
+        observations = war.get("war_support")
+        if observations is not None and not isinstance(observations, Mapping):
+            raise UnsupportedPdxError("战争支持度必须按国家身份保存数值观测")
+        value = observations.get(identity) if observations is not None and identity else None
+        if value is None:
+            unknown += 1
+        elif type(value) not in (int, float) or not math.isfinite(value):
+            raise UnsupportedPdxError("战争支持度必须是有限数值或未知")
+        elif value < 50:
+            known_low += 1
+    if known_low >= 2:
+        return True
+    return False if known_low + unknown < 2 else None
+
+
+def _cultural_exposure(
+    item: Assignment,
+    facts: Mapping[str, object | None],
+    anchor: Mapping[str, object | None],
+) -> Truth:
+    """Exact native state -> culture -> PREV state identity, not a flat proxy."""
+
+    def shape(node: Assignment | Block | Scalar | None) -> object:
+        if isinstance(node, Assignment):
+            if node.prefix is not None:
+                raise UnsupportedPdxError("文化接受查询禁止前缀")
+            return (node.key, node.op, shape(node.value))
+        if isinstance(node, Block):
+            return tuple(shape(child) for child in _ordinary_items(node))
+        if isinstance(node, Scalar):
+            return node.unquoted
+        raise UnsupportedPdxError("文化接受查询形状缺失")
+
+    expected = (
+        "any_scope_state",
+        "=",
+        (
+            (
+                "any_scope_culture",
+                "=",
+                (
+                    ("NOT", "=", (("is_primary_culture_of", "=", "ROOT"),)),
+                    (
+                        "PREV",
+                        "=",
+                        (
+                            (
+                                "state_average_culture_pop_acceptance",
+                                "=",
+                                (
+                                    ("culture", "=", "prev"),
+                                    ("value", "<", "acceptance_status_5"),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+    if shape(item) != expected:
+        raise UnsupportedPdxError("文化接受仅支持原版精确ROOT/PREV同州同文化查询")
+    actor = anchor.get("ROOT")
+    if actor is None:
+        return None
+    if facts is not actor:
+        raise UnsupportedPdxError("文化接受只能读取当前本国州")
+    primary = actor.get("primary_cultures")
+    if primary is not None and (
+        not isinstance(primary, (tuple, list)) or any(not isinstance(x, str) for x in primary)
+    ):
+        raise UnsupportedPdxError("主体文化必须是明确身份列表")
+    states = actor.get("any_scope_state")
+    if states is None:
+        return None
+    if not isinstance(states, (tuple, list)):
+        raise UnsupportedPdxError("本国州必须是完整对象列表")
+    result: list[Truth] = []
+    for state in states:
+        if not isinstance(state, Mapping):
+            raise UnsupportedPdxError("本国州对象必须是映射")
+        cultures = state.get("any_scope_culture")
+        if cultures is None:
+            result.append(None)
+            continue
+        if not isinstance(cultures, (tuple, list)):
+            raise UnsupportedPdxError("本州文化必须是完整身份列表")
+        acceptance = state.get("culture_pop_acceptance")
+        if acceptance is not None and not isinstance(acceptance, Mapping):
+            raise UnsupportedPdxError("文化接受必须按本州具体文化保存")
+        for culture in cultures:
+            if not isinstance(culture, str) or not culture:
+                raise UnsupportedPdxError("本州文化身份必须是非空字符串")
+            value = acceptance.get(culture) if acceptance is not None else None
+            if value is not None and (type(value) not in (int, float) or not math.isfinite(value)):
+                raise UnsupportedPdxError("文化接受必须是有限数值或未知")
+            result.append(
+                truth_all(
+                    (
+                        None if primary is None else culture not in primary,
+                        None if value is None else value < 80,
+                    )
+                )
+            )
+    return truth_any(tuple(result))
+
+
+def _is_cultural_exposure(item: Assignment) -> bool:
+    return (
+        item.key == "any_scope_state"
+        and isinstance(item.value, Block)
+        and bool(item.value.all("any_scope_culture"))
+    )
+
+
 def _condition(
     block: Block,
     facts: Mapping[str, object | None],
@@ -325,6 +538,12 @@ def _condition(
     for item in block.items:
         if not isinstance(item, Assignment):
             raise UnsupportedPdxError("条件块包含匿名或裸值")
+        if item.key == "any_scope_war":
+            values.append(_own_low_support_wars(item, facts, anchor))
+            continue
+        if _is_cultural_exposure(item):
+            values.append(_cultural_exposure(item, facts, anchor))
+            continue
         if item.key in {
             "any_political_movement",
             "any_interest_group",
@@ -406,6 +625,14 @@ def _condition(
         if item.key in _PARAMETER_QUERIES:
             values.append(_parameter_query(item, facts))
             continue
+        if item.key == "ROOT.economic_dependence(overlord)":
+            dependence_threshold = _literal(_scalar(item, label=item.key))
+            if type(dependence_threshold) not in (int, float):
+                raise UnsupportedPdxError("实际宗主依赖比较必须使用数值")
+            values.append(
+                _compare(_actual_overlord_dependence(anchor), item.op, dependence_threshold)
+            )
+            continue
         if isinstance(item.value, Scalar):
             if item.key not in facts or facts[item.key] is None:
                 values.append(None)
@@ -415,14 +642,14 @@ def _condition(
             expected: object = _literal(scalar)
             if isinstance(expected, str) and _REFERENCE.fullmatch(expected):
                 expected = _resolve_reference(expected, anchor)
-            elif not scalar.quoted and (item.key, item.op, expected) == (
-                "tax_capacity",
-                "<",
-                "tax_capacity_usage",
-            ):
-                # Exact same-state getter pair proved by the government
-                # consumer. No generic identifier or outer-country lookup.
-                expected = facts.get("tax_capacity_usage")
+            elif not scalar.quoted and (item.key, item.op, expected) in {
+                ("tax_capacity", "<", "tax_capacity_usage"),
+                ("average_sol", "<", "average_expected_sol"),
+            }:
+                # Exact same-state getter pairs proved by government-building
+                # and emergency-relief consumers. No generic identifier or
+                # outer-country lookup.
+                expected = facts.get(str(expected))
             values.append(_compare(actual, item.op, expected))
             continue
         if isinstance(item.value, Block) and item.key in _PARAMETER_QUERIES:
@@ -453,7 +680,11 @@ def _ordinary_items(block: Block) -> list[Assignment]:
 def _validate_condition(block: Block) -> None:
     """Validate syntax even under missing scopes or complete empty collections."""
     for item in _ordinary_items(block):
-        if isinstance(item.value, Block) and (
+        if item.key == "any_scope_war":
+            _own_low_support_wars(item, {}, {})
+        elif _is_cultural_exposure(item):
+            _cultural_exposure(item, {}, {})
+        elif isinstance(item.value, Block) and (
             item.key in _SCOPES
             or _GOODS_SCOPE.fullmatch(item.key)
             or _INTEREST_GROUP_SCOPE.fullmatch(item.key)

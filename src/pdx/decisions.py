@@ -30,6 +30,7 @@ from . import (
     decision_rules,
     decision_security,
 )
+from .lexer import ATOM, tokenize
 from .localization_languages import (
     DEFAULT_LANGUAGES,
     Language,
@@ -44,6 +45,7 @@ from .situated import action_instances as situated_action_instances
 from .situated import compiler as situated_compiler
 from .situated import lowering as situated_lowering
 from .situated import pdx_eval as situated_pdx_eval
+from .situated import resources as situated_resources
 from .situated import support_program
 from .situated.compiler import load_model as load_situated_model
 from .situated.compiler import strategy_overlay as compile_situated_overlay
@@ -524,12 +526,28 @@ def information_contract() -> dict[str, object]:
 
 
 def module_lifecycle_contract(
-    policy: Policy, _extensions: Extensions, country_policy: CountryPolicy | None = None
+    policy: Policy,
+    _extensions: Extensions,
+    country_policy: CountryPolicy | None = None,
+    *,
+    generated_files: Mapping[str, str] | None = None,
 ) -> dict[str, dict[str, object]]:
-    """返回各决策模块的状态、求值时机、关闭和存档契约。"""
+    """返回模块能力契约；提供生成文件时按实际部署收窄遗留财政状态。"""
 
     contract = deepcopy(MODULE_LIFECYCLE_CONTRACT)
     contract["fiscal"]["ttl_or_none"] = policy.ttl_days if policy.enabled else None
+    if generated_files is not None:
+        deployed = "common/scripted_effects/sitai_fiscal_effects.txt" in generated_files
+        contract["fiscal"]["deployed"] = deployed
+        if not deployed:
+            # The absent legacy module has no hooks or state to maintain.
+            # Current direct fact consumers belong to information_rules.
+            contract["fiscal"].update(
+                stateful=False,
+                hooks=[],
+                ttl_or_none=None,
+                clear_on_disable="no_persistent_state",
+            )
     if country_policy is not None and country_policy.enabled:
         contract["country_state"] = {
             "stateful": False,
@@ -1117,6 +1135,7 @@ def metadata_payload(
     complete_localization: bool = False,
     country_policy: CountryPolicy | None = None,
     situated_model: situated_compiler.SituatedModel | None = None,
+    generated_files: Mapping[str, str] | None = None,
 ) -> dict[str, object]:
     policy = policy or load()
     extensions = extensions or load_extensions()
@@ -1162,7 +1181,9 @@ def metadata_payload(
         "save_compatibility": policy.package.save_compatibility,
         "platforms": list(policy.package.platforms),
         "platform_notes": policy.package.platform_notes,
-        "module_contract": module_lifecycle_contract(policy, extensions, country_policy),
+        "module_contract": module_lifecycle_contract(
+            policy, extensions, country_policy, generated_files=generated_files
+        ),
         "information_contract": information_contract(),
         "source_fingerprint": source_fingerprint(
             policy,
@@ -1223,7 +1244,19 @@ def build(
         and consumer_adapters.supply is not None
         and any("market" in adapter.enabled_domains for _, adapter in consumer_adapters.policies)
     )
-    if not supply_enabled and situated_model.consumer_ir is not None:
+    event_enabled = (
+        consumer_adapters is not None
+        and bool(consumer_adapters.event_programs)
+        and any("political" in adapter.enabled_domains for _, adapter in consumer_adapters.policies)
+    )
+    acceptance_enabled = (
+        consumer_adapters is not None
+        and bool(consumer_adapters.acceptance_programs)
+        and any("diplomacy" in adapter.enabled_domains for _, adapter in consumer_adapters.policies)
+    )
+    if (
+        not supply_enabled or not event_enabled or not acceptance_enabled
+    ) and situated_model.consumer_ir is not None:
         # The configured model is wider than a caller's actual enabled inputs.
         # A disabled adapter must not survive as a claimed production writer.
         situated_model = replace(
@@ -1233,7 +1266,9 @@ def build(
                 writers=tuple(
                     writer
                     for writer in situated_model.consumer_ir.writers
-                    if writer.kind != "supply_program"
+                    if (writer.kind != "supply_program" or supply_enabled)
+                    and (writer.kind != "event_program" or event_enabled)
+                    and (writer.kind != "acceptance_program" or acceptance_enabled)
                 ),
             ),
         )
@@ -1436,7 +1471,13 @@ def build(
     strategy_issues = player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"])
     if strategy_issues:
         raise ValueError("生产策略违反玩家边界：" + "；".join(strategy_issues))
-    if policy.enabled:
+    # Joint consumers replace the legacy fiscal field and read current world
+    # facts directly. Emit its state only when the final strategy still has
+    # an actual legacy trigger token, never merely because config permits it.
+    if policy.enabled and any(
+        token.kind == ATOM and token.value == ACTIVE_TRIGGER
+        for token in tokenize(files["common/ai_strategies/00_default_strategy.txt"])
+    ):
         files.update(
             {
                 "common/scripted_triggers/sitai_fiscal_triggers.txt": triggers(policy),
@@ -1501,6 +1542,7 @@ def build(
         complete_localization=complete_localization,
         country_policy=country_policy,
         situated_model=situated_model,
+        generated_files=files,
     )
     action_contract = situated_model.contract()
     action_contract["enabled"] = bool(action_overlay)
@@ -1678,6 +1720,7 @@ def build(
         "evidence": "independent_pdx_ast_structure",
     }
     metadata["situated_actions"] = action_contract
+    metadata["static_resource_budget"] = situated_resources.check(files, situated_model)
     files[".metadata/metadata.json"] = (
         json.dumps(
             metadata,
@@ -1742,7 +1785,7 @@ def check(root: Path, files: Mapping[str, str | bytes] | None = None) -> list[st
         f"{p.relative_to(root)} 是未声明产物"
         for p in root.rglob("*")
         if p.is_file()
-        and p.relative_to(root).parts[0] in {"common", "localization", ".metadata"}
+        and p.relative_to(root).parts[0] in {"common", "events", "localization", ".metadata"}
         and p.relative_to(root).as_posix() not in files
     )
     return issues

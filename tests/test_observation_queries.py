@@ -163,12 +163,15 @@ def test_direct_dataclass_construction_cannot_bypass_validation(query):
         queries.render(query)
 
 
-def test_only_four_collection_engines_are_registered():
+def test_only_four_collections_local_market_and_finite_country_queries_are_registered():
     assert {
         "any_political_movement",
         "any_scope_state",
         "any_scope_building",
         "any_interest_group",
+        "market",
+        "OR",
+        "AND",
     } == queries.QUERY_ENGINES
     with pytest.raises(ValueError):
         queries.from_reader("any_country", {"threshold": "1"})

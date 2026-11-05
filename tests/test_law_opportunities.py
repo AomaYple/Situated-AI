@@ -53,10 +53,11 @@ def _value(derived, law, changes):
 
 
 def test_six_complete_native_families_have_37_unique_concrete_consumers(derived):
-    assert len(derived["covered"]) == 52
-    assert len({(row["source"], row["field"]) for row in derived["covered"]}) == 52
+    assert len(derived["covered"]) == 56
+    assert len({(row["source"], row["field"]) for row in derived["covered"]}) == 56
     assert sorted(Counter(row["source"] for row in derived["covered"]).values()) == [
         3,
+        4,
         4,
         5,
         5,

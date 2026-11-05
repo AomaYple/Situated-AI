@@ -410,17 +410,60 @@ def test_inconsistent_shared_cost_identity_is_rejected(changes):
 
 
 @pytest.mark.parametrize(
-    "changes",
+    ("category", "high", "expected"),
     [
-        {"cause_group": "cause"},
-        {"commitment_cost_id": "cost"},
-        {"rank_terms": (RankTerm("demand", "capacity", 1, "flag", 0.1, "need"),)},
+        ("base", True, 0.8),
+        ("base", None, 0.5),
+        ("rank", True, 1.3),
+        ("rank", None, 0.7),
     ],
 )
-def test_unsupported_variant_external_sharing_is_explicitly_rejected(changes):
-    model = _model(_row("a", 0.8, variant_group="variant", **changes))
-    with pytest.raises(ValueError, match="尚无合法"):
+def test_selected_variant_shares_declared_external_cause_in_reference_and_pdx(
+    category, high, expected
+):
+    if category == "base":
+        rows = (
+            _row("a", 0.8, variant_group="variant", variant_priority=2, cause_group="cause"),
+            _row("b", 0.2, variant_group="variant", variant_priority=1, cause_group="cause"),
+            _row("external", 0.5, cause_group="cause"),
+        )
+        # Only the selected variant competes with external .5 for this cause.
+    else:
+        rows = (
+            _row(
+                "a",
+                0.8,
+                variant_group="variant",
+                variant_priority=2,
+                rank_terms=(RankTerm("demand", "capacity", 1, "flag", 0.3, "need"),),
+            ),
+            _row(
+                "b",
+                0.2,
+                variant_group="variant",
+                variant_priority=1,
+                rank_terms=(RankTerm("demand", "capacity", 1, "flag", 0.1, "need"),),
+            ),
+            _row(
+                "external",
+                0.1,
+                rank_terms=(RankTerm("demand", "capacity", 1, "flag", 0.4, "need"),),
+            ),
+        )
+        # Independent bases join; shared rank contributes max(selected rank, .4).
+    _assert_output(
+        _model(*rows),
+        {"need_a": high, "need_b": True, "need_external": True, "demand": True},
+        {"field_c": expected},
+    )
+
+
+def test_variant_shared_cost_without_positive_cost_and_predicates_remains_rejected():
+    model = _model(_row("a", 0.8, variant_group="variant", commitment_cost_id="cost"))
+    with pytest.raises(ValueError, match="显式 shared cost 必须包含正成本与谓词"):
         compiler.strategy_overlay(model)
+    with pytest.raises(ValueError, match="显式 shared cost 必须包含正成本与谓词"):
+        compiler.evaluate_actions(model, {"need_a": True}, is_ai=True)
 
 
 def test_grouping_produces_linear_chains_instead_of_truth_table_expansion():

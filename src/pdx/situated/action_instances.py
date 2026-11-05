@@ -107,6 +107,46 @@ def build(
             )
             for rule in policy.rules
         )
+    if any("political" in policy.enabled_domains for _, policy in adapters.policies):
+        result.extend(
+            ActionInstance(
+                action_id=program.writer_id,
+                kind="event_program",
+                source=program.source,
+                rule_id=program.option,
+                domain="political",
+                consumer_field=program.field,
+                operation="add",
+                value=0.0,
+                condition_facts=tuple(reader.key for reader in program.readers()),
+                owner="event_opportunities",
+                vanilla_tail="preserve",
+                evidence=program.evaluation_context().evidence,
+                family_id=classify(domain="political", field=program.field, source=program.source),
+                evaluation_context=program.evaluation_context(),
+            )
+            for program in adapters.event_programs
+        )
+    if any("diplomacy" in policy.enabled_domains for _, policy in adapters.policies):
+        result.extend(
+            ActionInstance(
+                action_id=program.writer_id,
+                kind="acceptance_program",
+                source=program.source,
+                rule_id=program.definition,
+                domain="diplomacy",
+                consumer_field=program.field,
+                operation="add",
+                value=0,
+                condition_facts=tuple(reader.key for reader in program.readers()),
+                owner="treaty_acceptance_opportunities",
+                vanilla_tail="preserve",
+                evidence=program.evaluation_context().evidence,
+                family_id=classify(domain="diplomacy", field=program.field, source=program.source),
+                evaluation_context=program.evaluation_context(),
+            )
+            for program in adapters.acceptance_programs
+        )
     for card in explicit:
         consumer = (consumer_contracts or {}).get(card.consumer)
         if consumer is None:
@@ -244,8 +284,14 @@ def missing_witnesses(
     return tuple(
         item.action_id
         for item in instances
-        if item.kind == "rule_action"
-        and (_output_source(item.source, item.consumer_field), item.rule_id) not in witnesses
+        if item.kind in {"rule_action", "event_program", "acceptance_program"}
+        and (
+            _output_source(item.source, item.consumer_field),
+            item.action_id
+            if item.kind in {"event_program", "acceptance_program"}
+            else item.rule_id,
+        )
+        not in witnesses
     )
 
 
@@ -264,8 +310,14 @@ def witness_contract(
             "actor_scope": item.actor_scope,
             "target_scope": item.target_scope,
             "witnessed": (
-                item.kind != "rule_action"
-                or (_output_source(item.source, item.consumer_field), item.rule_id) in found
+                item.kind not in {"rule_action", "event_program", "acceptance_program"}
+                or (
+                    _output_source(item.source, item.consumer_field),
+                    item.action_id
+                    if item.kind in {"event_program", "acceptance_program"}
+                    else item.rule_id,
+                )
+                in found
             ),
             "evidence": "generated_marker_static_check",
         }

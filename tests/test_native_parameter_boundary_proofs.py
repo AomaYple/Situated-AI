@@ -359,9 +359,12 @@ def information_case(tmp_path, monkeypatch):
     metadata["enabled_modules"] = ["information_rules"]
     metadata["default_field_owners"] = {"wanted_construction_output": "information_rules"}
     generated.pop(old)
-    generated[DEFAULT] = (
-        b"ai_strategy_default={wanted_construction_output={value=10 if={limit={exists=ROOT ROOT={exists=market market={exists=mg:tools mg:tools={market_goods_pricier<=0.25}}}} multiply=1.2}}}"
-    )
+    generated[DEFAULT] = decision_rules.patch(
+        baseline.decode(),
+        compiled,
+        baseline=baseline.decode(),
+        reader_words=frozenset({reader.engine, *reader.path}),
+    ).encode()
     generated[METADATA] = json.dumps(metadata).encode()
     surface = replace(
         inventory.surfaces[0],
@@ -708,6 +711,8 @@ def test_population_reader_does_not_license_a_name_without_original_context(
     [
         "common/achievements/ep1_sphere_of_influence_achievements.txt",
         "common/achievements/ip4_iberian_twilight_achievements.txt",
+        "common/religions/religion.txt",
+        "common/ideologies/01_character_ideologies.txt",
     ],
 )
 @pytest.mark.parametrize("fault", ["missing", "drift"])

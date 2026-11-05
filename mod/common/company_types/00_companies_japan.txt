@@ -90,7 +90,7 @@ company_mitsui = {
 			# GROUP program_14ae221f190f8e33_company_mandatory_input_fabric_negative
 			add = { value = 0
 				# company_sector_company_mitsui_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_14ae221f190f8e33_company_output_demand_positive
 			add = { value = 0
@@ -110,7 +110,7 @@ company_mitsui = {
 			# GROUP program_14ae221f190f8e33_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_mitsui_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -207,12 +207,12 @@ company_mitsubishi = {
 			# GROUP program_b27579ffb30e8935_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_mitsubishi_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_b27579ffb30e8935_company_mandatory_input_wood_negative
 			add = { value = 0
 				# company_sector_company_mitsubishi_wood_input [market]; 主业某必选基础配方组所有方法共同需要wood；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_b27579ffb30e8935_company_output_demand_positive
 			add = { value = 0
@@ -236,7 +236,7 @@ company_mitsubishi = {
 			# GROUP program_b27579ffb30e8935_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_mitsubishi_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.5
 			max = 1.24
@@ -349,12 +349,12 @@ company_mantetsu = {
 			# GROUP program_76f9c29dd897a891_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_mantetsu_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_76f9c29dd897a891_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_mantetsu_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_76f9c29dd897a891_company_output_demand_positive
 			add = { value = 0
@@ -374,7 +374,7 @@ company_mantetsu = {
 			# GROUP program_76f9c29dd897a891_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_mantetsu_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.5
 			max = 1.24

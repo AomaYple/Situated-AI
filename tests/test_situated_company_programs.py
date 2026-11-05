@@ -135,14 +135,16 @@ CASES = [
     ({"balance": -1, "price": 0.251}, 1.20),
     ({"input": 0.25}, 1),
     ({"input": 0.251}, 0.85),
-    ({"input": None}, 1),
+    # Unknown input/solvency costs retain their independently declared finite
+    # contribution; missing demand observations still yield no reward.
+    ({"input": None}, 0.85),
     ({"balance": -1, "input": 0.5}, 0.97),
     ({"balance": -1, "price": 0.5, "input": 0.5}, 1.05),
     ({"industrial_workforce": 0.149}, 1),
     ({"industrial_workforce": 0.15}, 1.04),
     ({"industrial_workforce": None}, 1),
     ({"default": True}, 0.80),
-    ({"default": None}, 1),
+    ({"default": None}, 0.80),
     ({"balance": -1, "default": True}, 0.92),
     ({"balance": -1, "price": None, "input": 0.5, "default": True}, 0.77),
     (
@@ -157,7 +159,7 @@ CASES = [
     ),
     ({"balance": -1, "price": 0.5, "industrial_workforce": 0.15}, 1.24),
     ({"input": 0.5, "default": True}, 0.65),
-    ({"balance": None, "price": None, "input": None, "default": None}, 1),
+    ({"balance": None, "price": None, "input": None, "default": None}, 0.65),
 ]
 
 

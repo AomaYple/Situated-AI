@@ -659,8 +659,13 @@ ai_strategy_subject_overlord_compliance = {
 				# target_strategy_subject_cooperation_need [subjects]; 本国实际属国且低自由愿望形成有限合作方向；违约不能证明宗主援助或合作收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 } } add = 0.1 }
 			}
+			# GROUP program_b307327ddc11f2cc_subject_economic_relationship_continuity_positive
+			add = { value = 0
+				# subject_actual_economic_relationship_continuity [subjects]; 本国实际属国对当前直接宗主的经济依赖指数高于1，当前经济联系形成有限合作连续性收益；与自由愿望/关系需要独立联合，不把依赖一概判坏
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes AND = { is_subject = yes exists = overlord "ROOT.economic_dependence(overlord)" > 1 } } } add = 0.08 }
+			}
 			min = 1
-			max = 1.18
+			max = 1.26
 		} }
 		# SITAI END information:ai_strategy_subject_overlord_compliance.weight
 	}

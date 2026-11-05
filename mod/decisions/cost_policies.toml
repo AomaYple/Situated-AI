@@ -1,0 +1,94 @@
+# Explicit semantic families. Numeric direction never assigns a cost role.
+schema = 1
+anchors = ["population", "prospective_subject_population", "target_(?:owned|homeland)", "candidate_existing_subject", "actor_is_target_subject", "current_[a-z_]+", "(?:law_context|security)_current_[a-z_]+", "pm_active_[a-z0-9_]+", "has_[a-z_]+_institution", "[a-z_]+_investment", "(?:schools|workplace_safety|social_security)_present", "own_army", "navy", "company_port_[a-z_]+"]
+benefit_ids = ["health_reform_private_(?:charity|public)_administrative_saving", "bureaucracy_reform_elected_institution_saving_[a-z_]+_deficit", "social_reform_(?:poor_laws|wage_subsidies)_from_pension_financing_relief_[13]", "social_reform_(?:private_schools_from_(?:religious|public)|religious_schools_from_public)_administration_saving"]
+
+[[families]]
+id = "financing"
+groups = ["(?:institution|construction|colonial_institution|health|regional_conquest)_financing_pressure", "(?:external_state|naval_supply|conscript|ship|target|cooperation)_financing", "(?:building|administrative)_financing_pressure", "building_fiscal_default", "company_solvency", "equipment_financing_pressure", "mobilization_financing_pressure", "treaty_military_financing_pressure", "(?:public_school|school|health|welfare)_financing(?:_pressure)?", "law_(?:security_new_institution_financing|police_new_institution_default)"]
+ids = ["(?:diplomatic_overextension|military_peacetime_budget|naval_peacetime_budget|naval_design_affordability|military_artillery_affordability)", "structural_(?:ownership_financial_cost|naval_capital_cost_.*)"]
+pressure = ["(?:state_owner_|mobilization_)?default", "(?:state_owner_)?loans", "debt_ratio", "bankruptcy_horizon"]
+mode = "conservative"
+requires_core = true
+basis = "已绑定实际消费者的新增承诺融资档；仅辅助偿付压力未知保留本规则有限档，身份、现行制度、投入、战争情境及资格仍须证实；任一已知反例免除，不认定实际违约或直接付款。"
+
+[[families]]
+id = "administrative"
+groups = ["(?:institution|colonial_institution|health|public_school)_administrative_pressure", "external_state_administration", "target_governance_capacity", "(?:school|health|labor|welfare)_administration", "bureaucracy_institution_cost", "canal_administration", "law_(?:security_new_institution_administration|population_administration|police_new_institution_bureaucracy|tax_administration_transition)"]
+ids = []
+pressure = ["bureaucracy"]
+mode = "conservative"
+requires_core = true
+basis = "明确现行制度或具名新增治理承诺的有限行政承载成本；只将行政余额列为辅助压力，制度/现行法律/投资及目标身份不因未知而假存在，不代替原版实际行政费用。"
+
+[[families]]
+id = "native_commitment_financing"
+groups = ["payments_financing", "canal_financing", "bloc_membership_financing"]
+ids = []
+pressure = ["default", "net_surplus"]
+mode = "conservative"
+requires_core = true
+basis = "冻结付款让利的本国净收入/违约同一融资原因择强；运河调查新增1000官僚承诺的融资与行政成本独立；加入势力集团仅为新增外部成员承诺的有限融资机会成本，不推断固定会费或军事义务。仅该有限压力档未知时保守并要求实际本国实体锚；已知成本不增加人口前提，原版0、资格及执行保持。"
+
+[[families]]
+id = "active_material"
+groups = ["(?:building|administrative)_active_input_[a-z_]+"]
+ids = []
+pressure = ["state_owner_[a-z_]+_(?:price|balance)"]
+mode = "conservative"
+requires_core = true
+basis = "仅已证实启用的具体生产方式真实投入形成材料机会成本；PM身份必须为真，价格/余额未知保留当前有限压力档，任一已知无压力反例免除，未知PM不得假定配方已启用。"
+
+[[families]]
+id = "static_material"
+groups = ["equipment_material_pressure_[a-z_]+", "company_mandatory_input_[a-z_]+", "mobilization_material_[a-z_]+_pressure"]
+ids = []
+pressure = ["(?:country_goods|mobilization)_[a-z_]+_(?:price|balance)"]
+mode = "conservative"
+requires_core = true
+basis = "具名候选的冻结正投入已由原版盘点绑定，ROOT实体仍须已知；只保守该候选实际投入材料的有限档，条件式公司港口/配方资格保留核心，不臆造未盘点材料或付款。"
+
+[[families]]
+id = "political"
+groups = ["(?:regional_conquest|target_domestic|law|social_reform|public_school)_political_pressure", "health_political_risk"]
+ids = ["ai_strategy_default_(?:unacceptable|undesirable)_infamy_level"]
+pressure = ["legitimacy", "radical_share"]
+mode = "conservative"
+requires_core = true
+basis = "明确新增承诺的政治机会成本仅对合法性/激进人口读数保守；叛乱性IG和和平等布尔情境仍须证实，不能因身份未知虚构政治危机。"
+
+[[families]]
+id = "treaty_influence"
+groups = ["treaty_influence_pressure", "cooperation_influence"]
+ids = []
+pressure = ["treaty_influence", "influence"]
+mode = "conservative"
+requires_core = true
+basis = "已冻结条款本方明确影响力占用对应有限容量档；ROOT实体须已知，余额未知保留本条款已有有限档，不凭空分配影响力，不改变资格或签约执行。"
+
+[[families]]
+id = "investment_withdrawal"
+groups = ["institution_[a-z_]+_invested_priority_withdrawal", "colonial_(?:invested|inactive)_priority_withdrawal"]
+ids = []
+pressure = []
+mode = "withdrawal"
+requires_core = true
+basis = "这是已观察投入或完整无活动集合后的需求优先级撤回，不是成本；未知投入/活动不推断饱和或需求已满足。"
+
+[[families]]
+id = "observed_relationship_or_shock"
+groups = ["external_state_(?:geography|reconstruction)", "regional_conquest_recovery_pressure", "overlord_(?:autonomy|war_risk)", "embargo_naval_risk", "subject_defense_risk", "target_(?:relationship_commitment|reconstruction_opportunity|reputation|security_exposure)", "treaty_existing_war_commitment", "cooperation_recovery", "bloc_membership_recovery"]
+ids = ["coordinated_layered_fiscal_nationalization", "coordinated_layered_(?:battle_line|carriers)_fiscal", "coordinated_layered_building_building_gold_mine_recovery"]
+pressure = []
+mode = "known_only"
+requires_core = true
+basis = "关系、战败有期记忆、战争或目标比较本身是原因/身份，未知不能伪造既有承诺、永久冲击或另一实体军力；保持实际观测才扣有限档。"
+
+[[families]]
+id = "observed_transition_loss"
+groups = ["law_(?:observed_agenda|authority_transition|security_movement_intensity_loss|security_movement_conversion_loss|police_turmoil_protection|police_movement_loss|police_mortality|union_transition_adjustment|movement_radicalization_loss)", "school_access", "health_(?:food_security_loss|universal_access_loss)", "child_(?:dependent_income|mortality|school_capacity)", "labor_(?:wage_access|employer_floor)", "welfare_(?:employer_floor|workforce_supply|living|wage_access)", "reform_expectation", "bureaucracy_tax_capacity", "building_(?:infrastructure_pressure|labor_opportunity_cost)", "company_trade_operating_pressure"]
+ids = ["political_capacity_law_[a-z_]+", "lj10_defensive_pact_flow_pressure", "ai_strategy_default_(?:target_marine_formation_size|wanted_marines|wargoal_maneuvers_fraction)"]
+pressure = []
+mode = "known_only"
+requires_core = true
+basis = "本族损失依赖现行法律、真实投资、既有受益人/对象或共享硬情境；目前未有将辅助成本与这些身份完整隔离的独立合同，保持局部unknown回退，不能只凭负数扩大保守成本。"

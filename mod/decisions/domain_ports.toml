@@ -1,0 +1,429 @@
+# A3 最小现实纵切；compiler 将这些 guard 绑定具体生产 rule/card term。
+# 完整 reader 身份来自现有 information/adapters policy，禁止自由 PDX 或 caller alias。
+# 成本 unknown 不生成检测器：共同程序 if proven_cheap else conservative。
+schema = 1
+
+[limits]
+nodes = 32
+depth = 6
+expanded_leaves = 16
+evaluation_cost = 64
+
+[ports.literacy_low]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "literacy"
+op = "<"
+value = 0.5
+[ports.literacy_low.reader]
+engine = "literacy_rate"
+scope = "root"
+unit = "ratio"
+kind = "number"
+minimum = 0
+maximum = 1
+path = []
+parameters = []
+
+[ports.population_present]
+domain = "society"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "population"
+op = ">"
+value = 0
+[ports.population_present.reader]
+engine = "total_population"
+scope = "root"
+unit = "persons"
+kind = "number"
+minimum = 0
+path = []
+parameters = []
+
+[ports.no_default]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "default"
+op = "="
+value = false
+[ports.no_default.reader]
+engine = "in_default"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+path = []
+parameters = []
+
+[ports.cash_ready]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "lower_tier"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "net_surplus"
+op = ">"
+value = 0
+[ports.cash_ready.reader]
+engine = "net_total_income"
+scope = "root"
+unit = "currency_per_week"
+kind = "number"
+path = []
+parameters = []
+
+[ports.debt_high]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "debt_ratio"
+op = ">"
+value = 0.4
+[ports.debt_high.reader]
+engine = "scaled_debt"
+scope = "root"
+unit = "debt_to_credit_ratio"
+kind = "number"
+minimum = 0
+path = []
+parameters = []
+
+[ports.cash_short]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "net_surplus"
+op = "<"
+value = 0
+[ports.cash_short.reader]
+engine = "net_total_income"
+scope = "root"
+unit = "currency_per_week"
+kind = "number"
+path = []
+parameters = []
+
+[ports.administration_short]
+domain = "administration"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "bureaucracy"
+op = "<"
+value = 0
+[ports.administration_short.reader]
+engine = "bureaucracy"
+scope = "root"
+unit = "capacity_balance"
+kind = "number"
+path = []
+parameters = []
+
+[ports.industrial_route]
+domain = "economy"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "industrial_route"
+op = "="
+value = true
+[ports.industrial_route.reader]
+engine = "has_strategy"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "ai_strategy_industrial_expansion"
+path = []
+parameters = []
+
+[ports.tools_short]
+domain = "market"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "tools_balance"
+op = "<"
+value = 0
+[ports.tools_short.reader]
+engine = "market_goods_delta"
+scope = "root"
+unit = "sell_minus_buy_orders"
+kind = "number"
+path = ["market", "mg:tools"]
+parameters = []
+
+[ports.school_need]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+all = ["literacy_low", "population_present"]
+
+[ports.financing_ready]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "lower_tier"
+cost = 1
+all = ["no_default", "cash_ready"]
+
+[ports.school_funded]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "lower_tier"
+cost = 1
+all = ["school_need", "financing_ready"]
+
+[ports.industrial_need]
+domain = "economy"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+all = ["industrial_route", "tools_short"]
+
+[ports.construction_funded]
+domain = "economy"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "need"
+refresh = "consumer"
+unknown = "lower_tier"
+cost = 1
+all = ["industrial_need", "financing_ready"]
+
+[ports.financing_pressure]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+any = ["debt_high", "cash_short", "administration_short"]
+
+[ports.current_public_schools]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "common/laws/01_education_system.txt"
+reader_key = "current_public_schools"
+op = "="
+value = true
+[ports.current_public_schools.reader]
+engine = "has_law_or_variant"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "law_type:law_public_schools"
+path = []
+parameters = []
+
+[ports.schools_present]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "common/laws/01_education_system.txt"
+reader_key = "schools_present"
+op = "="
+value = true
+[ports.schools_present.reader]
+engine = "has_institution"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "institution_schools"
+path = []
+parameters = []
+
+[ports.literacy_ready]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "literacy"
+op = ">="
+value = 0.5
+[ports.literacy_ready.reader]
+engine = "literacy_rate"
+scope = "root"
+unit = "ratio"
+kind = "number"
+minimum = 0
+maximum = 1
+path = []
+parameters = []
+
+[ports.education_production_feedback]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+all = ["current_public_schools", "schools_present", "literacy_ready"]
+
+[ports.education_investment_feedback]
+domain = "education"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "capacity"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+all = ["current_public_schools", "schools_present", "literacy_low"]
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "remaining_school_catchup_need"
+port = "school_need"
+role = "need"
+selector = []
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "remaining_school_fiscal"
+port = "school_funded"
+role = "need"
+selector = []
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "remaining_industrial_construction_need"
+port = "industrial_need"
+role = "need"
+selector = []
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "remaining_industrial_construction_need_funded"
+port = "construction_funded"
+role = "need"
+selector = []
+
+[[uses]]
+source = "mod/decisions/actions.toml"
+definition = "education_and_research"
+port = "financing_pressure"
+role = "cost"
+selector = ["support_debt_service", "support_fiscal", "support_administrative"]
+
+[[uses]]
+source = "mod/decisions/actions.toml"
+definition = "industrial_foundation"
+port = "financing_pressure"
+role = "cost"
+selector = ["support_debt_service", "support_fiscal", "support_administrative"]
+
+[[uses]]
+source = "mod/decisions/actions.toml"
+definition = "industrial_foundation"
+port = "education_production_feedback"
+role = "relation"
+selector = ["current_public_schools", "schools_present", "literacy_ready"]
+
+[[uses]]
+source = "mod/decisions/actions.toml"
+definition = "education_and_research"
+port = "education_investment_feedback"
+role = "relation"
+selector = ["current_public_schools", "schools_present", "literacy_low"]
+
+# The existing observed knowledge relation projects into a separate physical
+# construction consumer only when its own actual industrial need is proven.
+# Its dimensionless strength becomes a multiplier delta, not extra output,
+# employment, qualifications or a completed education/industrial action.
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "remaining_industrial_construction_need"
+port = "education_production_feedback"
+role = "relation"
+selector = ["current_public_schools", "schools_present", "literacy_ready"]
+relation_cause = "school_knowledge_foundation"
+output_unit = "multiplier_delta"
+dependency_domain = "political"

@@ -18,23 +18,38 @@ from typing import TYPE_CHECKING, Any
 
 from . import (
     building_opportunities,
+    canal_opportunities,
+    colonial_opportunities,
     company_sectors,
     config,
+    cooperation_opportunities,
+    culture_opportunities,
     decision_intents,
     decision_interfaces,
     decision_rules,
+    decree_opportunities,
     equipment_opportunities,
+    event_opportunities,
+    famine_opportunities,
+    import_blockade_opportunities,
+    institution_opportunities,
+    internal_security_opportunities,
     law_opportunities,
+    migration_opportunities,
     mobilization_opportunities,
+    native_action_opportunities,
     observation_queries,
     production_inputs,
+    subject_dependence_opportunities,
     technology_opportunities,
+    treaty_acceptance_opportunities,
     treaty_opportunities,
+    war_pressure_opportunities,
 )
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
-from .situated import supply_program
+from .situated import cost_policies, supply_program
 from .situated.supply_program import SupplyAction, SupplyProgram
 from .textio import normalized_text
 
@@ -99,6 +114,23 @@ class AdapterSet:
     company_sectors_sha256: str | None = None
     law_opportunities_sha256: str | None = None
     technology_opportunities_sha256: str | None = None
+    internal_security_opportunities_sha256: str | None = None
+    colonial_opportunities_sha256: str | None = None
+    institution_opportunities_sha256: str | None = None
+    cooperation_opportunities_sha256: str | None = None
+    migration_opportunities_sha256: str | None = None
+    canal_opportunities_sha256: str | None = None
+    native_action_opportunities_sha256: str | None = None
+    event_programs: tuple[event_opportunities.EventProgram, ...] = ()
+    event_opportunities_sha256: str | None = None
+    import_blockade_opportunities_sha256: str | None = None
+    acceptance_programs: tuple[treaty_acceptance_opportunities.AcceptanceProgram, ...] = ()
+    treaty_acceptance_opportunities_sha256: str | None = None
+    culture_opportunities_sha256: str | None = None
+    subject_dependence_opportunities_sha256: str | None = None
+    war_pressure_opportunities_sha256: str | None = None
+    decree_opportunities_sha256: str | None = None
+    famine_opportunities_sha256: str | None = None
 
 
 def writes(
@@ -124,6 +156,30 @@ def writes(
             (supply.source, ("ai_strategy_default", "goods_stances", good), "supply_plan")
             for good in supply.goods
         )
+    event_enabled = (
+        any("political" in policy.enabled_domains for _, policy in adapters.policies)
+        if enabled_domains is None
+        else "political" in enabled_domains
+    )
+    if event_enabled:
+        for program in adapters.event_programs:
+            program.validate()
+            values.append((program.source, program.field_path, "event_opportunities"))
+    acceptance_enabled = (
+        any("diplomacy" in policy.enabled_domains for _, policy in adapters.policies)
+        if enabled_domains is None
+        else "diplomacy" in enabled_domains
+    )
+    if acceptance_enabled:
+        for acceptance_program in adapters.acceptance_programs:
+            acceptance_program.validate()
+            values.append(
+                (
+                    acceptance_program.source,
+                    acceptance_program.field_path,
+                    "treaty_acceptance_opportunities",
+                )
+            )
     values.sort()
     for (source, parent, _), (other_source, child, _) in pairwise(values):
         if source == other_source and child[: len(parent)] == parent:
@@ -138,6 +194,11 @@ def _merge_derivation(data: dict[str, Any], derived: Mapping[str, Any], label: s
             if key in data[collection] and data[collection][key] != value:
                 raise ValueError(f"{label}与消费者源冲突：{collection}/{key}")
             data[collection][key] = value
+    for key, value in derived.get("actors", {}).items():
+        actors = data.setdefault("actors", {})
+        if key in actors and actors[key] != value:
+            raise ValueError(f"{label}与消费者AI所有者冲突：{key}")
+        actors[key] = value
     data["rules"].extend(derived["rules"])
 
 
@@ -163,6 +224,24 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     mobilization_fields = None
     law_digest = None
     technology_digest = None
+    security_digest = None
+    colonial_digest = None
+    institution_digest = None
+    cooperation_digest = None
+    migration_digest = None
+    canal_digest = None
+    decree_digest = None
+    famine_digest = None
+    native_action_digest = None
+    culture_digest = None
+    subject_dependence_digest = None
+    war_pressure_digest = None
+    event_digest = None
+    event_programs: tuple[event_opportunities.EventProgram, ...] = ()
+    import_blockade_digest = None
+    acceptance_digest = None
+    acceptance_programs: tuple[treaty_acceptance_opportunities.AcceptanceProgram, ...] = ()
+    cost_digest = None
     if source == SOURCE:
         if (
             not isinstance(data["sources"], dict)
@@ -171,6 +250,40 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             or not isinstance(data.get("initial_values", []), list)
         ):
             raise ValueError("公司部门消费者源集合类型无效")
+        event_programs = event_opportunities.compile_programs()
+        for name, expected in event_opportunities.load()["sources"].items():
+            if name in data["sources"] and data["sources"][name] != expected:
+                raise ValueError(f"事件机会与消费者完整源冲突：{name}")
+            data["sources"][name] = expected
+        event_digest = hashlib.sha256(
+            event_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + event_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(event_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        _merge_derivation(
+            data, import_blockade_opportunities.derive(data), "本地进口敞口与实际封锁"
+        )
+        import_blockade_digest = hashlib.sha256(
+            import_blockade_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + import_blockade_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(import_blockade_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        acceptance_programs = (treaty_acceptance_opportunities.compile_program(),)
+        for name, expected in treaty_acceptance_opportunities.load()["sources"].items():
+            if name in data["sources"] and data["sources"][name] != expected:
+                raise ValueError(f"条约接受与消费者完整源冲突：{name}")
+            data["sources"][name] = expected
+        acceptance_digest = hashlib.sha256(
+            treaty_acceptance_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + treaty_acceptance_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(treaty_acceptance_opportunities.__file__).read_bytes()
+        ).hexdigest()
         # One source of sector semantics: the frozen, structurally verified
         # derivation. Loading it is not a claim about the current installation.
         sectors = company_sectors.load_baseline()
@@ -239,6 +352,110 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + b"\0generator:"
             + Path(technology_opportunities.__file__).read_bytes()
         ).hexdigest()
+        security = internal_security_opportunities.derive(data)
+        _merge_derivation(data, security, "内部安全真实制度机会")
+        security_digest = hashlib.sha256(
+            internal_security_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + internal_security_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(internal_security_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        colonies = colonial_opportunities.derive(data)
+        _merge_derivation(data, colonies, "殖民实际活动与投入机会")
+        colonial_digest = hashlib.sha256(
+            colonial_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + colonial_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(colonial_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        institutions = institution_opportunities.derive(data)
+        _merge_derivation(data, institutions, "制度实际投入优先级")
+        institution_digest = hashlib.sha256(
+            institution_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(institution_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        cooperation = cooperation_opportunities.derive(data)
+        _merge_derivation(data, cooperation, "外交缓和与新增保护承诺")
+        cooperation_digest = hashlib.sha256(
+            cooperation_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(cooperation_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        migration = migration_opportunities.derive(data)
+        _merge_derivation(data, migration, "同州真实迁移目标与就业吸纳")
+        migration_digest = hashlib.sha256(
+            migration_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(migration_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        for module, description in (
+            (canal_opportunities, "运河调查实际行政与融资成本"),
+            (decree_opportunities, "同州紧急救济需要与保守成本"),
+            (famine_opportunities, "真实饥荒暴露、救济收益与独立死亡成本"),
+            (native_action_opportunities, "原生宗属外交提案"),
+        ):
+            _merge_derivation(data, module.derive(data), description)
+        famine_digest = hashlib.sha256(
+            famine_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + famine_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(famine_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        decree_digest = hashlib.sha256(
+            decree_opportunities.PARAMETERS.read_bytes()
+            + b"\0"
+            + decree_opportunities.FROZEN.read_bytes()
+            + b"\0"
+            + Path(decree_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        canal_digest = hashlib.sha256(
+            canal_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + canal_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(canal_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        native_action_digest = hashlib.sha256(
+            native_action_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + native_action_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(native_action_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        _merge_derivation(data, culture_opportunities.derive(data), "有限宗教暴露与现行法律转换")
+        culture_digest = hashlib.sha256(
+            culture_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + culture_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(culture_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        _merge_derivation(
+            data, subject_dependence_opportunities.derive(data), "实际宗主经济联系连续性"
+        )
+        subject_dependence_digest = hashlib.sha256(
+            subject_dependence_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + subject_dependence_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(subject_dependence_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        _merge_derivation(
+            data, war_pressure_opportunities.derive(data), "本国多场低支持战争的扩张机会成本"
+        )
+        war_pressure_digest = hashlib.sha256(
+            war_pressure_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + war_pressure_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(war_pressure_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        data = cost_policies.apply(data, source="adapters")
+        cost_digest = cost_policies.digest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
     for name, digest in data["sources"].items():
@@ -262,6 +479,15 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     if not isinstance(actors, dict):
         raise ValueError("消费者 AI 所有者配置必须是映射")
     seen: set[str] = set()
+    reviewed_new_consumers = {
+        (row["source"], row["field"])
+        for row in (
+            *canal_opportunities.consumer_catalog(),
+            *decree_opportunities.consumer_catalog().values(),
+            *famine_opportunities.consumer_catalog(),
+            *native_action_opportunities.consumer_catalog().values(),
+        )
+    }
     for item in data["rules"]:
         if (
             not isinstance(item, dict)
@@ -272,17 +498,20 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ):
             raise ValueError("消费者适配规则身份或原件无效")
         name = item["source"]
-        if not name.endswith(".txt") or not name.startswith(
-            (
-                "common/ai_strategies/",
-                "common/laws/",
-                "common/technology/technologies/",
-                "common/buildings/",
-                "common/company_types/",
-                "common/ship_modifications/",
-                "common/treaty_articles/",
-                "common/mobilization_options/",
+        if not name.endswith(".txt") or (
+            not name.startswith(
+                (
+                    "common/ai_strategies/",
+                    "common/laws/",
+                    "common/technology/technologies/",
+                    "common/buildings/",
+                    "common/company_types/",
+                    "common/ship_modifications/",
+                    "common/treaty_articles/",
+                    "common/mobilization_options/",
+                )
             )
+            and (name, item.get("field")) not in reviewed_new_consumers
         ):
             raise ValueError("只允许适配已登记的数值消费者；事件只能作为读取依据")
         seen.add(item["id"])
@@ -302,6 +531,37 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     used_contexts: set[str] = set()
     digest = hashlib.sha256(
         raw
+        + (
+            b"\0treaty_acceptance_opportunities:" + acceptance_digest.encode("ascii")
+            if acceptance_digest
+            else b""
+        )
+        + (b"\0event_opportunities:" + event_digest.encode("ascii") if event_digest else b"")
+        + (
+            b"\0import_blockade_opportunities:" + import_blockade_digest.encode("ascii")
+            if import_blockade_digest
+            else b""
+        )
+        + (b"\0cost_policies:" + cost_digest.encode("ascii") if cost_digest else b"")
+        + (b"\0culture_opportunities:" + culture_digest.encode("ascii") if culture_digest else b"")
+        + (
+            b"\0subject_dependence_opportunities:" + subject_dependence_digest.encode("ascii")
+            if subject_dependence_digest
+            else b""
+        )
+        + (b"\0canal_opportunities:" + canal_digest.encode("ascii") if canal_digest else b"")
+        + (b"\0decree_opportunities:" + decree_digest.encode("ascii") if decree_digest else b"")
+        + (b"\0famine_opportunities:" + famine_digest.encode("ascii") if famine_digest else b"")
+        + (
+            b"\0war_pressure_opportunities:" + war_pressure_digest.encode("ascii")
+            if war_pressure_digest
+            else b""
+        )
+        + (
+            b"\0native_action_opportunities:" + native_action_digest.encode("ascii")
+            if native_action_digest
+            else b""
+        )
         + (b"\0company_sectors:" + sector_digest.encode("ascii") if sector_digest else b"")
         + (
             b"\0building_opportunities:" + opportunity_digest.encode("ascii")
@@ -315,6 +575,31 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         )
         + (b"\0treaty_opportunities:" + treaty_digest.encode("ascii") if treaty_digest else b"")
         + (b"\0law_opportunities:" + law_digest.encode("ascii") if law_digest else b"")
+        + (
+            b"\0migration_opportunities:" + migration_digest.encode("ascii")
+            if migration_digest
+            else b""
+        )
+        + (
+            b"\0cooperation_opportunities:" + cooperation_digest.encode("ascii")
+            if cooperation_digest
+            else b""
+        )
+        + (
+            b"\0institution_opportunities:" + institution_digest.encode("ascii")
+            if institution_digest
+            else b""
+        )
+        + (
+            b"\0colonial_opportunities:" + colonial_digest.encode("ascii")
+            if colonial_digest
+            else b""
+        )
+        + (
+            b"\0internal_security_opportunities:" + security_digest.encode("ascii")
+            if security_digest
+            else b""
+        )
         + (
             b"\0technology_opportunities:" + technology_digest.encode("ascii")
             if technology_digest
@@ -367,7 +652,13 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             for rule in rules
         ):
             raise ValueError("舰船改装适配只许可已证明的具名候选评分块")
-        expected_actor = ["owner"] if name.startswith("common/buildings/") or mobilization else []
+        expected_actor = (
+            ["owner"]
+            if name.startswith("common/buildings/")
+            or mobilization
+            or name == decree_opportunities.SOURCE
+            else []
+        )
         if actors.get(name, []) != expected_actor:
             raise ValueError("消费者 AI 所有者与锁定接口作用域不一致")
         try:
@@ -386,6 +677,9 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                         conditions.extend(strategy.expand(intent))
             readers = {condition["fact"] for condition in conditions}
             readers.update(key for rule in rules for key in rule.get("required_known_facts", []))
+            readers.update(
+                key for rule in rules for key in rule.get("unknown_cost_required_known_facts", [])
+            )
             readers.update(
                 condition["value"]["fact"]
                 for condition in conditions
@@ -549,6 +843,23 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         sector_digest,
         law_digest,
         technology_digest,
+        security_digest,
+        colonial_digest,
+        institution_digest,
+        cooperation_digest,
+        migration_digest,
+        canal_digest,
+        native_action_digest,
+        event_programs,
+        event_digest,
+        import_blockade_digest,
+        acceptance_programs,
+        acceptance_digest,
+        culture_digest,
+        subject_dependence_digest,
+        war_pressure_digest,
+        decree_digest,
+        famine_digest,
     )
     writes(adapters)
     return adapters
@@ -721,6 +1032,59 @@ def _supply_programs(
     return tuple(by_good[program.good] for program in expected)
 
 
+def _event_programs(
+    adapters: AdapterSet, bundle: ConsumerIRBundle | None, *, enabled: bool
+) -> tuple[event_opportunities.EventProgram, ...]:
+    expected = adapters.event_programs
+    if bundle is None:
+        if not enabled:
+            return ()
+        from .situated.decision_ir import ConsumerIRBundle  # noqa: PLC0415
+
+        # Standalone adapter callers freeze the already-loaded immutable plans.
+        # This never reloads adapters or compiler, and uses the same constructor
+        # and validation as the complete compiler's event writers.
+        bundle = ConsumerIRBundle(1, (), tuple(program.writer_ir() for program in expected))
+    bundle.as_dict()
+    actual = tuple(
+        writer.validate_event_program()
+        for writer in bundle.writers
+        if writer.kind == "event_program"
+    )
+    if (
+        actual
+        and expected
+        and {row.option: row for row in actual} != {row.option: row for row in expected}
+    ):
+        raise ValueError("事件计划与冻结ConsumerIR完整程序不一致")
+    if enabled and (len(actual) != len(expected) or set(actual) != set(expected)):
+        raise ValueError("事件计划与冻结ConsumerIR完整程序缺失或重复")
+    return actual if enabled else ()
+
+
+def _acceptance_programs(
+    adapters: AdapterSet, bundle: ConsumerIRBundle | None, *, enabled: bool
+) -> tuple[treaty_acceptance_opportunities.AcceptanceProgram, ...]:
+    expected = adapters.acceptance_programs
+    if bundle is None:
+        if not enabled:
+            return ()
+        from .situated.decision_ir import ConsumerIRBundle  # noqa: PLC0415
+
+        bundle = ConsumerIRBundle(1, (), tuple(program.writer_ir() for program in expected))
+    bundle.as_dict()
+    actual = tuple(
+        writer.validate_acceptance_program()
+        for writer in bundle.writers
+        if writer.kind == "acceptance_program"
+    )
+    if actual and expected and actual != expected:
+        raise ValueError("条约接受计划与冻结ConsumerIR完整程序不一致")
+    if enabled and actual != expected:
+        raise ValueError("条约接受计划与冻结ConsumerIR完整程序缺失或重复")
+    return actual if enabled else ()
+
+
 def _initialize(
     text: str,
     items: list[InitialValue],
@@ -841,6 +1205,10 @@ def build(
 ) -> tuple[dict[str, str], dict[str, object]]:
     """全输入预检后生成；合成测试可显式注入文本，生产默认读取 config.GAME。"""
     known_domains = {rule.domain for _, policy in adapters.policies for rule in policy.rules}
+    if adapters.event_programs:
+        known_domains.add(event_opportunities.DOMAIN)
+    if adapters.acceptance_programs:
+        known_domains.add(treaty_acceptance_opportunities.DOMAIN)
     if enabled_domains is not None and enabled_domains - known_domains:
         raise ValueError("消费者适配含未知领域开关")
     owners = writes(adapters, enabled_domains)
@@ -851,6 +1219,36 @@ def build(
         law_opportunities.verify_inputs(inputs)
     if adapters.technology_opportunities_sha256 is not None:
         technology_opportunities.verify_inputs(inputs)
+    if adapters.internal_security_opportunities_sha256 is not None:
+        internal_security_opportunities.verify_inputs(inputs)
+    if adapters.colonial_opportunities_sha256 is not None:
+        colonial_opportunities.verify_inputs(inputs)
+    if adapters.institution_opportunities_sha256 is not None:
+        institution_opportunities.verify_inputs(inputs)
+    if adapters.cooperation_opportunities_sha256 is not None:
+        cooperation_opportunities.verify_inputs(inputs)
+    if adapters.migration_opportunities_sha256 is not None:
+        migration_opportunities.verify_inputs(inputs)
+    if adapters.canal_opportunities_sha256 is not None:
+        canal_opportunities.verify_inputs(inputs)
+    if adapters.decree_opportunities_sha256 is not None:
+        decree_opportunities.verify_inputs(inputs)
+    if adapters.famine_opportunities_sha256 is not None:
+        famine_opportunities.verify_inputs(inputs)
+    if adapters.native_action_opportunities_sha256 is not None:
+        native_action_opportunities.verify_inputs(inputs)
+    if adapters.culture_opportunities_sha256 is not None:
+        culture_opportunities.verify_inputs(inputs)
+    if adapters.subject_dependence_opportunities_sha256 is not None:
+        subject_dependence_opportunities.verify_inputs(inputs)
+    if adapters.war_pressure_opportunities_sha256 is not None:
+        war_pressure_opportunities.verify_inputs(inputs)
+    if adapters.event_opportunities_sha256 is not None or adapters.event_programs:
+        event_opportunities.verify_inputs(inputs)
+    if adapters.import_blockade_opportunities_sha256 is not None:
+        import_blockade_opportunities.verify_inputs(inputs)
+    if adapters.treaty_acceptance_opportunities_sha256 is not None or adapters.acceptance_programs:
+        treaty_acceptance_opportunities.verify_inputs(inputs)
     state_recovery_evidence: tuple[str, ...] = ()
     if any(
         reader.engine == "devastation"
@@ -972,6 +1370,30 @@ def build(
     if supply is not None and supply_enabled:
         text = files.get(supply.source, (overlays or {}).get(supply.source, inputs[supply.source]))
         files[supply.source] = _supply_patch(text, supply, inputs, words, supply_programs)
+    event_enabled = bool(adapters.event_programs) and (
+        any("political" in policy.enabled_domains for _, policy in adapters.policies)
+        if enabled_domains is None
+        else "political" in enabled_domains
+    )
+    events = _event_programs(adapters, consumer_ir, enabled=event_enabled)
+    if events:
+        if any(program.source in files or program.source in (overlays or {}) for program in events):
+            raise ValueError("事件完整源存在独立覆盖作者")
+        files.update(event_opportunities.patch(inputs, consumer_programs=events))
+    acceptance_enabled = bool(adapters.acceptance_programs) and (
+        any("diplomacy" in policy.enabled_domains for _, policy in adapters.policies)
+        if enabled_domains is None
+        else "diplomacy" in enabled_domains
+    )
+    acceptances = _acceptance_programs(adapters, consumer_ir, enabled=acceptance_enabled)
+    for program in acceptances:
+        files.update(
+            treaty_acceptance_opportunities.patch(
+                inputs,
+                overlays={**(overlays or {}), **files},
+                consumer_program=program,
+            )
+        )
     return files, {
         "schema": 1,
         "evidence": "source_locked_generated_consumer_patches",
@@ -985,6 +1407,22 @@ def build(
             Path(production_inputs.__file__).read_bytes()
         ).hexdigest(),
         "sources": dict(adapters.sources),
+        "event_programs": [program.as_dict() for program in events],
+        "event_consumer_interfaces": [
+            decision_interfaces.event_consumer(program) for program in events
+        ],
+        "event_opportunities_sha256": adapters.event_opportunities_sha256,
+        "acceptance_programs": [program.as_dict() for program in acceptances],
+        "acceptance_consumer_interfaces": [
+            decision_interfaces.acceptance_consumer(program) for program in acceptances
+        ],
+        "treaty_acceptance_opportunities_sha256": adapters.treaty_acceptance_opportunities_sha256,
+        "import_blockade_opportunities_sha256": adapters.import_blockade_opportunities_sha256,
+        "culture_opportunities_sha256": adapters.culture_opportunities_sha256,
+        "subject_dependence_opportunities_sha256": adapters.subject_dependence_opportunities_sha256,
+        "war_pressure_opportunities_sha256": adapters.war_pressure_opportunities_sha256,
+        "decree_opportunities_sha256": adapters.decree_opportunities_sha256,
+        "famine_opportunities_sha256": adapters.famine_opportunities_sha256,
         "field_owners": [
             {"source": source, "field": ".".join(field), "owner": owner}
             for source, field, owner in owners

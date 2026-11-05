@@ -110,6 +110,7 @@ schema = 1
 "diplomacy" = true
 "economy" = true
 "fiscal" = true
+"geography" = true
 "market" = true
 "military" = true
 "political" = true
@@ -23400,6 +23401,118 @@ contribution_group = "target_freedom_need"
 conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "liberty", op = ">=", value = 90 } ]
 why = "本国实际为本候选宗主的属国且已观察高自主愿望，形成提高自主或独立的有限需求；不把任意外国、非属国或贷款当等价事实；更强已证自主愿望或友好解放关系仅支持同因高档，不重复奖励"
 counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/胜率换算；同原因档位取最强，独立原因联合，未知只撤回依赖分量，不当健康或零。每个具名候选与本国观测精确绑定，不以选中/排队当完成；保留玩家、关闭模块、原版资格/具体成本/执行、secret外层trigger、原版限幅与特殊主体终结零分。策略评分不等于建造、立法、援助、自由或战争必然实现"
+
+[[rules]]
+id = "target_strategy_liberty_increase_autonomy_default"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.increase_autonomy"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.9
+priority = 73000
+contribution_group = "target_financing"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "default", op = "=", value = true } ]
+why = "本国确为同一候选宗主的属国，实际违约形成自主交涉若升级时的融资承受风险；自主交涉不等于战争，故低于独立承诺成本，已知自主需要仍独立参与"
+counterexample = "正常借款不当违约；未知只退出依赖分量，不把未知当健康。精确本国到候选宗主关系不可反向或借用他国；独立成本联合一次限幅，保留原版资格、交涉执行、基础100和特殊主体终结零分；倍率是设计取舍，非战争概率或实际收费"
+
+[[rules]]
+id = "target_strategy_liberty_increase_autonomy_liquidity"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.increase_autonomy"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.92
+priority = 73001
+contribution_group = "target_financing"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "default", op = "=", value = false }, { fact = "loans", op = "=", value = true }, { fact = "debt_ratio", op = ">=", value = 0.4 }, { fact = "bankruptcy_horizon", op = "<", value = 26 } ]
+why = "同候选自主交涉面对已证非违约、借贷、高信用压力和26周内破产预期，形成温和融资风险；与违约同原因取强，不将正常低债借款当危机"
+counterexample = "所有融资事实分别已知且条件成立才有此档；不要求自主收益先通过财政健康门，不预测交涉必然升级为战争；未知、玩家或领域关闭回退，原版资格、执行和终结零分保留"
+
+[[rules]]
+id = "target_strategy_liberty_increase_autonomy_security"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.increase_autonomy"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.95
+priority = 73002
+contribution_group = "target_security_exposure"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "target_army", op = ">", value = { fact = "own_army" } } ]
+why = "同候选实际宗主陆军规模超过本国，形成自主交涉可能升级的有限安全暴露；自主交涉可和平达成，风险比独立更温和，不将营数当战力、胜率或必然战争"
+counterexample = "本国与目标军队必须同为已知营数，换成无关外国、反向关系或未知规模时不借值；无地理证据不盲加海军风险。自主需要、独立融资和恢复成本仍联合，原版资格和执行保留"
+
+[[rules]]
+id = "target_strategy_liberty_increase_autonomy_reconstruction"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.increase_autonomy"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.95
+priority = 73003
+contribution_group = "target_reconstruction_opportunity"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "war_defeat", op = "=", value = true } ]
+why = "本国原版有限期战败记忆使新增自主交涉承诺有温和恢复机会成本；不把战败当失去自主诉求，也不把自主交涉等同战争或新增永久记忆"
+counterexample = "战败记忆消失立即撤回此分量；未知只退出本项，不吞已知需求或其他成本；实际宗主身份必须成立，原版资格、执行与特殊零值保留"
+
+[[rules]]
+id = "target_strategy_liberty_independence_default"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.independence"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.8
+priority = 73004
+contribution_group = "target_financing"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "default", op = "=", value = true } ]
+why = "对同一实际宗主寻求独立的新增承诺面对本国已发生违约，形成独立融资成本；不以健康财政为独立诉求存在的门槛，也不强制发起独立战争"
+counterexample = "普通借款不当违约；融资同因不叠扣，陆军暴露和战败恢复另组联合；未知不推断健康或援助，保留原版100、BIC/DEI等特殊主体终结零、资格、成本和执行"
+
+[[rules]]
+id = "target_strategy_liberty_independence_liquidity"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.independence"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.85
+priority = 73005
+contribution_group = "target_financing"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "default", op = "=", value = false }, { fact = "loans", op = "=", value = true }, { fact = "debt_ratio", op = ">=", value = 0.4 }, { fact = "bankruptcy_horizon", op = "<", value = 26 } ]
+why = "同宗主独立承诺面对已证非违约、借贷、高信用压力及26周内破产预期，形成近期流动性风险；与已违约共用融资原因，不重复惩罚正常贷款"
+counterexample = "债务比例低、破产预期不短或不借贷均不触发；未知局部退出，不设置独立诉求共同健康门；原版资格、成本、执行和特殊主体终结零保留"
+
+[[rules]]
+id = "target_strategy_liberty_independence_security"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.independence"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.85
+priority = 73006
+contribution_group = "target_security_exposure"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "target_army", op = ">", value = { fact = "own_army" } } ]
+why = "同一实际宗主的陆军营数超过本国，对独立承诺形成有限安全风险；不把人数差当战力或胜率预测，不假定盟友参战及独立必然通过战争"
+counterexample = "目标宗主与本国营数分开读取，其他国家不可借值；相等或本国更大不触发，无海洋暴露证据不加海军风险。风险未知局部退出，需求和独立成本仍联合，保留原版资格及终结零"
+
+[[rules]]
+id = "target_strategy_liberty_independence_reconstruction"
+semantic_role = "cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.independence"
+domain = "diplomacy"
+operation = "multiply"
+value = 0.9
+priority = 73007
+contribution_group = "target_reconstruction_opportunity"
+conditions = [ { fact = "actor_is_target_subject", op = "=", value = true }, { fact = "war_defeat", op = "=", value = true } ]
+why = "本国原版有限期战败记忆表明恢复中的机会成本，独立承诺应与恢复需求权衡；不新增永久惩罚，也不把独立需求归零"
+counterexample = "原版记忆过期立即退出此成本；未知只撤对应分量，不代供财政或军力健康；实际宗主关系、玩家与领域开关、原版资格执行及特殊零值继续优先"
 
 [[rules]]
 id = "target_strategy_liberty_liberate_subject_need"

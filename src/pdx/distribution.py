@@ -225,7 +225,7 @@ def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object])
         raise ValueError("正式包缺少元数据或安装说明")
     if any(
         name not in required
-        and not (name.startswith("common/") and name.endswith(".txt"))
+        and not (name.startswith(("common/", "events/")) and name.endswith(".txt"))
         and not (name.startswith("localization/") and name.endswith(".yml"))
         and name != THUMBNAIL_NAME
         for name in data
@@ -512,7 +512,7 @@ def read_production_files() -> dict[str, str | bytes]:
     """读取受控生成物原始 UTF-8 字节，不折叠 CRLF 或移除 BOM。"""
     files: dict[str, str | bytes] = {
         path.relative_to(decisions.PRODUCT).as_posix(): path.read_bytes().decode("utf-8")
-        for directory in ("common", "localization", ".metadata")
+        for directory in ("common", "events", "localization", ".metadata")
         for path in sorted((decisions.PRODUCT / directory).rglob("*"))
         if path.is_file()
     }

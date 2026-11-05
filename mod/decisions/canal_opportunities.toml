@@ -1,0 +1,11 @@
+# Two independent country decision consumers. Positive factors preserve native zero.
+schema = 1
+
+[sources]
+"common/decisions/canal_decisions.txt" = "2f46ece1ac9f3377056c91a52dd74fecd9e342d2d8e402f75b926e4929d4fbd0"
+"common/decisions/000_decisions_help.txt" = "174b16778da4328061ff95a7e42159b05f3302bd1dfa7d674b86cc88765a96a7"
+"common/static_modifiers/02_event_modifiers.txt" = "c2bba6b99a2ccc85b17ee3369a1b84eef4af9452b2504955f8f26627aa8db40c"
+
+[tuning]
+administration = 0.8
+financing = 0.85

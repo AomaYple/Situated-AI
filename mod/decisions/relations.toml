@@ -14,6 +14,8 @@ scope = "root"
 # 同一实际制度在低识字时不会提前获得这项知识基础贡献。
 condition_facts = ["current_public_schools", "schools_present", "literacy_ready"]
 unknown_policy = "vanilla"
+cause_id = "school_knowledge_foundation"
+origins = ["current_public_schools", "schools_present", "literacy_ready"]
 
 [[relations]]
 source = "education_and_research"
@@ -26,3 +28,5 @@ scope = "root"
 # 识字达标后来源教育项及本贡献退出；未知只撤回本关系增量。
 condition_facts = ["current_public_schools", "schools_present", "literacy_low"]
 unknown_policy = "vanilla"
+cause_id = "school_education_channel"
+origins = ["current_public_schools", "schools_present", "literacy_low"]

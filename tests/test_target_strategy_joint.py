@@ -147,7 +147,10 @@ CASES = [
         DEFAULT,
         "ai_strategy_default.wargoal_scores.annex_country",
         {"default": True, "bureaucracy": None, "target_army": None, "national_gdp": None},
-        -3,
+        # Known target identity: finite governance 3 remains under unknown
+        # bureaucracy, independently of observed default financing 3. Unknown
+        # target force and GDP create no additional security/capacity cause.
+        -6,
     ),
     (
         DEFAULT,
@@ -189,7 +192,7 @@ CASES = [
         DEFAULT,
         "ai_strategy_default.wargoal_scores.independence",
         {"actor_is_target_subject": True, "liberty": 75, "default": True, "war": True},
-        1.10,
+        0.90,
     ),
     (
         DEFAULT,

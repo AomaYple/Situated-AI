@@ -83,7 +83,7 @@ company_misr = {
 			# GROUP program_5a27f3d58b5d71de_company_mandatory_input_fabric_negative
 			add = { value = 0
 				# company_sector_company_misr_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_5a27f3d58b5d71de_company_output_demand_positive
 			add = { value = 0
@@ -99,7 +99,7 @@ company_misr = {
 			# GROUP program_5a27f3d58b5d71de_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_misr_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -180,7 +180,7 @@ company_egyptian_rail = {
 			# GROUP program_3fefbf42f1db78fe_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_egyptian_rail_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_3fefbf42f1db78fe_company_output_demand_positive
 			add = { value = 0
@@ -192,7 +192,7 @@ company_egyptian_rail = {
 			# GROUP program_3fefbf42f1db78fe_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_egyptian_rail_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -303,24 +303,24 @@ company_suez_company = {
 			# GROUP program_685673e8146eeab1_company_mandatory_input_clippers_negative
 			add = { value = 0
 				# company_sector_company_suez_company_port_basic_clippers_input [market]; 已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:clippers mg:clippers = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:clippers mg:clippers = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_685673e8146eeab1_company_mandatory_input_coal_negative
 			add = { value = 0
 				# company_sector_company_suez_company_port_industrial_coal_input [market]; 已观察industrial港口active方式实际需要coal，国家市场高价为该生产方式的独立机会成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_685673e8146eeab1_company_mandatory_input_oil_negative
 			add = { value = 0
 				# company_sector_company_suez_company_port_modern_oil_input [market]; 已观察modern港口active方式实际需要oil，国家市场高价为该生产方式的独立机会成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:oil mg:oil = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_685673e8146eeab1_company_mandatory_input_steamers_negative
 			add = { value = 0
 				# company_sector_company_suez_company_port_modern_steamers_input [market]; 已观察modern港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 				# company_sector_company_suez_company_port_industrial_steamers_input [market]; 已观察industrial港口active方式实际需要steamers，国家市场高价为该生产方式的独立机会成本
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_685673e8146eeab1_company_output_demand_positive
 			add = { value = 0
@@ -344,7 +344,7 @@ company_suez_company = {
 			# GROUP program_685673e8146eeab1_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_suez_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			# GROUP program_685673e8146eeab1_company_trade_operating_pressure_negative
 			add = { value = 0

@@ -1,0 +1,12 @@
+schema = 1
+
+[sources]
+"common/alert_types/00_alert_types.txt" = "399eaa0ed4bb11e29bac7d0de29e2fa1e191cbdbf3b1290fba5abac9b622f912"
+"common/goods/00_goods.txt" = "496810f9b21012cb3ae764e4c0cd65aafa85b6079f96d3d2a6b3dece92a0afcc"
+"common/journal_entries/00_opium.txt" = "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8"
+"common/on_actions/00_code_on_actions.txt" = "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46"
+"events/trade_route_events.txt" = "92c99a87a04577b27f02ec5c6604571a3f4291675d2208aa65cbd1655cb99d8c"
+
+[tuning]
+arms_exposure = 1.12
+owned_state_disruption = 1.18

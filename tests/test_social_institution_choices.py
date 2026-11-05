@@ -71,6 +71,9 @@ def _values(changes: dict[str, Any]) -> dict[str, Any]:
         "grain_balance": 0,
     }
     values.update(changes)
+    # Both names read one physical ROOT total_population observation. Keep
+    # reference inputs and parsed PDX facts on the same feasible state.
+    values["cost_country_population"] = values["population"]
     policy = country_state.load()
     coordination = country_state.derive(
         policy, {key: value for key, value in values.items() if key in policy.readers}
@@ -102,8 +105,12 @@ CASES = [
     ({"average_sol": 7, "default": True}, 0.88),
     ({"average_sol": 7, "default": True, "bureaucracy": -1}, 0.78),
     ({"average_sol": 7, "default": True, "bureaucracy": -1, "war": True}, 0.83),
-    ({"average_sol": 7, "bureaucracy": None}, 1.08),
-    ({"average_sol": 7, "default": None}, 1.08),
+    # C2: proven population permits finite unknown administration .10, so
+    # independent observed living need .08 yields 1 + .08 - .10 = .98.
+    ({"average_sol": 7, "bureaucracy": None}, 0.98),
+    # Unknown default retains only the isolated .15 financing tier. The .20
+    # fiscal_recovery intent still requires observed default and cannot fire.
+    ({"average_sol": 7, "default": None}, 0.93),
     ({"average_sol": None, "bureaucracy": -1, "legitimacy": 20}, 0.9),
     ({"average_sol": None, "legitimacy": 20}, 1),
     ({"population": None, "average_sol": 7, "legitimacy": 20}, 1),
@@ -155,6 +162,8 @@ def test_only_real_same_need_tiers_and_independent_costs_remain(production):
         "social_security_direct_living_pressure",
         "social_security_administrative_pressure",
         "social_security_default_pressure",
+        "institution_priority_social_security_0_invested",
+        "institution_priority_social_security_0_deeply_invested",
     }
     for rule in rules.values():
         if rule.value > 1:
@@ -166,6 +175,7 @@ def test_only_real_same_need_tiers_and_independent_costs_remain(production):
     assert {rule.contribution_group for rule in rules.values() if rule.value < 1} == {
         "institution_financing_pressure",
         "institution_administrative_pressure",
+        "institution_social_security_invested_priority_withdrawal",
     }
     program = next(row for row in policy.consumer_programs if ".".join(row.field) == FIELD)
     assert {row.action_id for row in program.variants} == set(rules)

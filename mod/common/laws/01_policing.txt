@@ -184,12 +184,12 @@ law_local_police = {
 			# GROUP program_3bc4301d2294caae_law_police_new_institution_bureaucracy_negative
 			add = { value = 0
 				# law_context_law_local_police_new_institution_bureaucracy [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police bureaucracy < 0 } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_3bc4301d2294caae_law_police_new_institution_default_negative
 			add = { value = 0
 				# law_context_law_local_police_new_institution_default [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police in_default = yes } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_3bc4301d2294caae_law_police_turmoil_protection_positive
 			add = { value = 0
@@ -346,12 +346,12 @@ law_dedicated_police = {
 			# GROUP program_8e3c8ebc19563fec_law_police_new_institution_bureaucracy_negative
 			add = { value = 0
 				# law_context_law_dedicated_police_new_institution_bureaucracy [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police bureaucracy < 0 } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_8e3c8ebc19563fec_law_police_new_institution_default_negative
 			add = { value = 0
 				# law_context_law_dedicated_police_new_institution_default [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police in_default = yes } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_8e3c8ebc19563fec_law_police_turmoil_protection_negative
 			add = { value = 0
@@ -506,12 +506,12 @@ law_militarized_police = {
 			# GROUP program_7193bf2e0dafdc8f_law_police_new_institution_bureaucracy_negative
 			add = { value = 0
 				# law_context_law_militarized_police_new_institution_bureaucracy [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police bureaucracy < 0 } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_7193bf2e0dafdc8f_law_police_new_institution_default_negative
 			add = { value = 0
 				# law_context_law_militarized_police_new_institution_default [political]; 从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police in_default = yes } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_police } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_7193bf2e0dafdc8f_law_police_turmoil_protection_negative
 			add = { value = 0

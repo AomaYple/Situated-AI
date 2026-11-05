@@ -685,6 +685,12 @@ def _expanded_law_negative_contracts():
     # Native authority constants: current-only subjecthood has no score writer.
     authority_families = (
         {
+            "law_outlawed_dissent": 200,
+            "law_censorship": 100,
+            "law_right_of_assembly": 50,
+            "law_protected_speech": 0,
+        },
+        {
             "law_subjecthood": 100,
             "law_ethnostate": 200,
             "law_national_supremacy": 150,
@@ -851,6 +857,45 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
             row["value"],
         )
     authored = {row["id"] for row in declared}
+    # Register the two finite additions by exact identity and independent
+    # business contract, rather than letting a new namespace admit any tuning.
+    new_contracts = {
+        "culture_freedom_of_conscience_observed_religious_exposure": (
+            ("law_freedom_of_conscience", "ai_enact_weight_modifier"),
+            "add",
+            6,
+            "law_observed_religious_exposure",
+            {
+                ("culture_nonstate_religious_exposure", "=", True),
+                ("culture_current_law_state_religion", "=", True),
+                ("culture_current_law_millet_system", "=", False),
+                ("culture_current_law_people_of_the_book", "=", False),
+                ("culture_current_law_freedom_of_conscience", "=", False),
+            },
+        ),
+        "subject_actual_economic_relationship_continuity": (
+            ("ai_strategy_subject_overlord_compliance", "weight"),
+            "multiply",
+            1.08,
+            "subject_economic_relationship_continuity",
+            {
+                ("actor_is_subject", "=", True),
+                ("subject_actual_overlord_dependence", "=", True),
+            },
+        ),
+    }
+    assert {
+        identity for identity in actual if identity.startswith(("culture_", "subject_actual_"))
+    } == set(new_contracts)
+    for identity, contract in new_contracts.items():
+        rule = actual[identity]
+        assert (
+            rule.field,
+            rule.operation,
+            rule.value,
+            rule.contribution_group,
+            {(condition.fact, condition.op, condition.value) for condition in rule.conditions},
+        ) == contract
     assert all(
         rule.id.startswith(
             (
@@ -861,6 +906,16 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                 "mobilization_",
                 "law_context_",
                 "technology_",
+                "internal_security_",
+                "colonial_",
+                "institution_",
+                "cooperation_",
+                "migration_",
+                "canal_",
+                "native_",
+                "import_blockade_",
+                "culture_",
+                "subject_actual_",
             )
         )
         for rule in rules
@@ -875,6 +930,7 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
         "military",
         "subjects",
         "diplomacy",
+        "geography",
     }
     assert all(rule.conditions and rule.why and rule.counterexample for rule in rules)
     for name, policy in adapters.policies:
@@ -1000,6 +1056,15 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                             -6,
                             "law_population_administration",
                         )
+                elif rule.id.startswith("internal_security_") and rule.value < 0:
+                    # Complete five-law effect/transition matrices are
+                    # independently exercised in test_a3_internal_security.
+                    assert -16 <= rule.value < 0
+                    if "_adopted_agenda_" in rule.id:
+                        assert rule.contribution_group == "law_observed_agenda"
+                        assert rule.value == (-10 if rule.id.endswith("_strong") else -6)
+                    else:
+                        assert rule.contribution_group.startswith("law_security_")
                 elif rule.value < 0:
                     assert (rule.id, rule.value) in {
                         ("public_school_administrative_pressure", -8),
@@ -1020,6 +1085,7 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                             "lj12_",
                             "remaining_",
                             "target_strategy_",
+                            "cooperation_",
                         )
                     )
                     assert -10 <= rule.value <= 30
@@ -1065,7 +1131,14 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
         for row in scalar_consumers
         if row["operation"] == "retain_native_constant_in_named_value"
     }
-    assert set(files) == policy_sources | {row["value_source"] for row in named_values.values()}
+    event_sources = {program.source for program in adapters.event_programs}
+    acceptance_sources = {program.source for program in adapters.acceptance_programs}
+    assert set(files) == (
+        policy_sources
+        | event_sources
+        | acceptance_sources
+        | {row["value_source"] for row in named_values.values()}
+    )
     for name, text in files.items():
         inline_text = text
         if name == "common/script_values/sitai_adapter_values.txt":
@@ -1093,6 +1166,12 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
         )
         restored = re.sub(
             r"\n\t\t# SITAI BEGIN supply:[^\n]+\n.*?# SITAI END supply:[^\n]+\n\t",
+            "",
+            restored,
+            flags=re.DOTALL,
+        )
+        restored = re.sub(
+            r"\n\t\t# SITAI BEGIN (event|treaty_acceptance):([^\n]+)\n.*?\t\t# SITAI END \1:\2\n\t\t",
             "",
             restored,
             flags=re.DOTALL,
@@ -1894,6 +1973,91 @@ def test_population_selector_invalid_facts_preserve_vanilla(population_candidate
     assert decision_rules.evaluate(policy, {"peasants": bad}, is_ai=True) == {}
 
 
+_ADAPTER_RELIGIONS = (
+    "catholic",
+    "protestant",
+    "orthodox",
+    "oriental_orthodox",
+    "sunni",
+    "shiite",
+    "ibadi",
+    "jewish",
+    "mahayana",
+    "gelugpa",
+    "theravada",
+    "confucian",
+    "hindu",
+    "shinto",
+    "sikh",
+    "animist",
+    "atheist",
+)
+
+_ADAPTER_MOVEMENT_LAWS = (
+    "law_agrarianism",
+    "law_anti_strike_laws",
+    "law_canton_system",
+    "law_censorship",
+    "law_closed_borders",
+    "law_collectivized_agriculture",
+    "law_combination_acts",
+    "law_command_economy",
+    "law_commercialized_agriculture",
+    "law_consumption_based_taxation",
+    "law_cooperative_ownership",
+    "law_corporatized_unions",
+    "law_cultural_exclusion",
+    "law_dedicated_police",
+    "law_ethnostate",
+    "law_expanded_latifundias",
+    "law_extraction_economy",
+    "law_factory_councils",
+    "law_free_trade",
+    "law_freedom_of_conscience",
+    "law_graduated_taxation",
+    "law_guaranteed_liberties",
+    "law_guild_system",
+    "law_homesteading",
+    "law_industry_banned",
+    "law_interventionism",
+    "law_isolationism",
+    "law_laissez_faire",
+    "law_land_based_taxation",
+    "law_latifundias",
+    "law_local_police",
+    "law_manorialism",
+    "law_mercantilism",
+    "law_migration_controls",
+    "law_militarized_police",
+    "law_millet_system",
+    "law_multicultural",
+    "law_national_guard",
+    "law_national_supremacy",
+    "law_no_home_affairs",
+    "law_no_migration_controls",
+    "law_no_police",
+    "law_outlawed_dissent",
+    "law_peasant_proprietorship",
+    "law_people_of_the_book",
+    "law_per_capita_based_taxation",
+    "law_proportional_taxation",
+    "law_protected_speech",
+    "law_protectionism",
+    "law_racial_segregation",
+    "law_right_of_assembly",
+    "law_right_to_associate",
+    "law_sakoku",
+    "law_secret_police",
+    "law_serfdom",
+    "law_shinsengumi",
+    "law_state_atheism",
+    "law_state_religion",
+    "law_tenant_farmers",
+    "law_total_separation",
+    "law_traditionalism",
+)
+
+
 def _adapter_collection_observations(seed):
     """Sample owned objects, never a precomputed existential-query result.
 
@@ -1990,7 +2154,7 @@ def _adapter_collection_observations(seed):
         or any(state["any_scope_building"] is None for state in owned_states)
         else [member for state in owned_states for member in state["any_scope_building"]]
     )
-    return {
+    observations = {
         "any_scope_building": owned_buildings,
         "any_scope_state": owned_states,
         "any_political_movement": political_members(
@@ -1998,6 +2162,69 @@ def _adapter_collection_observations(seed):
         ),
         "any_interest_group": political_members("law_stance", ("law_anarchy",)),
     }
+    # Append new physical observations with a separate stream: old building,
+    # state and political-member draws retain their exact historical seeds.
+    extra_rng = random.Random(f"adapter-relationship-observations:{seed}")
+    for member in owned_states or ():
+        member["blockade_level"] = extra_rng.choice([None, 0, 0.00001, 0.5, 1])
+        member["is_under_colonization"] = extra_rng.choice([None, False, True])
+    for member in observations["any_political_movement"] or ():
+        member["political_movement_radicalism"] = extra_rng.choice(
+            [None, 0, 0.24999, 0.25, 0.25001, 0.74999, 0.75, 0.75001, 1]
+        )
+        for law in _ADAPTER_MOVEMENT_LAWS:
+            argument = (("law", f"law_type:{law}"),)
+            if argument not in member["law_enactment_stance"]:
+                member["law_enactment_stance"][argument] = extra_rng.choice([None, -1, 0, 1])
+    state_religion = extra_rng.choice([None, *_ADAPTER_RELIGIONS])
+    actual_overlord = extra_rng.choice([None, "ACTUAL", "CHANGED"])
+    observations["_root"] = {
+        "market": {
+            "mg:small_arms": {
+                "market_goods_imports": extra_rng.choice([None, 0, 4.99999, 5, 5.00001, 20])
+            },
+            "market_imports_reliance": {
+                (("goods", "small_arms"),): extra_rng.choice([None, 0, 0.24999, 0.25, 0.25001, 1])
+            },
+        },
+        "country_has_state_religion": {
+            (("argument", f"rel:{religion}"),): (
+                None if state_religion is None else religion == state_religion
+            )
+            for religion in _ADAPTER_RELIGIONS
+        },
+        "religion_percent_country": {
+            (("target", f"rel:{religion}"),): extra_rng.choice(
+                [None, 0, 0.09999, 0.1, 0.10001, 0.4]
+            )
+            for religion in _ADAPTER_RELIGIONS
+        },
+        "country_average_religious_acceptance": {
+            (("target", f"rel:{religion}"),): extra_rng.choice([None, -1, 0, 1])
+            for religion in _ADAPTER_RELIGIONS
+        },
+        "overlord": {"country_id": actual_overlord},
+        # Distractors are observations of distinct countries, never aliases
+        # for the actual direct overlord or a precomputed boolean getter.
+        "economic_dependence": {
+            country: extra_rng.choice([None, 0, 0.99999, 1, 1.00001, 2.5, 5])
+            for country in ("ACTUAL", "CHANGED", "CANDIDATE", "TOP", "FOREIGN")
+        },
+    }
+    return observations
+
+
+def _adapter_attach_query_observations(actor, observations):
+    """Merge physical query inputs without replacing scalar goods/overlord facts."""
+
+    def merge(target, extra):
+        for key, value in extra.items():
+            if isinstance(value, dict):
+                merge(target.setdefault(key, {}), value)
+            else:
+                target[key] = value
+
+    merge(actor, observations["_root"])
 
 
 def _adapter_query_reference(reader, observations, root_facts=None):
@@ -2026,6 +2253,78 @@ def _adapter_query_reference(reader, observations, root_facts=None):
         )
 
     parameters = dict(reader.parameters)
+    root = {} if root_facts is None else root_facts
+    if "colonial_query" in parameters:
+        assert reader.engine == "any_scope_state"
+        assert parameters == {"colonial_query": "active_projects"}
+        return existential(
+            observations["any_scope_state"], lambda member: member.get("is_under_colonization")
+        )
+    if "security_query" in parameters:
+        assert reader.engine == "any_political_movement"
+        assert parameters["security_query"] == "radicalism"
+        assert parameters["threshold"] in {"0.25", "0.75"}
+        return existential(
+            observations["any_political_movement"],
+            lambda member: compare(
+                member.get("political_movement_radicalism"),
+                operator.ge,
+                float(parameters["threshold"]),
+            ),
+        )
+    if "import_blockade_query" in parameters:
+        query = parameters["import_blockade_query"]
+        if query == "owned_state_blockade":
+            assert reader.engine == "any_scope_state"
+            return existential(
+                observations["any_scope_state"],
+                lambda member: compare(member.get("blockade_level"), operator.gt, 0),
+            )
+        assert reader.engine == "market"
+        market = root.get("market")
+        if market is None:
+            return None
+        if query == "arms_import_volume":
+            good = market.get("mg:small_arms")
+            return compare(
+                None if good is None else good.get("market_goods_imports"), operator.ge, 5
+            )
+        assert query == "arms_import_reliance"
+        return compare(
+            market.get("market_imports_reliance", {}).get((("goods", "small_arms"),)),
+            operator.gt,
+            0.25,
+        )
+    if "culture_query" in parameters:
+        assert reader.engine == "OR"
+        assert parameters == {"culture_query": "nonstate_religious_exposure"}
+
+        def exposed(religion):
+            target = (("target", f"rel:{religion}"),)
+            is_state = root.get("country_has_state_religion", {}).get(
+                (("argument", f"rel:{religion}"),)
+            )
+            return conjunction(
+                None if is_state is None else not is_state,
+                compare(root.get("religion_percent_country", {}).get(target), operator.ge, 0.1),
+                compare(
+                    root.get("country_average_religious_acceptance", {}).get(target),
+                    operator.lt,
+                    0,
+                ),
+            )
+
+        return existential(_ADAPTER_RELIGIONS, exposed)
+    if "subject_dependence_query" in parameters:
+        assert reader.engine == "AND"
+        assert parameters == {"subject_dependence_query": "actual_overlord_above_neutral"}
+        overlord = root.get("overlord")
+        overlord_identity = None if overlord is None else overlord.get("country_id")
+        return conjunction(
+            root.get("is_subject"),
+            overlord is not None,
+            compare(root.get("economic_dependence", {}).get(overlord_identity), operator.gt, 1),
+        )
     if "technology_query" in parameters:
         from technology_query_reference import evaluate
 
@@ -2179,7 +2478,8 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
             if reader.engine in observation_queries.QUERY_ENGINES:
                 assert reader.scope == "root"
                 assert not reader.path
-                current[reader.engine] = collections[reader.engine]
+                if reader.engine in collections:
+                    current[reader.engine] = collections[reader.engine]
                 # Resolve aggregate readers after every scalar ROOT observation
                 # exists; research queries refer to laws, goods and prior tech.
                 continue
@@ -2206,6 +2506,7 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
             ):
                 current[f"{reader.argument}_active"] = value
             values[reader.key] = None if missing_target and reader.scope != "root" else value
+        _adapter_attach_query_observations(scopes["ROOT"], collections)
         for reader in policy.readers:
             if reader.engine in observation_queries.QUERY_ENGINES:
                 values[reader.key] = _adapter_query_reference(reader, collections, scopes["ROOT"])

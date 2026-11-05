@@ -1,0 +1,14 @@
+# 有限的外交缓和收益与新增保护承诺成本；不重复原版关系/意识形态评分。
+schema = 1
+
+[sources]
+"common/ai_strategies/00_default_strategy.txt" = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+
+[tuning]
+reconcile_default = 8
+reconcile_liquidity = 5
+reconcile_recovery = 6
+protect_default = -8
+protect_liquidity = -5
+protect_influence = -4
+protect_recovery = -6

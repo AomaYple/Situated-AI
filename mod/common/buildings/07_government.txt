@@ -40,16 +40,16 @@ building_government_administration = {
 			# GROUP program_23cf35935032bc42_administrative_active_input_paper_negative
 			add = { value = 0
 				# administrative_input_government_pm_switch_boards_paper [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_delta < 0 } } } } } } } }  } else = { add = -0.2 } } } }
 				# administrative_input_government_pm_vertical_filing_cabinets_paper [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_vertical_filing_cabinets } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_vertical_filing_cabinets } exists = owner owner = { is_ai = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_delta < 0 } } } } } } } }  } else = { add = -0.2 } } } }
 				# administrative_input_government_pm_horizontal_drawer_cabinets_paper [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_horizontal_drawer_cabinets } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_horizontal_drawer_cabinets } exists = owner owner = { is_ai = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_delta < 0 } } } } } } } }  } else = { add = -0.2 } } } }
 			}
 			# GROUP program_23cf35935032bc42_administrative_active_input_telephones_negative
 			add = { value = 0
 				# administrative_input_government_pm_switch_boards_telephones [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:telephones mg:telephones = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:telephones mg:telephones = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:telephones mg:telephones = { NOT = { market_goods_delta < 0 } } } } } } } }  } else = { add = -0.2 } } } }
 			}
 			# GROUP program_23cf35935032bc42_administrative_capacity_repair_positive
 			add = { value = 0
@@ -65,9 +65,9 @@ building_government_administration = {
 			# GROUP program_23cf35935032bc42_administrative_financing_pressure_negative
 			add = { value = 0
 				# fiscal_government_building_default_downgrade [fiscal]; 州所属国家处于违约时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } add = -0.25 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = yes } } } } } }  } else = { add = -0.25 } } } }
 				# fiscal_government_building_loans_downgrade [fiscal]; 州所属国家正在借贷时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes taking_loans = yes } } } add = -0.25 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { AND = { OR = { taking_loans = yes NOT = { taking_loans = yes } } } AND = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = yes } } } } } }  } else = { add = -0.25 } } } }
 			}
 			# GROUP program_23cf35935032bc42_administrative_local_tax_capacity_positive
 			add = { value = 0
@@ -150,16 +150,16 @@ building_university = {
 			# GROUP program_50f41da1b83f7ffd_building_active_input_paper_negative
 			add = { value = 0
 				# actual_cost_building_university_building_university_pm_analytical_philosophy_department_paper [market]; 实际启用生产组 pmg_base_building_university 的 paper 投入同时高价且短缺时计入扩建成本
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_analytical_philosophy_department } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_analytical_philosophy_department } exists = owner owner = { is_ai = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_delta < 0 } } } } } } } }  } else = { add = -0.2 } } } }
 				# actual_cost_building_university_building_university_pm_philosophy_department_paper [market]; 实际启用生产组 pmg_base_building_university 的 paper 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_philosophy_department } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_philosophy_department } exists = owner owner = { is_ai = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_delta < 0 } } } } } } } }  } else = { add = -0.2 } } } }
 				# actual_cost_building_university_building_university_pm_scholastic_education_paper [market]; 实际启用生产组 pmg_base_building_university 的 paper 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_scholastic_education } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_scholastic_education } exists = owner owner = { is_ai = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:paper mg:paper = { NOT = { market_goods_delta < 0 } } } } } } } }  } else = { add = -0.2 } } } }
 			}
 			# GROUP program_50f41da1b83f7ffd_building_fiscal_default_negative
 			add = { value = 0
 				# knowledge_university_observed_default_cost [fiscal]; 所有者实际违约为新增公费大学提供独立偿付成本；不屏蔽低识字需求
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = yes } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_50f41da1b83f7ffd_building_output_demand_positive
 			add = { value = 0

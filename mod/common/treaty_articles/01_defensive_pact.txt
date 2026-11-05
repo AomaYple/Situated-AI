@@ -231,14 +231,14 @@ defensive_pact = {
 			# GROUP program_183b64bc3aded8a7_treaty_influence_pressure_negative
 			add = { value = 0
 				# treaty_defensive_pact_capacity_deficit [diplomacy]; ROOT影响力已为负，升档同一外交容量压力；与低于占用档去重，不把零余额或未知当赤字
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes influence < 0.0 } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { influence >= 0 NOT = { influence >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { influence < 0.0 } } } } }  } else = { add = -0.2 } } } }
 				# treaty_defensive_pact_capacity [diplomacy]; 原版每方影响力占用100；ROOT当前余额低于本条款精确占用，仅计边际外交容量压力，不增加资格门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes influence < 100.0 } } add = -0.1 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { influence >= 0 NOT = { influence >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { influence < 100.0 } } } } }  } else = { add = -0.1 } } } }
 			}
 			# GROUP program_183b64bc3aded8a7_treaty_military_financing_pressure_negative
 			add = { value = 0
 				# treaty_defensive_pact_default [diplomacy]; ROOT已实际违约，军事条约新增承诺有融资机会成本；不惩罚正常借款，不据此推断任何一方实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.15 } } } }
 			}
 			min = 0.5
 			max = 1.15

@@ -18,6 +18,8 @@ from .parser import parse_text
 
 if TYPE_CHECKING:
     from .decision_rules import Reader, RuleSet
+    from .event_opportunities import EventProgram
+    from .treaty_acceptance_opportunities import AcceptanceProgram
 
 
 _LJ10_EVIDENCE = Path(__file__).resolve().parents[2] / (
@@ -203,6 +205,7 @@ _INPUTS = {
     **dict.fromkeys(_STATE_NUMBER, ("state", "number")),
     "is_treaty_port": ("state", "boolean"),
     "is_incorporated": ("state", "boolean"),
+    "is_mass_migration_target": ("state", "boolean"),
     "is_production_method_active": ("state", "boolean"),
     "is_homeland_of_country_cultures": ("state", "boolean"),
     "owner": ("state", "boolean"),
@@ -269,6 +272,20 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine == "is_mass_migration_target" and (
+        root != "state"
+        or actor_path != ("owner",)
+        or reader.scope != "root"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.minimum is not None
+        or reader.maximum is not None
+        or reader.kind != "boolean"
+        or reader.unit != "boolean"
+    ):
+        raise ValueError(f"大迁移目标必须保持真实候选州ROOT无参数布尔合同：{reader.key}")
     if reader.engine == "pop_type_percent_state" and (
         root != "state"
         or reader.scope != "root"
@@ -404,15 +421,34 @@ def reader_scope(
         or reader.minimum != (0 if reader.engine in {"prestige", "num_alliances"} else None)
     ):
         raise ValueError(f"外交/声望观测必须保持精确本国 ROOT 签名：{reader.key}")
-    if reader.engine in {"num_companies", "max_num_companies", "authority"} and (
-        reader.scope != "root"
-        or actor_path
-        or reader.path
-        or reader.argument is not None
-        or reader.parameters
-        or reader.value_field is not None
-        or reader.maximum is not None
-        or reader.minimum != (None if reader.engine == "authority" else 0)
+    decree_authority = (
+        reader.key == "decree_relief_owner_authority"
+        and reader.engine == "authority"
+        and native_root == "state"
+        and actor_path == ("owner",)
+        and reader.scope == "root"
+        and reader.path == ("owner",)
+        and reader.kind == "number"
+        and reader.unit == "capacity_balance"
+        and reader.argument is None
+        and not reader.parameters
+        and reader.value_field is None
+        and reader.minimum is None
+        and reader.maximum is None
+    )
+    if (
+        reader.engine in {"num_companies", "max_num_companies", "authority"}
+        and not decree_authority
+        and (
+            reader.scope != "root"
+            or actor_path
+            or reader.path
+            or reader.argument is not None
+            or reader.parameters
+            or reader.value_field is not None
+            or reader.maximum is not None
+            or reader.minimum != (None if reader.engine == "authority" else 0)
+        )
     ):
         raise ValueError(f"公司容量与权威余额仅支持已证明的国家 ROOT 数值合同：{reader.key}")
     # 1.14.5 Windows reader/consumer证据只授权本国根；条款数量不是履约或军力。
@@ -505,11 +541,55 @@ def validate(rules: RuleSet) -> None:
         reader_scope(reader, rules.actor_path, native_root=rules.native_root)
     for rule in rules.rules:
         field = rule.field[1:] if rule.field[0] == "ai_strategy_default" else rule.field
+        if field[0] in {
+            "da_increase_autonomy_of_self",
+            "decrease_payments",
+            "suez_survey_decision",
+            "panama_survey_decision",
+        }:
+            expected = (
+                (field[0], "ai", "propose_score")
+                if field[0] in {"da_increase_autonomy_of_self", "decrease_payments"}
+                else (field[0], "ai_chance")
+            )
+            if (
+                field != expected
+                or rules.native_root != "country"
+                or rules.actor_path
+                or rule.operation != "multiply"
+                or rule.value <= 0
+                or any(
+                    readers[key].scope != "root" or readers[key].path for key in rule.input_keys()
+                )
+            ):
+                raise ValueError("原生提案/运河调查只支持精确country ROOT正倍率消费者")
         if "actual_overlord_relations" in rule.input_keys() and field != (
             "ai_strategy_subject_overlord_compliance",
             "weight",
         ):
             raise ValueError("实际宗主关系仅授权已证明的宗属合作策略消费者")
+        if any(
+            "war_pressure_query" in dict(readers[key].parameters) for key in rule.input_keys()
+        ) and (
+            field != ("wargoal_scores", "conquer_state")
+            or rule.id != "war_pressure_conquer_state"
+            or rules.native_root != "country"
+            or rules.actor_path
+            or rule.operation != "add"
+            or rule.semantic_role != "cost"
+            or not -3 <= rule.value < 0
+        ):
+            raise ValueError("本国多线低支持观测仅授权精确征服目标的有界扩张成本")
+        if any(
+            "subject_dependence_query" in dict(readers[key].parameters) for key in rule.input_keys()
+        ) and (
+            field != ("ai_strategy_subject_overlord_compliance", "weight")
+            or rules.native_root != "country"
+            or rules.actor_path
+            or rule.operation != "multiply"
+            or rule.value <= 1
+        ):
+            raise ValueError("实际宗主经济依赖仅授权已证明的国家宗属合作收益消费者")
         if (
             rules.native_root == "military_formation" or field[0].startswith("mobilization_option_")
         ) and (
@@ -544,6 +624,38 @@ def validate(rules: RuleSet) -> None:
             raise ValueError(f"消费者没有提供读取器的具名作用域：{rule.id}")
 
 
+def event_consumer(program: EventProgram) -> dict[str, object]:
+    """Grant only the proven event/option selector, never a generic country event."""
+    from . import event_opportunities  # noqa: PLC0415
+
+    program.validate()
+    return {
+        **event_opportunities.consumer_catalog()[program.option],
+        "role": "vanilla_event_option_aiweight",
+        "evaluation_context": program.evaluation_context().as_dict(),
+        "reader_context_bindings": [list(row) for row in program.reader_bindings()],
+        "scope_evidence_level": "static_complete_native_sources; runtime_behavior_unverified",
+        "eligibility_costs_and_execution": "retained_vanilla",
+        "world_scans": 0,
+    }
+
+
+def acceptance_consumer(program: AcceptanceProgram) -> dict[str, object]:
+    """Exact directed inherent acceptance; current ROOT and optional article inputs."""
+    from . import treaty_acceptance_opportunities as acceptance  # noqa: PLC0415
+
+    program.validate()
+    return {
+        **acceptance.consumer_catalog()[program.definition],
+        "role": "vanilla_directed_article_inherent_acceptance",
+        "evaluation_context": program.evaluation_context().as_dict(),
+        "reader_context_bindings": [list(row) for row in program.reader_bindings()],
+        "scope_evidence_level": "static_complete_native_sources; runtime_behavior_unverified",
+        "eligibility_costs_and_execution": "retained_vanilla",
+        "world_scans": 0,
+    }
+
+
 def consumer(
     field: tuple[str, ...],
     actor_path: tuple[str, ...],
@@ -555,12 +667,77 @@ def consumer(
     leaf = field[-1]
     evidence = "common/ai_strategies/00_default_strategy.txt"
     role = "vanilla_strategy_numeric_evaluation"
+    native_unit = None
     if (
         native_root == "military_formation"
         and source != "common/mobilization_options/00_mobilization_option.txt"
     ):
         raise ValueError("编队ROOT消费者必须提供精确医疗动员原件身份")
-    if leaf == "ai_enact_weight_modifier":
+    if (source is not None and source.startswith("common/diplomatic_actions/")) or field[0] in {
+        "da_increase_autonomy_of_self",
+        "decrease_payments",
+        "join_power_bloc",
+    }:
+        from .native_action_opportunities import consumer_catalog  # noqa: PLC0415
+
+        catalog = consumer_catalog()
+        row = catalog.get(field[0])
+        if (
+            row is None
+            or row["source"] != source
+            or row["field"] != ".".join(field)
+            or actor_path
+            or native_root not in {None, "country"}
+        ):
+            raise ValueError("原生外交行动只授权已登记精确country ROOT提案优先字段")
+        evidence, role = row["scope_evidence"], "vanilla_diplomatic_action_proposal_priority"
+        native_unit = "score"
+    elif source == "common/decisions/canal_decisions.txt" or field[0] in {
+        "suez_survey_decision",
+        "panama_survey_decision",
+    }:
+        from .canal_opportunities import HELP  # noqa: PLC0415
+        from .canal_opportunities import consumer_catalog as canal_catalog  # noqa: PLC0415
+
+        if (
+            (source, ".".join(field))
+            not in {(row["source"], row["field"]) for row in canal_catalog()}
+            or actor_path
+            or native_root not in {None, "country"}
+        ):
+            raise ValueError("运河只授权两个精确country ROOT调查相对权重")
+        evidence, role = HELP, "vanilla_country_decision_relative_weight"
+        native_unit = "relative_weight"
+    elif (source is not None and source.startswith("common/decrees/")) or field[0].startswith(
+        "decree_"
+    ):
+        from . import decree_opportunities as decree  # noqa: PLC0415
+
+        if (
+            source != decree.SOURCE
+            or ".".join(field) != decree.FIELD
+            or actor_path != ("owner",)
+            or native_root != "state"
+        ):
+            raise ValueError("政令只授权精确救济州ROOT与真实owner数值消费者")
+        decree.consumer_catalog()
+        evidence, role = decree.SOURCE, "vanilla_state_decree_relative_weight"
+        native_unit = "relative_weight"
+    elif (source is not None and source.startswith("common/scripted_buttons/")) or field[
+        0
+    ].startswith("je_indian_famines_button_"):
+        from . import famine_opportunities as famine  # noqa: PLC0415
+
+        if (
+            (source, ".".join(field))
+            not in {(row["source"], row["field"]) for row in famine.consumer_catalog()}
+            or actor_path
+            or native_root not in {None, "country"}
+        ):
+            raise ValueError("饥荒只授权三个精确country ROOT按钮相对权重")
+        evidence, role = famine.HELP, "vanilla_famine_button_relative_weight"
+        native_unit = "relative_weight"
+    elif leaf == "ai_enact_weight_modifier":
         evidence, role = "common/laws/readme.md", "vanilla_law_candidate_weight"
     elif leaf == "ai_weight" and source is not None and source.startswith("common/company_types/"):
         evidence, role = (
@@ -612,6 +789,16 @@ def consumer(
         )
     return {
         **(
+            {
+                "native_unit": native_unit,
+                "writer_unit": "weight_delta"
+                if role == "vanilla_state_decree_relative_weight"
+                else "multiplier",
+            }
+            if native_unit
+            else {}
+        ),
+        **(
             {"native_unit": "probability", "writer_unit": "multiplier"}
             if role == "vanilla_treaty_article_evaluation_probability"
             else {}
@@ -632,6 +819,8 @@ def consumer(
 def placement_contract(field: tuple[str, ...]) -> str:
     """数值写入先于原版终结资格/截断；路径按锁定消费者逐项审计。"""
     field = field[1:] if field[0] == "ai_strategy_default" else field
+    if field == ("decree_emergency_relief", "ai_weight"):
+        return "before_native_decree_political_multiply_tail"
     if field == ("subject_value",):
         return "inside_regular_reachable_subject_branch_before_native_tail"
     if field == ("treaty_port_value",):

@@ -12,7 +12,7 @@ from pdx import config, decision_adapters
 from pdx.model import Block
 from pdx.parser import parse_text
 
-from . import domain_coverage, inventory, native_treatments, vanilla_inventory
+from . import business_review, domain_coverage, inventory, native_treatments, vanilla_inventory
 from .compiler import audit, load_model
 from .families import classify
 from .receipts import AuditResult, CoverageRow, ReceiptStatus, StageReceipt, digest, status_for
@@ -249,6 +249,15 @@ def native_report() -> dict[str, object]:
         coverage=coverage,
         production_complete=True,
     )
+    business = business_review.review(
+        scope,
+        sources,
+        {
+            name: text.encode("utf-8") if isinstance(text, str) else text
+            for name, text in generated.items()
+        },
+        treatments,
+    )
     return {
         "schema": 1,
         "plan_version": "A2",
@@ -264,6 +273,7 @@ def native_report() -> dict[str, object]:
         "scope": scope.as_dict(),
         "native_coverage": coverage,
         "native_treatments": treatments,
+        "native_business_review": business,
         "business_complete": False,
         "limits": [
             "native protections and numeric mappings are separate responsibilities",

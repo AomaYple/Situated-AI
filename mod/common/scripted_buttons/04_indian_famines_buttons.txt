@@ -1,0 +1,300 @@
+je_indian_famines_button_relief_kitchens = {
+	name = "je_indian_famines_button_relief_kitchens"
+	desc = "je_indian_famines_button_relief_kitchens_desc"
+
+	visible = {
+		always = yes
+	}
+
+	cooldown = { days = 365 }
+
+	selected = {
+		has_variable = relief_kitchens_button_var
+	}
+
+	ai_chance = {
+		value = 10
+
+		# SITAI BEGIN information:je_indian_famines_button_relief_kitchens.ai_chance
+		# ACTION program_8ef0c712f0969a37 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8ef0c712f0969a37_famine_relief_kitchens_actual_famine_effect_positive
+			add = { value = 0
+				# famine_relief_kitchens_railway_benefit [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } any_scope_state = { has_famine = yes has_building = building_railway } } } add = 0.32 }
+				# famine_relief_kitchens_benefit [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = 0.22 }
+			}
+			# GROUP program_8ef0c712f0969a37_famine_relief_kitchens_observed_fiscal_pressure_negative
+			add = { value = 0
+				# famine_relief_kitchens_financing [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.08 } } } }
+			}
+			# GROUP program_8ef0c712f0969a37_famine_relief_kitchens_twelve_month_expense_negative
+			add = { value = 0
+				# famine_relief_kitchens_commitment [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = -0.1 }
+			}
+			min = 0.82
+			max = 1.32
+		} }
+		# SITAI END information:je_indian_famines_button_relief_kitchens.ai_chance
+	}
+
+	effect = {
+		set_variable = {
+			name = relief_kitchens_button_var
+			months = 12
+		}
+		add_modifier = {
+			name = relief_kitchens_costs_modifier
+			months = 12
+			multiplier = money_amount_multiplier_medium
+		}
+		hidden_effect = {
+			every_scope_state = {
+				limit = {
+					has_famine = yes
+				}
+				if = {
+					limit = {
+						has_building = building_railway
+					}
+					add_modifier = {
+						name = improved_relief_kitchens_effect_modifier
+						months = 12
+					}
+				}
+				else = {
+					add_modifier = {
+						name = relief_kitchens_effect_modifier
+						months = 12
+					}
+				}
+			}
+		}
+		custom_tooltip = every_state_suffers_following_modifier
+		show_as_tooltip = {
+			ordered_scope_state = {
+				limit = {
+					has_famine = yes
+				}
+				order_by = gdp
+				position = 0
+				check_range_bounds = no
+				add_modifier = {
+					name = relief_kitchens_effect_modifier
+					months = 12
+				}
+			}
+		}
+	}
+}
+
+je_indian_famines_button_work_camps = {
+	name = "je_indian_famines_button_work_camps"
+	desc = "je_indian_famines_button_work_camps_desc"
+
+	visible = {
+		always = yes
+	}
+
+	selected = {
+		has_variable = work_camps_button_var
+	}
+
+	cooldown = { days = 365 }
+
+	ai_chance = {
+		value = 10
+
+		# SITAI BEGIN information:je_indian_famines_button_work_camps.ai_chance
+		# ACTION program_b1538f388b9f7adb [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b1538f388b9f7adb_famine_work_camps_actual_famine_effect_positive
+			add = { value = 0
+				# famine_work_camps_railway_benefit [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } any_scope_state = { has_famine = yes has_building = building_railway } } } add = 0.2 }
+				# famine_work_camps_benefit [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = 0.12 }
+			}
+			# GROUP program_b1538f388b9f7adb_famine_work_camps_nonrailway_extra_mortality_negative
+			add = { value = 0
+				# famine_work_camps_nonrailway_mortality [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { any_scope_state = { has_famine = yes NOT = { has_building = building_railway } } } } } } }  } else = { add = -0.1 } } } }
+			}
+			# GROUP program_b1538f388b9f7adb_famine_work_camps_observed_fiscal_pressure_negative
+			add = { value = 0
+				# famine_work_camps_financing [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.03 } } } }
+			}
+			# GROUP program_b1538f388b9f7adb_famine_work_camps_twelve_month_expense_negative
+			add = { value = 0
+				# famine_work_camps_commitment [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = -0.03 }
+			}
+			# GROUP program_b1538f388b9f7adb_famine_work_camps_unavoidable_mortality_negative
+			add = { value = 0
+				# famine_work_camps_mortality [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = -0.1 }
+			}
+			min = 0.74
+			max = 1.2
+		} }
+		# SITAI END information:je_indian_famines_button_work_camps.ai_chance
+	}
+
+	effect = {
+		set_variable = {
+			name = work_camps_button_var
+			months = 12
+		}
+		add_modifier = {
+			name = work_camps_costs_modifier
+			months = 12
+			multiplier = money_amount_multiplier_very_small
+		}
+		hidden_effect = {
+			every_scope_state = {
+				limit = {
+					has_famine = yes
+				}
+				if = {
+					limit = {
+						has_building = building_railway
+					}
+					add_modifier = {
+						name = improved_work_camps_effect_modifier
+						months = 12
+					}
+				}
+				else = {
+					add_modifier = {
+						name = work_camps_effect_modifier
+						months = 12
+					}
+				}
+			}
+		}
+		custom_tooltip = every_state_suffers_following_modifier
+		show_as_tooltip = {
+			ordered_state = {
+				limit = {
+					has_famine = yes
+				}
+				order_by = gdp
+				position = 0
+				check_range_bounds = no
+				add_modifier = {
+					name = work_camps_effect_modifier
+					months = 12
+				}
+			}
+		}
+	}
+}
+
+je_indian_famines_button_epidemic_control = {
+	name = "je_indian_famines_button_epidemic_control"
+	desc = "je_indian_famines_button_epidemic_control_desc"
+
+	visible = {
+		always = yes
+	}
+
+	cooldown = { days = 365 }
+
+	selected = {
+		has_variable = epidemic_control_button_var
+	}
+
+	ai_chance = {
+		value = 10
+
+		# SITAI BEGIN information:je_indian_famines_button_epidemic_control.ai_chance
+		# ACTION program_da1964f037a994a5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_da1964f037a994a5_famine_epidemic_control_actual_famine_effect_positive
+			add = { value = 0
+				# famine_epidemic_control_railway_benefit [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } any_scope_state = { has_famine = yes has_building = building_railway } } } add = 0.4 }
+				# famine_epidemic_control_benefit [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = 0.28 }
+			}
+			# GROUP program_da1964f037a994a5_famine_epidemic_control_observed_fiscal_pressure_negative
+			add = { value = 0
+				# famine_epidemic_control_financing [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.06 } } } }
+			}
+			# GROUP program_da1964f037a994a5_famine_epidemic_control_twelve_month_expense_negative
+			add = { value = 0
+				# famine_epidemic_control_commitment [political]; 实际本国饥荒州的具体效果与12月经常成本联合；劳役营正死亡独立成本，铁路只影响原版效果档位
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { has_famine = yes } } } add = -0.06 }
+			}
+			min = 0.88
+			max = 1.4
+		} }
+		# SITAI END information:je_indian_famines_button_epidemic_control.ai_chance
+	}
+
+	possible = {
+		has_technology_researched = malaria_prevention
+		has_technology_researched = central_planning
+        institution_investment_level = {
+            institution = institution_health_system
+            value >= 2
+        }
+	}
+
+	effect = {
+		set_variable = {
+			name = epidemic_control_button_var
+			months = 12
+		}
+		add_modifier = {
+			name = epidemic_control_costs_modifier
+			months = 12
+			multiplier = money_amount_multiplier_small
+		}
+		hidden_effect = {
+			every_scope_state = {
+				limit = {
+					has_famine = yes
+				}
+				if = {
+					limit = {
+						has_building = building_railway
+					}
+					add_modifier = {
+						name = improved_epidemic_control_effect_modifier
+						months = 12
+					}
+				}
+				else = {
+					add_modifier = {
+						name = epidemic_control_effect_modifier
+						months = 12
+					}
+				}
+			}
+		}
+		custom_tooltip = every_state_suffers_following_modifier
+		show_as_tooltip = {
+			ordered_state = {
+				limit = {
+					has_famine = yes
+				}
+				order_by = gdp
+				position = 0
+				check_range_bounds = no
+				add_modifier = {
+					name = epidemic_control_effect_modifier
+					months = 12
+				}
+			}
+		}
+	}
+}

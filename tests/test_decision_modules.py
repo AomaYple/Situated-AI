@@ -81,7 +81,6 @@ def test_正式包启用模块与生命周期契约一致():
     contract = metadata["module_contract"]
     enabled_modules = set(metadata["enabled_modules"])
     assert enabled_modules == {
-        "fiscal",
         "reform",
         "market",
         "security",
@@ -94,10 +93,18 @@ def test_正式包启用模块与生命周期契约一致():
     assert enabled_modules <= set(contract)
     assert "subjects" in contract
     assert "subjects" not in enabled_modules
-    assert contract["fiscal"]["stateful"] is True
+    assert "fiscal" not in enabled_modules
+    assert contract["fiscal"]["deployed"] is False
+    assert contract["fiscal"]["stateful"] is False
     assert contract["fiscal"]["direct_read"] is False
-    assert contract["fiscal"]["ttl_or_none"] == policy.ttl_days
-    assert contract["fiscal"]["hooks"] == [
+    assert contract["fiscal"]["ttl_or_none"] is None
+    assert contract["fiscal"]["hooks"] == []
+    assert contract["fiscal"]["clear_on_disable"] == "no_persistent_state"
+    assert all("sitai_fiscal" not in name for name in files)
+    legacy = decisions.module_lifecycle_contract(policy, extensions)["fiscal"]
+    assert legacy["stateful"] is True
+    assert legacy["ttl_or_none"] == policy.ttl_days
+    assert legacy["hooks"] == [
         "on_monthly_pulse_country",
         "on_country_default",
         "on_country_no_longer_default",
@@ -137,7 +144,6 @@ def test_正式候选生成所有脚本和全语言无回退():
     metadata = json.loads(files[".metadata/metadata.json"])
     assert policy.package.status == "released"
     assert set(metadata["enabled_modules"]) == {
-        "fiscal",
         "reform",
         "market",
         "security",

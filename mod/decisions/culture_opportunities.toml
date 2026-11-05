@@ -1,0 +1,17 @@
+# 同一本国非国教宗教实际人口与低接受，连接精确国教法转换。
+schema = 1
+
+[sources]
+"common/journal_entries/01_algeria.txt" = "4c62d922b8de894ff1e5e22ea66f055f7da1f928a2e756bedecc603d3dc89a55"
+"common/laws/00_church_and_state.txt" = "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174"
+"common/religions/religion.txt" = "1f1816ecf630205eb158ee0c5227a60b149378bca3aecc179c97bdeb332fd238"
+"common/script_values/event_values.txt" = "99e2dfc8e07c8b91a6f9c6bf4616444b4c973fc07c281b057b48b2594280067a"
+"events/india_events/set_hierarchy_events.txt" = "6b6e19147d86f59bf19a2958190bd074c2259bff7f14bc0861c084a7cc23ba42"
+"events/soi_events/00_lobbies_events_04.txt" = "2af9b7ec1fdd28021aeb7af837033ac4f665a5468af6c6a68aa231de57ac5bc6"
+
+"common/laws/00_citizenship.txt" = "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f"
+"events/cultural_homeland_events.txt" = "7adb75ce3082a6826f9f203f74f3b4069319eb98dc9812bbaf0442a6fd67de6a"
+
+[tuning]
+observed_religious_need = 6
+observed_cultural_need = 6

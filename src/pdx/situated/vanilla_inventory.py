@@ -1,6 +1,6 @@
 """D0 原版消费者独立发现，不以 Mod 规则或已修改文件作为发现分母。
 
-扫描 common 全树定位 AI 相关目录，再解析这些目录的全部定义。发现的字段和
+扫描 common 全树定位 AI 相关目录，并盘点全部已挂载 events 选项，再解析全部定义。发现的字段和
 读取器均保持实现 pending；只有原版文档明确支持的字段级作用域才进入 legal。
 字段存在、脚本引用了某个 scope、可从日志观察，均不能证明合法控制能力。
 """
@@ -21,6 +21,7 @@ from .. import config  # noqa: TID252
 from ..lexer import ATOM, LBRACE, OP, RBRACE, STRING, tokenize  # noqa: TID252
 from ..model import Assignment, Block, Scalar  # noqa: TID252
 from ..parser import PREFIXES, parse_bytes  # noqa: TID252
+from ..textio import normalized_text  # noqa: TID252
 from . import engine_scope
 
 if TYPE_CHECKING:
@@ -57,6 +58,9 @@ _REQUIRED_DIRS = frozenset(
         "defines",
         "script_values",
         "scripted_triggers",
+        # Exact event effects need their complete modifier definitions as
+        # context evidence; scanning does not authorize modifier writers.
+        "static_modifiers",
     }
 )
 _OBSERVATION_DIRS = frozenset({"script_values", "scripted_triggers"})
@@ -65,6 +69,8 @@ _INFRASTRUCTURE_DIRS = frozenset({"scripted_effects", "on_actions", "trigger_loc
 # These declarations establish goods, unit, law and observation arguments; they
 # never enter consumer discovery merely because a Mod reader uses them.
 _PARAMETER_EVIDENCE_HASHES = {
+    "events/brazil/amazonas.txt": "1841eee77acbbea074ca4d9506cce0b3aa391f08bbda21394610af287e9943d2",
+    "common/tutorial_lessons/00_tutorial_lessons_promote_ig.txt": "554a34f763aad704582a610450c88f03a009951724c4088f409111543163cd55",
     "common/achievements/base_achievements.txt": "dc5a50c8313fffbe50d68f0a6b8c9b9d05f1794f46725d23f2c0e67f7369799f",
     "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
     "common/achievements/ip2_pivot_of_empire_achievements.txt": "9ce0330dab546239369a8b916b5ee8fc85ad6de28d5ec5cc60c47c798d271de8",
@@ -73,6 +79,7 @@ _PARAMETER_EVIDENCE_HASHES = {
     "common/combat_unit_types/00_land_combat_unit_types.txt": "ad3ed3d68533cbe6ef05ce014cd88b920b58dc4a42b3e566077cdccee072d86c",
     "common/goods/00_goods.txt": "e5d8ed5e5deaf3d2c7193bc6b749555c63c78631aecaf87784a2e34051ddfa48",
     "common/ideologies/00_ig_ideologies.txt": "4c8bc020d2d1060795e5a615b850736b731a31193862399363ec2e1829639b05",
+    "common/ideologies/01_character_ideologies.txt": "ee996f042b387707e5bc305c32bd7e83d9b706aec784cb4e4f35ade0dae98bee",
     "common/journal_entries/00_urbanization.txt": "0be06294448f31679d2b14280b4e6c1991f0d2fa34f97ccc0452068c7cdc5ee6",
     "common/objective_subgoals/00_subgoals_tutorial.txt": "ca2052a10b208fb311e219b9ec2589875b4b0876cc86d92c5728cabaaba080ed",
     "common/political_movements/00_ideological_movements.txt": "834a1b97f09c65b9b64eafdaffe4ee68965aaac262066140793a482eefd23a6b",
@@ -80,6 +87,7 @@ _PARAMETER_EVIDENCE_HASHES = {
     "common/pop_types/laborers.txt": "90e109f061ca04c308d3d60cf6ba6d91cbe3769759ff28f0a9a0bd34e169a2d5",
     "common/pop_types/machinists.txt": "e0ddad8032fd6be5d0eb77533cf9f711a5baf5fe275d20819bc5ba8e3f6785ee",
     "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
+    "common/religions/religion.txt": "96ee8ddca57de6957b1a1501f91896e37a086319468312952a1843e5892d1814",
     "events/french_pretenders_pulse.txt": "3ed2ebf66cef1b0159ae352177cebd0a8d5c6e6de1bbab8732ef6a17e82d94bb",
     "events/law_events/children_rights_events.txt": "13414a1a5e817c98a2f2e8244c9ae997bf9d89cf96d1d68b3bd9244bcfaf50b8",
     "events/law_events/state_atheism.txt": "156c7e20ba3326e8aacb0bc3c91acdb9b6bf84988a15d9357467e707ee9e30ec",
@@ -197,6 +205,26 @@ class VanillaReference:
 
 
 @dataclass(frozen=True, slots=True)
+class VanillaEventOption:
+    """An actual option declaration, including slots with no declared AI weight.
+
+    Absence of ai_chance never establishes its default weight, write authority,
+    or a relationship between default_option and AI selection.
+    """
+
+    source: str
+    definition: str
+    field: str
+    option_index: int
+    option_name: str | None
+    event_type: str | None
+    source_line: int
+    weight_lines: tuple[int, ...]
+    default_option: str | None
+    ambiguity: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class VanillaInventory:
     baseline_id: str
     source_hashes: dict[str, str]
@@ -211,6 +239,7 @@ class VanillaInventory:
     # receipt from silently inventing an empty list independently of the
     # discovery result.
     parse_failures: tuple[str, ...] = ()
+    event_options: tuple[VanillaEventOption, ...] = ()
 
     @property
     def discovered_count(self) -> int:
@@ -280,6 +309,15 @@ class VanillaInventory:
             "migration_denominator": MIGRATION_DENOMINATOR,
             "parse_failures": list(self.parse_failures),
             "unknown_scopes": list(self.unknown_scopes),
+            "event_options": [asdict(item) for item in self.event_options],
+            "event_option_count": len(self.event_options),
+            "event_explicit_weight_count": sum(
+                len(item.weight_lines) for item in self.event_options
+            ),
+            "event_undeclared_weight_count": sum(
+                not item.weight_lines for item in self.event_options
+            ),
+            "event_default_semantics": "unknown; default_option is recorded, not interpreted as AI weight",
         }
 
 
@@ -334,9 +372,11 @@ def _inputs(game: Path) -> tuple[dict[str, bytes], tuple[str, ...], tuple[str, .
         raise ValueError(f"原版 common 树不存在：{common}")
     _contained(game, common)
     roots = [common]
-    in_game = game / "in_game/common"
-    if in_game.is_dir():
-        roots.append(in_game)
+    roots.extend(
+        candidate
+        for candidate in (game / "events", game / "in_game/common", game / "in_game/events")
+        if candidate.is_dir()
+    )
     dlc = game / "dlc"
     descriptors: dict[str, bytes] = {}
     if dlc.is_dir():
@@ -367,7 +407,7 @@ def _inputs(game: Path) -> tuple[dict[str, bytes], tuple[str, ...], tuple[str, .
             _contained(game, mount)
             if not mount.is_dir():
                 raise ValueError(f"DLC 挂载目录缺失或超出锁定树：{source}: {mount_name}")
-            if mount.name == "common":
+            if mount.name in {"common", "events"}:
                 roots.append(mount)
             # A descriptor mounts one content root.  Only its declared root
             # and its direct common trees are in scope; recursively importing
@@ -375,7 +415,12 @@ def _inputs(game: Path) -> tuple[dict[str, bytes], tuple[str, ...], tuple[str, .
             # inventory claim files the engine does not mount from this DLC.
             roots.extend(
                 candidate
-                for candidate in (mount / "common", mount / "in_game" / "common")
+                for candidate in (
+                    mount / "common",
+                    mount / "events",
+                    mount / "in_game" / "common",
+                    mount / "in_game" / "events",
+                )
                 if candidate.is_dir()
             )
             descriptors[source] = raw
@@ -392,6 +437,8 @@ def _inputs(game: Path) -> tuple[dict[str, bytes], tuple[str, ...], tuple[str, .
     )
     related = set(_REQUIRED_DIRS)
     for content_root, path in files:
+        if content_root.name == "events":
+            continue
         directory = path.relative_to(content_root).parts[0]
         if directory.startswith("ai_"):
             related.add(directory)
@@ -403,16 +450,21 @@ def _inputs(game: Path) -> tuple[dict[str, bytes], tuple[str, ...], tuple[str, .
     selected = {
         path.relative_to(game).as_posix(): path.read_bytes()
         for content_root, path in files
-        if path.relative_to(content_root).parts[0] in related
+        if content_root.name == "events" or path.relative_to(content_root).parts[0] in related
     }
     directories = tuple(
         sorted(
             {
-                (content_root / path.relative_to(content_root).parts[0])
+                (
+                    content_root
+                    if content_root.name == "events"
+                    else content_root / path.relative_to(content_root).parts[0]
+                )
                 .relative_to(game)
                 .as_posix()
                 for content_root, path in files
-                if path.relative_to(content_root).parts[0] in related
+                if content_root.name == "events"
+                or path.relative_to(content_root).parts[0] in related
             }
         )
     )
@@ -1884,6 +1936,27 @@ def _scope(
         return _static_policy_scope(directory, field, inputs, definition)
     if directory == "subject_types" and field == ("ai_value",):
         return _static_subject_value_scope(inputs, definition, source, subject_value_minimum)
+    if directory == "decrees" and field == ("ai_weight",):
+        if source != "common/decrees/00_decree.txt" or definition.key != "decree_emergency_relief":
+            return _Scope()
+        raw = inputs.get(source)
+        if (
+            raw is None
+            or hashlib.sha256(normalized_text(raw.decode("utf-8-sig")).encode()).hexdigest()
+            != "c0d0ca00271ae9a69a1119122e3392e74040f88c7097ddc5e357654d7a40e883"
+        ):
+            return _Scope()
+        # Full source identity plus explicit field-local state/AI comments;
+        # no company/research fallback or family-wide decree authorization.
+        return _doc_scope(
+            inputs,
+            source,
+            ("state_trigger", "ai_weight"),
+            "state",
+            "none",
+            "relative_weight",
+            "direct",
+        )
     if directory == "decisions" and field == ("ai_chance",):
         return _decision_chance_scope(inputs)
     if directory == "ai_strategies" and field[0] in {"pro_interest_groups", "anti_interest_groups"}:
@@ -2603,6 +2676,113 @@ def _surface(
     )
 
 
+def _event_candidates(
+    source: str, definition: Assignment
+) -> tuple[tuple[VanillaEventOption, ...], tuple[VanillaSurface, ...]]:
+    """Discover real top-level event options; never recurse through effects.
+
+    Event IDs beginning with ai_ are definitions, not consumer assignments.
+    Repeated option keys are selected by unique scalar name when possible and
+    otherwise by physical declaration index. Neither form grants write access.
+    """
+    if not isinstance(definition.value, Block):
+        return (), ()
+    event = definition.value
+
+    def scalar(block: Block, key: str) -> str | None:
+        values = block.all(key)
+        if len(values) == 1 and isinstance(values[0].value, Scalar):
+            return values[0].value.unquoted
+        return None
+
+    options = event.all("option")
+    names = [scalar(row.value, "name") if isinstance(row.value, Block) else None for row in options]
+    counts = Counter(name for name in names if name is not None)
+    records, surfaces = [], []
+    for index, (option, name) in enumerate(zip(options, names, strict=True), 1):
+        ambiguity = None
+        if not isinstance(option.value, Block):
+            ambiguity = "event_option_not_block"
+        elif name is None or counts[name] != 1:
+            ambiguity = "event_option_name_missing_dynamic_or_duplicate"
+        identity = f"option[{name}]" if ambiguity is None else f"option[#{index}]"
+        weights = option.value.all("ai_chance") if isinstance(option.value, Block) else []
+        if len(weights) > 1:
+            ambiguity = "duplicate_event_option_ai_chance"
+        field = f"{identity}.ai_chance"
+        records.append(
+            VanillaEventOption(
+                source,
+                definition.key,
+                field,
+                index,
+                name,
+                scalar(event, "type"),
+                option.line,
+                tuple(row.line for row in weights),
+                scalar(option.value, "default_option") if isinstance(option.value, Block) else None,
+                ambiguity,
+            )
+        )
+        # Include undeclared numeric slots in the actual denominator while
+        # keeping their operation, scope and legal status explicitly unproven.
+        candidates: tuple[Assignment | None, ...] = tuple(weights) if weights else (None,)
+        for weight in candidates:
+            row = _surface(
+                source,
+                definition.key,
+                field,
+                weight.line if weight is not None else option.line,
+                _Scope(
+                    operation="event_option_weight"
+                    if weight is not None
+                    else "undeclared_event_option_weight",
+                    evidence=(f"{source}:{option.line}",),
+                ),
+            )
+            if ambiguity:
+                row = replace(row, ambiguity=ambiguity)
+            surfaces.append(row)
+    return tuple(records), tuple(surfaces)
+
+
+def _proven_event_surfaces(
+    inputs: dict[str, bytes], surfaces: list[VanillaSurface]
+) -> list[VanillaSurface]:
+    """Authorize exact reviewed event slots after complete native context proof."""
+    from pdx import event_opportunities as event  # noqa: PLC0415
+
+    names = event.load()["sources"]
+    if not set(names) <= set(inputs):
+        return surfaces
+    texts = {name: normalized_text(inputs[name].decode("utf-8-sig")) for name in names}
+    event.verify_inputs(texts)
+    catalog = {row["field"]: row for row in event.consumer_catalog().values()}
+    result = []
+    for surface in surfaces:
+        resolved = surface
+        row = catalog.get(surface.field)
+        if (
+            row is not None
+            and surface.source == row["source"]
+            and surface.definition == row["definition"]
+            and not surface.ambiguity
+            and surface.operation in {"event_option_weight", "undeclared_event_option_weight"}
+            and surface.source_line == row["source_line"]
+        ):
+            resolved = replace(
+                surface,
+                actor_scope="country",
+                target_scope=row["target_scope"],
+                operation="event_option_weight",
+                capability="direct",
+                scope_evidence=tuple(row["scope_evidence"]),
+                responsibility_step="D4.06",
+            )
+        result.append(resolved)
+    return result
+
+
 def _references(inputs: dict[str, bytes]) -> tuple[VanillaReference, ...]:
     result: list[VanillaReference] = []
     pattern = re.compile(_AI_REFERENCE.pattern.decode("ascii"))
@@ -2694,6 +2874,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     if missing_version:
         raise ValueError(f"原版版本指纹缺失：{', '.join(missing_version)}")
     inputs, directories, content_roots = _inputs(root)
+    event_roots = tuple(name for name in content_roots if PurePosixPath(name).name == "events")
     hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in inputs.items()}
     hashes.update(parameter_evidence_hashes(root))
     technology_proof = engine_scope.technology_evidence(root, inputs)
@@ -2738,8 +2919,10 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     country_owners: dict[tuple[str, str], set[tuple[str, int]]] = {}
     company_owners: dict[str, set[tuple[str, int]]] = {}
     law_owners: dict[str, set[tuple[str, int]]] = {}
+    event_owners: dict[str, set[tuple[str, int]]] = {}
     parsed_files = 0
     parse_failures: list[str] = []
+    event_options: list[VanillaEventOption] = []
     for source, raw in sorted(inputs.items()):
         if not source.endswith(".txt"):
             continue
@@ -2751,8 +2934,15 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
             parse_failures.append(failure)
             raise ValueError(f"原版解析失败：{failure}")
         directory = source.removeprefix("common/").split("/common/")[-1].split("/")[0]
+        event_source = any(source.startswith(name + "/") for name in event_roots)
         for definition_index, definition in enumerate(parsed.top_assignments):
             if definition.is_variable:
+                continue
+            if event_source:
+                event_owners.setdefault(definition.key, set()).add((source, definition_index))
+                options, candidates = _event_candidates(source, definition)
+                event_options.extend(options)
+                surfaces.extend(candidates)
                 continue
             if "/technology/technologies/" in "/" + source:
                 # 多个定义可同处一行；行号不能替代声明位置。
@@ -2880,6 +3070,16 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                 responsibility_step="D0.03",
             )
         directory = item.source.removeprefix("common/").split("/common/")[-1].split("/")[0]
+        if (
+            any(item.source.startswith(name + "/") for name in event_roots)
+            and len(event_owners[item.definition]) > 1
+        ):
+            item = replace(
+                item,
+                ambiguity="duplicate_event_definition_merge_semantics_unknown",
+                capability="pending",
+                responsibility_step="D0.03",
+            )
         if directory == "laws" and len(law_owners[item.definition]) > 1:
             item = replace(
                 item,
@@ -2905,12 +3105,15 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                 responsibility_step="D0.03",
             )
         resolved.append(item)
-    surfaces_tuple = tuple(sorted(resolved, key=lambda item: item.surface_id))
+    surfaces_tuple = tuple(
+        sorted(_proven_event_surfaces(inputs, resolved), key=lambda item: item.surface_id)
+    )
     scope_hash = _digest(
         {
             "source_hashes": hashes,
             "surfaces": [asdict(item) for item in surfaces_tuple],
             "references": [asdict(item) for item in references],
+            "event_options": [asdict(item) for item in event_options],
         }
     )
     return VanillaInventory(
@@ -2923,6 +3126,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
         parsed_files,
         references,
         tuple(sorted(parse_failures)),
+        tuple(event_options),
     )
 
 

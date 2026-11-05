@@ -78,6 +78,40 @@ def test_decision_report_covers_all_declared_domains(engineering_metadata: dict[
     )
 
 
+def test_real_parameter_queries_keep_their_source_identity_in_profile(engineering_metadata):
+    report = decision_report.build(engineering_metadata)
+    expected = {
+        "import_blockade_arms_import_reliance": (
+            "market",
+            {"import_blockade_query": "arms_import_reliance"},
+        ),
+        "import_blockade_arms_import_volume": (
+            "market",
+            {"import_blockade_query": "arms_import_volume"},
+        ),
+        "own_multiwar_low_support": (
+            "any_scope_war",
+            {"war_pressure_query": "two_own_wars_below_50"},
+        ),
+        "subject_actual_overlord_dependence": (
+            "AND",
+            {"subject_dependence_query": "actual_overlord_above_neutral"},
+        ),
+        "culture_nonstate_religious_exposure": (
+            "OR",
+            {"culture_query": "nonstate_religious_exposure"},
+        ),
+    }
+    for key, (engine, parameters) in expected.items():
+        facts = [row for row in report["facts"] if row["key"] == key]
+        assert facts
+        assert {row["engine"] for row in facts} == {engine}
+        assert all(row["parameters"] == parameters for row in facts)
+        assert all(row["source"] and row["used_by"] for row in facts)
+        assert {row["profile_dimension"] for row in facts} == {"local_opportunity"}
+    assert report["behavior_verified"] is False
+
+
 def test_phase_four_to_six_static_coverage_is_explicit(
     engineering_metadata: dict[str, Any],
 ) -> None:

@@ -154,14 +154,14 @@ law_religious_schools = {
 			# GROUP program_a1e8e1a7a5d70541_school_administration_negative
 			add = { value = 0
 				# social_reform_religious_schools_new_administration [political]; 明确新启学校制度时实际行政缺口是独立承载压力；既有制度切换改按折扣差计算
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 				# social_reform_religious_schools_from_private_administration_loss [political]; 已有真实学校投资时，私校转宗教校失去部分原版制度行政折扣（40%到20%）
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools bureaucracy < 0 } } add = -4 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -4 } } } }
 			}
 			# GROUP program_a1e8e1a7a5d70541_school_financing_negative
 			add = { value = 0
 				# social_reform_religious_schools_new_financing [political]; 新学校制度形成后续投入承诺；实际违约独立降低支持，不换算并不存在的固定货币费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_a1e8e1a7a5d70541_social_reform_political_pressure_negative
 			add = { value = 0
@@ -314,12 +314,12 @@ law_private_schools = {
 			# GROUP program_383c2b7f87d62f01_school_administration_negative
 			add = { value = 0
 				# social_reform_private_schools_new_administration [political]; 明确新启学校制度时实际行政缺口是独立承载压力；既有制度切换改按折扣差计算
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_383c2b7f87d62f01_school_financing_negative
 			add = { value = 0
 				# social_reform_private_schools_new_financing [political]; 新学校制度形成后续投入承诺；实际违约独立降低支持，不换算并不存在的固定货币费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_383c2b7f87d62f01_social_reform_political_pressure_negative
 			add = { value = 0
@@ -498,12 +498,12 @@ law_public_schools = {
 			# GROUP program_4d1ae7b90d6da97b_public_school_administrative_pressure_negative
 			add = { value = 0
 				# public_school_administrative_pressure [political]; 行政赤字独立计入公共学校改革的制度管理机会成本，不删除已知教育接入需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { bureaucracy >= 0 NOT = { bureaucracy >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_4d1ae7b90d6da97b_public_school_financing_pressure_negative
 			add = { value = 0
 				# public_school_default_pressure [fiscal]; 已观察违约独立计入公共学校改革融资机会成本，与行政和政治压力同时计算，正常贷款本身不扣分
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_4d1ae7b90d6da97b_public_school_political_pressure_negative
 			add = { value = 0

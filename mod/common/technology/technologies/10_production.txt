@@ -1712,7 +1712,7 @@ steel_railway_cars = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { state_unemployment_rate < 0.02 pop_type_percent_state = { target = pop_type:peasants value < 0.02 } any_scope_building = { level >= 1 occupancy >= 0.9 OR = { AND = { is_building_type = building_oil_rig has_active_production_method = pm_rail_transport_building_oil_rig ROOT = { has_technology_researched = pumpjacks } } AND = { is_building_type = building_oil_rig has_active_production_method = pm_road_carts ROOT = { has_technology_researched = pumpjacks } } } } } } } add = 0.12 }
 			}
 			min = 1
-			max = 1.4400000000000002
+			max = 1.44
 		} }
 		# SITAI END information:steel_railway_cars.ai_weight
 	}

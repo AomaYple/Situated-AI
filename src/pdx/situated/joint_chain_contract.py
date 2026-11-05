@@ -672,6 +672,8 @@ _COMPLETION_STATES = {
 
 _EXPECTED_REQUIRED_KNOWN = {
     "lj06_employment_textile_unemployment_support": ("state_owner_loans",),
+    "fiscal_construction_guard": ("population",),
+    "liquidity_construction_guard": ("population",),
 }
 
 _EXPECTED_REFERENCE_FACTS = {
@@ -695,6 +697,12 @@ def _fingerprint(rule: Any) -> str:
         payload["required_known_facts"] = list(rule.required_known_facts)
     if getattr(rule, "auxiliary_facts", ()):
         payload["auxiliary_facts"] = list(rule.auxiliary_facts)
+    if getattr(rule, "conservative_unknown_facts", ()):
+        payload["semantic_role"] = rule.semantic_role
+        payload["conservative_unknown_facts"] = list(rule.conservative_unknown_facts)
+        payload["unknown_cost_basis"] = rule.unknown_cost_basis
+    if getattr(rule, "unknown_cost_required_known_facts", ()):
+        payload["unknown_cost_required_known_facts"] = list(rule.unknown_cost_required_known_facts)
     return hashlib.sha256(
         json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()

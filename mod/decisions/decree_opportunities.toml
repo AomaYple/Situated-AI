@@ -1,0 +1,13 @@
+schema = 1
+
+[sources]
+"common/decrees/00_decree.txt" = "c0d0ca00271ae9a69a1119122e3392e74040f88c7097ddc5e357654d7a40e883"
+"events/brazil/amazonas.txt" = "b224b57ce1ea1f2ee9de0b3844b03e1731b9a54877de88e5c1dc1f5289138135"
+"common/tutorial_lessons/00_tutorial_lessons_promote_ig.txt" = "72e4426ad12cfdb5615af471e77b85552486d607626b847d98e994ea9855689f"
+
+[tuning]
+# Gross disaster need 40, less two conservative allowances of 10.
+# Positive releases never reduce the native SOL route or imply affordability.
+disaster_residual = 20
+financing_release = 10
+authority_release = 10

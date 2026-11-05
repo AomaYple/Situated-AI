@@ -466,6 +466,20 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
             )
             else "needs_review"
         )
+    if family == "decrees":
+        return (
+            "dynamic_numeric"
+            if surface.source == "common/decrees/00_decree.txt"
+            and surface.definition == "decree_emergency_relief"
+            and field == "ai_weight"
+            and surface.actor_scope == "state"
+            and surface.target_scope == "none"
+            and surface.operation == "relative_weight"
+            and surface.capability == "direct"
+            and surface.legal
+            and isinstance(value, Block)
+            else "needs_review"
+        )
     if family == "modifier_type_definitions" and field == "game_data.ai_value":
         if isinstance(value, Scalar) and not value.quoted and _NUMBER.fullmatch(value.text):
             return "static_modifier_valuation"
@@ -529,6 +543,13 @@ def _companion_fields(surface: VanillaSurface) -> list[str]:
         )
     if family == "ai_regional_objectives":
         fields.update({"stances", "complete", "invalid", "on_create", "on_complete", "on_invalid"})
+    if (
+        family == "decrees"
+        and surface.source == "common/decrees/00_decree.txt"
+        and surface.definition == "decree_emergency_relief"
+        and surface.field == "ai_weight"
+    ):
+        fields.update({"state_trigger", "country_trigger", "modifier", "cost"})
     fields.discard(surface.field)
     return sorted(fields)
 
@@ -616,6 +637,8 @@ class _Dependencies:
         self.parameter_information_policy: Any = None
         self.parameter_information_contract: tuple[Any, Any, str] | None = None
         self.parameter_native_inputs: dict[str, tuple[str, str]] = {}
+        self.parameter_program_policies: dict[tuple[str, str], Any] = {}
+        self.parameter_program_roots: dict[tuple[str, str], Block | None] = {}
         # With an incomplete definition index, an unrecognized condition name
         # could be a custom trigger rather than a built-in. Do not infer safety
         # from a caller supplying only the consumer files.
@@ -1269,6 +1292,7 @@ class _Dependencies:
         consumers = [
             item for item in self.parameter_metadata["consumers"] if item.get("source") == source
         ]
+        joint = None
         if len(consumers) == 1 and consumers[0].get("consumer_programs") is not None:
             # Preserve priorities and every wire-contract field; no metadata
             # projection or digest-only shortcut grants reader permission.
@@ -1294,6 +1318,8 @@ class _Dependencies:
             policy.groups(),
             hashlib.sha256(json.dumps(expected, sort_keys=True).encode()).hexdigest(),
         )
+        if joint is not None:
+            self.parameter_program_policies[source, result[2]] = joint
         self.parameter_contracts[source] = result
         return result
 
@@ -1330,6 +1356,14 @@ class _Dependencies:
             source=source,
         )
         expected = json.loads(json.dumps(decision_rules.contract(joint)))
+        if document["decision_rules"] != expected:
+            # The production compiler can add exact typed relation readers
+            # and bindings. Reconstruct that complete contract independently;
+            # never project away unfamiliar metadata or borrow adapter fields.
+            from . import compiler  # noqa: PLC0415
+
+            joint, _ = compiler.compile_policy(policy, source)
+            expected = json.loads(json.dumps(decision_rules.contract(joint)))
         if (
             document["decision_rules"] != expected
             or fingerprint.get("information_rules_source_sha256") != policy.source_sha256
@@ -1340,12 +1374,79 @@ class _Dependencies:
             )
         ):
             return None
+        self.parameter_information_policy = joint
         self.parameter_information_contract = (
-            policy,
-            policy.groups(),
+            joint,
+            joint.groups(),
             hashlib.sha256(json.dumps(expected, sort_keys=True).encode()).hexdigest(),
         )
+        self.parameter_program_policies[
+            "common/ai_strategies/00_default_strategy.txt", self.parameter_information_contract[2]
+        ] = joint
         return self.parameter_information_contract
+
+    def _parameter_program_root(self, source: str, contract_sha256: str) -> Block | None:
+        """Lower only the verified policy to an in-memory occurrence oracle.
+
+        Native bodies retain the tails required by the insertion contract.
+        Their occurrences are removed from the oracle before use, so they
+        cannot license extra native copies. Reader/source proof is independent.
+        """
+        from .. import country_state, decision_adapters, decision_rules  # noqa: PLC0415, TID252
+        from ..textio import normalized_text  # noqa: PLC0415, TID252
+
+        identity = (source, contract_sha256)
+        if identity in self.parameter_program_roots:
+            return self.parameter_program_roots[identity]
+        self.parameter_program_roots[identity] = None
+        policy = self.parameter_program_policies[identity]
+        # Information rules omit the default strategy prefix in their paths.
+        information = policy is self.parameter_information_policy or (
+            self.parameter_information_contract is not None
+            and contract_sha256 == self.parameter_information_contract[2]
+        )
+        baseline = normalized_text(self.native_bytes[source].decode("utf-8-sig"))
+        text = baseline
+        if not information:
+            adapters = self.parameter_adapters
+            groups = policy.groups()
+            initial = [
+                item
+                for item in adapters.initial_values
+                if item.source == source and item.field in groups
+            ]
+            if initial:
+                inputs = {
+                    item.define_source: normalized_text(
+                        self.native_bytes[item.define_source].decode("utf-8-sig")
+                    )
+                    for item in initial
+                }
+                text = decision_adapters._initialize(text, initial, inputs, {})
+            scalars = {
+                path for name, path in adapters.scalar_values if name == source and path in groups
+            }
+            if scalars:
+                text = decision_adapters._wrap_scalars(text, scalars)
+        words = set(policy.actor_path)
+        for reader in policy.readers:
+            words.update((reader.engine, *reader.path))
+            if reader.argument is not None:
+                words.add(reader.argument)
+            for key, value in reader.parameters:
+                words.update((key, value))
+        text = decision_rules.patch(
+            text,
+            policy,
+            baseline=baseline,
+            default_strategy=information,
+            reader_words=frozenset(words),
+            country_policy=country_state.load(),
+        )
+        parsed = parse_bytes(text.encode(), path="parameter-program-oracle")
+        if not parsed.errors:
+            self.parameter_program_roots[identity] = parsed.root
+        return self.parameter_program_roots[identity]
 
     def population_parameter_sources(self, reader: Any) -> dict[str, str]:
         """Prove the exact scoped percentage getter and registered pop argument."""
@@ -1475,6 +1576,8 @@ class _Dependencies:
             decision_rules,
             observation_queries,
             production_inputs,
+            subject_dependence_opportunities,
+            war_pressure_opportunities,
         )
         from ..textio import normalized_text  # noqa: PLC0415, TID252
 
@@ -1552,8 +1655,21 @@ class _Dependencies:
                         ),
                         True,
                     )
-                    for key in rule.required_known_facts
+                    for key in (*rule.required_known_facts, *rule.unknown_cost_required_known_facts)
                 )
+                for binding in policy.rule_relation_bindings:
+                    if (
+                        binding.projection.field == consumer_field
+                        and binding.projection.definition == rule.id
+                    ):
+                        used.extend(
+                            (
+                                decision_rules.Predicate(leaf.reader.key, leaf.op, leaf.expected),
+                                False,
+                            )
+                            for leaf in binding.graph.leaves(binding.projection.port)
+                            if leaf.reader is not None
+                        )
                 for predicate, knowledge_only in used:
                     reader = readers[predicate.fact]
                     resource = any(part.startswith(("mg:", "sg:")) for part in reader.path)
@@ -1638,12 +1754,52 @@ class _Dependencies:
                         )
                         for name in observation_queries.required_sources(query):
                             verify(name)
+                            if name in {
+                                "common/scripted_buttons/scripted_buttons.md",
+                                war_pressure_opportunities.TRIGGER_DOC,
+                            }:
+                                # This pinned Reader input is documentation,
+                                # not a PDX definition container. Its bytes
+                                # stay hashed above and compile_query checks
+                                # the exact native ai_chance help contract.
+                                continue
+                            if name == subject_dependence_opportunities.DEFINES and isinstance(
+                                query,
+                                subject_dependence_opportunities.ActualOverlordDependenceQuery,
+                            ):
+                                # Define namespaces merge across source files;
+                                # only the two actually queried leaves must
+                                # have one owner, with unchanged native bytes.
+                                if self.effective_bytes.get(name) != self.native_bytes[name]:
+                                    return {}
+                                for key in ("ECONOMIC_DEPENDENCE_MIN", "ECONOMIC_DEPENDENCE_MAX"):
+                                    for sources in (self.native, self.effective):
+                                        owners = [
+                                            owner
+                                            for owner in sorted(
+                                                set(sources.owners["defines", "NDiplomacy"])
+                                            )
+                                            for _ in _declarations(
+                                                sources.roots[owner], "NDiplomacy", key
+                                            )
+                                        ]
+                                        if owners != [name]:
+                                            return {}
+                                continue
                             root = self.native.roots.get(name)
                             native_family = _family(name)
                             if root is None:
                                 return {}
                             for item in root.assignments():
                                 if item.is_variable:
+                                    continue
+                                if name.startswith("events/") and isinstance(item.value, Scalar):
+                                    # Event namespace/type declarations are
+                                    # not globally named definitions. Their
+                                    # exact native bytes remain hashed; every
+                                    # actual event block still needs one owner.
+                                    if self.effective_bytes.get(name) != self.native_bytes[name]:
+                                        return {}
                                     continue
                                 if self.native.owners[native_family, item.key] != [
                                     name
@@ -1748,10 +1904,17 @@ class _Dependencies:
         """New finite query/resource occurrences require independent Reader proof."""
         from .. import decision_interfaces, observation_queries  # noqa: PLC0415, TID252
 
-        engines = observation_queries.QUERY_ENGINES | {
+        # Logical operators and market are also registered composite Reader
+        # engines, but ordinary guards use them as containers. Inspect their
+        # leaves and keep the complete envelope for composite query matching.
+        engines = (observation_queries.QUERY_ENGINES - {"AND", "OR", "market"}) | {
             "is_production_method_active",
             "pop_type_percent_country",
             "pop_type_percent_state",
+            "market_imports_reliance",
+            "country_has_state_religion",
+            "religion_percent_country",
+            "country_average_religious_acceptance",
         }
 
         def occurrences(node: Assignment) -> list[tuple[Any, ...]]:
@@ -1789,6 +1952,7 @@ class _Dependencies:
                     resource = any(part.startswith(("mg:", "sg:")) for part in scope)
                     if condition and (
                         item.key in engines
+                        or re.search(r"\beconomic_dependence\(", item.key) is not None
                         or (resource and item.key in decision_interfaces._INPUTS)
                         or (
                             item.key == "tax_capacity"
@@ -1811,7 +1975,7 @@ class _Dependencies:
                     nested_scope = scope
                     nested_guarded = guarded
                     nested_envelopes = envelopes
-                    if condition and item.key in {"AND", "OR", "NOT"}:
+                    if condition and item.key in {"AND", "OR", "NOT", "market"}:
                         nested_envelopes = (
                             *envelopes,
                             (scope if guarded else ("@unguarded", *scope), _digest(item)),
@@ -1845,7 +2009,8 @@ class _Dependencies:
         # innermost control fragment AND every ancestor guard and scope path.
         # Registered numeric insertions can change an outer body/ordinal while
         # an entire native inner fragment remains byte-for-byte structural.
-        native = Counter(occurrence[1:] for occurrence in occurrences(before))
+        native_occurrences = Counter(occurrence[1:] for occurrence in occurrences(before))
+        native = native_occurrences.copy()
         introduced = []
         for occurrence in occurrences(after):
             if native[occurrence[1:]]:
@@ -1855,11 +2020,45 @@ class _Dependencies:
         if not introduced:
             return {}, True
         proof = self.parameter_readers(source, definition, field, actor_scope)
-        valid = bool(proof) and all(
-            (scope, digest) in proof["clauses"]
-            or any(envelope in proof["clauses"] for envelope in envelopes)
-            for _, scope, digest, envelopes, _ in introduced
-        )
+        valid = False
+        if proof:
+            program_identity = (source, proof["consumer_contract_sha256"])
+            valid = all(
+                (scope, digest) in proof["clauses"]
+                or any(envelope in proof["clauses"] for envelope in envelopes)
+                for _, scope, digest, envelopes, _ in introduced
+            )
+            if program_identity in self.parameter_program_policies:
+                try:
+                    root = self._parameter_program_root(*program_identity)
+                    expected, state = (
+                        _resolve(root, definition, field) if root is not None else (None, "missing")
+                    )
+                    # Each introduced occurrence consumes one exact emitted
+                    # control fragment, including all ancestor guards/scopes.
+                    # No leaf-name fallback licenses a changed program guard.
+                    allowed = (
+                        Counter(occurrence[1:] for occurrence in occurrences(expected))
+                        if expected is not None and state == "found"
+                        else Counter()
+                    )
+                    allowed -= native_occurrences
+                    valid = True
+                    for occurrence in introduced:
+                        signature = occurrence[1:]
+                        if allowed[signature] <= 0:
+                            valid = False
+                            break
+                        allowed[signature] -= 1
+                except (
+                    OSError,
+                    KeyError,
+                    TypeError,
+                    ValueError,
+                    AttributeError,
+                    UnicodeDecodeError,
+                ):
+                    valid = False
         row: dict[str, Any] = (
             {key: value for key, value in proof.items() if key != "clauses"}
             if valid
@@ -2393,6 +2592,209 @@ def _support_program_proof(
             "business_complete": False,
         }
     except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+        return {}
+
+
+def _acceptance_program_proof(
+    surface: VanillaSurface,
+    inventory: VanillaInventory,
+    dependencies: _Dependencies,
+    generated_sources: Mapping[str, bytes],
+) -> dict[str, Any]:
+    """Project only the exact current serialized acceptance writer and suffix.
+
+    This proves a complete program against supplied native bytes. Its optional
+    article/goods operands never become permissions for another expression.
+    """
+    from .. import (  # noqa: PLC0415, TID252
+        decision_adapters,
+        decision_interfaces,
+    )
+    from .. import (  # noqa: PLC0415, TID252
+        treaty_acceptance_opportunities as acceptance,
+    )
+    from . import action_instances, domain_coverage  # noqa: PLC0415
+    from .decision_ir import ConsumerIRBundle  # noqa: PLC0415
+
+    if (
+        (surface.source, surface.definition, surface.field)
+        != (acceptance.SOURCE, acceptance.DEFINITION, "ai.inherent_accept_score")
+        or not dependencies.production_complete
+        or dependencies.source_gaps
+        or dependencies.effective.failures
+    ):
+        return {}
+    try:
+        program = acceptance.compile_program()
+        writer = program.writer_ir()
+        expected_bundle = ConsumerIRBundle(1, (), (writer,)).as_dict()
+        metadata_raw = generated_sources[".metadata/metadata.json"]
+        metadata = json.loads(metadata_raw)
+        bundle = metadata["situated_actions"]["consumer_ir"]
+        rows = bundle["writers"]
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            return {}
+        ids = [row["writer_id"] for row in rows]
+        candidates = [
+            row
+            for row in rows
+            if row.get("kind") == "acceptance_program"
+            or row.get("writer_id") == writer.writer_id
+            or "acceptance_program" in row
+        ]
+
+        def canonical(value: object) -> str:
+            return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+        if (
+            len(ids) != len(set(ids))
+            or type(bundle["writer_count"]) is not int
+            or bundle["writer_count"] != len(rows)
+            or type(bundle["acceptance_program_writer_count"]) is not int
+            or bundle["acceptance_program_writer_count"] != 1
+            or canonical(candidates) != canonical(expected_bundle["writers"])
+            or bundle["field_owners"].get(writer.field) != writer.owner
+            or bundle["source_field_owners"].get(f"{writer.source}:{writer.field}") != writer.owner
+        ):
+            return {}
+        for row in rows:
+            if row is candidates[0] or row.get("source") != writer.source:
+                continue
+            field = row["field"]
+            if not isinstance(field, str):
+                return {}
+            qualified = (
+                field
+                if field.startswith(writer.definition + ".")
+                else (f"{row['definition']}.{field}")
+            )
+            if (
+                qualified == writer.field
+                or qualified.startswith(writer.field + ".")
+                or writer.field.startswith(qualified + ".")
+            ):
+                return {}
+        contract = metadata["consumer_adapters"]
+        fingerprint = metadata["source_fingerprint"]
+        generator = hashlib.sha256(Path(decision_adapters.__file__).read_bytes()).hexdigest()
+        program_digest = hashlib.sha256(
+            acceptance.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + acceptance.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(acceptance.__file__).read_bytes()
+        ).hexdigest()
+        owners = [row for row in contract["field_owners"] if row.get("source") == writer.source]
+        expected_owner = {"source": writer.source, "field": writer.field, "owner": writer.owner}
+        if (
+            canonical(contract["acceptance_programs"]) != canonical([program.as_dict()])
+            or canonical(contract["acceptance_consumer_interfaces"])
+            != canonical([decision_interfaces.acceptance_consumer(program)])
+            or contract["treaty_acceptance_opportunities_sha256"] != program_digest
+            or contract["generator_sha256"] != generator
+            or fingerprint["consumer_adapters_generator_sha256"] != generator
+            or fingerprint["consumer_interfaces_sha256"]
+            != hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()
+            or owners.count(expected_owner) != 1
+        ):
+            return {}
+        for source, digest in acceptance.load()["sources"].items():
+            if contract["sources"].get(source) != digest:
+                return {}
+        native_proofs = domain_coverage._NativeBindingProofs(
+            inventory, dependencies.native_bytes, {}
+        )
+        instance = action_instances.ActionInstance(
+            action_id=writer.writer_id,
+            kind=writer.kind,
+            source=writer.source,
+            rule_id=writer.definition,
+            domain="diplomacy",
+            consumer_field=writer.field,
+            operation="add",
+            value=0,
+            condition_facts=tuple(reader.key for reader in program.readers()),
+            owner=writer.owner,
+            vanilla_tail=writer.vanilla_tail,
+            evidence=program.evaluation_context().evidence,
+            family_id="diplomacy",
+            evaluation_context=program.evaluation_context(),
+        )
+        if native_proofs.context_issue(instance, surface, state_owner_proven=False) is not None:
+            return {}
+        content = generated_sources[writer.source].decode("utf-8")
+        overlay = acceptance.render(program)
+        begin = f"# SITAI BEGIN treaty_acceptance:{writer.definition}"
+        end = f"# SITAI END treaty_acceptance:{writer.definition}"
+        if (
+            content.count(overlay) != 1
+            or content.count(begin) != 1
+            or content.count(end) != 1
+            or content.count(f"# ACTION {writer.writer_id}")
+            != overlay.count(f"# ACTION {writer.writer_id}")
+            or any(
+                source != writer.source
+                and source.endswith(".txt")
+                and (begin.encode() in raw or f"# ACTION {writer.writer_id}".encode() in raw)
+                for source, raw in generated_sources.items()
+            )
+        ):
+            return {}
+        restored = parse_bytes(content.replace(overlay, "", 1).encode(), path=writer.source)
+        before, bstate = _resolve(
+            dependencies.native.roots[writer.source], writer.definition, surface.field
+        )
+        after, astate = _resolve(
+            dependencies.effective.roots[writer.source], writer.definition, surface.field
+        )
+        original, state = _resolve(restored.root, writer.definition, surface.field)
+        if (
+            restored.errors
+            or before is None
+            or after is None
+            or bstate != astate
+            or bstate != state
+            or state != "found"
+            or _ast(original) != _ast(before)
+        ):
+            return {}
+        # Ensure the matching text physically belongs to this consumer, rather
+        # than a comment/string elsewhere while the actual score is untouched.
+        expected = parse_bytes(
+            acceptance.patch(
+                {
+                    name: dependencies.native_bytes[name].decode("utf-8-sig")
+                    for name in acceptance.SOURCES
+                },
+                consumer_program=program,
+            )[writer.source].encode(),
+            path=writer.source,
+        )
+        expected_node, expected_state = _resolve(expected.root, writer.definition, surface.field)
+        if expected.errors or expected_state != "found" or _ast(after) != _ast(expected_node):
+            return {}
+        return {
+            "family": "acceptance_program",
+            "definition": writer.writer_id,
+            "status": "proven_generated",
+            "native_source": writer.source,
+            "effective_source": writer.source,
+            "native_source_sha256": hashlib.sha256(
+                dependencies.native_bytes[writer.source]
+            ).hexdigest(),
+            "effective_source_sha256": hashlib.sha256(generated_sources[writer.source]).hexdigest(),
+            "native_ast_sha256": _digest(before),
+            "effective_ast_sha256": _digest(after),
+            "metadata_sha256": hashlib.sha256(metadata_raw).hexdigest(),
+            "writer_sha256": hashlib.sha256(canonical(candidates[0]).encode()).hexdigest(),
+            "overlay_sha256": hashlib.sha256(overlay.encode()).hexdigest(),
+            "native_inputs": {
+                name: inventory.source_hashes[name] for name in sorted(acceptance.SOURCES)
+            },
+            "interface_authorized": True,
+            "business_complete": False,
+        }
+    except (OSError, KeyError, TypeError, AttributeError, UnicodeError, ValueError):
         return {}
 
 
@@ -2972,6 +3374,48 @@ def _responsibility_axes(
             if row["ast_status"] != "retained" and not structural_projection:
                 source_issues.append("native_declaration_changed_or_unresolved")
             protected = not source_issues
+            composition: dict[str, Any] | None = None
+            if protected and structural_projection and bnode is not None and anode is not None:
+                native_dependencies, native_closed = dependencies.check(bnode, bnode, numeric=False)
+                children = [
+                    child
+                    for child_surface, child in members
+                    if child_surface.definition == surface.definition
+                    and child_surface.field.startswith(surface.field + ".")
+                    and child["status"] == "implemented_numeric"
+                    and child["declaration_id"] in masks_before.values()
+                ]
+                if native_closed and children:
+                    composition = {
+                        "family": "structural_composition",
+                        "definition": f"{surface.definition}.{surface.field}",
+                        "status": "proven_generated",
+                        "native_source": source,
+                        "effective_source": source,
+                        "native_ast_sha256": _digest(bnode),
+                        "effective_ast_sha256": _digest(anode),
+                        "children": [
+                            {
+                                "declaration_id": child["declaration_id"],
+                                "field": child["field"],
+                                "native_ast_sha256": child["native_ast_sha256"],
+                                "effective_ast_sha256": child["effective_ast_sha256"],
+                                "numeric_actions": child["numeric_actions"],
+                                "dependencies": child["dependencies"],
+                            }
+                            for child in children
+                        ],
+                        "interface_authorized": False,
+                        "business_complete": False,
+                    }
+                    # The original aggregate reader check remains rejecting.
+                    # Its replacement proof composes independently registered
+                    # physical children and the complete ordered source boundary.
+                    row["aggregate_dependency_issues"] = row["issues"][:]
+                    row["dependencies"] = [*native_dependencies, composition]
+                    row["issues"] = [
+                        issue for issue in row["issues"] if issue != "native_dependency_unproven"
+                    ]
             row["source_protection"] = {
                 "status": "retained"
                 if protected
@@ -2987,6 +3431,7 @@ def _responsibility_axes(
                 "dependencies_closed": closed,
                 "context_closed": context_closed,
                 "structural_projection": structural_projection,
+                "structural_composition": composition,
                 "controlled_numeric_declarations": sorted(masks_before.values()),
                 "implicit_numeric_projections": list(implicit.values()),
                 "implicit_enum_projections": list(enums.values()),
@@ -3211,7 +3656,7 @@ def native_treatments(
         if not same and kind == "dynamic_numeric":
             continuous_proof = _support_program_proof(
                 surface, inventory, dependencies, generated_sources
-            )
+            ) or _acceptance_program_proof(surface, inventory, dependencies, generated_sources)
         if continuous_proof:
             # The complete typed program and restored native tail were already
             # checked as one overlay. Re-run dependency closure on the untouched

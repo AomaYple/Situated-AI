@@ -86,7 +86,7 @@ company_da_afghan_nassaji_sherkat = {
 			# GROUP program_d528482bd0e8d6a3_company_mandatory_input_fabric_negative
 			add = { value = 0
 				# company_sector_company_da_afghan_nassaji_sherkat_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_d528482bd0e8d6a3_company_output_demand_positive
 			add = { value = 0
@@ -98,7 +98,7 @@ company_da_afghan_nassaji_sherkat = {
 			# GROUP program_d528482bd0e8d6a3_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_da_afghan_nassaji_sherkat_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -189,7 +189,7 @@ company_iranian_state_railway = {
 			# GROUP program_16696598bb448678_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_iranian_state_railway_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_16696598bb448678_company_output_demand_positive
 			add = { value = 0
@@ -201,7 +201,7 @@ company_iranian_state_railway = {
 			# GROUP program_16696598bb448678_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_iranian_state_railway_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -307,7 +307,7 @@ company_tashkent_railroad = {
 			# GROUP program_b6ca12926e134097_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_tashkent_railroad_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_b6ca12926e134097_company_output_demand_positive
 			add = { value = 0
@@ -319,7 +319,7 @@ company_tashkent_railroad = {
 			# GROUP program_b6ca12926e134097_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_tashkent_railroad_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -408,7 +408,7 @@ company_west_ural_petroleum = {
 			# GROUP program_91d1bea7ca98e68f_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_west_ural_petroleum_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_91d1bea7ca98e68f_company_output_demand_positive
 			add = { value = 0
@@ -420,7 +420,7 @@ company_west_ural_petroleum = {
 			# GROUP program_91d1bea7ca98e68f_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_west_ural_petroleum_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -513,7 +513,7 @@ company_sherkat_shemali = {
 			# GROUP program_d078279c7d40c7aa_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_sherkat_shemali_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.8
 			max = 1.24
@@ -622,7 +622,7 @@ company_opium_export_monopoly = {
 			# GROUP program_f651a8d434b3921e_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_opium_export_monopoly_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.8
 			max = 1.24
@@ -718,7 +718,7 @@ company_sherkate_eslamiya = {
 			# GROUP program_d28ac26253297c96_company_mandatory_input_fabric_negative
 			add = { value = 0
 				# company_sector_company_sherkate_eslamiya_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_d28ac26253297c96_company_output_demand_positive
 			add = { value = 0
@@ -730,7 +730,7 @@ company_sherkate_eslamiya = {
 			# GROUP program_d28ac26253297c96_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_sherkate_eslamiya_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -825,7 +825,7 @@ company_nicolas_portalis = {
 			# GROUP program_12daaea805163134_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_nicolas_portalis_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.8
 			max = 1.24
@@ -915,7 +915,7 @@ company_hanseong_jeongi_hoesa = {
 			# GROUP program_603ca34d381b96b8_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_hanseong_jeongi_hoesa_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_603ca34d381b96b8_company_output_demand_positive
 			add = { value = 0
@@ -927,7 +927,7 @@ company_hanseong_jeongi_hoesa = {
 			# GROUP program_603ca34d381b96b8_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_hanseong_jeongi_hoesa_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -1016,7 +1016,7 @@ company_kirgizian_mining_company= {
 			# GROUP program_f7f49c2d2a9842f1_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_kirgizian_mining_company_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_f7f49c2d2a9842f1_company_output_demand_positive
 			add = { value = 0
@@ -1028,7 +1028,7 @@ company_kirgizian_mining_company= {
 			# GROUP program_f7f49c2d2a9842f1_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_kirgizian_mining_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -1137,7 +1137,7 @@ company_persshelk = {
 			# GROUP program_b6b6fc195f08b16d_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_persshelk_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.8
 			max = 1.24
@@ -1246,7 +1246,7 @@ company_perskhlopok = {
 			# GROUP program_26c3148f2fd7718e_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_perskhlopok_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.8
 			max = 1.24
@@ -1389,7 +1389,7 @@ company_moscow_irrigation_company = {
 			# GROUP program_be78c453271fec27_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_moscow_irrigation_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.8
 			max = 1.24
@@ -1490,7 +1490,7 @@ company_guinness = {
 			# GROUP program_37645b506fcd95cc_company_mandatory_input_grain_negative
 			add = { value = 0
 				# company_sector_company_guinness_grain_input [market]; 主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_37645b506fcd95cc_company_output_demand_positive
 			add = { value = 0
@@ -1502,7 +1502,7 @@ company_guinness = {
 			# GROUP program_37645b506fcd95cc_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_guinness_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -1653,7 +1653,7 @@ company_oriental_development_company = {
 			# GROUP program_7d1ea20b0b57696a_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_oriental_development_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.8
 			max = 1.24
@@ -1757,7 +1757,7 @@ company_turkish_petroleum = {
 			# GROUP program_9f10774eb04b7e00_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_turkish_petroleum_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_9f10774eb04b7e00_company_output_demand_positive
 			add = { value = 0
@@ -1769,7 +1769,7 @@ company_turkish_petroleum = {
 			# GROUP program_9f10774eb04b7e00_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_turkish_petroleum_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -1881,7 +1881,7 @@ company_anglo_persian_oil = {
 			# GROUP program_061bd11614d0df8a_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_anglo_persian_oil_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_061bd11614d0df8a_company_output_demand_positive
 			add = { value = 0
@@ -1893,7 +1893,7 @@ company_anglo_persian_oil = {
 			# GROUP program_061bd11614d0df8a_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_anglo_persian_oil_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24
@@ -2005,7 +2005,7 @@ company_national_iranian_oil = {
 			# GROUP program_bf8f97c958f0b0f0_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_national_iranian_oil_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { OR = { market_goods_pricier >= 0 NOT = { market_goods_pricier >= 0 } } } } } } AND = { exists = ROOT ROOT = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_bf8f97c958f0b0f0_company_output_demand_positive
 			add = { value = 0
@@ -2017,7 +2017,7 @@ company_national_iranian_oil = {
 			# GROUP program_bf8f97c958f0b0f0_company_solvency_negative
 			add = { value = 0
 				# company_sector_company_national_iranian_oil_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.2 } } } }
 			}
 			min = 0.65
 			max = 1.24

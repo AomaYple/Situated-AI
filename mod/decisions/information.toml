@@ -854,6 +854,10 @@ auxiliary_facts = [ "net_surplus" ]
 
 [[rules]]
 id = "fiscal_construction_guard"
+required_known_facts = ["population"]
+semantic_role = "cost"
+conservative_unknown_facts = ["default"]
+unknown_cost_basis = "融资压力仅在已证实未违约时免除；信息不全保留本档有限新增承诺成本，不认定实际违约或取消原版行动。"
 domain = "fiscal"
 field = "wanted_construction_output"
 contribution_group = "construction_financing_pressure"
@@ -865,6 +869,10 @@ counterexample = "核心或本原因未知只退出本原因，不假定健康�
 
 [[rules]]
 id = "liquidity_construction_guard"
+required_known_facts = ["population"]
+semantic_role = "cost"
+conservative_unknown_facts = ["default", "loans", "debt_ratio", "bankruptcy_horizon"]
+unknown_cost_basis = "任一已证实反例免除该近端流动性成本；其余缺失保留有限压力档，与违约同因取强，不重复累计。"
 domain = "fiscal"
 field = "wanted_construction_output"
 contribution_group = "construction_financing_pressure"
@@ -923,6 +931,10 @@ auxiliary_facts = [ "net_surplus", "bureaucracy" ]
 
 [[rules]]
 id = "school_default_pressure"
+required_known_facts = ["population"]
+semantic_role = "cost"
+conservative_unknown_facts = ["default"]
+unknown_cost_basis = "融资压力仅在已证实未违约时免除；信息不全保留有限制度承诺成本，不声称实际违约。"
 domain = "political"
 field = "institution_scores.institution_schools"
 contribution_group = "institution_financing_pressure"
@@ -934,6 +946,10 @@ counterexample = "核心或本原因未知只退出本原因，不假定健康�
 
 [[rules]]
 id = "school_administrative_pressure"
+required_known_facts = ["population"]
+semantic_role = "cost"
+conservative_unknown_facts = ["bureaucracy"]
+unknown_cost_basis = "仅在行政余额已证实非负时免除维护成本；未知保留有限行政承受成本，不停止基本教育需求。"
 domain = "political"
 field = "institution_scores.institution_schools"
 contribution_group = "institution_administrative_pressure"

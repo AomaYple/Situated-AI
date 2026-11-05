@@ -1,0 +1,23 @@
+# 完整原版内部安全法与国家政治运动观测；效果值从锁定AST读取，不复制业务常数。
+schema = 1
+
+[sources]
+"common/laws/00_internal_security.txt" = "4b74ea0b9172813596b903507cda213133f08e43215331750be364db37b719c1"
+"common/scripted_triggers/00_ai_triggers.txt" = "d8da988122619e26e16ce17e8ac196337cdb8d1592f357c45ded4f8cb85d3698"
+
+[candidates]
+law_no_home_affairs = "common/laws/00_internal_security.txt"
+law_national_guard = "common/laws/00_internal_security.txt"
+law_secret_police = "common/laws/00_internal_security.txt"
+law_shinsengumi = "common/laws/00_internal_security.txt"
+law_guaranteed_liberties = "common/laws/00_internal_security.txt"
+
+[tuning]
+agenda_base = 6
+agenda_strong = 10
+movement_change_base = 8
+movement_change_invested = 12
+movement_loss_base = -6
+movement_loss_invested = -9
+new_administration_cost = -6
+new_financing_cost = -8

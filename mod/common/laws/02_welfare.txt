@@ -134,7 +134,7 @@ law_poor_laws = {
 			# GROUP program_edbadd96f5b385b9_welfare_administration_negative
 			add = { value = 0
 				# social_reform_poor_laws_new_administration [political]; 新启社会保障制度需要行政承载；真实行政缺口独立计入，不将已有制度切换重复算新建费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_employer_floor_positive
 			add = { value = 0
@@ -155,7 +155,7 @@ law_poor_laws = {
 			# GROUP program_edbadd96f5b385b9_welfare_financing_negative
 			add = { value = 0
 				# social_reform_poor_laws_new_financing [political]; 新增福利支付责任遇实际违约时降低支持；无精确支出读取，不把普通借款或战争称为违约
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_living_positive
 			add = { value = 0
@@ -226,7 +226,7 @@ law_wage_subsidies = {
 			# GROUP program_614c675c0f99c912_welfare_administration_negative
 			add = { value = 0
 				# social_reform_wage_subsidies_new_administration [political]; 新启社会保障制度需要行政承载；真实行政缺口独立计入，不将已有制度切换重复算新建费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_614c675c0f99c912_welfare_employer_floor_positive
 			add = { value = 0
@@ -252,7 +252,7 @@ law_wage_subsidies = {
 			# GROUP program_614c675c0f99c912_welfare_financing_negative
 			add = { value = 0
 				# social_reform_wage_subsidies_new_financing [political]; 新增福利支付责任遇实际违约时降低支持；无精确支出读取，不把普通借款或战争称为违约
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_614c675c0f99c912_welfare_living_positive
 			add = { value = 0
@@ -337,7 +337,7 @@ law_old_age_pension = {
 			# GROUP program_f94bd970835c0d68_welfare_administration_negative
 			add = { value = 0
 				# social_reform_old_age_pension_new_administration [political]; 新启社会保障制度需要行政承载；真实行政缺口独立计入，不将已有制度切换重复算新建费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_f94bd970835c0d68_welfare_employer_floor_negative
 			add = { value = 0
@@ -355,15 +355,15 @@ law_old_age_pension = {
 			# GROUP program_f94bd970835c0d68_welfare_financing_negative
 			add = { value = 0
 				# social_reform_old_age_pension_from_wage_subsidies_financing_3 [political]; 养老金每级增加福利支付；实际制度投资与违约共同证明增量融资压力，强档未知保留已证低档
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } in_default = yes } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -10 } } } }
 				# social_reform_old_age_pension_from_poor_laws_financing_3 [political]; 养老金每级增加福利支付；实际制度投资与违约共同证明增量融资压力，强档未知保留已证低档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } in_default = yes } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -10 } } } }
 				# social_reform_old_age_pension_from_wage_subsidies_financing_1 [political]; 养老金每级增加福利支付；实际制度投资与违约共同证明增量融资压力，强档未知保留已证低档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 				# social_reform_old_age_pension_from_poor_laws_financing_1 [political]; 养老金每级增加福利支付；实际制度投资与违约共同证明增量融资压力，强档未知保留已证低档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 				# social_reform_old_age_pension_new_financing [political]; 新增福利支付责任遇实际违约时降低支持；无精确支出读取，不把普通借款或战争称为违约
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_f94bd970835c0d68_welfare_living_positive
 			add = { value = 0

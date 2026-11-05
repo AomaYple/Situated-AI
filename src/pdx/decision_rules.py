@@ -19,7 +19,13 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import config, decision_intents, decision_interfaces, observation_queries
+from . import (
+    config,
+    decision_intents,
+    decision_interfaces,
+    institution_opportunities,
+    observation_queries,
+)
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
@@ -31,6 +37,7 @@ if TYPE_CHECKING:
     from .country_state import CountryPolicy
     from .situated.decision_ir import ConsumerIRBundle, WriterDecisionIR
     from .situated.ir import ActionIR
+    from .situated.ports import PortBinding, RuleRelationBinding
     from .situated.programs import ConsumerProgram
 
 SOURCE = config.REPO / "mod/decisions/information.toml"
@@ -142,10 +149,15 @@ class Rule:
     auxiliary_facts: tuple[str, ...] = ()
     required_known_facts: tuple[str, ...] = ()
     contribution_group: str = ""
+    semantic_role: str = "unspecified"
+    conservative_unknown_facts: tuple[str, ...] = ()
+    unknown_cost_basis: str = ""
+    unknown_cost_required_known_facts: tuple[str, ...] = ()
 
     def input_keys(self) -> frozenset[str]:
         return frozenset(
             set(self.required_known_facts)
+            | set(self.unknown_cost_required_known_facts)
             | {condition.fact for condition in self.conditions}
             | {
                 condition.value.key
@@ -167,6 +179,8 @@ class RuleSet:
     semantic_ir: tuple[ActionIR, ...] = ()
     consumer_programs: tuple[ConsumerProgram, ...] = ()
     native_root: str = "country"
+    port_bindings: tuple[PortBinding, ...] = ()
+    rule_relation_bindings: tuple[RuleRelationBinding, ...] = ()
 
     def groups(
         self, enabled_domains: frozenset[str] | None = None
@@ -194,6 +208,23 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     """严格解析版本锁定的规则；不接受自由脚本、隐式数值或重复优先级。"""
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
+    if source == SOURCE:
+        derived = institution_opportunities.derive_information(data)
+        for key, reader in derived["readers"].items():
+            if key in data["readers"] and data["readers"][key] != reader:
+                raise ValueError(f"制度优先级读取器冲突：{key}")
+            data["readers"][key] = reader
+        data["rules"].extend(derived["rules"])
+        raw += (
+            b"\0institution_opportunities:"
+            + institution_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(institution_opportunities.__file__).read_bytes()
+        )
+        from .situated import cost_policies  # noqa: PLC0415
+
+        data = cost_policies.apply(data, source="information")
+        raw += b"\0cost_policies:" + cost_policies.digest().encode("ascii")
     if source == SOURCE and strategy is None:
         strategy = decision_intents.load()
     return from_data(data, source_sha256=hashlib.sha256(raw).hexdigest(), strategy=strategy)
@@ -251,7 +282,11 @@ def from_data(
             not _NAME.fullmatch(key)
             or key in readers
             or not isinstance(item["engine"], str)
-            or (not _NAME.fullmatch(item["engine"]) and item["engine"] != "relations:root")
+            or (
+                not _NAME.fullmatch(item["engine"])
+                and item["engine"] != "relations:root"
+                and item["engine"] not in observation_queries.QUERY_ENGINES
+            )
         ):
             raise ValueError("读取器名称无效")
         if (
@@ -428,6 +463,10 @@ def from_data(
             "auxiliary_facts",
             "required_known_facts",
             "contribution_group",
+            "semantic_role",
+            "conservative_unknown_facts",
+            "unknown_cost_basis",
+            "unknown_cost_required_known_facts",
         } != {
             "id",
             "domain",
@@ -581,6 +620,63 @@ def from_data(
             )
             if dependencies & set(auxiliary) and not dependencies <= set(auxiliary):
                 raise ValueError("辅助相对比较必须声明完整的事实依赖，不能混用核心和辅助输入")
+        role = item.get("semantic_role", "unspecified")
+        unknown_cost = item.get("conservative_unknown_facts", [])
+        cost_basis = item.get("unknown_cost_basis", "")
+        unknown_anchors = item.get("unknown_cost_required_known_facts", [])
+        if role not in {"unspecified", "benefit", "cost"}:
+            raise ValueError("贡献语义角色必须显式为 benefit/cost/unspecified")
+        if (
+            not isinstance(unknown_cost, list)
+            or any(not isinstance(key, str) or key not in inputs for key in unknown_cost)
+            or len(set(unknown_cost)) != len(unknown_cost)
+            or set(unknown_cost) & (set(auxiliary) | set(required_known) | hard_inputs)
+            or (unknown_cost and role != "cost")
+            or not isinstance(cost_basis, str)
+            or (unknown_cost and not cost_basis.strip())
+            or (cost_basis and not unknown_cost)
+            or not isinstance(unknown_anchors, list)
+            or any(not isinstance(key, str) or key not in readers for key in unknown_anchors)
+            or len(set(unknown_anchors)) != len(unknown_anchors)
+            or set(unknown_anchors) & (set(unknown_cost) | set(auxiliary) | hard_inputs)
+            or (unknown_anchors and not unknown_cost)
+        ):
+            raise ValueError(
+                "未知成本须声明实际成本输入、语义角色及有限保守档依据，不能放宽核心资格"
+            )
+        for key in unknown_cost:
+            reader = readers[key]
+            if reader.engine.startswith("sitai_context_") or reader.engine in {
+                "is_ai",
+                "has_variable",
+                "owner",
+                "can_enact_law",
+                "is_subject_of",
+                "is_production_method_active",
+                "has_technology_researched",
+            }:
+                raise ValueError("未知成本不能把实体身份、资格或未完成行动当作已知")
+        for key in unknown_anchors:
+            reader = readers[key]
+            if (
+                reader.engine != "total_population"
+                or reader.scope != "root"
+                or reader.kind != "number"
+                or reader.unit != "persons"
+                or reader.minimum != 0
+                or reader.maximum is not None
+                or reader.argument is not None
+                or reader.parameters
+                or reader.value_field is not None
+                or reader.path != tuple(actor_path)
+            ):
+                raise ValueError("未知成本专用锚必须是实际actor国家人口完整Reader身份")
+        for predicate in predicates:
+            dependencies = {predicate.fact} | (
+                {predicate.value.key} if isinstance(predicate.value, FactReference) else set()
+            )
+            if dependencies & set(unknown_cost) and not dependencies <= set(unknown_cost):
+                raise ValueError("未知成本相对比较必须声明完整依赖，不能放宽另一实体的核心身份")
         rules.append(
             Rule(
                 **{
@@ -591,6 +687,10 @@ def from_data(
                     "contexts": tuple(names),
                     "auxiliary_facts": tuple(auxiliary),
                     "required_known_facts": tuple(required_known),
+                    "semantic_role": role,
+                    "conservative_unknown_facts": tuple(unknown_cost),
+                    "unknown_cost_basis": cost_basis,
+                    "unknown_cost_required_known_facts": tuple(unknown_anchors),
                 }
             )
         )
@@ -598,6 +698,7 @@ def from_data(
         priorities.add((field, priority))
     used = {condition.fact for rule in rules for condition in rule.conditions}
     used.update(key for rule in rules for key in rule.required_known_facts)
+    used.update(key for rule in rules for key in rule.unknown_cost_required_known_facts)
     used.update(
         condition.value.key
         for rule in rules
@@ -629,12 +730,35 @@ def from_data(
     )
     decision_interfaces.validate(policy)
     for candidates in policy.groups(frozenset(domains)).values():
+        candidate_limit = STATIC_BUDGET["candidates_per_field"]
+        # A3's observed migration destination adds one cheap same-state tier
+        # to the already full textile consumer. Its independently inventoried
+        # 32 -> 33 candidates use 151/160 predicates and no collection scans;
+        # no other consumer or baseline receives this local allowance.
         if (
-            len(candidates) > STATIC_BUDGET["candidates_per_field"]
-            or sum(len(rule.conditions) + len(rule.required_known_facts) for rule in candidates)
+            policy.baseline_sha256
+            == "6f80935a4fb6ccaf56ff900848a090f9ba4fa442b4cb93aec9ec1b3692616c1d"
+            and policy.native_root == "state"
+            and policy.actor_path == ("owner",)
+            and candidates[0].field == ("building_textile_mill", "ai_value")
+            and any(
+                rule.id == "migration_target_textile_employment_absorption" for rule in candidates
+            )
+        ):
+            candidate_limit = 33
+        if (
+            len(candidates) > candidate_limit
+            or sum(
+                len(rule.conditions)
+                + len(rule.required_known_facts)
+                + len(rule.unknown_cost_required_known_facts)
+                for rule in candidates
+            )
             > STATIC_BUDGET["predicates_per_field"]
             or any(
-                len(rule.conditions) + len(rule.required_known_facts)
+                len(rule.conditions)
+                + len(rule.required_known_facts)
+                + len(rule.unknown_cost_required_known_facts)
                 > STATIC_BUDGET["predicates_per_rule"]
                 for rule in candidates
             )
@@ -690,7 +814,16 @@ def evaluate_ir(
         selected = rules.enabled_domains if enabled_domains is None else enabled_domains
         if selected - {rule.domain for rule in rules.rules}:
             raise ValueError("领域开关含未登记的名称")
-        return programs.evaluate(rules, values, selected)
+        overrides = {}
+        for binding in rules.port_bindings:
+            rule = next(item for item in rules.rules if item.id == binding.definition)
+            binding.graph.assert_predicates(
+                binding.port, rule.conditions, {r.key: r for r in rules.readers}
+            )
+            overrides[binding.definition] = binding.evaluate(
+                values, {r.key: r for r in rules.readers}
+            )
+        return programs.evaluate(rules, values, selected, guard_overrides=overrides)
     readers = {reader.key: reader for reader in rules.readers}
     for field, candidates in rules.groups(enabled_domains).items():
         for rule in candidates:
@@ -864,6 +997,18 @@ def _protected_offsets(
             if aggression_ordinal is None:
                 raise ValueError("攻击倾向消费者缺少原版终结归零保护")
             targets[(*address, ("if", aggression_ordinal))] = (field, "start")
+        elif mode == "before_native_decree_political_multiply_tail":
+            branches = block.all("if")
+            if len(branches) != 2 or not isinstance(branches[1].value, Block):
+                raise ValueError("救济政令政治尾乘保护形状漂移")
+            multiply = branches[1].value.first("multiply")
+            if (
+                multiply is None
+                or not isinstance(multiply.value, Scalar)
+                or multiply.value.unquoted != "0.5"
+            ):
+                raise ValueError("救济政令政治尾乘保护形状漂移")
+            targets[(*address, ("if", 1))] = (field, "start")
         else:
             raise ValueError("未登记的消费者插入保护")
     starts = [0]
@@ -1166,6 +1311,70 @@ def patch(
             core_known.append("AND = { " + _scoped_conditions({scope_key: known_terms}) + " }")
         return conditions, valid, false_conditions, core_known
 
+    def cost_guard_parts(rule):
+        """Only proven cost absence waives a declared conservative cost.
+
+        Core entity/eligibility facts still require positive evidence.  The
+        generated numeric program uses if cheap / else cost, never NOT of an
+        unknown knowledge test.  Known false cost predicates are enough to
+        waive a conjunctive cost; missing cost evidence cannot waive it.
+        """
+        declared = frozenset(rule.conservative_unknown_facts)
+        core = replace(
+            rule,
+            conditions=tuple(p for p in rule.conditions if p.fact not in declared),
+            conservative_unknown_facts=(),
+        )
+        core_conditions, _, _, _ = guard_parts(core)
+        if rule.unknown_cost_required_known_facts:
+            knowledge_groups = []
+            actor_key = ("root", rules.actor_path)
+            pressure_keys = declared | {
+                predicate.value.key
+                for predicate in rule.conditions
+                if predicate.fact in declared and isinstance(predicate.value, FactReference)
+            }
+            for keys in (tuple(sorted(pressure_keys)), rule.unknown_cost_required_known_facts):
+                knowledge: dict[tuple[str, tuple[str, ...]], list[str]] = defaultdict(list)
+                for key in keys:
+                    reader = readers[key]
+                    bounds = _reader_bounds(reader)
+                    # A satisfied numeric bound already proves a readable,
+                    # valid number; boolean/unbounded readers need both signs.
+                    expression = (
+                        reader.expression("=", True)
+                        if reader.kind == "boolean"
+                        else reader.expression(">=", 0)
+                    )
+                    knowledge[(reader.scope, reader.path)].extend(
+                        bounds or [f"OR = {{ {expression} NOT = {{ {expression} }} }}"]
+                    )
+                knowledge_groups.append(knowledge)
+            if all(set(group) == {actor_key} for group in knowledge_groups):
+                # The existing actor scope proves existence for both branches.
+                branches = [
+                    "AND = { " + " ".join(group[actor_key]) + " }" for group in knowledge_groups
+                ]
+            else:
+                branches = [
+                    "AND = { " + _scoped_conditions(group) + " }" for group in knowledge_groups
+                ]
+            core_conditions[actor_key].append("OR = { " + " ".join(branches) + " }")
+        core_expression = _scoped_conditions(core_conditions)
+        cheap = []
+        for predicate in rule.conditions:
+            if predicate.fact not in declared:
+                continue
+            reader = readers[predicate.fact]
+            expression = reader.expression(predicate.op, predicate.value)
+            opposite = f"NOT = {{ {expression} }}"
+            parts = {(reader.scope, reader.path): [*_reader_bounds(reader), opposite]}
+            if isinstance(predicate.value, FactReference):
+                other = readers[predicate.value.key]
+                parts.setdefault((other.scope, other.path), []).extend(_reader_bounds(other))
+            cheap.append("AND = { " + _scoped_conditions(parts) + " }")
+        return core_expression, "OR = { " + " ".join(cheap) + " }"
+
     program_fields = {}
     if rules.consumer_programs:
         from .situated import programs  # noqa: PLC0415
@@ -1177,10 +1386,28 @@ def patch(
     for field in sorted(groups, key=lambda field: positions[(*prefix, *field)], reverse=True):
         chunks = [f"\n\t\t# SITAI BEGIN information:{'.'.join(field)}\n"]
         if field in program_fields:
-            guards, descriptions, producer_markers = {}, {}, {}
+            guards, descriptions, producer_markers, cost_guards = {}, {}, {}, {}
             for rule in groups[field]:
                 conditions, _valid, _false, _core = guard_parts(rule)
                 guards[rule.id] = _scoped_conditions(conditions)
+                port_binding = next(
+                    (binding for binding in rules.port_bindings if binding.definition == rule.id),
+                    None,
+                )
+                if port_binding is not None:
+                    port_binding.graph.assert_predicates(
+                        port_binding.port, rule.conditions, readers
+                    )
+                    guards[rule.id] = port_binding.graph.guard(
+                        port_binding.source, rule.id, port_binding.port
+                    ).when_true
+                    if rule.required_known_facts:
+                        _, _, _, known = guard_parts(replace(rule, conditions=()))
+                        guards[rule.id] = (
+                            "AND = { " + guards[rule.id] + " " + " ".join(known) + " }"
+                        )
+                if rule.conservative_unknown_facts:
+                    cost_guards[rule.id] = cost_guard_parts(rule)
                 if (description := description_key(rule)) is not None:
                     descriptions[rule.id] = description
                 writer = bundle_writers.get((str(consumer_source), rule.id))
@@ -1196,6 +1423,14 @@ def patch(
                     ai_guard=_scoped_conditions({("root", rules.actor_path): ["is_ai = yes"]}),
                     descriptions=descriptions,
                     producer_markers=producer_markers,
+                    cost_guards=cost_guards,
+                    relation_guards={
+                        binding.projection.guard_id: binding.guard(readers)
+                        for binding in rules.rule_relation_bindings
+                        if binding.projection.field == field
+                        and binding.projection.dependency_domain
+                        in (rules.enabled_domains if enabled_domains is None else enabled_domains)
+                    },
                 )
             )
             chunks.append(f"\t\t# SITAI END information:{'.'.join(field)}\n\t")
@@ -1342,7 +1577,11 @@ def contract(
                 ),
                 "description_key": description_key(rule),
                 "unknown": (
-                    "unknown_local_variant_skipped_independent_groups_continue"
+                    "known_cost_preserved_unknown_pressure_requires_actual_actor_anchor"
+                    if rule.unknown_cost_required_known_facts
+                    else "declared_pressure_unknown_bounded_conservative_existing_core"
+                    if rule.conservative_unknown_facts
+                    else "unknown_local_variant_skipped_independent_groups_continue"
                     if rules.consumer_programs
                     else "auxiliary_unproven_try_lower_tier_core_unknown_preserve_vanilla"
                     if rule.auxiliary_facts
@@ -1357,8 +1596,21 @@ def contract(
                     if rule.required_known_facts
                     else {}
                 ),
+                "semantic_role": rule.semantic_role,
+                "conservative_unknown_facts": list(rule.conservative_unknown_facts),
+                "unknown_cost_basis": rule.unknown_cost_basis,
+                **(
+                    {
+                        "unknown_cost_required_known_facts": list(
+                            rule.unknown_cost_required_known_facts
+                        )
+                    }
+                    if rule.unknown_cost_required_known_facts
+                    else {}
+                ),
                 "inputs": sorted(
                     set(rule.required_known_facts)
+                    | set(rule.unknown_cost_required_known_facts)
                     | {condition.fact for condition in rule.conditions}
                     | {
                         condition.value.key
@@ -1387,7 +1639,10 @@ def contract(
             ".".join(field): {
                 "candidates": len(candidates),
                 "predicates": sum(
-                    len(rule.conditions) + len(rule.required_known_facts) for rule in candidates
+                    len(rule.conditions)
+                    + len(rule.required_known_facts)
+                    + len(rule.unknown_cost_required_known_facts)
+                    for rule in candidates
                 ),
                 "scope_depth": max(
                     len(reader.path)

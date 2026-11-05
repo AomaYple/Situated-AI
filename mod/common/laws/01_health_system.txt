@@ -89,12 +89,12 @@ law_charitable_health_system = {
 			# GROUP program_e19399bed3189030_health_administration_negative
 			add = { value = 0
 				# health_reform_charity_new_administrative_pressure [political]; 建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_e19399bed3189030_health_financing_negative
 			add = { value = 0
 				# health_reform_charity_new_default_pressure [political]; 实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_e19399bed3189030_health_need_positive
 			add = { value = 0
@@ -157,12 +157,12 @@ law_private_health_insurance = {
 			# GROUP program_8223634670ab82f4_health_administration_negative
 			add = { value = 0
 				# health_reform_private_new_administrative_pressure [political]; 建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_8223634670ab82f4_health_financing_negative
 			add = { value = 0
 				# health_reform_private_new_default_pressure [political]; 实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_8223634670ab82f4_health_food_security_loss_negative
 			add = { value = 0
@@ -218,20 +218,20 @@ law_public_health_insurance = {
 			# GROUP program_de85f4e587dd38c8_health_administration_negative
 			add = { value = 0
 				# health_reform_public_private_administrative_loss [political]; 有实际医保投资时，退出私保的制度行政折扣且行政已不足，构成一次独立管理压力
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 				# health_reform_public_new_administrative_pressure [political]; 建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 				# health_reform_public_charity_administrative_loss [political]; 有实际制度投资且行政不足时，退出慈善的20%制度行政成本折扣形成管理成本
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = -4 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -4 } } } }
 			}
 			# GROUP program_de85f4e587dd38c8_health_financing_negative
 			add = { value = 0
 				# health_reform_public_charity_default_pressure [political]; 已有医保实际投资且违约时，退出慈善折扣有融资压力；与行政原因分开
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 				# health_reform_public_private_default_pressure [political]; 有实际医保投资且违约时，转出私保折扣的新增承诺有融资机会成本
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 				# health_reform_public_new_default_pressure [political]; 实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system in_default = yes } } add = -6 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -6 } } } }
 			}
 			# GROUP program_de85f4e587dd38c8_health_food_security_loss_negative
 			add = { value = 0

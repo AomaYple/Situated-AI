@@ -1,8 +1,8 @@
 """统一的处境行动编译器。
 
-显式行动通过同一 ConsumerDecisionIR 编译为消费者联合数值程序；独立
-贡献共同参与，只在消费者边界限幅。旧 RuleSet 的精确迁移合同仍单独
-保留，不能据此声称所有旧规则已经转换为联合行动语义。运行期没有
+显式行动和规则行动通过各自的类型化输入适配，共用 programs 的标量
+贡献、分档选择、条件效果和消费者末端限幅；原版作用域及精确迁移合同
+仍由各自适配器保护，不据此声称旧规则具备未声明的业务语义。运行期没有
 Python 服务、世界扫描或新增的无界状态。
 """
 
@@ -34,6 +34,7 @@ from . import (
     layers,
     migration_baseline,
     opportunity,
+    ports,
     programs,
     relations,
     state,
@@ -77,6 +78,7 @@ SUPPORTING_SOURCES = (
     "action_layers.toml",
     "action_bindings.toml",
     "domain_actions.toml",
+    "domain_ports.toml",
 )
 
 
@@ -745,6 +747,111 @@ def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.Evaluat
     return dict(_mobilization_context_rows(raw, source))
 
 
+def _frozen_native_action_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Exact proposal ROOT; the documented target grants no target_country alias."""
+    from .. import native_action_opportunities as native  # noqa: PLC0415, TID252
+
+    catalog = native.consumer_catalog()
+    frozen_source = native.FROZEN.relative_to(REPO).as_posix()
+    return {
+        (row["source"], row["field"]): decision_ir.EvaluationContext(
+            actor_scope=decision_ir.ContextBinding(
+                "root", "country", "actor", row["scope_evidence"], row["scope_evidence_line"]
+            ),
+            evidence=(
+                f"{frozen_source}:sha256={native.FROZEN_SHA256}",
+                f"{row['scope_evidence']}:{row['scope_evidence_line']}",
+                f"{row['scope_evidence']}:{row['score_evidence_line']}",
+                f"{row['scope_evidence']}:sha256={row['scope_evidence_sha256']}",
+                f"{row['source']}:sha256={row['source_sha256']}",
+                f"{row['source']}:consumer={row['field']}:target_not_consumed",
+            ),
+        )
+        for row in catalog.values()
+    }
+
+
+def _frozen_canal_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Country survey decisions preserve the native relative weight and zero tail."""
+    from .. import canal_opportunities as canal  # noqa: PLC0415, TID252
+
+    raw = canal.FROZEN.read_bytes()
+    frozen_hash = "01c5e51daa6959f9fdb86d81f73c2b132d30ea18f137357f02b5f4215f38d3fb"
+    if hashlib.sha256(raw).hexdigest() != frozen_hash:
+        raise ValueError("运河冻结完整源身份漂移，必须独立复核后重新pin")
+    inputs = canal.frozen_inputs()
+    source = canal.FROZEN.relative_to(REPO).as_posix()
+    markers = (
+        "# A decision is evaluated in country scope.",
+        "# The scripted weight which determines how likely AI is to take it amongst all possible decisions (country scope).",
+        "# Similar to event options. If it evaluates to 0, AI will not take the decision. Evaluates to 1 if unspecified",
+    )
+    lines = inputs[canal.HELP].splitlines()
+    locations = [
+        [i + 1 for i, line in enumerate(lines) if line.strip() == marker] for marker in markers
+    ]
+    if any(len(found) != 1 for found in locations):
+        raise ValueError("运河country ROOT及相对权重/零分帮助合同不唯一")
+    return {
+        (row["source"], row["field"]): decision_ir.EvaluationContext(
+            actor_scope=decision_ir.ContextBinding(
+                "root", "country", "actor", canal.HELP, locations[0][0]
+            ),
+            evidence=(
+                f"{source}:sha256={frozen_hash}",
+                *(f"{canal.HELP}:{found[0]}" for found in locations),
+                *(
+                    f"{name}:sha256={digest}"
+                    for name, digest in sorted(canal.load()["sources"].items())
+                ),
+                f"{row['source']}:consumer={row['field']}:relative_weight_preserve_zero",
+            ),
+        )
+        for row in canal.consumer_catalog()
+    }
+
+
+def _frozen_famine_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Three exact JE buttons share documented country ROOT, never a target alias."""
+    from .. import famine_opportunities as famine  # noqa: PLC0415, TID252
+
+    frozen_hash = "bdce4a7fb98080e3bbc858484187079706d1cbbaacf62f057cdf69c14a96cbc5"
+    if hashlib.sha256(famine.FROZEN.read_bytes()).hexdigest() != frozen_hash:
+        raise ValueError("饥荒完整原版冻结身份漂移，须独立复核后重新pin")
+    famine.verify_inputs(famine.frozen_inputs())
+    source = famine.FROZEN.relative_to(REPO).as_posix()
+    return {
+        (row["source"], row["field"]): decision_ir.EvaluationContext(
+            actor_scope=decision_ir.ContextBinding(
+                "root", "country", "actor", famine.HELP, row["scope_evidence_line"]
+            ),
+            evidence=(
+                f"{source}:sha256={frozen_hash}",
+                f"{famine.HELP}:{row['scope_evidence_line']}",
+                f"{row['source']}:{row['score_evidence_line']}",
+                *(
+                    f"{name}:sha256={digest}"
+                    for name, digest in sorted(famine.load()["sources"].items())
+                ),
+                f"{row['source']}:consumer={row['field']}:relative_weight_preserve_zero",
+            ),
+        )
+        for row in famine.consumer_catalog()
+    }
+
+
+def _frozen_decree_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """One complete native emergency-relief state ROOT / owner contract."""
+    from .. import decree_opportunities as decree  # noqa: PLC0415, TID252
+
+    if (
+        hashlib.sha256(decree.FROZEN.read_bytes()).hexdigest()
+        != "802ffd32070f27ce09049aadac770f6f4c13b21b6fa79ec749d557922894b3de"
+    ):
+        raise ValueError("救济政令冻结完整源身份漂移，必须独立复核后重新pin")
+    return {(decree.SOURCE, decree.FIELD): decree.evaluation_context()}
+
+
 @lru_cache(maxsize=1)
 def _mobilization_context_rows(
     raw: bytes, source: str
@@ -790,6 +897,14 @@ def _mobilization_context_readers(
     if native_root != "military_formation" or actor_path != ("owner",):
         raise ValueError("医疗动员必须保持编队ROOT与所属国家AI所有者")
     allowed = mobilization_opportunities.reader_specs(field.removesuffix(".ai_weight"))
+    allowed["cost_owner_population"] = {
+        "engine": "total_population",
+        "scope": "root",
+        "unit": "persons",
+        "kind": "number",
+        "minimum": 0,
+        "path": ["owner"],
+    }
     result: set[tuple[str, str, str, str]] = set()
     for key in {*input_keys, *(predicate.fact for predicate in predicates)}:
         reader = readers.get(key)
@@ -820,6 +935,103 @@ def validate_context_readers(
     native_root: str | None = None,
 ) -> tuple[tuple[str, str, str, str], ...]:
     """Bind existing observations to evidenced objects, never authorize getters."""
+    if (source is not None and source.startswith("common/decrees/")) or field.startswith("decree_"):
+        from .. import decree_opportunities as decree  # noqa: PLC0415, TID252
+
+        if (
+            source != decree.SOURCE
+            or field != decree.FIELD
+            or context != _frozen_decree_contexts().get((source, field))
+            or actor_path != ("owner",)
+            or native_root != "state"
+        ):
+            raise ValueError("救济政令上下文必须保留精确州ROOT与真实owner")
+        specs = decree.derive({})["readers"]
+        keys = set(input_keys) | {p.fact for p in predicates}
+        if any(isinstance(p.value, decision_rules.FactReference) for p in predicates):
+            raise ValueError("救济政令没有跨对象FactReference合同")
+        decree_bindings = []
+        for key in sorted(keys):
+            spec = specs.get(key)
+            expected = (
+                decision_rules.Reader(key=key, **{**spec, "path": tuple(spec.get("path", ()))})
+                if spec is not None
+                else None
+            )
+            if readers.get(key) != expected or expected is None:
+                raise ValueError(f"救济政令读取器必须保持精确州/owner签名：{key}")
+            decision_interfaces.reader_scope(expected, actor_path, native_root="state")
+            decree_bindings.append(
+                (key, "owner", "country", "actor")
+                if expected.path
+                else (key, "root", "state", "auxiliary")
+            )
+        return tuple(decree_bindings)
+    native_fields = (
+        _frozen_native_action_contexts()
+        if (source and source.startswith("common/diplomatic_actions/"))
+        or field.split(".", 1)[0] in {"da_increase_autonomy_of_self", "decrease_payments"}
+        else {}
+    )
+    canal_fields = (
+        _frozen_canal_contexts()
+        if source == "common/decisions/canal_decisions.txt"
+        or field.split(".", 1)[0] in {"suez_survey_decision", "panama_survey_decision"}
+        else {}
+    )
+    famine_fields = (
+        _frozen_famine_contexts()
+        if (source and source.startswith("common/scripted_buttons/"))
+        or field.startswith("je_indian_famines_button_")
+        else {}
+    )
+    exact_country_context = (
+        (
+            native_fields.get((source, field))
+            or canal_fields.get((source, field))
+            or famine_fields.get((source, field))
+        )
+        if source is not None
+        else None
+    )
+    if native_fields or canal_fields or famine_fields:
+        if (
+            exact_country_context is None
+            or context != exact_country_context
+            or actor_path
+            or native_root not in {None, "country"}
+        ):
+            raise ValueError(f"消费者 {field} 偏离精确原生country ROOT合同")
+        keys = set(input_keys) | {p.fact for p in predicates}
+        keys.update(
+            p.value.key for p in predicates if isinstance(p.value, decision_rules.FactReference)
+        )
+        exact_bindings = []
+        for key in sorted(keys):
+            reader = readers.get(key)
+            if reader is None or reader.scope != "root" or reader.path:
+                raise ValueError(f"消费者 {field} 只允许本国ROOT，不提供target或owner观测：{key}")
+            if famine_fields:
+                from .. import famine_opportunities as famine  # noqa: PLC0415, TID252
+
+                spec = famine.derive({})["readers"].get(key)
+                expected = (
+                    decision_rules.Reader(
+                        key=key,
+                        **{**spec, "parameters": tuple(sorted(spec.get("parameters", {}).items()))},
+                    )
+                    if spec is not None
+                    else None
+                )
+                if reader != expected:
+                    raise ValueError(f"饥荒读取器必须保持精确事实身份：{key}")
+            decision_interfaces.reader_scope(reader, actor_path, native_root="country")
+            if (reader.argument is not None and reader.argument.startswith("scope:")) or any(
+                value.startswith("scope:") for _, value in reader.parameters
+            ):
+                raise ValueError(f"消费者 {field} 不授权目标参数别名：{key}")
+            exact_bindings.append((key, "root", "country", "actor"))
+        return tuple(exact_bindings)
     if source == "common/mobilization_options/00_mobilization_option.txt" or field.startswith(
         "mobilization_option_"
     ):
@@ -1074,6 +1286,10 @@ class ProductionConsumer:
     rule_count: int
     max_delta: float
     vanilla_tail: str
+    numeric_policy: str = "delta_to_native"
+    scalar_neutral: float | None = None
+    scalar_lower: float | None = None
+    scalar_upper: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1096,13 +1312,16 @@ class SituatedModel:
     consumer_ir: ConsumerIRBundle | None = None
     support_signals: support_signals.SupportSignals | None = None
     observation_contracts: tuple[tuple[str, str, tuple[object, ...]], ...] = ()
+    port_graph: ports.PortGraph | None = None
 
     def contract(self) -> dict[str, object]:
         result = contract(self.facts, self.consumers, self.actions, self.relations)
         result["source_fingerprints"] = dict(self.source_sha256)
+        if self.port_graph is not None:
+            result["domain_ports"] = self.port_graph.contract()
         owners_by_source_field: dict[tuple[str, str], set[str]] = {}
         for instance in self.action_instances:
-            if instance.kind != "rule_action":
+            if instance.kind not in {"rule_action", "event_program", "acceptance_program"}:
                 continue
             key = (instance.source, instance.consumer_field)
             owners_by_source_field.setdefault(key, set()).add(instance.owner)
@@ -1127,6 +1346,21 @@ class SituatedModel:
                     "rule_count": item.rule_count,
                     "max_delta": item.max_delta,
                     "vanilla_tail": item.vanilla_tail,
+                    "numeric_policy": item.numeric_policy,
+                    **(
+                        {
+                            "scalar": {
+                                "neutral": item.scalar_neutral,
+                                "lower": item.scalar_lower,
+                                "upper": item.scalar_upper,
+                            },
+                            "max_delta_semantics": "emitted_scalar_output_magnitude_not_difference_from_unknown_native_default"
+                            if item.numeric_policy == "absolute_new_aiweight_native_default_unknown"
+                            else "additive_delta_magnitude_to_explicit_native_weight",
+                        }
+                        if item.scalar_lower is not None
+                        else {}
+                    ),
                     "owner": next(iter(owners)),
                     "write_once": True,
                 }
@@ -1491,6 +1725,8 @@ def _production_inventory(
     information: decision_rules.RuleSet | None = None,
     adapters: decision_adapters.AdapterSet | None = None,
 ) -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
+    from pdx import event_opportunities  # noqa: PLC0415
+
     consumers: list[ProductionConsumer] = []
     fingerprints: dict[str, str] = {}
     total = 0
@@ -1514,6 +1750,12 @@ def _production_inventory(
     fingerprints["adapters"] = adapters.source_sha256
     for source, policy in adapters.policies:
         for field, rules in policy.groups().items():
+            decree_program = (
+                programs.enable(policy, source=source).consumer_programs[0]
+                if source == "common/decrees/00_decree.txt"
+                and field == ("decree_emergency_relief", "ai_weight")
+                else None
+            )
             consumers.append(
                 ProductionConsumer(
                     id=f"adapter:{source}:{'.'.join(field)}",
@@ -1522,11 +1764,60 @@ def _production_inventory(
                     scope="owner" if policy.actor_path else "root",
                     operation=rules[0].operation,
                     rule_count=len(rules),
-                    max_delta=0.5,
+                    max_delta=max(abs(decree_program.lower), abs(decree_program.upper))
+                    if decree_program is not None
+                    else 0.5,
                     vanilla_tail="retain_original_qualification_cost_execution",
+                    numeric_policy="delta_to_native",
+                    scalar_neutral=decree_program.neutral if decree_program is not None else None,
+                    scalar_lower=decree_program.lower if decree_program is not None else None,
+                    scalar_upper=decree_program.upper if decree_program is not None else None,
                 )
             )
             total += len(rules)
+    if any("political" in policy.enabled_domains for _, policy in adapters.policies):
+        for program in adapters.event_programs:
+            consumers.append(
+                ProductionConsumer(
+                    id=program.consumer_id,
+                    field=program.field_path,
+                    source=program.source,
+                    scope="root",
+                    operation="add",
+                    rule_count=1,
+                    max_delta=max(
+                        abs(float(program.scalar.lower)), abs(float(program.scalar.upper))
+                    ),
+                    vanilla_tail="preserve",
+                    numeric_policy=(
+                        "absolute_new_aiweight_native_default_unknown"
+                        if program.source == event_opportunities.PLAGUE
+                        else "delta_to_explicit_native_aiweight"
+                    ),
+                    scalar_neutral=float(program.scalar.neutral),
+                    scalar_lower=float(program.scalar.lower),
+                    scalar_upper=float(program.scalar.upper),
+                )
+            )
+            total += 1
+    if any("diplomacy" in policy.enabled_domains for _, policy in adapters.policies):
+        for acceptance_program in adapters.acceptance_programs:
+            consumers.append(
+                ProductionConsumer(
+                    id=acceptance_program.consumer_id,
+                    field=acceptance_program.field_path,
+                    source=acceptance_program.source,
+                    scope="root",
+                    operation="add",
+                    rule_count=1,
+                    max_delta=max(
+                        abs(float(acceptance_program.scalar.lower)),
+                        abs(float(acceptance_program.scalar.upper)),
+                    ),
+                    vanilla_tail="preserve",
+                )
+            )
+            total += 1
     consumers.sort(key=lambda item: (item.source, item.field))
     return tuple(consumers), total, fingerprints
 
@@ -1544,7 +1835,7 @@ def _validate_supporting_sources(
     raw_relations = sources["relations.toml"].get("relations", [])
     if not isinstance(raw_relations, list):
         raise ValueError("relations.toml 的 relations 必须是列表")
-    listed: dict[tuple[str, str, str], tuple[float, str, tuple[str, ...], str]] = {}
+    listed: dict[tuple[str, str, str], tuple[object, ...]] = {}
     for item in raw_relations:
         if not isinstance(item, dict):
             raise ValueError("relations.toml 含无效关系项")
@@ -1567,13 +1858,22 @@ def _validate_supporting_sources(
         ):
             raise ValueError(f"relations.toml 含无效或重复关系：{raw_key}")
         key = cast("tuple[str, str, str]", raw_key)
-        listed[key] = (float(strength), scope, tuple(condition_facts), unknown_policy)
+        listed[key] = (
+            float(strength),
+            scope,
+            tuple(condition_facts),
+            unknown_policy,
+            item.get("cause_id", ""),
+            tuple(item.get("origins", ())),
+        )
     actual = {
         (item.source, item.target, item.kind): (
             item.strength,
             item.scope,
             item.condition_facts,
             item.unknown_policy,
+            item.cause_id,
+            item.origins,
         )
         for item in relation_list
     }
@@ -1675,6 +1975,10 @@ def load_model(
     ship_modification_contexts = _frozen_ship_modification_contexts()
     treaty_contexts = _frozen_treaty_contexts()
     mobilization_contexts = _frozen_mobilization_contexts()
+    native_action_contexts = _frozen_native_action_contexts()
+    canal_contexts = _frozen_canal_contexts()
+    decree_contexts = _frozen_decree_contexts()
+    famine_contexts = _frozen_famine_contexts()
     context_readers = {}
     instance_contexts = {}
     for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
@@ -1726,6 +2030,10 @@ def load_model(
                 else ship_modification_contexts.get((source, field))
                 or treaty_contexts.get((source, field))
                 or mobilization_contexts.get((source, field))
+                or native_action_contexts.get((source, field))
+                or canal_contexts.get((source, field))
+                or decree_contexts.get((source, field))
+                or famine_contexts.get((source, field))
             )
             if context is not None:
                 instance_contexts[(source, rule.id)] = context
@@ -1779,9 +2087,30 @@ def load_model(
         context_readers[key] = _action_context_readers(
             decision_row, context, declared_facts, support_model, original_readers
         )
+    graph = ports.from_data(
+        supporting["domain_ports.toml"],
+        readers={
+            (source, reader.key): reader
+            for source, policy in (
+                ("mod/decisions/information.toml", information),
+                *adapters.policies,
+            )
+            for reader in policy.readers
+        },
+        writers=instance_contexts,
+    )
+    origin_map = {
+        port.id: tuple(origin.identity for origin in graph.origins(port.id)) for port in graph.ports
+    }
+    relation_list = relations.bind_origins(relation_list, origin_map)
+    actions = _bind_action_origins(actions, graph, facts)
+    decision_rows = decision_ir.compile_decisions(actions, consumers, relation_list)
     instances = tuple(
         replace(
-            instance, evaluation_context=instance_contexts.get((instance.source, instance.rule_id))
+            instance,
+            evaluation_context=instance_contexts.get(
+                (instance.source, instance.rule_id), instance.evaluation_context
+            ),
         )
         for instance in instances
     )
@@ -1841,6 +2170,22 @@ def load_model(
                 ),
             ),
         )
+    if any("political" in policy.enabled_domains for _, policy in adapters.policies):
+        consumer_bundle = replace(
+            consumer_bundle,
+            writers=(
+                *consumer_bundle.writers,
+                *(program.writer_ir() for program in adapters.event_programs),
+            ),
+        )
+    if any("diplomacy" in policy.enabled_domains for _, policy in adapters.policies):
+        consumer_bundle = replace(
+            consumer_bundle,
+            writers=(
+                *consumer_bundle.writers,
+                *(program.writer_ir() for program in adapters.acceptance_programs),
+            ),
+        )
     migration_baseline.validate_bundle(consumer_bundle)
     consumer_bundle = joint_chain_contract.bind_bundle(
         consumer_bundle,
@@ -1870,6 +2215,15 @@ def load_model(
             for name in SUPPORTING_SOURCES
         },
     }
+    event_observations: dict[tuple[str, str], tuple[object, ...]] = {}
+    if any("political" in policy.enabled_domains for _, policy in adapters.policies):
+        for program in adapters.event_programs:
+            for reader in program.readers():
+                key = (program.source, reader.key)
+                signature = _reader_signature(reader)
+                if key in event_observations and event_observations[key] != signature:
+                    raise ValueError(f"事件共享观测身份冲突：{key}")
+                event_observations[key] = signature
     return SituatedModel(
         facts,
         consumers,
@@ -1895,7 +2249,15 @@ def load_model(
                 *adapters.policies,
             )
             for reader in policy.readers
+        )
+        + tuple((source, key, signature) for (source, key), signature in event_observations.items())
+        + tuple(
+            (program.source, reader.key, _reader_signature(reader))
+            for program in adapters.acceptance_programs
+            if any("diplomacy" in policy.enabled_domains for _, policy in adapters.policies)
+            for reader in program.readers()
         ),
+        graph,
     )
 
 
@@ -1994,31 +2356,6 @@ def _cost_state(
     return truth_any(tuple(states)) if states else False
 
 
-def _row_cost(
-    row: decision_ir.ConsumerDecisionIR,
-    values: Mapping[str, object],
-    states: dict[tuple[CostPredicate, ...], bool] | None = None,
-    model: SituatedModel | None = None,
-) -> float:
-    if model is not None and model.support_signals is not None:
-        values = model.support_signals.values(values)
-
-    def active(predicates: tuple[CostPredicate, ...]) -> bool:
-        if not predicates:
-            return False
-        return (
-            states[predicates]
-            if states is not None
-            # Only a proven absence of pressure permits the cheaper tier.
-            else _cost_state(predicates, values, {f.id: f for f in model.facts} if model else None)
-            in (True, None)
-        )
-
-    return (row.commitment if active(row.commitment_when) else 0.0) + (
-        row.political_cost if active(row.political_when) else 0.0
-    )
-
-
 def _row_delta(
     row: decision_ir.ConsumerDecisionIR,
     values: Mapping[str, object],
@@ -2026,13 +2363,13 @@ def _row_delta(
     complement: float = 0.0,
     model: SituatedModel | None = None,
 ) -> float:
-    """Unclamped signed contribution; only the consumer clamps the sum."""
-    direction = -1.0 if row.base + row.opportunity < 0 else 1.0
-    demand = sum(term.amount for term in row.rank_terms if values.get(term.fact) is True)
-    return (
-        row.base
-        + row.opportunity
-        + direction * (demand + complement - _row_cost(row, values, model=model))
+    """Compatibility adapter; scalar effects and aggregation live in programs."""
+    if model is not None and model.support_signals is not None:
+        values = model.support_signals.values(values)
+    program = programs.card_value(row, complement=complement)
+    facts = {fact.id: fact for fact in model.facts} if model is not None else None
+    return programs.evaluate_scalar(
+        program.scalar, _card_condition_values(program.conditions, values, facts)
     )
 
 
@@ -2141,13 +2478,55 @@ def _direction(row: decision_ir.ConsumerDecisionIR) -> float:
     return -1.0 if row.base + row.opportunity < 0 else 1.0
 
 
-def _validate_action_groups(rows, facts) -> None:
-    """Only declared identities deduplicate; equal predicates never imply identity.
+def _bind_action_origins(actions, graph, facts):
+    """Resolve only source claims proven by actual observed predicate inputs.
 
-    Variant branches are local numeric chains. Sharing their costs or evidence
-    outside the chain requires a selected-variant runtime value, which this
-    stateless adapter cannot legally provide. Reject that combination explicitly.
+    Derived support aliases need their own source proof before participating in
+    cause aggregation. Until then an explicit origin claim on them fails.
     """
+    port_ids = {port.id for port in graph.ports}
+    by_id = {port.id: port for port in graph.ports}
+
+    def closure(keys):
+        if not keys or any(key not in port_ids for key in keys):
+            raise ValueError("行动因果来源尚无真实端口闭包")
+        return tuple(sorted({origin.identity for key in keys for origin in graph.origins(key)}))
+
+    def actual_closure(keys):
+        for key in keys:
+            if key not in by_id or by_id[key].reader is None:
+                raise ValueError("行动事实来源尚未绑定可核查的观测端口")
+            _assert_port_fact(facts, by_id[key])
+        return closure(keys)
+
+    result = []
+    for action in actions:
+        cause_origins = action.cause_origins
+        if cause_origins:
+            # This supported form has one conjunctive observed qualification.
+            # Alternative, negative or synthetic demand qualification is not
+            # silently relabelled as the declared positive source.
+            if action.requires_any or action.blocked_by or action.exit_when:
+                raise ValueError("行动因果来源尚未支持替代或否定资格闭包")
+            actual = actual_closure(action.requires_all)
+            if closure(cause_origins) != actual:
+                raise ValueError("行动因果来源与实际资格闭包不一致")
+            cause_origins = actual
+        ranks = []
+        for term in action.rank_terms:
+            resolved_term = term
+            if term.origins:
+                actual = actual_closure((term.fact,))
+                if closure(term.origins) != actual:
+                    raise ValueError("rank来源与实际事实闭包不一致")
+                resolved_term = replace(term, origins=actual)
+            ranks.append(resolved_term)
+        result.append(replace(action, cause_origins=cause_origins, rank_terms=tuple(ranks)))
+    return tuple(result)
+
+
+def _validate_action_groups(rows, facts) -> None:
+    """Only declared identities deduplicate; equal predicates never imply identity."""
     groups: dict[tuple[str, str, str], object] = {}
     priorities: dict[tuple[str, str], set[int]] = {}
     for row in rows:
@@ -2162,13 +2541,6 @@ def _validate_action_groups(rows, facts) -> None:
         ):
             raise ValueError("variant_priority 必须是显式 variant_group 的整数优先级")
         if row.variant_group:
-            if (
-                row.cause_group
-                or row.commitment_cost_id
-                or row.political_cost_id
-                or any(term.evidence_group for term in row.rank_terms)
-            ):
-                raise ValueError("variant 与跨卡 cause/evidence/shared cost 聚合尚无合法无状态投影")
             priority_key = (row.consumer_id, row.variant_group)
             used = priorities.setdefault(priority_key, set())
             if row.variant_priority in used:
@@ -2206,119 +2578,6 @@ def _validate_action_groups(rows, facts) -> None:
             if key in groups and groups[key] != signature:
                 raise ValueError(f"shared cost 身份的金额/方向/谓词/作用域/单位不一致：{identity}")
             groups[key] = signature
-
-
-@dataclass(frozen=True, slots=True)
-class _ExplicitTerm:
-    row: decision_ir.ConsumerDecisionIR
-    amount: float
-    facts: tuple[str, ...] = ()
-    cost: tuple[CostPredicate, ...] = ()
-    full_variant: bool = False
-
-
-def _explicit_groups(rows, by_id, enabled):
-    """Linear numeric chains: one known applicable member per declared group."""
-    groups: dict[tuple[str, ...], list[_ExplicitTerm]] = {}
-    for row in rows:
-        if row.variant_group:
-            groups.setdefault(("variant", row.variant_group), []).append(
-                _ExplicitTerm(row, 0.0, full_variant=True)
-            )
-            continue
-        cause_key = (
-            ("cause", row.cause_group) if row.cause_group else ("local_cause", row.action_id)
-        )
-        groups.setdefault(cause_key, []).append(_ExplicitTerm(row, row.base + row.opportunity))
-        for index, term in enumerate(row.rank_terms):
-            if term.amount:
-                key = (
-                    ("demand", term.evidence_group)
-                    if term.evidence_group
-                    else ("local_demand", row.action_id, str(index))
-                )
-                groups.setdefault(key, []).append(
-                    _ExplicitTerm(row, _direction(row) * term.amount, (term.fact,))
-                )
-        for label, identity, predicates, amount in (
-            ("commitment", row.commitment_cost_id, row.commitment_when, row.commitment),
-            ("political", row.political_cost_id, row.political_when, row.political_cost),
-        ):
-            if predicates and amount:
-                key = (
-                    ("shared_cost", identity) if identity else ("local_cost", row.action_id, label)
-                )
-                groups.setdefault(key, []).append(
-                    _ExplicitTerm(row, -_direction(row) * amount, cost=predicates)
-                )
-        for index, relation in enumerate(_effective_relations(row, by_id, enabled)):
-            if relation.kind != "enables":
-                amount = (
-                    _direction(row)
-                    * relation.strength
-                    * (-1 if relation.kind in {"substitutes", "conflicts"} else 1)
-                )
-                groups[("relation", row.action_id, str(index))] = [
-                    _ExplicitTerm(row, amount, relation.condition_facts)
-                ]
-    return tuple(
-        tuple(
-            sorted(
-                members,
-                key=lambda term: (
-                    -term.row.variant_priority if term.full_variant else -abs(term.amount),
-                    term.row.action_id,
-                ),
-            )
-        )
-        for _, members in sorted(groups.items())
-    )
-
-
-def _term_links(term, by_id, enabled):
-    links = _effective_relations(term.row, by_id, enabled)
-    if any(relation.kind == "enables" and relation not in links for relation in term.row.relations):
-        return None
-    return links
-
-
-def _variant_effects(row, links, facts):
-    effects = [f"value = {programs.numeric_literal(row.base + row.opportunity)}"]
-    for predicates, amount in (
-        (row.commitment_when, row.commitment),
-        (row.political_when, row.political_cost),
-    ):
-        if predicates and amount:
-            effects.append(
-                "if = { limit = { ROOT ?= { "
-                + _cheap_cost_trigger(predicates, facts)
-                + " } } } else = { add = "
-                + programs.numeric_literal(-_direction(row) * amount)
-                + " }"
-            )
-    effects.extend(
-        "if = { limit = { ROOT ?= { "
-        + facts[term.fact].trigger
-        + " } } add = "
-        + programs.numeric_literal(_direction(row) * term.amount)
-        + " }"
-        for term in row.rank_terms
-    )
-    for relation in links:
-        if relation.kind != "enables":
-            amount = (
-                _direction(row)
-                * relation.strength
-                * (-1 if relation.kind in {"substitutes", "conflicts"} else 1)
-            )
-            effects.append(
-                "if = { limit = { ROOT ?= { "
-                + _condition(facts, relation.condition_facts)
-                + " } } add = "
-                + programs.numeric_literal(amount)
-                + " }"
-            )
-    return " ".join(effects)
 
 
 def _ordered_relations(row: decision_ir.ConsumerDecisionIR) -> tuple[Relation, ...]:
@@ -2360,16 +2619,215 @@ def _effective_relations(row, by_id, enabled_fields):
     )
 
 
+def _bound_card_ports(model, program):
+    """Bind declared uses to exact existing cost/relation terms, never card base."""
+    graph = model.port_graph if model is not None else None
+    if graph is None:
+        return {}
+    observations = {
+        (source, key): signature for source, key, signature in model.observation_contracts
+    }
+    for leaf in graph.ports:
+        if leaf.reader is not None and observations.get(leaf.reader_key) != _reader_signature(
+            leaf.reader
+        ):
+            raise ValueError("端口reader完整身份与实际生产观测不一致")
+    owners = {}
+    for group in program.scalar.groups:
+        for term in group.terms:
+            owners[term.id] = term.action_id
+            for effect in term.effects:
+                owners[effect.guard] = term.action_id
+    support = (
+        {signal.alias: signal for signal in model.support_signals.signals}
+        if model.support_signals
+        else {}
+    )
+    result = {}
+    for use in graph.uses:
+        if use.source != "mod/decisions/actions.toml":
+            continue
+        matches = []
+        for condition in program.conditions:
+            if owners.get(condition.id) != use.definition:
+                continue
+            selector = (
+                tuple(p.fact for p in condition.cost) if use.role == "cost" else condition.facts
+            )
+            if selector != use.selector:
+                continue
+            if use.role == "cost":
+                leaves = graph.leaves(use.port)
+                expected = []
+                for predicate in condition.cost:
+                    signal = support.get(predicate.fact)
+                    if signal is None or signal.mode != "value":
+                        raise ValueError("成本端口必须对应真实value support源")
+                    candidates = [
+                        leaf
+                        for leaf in leaves
+                        if leaf.reader_key is not None and leaf.reader_key[1] == signal.source_fact
+                    ]
+                    if len(candidates) != 1:
+                        raise ValueError("成本端口与实际support原始输入不匹配")
+                    reader = candidates[0].reader
+                    if (
+                        reader.unit != predicate.unit
+                        or candidates[0].op != predicate.op
+                        or candidates[0].expected != predicate.value
+                    ):
+                        raise ValueError("成本端口与实际term单位/阈值不等价")
+                    expected.append(signal.source_fact)
+                if len(leaves) != len(expected):
+                    raise ValueError("成本端口含未声明额外谓词")
+            elif use.role == "relation":
+                if set(use.selector) != {leaf.id for leaf in graph.leaves(use.port)}:
+                    raise ValueError("关系端口与实际关系事实不等价")
+                for leaf in graph.leaves(use.port):
+                    _assert_port_fact(model.facts, leaf)
+            else:
+                continue
+            matches.append(condition.id)
+        if matches:
+            if len(matches) != 1:
+                raise ValueError("端口使用无法唯一定位具体card term")
+            result[matches[0]] = use
+        elif use.definition in owners.values():
+            # A disabled relation may intentionally remove its term.
+            if use.role != "relation":
+                raise ValueError("端口缺少实际card cost term")
+    return result
+
+
+def _assert_port_fact(facts, port):
+    """A named observed predicate must retain the exact raw-reader expression."""
+    fact = next((fact for fact in facts if fact.id == port.id), None)
+    reader = port.reader
+    if reader is None:
+        raise ValueError("事实端口必须绑定原始reader")
+    condition = reader.expression(port.op, port.expected)
+    bounds = [
+        reader.expression(op, bound)
+        for op, bound in ((">=", reader.minimum), ("<=", reader.maximum))
+        if bound is not None
+    ]
+    expected_trigger = f"AND = {{ {' '.join((*bounds, condition))} }}" if bounds else condition
+    if (
+        fact is None
+        or fact.trigger != expected_trigger
+        or fact.quality != "observed"
+        or fact.scope != reader.scope
+        or reader.path
+    ):
+        raise ValueError("端口predicate兼容证据与实际原始事实不等价")
+
+
+def _port_card_values(model, values):
+    """Map public observed fact evidence to exact leaf predicates, never aliases."""
+    graph = model.port_graph
+    raw = {}
+    predicate_values = {}
+    for port in graph.ports:
+        if port.reader is None or port.reader_key is None:
+            continue
+        key = port.reader_key[1]
+        if key in values:
+            raw[port.reader_key] = values[key]
+        # Existing public reference facts include observed literacy predicates.
+        # They are accepted only for these exact locked predicate definitions.
+        if port.id in {"literacy_low", "literacy_ready"} and port.id in values:
+            _assert_port_fact(model.facts, port)
+            if key in values:
+                expected = graph.evaluate(port.id, {port.reader_key: values[key]})
+                if (
+                    type(values[port.id]) is bool
+                    and expected is not None
+                    and values[port.id] != expected
+                ):
+                    raise ValueError("原始数值与已观测端口谓词证据冲突")
+            else:
+                predicate_values[port.id] = values[port.id]
+    return raw, predicate_values
+
+
+def _card_condition_values(conditions, values, facts, *, model=None, program=None):
+    """Adapt three-valued card inputs to the common scalar guard contract."""
+    result = {}
+    bound = _bound_card_ports(model, program) if program is not None else {}
+    raw, predicate_values = _port_card_values(model, values) if bound else ({}, {})
+    for condition in conditions:
+        if condition.id in bound:
+            use = bound[condition.id]
+            state = model.port_graph.evaluate(use.port, raw, predicate_values=predicate_values)
+            if use.role == "cost":
+                result[condition.id] = state is False
+                continue
+            result[condition.id] = (
+                (condition.row is None or _action_status(condition.row, values) is True)
+                and all(_relation_conditions(link, values) is True for link in condition.enables)
+                and state is True
+            )
+            continue
+        if condition.cost:
+            # Only proven absence permits the cheap branch; unknown stays expensive.
+            result[condition.id] = _cost_state(condition.cost, values, facts) is False
+        else:
+            result[condition.id] = (
+                (condition.row is None or _action_status(condition.row, values) is True)
+                and all(_relation_conditions(link, values) is True for link in condition.enables)
+                and all(values.get(fact) is True for fact in condition.facts)
+            )
+    return result
+
+
+def _card_condition_texts(conditions, facts, *, model=None, program=None):
+    """Keep exact world-fact qualification and scope lowering in the adapter."""
+    result = {}
+    bound = _bound_card_ports(model, program) if program is not None else {}
+    for condition in conditions:
+        if condition.id in bound:
+            use = bound[condition.id]
+            guard = model.port_graph.guard(use.source, use.definition, use.port)
+            if use.role == "cost":
+                result[condition.id] = guard.when_false
+                continue
+            guards = (
+                *(_condition(facts, link.condition_facts) for link in condition.enables),
+                guard.when_true,
+            )
+            body = (
+                _limit(condition.row, facts, relation_guards=guards)
+                if condition.row is not None
+                else guard.when_true
+            )
+            result[condition.id] = "ROOT ?= { " + body + " }"
+            continue
+        if condition.cost:
+            body = _cheap_cost_trigger(condition.cost, facts)
+        elif condition.row is None:
+            body = _condition(facts, condition.facts)
+        else:
+            guards = tuple(
+                _condition(facts, link.condition_facts) for link in condition.enables
+            ) + ((_condition(facts, condition.facts),) if condition.facts else ())
+            body = _limit(condition.row, facts, relation_guards=guards)
+        result[condition.id] = "ROOT ?= { " + body + " }"
+    return result
+
+
+def _card_program(consumer, rows, by_id, enabled):
+    if len(rows) > consumer.budget:
+        raise ValueError(f"消费者 {consumer.id} 的行动数超过预算；不能静默丢弃候选")
+    links = {row.action_id: _effective_relations(row, by_id, enabled) for row in rows}
+    return programs.card_program(consumer, rows, links)
+
+
 def strategy_overlay(
     model: SituatedModel,
     *,
     enabled_consumer_fields: set[str] | frozenset[str] | None = None,
 ) -> dict[str, str]:
-    """Emit one additive program per consumer without truth-table expansion.
-
-    Independent action terms share the final clamp. Unknown qualification skips
-    only its term; unknown cost takes its conservative expensive branch.
-    """
+    """Adapt card guards, then lower the common scalar consumer program."""
     rows = _production_action_rows(model)
     facts = {fact.id: fact for fact in model.facts}
     by_id = {row.action_id: row for row in rows}
@@ -2386,53 +2844,17 @@ def strategy_overlay(
             (row for row in rows if row.consumer_id == consumer.id),
             key=lambda row: row.action_id,
         )
-        if len(declared) > consumer.budget:
-            raise ValueError(f"消费者 {consumer.id} 的行动数超过预算；不能静默丢弃候选")
-        parts = [
+        program = _card_program(consumer, declared, by_id, enabled)
+        intro = "".join(
             f"\t\t# ACTION {row.action_id} [{row.domain}]; {row.explanation}\n" for row in declared
-        ]
-        for group in _explicit_groups(declared, by_id, enabled):
-            branches: list[str] = []
-            for term in group:
-                links = _term_links(term, by_id, enabled)
-                if links is None:
-                    continue
-                guards = tuple(
-                    _condition(facts, relation.condition_facts)
-                    for relation in links
-                    if relation.kind == "enables"
-                ) + ((_condition(facts, term.facts),) if term.facts else ())
-                if term.full_variant:
-                    effects = _variant_effects(term.row, links, facts)
-                elif term.cost:
-                    effects = (
-                        "value = 0 if = { limit = { ROOT ?= { "
-                        + _cheap_cost_trigger(term.cost, facts)
-                        + " } } } else = { add = "
-                        + programs.numeric_literal(term.amount)
-                        + " }"
-                    )
-                else:
-                    effects = f"value = {programs.numeric_literal(term.amount)}"
-                keyword = "if" if not branches else "else_if"
-                branches.append(
-                    "\t\t"
-                    + keyword
-                    + " = { limit = { ROOT ?= { "
-                    + _limit(term.row, facts, relation_guards=guards)
-                    + " } } add = { "
-                    + effects
-                    + " } }\n"
-                )
-            parts.extend(branches)
-        output[consumer.field] = (
-            f"# ACTION joint_{consumer.id} [{consumer.domain}]; joint consumer contribution\n"
-            "if = { limit = { ROOT ?= { is_ai = yes } }\n"
-            "\tadd = {\n\t\tvalue = 0\n"
-            + "".join(parts)
-            + f"\t\tmin = {programs.numeric_literal(-consumer.max_delta)}\n"
-            + f"\t\tmax = {programs.numeric_literal(consumer.max_delta)}\n"
-            "\t}\n}\n"
+        )
+        output[consumer.field] = programs.render_scalar(
+            program.scalar,
+            _card_condition_texts(program.conditions, facts, model=model, program=program),
+            ai_guard="ROOT ?= { is_ai = yes }",
+            style="cards",
+            domain=consumer.domain,
+            intro=intro,
         )
     return output
 
@@ -2602,6 +3024,36 @@ def compile_policy(
             readers[key]
         ):
             raise ValueError(f"生产 reader 完整身份与冻结 IR 不一致：{exact_source}:{key}")
+    if model.port_graph is not None:
+        relation_bindings, relation_readers = ports.bind_rule_relations(
+            model.port_graph,
+            source=exact_source or "empty",
+            rules=compiled.rules,
+            readers=readers,
+            relations=model.relations,
+            writers=writer_by_key,
+        )
+        compiled = replace(
+            compiled, readers=relation_readers, rule_relation_bindings=relation_bindings
+        )
+        port_bindings = []
+        for use in model.port_graph.uses:
+            if use.source != exact_source or use.role not in {"need", "capacity"}:
+                continue
+            port_rule = next((rule for rule in compiled.rules if rule.id == use.definition), None)
+            if port_rule is None:
+                raise ValueError(f"端口缺少具体规则term: {use.definition}")
+            model.port_graph.assert_predicates(use.port, port_rule.conditions, readers)
+            port_bindings.append(
+                ports.PortBinding(
+                    use.source,
+                    use.definition,
+                    use.port,
+                    model.port_graph,
+                    port_rule.required_known_facts,
+                )
+            )
+        compiled = replace(compiled, port_bindings=tuple(port_bindings))
     compiled = programs.enable(compiled, source=exact_source or "empty")
     compiled_contract = {
         "schema": 2,
@@ -2632,6 +3084,39 @@ def compile_policy(
         "adjustment_application": "signed_envelope_concrete_consumer_program; explicit_joint_net",
         "consumer_programs": programs.contract(compiled),
         "ir_to_pdx": "consumer_ir_to_bounded_consumer_program",
+        "domain_ports": [
+            {
+                "source": binding.source,
+                "definition": binding.definition,
+                "port": binding.port,
+                "origins": [origin.identity for origin in binding.graph.origins(binding.port)],
+            }
+            for binding in compiled.port_bindings
+        ],
+        "rule_relations": [
+            {
+                "source": binding.projection.source,
+                "definition": binding.projection.definition,
+                "writer_id": binding.projection.writer_id,
+                "port": binding.projection.port,
+                "cause_id": binding.projection.cause_id,
+                "amount": binding.projection.amount,
+                "output_unit": binding.projection.output_unit,
+                "dependency_domain": binding.projection.dependency_domain,
+                "origins": list(binding.projection.origins),
+                "readers": [
+                    {
+                        "source": origin.reader_source,
+                        "key": origin.reader_key,
+                        "signature": origin.signature,
+                        "entity": origin.entity,
+                        "entity_kind": origin.entity_kind,
+                    }
+                    for origin in binding.graph.origins(binding.projection.port)
+                ],
+            }
+            for binding in compiled.rule_relation_bindings
+        ],
     }
     return compiled, compiled_contract
 
@@ -2724,7 +3209,7 @@ def evaluate_actions(
     is_ai: bool,
     enabled_consumer_fields: set[str] | frozenset[str] | None = None,
 ) -> dict[str, tuple[str, float]]:
-    """Reference signed action terms, then clamp once per physical consumer."""
+    """Adapt card observations, then evaluate the common scalar program."""
     if type(is_ai) is not bool:
         raise ValueError("is_ai 必须为明确布尔值")
     rows = _production_action_rows(model)
@@ -2733,6 +3218,7 @@ def evaluate_actions(
     if model.support_signals is not None:
         values = model.support_signals.values(values)
     by_id = {row.action_id: row for row in rows}
+    facts = {fact.id: fact for fact in model.facts}
     enabled = (
         frozenset(consumer.field for consumer in model.consumers)
         if enabled_consumer_fields is None
@@ -2746,46 +3232,13 @@ def evaluate_actions(
             (row for row in rows if row.consumer_id == consumer.id),
             key=lambda row: row.action_id,
         )
-        if len(candidates) > consumer.budget:
-            raise ValueError(f"消费者 {consumer.id} 的行动数超过预算；不能静默丢弃候选")
-        total = 0.0
-        for group in _explicit_groups(candidates, by_id, enabled):
-            for term in group:
-                row = term.row
-                if _action_status(row, values) is not True:
-                    continue
-                links = _term_links(term, by_id, enabled)
-                if (
-                    links is None
-                    or any(
-                        _relation_conditions(relation, values) is not True
-                        for relation in links
-                        if relation.kind == "enables"
-                    )
-                    or any(values.get(fact) is not True for fact in term.facts)
-                ):
-                    continue
-                if term.full_variant:
-                    relation_delta = sum(
-                        relation.strength
-                        * (-1 if relation.kind in {"substitutes", "conflicts"} else 1)
-                        for relation in links
-                        if relation.kind != "enables"
-                        and _relation_conditions(relation, values) is True
-                    )
-                    total += _row_delta(row, values, complement=relation_delta, model=model)
-                elif term.cost:
-                    if (
-                        _cost_state(term.cost, values, {fact.id: fact for fact in model.facts})
-                        is not False
-                    ):
-                        total += term.amount
-                else:
-                    total += term.amount
-                break
-        delta = max(-consumer.max_delta, min(consumer.max_delta, total))
+        program = _card_program(consumer, candidates, by_id, enabled)
+        delta = programs.evaluate_scalar(
+            program.scalar,
+            _card_condition_values(program.conditions, values, facts, model=model, program=program),
+        )
         if delta != 0:
-            result[consumer.field] = (f"joint_{consumer.id}", delta)
+            result[consumer.field] = (program.scalar.action_id, delta)
     return result
 
 

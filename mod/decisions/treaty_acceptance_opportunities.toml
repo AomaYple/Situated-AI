@@ -1,0 +1,13 @@
+schema = 1
+
+[sources]
+"common/journal_entries/06_portugal_politics.txt" = "3419343456182541870fc8de7c7c52c23bb6c9e7ec1deded06a7744d61e04316"
+"common/treaty_articles/05_transfer_money.txt" = "9920550c6c4367b70b96ff5b936d37aeb560a15c1aa406785502e32c595fe2c1"
+"common/treaty_articles/13_goods_transfer.txt" = "351863a506c4d78012ee79d88ce490a9439e94107bbefca77808c0a7e1edfc1b"
+"common/treaty_articles/21_no_tariffs.txt" = "4e361356002dd9d440b767bad998b20e73eb4af1a5a0d1999e566a8923e5afab"
+"common/treaty_articles/treaty_articles.md" = "8aa3024c68f12761eec43461dcfd9a0e747f74513d1d3f0d6bd3a369e3aef613"
+
+[tuning]
+target_input_need = 6
+source_deficit_cost = 8
+source_default_cost = 12

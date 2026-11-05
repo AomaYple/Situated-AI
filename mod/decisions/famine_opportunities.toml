@@ -1,0 +1,30 @@
+# Explicit effect-specific tuning; factors are bounded preferences, not affordability predictions.
+schema = 1
+
+[sources]
+"common/journal_entries/04_indian_famines.txt" = "a1a371a730d02ce5911873f835340d89766e44d6b823604040aeb41881844e30"
+"common/script_values/event_values.txt" = "99e2dfc8e07c8b91a6f9c6bf4616444b4c973fc07c281b057b48b2594280067a"
+"common/scripted_buttons/04_indian_famines_buttons.txt" = "223404898f416fea74ac849416212409e2f3c1394aefe3b2501c290daa036db4"
+"common/scripted_buttons/scripted_buttons.md" = "bb1028f7b843e43dc42473968307ad340e2960099cc50e6907f3cff9a47c2d4d"
+"common/static_modifiers/00_ip2_02_modifiers.txt" = "74cd0627025f5e35ded042a3a120507783d92b214e030337c71c67054047ef51"
+"events/brazil/amazonas.txt" = "b224b57ce1ea1f2ee9de0b3844b03e1731b9a54877de88e5c1dc1f5289138135"
+
+[tuning.relief_kitchens]
+benefit = 1.22
+railway_benefit = 1.32
+commitment = 0.90
+financing = 0.92
+
+[tuning.work_camps]
+benefit = 1.12
+railway_benefit = 1.20
+commitment = 0.97
+financing = 0.97
+mortality = 0.90
+nonrailway_mortality = 0.90
+
+[tuning.epidemic_control]
+benefit = 1.28
+railway_benefit = 1.40
+commitment = 0.94
+financing = 0.94

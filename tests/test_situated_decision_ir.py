@@ -40,6 +40,8 @@ def test_统一生产bundle包含全部legacy和显式writer():
         "rule_action",
         "action_card",
         "supply_program",
+        "event_program",
+        "acceptance_program",
     }
     assert sum(item.kind == "supply_program" for item in bundle.writers) == len(supply)
     assert {
@@ -64,6 +66,11 @@ def test_统一生产bundle包含全部legacy和显式writer():
     assert payload["legacy_semantic_count"] == len(production_policy_sources().rules)
     assert payload["action_card_writer_count"] == len(model.actions)
     assert payload["supply_program_writer_count"] == len(supply)
+    assert payload["event_program_writer_count"] == 5
+    assert payload["acceptance_program_writer_count"] == 1
+    assert all(
+        row.event_program is not None for row in bundle.writers if row.kind == "event_program"
+    )
     assert payload["support_program_writer_count"] == 0
     assert len(set(bundle.writer_ids())) == len(bundle.writers)
     assert all(item.vanilla_tail for item in bundle.writers)
@@ -150,7 +157,7 @@ def test_production_contract_owner_matches_actual_legacy_instances():
     expected = {
         (item.source, item.consumer_field): item.owner
         for item in model.action_instances
-        if item.kind == "rule_action"
+        if item.kind in {"rule_action", "event_program", "acceptance_program"}
     }
     assert set(rows) == set(expected)
     assert {key: rows[key]["owner"] for key in expected} == expected

@@ -24,7 +24,19 @@ CRISIS = {"legitimacy": 20, "insurrection": True, "radical_share": 0.3}
 def production():
     source = dict(decision_adapters.load().policies)[SOURCE]
     rules = tuple(r for r in source.rules if ".".join(r.field) in {COLONIAL, CONQUEST})
-    assert len(rules) == 5
+    assert {rule.id for rule in rules} == {
+        "coordinated_institution_colonial_affairs_administrative_cost",
+        "coordinated_institution_colonial_affairs_financial_cost",
+        "coordinated_layered_conquer_region_tradeoff",
+        "coordinated_strategic_region_stance_type_scores_stance_conquer_region_financial_cost",
+        "coordinated_strategic_region_stance_type_scores_stance_conquer_region_political_cost",
+        "colonial_activity_need",
+        "colonial_activity_invested",
+        "colonial_activity_deeply_invested",
+        "colonial_activity_inactive",
+        "colonial_activity_inactive_invested",
+    }
+    assert len(rules) == 10
     keys = {key for rule in rules for key in rule.input_keys()}
     policy = programs.enable(
         replace(

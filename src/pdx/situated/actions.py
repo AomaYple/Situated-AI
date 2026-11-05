@@ -52,14 +52,16 @@ def _rank_terms(value: object, label: str) -> tuple[RankTerm, ...]:
         raise ValueError(f"{label} 必须是有限需求档列表")
     result = []
     for item in value:
-        if not isinstance(item, dict) or set(item) - {"amount", "evidence_group"} != {
+        if not isinstance(item, dict) or set(item) - {"amount", "evidence_group", "origins"} != {
             "fact",
             "goal",
             "tier",
             "unit",
         }:
             raise ValueError(f"{label} RankTerm 字段无效")
-        result.append(RankTerm(**item))
+        parsed = dict(item)
+        parsed["origins"] = _names(parsed.get("origins", []), f"{label}.origins")
+        result.append(RankTerm(**parsed))
     if len({term.fact for term in result}) != len(result):
         raise ValueError(f"{label} 重复 rank 证据")
     return tuple(result)
@@ -130,6 +132,7 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
             "cause_group",
             "commitment_cost_id",
             "political_cost_id",
+            "cause_origins",
         }
         if set(raw) - optional != required:
             raise ValueError(f"行动 {key} 字段必须恰好为：{sorted(required)}")
@@ -196,6 +199,7 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
                 cause_group=raw.get("cause_group", ""),
                 commitment_cost_id=raw.get("commitment_cost_id", ""),
                 political_cost_id=raw.get("political_cost_id", ""),
+                cause_origins=_names(raw.get("cause_origins", []), f"{key}.cause_origins"),
             )
         )
     consumer_ids = {item.id for item in consumers}

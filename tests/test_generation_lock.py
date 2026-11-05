@@ -17,6 +17,7 @@ def frozen_product(tmp_path, monkeypatch):
         "mod/decisions/policy.toml": b"enabled = true\n",
         "research/vanilla-ai/1.14.5/default.txt": b"default = {}\n",
         "mod/common/values.txt": b"value = 1\n",
+        "mod/events/fixture_events.txt": b"namespace = fixture\nfixture.1 = {}\n",
         "mod/localization/english/l_english.yml": b"l_english:\n",
         "mod/.metadata/metadata.json": b"{}\n",
     }.items():
@@ -40,7 +41,8 @@ def test_frozen_lock_is_deterministic_and_excludes_delivery_guide(frozen_product
     lock = json.loads(original)
     assert lock["evidence"] == "frozen_generation_not_current_game_verification"
     assert len(lock["sources"]) == 3
-    assert len(lock["files"]) == 3
+    assert len(lock["files"]) == 4
+    assert "events/fixture_events.txt" in lock["files"]
 
 
 @pytest.mark.parametrize(
@@ -54,6 +56,9 @@ def test_frozen_lock_is_deterministic_and_excludes_delivery_guide(frozen_product
         ("common/values.txt", "bom"),
         ("common/values.txt", "delete"),
         ("common/added.txt", "add"),
+        ("events/fixture_events.txt", "change"),
+        ("events/fixture_events.txt", "delete"),
+        ("events/added.txt", "add"),
         ("localization/english/l_english.yml", "change"),
         (".metadata/metadata.json", "change"),
         ("generation-lock.json", "change"),

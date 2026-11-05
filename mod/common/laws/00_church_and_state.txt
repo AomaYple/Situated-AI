@@ -104,9 +104,9 @@ law_state_religion = {
 			}
 			# GROUP program_f7cf1397de7cf6d3_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_state_religion_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_state_religion_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
-				# law_context_law_state_religion_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_state_religion_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
 			}
 			# GROUP program_f7cf1397de7cf6d3_law_observed_agenda_positive
@@ -280,9 +280,9 @@ law_millet_system = { # Ottoman Empire
 			}
 			# GROUP program_9df07ba771f8d939_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_millet_system_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_millet_system_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
-				# law_context_law_millet_system_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_millet_system_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
 			}
 			# GROUP program_9df07ba771f8d939_law_observed_agenda_positive
@@ -425,9 +425,9 @@ law_people_of_the_book = { # Other Muslim states
 			}
 			# GROUP program_e800d71a9436f6b2_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_people_of_the_book_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_people_of_the_book_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
-				# law_context_law_people_of_the_book_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_people_of_the_book_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
 			}
 			# GROUP program_e800d71a9436f6b2_law_observed_agenda_positive
@@ -554,18 +554,18 @@ law_freedom_of_conscience = {
 			}
 			# GROUP program_c0c707ed4f336ad4_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_freedom_of_conscience_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_freedom_of_conscience_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
 			}
 			# GROUP program_c0c707ed4f336ad4_law_authority_transition_negative
 			add = { value = 0
-				# law_context_law_freedom_of_conscience_law_state_atheism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_freedom_of_conscience_law_state_atheism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_atheism authority < 100 } } add = -8 }
-				# law_context_law_freedom_of_conscience_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_freedom_of_conscience_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 100 } } add = -8 }
-				# law_context_law_freedom_of_conscience_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_freedom_of_conscience_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 100 } } add = -8 }
-				# law_context_law_freedom_of_conscience_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_freedom_of_conscience_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 100 } } add = -8 }
 			}
 			# GROUP program_c0c707ed4f336ad4_law_observed_agenda_positive
@@ -582,8 +582,13 @@ law_freedom_of_conscience = {
 				# law_context_law_freedom_of_conscience_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_freedom_of_conscience value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_freedom_of_conscience } } add = -6 }
 			}
+			# GROUP program_c0c707ed4f336ad4_law_observed_religious_exposure_positive
+			add = { value = 0
+				# culture_freedom_of_conscience_observed_religious_exposure [political]; 真实现行国教法且排除效果不同的两变体，固定完整宗教字典中同一非国教宗教占本国人口至少10%且宗教接受分量低于0；具体候选三非国教分量严格改善，给予有限改革需要，独立保留政治/权威成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { NOT = { country_has_state_religion = rel:catholic } religion_percent_country = { target = rel:catholic value >= 0.1 } country_average_religious_acceptance = { target = rel:catholic value < 0 } } AND = { NOT = { country_has_state_religion = rel:protestant } religion_percent_country = { target = rel:protestant value >= 0.1 } country_average_religious_acceptance = { target = rel:protestant value < 0 } } AND = { NOT = { country_has_state_religion = rel:orthodox } religion_percent_country = { target = rel:orthodox value >= 0.1 } country_average_religious_acceptance = { target = rel:orthodox value < 0 } } AND = { NOT = { country_has_state_religion = rel:oriental_orthodox } religion_percent_country = { target = rel:oriental_orthodox value >= 0.1 } country_average_religious_acceptance = { target = rel:oriental_orthodox value < 0 } } AND = { NOT = { country_has_state_religion = rel:sunni } religion_percent_country = { target = rel:sunni value >= 0.1 } country_average_religious_acceptance = { target = rel:sunni value < 0 } } AND = { NOT = { country_has_state_religion = rel:shiite } religion_percent_country = { target = rel:shiite value >= 0.1 } country_average_religious_acceptance = { target = rel:shiite value < 0 } } AND = { NOT = { country_has_state_religion = rel:ibadi } religion_percent_country = { target = rel:ibadi value >= 0.1 } country_average_religious_acceptance = { target = rel:ibadi value < 0 } } AND = { NOT = { country_has_state_religion = rel:jewish } religion_percent_country = { target = rel:jewish value >= 0.1 } country_average_religious_acceptance = { target = rel:jewish value < 0 } } AND = { NOT = { country_has_state_religion = rel:mahayana } religion_percent_country = { target = rel:mahayana value >= 0.1 } country_average_religious_acceptance = { target = rel:mahayana value < 0 } } AND = { NOT = { country_has_state_religion = rel:gelugpa } religion_percent_country = { target = rel:gelugpa value >= 0.1 } country_average_religious_acceptance = { target = rel:gelugpa value < 0 } } AND = { NOT = { country_has_state_religion = rel:theravada } religion_percent_country = { target = rel:theravada value >= 0.1 } country_average_religious_acceptance = { target = rel:theravada value < 0 } } AND = { NOT = { country_has_state_religion = rel:confucian } religion_percent_country = { target = rel:confucian value >= 0.1 } country_average_religious_acceptance = { target = rel:confucian value < 0 } } AND = { NOT = { country_has_state_religion = rel:hindu } religion_percent_country = { target = rel:hindu value >= 0.1 } country_average_religious_acceptance = { target = rel:hindu value < 0 } } AND = { NOT = { country_has_state_religion = rel:shinto } religion_percent_country = { target = rel:shinto value >= 0.1 } country_average_religious_acceptance = { target = rel:shinto value < 0 } } AND = { NOT = { country_has_state_religion = rel:sikh } religion_percent_country = { target = rel:sikh value >= 0.1 } country_average_religious_acceptance = { target = rel:sikh value < 0 } } AND = { NOT = { country_has_state_religion = rel:animist } religion_percent_country = { target = rel:animist value >= 0.1 } country_average_religious_acceptance = { target = rel:animist value < 0 } } AND = { NOT = { country_has_state_religion = rel:atheist } religion_percent_country = { target = rel:atheist value >= 0.1 } country_average_religious_acceptance = { target = rel:atheist value < 0 } } } has_law_or_variant = law_type:law_state_religion NOT = { has_law_or_variant = law_type:law_millet_system } NOT = { has_law_or_variant = law_type:law_people_of_the_book } NOT = { has_law_or_variant = law_type:law_freedom_of_conscience } } } add = 6 }
+			}
 			min = -28
-			max = 16
+			max = 22
 		} }
 		# SITAI END information:law_freedom_of_conscience.ai_enact_weight_modifier
 	}
@@ -674,15 +679,15 @@ law_total_separation = {
 			}
 			# GROUP program_651af39974214858_law_authority_transition_negative
 			add = { value = 0
-				# law_context_law_total_separation_law_state_atheism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_total_separation_law_state_atheism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_atheism authority < 200 } } add = -8 }
-				# law_context_law_total_separation_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_total_separation_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 100 } } add = -8 }
-				# law_context_law_total_separation_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_total_separation_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 200 } } add = -8 }
-				# law_context_law_total_separation_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_total_separation_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 200 } } add = -8 }
-				# law_context_law_total_separation_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_total_separation_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 200 } } add = -8 }
 			}
 			# GROUP program_651af39974214858_law_observed_agenda_positive
@@ -807,9 +812,9 @@ law_state_atheism = {
 			}
 			# GROUP program_ed719ebdea61f906_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_state_atheism_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_state_atheism_law_total_separation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_total_separation authority < 0 } } add = 6 }
-				# law_context_law_state_atheism_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_state_atheism_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 0 } } add = 6 }
 			}
 			# GROUP program_ed719ebdea61f906_law_observed_agenda_positive

@@ -253,15 +253,15 @@ law_ethnostate = {
 			}
 			# GROUP program_abfb76fe371df2f6_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_ethnostate_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_ethnostate_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_multicultural authority < 0 } } add = 6 }
-				# law_context_law_ethnostate_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_ethnostate_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_cultural_exclusion authority < 0 } } add = 6 }
-				# law_context_law_ethnostate_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_ethnostate_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_racial_segregation authority < 0 } } add = 6 }
-				# law_context_law_ethnostate_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_ethnostate_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_supremacy authority < 0 } } add = 6 }
-				# law_context_law_ethnostate_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_ethnostate_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_subjecthood authority < 0 } } add = 6 }
 			}
 			# GROUP program_abfb76fe371df2f6_law_observed_agenda_positive
@@ -415,18 +415,18 @@ law_national_supremacy = {
 			}
 			# GROUP program_3ca2fb46269dc4d2_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_national_supremacy_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_national_supremacy_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_multicultural authority < 0 } } add = 6 }
-				# law_context_law_national_supremacy_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_national_supremacy_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_cultural_exclusion authority < 0 } } add = 6 }
-				# law_context_law_national_supremacy_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_national_supremacy_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_racial_segregation authority < 0 } } add = 6 }
-				# law_context_law_national_supremacy_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_national_supremacy_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_subjecthood authority < 0 } } add = 6 }
 			}
 			# GROUP program_3ca2fb46269dc4d2_law_authority_transition_negative
 			add = { value = 0
-				# law_context_law_national_supremacy_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_national_supremacy_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_ethnostate authority < 50 } } add = -8 }
 			}
 			# GROUP program_3ca2fb46269dc4d2_law_observed_agenda_positive
@@ -577,16 +577,16 @@ law_racial_segregation = {
 			}
 			# GROUP program_d60ef1694875c318_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_racial_segregation_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_racial_segregation_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_multicultural authority < 0 } } add = 6 }
-				# law_context_law_racial_segregation_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_racial_segregation_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_cultural_exclusion authority < 0 } } add = 6 }
 			}
 			# GROUP program_d60ef1694875c318_law_authority_transition_negative
 			add = { value = 0
-				# law_context_law_racial_segregation_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_racial_segregation_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_supremacy authority < 50 } } add = -8 }
-				# law_context_law_racial_segregation_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_racial_segregation_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_ethnostate authority < 100 } } add = -8 }
 			}
 			# GROUP program_d60ef1694875c318_law_observed_agenda_positive
@@ -744,18 +744,18 @@ law_cultural_exclusion = {
 			}
 			# GROUP program_d6da648056542ae0_law_authority_transition_positive
 			add = { value = 0
-				# law_context_law_cultural_exclusion_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_cultural_exclusion_law_multicultural_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_multicultural authority < 0 } } add = 6 }
 			}
 			# GROUP program_d6da648056542ae0_law_authority_transition_negative
 			add = { value = 0
-				# law_context_law_cultural_exclusion_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_cultural_exclusion_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_racial_segregation authority < 50 } } add = -8 }
-				# law_context_law_cultural_exclusion_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_cultural_exclusion_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_supremacy authority < 100 } } add = -8 }
-				# law_context_law_cultural_exclusion_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_cultural_exclusion_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_ethnostate authority < 150 } } add = -8 }
-				# law_context_law_cultural_exclusion_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_cultural_exclusion_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_subjecthood authority < 50 } } add = -8 }
 			}
 			# GROUP program_d6da648056542ae0_law_observed_agenda_positive
@@ -899,15 +899,15 @@ law_multicultural = {
 			}
 			# GROUP program_f65ea537d28f6ec1_law_authority_transition_negative
 			add = { value = 0
-				# law_context_law_multicultural_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_multicultural_law_cultural_exclusion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_cultural_exclusion authority < 50 } } add = -8 }
-				# law_context_law_multicultural_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_multicultural_law_racial_segregation_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_racial_segregation authority < 100 } } add = -8 }
-				# law_context_law_multicultural_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_multicultural_law_national_supremacy_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_national_supremacy authority < 150 } } add = -8 }
-				# law_context_law_multicultural_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_multicultural_law_ethnostate_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_ethnostate authority < 200 } } add = -8 }
-				# law_context_law_multicultural_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
+				# law_context_law_multicultural_law_subjecthood_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_subjecthood authority < 100 } } add = -8 }
 			}
 			# GROUP program_f65ea537d28f6ec1_law_observed_agenda_positive
@@ -924,8 +924,13 @@ law_multicultural = {
 				# law_context_law_multicultural_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_multicultural value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_multicultural } } add = -6 }
 			}
+			# GROUP program_f65ea537d28f6ec1_law_observed_cultural_exposure_positive
+			add = { value = 0
+				# culture_multicultural_observed_ethnostate_exposure [political]; 现行民族国家制且本国州存在实际非主体文化接受不足；多元文化对全部非主体heritage/language分量严格改善、tradition不变，给予有界需要，政治和权威成本独立保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_culture = { NOT = { is_primary_culture_of = ROOT } PREV = { state_average_culture_pop_acceptance = { culture = prev value < acceptance_status_5 } } } } has_law_or_variant = law_type:law_ethnostate NOT = { has_law_or_variant = law_type:law_multicultural } } } add = 6 }
+			}
 			min = -28
-			max = 10
+			max = 16
 		} }
 		# SITAI END information:law_multicultural.ai_enact_weight_modifier
 	}

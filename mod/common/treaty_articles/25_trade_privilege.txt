@@ -127,9 +127,9 @@ trade_privilege = {
 			# GROUP program_a6c0b2e8d73050b3_treaty_influence_pressure_negative
 			add = { value = 0
 				# treaty_trade_privilege_capacity_deficit [diplomacy]; ROOT影响力已为负，升档同一外交容量压力；与低于占用档去重，不把零余额或未知当赤字
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes influence < 0.0 } } add = -0.2 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { influence >= 0 NOT = { influence >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { influence < 0.0 } } } } }  } else = { add = -0.2 } } } }
 				# treaty_trade_privilege_capacity [diplomacy]; 原版每方影响力占用50；ROOT当前余额低于本条款精确占用，仅计边际外交容量压力，不增加资格门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes influence < 50.0 } } add = -0.1 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { influence >= 0 NOT = { influence >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { influence < 50.0 } } } } }  } else = { add = -0.1 } } } }
 			}
 			min = 0.8
 			max = 1

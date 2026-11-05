@@ -77,7 +77,16 @@ PRODUCTION_WITNESSES = [
 
 
 def _values(**changes):
-    return {"war": True, "navy": 1, "steamers_price": 0.3, "steamers_balance": -1, **changes}
+    return {
+        "war": True,
+        "navy": 1,
+        "steamers_price": 0.3,
+        "steamers_balance": -1,
+        "import_blockade_arms_import_volume": False,
+        "import_blockade_arms_import_reliance": False,
+        "import_blockade_owned_state_blockade": False,
+        **changes,
+    }
 
 
 @pytest.fixture(scope="module")
@@ -132,13 +141,16 @@ def _facts(values, *, is_ai=True, root_exists=True, market_exists=True):
         "is_at_war": values["war"],
         "navy_size": values["navy"],
         "market": {
+            "mg:small_arms": {"market_goods_imports": 0},
+            "market_imports_reliance": {(("goods", "small_arms"),): 0},
             "mg:steamers": {
                 "market_goods_pricier": values["steamers_price"],
                 "market_goods_delta": values["steamers_balance"],
-            }
+            },
         }
         if market_exists
         else None,
+        "any_scope_state": [],
     }
     return {"ROOT": country if root_exists else None}
 

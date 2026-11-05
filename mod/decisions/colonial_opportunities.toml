@@ -1,0 +1,13 @@
+# 真实殖民活动和既有投入；倍率为偏好设计档，不是原版边际收益曲线。
+schema = 1
+
+[sources]
+"common/power_bloc_principles/00_power_bloc_principles.txt" = "e92e79a48382503971c6f07d2be2d8fffa85a84c1e0e8dc6a200c7a8f3cce455"
+"common/institutions/00_institutions.txt" = "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f"
+
+[tuning]
+active_need = 1.18
+invested_withdrawal = 0.90
+deeply_invested_withdrawal = 0.86
+inactive_withdrawal = 0.92
+inactive_invested_withdrawal = 0.85

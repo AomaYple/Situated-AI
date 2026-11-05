@@ -17,6 +17,7 @@ from test_situated_joint_witnesses import _facts
 
 from pdx import (
     config,
+    country_state,
     decision_adapters,
     decision_interfaces,
     decision_rules,
@@ -29,8 +30,7 @@ pytestmark = pytest.mark.integration
 LABOUR = "common/laws/02_labour_associations.txt"
 
 
-@pytest.fixture(scope="module")
-def focused():
+def build_focused():
     raw = tomllib.loads((config.REPO / "mod/decisions/adapters.toml").read_text(encoding="utf-8"))
     derived = law_opportunities.derive(raw)
     sources = set(raw["sources"]) | set(law_opportunities.load()["sources"])
@@ -59,6 +59,7 @@ def focused():
             policy,
             baseline=inputs[source],
             default_strategy=False,
+            country_policy=country_state.load(),
             reader_words=decision_interfaces.proven_reader_words()
             | frozenset(re.findall(r"[A-Za-z_][A-Za-z_0-9:]*", "\n".join(inputs.values()))),
         )
@@ -68,6 +69,7 @@ def focused():
                 policy,
                 baseline=inputs[source],
                 default_strategy=False,
+                country_policy=country_state.load(),
                 enabled_domains=frozenset(),
             )
             == inputs[source]
@@ -86,6 +88,11 @@ def focused():
             (t.kind, t.value) for t in tokenize(inputs[source])
         ]
     return policies, files, inputs
+
+
+@pytest.fixture(scope="module")
+def focused():
+    return build_focused()
 
 
 def witness(focused, law, changes, expected, *, support=0.1, is_ai=True):
@@ -437,8 +444,10 @@ def test_g3_protection_and_mortality_are_distinct_actual_differences(
         ({"default": True}, -2),
         ({"bureaucracy": -1, "default": True}, -8),
         ({"bureaucracy": 0}, 6),
-        ({"bureaucracy": None, "default": True}, -2),
-        ({"bureaucracy": -1, "default": None}, 0),
+        # Known absence of police anchors the new institution. Missing cost
+        # pressure keeps its finite conservative tier: +6 -6 -8 = -8.
+        ({"bureaucracy": None, "default": True}, -8),
+        ({"bureaucracy": -1, "default": None}, -8),
         ({"law_context_current_law_no_police": None, "bureaucracy": -1, "default": True}, 6),
     ],
 )

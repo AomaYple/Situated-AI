@@ -1256,6 +1256,15 @@ def test_release_is_a_real_standard_package(standard_release_package):
     contract = manifest["contract"]
     assert isinstance(contract, dict)
     assert contract["product_version"] == distribution.RELEASE_VERSION
+    # Exact registered event programs are production scripts too: dropping the
+    # events tree from the reader/allowlist must fail the same delivery gate.
+    from pdx import event_opportunities
+
+    event_sources = {program.source for program in event_opportunities.compile_programs()}
+    assert event_sources
+    files = manifest["files"]
+    assert isinstance(files, dict)
+    assert event_sources <= files.keys()
 
 
 def test_static_matrix_never_claims_execution_contract(tmp_path: Path):

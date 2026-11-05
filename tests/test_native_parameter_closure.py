@@ -655,7 +655,7 @@ def _joint_reader_metadata(case):
     from pdx.situated import programs
     from pdx.situated.ir import from_rule
 
-    inventory, _sources, generated, _path = case
+    inventory, sources, generated, _path = case
     source = inventory.surfaces[0].source
     policy = dict(decision_adapters.load().policies)[source]
     compiled = programs.enable(
@@ -676,6 +676,18 @@ def _joint_reader_metadata(case):
         }
     ]
     generated[".metadata/metadata.json"] = json.dumps(metadata).encode()
+    generated[source] = decision_rules.patch(
+        sources[source].decode(),
+        compiled,
+        baseline=sources[source].decode(),
+        default_strategy=False,
+        reader_words=frozenset(
+            {reader.engine for reader in compiled.readers}
+            | {part for reader in compiled.readers for part in reader.path}
+            | {literal for reader in compiled.readers for _, literal in reader.parameters}
+            | set(compiled.actor_path)
+        ),
+    ).encode()
 
 
 def test_joint_compiled_metadata_preserves_exact_parameter_reader_proof(reader_case):

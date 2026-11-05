@@ -82,6 +82,7 @@ class RankTerm:
     unit: str
     amount: float = 0.0
     evidence_group: str = ""
+    origins: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if (
@@ -97,6 +98,10 @@ class RankTerm:
             or self.amount < 0
             or not isinstance(self.evidence_group, str)
             or (self.evidence_group and not re.fullmatch(r"[a-z][a-z0-9_]*", self.evidence_group))
+            or not isinstance(self.origins, tuple)
+            or any(not isinstance(origin, str) or not origin for origin in self.origins)
+            or len(set(self.origins)) != len(self.origins)
+            or (self.origins and not self.evidence_group)
         ):
             raise ValueError("RankTerm 必须绑定事实、目标与 1..2 的 flag 需求档")
 
@@ -133,8 +138,16 @@ class ActionCard:
     cause_group: str = ""
     commitment_cost_id: str = ""
     political_cost_id: str = ""
+    cause_origins: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
+        if (
+            not isinstance(self.cause_origins, tuple)
+            or any(not isinstance(origin, str) or not origin for origin in self.cause_origins)
+            or len(set(self.cause_origins)) != len(self.cause_origins)
+            or (self.cause_origins and not self.cause_group)
+        ):
+            raise ValueError("行动因果来源必须唯一且绑定cause_group")
         for value in (
             self.variant_group,
             self.cause_group,
@@ -160,6 +173,8 @@ class Relation:
     scope: str = "root"
     condition_facts: tuple[str, ...] = ()
     unknown_policy: UnknownPolicy = "vanilla"
+    cause_id: str = ""
+    origins: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

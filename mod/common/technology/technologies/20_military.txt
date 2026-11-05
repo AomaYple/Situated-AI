@@ -466,7 +466,7 @@ field_works = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { state_unemployment_rate < 0.02 pop_type_percent_state = { target = pop_type:peasants value < 0.02 } any_scope_building = { level >= 1 occupancy >= 0.9 AND = { is_building_type = building_livestock_ranch has_active_production_method = pm_standard_fences ROOT = { has_technology_researched = enclosure } } } } } } add = 0.12 }
 			}
 			min = 1
-			max = 1.3299999999999998
+			max = 1.33
 		} }
 		# SITAI END information:field_works.ai_weight
 	}
@@ -790,7 +790,7 @@ power_of_the_purse = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
 			}
 			min = 1
-			max = 1.2999999999999998
+			max = 1.3
 		} }
 		# SITAI END information:power_of_the_purse.ai_weight
 	}
@@ -1866,7 +1866,7 @@ concrete_dockyards = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0 } } } } add = 0.12 }
 			}
 			min = 1
-			max = 1.4200000000000002
+			max = 1.42
 		} }
 		# SITAI END information:concrete_dockyards.ai_weight
 	}

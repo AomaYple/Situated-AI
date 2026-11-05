@@ -1,0 +1,17 @@
+# 和平自主交涉、宗主让利和加入势力集团分别绑定本国提案优先级。
+schema = 1
+
+[sources]
+"common/diplomatic_actions/diplomatic_action.md" = "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c"
+"common/diplomatic_actions/38_subjects_increase_autonomy.txt" = "533689cd0cb50a664fc7c9b35a9b7ee125080aae27d12c60e2060fbdaa786a0c"
+"common/diplomatic_actions/33_subjects_decrease_payments.txt" = "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df"
+"common/diplomatic_actions/26_join_power_bloc.txt" = "a66a61d5ee5a86282cec8f09b38bd0e58f3f12ac170f080499b3126370a9c28e"
+
+[tuning]
+autonomy_need = 1.18
+autonomy_recovery = 0.95
+payments_default = 0.85
+payments_deficit = 0.92
+bloc_default = 0.90
+bloc_deficit = 0.95
+bloc_recovery = 0.95

@@ -6,6 +6,60 @@ schema = 1
 plan = "A3"
 freeze = "2026-11-05 / Victoria 3 1.14.5 / A3-0 initial-direction-freeze"
 
+# 精确业务补盘追加；保持原82项，不以批量保留或已存在接线签完成。
+[[obligations]]
+id = "B05.5.5"
+parent = "B05.5"
+title = "印度饥荒三个按钮的救济、铁路与死亡取舍"
+status = "implemented"
+question = "原版三个ai_chance均为10，但厨房、防疫与劳役营的实际健康收益、铁路档和12月费用不同，如何联合评估？"
+acceptance = "三个精确country ROOT按钮共享IR；真实owned-state饥荒/铁路查询、独立费用和劳役营正死亡成本均有手算及实际PDX见证；资格、效果、冷却、变量、玩家与关闭回退保护；完整生成及包身份刷新后签发。"
+source_paths = ["src/pdx/famine_opportunities.py", "mod/decisions/famine_opportunities.toml", "tests/test_a3_famine_integration.py"]
+consumer_investigation = "common/scripted_buttons/04_indian_famines_buttons.txt 三个je_indian_famines_button_*.ai_chance；真实JE接线及按钮帮助第19行country ROOT。"
+existing_state = "三个原版10基权重分别接入14条共享贡献；实际owned-state集合、铁路分档及独立融资/健康/死亡取舍通过手算与实际PDX桥，完整源恢复与玩家关闭保护已核对；本批103文件统一生成和标准包回归通过。"
+gap = "保留源身份及真实效果，不以布尔投影测试代替物理owned-state查询；融资未知保留有限成本，必要饥荒未知局部回原版。"
+evidence = [{"role" = "source", "path" = "src/pdx/famine_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "b7b1201f099e99f7a5c45a134734ece99cf4d9386a3fb60d931e6079dafdd8f3"}, {"role" = "consumer", "path" = "src/pdx/famine_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "b7b1201f099e99f7a5c45a134734ece99cf4d9386a3fb60d931e6079dafdd8f3"}, {"role" = "witness", "path" = "tests/test_a3_famine_integration.py", "kind" = "python_symbol", "identity" = "test_full_collection_bridge_hand_calculation_reference_and_actual_pdx", "sha256" = "0d23586b8067382ad12acd6f6dae14acad7ddcc8cfe8e2100492feb62eea39f7"}, {"role" = "witness", "path" = "tests/test_a3_famine_integration.py", "kind" = "python_symbol", "identity" = "test_full_native_source_restored_and_no_extra_state_or_world_scan", "sha256" = "0d23586b8067382ad12acd6f6dae14acad7ddcc8cfe8e2100492feb62eea39f7"}]
+rationale = "仅关闭三项精确饥荒按钮的实现义务；真实效果与期限、独立原版源、参考和实际PDX、零/未知/玩家/关闭及结构保护已有见证，定向回归与标准包通过。不关闭整个B05.5方向、全部事件或用户长期行为验收。"
+
+[[obligations]]
+id = "B05.5.6"
+parent = "B05.5"
+title = "八个自然灾害事件的十六选项完整处境政策"
+status = "pending"
+question = "自然灾害1至8事件未声明ai_chance，救灾效果、金额尺度及经常费用期限却不同，是否可加入完整显式处境选择？"
+acceptance = "逐事件country ROOT/实际AI调用与保存州身份取证；全16选项定义有意显式政策，不冒充未知缺省概率等价；普通/巨灾/农业及Krakatoa分支分别核对真实效果和913/1825日费用，有正反、未知、尾部、玩家、关闭、参考/PDX见证。"
+source_paths = ["src/pdx/event_opportunities.py", "src/pdx/situated/vanilla_inventory.py", "mod/decisions/event_opportunities.toml"]
+consumer_investigation = "events/natural_disasters_events.txt natural_disaster_events.1–.8全部成对选项；原实际.6条件为coastal+earthquake，不按名称改资格。"
+existing_state = "事件业务审计已给出全父结构/选项/费用及调用证据，原省略权重语义未知；尚未实现。"
+gap = "不能用所有灾害统一倍率；须分清经常费用与一次扣款、实际减灾与农业吞吐福利收益。"
+evidence = []
+
+[[obligations]]
+id = "B09.3.2"
+parent = "B09.3"
+title = "科技共享捐助方的真实传播机会成本"
+status = "pending"
+question = "da_knowledge_sharing提案仅1+目标rank，捐助方tech_spread -0.10与受方+0.25是否遗漏本国传播弱势的独立机会成本？"
+acceptance = "原版传播>-0.25资格及50影响力成本不改；精确ROOT/目标/传播getter权限先证，已合法但传播弱势与充裕的反事实独立；排除影响力配额同因重复，实际IR/PDX/未知/关闭/玩家及完整尾部保护。"
+source_paths = ["src/pdx/native_action_opportunities.py", "src/pdx/decision_interfaces.py", "src/pdx/situated/compiler.py"]
+consumer_investigation = "外交业务审计的da_knowledge_sharing.ai.propose_score及其实际source/target传播modifier；现只调查，不授权借用未证目标别名。"
+existing_state = "原资格已经防止极弱传播捐助；提案优先尚不区分仍合法范围内传播代价。"
+gap = "新增判断须独立于既有资格，无法确认getter时保持unknown，不泛称引擎不支持。"
+evidence = []
+
+[[obligations]]
+id = "B09.2.2"
+parent = "B09.2"
+title = "军事条约接受的实际付款方与新增承诺"
+status = "pending"
+question = "联盟、防御协定、担保、支持独立、军事援助的提案成本不能代签接受时本国实际成本，如何精确处理mutual及directed？"
+acceptance = "逐精确inherent_accept_score确认ROOT、source、target及可用对象；按真实付款方评估新增成本，免费target不受惩罚；保留原有拒绝/军力/战争/资格/效果并排除同因重复；各候选实际生产与反例完整。"
+source_paths = ["src/pdx/treaty_acceptance_opportunities.py", "src/pdx/decision_interfaces.py", "src/pdx/situated/domain_coverage.py"]
+consumer_investigation = "外交/条约203精确身份审计；军事援助source军需+0.10与target-0.10、各军事条约inherent_accept_score；该时机无treaty对象，不借用contextual_accept_score权限。"
+existing_state = "已有10项提案/评估及no_tariffs动态接受接线，不覆盖这些新增接受成本。"
+gap = "逐付款角色和不同实际承诺分别深化，不能复制统一融资惩罚或把已有提案签为接受完成。"
+evidence = []
+
 # 最终接口/业务复核新增；原80项保留，不删除或缩小分母。
 [[obligations]]
 id = "B05.5.4"

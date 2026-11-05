@@ -94,7 +94,7 @@ law_guild_system = {
 			# GROUP program_0ca57c2a93b08ed6_law_political_pressure_negative
 			add = { value = 0
 				# law_context_law_guild_system_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_insurrectionary_interest_groups = yes OR = { AND = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } } }  } else = { add = -10 } } } }
 			}
 			# GROUP program_0ca57c2a93b08ed6_law_union_transition_adjustment_negative
 			add = { value = 0
@@ -218,7 +218,7 @@ law_combination_acts = {
 			# GROUP program_1ead1388612c8442_law_political_pressure_negative
 			add = { value = 0
 				# law_context_law_combination_acts_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_insurrectionary_interest_groups = yes OR = { AND = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } } }  } else = { add = -10 } } } }
 			}
 			min = -26
 			max = 10
@@ -331,7 +331,7 @@ law_anti_strike_laws = {
 			# GROUP program_b1c9f9b5124eff60_law_political_pressure_negative
 			add = { value = 0
 				# law_context_law_anti_strike_laws_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_insurrectionary_interest_groups = yes OR = { AND = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } } }  } else = { add = -10 } } } }
 			}
 			# GROUP program_b1c9f9b5124eff60_law_union_transition_adjustment_negative
 			add = { value = 0
@@ -451,7 +451,7 @@ law_right_to_associate = {
 			# GROUP program_5c9fac5659705c3f_law_political_pressure_negative
 			add = { value = 0
 				# law_context_law_right_to_associate_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_insurrectionary_interest_groups = yes OR = { AND = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } } }  } else = { add = -10 } } } }
 			}
 			# GROUP program_5c9fac5659705c3f_law_union_transition_adjustment_negative
 			add = { value = 0
@@ -572,7 +572,7 @@ law_corporatized_unions = {
 			# GROUP program_081035cefd15d268_law_political_pressure_negative
 			add = { value = 0
 				# law_context_law_corporatized_unions_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_insurrectionary_interest_groups = yes OR = { AND = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } } }  } else = { add = -10 } } } }
 			}
 			# GROUP program_081035cefd15d268_law_union_transition_adjustment_negative
 			add = { value = 0
@@ -690,7 +690,7 @@ law_factory_councils = {
 			# GROUP program_28a4940589b67ac1_law_political_pressure_negative
 			add = { value = 0
 				# law_context_law_factory_councils_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_insurrectionary_interest_groups = yes OR = { AND = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } } }  } else = { add = -10 } } } }
 			}
 			# GROUP program_28a4940589b67ac1_law_union_transition_adjustment_negative
 			add = { value = 0

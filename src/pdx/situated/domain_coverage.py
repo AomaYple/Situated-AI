@@ -11,7 +11,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from pdx import decision_adapters, decision_rules
+from pdx import (
+    decision_adapters,
+    decision_rules,
+    event_opportunities,
+    treaty_acceptance_opportunities,
+)
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.textio import normalized_text
@@ -118,7 +123,11 @@ class NativeConsumerBinding:
             or source.is_absolute()
             or PureWindowsPath(self.source).drive
             or any(part in {"", ".", ".."} for part in self.source.split("/"))
-            or not (self.source.startswith("common/") or "/common/" in self.source)
+            or not (
+                self.source.startswith("common/")
+                or "/common/" in self.source
+                or self.source in {event_opportunities.SOURCE, event_opportunities.PLAGUE}
+            )
             or not self.definition
             or any(not part for part in self.field.split("."))
         ):
@@ -235,9 +244,40 @@ class _ReviewedNumericContract:
     scope_evidence: tuple[str, ...]
     context: EvaluationContext
     rules: dict[str, decision_rules.Rule]
+    normalized_hashes: tuple[tuple[str, str], ...] = ()
+    native_target: str = "none"
 
 
 def _native_binding(instance: ActionInstance) -> NativeConsumerBinding | None:
+    if instance.kind == "acceptance_program":
+        acceptance_program = treaty_acceptance_opportunities.compile_program()
+        if (
+            instance.source != acceptance_program.source
+            or instance.rule_id != acceptance_program.definition
+            or instance.consumer_field != acceptance_program.field
+        ):
+            return None
+        return NativeConsumerBinding(
+            acceptance_program.source, acceptance_program.definition, "ai.inherent_accept_score"
+        )
+    if instance.kind == "event_program":
+        program = next(
+            (
+                row
+                for row in event_opportunities.compile_programs()
+                if row.option == instance.rule_id
+            ),
+            None,
+        )
+        if (
+            program is None
+            or instance.source != program.source
+            or instance.consumer_field != program.field
+        ):
+            return None
+        return NativeConsumerBinding(
+            program.source, program.event, f"option[{program.option}].ai_chance"
+        )
     if instance.kind != "rule_action":
         return None
     if instance.source == "mod/decisions/information.toml":
@@ -475,7 +515,7 @@ class _NativeBindingProofs:
             return self.reviewed_numeric
         from pdx import mobilization_opportunities, treaty_opportunities  # noqa: PLC0415
 
-        from . import compiler, vanilla_inventory  # noqa: PLC0415
+        from . import compiler, cost_policies, vanilla_inventory  # noqa: PLC0415
 
         contracts = {}
         for module, contexts, native_root, actor_path, operation in (
@@ -496,6 +536,7 @@ class _NativeBindingProofs:
         ):
             baseline = module.load_baseline()
             derived = module.derive({"sources": {}, "readers": {}, "rules": []}, baseline)
+            derived = cost_policies.apply(derived, source="adapters")
             raw_hashes = {source: row["sha256"] for source, row in baseline["originals"].items()}
             inputs = {
                 source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()
@@ -538,6 +579,14 @@ class _NativeBindingProofs:
                         operation=rule["operation"],
                         required_known_facts=tuple(rule.get("required_known_facts", ())),
                         contribution_group=rule["contribution_group"],
+                        semantic_role=rule.get("semantic_role", "unspecified"),
+                        conservative_unknown_facts=tuple(
+                            rule.get("conservative_unknown_facts", ())
+                        ),
+                        unknown_cost_basis=rule.get("unknown_cost_basis", ""),
+                        unknown_cost_required_known_facts=tuple(
+                            rule.get("unknown_cost_required_known_facts", ())
+                        ),
                     )
                 contracts[(source, definition, leaf)] = _ReviewedNumericContract(
                     raw_hashes,
@@ -550,18 +599,263 @@ class _NativeBindingProofs:
                     contexts[(source, field)],
                     expected_rules,
                 )
+        from pdx import (  # noqa: PLC0415
+            canal_opportunities,
+            decree_opportunities,
+            famine_opportunities,
+            native_action_opportunities,
+        )
+
+        # These modules freeze complete normalized sources. The independent
+        # inventory still pins the caller's raw bytes in __init__; matching a
+        # normalized hash below grants no permission to edit any native file.
+        adapter_readers = tomllib.loads(decision_adapters.SOURCE.read_text(encoding="utf-8"))[
+            "readers"
+        ]
+        for module, inputs_text, contexts, operation, target, native_root, actor_path in (
+            (
+                native_action_opportunities,
+                native_action_opportunities.load_baseline()["texts"],
+                compiler._frozen_native_action_contexts(),
+                "score",
+                "scope:target=country",
+                "country",
+                (),
+            ),
+            (
+                canal_opportunities,
+                canal_opportunities.frozen_inputs(),
+                compiler._frozen_canal_contexts(),
+                "chance",
+                "none",
+                "country",
+                (),
+            ),
+            (
+                decree_opportunities,
+                decree_opportunities.frozen_inputs(),
+                compiler._frozen_decree_contexts(),
+                "relative_weight",
+                "none",
+                "state",
+                ("owner",),
+            ),
+            (
+                famine_opportunities,
+                famine_opportunities.frozen_inputs(),
+                compiler._frozen_famine_contexts(),
+                "chance",
+                "none",
+                "country",
+                (),
+            ),
+        ):
+            derived = module.derive({"readers": adapter_readers})
+            derived = cost_policies.apply(derived, source="adapters")
+            inputs = {source: text.encode("utf-8") for source, text in inputs_text.items()}
+            for source, field in contexts:
+                definition, leaf = field.split(".", 1)
+                parsed = parse_bytes(inputs[source], path=source)
+                declaration = _ordinary(parsed.root, definition)
+                if parsed.errors or declaration is None:
+                    raise ValueError("原生country消费者完整冻结定义无效")
+                current = declaration.value
+                weight = None
+                for part in leaf.split("."):
+                    weight = _ordinary(current, part) if isinstance(current, Block) else None
+                    if weight is None:
+                        raise ValueError("原生country消费者精确冻结数值字段缺失")
+                    current = weight.value
+                assert weight is not None
+                scope = vanilla_inventory._scope(
+                    source.split("/")[-2], tuple(leaf.split(".")), inputs, {}, declaration, source
+                )
+                expected_rules = {
+                    rule["id"]: decision_rules.Rule(
+                        id=rule["id"],
+                        domain=rule["domain"],
+                        field=tuple(field.split(".")),
+                        priority=rule["priority"],
+                        value=rule["value"],
+                        conditions=tuple(
+                            decision_rules.Predicate(**condition)
+                            for condition in rule["conditions"]
+                        ),
+                        why=rule["why"],
+                        counterexample=rule["counterexample"],
+                        operation=rule["operation"],
+                        contribution_group=rule["contribution_group"],
+                        semantic_role=rule.get("semantic_role", "unspecified"),
+                        conservative_unknown_facts=tuple(
+                            rule.get("conservative_unknown_facts", ())
+                        ),
+                        unknown_cost_basis=rule.get("unknown_cost_basis", ""),
+                        unknown_cost_required_known_facts=tuple(
+                            rule.get("unknown_cost_required_known_facts", ())
+                        ),
+                    )
+                    for rule in derived["rules"]
+                    if rule["source"] == source and rule["field"] == field
+                }
+                contracts[(source, definition, leaf)] = _ReviewedNumericContract(
+                    {},
+                    derived["sources"][source],
+                    actor_path,
+                    native_root,
+                    operation,
+                    weight.line,
+                    scope.evidence,
+                    contexts[(source, field)],
+                    expected_rules,
+                    tuple(sorted(derived["sources"].items())),
+                    target,
+                )
         self.reviewed_numeric = contracts
         return contracts
 
     def context_issue(
         self, instance: ActionInstance, surface: VanillaSurface, *, state_owner_proven: bool
     ) -> str | None:
+        if instance.kind == "acceptance_program":
+            acceptance = treaty_acceptance_opportunities
+            acceptance_program = acceptance.compile_program()
+            if not set(acceptance.SOURCES) <= set(self.sources):
+                return "native_source_contract_unproven"
+            texts = {
+                name: normalized_text(self.sources[name].decode("utf-8-sig"))
+                for name in acceptance.SOURCES
+            }
+            try:
+                acceptance.verify_inputs(texts)
+            except ValueError:
+                return "native_source_contract_unproven"
+            from . import vanilla_inventory  # noqa: PLC0415
+
+            declaration = _ordinary(
+                parse_bytes(self.sources[acceptance.SOURCE], path=acceptance.SOURCE).root,
+                acceptance.DEFINITION,
+            )
+            if declaration is None:
+                return "acceptance_definition_unproven"
+            native_scope = vanilla_inventory._treaty_scope(
+                ("ai", "inherent_accept_score"), self.sources, declaration, acceptance.SOURCE
+            )
+            ai = (
+                _ordinary(declaration.value, "ai") if isinstance(declaration.value, Block) else None
+            )
+            weight = (
+                _ordinary(ai.value, "inherent_accept_score")
+                if ai is not None and isinstance(ai.value, Block)
+                else None
+            )
+            if (
+                instance.action_id != acceptance_program.writer_id
+                or instance.source != acceptance_program.source
+                or instance.rule_id != acceptance_program.definition
+                or instance.consumer_field != acceptance_program.field
+                or instance.domain != "diplomacy"
+                or instance.operation != "add"
+                or instance.value != 0
+                or instance.owner != "treaty_acceptance_opportunities"
+                or instance.vanilla_tail != "preserve"
+                or instance.actor_scope != "root"
+                or instance.target_scope != "none"
+                or instance.evaluation_context != acceptance_program.evaluation_context()
+                or instance.evidence != acceptance_program.evaluation_context().evidence
+                or instance.condition_facts
+                != tuple(reader.key for reader in acceptance_program.readers())
+                or surface.source != acceptance_program.source
+                or surface.definition != acceptance_program.definition
+                or surface.field != "ai.inherent_accept_score"
+                or weight is None
+                or surface.source_line != weight.line
+                or surface.capability != native_scope.capability
+                or surface.capability != "direct"
+                or surface.actor_scope != native_scope.actor
+                or surface.target_scope != native_scope.target
+                or surface.operation != "acceptance_score"
+                or surface.ambiguity
+                or not surface.legal
+                or surface.scope_evidence != native_scope.evidence
+            ):
+                return "acceptance_program_contract_unproven"
+            return None
+        if instance.kind == "event_program" or surface.source in {
+            event_opportunities.SOURCE,
+            event_opportunities.PLAGUE,
+        }:
+            program = next(
+                (
+                    row
+                    for row in event_opportunities.compile_programs()
+                    if row.option == instance.rule_id
+                ),
+                None,
+            )
+            if program is None:
+                return "event_program_identity_unproven"
+            row = event_opportunities.consumer_catalog()[program.option]
+            if (
+                instance.kind != "event_program"
+                or instance.action_id != program.writer_id
+                or instance.source != program.source
+                or instance.consumer_field != program.field
+                or instance.domain != "political"
+                or instance.operation != "add"
+                or instance.value != 0
+                or instance.owner != "event_opportunities"
+                or instance.vanilla_tail != "preserve"
+                or instance.actor_scope != "root"
+                or instance.target_scope != "none"
+                or instance.evaluation_context != program.evaluation_context()
+                or instance.condition_facts != tuple(reader.key for reader in program.readers())
+                or instance.evidence != program.evaluation_context().evidence
+                or surface.source != program.source
+                or surface.definition != program.field_path[0]
+                or surface.field != row["field"]
+                or surface.source_line != row["source_line"]
+                or surface.capability != "direct"
+                or not surface.legal
+                or surface.ambiguity
+                or surface.actor_scope != "country"
+                or surface.operation != "event_option_weight"
+                or surface.target_scope != row["target_scope"]
+                or surface.scope_evidence != tuple(row["scope_evidence"])
+            ):
+                return "event_program_contract_unproven"
+            names = event_opportunities.load()["sources"]
+            if not set(names) <= set(self.sources):
+                return "native_source_contract_unproven"
+            texts = {
+                name: normalized_text(self.sources[name].decode("utf-8-sig")) for name in names
+            }
+            try:
+                event_opportunities.verify_inputs(texts)
+            except ValueError:
+                return "native_source_contract_unproven"
+            return None
         candidate = (
-            surface.source == "common/mobilization_options/00_mobilization_option.txt"
-            and surface.field == "ai_weight"
-        ) or (
-            surface.source.startswith("common/treaty_articles/")
-            and surface.field in {"ai.proposal_weight", "ai.evaluation_chance"}
+            (
+                surface.source == "common/mobilization_options/00_mobilization_option.txt"
+                and surface.field == "ai_weight"
+            )
+            or (
+                surface.source.startswith("common/treaty_articles/")
+                and surface.field in {"ai.proposal_weight", "ai.evaluation_chance"}
+            )
+            or (
+                surface.source.startswith("common/diplomatic_actions/")
+                and surface.field == "ai.propose_score"
+            )
+            or (
+                surface.source == "common/decisions/canal_decisions.txt"
+                and surface.field == "ai_chance"
+            )
+            or (
+                surface.source == "common/decrees/00_decree.txt"
+                and surface.definition == "decree_emergency_relief"
+                and surface.field == "ai_weight"
+            )
         )
         contract = (
             self._reviewed_numeric_contracts().get(
@@ -577,11 +871,11 @@ class _NativeBindingProofs:
             or not surface.legal
             or surface.ambiguity
             or surface.operation != contract.native_operation
-            or surface.target_scope != "none"
+            or surface.target_scope != contract.native_target
             or surface.actor_scope != contract.native_root
             or surface.source_line != contract.native_line
             or surface.scope_evidence != contract.scope_evidence
-            or instance.operation != "multiply"
+            or instance.operation != ("add" if contract.native_root == "state" else "multiply")
             or instance.kind != "rule_action"
             or instance.source != surface.source
             or instance.consumer_field != f"{surface.definition}.{surface.field}"
@@ -603,6 +897,15 @@ class _NativeBindingProofs:
                 and source not in self.inventory.source_hashes
                 and source not in self.sources
             )
+        ):
+            return "native_source_contract_unproven"
+        if any(
+            source not in self.sources
+            or hashlib.sha256(
+                normalized_text(self.sources[source].decode("utf-8-sig")).encode("utf-8")
+            ).hexdigest()
+            != digest
+            for source, digest in contract.normalized_hashes
         ):
             return "native_source_contract_unproven"
         if (
@@ -1446,7 +1749,11 @@ def contract(
     explicit_by_domain: dict[str, list[ActionInstance]] = {name: [] for name in FAMILIES}
     for instance in instances:
         domain = getattr(instance, "family_id", "")
-        if domain in by_domain and getattr(instance, "kind", "rule_action") == "rule_action":
+        if domain in by_domain and getattr(instance, "kind", "rule_action") in {
+            "rule_action",
+            "event_program",
+            "acceptance_program",
+        }:
             by_domain[domain].append(instance)
         elif domain in explicit_by_domain and getattr(instance, "kind", "") == "action_card":
             explicit_by_domain[domain].append(instance)

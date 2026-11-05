@@ -16,24 +16,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pdx import config
-from pdx.model import Assignment, Block, Scalar
-from pdx.parser import parse_text
 from pdx.situated import compiler, vanilla_inventory
+from pdx.situated.resources import pdx_metrics
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
-PERSISTENT_WRITES = {
-    "set_variable",
-    "change_variable",
-    "remove_variable",
-    "clamp_variable",
-    "set_global_variable",
-    "change_global_variable",
-    "remove_global_variable",
-}
-SCAN_PREFIXES = ("any_", "every_", "random_", "ordered_")
 
 
 def _json(value: Any) -> str:
@@ -55,40 +44,6 @@ def require_identity(before: Mapping[str, str], after: Mapping[str, str]) -> Non
             key for key in before.keys() | after.keys() if before.get(key) != after.get(key)
         )
         raise ValueError(f"采集中源身份漂移: {changed}")
-
-
-def pdx_metrics(text: str) -> dict[str, Any]:
-    """Count existing generated AST sites; these are not invocation counts."""
-    parsed = parse_text(text)
-    if parsed.errors:
-        raise ValueError(f"生成脚本解析失败: {parsed.errors}")
-    counts: Counter[str] = Counter()
-    writes: Counter[str] = Counter()
-    scans: Counter[str] = Counter()
-    stack: list[Any] = [parsed.root]
-    while stack:
-        node = stack.pop()
-        if isinstance(node, Assignment):
-            counts["assignment_nodes"] += 1
-            if node.key in PERSISTENT_WRITES:
-                writes[node.key] += 1
-            if node.key.startswith(SCAN_PREFIXES):
-                scans[node.key] += 1
-            if node.value is not None:
-                stack.append(node.value)
-        elif isinstance(node, Block):
-            counts["block_nodes"] += 1
-            stack.extend(node.items)
-        elif isinstance(node, Scalar):
-            counts["scalar_nodes"] += 1
-    return {
-        **{name: counts[name] for name in ("assignment_nodes", "block_nodes", "scalar_nodes")},
-        "max_depth": parsed.max_depth,
-        "object_scan_sites": sum(scans.values()),
-        "object_scan_keys": dict(sorted(scans.items())),
-        "persistent_write_sites": sum(writes.values()),
-        "persistent_write_keys": dict(sorted(writes.items())),
-    }
 
 
 def reader_metrics(rows: Sequence[tuple[str, str, tuple[Any, ...]]]) -> dict[str, Any]:

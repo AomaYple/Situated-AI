@@ -263,6 +263,11 @@ PROFILE_ROLES = {
             "any_interest_group",
             "any_political_movement",
             "market_goods_consumption",
+            "is_mass_migration_target",
+            "market",
+            "OR",
+            "AND",
+            "any_scope_war",
         ),
         "native_demand": ("wanted_army_size_script_value", "wanted_marines_size_script_value"),
         "current_shock": ("has_insurrectionary_interest_groups", "is_at_war", "has_variable"),
@@ -701,6 +706,16 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
                 issues.append(f"{label} 核心知识声明必须是非空、唯一的实际读取器")
             else:
                 referenced.update(required_known)
+            unknown_anchors = rule.get("unknown_cost_required_known_facts", [])
+            if (
+                not isinstance(unknown_anchors, list)
+                or any(not isinstance(key, str) or key not in readers for key in unknown_anchors)
+                or len(set(unknown_anchors)) != len(unknown_anchors)
+                or (unknown_anchors and not rule.get("conservative_unknown_facts"))
+            ):
+                issues.append(f"{label} 未知成本专用实体锚必须追溯实际读取器")
+            else:
+                referenced.update(unknown_anchors)
             for condition in conditions:
                 fact = condition.get("fact")
                 if not isinstance(fact, str) or fact not in readers:
@@ -765,6 +780,11 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
                 + (
                     len(row["required_known_facts"])
                     if isinstance(row.get("required_known_facts"), list)
+                    else 0
+                )
+                + (
+                    len(row["unknown_cost_required_known_facts"])
+                    if isinstance(row.get("unknown_cost_required_known_facts"), list)
                     else 0
                 )
                 for row in candidates

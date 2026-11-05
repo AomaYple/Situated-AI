@@ -63,7 +63,7 @@ law_regulatory_bodies = {
 			# GROUP program_a76ea052384beaf9_labor_administration_negative
 			add = { value = 0
 				# social_reform_regulatory_bodies_new_administration [political]; 新建工作安全制度需要行政承载；两种已有安全法律之间不虚构另一套制度费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_a76ea052384beaf9_labor_employer_floor_positive
 			add = { value = 0
@@ -129,7 +129,7 @@ law_worker_protections = {
 			# GROUP program_9109c1aba96e54ad_labor_administration_negative
 			add = { value = 0
 				# social_reform_worker_protections_new_administration [political]; 新建工作安全制度需要行政承载；两种已有安全法律之间不虚构另一套制度费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } bureaucracy < 0 } } add = -8 }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = -8 } } } }
 			}
 			# GROUP program_9109c1aba96e54ad_labor_employer_floor_negative
 			add = { value = 0

@@ -252,7 +252,9 @@ def test_所有生成脚本可解析且没有旧世界或换牌干预(policy):
     assert "set_strategy" not in added
     assert "add_modifier" not in added
     assert "every_country" not in added
-    assert f"days = {policy.ttl_days}" in added
+    # The current joint fiscal consumer reads live facts and deploys no latch.
+    assert decisions.RISK_VAR not in added
+    assert decisions.ACTIVE_TRIGGER not in files["common/ai_strategies/00_default_strategy.txt"]
 
 
 def test_财政生命周期所有入口汇聚到唯一更新器(policy):
@@ -288,6 +290,23 @@ def test_写盘检查发现篡改和遗留产物(tmp_path):
     stale = tmp_path / "common/old.txt"
     stale.write_text("old", encoding="utf-8")
     assert len(decisions.check(tmp_path)) == 2
+
+
+@pytest.mark.parametrize("extra", ["events/extra.txt", "common/extra.txt"])
+def test_production_check_rejects_undeclared_scripts_with_declared_events(tmp_path, extra):
+    from pdx import event_opportunities
+
+    files = event_opportunities.patch(event_opportunities.frozen_inputs())
+    assert set(files) == {program.source for program in event_opportunities.compile_programs()}
+    assert files
+    assert all(name.startswith("events/") for name in files)
+    decisions.write(tmp_path, files)
+    assert decisions.check(tmp_path, files) == []
+
+    path = tmp_path / extra
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("undeclared = {}\n", encoding="utf-8", newline="\n")
+    assert decisions.check(tmp_path, files) == [f"{path.relative_to(tmp_path)} 是未声明产物"]
 
 
 @pytest.mark.parametrize(
@@ -548,6 +567,7 @@ def test_开关往返清理旧生成物且保留未知文件(tmp_path, policy):
     decisions.write(tmp_path, enabled)
     assert decisions.check(tmp_path, enabled) == []
     unknown = tmp_path / "common/on_actions/custom.txt"
+    unknown.parent.mkdir(parents=True, exist_ok=True)
     unknown.write_text("# 用户文件\n", encoding="utf-8", newline="\n")
     decisions.write(tmp_path, disabled)
     assert unknown.read_text(encoding="utf-8") == "# 用户文件\n"
@@ -623,7 +643,6 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
         assert manifest["contract"]["product_version"] == distribution.RELEASE_VERSION
         enabled_modules = set(manifest["contract"]["enabled_modules"])
         assert {
-            "fiscal",
             "reform",
             "market",
             "security",
@@ -633,6 +652,7 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
             "consumer_adapters",
             "country_state",
         } <= enabled_modules
+        assert "fiscal" not in enabled_modules
         assert manifest["contract"]["country_state"]["persistent_variables"] == []
         assert (
             manifest["contract"]["country_coordination"]["runtime_state"]
@@ -641,7 +661,7 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt").decode("utf-8-sig")
         assert "# SITAI BEGIN information:" in strategy
         lifecycle = "common/on_actions/sitai_fiscal_on_actions.txt"
-        assert lifecycle in archive.namelist()
+        assert lifecycle not in archive.namelist()
         assert len([name for name in archive.namelist() if name.startswith("localization/")]) == 11
         for name, digest in manifest["files"].items():
             payload = archive.read(name)
@@ -669,8 +689,8 @@ def test_正式包API和CLI输出逐字节一致(tmp_path):
     with zipfile.ZipFile(api_target) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         assert manifest["generation"]["variant"] == distribution.RELEASE_VARIANT
-        assert "fiscal" in manifest["contract"]["enabled_modules"]
-        assert "common/on_actions/sitai_fiscal_on_actions.txt" in archive.namelist()
+        assert "fiscal" not in manifest["contract"]["enabled_modules"]
+        assert "common/on_actions/sitai_fiscal_on_actions.txt" not in archive.namelist()
 
 
 @pytest.mark.integration

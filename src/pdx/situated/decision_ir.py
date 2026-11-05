@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from pdx.decision_rules import RuleSet
+    from pdx.event_opportunities import EventProgram
+    from pdx.treaty_acceptance_opportunities import AcceptanceProgram
 
     from .action_instances import ActionInstance
     from .bindings import Binding
@@ -43,6 +45,10 @@ class ContextBinding:
             "region_score": ("scalar", {"auxiliary"}),
             "ship_modification_type": ("ship_modification", {"candidate"}),
             "interest_group": ("interest_group", {"candidate"}),
+            "anti_public_healthcare_ig": ("interest_group", {"auxiliary"}),
+            "article": ("treaty_article_options", {"auxiliary"}),
+            "source_country": ("country", {"auxiliary"}),
+            "article_input_market_goods": ("market_goods", {"auxiliary"}),
             "law": ("law", {"auxiliary"}),
             "diplomatic_play": ("diplomatic_play", {"auxiliary"}),
             "military_formation": ("military_formation", {"auxiliary"}),
@@ -53,6 +59,7 @@ class ContextBinding:
         expected = shapes.get(self.name)
         formation_binding = (self.name, self.kind, self.role) in {
             ("root", "military_formation", "auxiliary"),
+            ("root", "state", "auxiliary"),
             ("owner", "country", "actor"),
         }
         if not formation_binding and (
@@ -142,6 +149,10 @@ class LegacyDecisionIR:
     auxiliary_facts: tuple[str, ...] = ()
     required_known_facts: tuple[str, ...] = ()
     contribution_group: str = ""
+    semantic_role: str = "unspecified"
+    conservative_unknown_facts: tuple[str, ...] = ()
+    unknown_cost_basis: str = ""
+    unknown_cost_required_known_facts: tuple[str, ...] = ()
 
     def to_action_ir(self) -> ActionIR:
         from .ir import ActionIR, PredicateIR  # noqa: PLC0415
@@ -163,6 +174,10 @@ class LegacyDecisionIR:
             auxiliary_facts=self.auxiliary_facts,
             required_known_facts=self.required_known_facts,
             contribution_group=self.contribution_group,
+            semantic_role=self.semantic_role,
+            conservative_unknown_facts=self.conservative_unknown_facts,
+            unknown_cost_basis=self.unknown_cost_basis,
+            unknown_cost_required_known_facts=self.unknown_cost_required_known_facts,
         )
 
 
@@ -207,6 +222,7 @@ class ConsumerDecisionIR:
     cause_group: str = ""
     commitment_cost_id: str = ""
     political_cost_id: str = ""
+    cause_origins: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,6 +253,102 @@ class WriterDecisionIR:
     reader_context_bindings: tuple[tuple[str, str, str, str], ...] = ()
     program: SupportProgram | None = None
     supply_program: SupplyProgram | None = None
+    event_program: EventProgram | None = None
+    acceptance_program: AcceptanceProgram | None = None
+
+    def validate_acceptance_program(self) -> AcceptanceProgram:
+        from pdx.treaty_acceptance_opportunities import AcceptanceProgram  # noqa: PLC0415
+
+        program = self.acceptance_program
+        if not isinstance(program, AcceptanceProgram):
+            raise ValueError("条约接受writer缺少完整程序")
+        program.validate()
+        if (
+            (
+                self.kind,
+                self.writer_id,
+                self.source,
+                self.definition,
+                self.consumer_id,
+                self.field,
+                self.actor,
+                self.target,
+                self.operation,
+                self.owner,
+                self.vanilla_tail,
+            )
+            != (
+                "acceptance_program",
+                program.writer_id,
+                program.source,
+                program.definition,
+                program.consumer_id,
+                program.field,
+                "root",
+                "none",
+                "add",
+                "treaty_acceptance_opportunities",
+                "preserve",
+            )
+            or self.evaluation_context != program.evaluation_context()
+            or self.reader_context_bindings != program.reader_bindings()
+            or self.supply_program is not None
+            or self.program is not None
+            or self.event_program is not None
+            or self.action is not None
+            or self.legacy is not None
+            or self.predicates
+            or self.chain_refs
+        ):
+            raise ValueError("条约接受writer与完整语义、身份或作用域不一致")
+        return program
+
+    def validate_event_program(self) -> EventProgram:
+        from pdx.event_opportunities import EventProgram  # noqa: PLC0415
+
+        program = self.event_program
+        if not isinstance(program, EventProgram):
+            raise ValueError("事件writer缺少完整事件程序")
+        program.validate()
+        if (
+            (
+                self.kind,
+                self.writer_id,
+                self.source,
+                self.definition,
+                self.consumer_id,
+                self.field,
+                self.actor,
+                self.target,
+                self.operation,
+                self.owner,
+                self.vanilla_tail,
+            )
+            != (
+                "event_program",
+                program.writer_id,
+                program.source,
+                program.option,
+                program.consumer_id,
+                program.field,
+                "root",
+                "none",
+                "add",
+                "event_opportunities",
+                "preserve",
+            )
+            or self.evaluation_context != program.evaluation_context()
+            or self.reader_context_bindings != program.reader_bindings()
+            or self.supply_program is not None
+            or self.acceptance_program is not None
+            or self.program is not None
+            or self.action is not None
+            or self.legacy is not None
+            or self.predicates
+            or self.chain_refs
+        ):
+            raise ValueError("事件writer与完整语义、身份或作用域不一致")
+        return program
 
     def validate_supply_program(self) -> SupplyProgram:
         from .supply_program import SupplyProgram  # noqa: PLC0415
@@ -271,6 +383,8 @@ class WriterDecisionIR:
                 "preserve",
             )
             or self.program is not None
+            or self.event_program is not None
+            or self.acceptance_program is not None
             or self.action is not None
             or self.legacy is not None
             or self.predicates
@@ -307,6 +421,32 @@ class ConsumerIRBundle:
         field_owners: dict[str, set[str]] = {}
         source_field_owners: dict[tuple[str, str], set[str]] = {}
         for item in self.writers:
+            if item.kind == "acceptance_program":
+                item.validate_acceptance_program()
+                for other in self.writers:
+                    if other is item or other.source != item.source:
+                        continue
+                    if (
+                        other.field == item.field
+                        or other.field.startswith(item.field + ".")
+                        or item.field.startswith(other.field + ".")
+                    ):
+                        raise ValueError("条约接受消费者父子字段重复写入")
+            elif item.acceptance_program is not None:
+                raise ValueError("非条约接受writer不能携带接受程序")
+            if item.kind == "event_program":
+                item.validate_event_program()
+                for other in self.writers:
+                    if other is item or other.source != item.source:
+                        continue
+                    if (
+                        other.field == item.field
+                        or other.field.startswith(item.field + ".")
+                        or item.field.startswith(other.field + ".")
+                    ):
+                        raise ValueError("事件消费者父子字段重复写入")
+            elif item.event_program is not None:
+                raise ValueError("非事件writer不能携带事件程序")
             if item.kind == "supply_program":
                 item.validate_supply_program()
                 for other in self.writers:
@@ -383,6 +523,12 @@ class ConsumerIRBundle:
                 item.kind == "supply_program" and item.supply_program is not None
                 for item in self.writers
             ),
+            "acceptance_program_writer_count": sum(
+                item.kind == "acceptance_program" for item in self.writers
+            ),
+            "event_program_writer_count": sum(
+                item.kind == "event_program" for item in self.writers
+            ),
             "writers": [
                 {
                     "writer_id": item.writer_id,
@@ -409,6 +555,16 @@ class ConsumerIRBundle:
                     "action_id": item.action.action_id if item.action is not None else None,
                     **({"program": item.program.as_dict()} if item.program is not None else {}),
                     **(
+                        {"acceptance_program": item.acceptance_program.as_dict()}
+                        if item.acceptance_program is not None
+                        else {}
+                    ),
+                    **(
+                        {"event_program": item.event_program.as_dict()}
+                        if item.event_program is not None
+                        else {}
+                    ),
+                    **(
                         {"supply_program": item.supply_program.as_dict()}
                         if item.supply_program is not None
                         else {}
@@ -432,6 +588,15 @@ class ConsumerIRBundle:
                             "intent": item.legacy.intent,
                             "auxiliary_facts": list(item.legacy.auxiliary_facts),
                             "required_known_facts": list(item.legacy.required_known_facts),
+                            "contribution_group": item.legacy.contribution_group,
+                            "semantic_role": item.legacy.semantic_role,
+                            "conservative_unknown_facts": list(
+                                item.legacy.conservative_unknown_facts
+                            ),
+                            "unknown_cost_basis": item.legacy.unknown_cost_basis,
+                            "unknown_cost_required_known_facts": list(
+                                item.legacy.unknown_cost_required_known_facts
+                            ),
                             "predicates": [
                                 [fact, operator, _json_value(value)]
                                 for fact, operator, value in item.legacy.predicates
@@ -536,6 +701,7 @@ def compile_decisions(
                 cause_group=action.cause_group,
                 commitment_cost_id=action.commitment_cost_id,
                 political_cost_id=action.political_cost_id,
+                cause_origins=action.cause_origins,
                 relations=tuple(
                     sorted(
                         (relation for relation in relations if relation.source == action.id),
@@ -625,6 +791,10 @@ def compile_consumer_ir(
                     auxiliary_facts=item.auxiliary_facts,
                     required_known_facts=item.required_known_facts,
                     contribution_group=item.contribution_group,
+                    semantic_role=item.semantic_role,
+                    conservative_unknown_facts=item.conservative_unknown_facts,
+                    unknown_cost_basis=item.unknown_cost_basis,
+                    unknown_cost_required_known_facts=item.unknown_cost_required_known_facts,
                     predicates=tuple(
                         (predicate.fact, predicate.operator, predicate.value)
                         for predicate in item.predicates

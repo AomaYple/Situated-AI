@@ -7,7 +7,7 @@ import hashlib
 import runpy
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -19,26 +19,42 @@ def _validate(data: dict[str, Any], *, complete: bool = False) -> dict[str, int]
     script = ROOT / "tools/ci/a3_scope.py"
     assert script.is_file(), "缺少 A3 台账校验器"
     validate = runpy.run_path(str(script))["validate_scope"]
-    return validate(data, root=ROOT, require_complete=complete)
+    return cast("dict[str, int]", validate(data, root=ROOT, require_complete=complete))
 
 
 def _ledger() -> dict[str, Any]:
     assert LEDGER.is_file(), "缺少 A3 冻结台账"
-    return tomllib.loads(LEDGER.read_text(encoding="utf-8"))
+    data = tomllib.loads(LEDGER.read_text(encoding="utf-8"))
+    # Negative validator fixtures stay pending as the real ledger progresses.
+    for row in data["obligations"]:
+        row.update(status="pending", evidence=[])
+        row.pop("rationale", None)
+    return data
+
+
+def test_current_scope_has_valid_live_evidence_identities() -> None:
+    data = tomllib.loads(LEDGER.read_text(encoding="utf-8"))
+    _validate(data)
 
 
 def test_frozen_scope_is_valid_but_not_product_complete() -> None:
     data = _ledger()
     result = _validate(data)
-    assert result == {"directions": 52, "relations": 12, "contracts": 9, "pending": 73}
+    assert len(data["obligations"]) >= 80
+    assert result == {
+        "directions": 52,
+        "relations": 12,
+        "contracts": 9,
+        "pending": len(data["obligations"]),
+    }
     with pytest.raises(ValueError, match="未完成"):
         _validate(data, complete=True)
 
 
-@pytest.mark.parametrize("index", [0, 51, 52, 63, 64, 72])
-def test_scope_rejects_missing_domain_relation_or_contract(index: int) -> None:
+@pytest.mark.parametrize("identity", ["B01.1.1", "B12.4.1", "R01.1", "R12.1", "C1.1", "C9.1"])
+def test_scope_rejects_missing_domain_relation_or_contract(identity: str) -> None:
     data = _ledger()
-    del data["obligations"][index]
+    data["obligations"] = [row for row in data["obligations"] if row["id"] != identity]
     with pytest.raises(ValueError, match="缺失"):
         _validate(data)
 
@@ -118,7 +134,7 @@ def test_scope_accepts_traceable_implementation_but_keeps_other_items_pending() 
     row = data["obligations"][0]
     row.update(status="implemented", rationale="此测试仅证明引用身份校验，不签发行为结论。")
     row["evidence"] = _implementation_refs()
-    assert _validate(data)["pending"] == 72
+    assert _validate(data)["pending"] == len(data["obligations"]) - 1
     with pytest.raises(ValueError, match="未完成"):
         _validate(data, complete=True)
 
@@ -149,7 +165,7 @@ def test_scope_rejects_metadata_as_rule_identity() -> None:
 def test_scope_keeps_unknown_and_in_progress_noncomplete(status: str) -> None:
     data = _ledger()
     data["obligations"][0]["status"] = status
-    assert _validate(data)["pending"] == 73
+    assert _validate(data)["pending"] == len(data["obligations"])
     with pytest.raises(ValueError, match="未完成"):
         _validate(data, complete=True)
 

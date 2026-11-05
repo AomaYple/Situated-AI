@@ -15,13 +15,33 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
-from . import company_observations, technology_opportunities
+from . import (
+    colonial_opportunities,
+    company_observations,
+    culture_opportunities,
+    event_opportunities,
+    famine_opportunities,
+    import_blockade_opportunities,
+    internal_security_opportunities,
+    subject_dependence_opportunities,
+    technology_opportunities,
+    war_pressure_opportunities,
+)
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
 
 QUERY_ENGINES = frozenset(
-    {"any_political_movement", "any_scope_state", "any_scope_building", "any_interest_group"}
+    {
+        "any_political_movement",
+        "any_scope_state",
+        "any_scope_building",
+        "any_interest_group",
+        "market",
+        "OR",
+        "AND",
+        "any_scope_war",
+    }
 )
 _ECONOMY = "common/laws/01_economic_system.txt"
 _TRADE = "common/laws/01_trade_policy.txt"
@@ -44,6 +64,8 @@ MARKET_CONSUMPTION_SOURCES = (_ATHEISM, _GFX, _GOODS)
 # Normalized UTF-8, matching the production adapter input contract. These are
 # source identities, not a claim that normalized strings retain raw BOM bytes.
 SOURCE_HASHES = {
+    "common/laws/02_free_speech.txt": "535b73670d2029a2b68a842542b8df5995d7b238418eeab73f48c81d07458c97",
+    "common/laws/00_internal_security.txt": "4b74ea0b9172813596b903507cda213133f08e43215331750be364db37b719c1",
     "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
     "common/laws/00_citizenship.txt": "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f",
     "common/laws/00_church_and_state.txt": "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174",
@@ -69,6 +91,14 @@ SOURCE_HASHES = {
     _GFX: "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
 }
 LAW_SOURCES = {
+    "law_outlawed_dissent": "common/laws/02_free_speech.txt",
+    "law_censorship": "common/laws/02_free_speech.txt",
+    "law_right_of_assembly": "common/laws/02_free_speech.txt",
+    "law_protected_speech": "common/laws/02_free_speech.txt",
+    **dict.fromkeys(
+        internal_security_opportunities.load()["candidates"],
+        internal_security_opportunities.LAW_SOURCE,
+    ),
     "law_no_police": "common/laws/01_policing.txt",
     "law_local_police": "common/laws/01_policing.txt",
     "law_dedicated_police": "common/laws/01_policing.txt",
@@ -178,6 +208,15 @@ CountryQuery = (
     | OwnBuildingActiveMethod
     | company_observations.CompanyQuery
     | technology_opportunities.TechnologyQuery
+    | internal_security_opportunities.SecurityQuery
+    | colonial_opportunities.ColonialQuery
+    | import_blockade_opportunities.ImportBlockadeQuery
+    | culture_opportunities.ReligiousExposureQuery
+    | culture_opportunities.CulturalExposureQuery
+    | subject_dependence_opportunities.ActualOverlordDependenceQuery
+    | event_opportunities.PlagueStateQuery
+    | famine_opportunities.FamineStateQuery
+    | war_pressure_opportunities.OwnMultiwarLowSupportQuery
 )
 
 
@@ -219,6 +258,22 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         return company_observations.from_reader(engine, parameters)
     if "technology_query" in parameters:
         return technology_opportunities.query_from_reader(engine, parameters)
+    if "security_query" in parameters:
+        return internal_security_opportunities.query_from_reader(engine, parameters)
+    if "colonial_query" in parameters:
+        return colonial_opportunities.query_from_reader(engine, parameters)
+    if import_blockade_opportunities.QUERY_PARAMETER in parameters:
+        return import_blockade_opportunities.query_from_reader(engine, parameters)
+    if culture_opportunities.QUERY_PARAMETER in parameters:
+        return culture_opportunities.query_from_reader(engine, parameters)
+    if subject_dependence_opportunities.QUERY_PARAMETER in parameters:
+        return subject_dependence_opportunities.query_from_reader(engine, parameters)
+    if event_opportunities.QUERY_PARAMETER in parameters:
+        return event_opportunities.query_from_reader(engine, parameters)
+    if famine_opportunities.QUERY_PARAMETER in parameters:
+        return famine_opportunities.query_from_reader(engine, parameters)
+    if war_pressure_opportunities.QUERY_PARAMETER in parameters:
+        return war_pressure_opportunities.query_from_reader(engine, parameters)
     if engine == "any_political_movement" and set(parameters) == {"law", "minimum_support"}:
         query: CountryQuery = LawMovementSupport(
             parameters["law"], _decimal(parameters["minimum_support"])
@@ -252,6 +307,25 @@ def render(query: CountryQuery) -> str:
         return company_observations.render(query)
     if isinstance(query, technology_opportunities.TechnologyQuery):
         return technology_opportunities.render_query(query)
+    if isinstance(query, internal_security_opportunities.SecurityQuery):
+        return internal_security_opportunities.render_query(query)
+    if isinstance(query, colonial_opportunities.ColonialQuery):
+        return colonial_opportunities.render_query(query)
+    if isinstance(query, import_blockade_opportunities.ImportBlockadeQuery):
+        return import_blockade_opportunities.render_query(query)
+    if isinstance(
+        query,
+        (culture_opportunities.ReligiousExposureQuery, culture_opportunities.CulturalExposureQuery),
+    ):
+        return culture_opportunities.render_query(query)
+    if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
+        return subject_dependence_opportunities.render_query(query)
+    if isinstance(query, event_opportunities.PlagueStateQuery):
+        return event_opportunities.render_query(query)
+    if isinstance(query, famine_opportunities.FamineStateQuery):
+        return famine_opportunities.render_query(query)
+    if isinstance(query, war_pressure_opportunities.OwnMultiwarLowSupportQuery):
+        return war_pressure_opportunities.render_query(query)
     if type(query) is LawMovementSupport:
         if not isinstance(query.law_id, str) or query.law_id not in LAW_SOURCES:
             raise ValueError("运动查询的法律ID没有已登记的真实定义")
@@ -293,6 +367,25 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
         return company_observations.required_sources(query)
     if isinstance(query, technology_opportunities.TechnologyQuery):
         return technology_opportunities.required_query_sources(query)
+    if isinstance(query, internal_security_opportunities.SecurityQuery):
+        return internal_security_opportunities.required_query_sources(query)
+    if isinstance(query, colonial_opportunities.ColonialQuery):
+        return colonial_opportunities.required_query_sources(query)
+    if isinstance(query, import_blockade_opportunities.ImportBlockadeQuery):
+        return import_blockade_opportunities.required_query_sources(query)
+    if isinstance(
+        query,
+        (culture_opportunities.ReligiousExposureQuery, culture_opportunities.CulturalExposureQuery),
+    ):
+        return culture_opportunities.required_query_sources(query)
+    if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
+        return subject_dependence_opportunities.required_query_sources(query)
+    if isinstance(query, event_opportunities.PlagueStateQuery):
+        return event_opportunities.required_query_sources(query)
+    if isinstance(query, famine_opportunities.FamineStateQuery):
+        return famine_opportunities.required_query_sources(query)
+    if isinstance(query, war_pressure_opportunities.OwnMultiwarLowSupportQuery):
+        return war_pressure_opportunities.required_query_sources(query)
     if isinstance(query, LawMovementSupport):
         return tuple(sorted({_ECONOMY, _AI, LAW_SOURCES[query.law_id]}))
     if isinstance(query, LawInterestGroupSupport):
@@ -436,12 +529,39 @@ def compile_query(
     CompiledQuery
     | company_observations.CompiledQuery
     | technology_opportunities.CompiledTechnologyQuery
+    | internal_security_opportunities.CompiledSecurityQuery
+    | colonial_opportunities.CompiledColonialQuery
+    | import_blockade_opportunities.CompiledImportBlockadeQuery
+    | culture_opportunities.CompiledReligiousExposureQuery
+    | subject_dependence_opportunities.CompiledActualOverlordDependenceQuery
+    | event_opportunities.CompiledPlagueStateQuery
+    | famine_opportunities.CompiledFamineStateQuery
+    | war_pressure_opportunities.CompiledOwnMultiwarLowSupportQuery
 ):
     """Verify supplied pinned sources and complete consumers, without I/O."""
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.compile_query(query, texts)
     if isinstance(query, technology_opportunities.TechnologyQuery):
         return technology_opportunities.compile_query(query, texts)
+    if isinstance(query, internal_security_opportunities.SecurityQuery):
+        return internal_security_opportunities.compile_query(query, texts)
+    if isinstance(query, colonial_opportunities.ColonialQuery):
+        return colonial_opportunities.compile_query(query, texts)
+    if isinstance(query, import_blockade_opportunities.ImportBlockadeQuery):
+        return import_blockade_opportunities.compile_query(query, texts)
+    if isinstance(
+        query,
+        (culture_opportunities.ReligiousExposureQuery, culture_opportunities.CulturalExposureQuery),
+    ):
+        return culture_opportunities.compile_query(query, texts)
+    if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
+        return subject_dependence_opportunities.compile_query(query, texts)
+    if isinstance(query, event_opportunities.PlagueStateQuery):
+        return event_opportunities.compile_query(query, texts)
+    if isinstance(query, famine_opportunities.FamineStateQuery):
+        return famine_opportunities.compile_query(query, texts)
+    if isinstance(query, war_pressure_opportunities.OwnMultiwarLowSupportQuery):
+        return war_pressure_opportunities.compile_query(query, texts)
     expression = render(query)
     roots, hashes = _verified_sources(required_sources(query), texts)
     references = []

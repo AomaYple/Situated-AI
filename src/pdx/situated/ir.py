@@ -43,6 +43,10 @@ class ActionIR:
     auxiliary_facts: tuple[str, ...] = ()
     required_known_facts: tuple[str, ...] = ()
     contribution_group: str = ""
+    semantic_role: str = "unspecified"
+    conservative_unknown_facts: tuple[str, ...] = ()
+    unknown_cost_basis: str = ""
+    unknown_cost_required_known_facts: tuple[str, ...] = ()
 
     def to_rule(self) -> Rule:
         return Rule(
@@ -63,6 +67,10 @@ class ActionIR:
             auxiliary_facts=self.auxiliary_facts,
             required_known_facts=self.required_known_facts,
             contribution_group=self.contribution_group,
+            semantic_role=self.semantic_role,
+            conservative_unknown_facts=self.conservative_unknown_facts,
+            unknown_cost_basis=self.unknown_cost_basis,
+            unknown_cost_required_known_facts=self.unknown_cost_required_known_facts,
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -81,6 +89,10 @@ def from_rule(rule: Rule, *, source: str) -> ActionIR:
         auxiliary_facts=rule.auxiliary_facts,
         required_known_facts=rule.required_known_facts,
         contribution_group=rule.contribution_group,
+        semantic_role=rule.semantic_role,
+        conservative_unknown_facts=rule.conservative_unknown_facts,
+        unknown_cost_basis=rule.unknown_cost_basis,
+        unknown_cost_required_known_facts=rule.unknown_cost_required_known_facts,
         action_id=rule.id,
         source=source,
         domain=rule.domain,

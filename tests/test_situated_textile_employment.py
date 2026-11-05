@@ -142,8 +142,13 @@ def test_textile_and_railway_keep_static_budget_with_one_recovery_variant(produc
 
     policy = production[0]
     candidates = policy.groups()[("building_textile_mill", "ai_value")]
-    assert len(candidates) == 32
-    assert sum(len(r.conditions) + len(r.required_known_facts) for r in candidates) == 148
+    assert len(candidates) == 33
+    assert sum(len(r.conditions) + len(r.required_known_facts) for r in candidates) == 151
+    added = [r for r in candidates if r.id == "migration_target_textile_employment_absorption"]
+    assert len(added) == 1
+    previous = [r for r in candidates if r.id != added[0].id]
+    assert len(previous) == 32
+    assert sum(len(r.conditions) + len(r.required_known_facts) for r in previous) == 148
     railway = dict(decision_adapters.load().policies)[
         "common/buildings/11_private_infrastructure.txt"
     ]

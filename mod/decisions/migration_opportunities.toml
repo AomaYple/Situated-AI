@@ -1,0 +1,8 @@
+# 真实大迁移目标州在真实衣物需求和本地失业下的就业吸纳升档。
+schema = 1
+
+[sources]
+"events/paralegal_discrimination_events.txt" = "6035008b9af5c24f5b41dc8cfac5b3ff878ea56f2071228caa8c2c9f73672e39"
+
+[tuning]
+absorption_target = 1.10

@@ -34,6 +34,12 @@ LABOUR_EFFECTS = {
     "law_factory_councils": (0.0, 0.25),
 }
 AUTHORITY_EFFECTS = {
+    "common/laws/02_free_speech.txt": {
+        "law_outlawed_dissent": 200,
+        "law_censorship": 100,
+        "law_right_of_assembly": 50,
+        "law_protected_speech": 0,
+    },
     "common/laws/00_citizenship.txt": {
         "law_subjecthood": 100,  # Current origin only: no native score field.
         "law_ethnostate": 200,
@@ -92,8 +98,8 @@ def load() -> dict[str, Any]:
         and 0 < tuning["administration_change"] <= 10
     ):
         raise ValueError("具体法律机会参数越界")
-    if len(data["sources"]) != 9 or len(data["candidates"]) != 52:
-        raise ValueError("具体法律机会必须保留原37候选并扩展公民权5、宗教6及警务4候选")
+    if len(data["sources"]) != 10 or len(data["candidates"]) != 56:
+        raise ValueError("具体法律机会必须保留原52候选并覆盖完整4项言论法律")
     if {law for law, name in data["candidates"].items() if name == POLICING_SOURCE} != set(
         POLICING_EFFECTS
     ):
@@ -257,7 +263,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                         _condition(current(origin), "=", True),
                         _condition("authority", "<", -delta if delta < 0 else 0),
                     ],
-                    "比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益",
+                    "比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益",
                 )
 
     for law, effects in POLICING_EFFECTS.items():
