@@ -1,9 +1,11 @@
-"""A3-0 冻结台账不得漏方向、引用死文件或把调查状态冒充完成。"""
+"""归档 A3 台账的范围和证据身份仍可复核，不把历史状态冒充当前计划。"""
 
 from __future__ import annotations
 
 import copy
+import gzip
 import hashlib
+import json
 import runpy
 import tomllib
 from pathlib import Path
@@ -12,7 +14,7 @@ from typing import Any, cast
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-LEDGER = ROOT / "docs/design/A3实施台账.toml"
+LEDGER = ROOT / "docs/design/archive/A3/A3实施台账.toml"
 
 
 def _validate(data: dict[str, Any], *, complete: bool = False) -> dict[str, int]:
@@ -32,9 +34,22 @@ def _ledger() -> dict[str, Any]:
     return data
 
 
-def test_current_scope_has_valid_live_evidence_identities() -> None:
-    data = tomllib.loads(LEDGER.read_text(encoding="utf-8"))
-    _validate(data)
+def test_archived_scope_preserves_original_state_and_evidence_bytes() -> None:
+    """历史台账验收原始身份；当前证据漂移仍由严格校验器拒绝。"""
+    archive = ROOT / "docs/design/archive"
+    manifest = json.loads((archive / "A3-manifest.json").read_text(encoding="utf-8"))
+    row = next(
+        item for item in manifest["originals"] if item["path"] == "docs/design/A3实施台账.toml"
+    )
+    raw = gzip.decompress((archive / row["object"]).read_bytes())
+    assert LEDGER.read_bytes() == raw
+    assert len(raw) == row["bytes"]
+    assert hashlib.sha256(raw).hexdigest() == row["sha256"]
+    data = tomllib.loads(raw.decode("utf-8"))
+    assert data["plan"] == "A3"
+    assert len(data["obligations"]) == 96
+    assert sum(item["status"] == "pending" for item in data["obligations"]) == 79
+    assert sum(item["status"] == "implemented" for item in data["obligations"]) == 17
 
 
 def test_frozen_scope_is_valid_but_not_product_complete() -> None:

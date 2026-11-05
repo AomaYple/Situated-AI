@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "plan": "A3",
+  "status": "archived_reference_only",
+  "reason": "Victoria 3 1.15.0 update requires a new compatibility baseline; A3 remains historical and its uncommitted candidate is a checkpoint, not a 1.15.0 release.",
+  "originals": [
+    {
+      "path": "docs/design/架构主计划.md",
+      "sha256": "96deedf1063fc4f104e21bad0fd6829e45af85639094d850503c2ad172857b4a",
+      "bytes": 5554,
+      "object": "objects/a53b06c/96deedf1063fc4f104e21bad0fd6829e45af85639094d850503c2ad172857b4a.gz",
+      "readable": "A3/架构主计划.md",
+      "provenance": "committed_at_base",
+      "readable_kind": "navigation_derivative"
+    },
+    {
+      "path": "docs/design/架构子计划.md",
+      "sha256": "ffdde79039a73df8d4483343cbeaf2303c4a82527264f14680805a41c0e8fb15",
+      "bytes": 19044,
+      "object": "objects/a53b06c/ffdde79039a73df8d4483343cbeaf2303c4a82527264f14680805a41c0e8fb15.gz",
+      "readable": "A3/架构子计划.md",
+      "provenance": "committed_at_base",
+      "readable_kind": "navigation_derivative"
+    },
+    {
+      "path": "docs/design/架构深化计划.md",
+      "sha256": "db8528c861aec3d7cc8ce4382db02163a5fd025fee29dcd982574559ae4ed9d5",
+      "bytes": 27083,
+      "object": "objects/a53b06c/db8528c861aec3d7cc8ce4382db02163a5fd025fee29dcd982574559ae4ed9d5.gz",
+      "readable": "A3/架构深化计划.md",
+      "provenance": "committed_at_base",
+      "readable_kind": "navigation_derivative"
+    },
+    {
+      "path": "docs/design/当前工作清单.md",
+      "sha256": "afc994ce9727d36179356d08d36c176e30471584e0c5e782e5ada136d0aef86e",
+      "bytes": 6968,
+      "object": "objects/a53b06c/afc994ce9727d36179356d08d36c176e30471584e0c5e782e5ada136d0aef86e.gz",
+      "readable": "A3/当前工作清单.md",
+      "provenance": "uncommitted_checkpoint_at_capture",
+      "readable_kind": "navigation_derivative"
+    },
+    {
+      "path": "docs/design/A3实施台账.toml",
+      "sha256": "b8919c0cfc72ab2e5cdff00c0eaa9812ba381c57872e537d2790bc1334ccab2d",
+      "bytes": 134295,
+      "object": "objects/a53b06c/b8919c0cfc72ab2e5cdff00c0eaa9812ba381c57872e537d2790bc1334ccab2d.gz",
+      "readable": "A3/A3实施台账.toml",
+      "provenance": "committed_at_base",
+      "readable_kind": "exact_original"
+    },
+    {
+      "path": "docs/design/exec/A3分层联动-结果.md",
+      "sha256": "ee22b82c143e6b278c3d9cf856a0d393aa6fea8bc6692820ac11210c47f4b889",
+      "bytes": 27538,
+      "object": "objects/a53b06c/ee22b82c143e6b278c3d9cf856a0d393aa6fea8bc6692820ac11210c47f4b889.gz",
+      "readable": "A3/A3分层联动-结果.md",
+      "provenance": "uncommitted_checkpoint_at_capture",
+      "readable_kind": "navigation_derivative"
+    }
+  ],
+  "base_commit": "a53b06c637d575e9b201a101304169a03e9e087e",
+  "capture": "2026-11-05 working-tree checkpoint; per-file provenance and original hashes are authoritative"
+}

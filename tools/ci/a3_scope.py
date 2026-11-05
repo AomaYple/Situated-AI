@@ -1,4 +1,8 @@
-"""Validate A3 scope and evidence wiring; this does not certify game behavior."""
+"""Validate archived A3 references against the current tree without re-signing history.
+
+Archived bytes remain authoritative. Changed source hashes must still fail here;
+this tool neither certifies A4 completion nor game behavior.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +16,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-LEDGER = Path("docs/design/A3实施台账.toml")
+LEDGER = Path("docs/design/archive/A3/A3实施台账.toml")
 DIRECTIONS = {
     f"B{domain:02}.{direction}"
     for domain, count in enumerate((5, 5, 4, 4, 5, 5, 4, 4, 4, 4, 4, 4), start=1)

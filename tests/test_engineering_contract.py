@@ -60,15 +60,17 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
     for current in (plan_entry, subplan_entry, checklist):
-        assert "A3" in current
-        assert "已授权" in current
+        assert "A4" in current
+        assert "已制定" in current
         assert "(架构深化计划.md)" in current
     assert (root / "docs/design/架构深化计划.md").is_file()
-    assert "(archive/X1/架构主计划.md)" in plan_entry
-    assert "(archive/X1/架构子计划.md)" in subplan_entry
+    assert "archive/A3-manifest.json" in plan_entry
+    assert "archive/A3-manifest.json" in subplan_entry
     assert "已完成并归档" in plan
     assert "已完成并归档" in subplans
-    assert "已授权实施" in plan
+    assert re.findall(r"^\| (A4-\d+) ", plan_entry, re.MULTILINE) == [
+        f"A4-{index}" for index in range(9)
+    ]
     assert "[架构子计划](架构子计划.md)" in plan
     assert "[架构主计划](架构主计划.md)" in subplans
     assert re.findall(r"^\| (X\d+) ", plan, re.MULTILINE) == [f"X{i}" for i in range(7)]
@@ -82,17 +84,35 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     archive = root / "docs/design/archive"
     assert (archive / "manifest.json").is_file()
     assert "历史" in (archive / "README.md").read_text(encoding="utf-8")
-    manifest = json.loads((archive / "X1-manifest.json").read_text(encoding="utf-8"))
-    assert manifest["status"] == "archived_reference_only"
-    assert {row["path"] for row in manifest["originals"]} == {
-        "docs/design/架构主计划.md",
-        "docs/design/架构子计划.md",
-    }
-    for row in manifest["originals"]:
-        raw = gzip.decompress((archive / row["object"]).read_bytes())
-        assert len(raw) == row["bytes"]
-        assert hashlib.sha256(raw).hexdigest() == row["sha256"]
-        assert (archive / row["readable"]).is_file()
+    for plan_id in ("X1", "A3"):
+        manifest = json.loads((archive / f"{plan_id}-manifest.json").read_text(encoding="utf-8"))
+        assert manifest["status"] == "archived_reference_only"
+        expected = {"docs/design/架构主计划.md", "docs/design/架构子计划.md"}
+        if plan_id == "A3":
+            expected |= {
+                "docs/design/架构深化计划.md",
+                "docs/design/当前工作清单.md",
+                "docs/design/A3实施台账.toml",
+                "docs/design/exec/A3分层联动-结果.md",
+            }
+        assert {row["path"] for row in manifest["originals"]} == expected
+        assert len(manifest["originals"]) == len(expected)
+        for row in manifest["originals"]:
+            raw = gzip.decompress((archive / row["object"]).read_bytes())
+            assert len(raw) == row["bytes"]
+            assert hashlib.sha256(raw).hexdigest() == row["sha256"]
+            readable = archive / row["readable"]
+            assert readable.is_file()
+            if row.get("readable_kind") == "exact_original":
+                assert readable.read_bytes() == raw
+            if plan_id == "A3":
+                assert row["provenance"] in {
+                    "committed_at_base",
+                    "uncommitted_checkpoint_at_capture",
+                }
+        if plan_id == "A3":
+            assert re.fullmatch(r"[0-9a-f]{40}", manifest["base_commit"])
+            assert not (root / "docs/design/A3实施台账.toml").exists()
     assert "# Situated AI 处境行动决策内核实施计划" in previous
     assert "旧计划已暂停，未完成" in previous
     version = re.search(r"计划版本：(\d+)\.(\d+)", previous)
@@ -108,13 +128,15 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     assert "由用户验收" in plan
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
-    assert "架构主计划 X1" in checklist
+    assert "A4" in checklist
     assert "长期行为" in checklist
     assert distribution.RELEASE_VERSION in checklist
     assert "发布" in checklist
     assert "部署" in checklist
-    assert "Release/ZIP/SHA" in checklist
-    assert "严格工程门" in checklist
+    assert "Release" in checklist
+    assert "ZIP/SHA" in checklist
+    assert "A2" in checklist
+    assert "不签发A4完成" in checklist
     assert "11 种语言" in previous
 
 

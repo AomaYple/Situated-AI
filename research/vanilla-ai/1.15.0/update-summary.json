@@ -1,0 +1,1847 @@
+{
+  "evidence": "snapshot_and_static_check_not_engine_or_behavior_acceptance",
+  "from": {
+    "caligula_branch": "release/1.14.5",
+    "caligula_rev": "9f8281a37e85639359b3b0c2c5df0196e975ca4b",
+    "clausewitz_branch": "caligula/release/1.14.x",
+    "clausewitz_rev": "fd5e1dbd038c3c4a3f48a36abf60ebb42dd0ceef"
+  },
+  "to": {
+    "caligula_branch": "release/1.15.0",
+    "caligula_rev": "6338547985dbc271523e149f362a6fd93dc62975",
+    "clausewitz_branch": "caligula/release/1.15.0",
+    "clausewitz_rev": "a65fc88f3e604839357cb5b2aaf3b123e9d7434e"
+  },
+  "same_sections": true,
+  "input_count": 9002,
+  "snapshot_sha256": "dec130145baa532b4752f1b168059cbcdcf144461af2d01f3f453e0491a00293",
+  "summary": {
+    "变更项数": 6826,
+    "新增条目": 25764,
+    "删除条目": 4641
+  },
+  "by_section": {
+    "ai_surface": 37,
+    "clausewitz/localization_digest": 11,
+    "common_entries": 67,
+    "defines": 22,
+    "dlc": 1,
+    "dlc_descriptors": 1,
+    "dlc_entries": 4,
+    "dlc_fields": 149,
+    "dlc_metadata_entries": 1,
+    "dlc_metadata_fields": 12,
+    "doc_tables": 120,
+    "events_entries": 13,
+    "events_fields": 1180,
+    "fields": 4342,
+    "gfx_entries": 5,
+    "gfx_fields": 164,
+    "gui_entries": 1,
+    "gui_fields": 3,
+    "icon_paths": 1,
+    "input_profile": 2,
+    "jomini/common_fields": 2,
+    "jomini/localization_digest": 11,
+    "localization_digest": 11,
+    "map_data_entries": 1,
+    "map_data_fields": 566,
+    "mod_paths": 41,
+    "modifier_fields": 1,
+    "music_fields": 20,
+    "script_value_accessors": 1,
+    "sound_entries": 1,
+    "sound_fields": 22,
+    "vanilla_keys": 7,
+    "vanilla_variables": 2,
+    "vocabulary": 4
+  },
+  "adapter_summary": {
+    "changed": 194,
+    "unchanged": 100
+  },
+  "adapter_read_check": {
+    "status": "failed_as_expected_on_version_drift",
+    "detail": "消费者适配原件漂移：common/achievements/base_achievements.txt"
+  },
+  "limitations": [
+    "Structural snapshot is not a complete value or executable diff",
+    "Asset payloads are not hashed; selected script/localization/config inputs and EXE are guarded",
+    "No production lock/source/catalog/Mod file is regenerated or relaxed",
+    "doc_tables differences include generated documentation/tool state, not only game changes",
+    "AI-surface line numbers and term inventories are not behavior evidence",
+    "Before/after identities protect observed changes; this is not an atomic filesystem snapshot"
+  ],
+  "snapshot": "research/vanilla-ai/1.15.0/structural.compact.json",
+  "production_baseline": "1.14.5; unchanged; research snapshot is not installed as the default offline oracle",
+  "game_adapter_source_count": 293,
+  "game_adapter_changed": 194,
+  "game_adapter_unchanged": 99,
+  "adapter_sources": [
+    {
+      "source": "common/achievements/base_achievements.txt",
+      "expected_normalized_sha256": "2d3e7fa2cc1239682b12377605e03aea4b530d2eeffcfb9d7c6ec2f73c8fef3d",
+      "actual_normalized_sha256": "d073f27521c4d459410b61dea9f82b785603748ebd1a133e067ac029ec450414",
+      "status": "changed"
+    },
+    {
+      "source": "common/achievements/ip2_pivot_of_empire_achievements.txt",
+      "expected_normalized_sha256": "42a9c8cec20b6add6332b19a1354640d66fb7cfc45e464b95913315e824a4a04",
+      "actual_normalized_sha256": "a69d95c55fc6dbe0d558273325569266a82bfa628e1a38bb05cc18514d7c7460",
+      "status": "changed"
+    },
+    {
+      "source": "common/ai_regional_objectives/00_ai_regional_objectives.txt",
+      "expected_normalized_sha256": "4cf75c09ebf4f275b77a015bd0c6e829e0c08d589a859d90c9cc18a44832755a",
+      "actual_normalized_sha256": "ecf891e41a37209e388c576b2696410d70ceec1647db3a43ff2febe256776306",
+      "status": "changed"
+    },
+    {
+      "source": "common/ai_regional_objectives/ai_regional_objectives.md",
+      "expected_normalized_sha256": "5b48e95ee6293ead6f3bc05eb6cf98a702e27375e1de9c327c5d5f25f5c3c60c",
+      "actual_normalized_sha256": "05d947753b9e5f0a063b5af1178e60aa2e6a2cbea4dc6ab6ab9a51fbe6cfaf92",
+      "status": "changed"
+    },
+    {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "expected_normalized_sha256": "1a1f9115b6b3aabf09e52d726f96642b9e5ecf13e4509cdb7f3ed9c8d9b0d1bb",
+      "actual_normalized_sha256": "1a1f9115b6b3aabf09e52d726f96642b9e5ecf13e4509cdb7f3ed9c8d9b0d1bb",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "expected_normalized_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
+      "actual_normalized_sha256": "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431",
+      "status": "changed"
+    },
+    {
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "expected_normalized_sha256": "38a7dc32f3c0fbc372c92080860bcf223c16436067dfe56fc51845d6c4e33cf2",
+      "actual_normalized_sha256": "376ebad73fb16d6029b95ed4faaa9835f8dfda359eb7eff526a418ad7e6f0b88",
+      "status": "changed"
+    },
+    {
+      "source": "common/ai_strategies/02_diplomatic_strategies.txt",
+      "expected_normalized_sha256": "2b0ce7b4430d970eba2e878c8cff6fd38f6ee49274431721025819c0d646ccb4",
+      "actual_normalized_sha256": "989d701d573d934d8206ee639f4dc037ba3833f8c119feaf3511c3d067c72e66",
+      "status": "changed"
+    },
+    {
+      "source": "common/ai_strategies/02_subject_diplomatic_strategies.txt",
+      "expected_normalized_sha256": "0afec614df77afc07c26d39aa6e560f7d0c1cf51058f0ae2ca5ef7e92f839129",
+      "actual_normalized_sha256": "bb958826ac9ac8c75064ed58771f82e55b0266fbd7b215a49a439ba718f67d18",
+      "status": "changed"
+    },
+    {
+      "source": "common/alert_types/00_alert_types.txt",
+      "expected_normalized_sha256": "399eaa0ed4bb11e29bac7d0de29e2fa1e191cbdbf3b1290fba5abac9b622f912",
+      "actual_normalized_sha256": "06099e868214b521f615cac1b5cf1f0d410aff5c8809484e44e56f66213545da",
+      "status": "changed"
+    },
+    {
+      "source": "common/building_groups/00_building_groups.txt",
+      "expected_normalized_sha256": "5f4ba8976a33b0fbc0f391d44029e455ab83bc64d594f26fbb7c70f3a56420c9",
+      "actual_normalized_sha256": "a144b561da5b7a4091a605d63090318a2ec3587f077284053d1a086ea7f5beb7",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "expected_normalized_sha256": "6f80935a4fb6ccaf56ff900848a090f9ba4fa442b4cb93aec9ec1b3692616c1d",
+      "actual_normalized_sha256": "b7b8a4ba8ccf832869fb434cf287e0dc6e6463ab2d90a4781a6ca309888380a2",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "expected_normalized_sha256": "78cc7634d66fd5c6c68b5e9863c6208cd04a1ba3a8c274c4439374a2587cd0de",
+      "actual_normalized_sha256": "271ccbd2e6d02e941a92553bddf70d08ab8b72154fe6b5e7cbbc3d6197bb554d",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "expected_normalized_sha256": "6b3e9846022b6e4f998be0b131fc7c465a2a592d70c7c6ff6786e158aec68992",
+      "actual_normalized_sha256": "122b78e126dec4044da5e78b86d5e8edd06d6581483efba9e7d0c9404091b655",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "expected_normalized_sha256": "785248f30a4c7fa6857ee1ea5f1cfae897a6ed27f6219d8c0a18ef6df46aacd8",
+      "actual_normalized_sha256": "785248f30a4c7fa6857ee1ea5f1cfae897a6ed27f6219d8c0a18ef6df46aacd8",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/buildings/05_military.txt",
+      "expected_normalized_sha256": "892ac14f85ec7e2925f54f468ed70c8584f2d6c83c383e6eb618d22e68a52d95",
+      "actual_normalized_sha256": "82277b680d73dc11ef9bcab8af73c25d55acd3a789cc452f3df706cbc45441bf",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/06_urban_center.txt",
+      "expected_normalized_sha256": "c41ed5adb63e8f626e6394ce4f2f619bc8f229cafa3d8994271e2a66d1c2b0c5",
+      "actual_normalized_sha256": "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/07_government.txt",
+      "expected_normalized_sha256": "01867816e5cf623ebf50927c94b0c2b92b189c8ed31d78fd55fa79ab67976872",
+      "actual_normalized_sha256": "8c2213c705a739c06eb34287e3632e2e9d42a06564237c0556d7468624e6b211",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/08_monuments.txt",
+      "expected_normalized_sha256": "8e323879d561cb37ff75c0af0484eb6a08a640fbf86744610bc471b4f409743f",
+      "actual_normalized_sha256": "060771b9062d38d65b2cbd42f9b81cd2bc6e23899557e6a59c9926be466e4c0c",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "expected_normalized_sha256": "cdb01907f4e00fe2ce089ea2270dcd5954235df4671683fc74812e4debdfc8e7",
+      "actual_normalized_sha256": "cdb01907f4e00fe2ce089ea2270dcd5954235df4671683fc74812e4debdfc8e7",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/buildings/10_canals.txt",
+      "expected_normalized_sha256": "a098940682e58a49c0ed90c6542eb107c476e81b6a99cc191bb8c5c19941d680",
+      "actual_normalized_sha256": "a098940682e58a49c0ed90c6542eb107c476e81b6a99cc191bb8c5c19941d680",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/buildings/11_private_infrastructure.txt",
+      "expected_normalized_sha256": "3438f826295bb37ae52823121209734042e759c64c453754bde6876d44f9f35b",
+      "actual_normalized_sha256": "b56e1c971a13604681bd11b374170eed0b4887f534b3f10f98fa875e7b67703b",
+      "status": "changed"
+    },
+    {
+      "source": "common/buildings/12_subsistence.txt",
+      "expected_normalized_sha256": "61e40b3e0e27234b89e24bf4ac3951625a8f69c766ab7775d00e17bb5bc58afc",
+      "actual_normalized_sha256": "61e40b3e0e27234b89e24bf4ac3951625a8f69c766ab7775d00e17bb5bc58afc",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/buildings/13_construction.txt",
+      "expected_normalized_sha256": "20aa0f8457e5c26a3153b9eb9f04692e631bce11d259c5b25710d7e1305510e3",
+      "actual_normalized_sha256": "20aa0f8457e5c26a3153b9eb9f04692e631bce11d259c5b25710d7e1305510e3",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/buildings/14_companies.txt",
+      "expected_normalized_sha256": "66534f88dc9c51f5c45b6b680ed1a59e3c7e680357b96a78b90f8638982d58ff",
+      "actual_normalized_sha256": "66534f88dc9c51f5c45b6b680ed1a59e3c7e680357b96a78b90f8638982d58ff",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/buildings/buildings.md",
+      "expected_normalized_sha256": "505a51262ae1b118a6d30f305b8ab4169e78666eadffd996a7d2524d614b9097",
+      "actual_normalized_sha256": "505a51262ae1b118a6d30f305b8ab4169e78666eadffd996a7d2524d614b9097",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/character_interactions/01_additional_interactions.txt",
+      "expected_normalized_sha256": "d7cfbfccdd9b7b0b504908e4db43e38646838c26cb29c834abe5595210a22b53",
+      "actual_normalized_sha256": "1ae63b1785cc7df424b487192561c220d603d24ad8921c0b3d7759b4f75262e9",
+      "status": "changed"
+    },
+    {
+      "source": "common/combat_unit_types/00_land_combat_unit_types.txt",
+      "expected_normalized_sha256": "6e72b9011747f287809bb97ad8699a292041bc3395b8ee7bd2947677615b4717",
+      "actual_normalized_sha256": "6e72b9011747f287809bb97ad8699a292041bc3395b8ee7bd2947677615b4717",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/company_types/00_companies_africa.txt",
+      "expected_normalized_sha256": "85b4bbb93016f3bb3c0d86e240f926e0461ef5ae7adf661b9c4341ed7d3f5bb7",
+      "actual_normalized_sha256": "015d21c506344b9a19696ac29e78e3153cd67e2e98047a38433b0755bd224101",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_americas.txt",
+      "expected_normalized_sha256": "a98ae03efe08365ab878c90bffa55220b24c106130041419f28f29203d96f19a",
+      "actual_normalized_sha256": "b88c1909b6d0349884ef3eb45cae8305aff35157c6c74fef8c65bea4d6c8a7f6",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_asia.txt",
+      "expected_normalized_sha256": "9a90632fb90729833948d660aa2301b7553a072a67deee5432012681857b5ebe",
+      "actual_normalized_sha256": "6a29d236ba81d59a5d967448e4eff830de94afe8c7a5cbe02d1cd531e77dd6eb",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_austria_hungary.txt",
+      "expected_normalized_sha256": "dd1d1c85741548d690e32020d879e480d3b14c4c6e1fe1bc2509de0816198991",
+      "actual_normalized_sha256": "f2e76db180f198ab4e5056b8dd81baa245b5155e7e64a0950147367daeae31e8",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_china.txt",
+      "expected_normalized_sha256": "41a0be984e0b60b8c2f24150b5246603321dcac24561a1d69c48c9635d2e0c2a",
+      "actual_normalized_sha256": "7db5c49e832da38bbcc64db282b6256828583ad017052c4b9fe2d00543b8266f",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_cots.txt",
+      "expected_normalized_sha256": "d0af8e4008c22d72230a8a3f240c6dc15efc1ade13ceec27ab502cbe9da1cb86",
+      "actual_normalized_sha256": "4b79bb391d0a35d8658f086a019730b1410be781dbce6c48e3faa3a91c21fd9b",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_ep2.txt",
+      "expected_normalized_sha256": "292df14fd0af8fabf9af2d95814cea07a89e3aa9a350bcba367edad8b7450ca0",
+      "actual_normalized_sha256": "eff56cfbd2b4e7702fbb1a9b270508e9cae704142d4149f7600754224f4c483a",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_europe.txt",
+      "expected_normalized_sha256": "e2c92439747665afbc3114af2dd5dcf5427b6823cef27203c1c8dfdbd165c1e6",
+      "actual_normalized_sha256": "7e6094f94b24c56dfdb59eb80c8df7063f099a0aa467dabf292b13c6ab251696",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_france.txt",
+      "expected_normalized_sha256": "a39b713d08ca42a7246373deecf255ba46630da32d4f04ddcb15f1c315f5d21b",
+      "actual_normalized_sha256": "faf7dba448944da0b78d2e6f8250ad338f8e3dffaea008e4d264e4f720f1a8e9",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_germany.txt",
+      "expected_normalized_sha256": "6ae190cdd5487e31d6c49e6a203f45083fe276b87983a5df27994551bc6fec18",
+      "actual_normalized_sha256": "f21956f1cb070cba72004d7b17f6b526308f3883675c663f01cd17f75b63e5be",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_great_britain.txt",
+      "expected_normalized_sha256": "039c9c620aaf8405bbb8ce288a773dcafa037c52df026917cad5a3e0306d097d",
+      "actual_normalized_sha256": "922b5ffc1015ad284b34aa7cd65e3fd49b6c811899b92799f103beca1b316268",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_ip2.txt",
+      "expected_normalized_sha256": "8c196bd2d02520161a7a96ce8d44d4b6827620c19c590cc5c222c2f6ac17b342",
+      "actual_normalized_sha256": "7162acc28d79041d4f8b4fd8e55cc42b5634bdbe719a0ca3a520b81b4189be83",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_ip3.txt",
+      "expected_normalized_sha256": "293ffc7cbee3de5b0f2413296ab26992223eb4c45d53e2163c5fb9d497a4ad2e",
+      "actual_normalized_sha256": "6552e51e38bc7afdb7f90fe3c62dd96ee3f68b93e67c7d7a797fbe767b7a36d4",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_ip4.txt",
+      "expected_normalized_sha256": "3d2ec18311dfdc6fd98c150cd8f0314795db34b314fd2f29002dd52c6a2634f4",
+      "actual_normalized_sha256": "46ced0597b14a1f0ec5817f382da32ecc2e5e687e9241754e4a8f2b854864adc",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_italy.txt",
+      "expected_normalized_sha256": "1545deefb9d2a6152a005e004fdef2848e53bfb7a2379e502bd231c2237ad66c",
+      "actual_normalized_sha256": "1a598a07edc26b2f0e459b39875451f1bedd6b00b0bd9edba3c8e128aa31c4d8",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_japan.txt",
+      "expected_normalized_sha256": "4493839659db66d3b557cffa8dd282dbec95d6a4621099a0784a5c8a9548b469",
+      "actual_normalized_sha256": "0ddca17c09aac038e0b732de4c9700d9d6a89b27ddc6cbe888572b08972ccfc3",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_mp1.txt",
+      "expected_normalized_sha256": "6b7f02c5d109b68477fae6a2c16bbbc0de96b9a974da1e2eb7050df8740a62ba",
+      "actual_normalized_sha256": "3036ef7e8d00a35798bfaa061f56455a8d773dd08100e8bc75cd22ad96cb5ec5",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_russia.txt",
+      "expected_normalized_sha256": "cd5908aa7c8e3286948a5ef1dcc3a6060cc86eb8fa3674f408fd2d03699769c5",
+      "actual_normalized_sha256": "4b799b13087f61231ec7a2d1c12223be08b41af0aa63d198af99f53910031432",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_soi.txt",
+      "expected_normalized_sha256": "59546f6105092bad8935498d917a6012aa508c58bea873e462dd66a5850f2f1d",
+      "actual_normalized_sha256": "5d96e85f5fb786240b201e98d900d9a1e88fff9287389a4a12886e874130f46f",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_totally_normal.txt",
+      "expected_normalized_sha256": "5072c126fe05a86849651d4fd9af7a8b7c99d2d5b612fd451af618ee6eecf7d9",
+      "actual_normalized_sha256": "12263e46f1875d6e43dc7cab2844120552cc97371dd6125f59b20bfc41c08aa7",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/00_companies_usa.txt",
+      "expected_normalized_sha256": "92e51755890aaab4c6f574602c05732ff115b1008efdaf578ebc93df541ecf12",
+      "actual_normalized_sha256": "3225ff4ab3cc7ccc56d7bbc82d98c2a3e873e20ef664634e0ee99b159eceefc1",
+      "status": "changed"
+    },
+    {
+      "source": "common/company_types/99_basic_companies.txt",
+      "expected_normalized_sha256": "16fc3f7473a2bc337ae32a4345248123a78c958b59b3c28314723d9d9357296a",
+      "actual_normalized_sha256": "e996db5a8083dc603e30cd281f2cbdc96b812302fe409a69f6722b812ca981d9",
+      "status": "changed"
+    },
+    {
+      "source": "common/decisions/000_decisions_help.txt",
+      "expected_normalized_sha256": "174b16778da4328061ff95a7e42159b05f3302bd1dfa7d674b86cc88765a96a7",
+      "actual_normalized_sha256": "174b16778da4328061ff95a7e42159b05f3302bd1dfa7d674b86cc88765a96a7",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/decisions/00_decisions.txt",
+      "expected_normalized_sha256": "06173784f4f68a4c4f292b0534abfaf53889fe7e7055c4f124085f23acecff0f",
+      "actual_normalized_sha256": "06173784f4f68a4c4f292b0534abfaf53889fe7e7055c4f124085f23acecff0f",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/decisions/canal_decisions.txt",
+      "expected_normalized_sha256": "2f46ece1ac9f3377056c91a52dd74fecd9e342d2d8e402f75b926e4929d4fbd0",
+      "actual_normalized_sha256": "2f46ece1ac9f3377056c91a52dd74fecd9e342d2d8e402f75b926e4929d4fbd0",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/decisions/japan_decisions.txt",
+      "expected_normalized_sha256": "a89f6851feff626669d1a4271a472a7f94f58d0a45dfc563946bd8768368c4db",
+      "actual_normalized_sha256": "a89f6851feff626669d1a4271a472a7f94f58d0a45dfc563946bd8768368c4db",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/decisions/spanish_flu_decisions.txt",
+      "expected_normalized_sha256": "1d429ba6a7c574f5fff45290ca668bee34eee7e620d67ffeecf1ddd26d874df2",
+      "actual_normalized_sha256": "1d429ba6a7c574f5fff45290ca668bee34eee7e620d67ffeecf1ddd26d874df2",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/decisions/west_america_expidition_decision.txt",
+      "expected_normalized_sha256": "4b191f0dd42db3f3025ed29cca5ce39935fabd4c73aa39abe82930538ef927be",
+      "actual_normalized_sha256": "4b191f0dd42db3f3025ed29cca5ce39935fabd4c73aa39abe82930538ef927be",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/decrees/00_decree.txt",
+      "expected_normalized_sha256": "c0d0ca00271ae9a69a1119122e3392e74040f88c7097ddc5e357654d7a40e883",
+      "actual_normalized_sha256": "064009967bc866782695ed8f9f4ee2ddc9d97d6686584abf07c43c8091564aa4",
+      "status": "changed"
+    },
+    {
+      "source": "common/defines/00_ai.txt",
+      "expected_normalized_sha256": "c26be7de60d06cb65a652b14abfb20d812d6c39b12bbab52f721824a1b1f7057",
+      "actual_normalized_sha256": "e73869e67621e325ce6da97e6c3e8cbd95596699cb6c7a6d67af3b1e1e7b1bd5",
+      "status": "changed"
+    },
+    {
+      "source": "common/defines/00_audio.txt",
+      "expected_normalized_sha256": "c6db521702e35670765ad0fc7ab10243c2c6e468dc87d08705527483bf0e55f1",
+      "actual_normalized_sha256": "0cf2ad03dbfc506cab2bcd7e20290a892b1e641571796e9a0d6e81664e8b2721",
+      "status": "changed"
+    },
+    {
+      "source": "common/defines/00_defines.txt",
+      "expected_normalized_sha256": "e724f25896e13f8d19457b0b0699ba825a11b4d6e0ad39b58c0ce3d9d233e6af",
+      "actual_normalized_sha256": "406b015e0277fa667a5c2b2fab2e1a3b029c19e9a9f32dcad05ce01b5ace95f2",
+      "status": "changed"
+    },
+    {
+      "source": "common/defines/00_graphics.txt",
+      "expected_normalized_sha256": "0826e679e59f6d350df7d16a95003ae77b1815f8e3b3d9b46ba86b4f125c27f4",
+      "actual_normalized_sha256": "6b3e20e9d0b31a89fc5f02841b4984bdc6dcf234692758f2303318c7740ab751",
+      "status": "changed"
+    },
+    {
+      "source": "common/defines/00_interfaces.txt",
+      "expected_normalized_sha256": "4e8ab0d672c3303e68f94816b95bae1dfc0a0e6c34e043f4b2a12cf612264311",
+      "actual_normalized_sha256": "b9485898feecdcdb7c8c3c5b1fac111d9418a64ab76a116d36f0e20d44dfc321",
+      "status": "changed"
+    },
+    {
+      "source": "common/defines/00_shaders.txt",
+      "expected_normalized_sha256": "2e8cc04d09b23cd192cffd6f552fdf443033ef25d26997fa1db0b6a32dacfcd1",
+      "actual_normalized_sha256": "2e8cc04d09b23cd192cffd6f552fdf443033ef25d26997fa1db0b6a32dacfcd1",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/diplomatic_actions/00_relations_actions.txt",
+      "expected_normalized_sha256": "da0af78d69d4d862b15f9181ef70f2df75e6fcfa94c99a8eb171a115ab13bd6d",
+      "actual_normalized_sha256": "71b29f5d0c160cb178cdf45fea2af6591449f0f99aefda67a0747aee59ed7104",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/01_expel_diplomats.txt",
+      "expected_normalized_sha256": "9bca63b14f0811d7381a658a567a3a84247242157275ed5a85b05857b47622fb",
+      "actual_normalized_sha256": "a1187db53529e92f733775a5d51746d7c6fc0dac8b15e6cf8b2e139298afc678",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/03_violate_sovereignty.txt",
+      "expected_normalized_sha256": "7e34682aa4f54d39d046f4f2d32bb8cb76b48a9a78cee6375abd2ff66f39efc0",
+      "actual_normalized_sha256": "82f1b0cf35891986e024b571cd0b08162ad665a703c5dff6423f38a9effb0a81",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/25_colonization_rights.txt",
+      "expected_normalized_sha256": "16fca6be8a75fc4de4c14171031b5039f0640a9a8b711cef8ce7df99cc0f35b1",
+      "actual_normalized_sha256": "16fca6be8a75fc4de4c14171031b5039f0640a9a8b711cef8ce7df99cc0f35b1",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/diplomatic_actions/26_join_power_bloc.txt",
+      "expected_normalized_sha256": "a66a61d5ee5a86282cec8f09b38bd0e58f3f12ac170f080499b3126370a9c28e",
+      "actual_normalized_sha256": "a66a61d5ee5a86282cec8f09b38bd0e58f3f12ac170f080499b3126370a9c28e",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/diplomatic_actions/32_subjects_raise_payments.txt",
+      "expected_normalized_sha256": "a8a6721398b8449cb2fd00ee3e4cd53034d24172552db8bf520a3a3e3212c38f",
+      "actual_normalized_sha256": "7dc051b8613e44d3c5831e0bed185ee042fbd17db20e36f4b0f099e3ecc6a890",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/33_subjects_decrease_payments.txt",
+      "expected_normalized_sha256": "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df",
+      "actual_normalized_sha256": "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/diplomatic_actions/34_subjects_exempt_from_service.txt",
+      "expected_normalized_sha256": "ccf74b2d6b2fa89aed685c441c4731e3ccdcec1aca13ea47990bcec543295335",
+      "actual_normalized_sha256": "ccf74b2d6b2fa89aed685c441c4731e3ccdcec1aca13ea47990bcec543295335",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/diplomatic_actions/36_subjects_grant_own_market.txt",
+      "expected_normalized_sha256": "8d7b67c13e1029aed59fe825c1f724f595796eb26cb5c0b22a3bef403daf09d2",
+      "actual_normalized_sha256": "8d7b67c13e1029aed59fe825c1f724f595796eb26cb5c0b22a3bef403daf09d2",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/diplomatic_actions/38_subjects_increase_autonomy.txt",
+      "expected_normalized_sha256": "533689cd0cb50a664fc7c9b35a9b7ee125080aae27d12c60e2060fbdaa786a0c",
+      "actual_normalized_sha256": "78f5829b7d9b32ae93880b890bfb1b1a40d7606b670b29a9e60804c8ab5f989f",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/39_subjects_support_regime.txt",
+      "expected_normalized_sha256": "f14b3d4606b5ba8bda5b0efd1b05bb632c6ca5c0f4527475864771b2e30d0c90",
+      "actual_normalized_sha256": "7fc411abe56a7068b47752d572b20a217e98c8155cc6d8447025ea64a3ea74d7",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/40_subjects_knowledge_sharing.txt",
+      "expected_normalized_sha256": "0e8d089a62180b570dfba7b1bb644238fa3dab6f936d12af9f21b5cedcc5afcd",
+      "actual_normalized_sha256": "bbbb6e12e9dea1f48a0e3226b895c3854554b8ed1435ae071f17b2e72a3a102e",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/41_subjects_evangelize.txt",
+      "expected_normalized_sha256": "7104ac353e71f57ab33f953c6c6ad38ebcee6eee2af6dd7946b7c253e126c88c",
+      "actual_normalized_sha256": "f6f34c2169b69e35a16370edc56fc2c5d52a49f9f1c8bb510f1f85bb4bc3133a",
+      "status": "changed"
+    },
+    {
+      "source": "common/diplomatic_actions/52_nationalism_actions.txt",
+      "expected_normalized_sha256": "6609ecafba7c840685c9716b8a1d414a2043c06ed1f6e79327679b13d9cce9ed",
+      "actual_normalized_sha256": "6609ecafba7c840685c9716b8a1d414a2043c06ed1f6e79327679b13d9cce9ed",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/diplomatic_actions/diplomatic_action.md",
+      "expected_normalized_sha256": "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
+      "actual_normalized_sha256": "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/goods/00_goods.txt",
+      "expected_normalized_sha256": "496810f9b21012cb3ae764e4c0cd65aafa85b6079f96d3d2a6b3dece92a0afcc",
+      "actual_normalized_sha256": "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49",
+      "status": "changed"
+    },
+    {
+      "source": "common/ideologies/00_ig_ideologies.txt",
+      "expected_normalized_sha256": "2e3f1940ebe12e8a36230f57710a81f7b14e84b221438ed41c9b6cffdf7277d4",
+      "actual_normalized_sha256": "9637ce7b900e671af5880f1876be7b086e913d9caf5031aae84e3bf080f2c660",
+      "status": "changed"
+    },
+    {
+      "source": "common/ideologies/01_character_ideologies.txt",
+      "expected_normalized_sha256": "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51",
+      "actual_normalized_sha256": "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4",
+      "status": "changed"
+    },
+    {
+      "source": "common/institutions/00_institutions.txt",
+      "expected_normalized_sha256": "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f",
+      "actual_normalized_sha256": "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/interest_groups/00_trade_unions.txt",
+      "expected_normalized_sha256": "b1759c80f901533b7b83495da8958a2f13edb88be7c007ccd1e5af798bd66c43",
+      "actual_normalized_sha256": "dd11f29ac662a390d0ddeafe5de5e6e63ef91fd7b885892670fa6b3c89896201",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_acw_entries.txt",
+      "expected_normalized_sha256": "6132f262affcfc038df2549a0d5cb6ae059bc9e7fb90a8a1fe2c14db5263ff3e",
+      "actual_normalized_sha256": "3a3c170784d191f4c3835e3144e66546121f10eaadc7e1a62fd99af92d42f2a4",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_art_jes.txt",
+      "expected_normalized_sha256": "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
+      "actual_normalized_sha256": "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_communism.txt",
+      "expected_normalized_sha256": "fbe2ce3af236a3f49e146f445ba56957952ac910b68022cc0f69e94e8010072f",
+      "actual_normalized_sha256": "107fa64a7e5587d8459eab2404b504b06042d1fffb7a8918eb49b5a4654512c2",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_corn_laws.txt",
+      "expected_normalized_sha256": "af260e3b2d4825d15bee505c4105597446fadbffc490e2c279f5d1e7d65d4587",
+      "actual_normalized_sha256": "75b1ad344408c473cf8347e52eb811a1b751631e8a83b1375db0d20b0ce842da",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_greek_nationalism.txt",
+      "expected_normalized_sha256": "54ae31ee5aec299a89288a56a660a737b81debf24abf7a5611e99d85c982c7e5",
+      "actual_normalized_sha256": "7d422f0fb96786f69e8d114dff1f2d7aec1b6c978628f907f18b5db1ed404b3c",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_liberalism.txt",
+      "expected_normalized_sha256": "560666da54d2c206dda7f0b1e338ae4362e0821768cbe33e96af6c8513b64d54",
+      "actual_normalized_sha256": "6b6b5dcf8eb10ee36b42162e5ea941afee9f86478a44ebdbae6cbb4c8f1d3265",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_opium.txt",
+      "expected_normalized_sha256": "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8",
+      "actual_normalized_sha256": "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_plague.txt",
+      "expected_normalized_sha256": "62cd74980c81622a9a7de004ff0fbe34bb036a14570ccfe1e1e2fcf90485f65b",
+      "actual_normalized_sha256": "760746f35c6e51bc6f9edcbb2312d8323ee5423c72b9e62880224f054c72251a",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_standard_of_living.txt",
+      "expected_normalized_sha256": "6de98d21d08b52cb7ab83f577e1a60854a722a6584a0a28b9602a5e1fcd64c77",
+      "actual_normalized_sha256": "2d675cd98c3b7521460f06b232087914fecef10d7105844ca78597063a88805c",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_strike_je.txt",
+      "expected_normalized_sha256": "a3be1ecae49d794e9dd4c3f2e8938f00800c7054bd4ec96423901fd8fd219b08",
+      "actual_normalized_sha256": "bf6e6ddd8f50083d78fba5cef9d1694d9f132720f7fd7417a9a2ee171a2ca630",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_tutorial.txt",
+      "expected_normalized_sha256": "dbd90b3993566ccb0c777912a9429013186367449b2d6b6e88b91acdb4e356da",
+      "actual_normalized_sha256": "0fb0757ac536ac0ef76f0b925ec8754056feaef14511de947028be2125ca541a",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/00_urbanization.txt",
+      "expected_normalized_sha256": "6964cdcb70bf3b8b4a66026aa02414910f86f4e1f4c2175f8a31499a2fed155e",
+      "actual_normalized_sha256": "b9e6531f86e816018fb1384b03fa864afcea8d894ece3205ccae076150e0451e",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/01_algeria.txt",
+      "expected_normalized_sha256": "4c62d922b8de894ff1e5e22ea66f055f7da1f928a2e756bedecc603d3dc89a55",
+      "actual_normalized_sha256": "520eb7c9007f41786119d83f95fa93760564be16a97ee0dc64155d96618571aa",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/01_hispaniola.txt",
+      "expected_normalized_sha256": "cc06db1d0cdb46c27fe51798d9c28c70269e27402dc8459d25ea4d31d7adfdd5",
+      "actual_normalized_sha256": "8d55aace1c5abea311f66e4aa6048e53d145bdd219df409323acc8776691a57c",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/02_south_america_migration.txt",
+      "expected_normalized_sha256": "bd0b979f45d429dd1521c9f050e41c4309d8c35d151aebe65c2340845d5ae757",
+      "actual_normalized_sha256": "1523016bc26338dfb01eb5956541d25823ae438e2b13bb1dda5632241ec2d84b",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/04_india_non_cooperation.txt",
+      "expected_normalized_sha256": "9d9437b35f0c356e2dadcf40f23470712a1c6f436ef4b2abdf64caae81a13288",
+      "actual_normalized_sha256": "d3b4f653d1494c72a94e6db235ae1e2869bcbb21fde7eead63311bc4ba70278b",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/04_indian_famines.txt",
+      "expected_normalized_sha256": "a1a371a730d02ce5911873f835340d89766e44d6b823604040aeb41881844e30",
+      "actual_normalized_sha256": "157fc4b84f56708a7423ef5f76dc3181819784b565f3048b557d49bf11ae9875",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/06_portugal_politics.txt",
+      "expected_normalized_sha256": "3419343456182541870fc8de7c7c52c23bb6c9e7ec1deded06a7744d61e04316",
+      "actual_normalized_sha256": "5d0a31d587f9d2ce137a879a0992748c25dd738b958f83b0ca875d0ea6a51a5f",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/07_hokkaido.txt",
+      "expected_normalized_sha256": "95d57e04740b5bf006e3252838b4082a15414df1f9ef48bff7048b0ce4c2ace5",
+      "actual_normalized_sha256": "a49afacc1f6fdf9e50fde53370cf05dc433a12d7d5742f13846ef4f027701dd8",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entries/journal_entries.md",
+      "expected_normalized_sha256": "8af044b1223866f3ddc59f837ccb9c370d5fda08f74e371274549288aaa3e380",
+      "actual_normalized_sha256": "a28e3f4cd37b381b40e787deb3342aa2518be87fa89176e213d235a6ed0eeff1",
+      "status": "changed"
+    },
+    {
+      "source": "common/journal_entry_groups/00_journal_entries.txt",
+      "expected_normalized_sha256": "6265408016db2eb5ed2707acf379f50523468cb81e4feeb04ddab239fef021ef",
+      "actual_normalized_sha256": "39350de2d5f8809ca9dc5bd6a25634312150b7c258f43f825fa01b996eb74b0c",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_army_model.txt",
+      "expected_normalized_sha256": "879d2a9b16701b53693eb07f94ccfce40a1142f5691135a9b83d5acdeeb6fcb1",
+      "actual_normalized_sha256": "4924234c33dc8bdd12e7317bd82de29532e2af28ca7bad4cc4a44d7130d995aa",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_bureaucracy.txt",
+      "expected_normalized_sha256": "49ff3d2af4dc91e39754828520ad2381ccb3b4124f071ca8e83d34028e5e3ab3",
+      "actual_normalized_sha256": "2ed264b5112e3bbc8634b79d8287c4a28d25cc844f2c191667195047ddda113b",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_caste_hegemony.txt",
+      "expected_normalized_sha256": "13ed1a31acd63f9ccb2aea285d546e1bf7199a4a2911f07bda07513f39072ada",
+      "actual_normalized_sha256": "13ed1a31acd63f9ccb2aea285d546e1bf7199a4a2911f07bda07513f39072ada",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/00_church_and_state.txt",
+      "expected_normalized_sha256": "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174",
+      "actual_normalized_sha256": "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_citizenship.txt",
+      "expected_normalized_sha256": "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f",
+      "actual_normalized_sha256": "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_distribution_of_power.txt",
+      "expected_normalized_sha256": "b16b4f8103ade4f61cf2890af6fd2834f8782856bab8b08c6ec5942522a00855",
+      "actual_normalized_sha256": "c99d7a71a1d6f75385a35afb3f5d1887f50604f47cc73cb6ca3752da8127c478",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_governance_principles.txt",
+      "expected_normalized_sha256": "481a2c32a6873a0d5d5682e50b056a91ffd1d41017742f171a105737d59be0f8",
+      "actual_normalized_sha256": "c487020a20e305bf5a8c66b7ad45c429f4e67daa1cd6cdcf2208f421708365ed",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_internal_security.txt",
+      "expected_normalized_sha256": "4b74ea0b9172813596b903507cda213133f08e43215331750be364db37b719c1",
+      "actual_normalized_sha256": "d1faa617a0cd77c0ae0facac3c576b4019fe3b04d8e1e2b370852b1da91ac31e",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/00_navy_model.txt",
+      "expected_normalized_sha256": "acc050c5e250f76e3851dc2723bf43910e1fbd4b156ecd2c39edbcaefe218b32",
+      "actual_normalized_sha256": "acc050c5e250f76e3851dc2723bf43910e1fbd4b156ecd2c39edbcaefe218b32",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/01_colonial_affairs.txt",
+      "expected_normalized_sha256": "a27bfdbbcd5a8075279d648cd6f474be85aee200b9215461d176956ae27eec61",
+      "actual_normalized_sha256": "7785b477cd0aa1f2ec5c95b69733ee08b7cbf54982e1b57f24643c577ddb2a4f",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/01_economic_system.txt",
+      "expected_normalized_sha256": "5622b68492a6f57913ead582011980d2ea5c5f5d41c715261bc228b8b7f9f0e9",
+      "actual_normalized_sha256": "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/01_education_system.txt",
+      "expected_normalized_sha256": "b20bb365d145c484cf4b2d659f794213893640963b8de1eed9dedc2466b9e346",
+      "actual_normalized_sha256": "8d89d5e97c2ba9bedca17ea234840af6f02cc90eb9acef0699e3296f3e25157f",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/01_health_system.txt",
+      "expected_normalized_sha256": "bcf990006c7545240604e1fab78091462ac86efcd505b8c03119af24018c58f9",
+      "actual_normalized_sha256": "bcf990006c7545240604e1fab78091462ac86efcd505b8c03119af24018c58f9",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/01_land_reform.txt",
+      "expected_normalized_sha256": "8576c5bb769ca0bc9c2e3e2d89fb2e2dffcd9b4d479c08b43ca00c639e98e82f",
+      "actual_normalized_sha256": "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/01_policing.txt",
+      "expected_normalized_sha256": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
+      "actual_normalized_sha256": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/01_taxation.txt",
+      "expected_normalized_sha256": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
+      "actual_normalized_sha256": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/01_trade_policy.txt",
+      "expected_normalized_sha256": "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
+      "actual_normalized_sha256": "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/02_childrens_rights.txt",
+      "expected_normalized_sha256": "5b8bd22e27d7afea8dfd47d26c6a353275d10710335ebe37fcd46bd02390457e",
+      "actual_normalized_sha256": "5b8bd22e27d7afea8dfd47d26c6a353275d10710335ebe37fcd46bd02390457e",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/02_free_speech.txt",
+      "expected_normalized_sha256": "535b73670d2029a2b68a842542b8df5995d7b238418eeab73f48c81d07458c97",
+      "actual_normalized_sha256": "4f684e9219d3ab1bedba83ab93f50b2ea3a436be854ecc37c77709bc4977808a",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/02_labor_rights.txt",
+      "expected_normalized_sha256": "70a05689bb667ecab63077332fbb952a498a9c5692aef3b98aa5c07a15e0e264",
+      "actual_normalized_sha256": "70a05689bb667ecab63077332fbb952a498a9c5692aef3b98aa5c07a15e0e264",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/02_labour_associations.txt",
+      "expected_normalized_sha256": "47ec5d950de0c1fd409203b83aa3a56849a02c6977e69d7e21a4bacc2ca4ce45",
+      "actual_normalized_sha256": "5b50400f5e9be0d70a75f1b13c902ee817384473c64ab12bf52935ea98cf23b5",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/02_migration.txt",
+      "expected_normalized_sha256": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
+      "actual_normalized_sha256": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/02_rights_of_women.txt",
+      "expected_normalized_sha256": "f0c963ca8b131f39f47619b89769c3acada4fa94a1088bfb1e2e132a5da87f54",
+      "actual_normalized_sha256": "d8dc08bc6fbecad91d90c21ba31541b9c7ce9101c4da9b98a2a7ac37c90e145f",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/02_slavery.txt",
+      "expected_normalized_sha256": "a33b9378ece993c63fc90ff54de4080ceea420df06051e03cc5754999a8bf263",
+      "actual_normalized_sha256": "9efc9dd2960fcae034765c88ba6ad7252724d5d91577f71bf70cc36745a205d0",
+      "status": "changed"
+    },
+    {
+      "source": "common/laws/02_welfare.txt",
+      "expected_normalized_sha256": "d1b78d84eec4bccd13166cbb3ef98eb8c41ad886856a4cde4c429f6164f5568b",
+      "actual_normalized_sha256": "d1b78d84eec4bccd13166cbb3ef98eb8c41ad886856a4cde4c429f6164f5568b",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/laws/readme.md",
+      "expected_normalized_sha256": "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076",
+      "actual_normalized_sha256": "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "expected_normalized_sha256": "5b69e5c13fe0278122fc34b256838c5ae76c7db893404184b855accc34672a09",
+      "actual_normalized_sha256": "4dce33c917b2f2a323de96b7e51602d5d52262207af5f2736de3f17008537296",
+      "status": "changed"
+    },
+    {
+      "source": "common/mobilization_options/mobilization_options.md",
+      "expected_normalized_sha256": "2b8d285c68ba3c988b5ccc4937efabe5388c8fddfb13513e393b38b51f08f07b",
+      "actual_normalized_sha256": "2b8d285c68ba3c988b5ccc4937efabe5388c8fddfb13513e393b38b51f08f07b",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/modifier_type_definitions/00_modifier_types.txt",
+      "expected_normalized_sha256": "40b056a0f278dba92d13592f60772f52e5c6886dc421dbb4431b07893ac6d4d5",
+      "actual_normalized_sha256": "494fa65068e1242f933088f18d0a602f8d6b2135d54e7bea737a09b39635d22a",
+      "status": "changed"
+    },
+    {
+      "source": "common/objective_subgoals/00_subgoals_tutorial.txt",
+      "expected_normalized_sha256": "fa0a1d4bd3135cfb8e534bbef2b599a0b4e03fcde16c8df9df7ebdf8ce67c02b",
+      "actual_normalized_sha256": "48a239919488c1dd9cb1f010d40b20ced9b26710aec7e2961ac59e2076658b72",
+      "status": "changed"
+    },
+    {
+      "source": "common/on_actions/00_code_on_actions.txt",
+      "expected_normalized_sha256": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
+      "actual_normalized_sha256": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
+      "status": "changed"
+    },
+    {
+      "source": "common/on_actions/00_on_actions_yearly.txt",
+      "expected_normalized_sha256": "302c832abd4275b9ac53fa600b7f91a93d1df188436643d95e7c547f58a0da16",
+      "actual_normalized_sha256": "db1f58e6d306c5a254c09180963bea383c4e146d29e21eab04f54eb1e3674b17",
+      "status": "changed"
+    },
+    {
+      "source": "common/political_movements/00_ideological_movements.txt",
+      "expected_normalized_sha256": "4462653e5fa326f3d84f03b6a551ddc76e9dead91409678adad56dcdb7f11035",
+      "actual_normalized_sha256": "17f682b4c10a64139c19230dbda69c212669319cb7e50e893e47bf2ea1f90dfb",
+      "status": "changed"
+    },
+    {
+      "source": "common/political_movements/05_slave_revolt_movements.txt",
+      "expected_normalized_sha256": "14ea7992d4905c694faf204c644f71ae96bcc5be757a57e3d9cf4a7bab2b2303",
+      "actual_normalized_sha256": "8ce8f69cdf1ca623ed84e475f1721e9c7945998a687a1f099da0c70f44431968",
+      "status": "changed"
+    },
+    {
+      "source": "common/power_bloc_principles/00_power_bloc_principles.txt",
+      "expected_normalized_sha256": "e92e79a48382503971c6f07d2be2d8fffa85a84c1e0e8dc6a200c7a8f3cce455",
+      "actual_normalized_sha256": "e92e79a48382503971c6f07d2be2d8fffa85a84c1e0e8dc6a200c7a8f3cce455",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/00_dummy.txt",
+      "expected_normalized_sha256": "998aae48adfafc4704821a7e1459860775a4d7a1cf15a4977862d858fdcc2226",
+      "actual_normalized_sha256": "998aae48adfafc4704821a7e1459860775a4d7a1cf15a4977862d858fdcc2226",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/01_industry.txt",
+      "expected_normalized_sha256": "80c5ecf3875752526b91be0d5d22f24fe16f59d79206e3885bdca546963a0ecd",
+      "actual_normalized_sha256": "69de9a696bf8e6e91e08f739008c8169cc67454c91abbc81956eb61d90cc5152",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_method_groups/02_agro.txt",
+      "expected_normalized_sha256": "a4f21d31cb98eeb3caaff7cbc44a19007028fc66c824bcba8247b4b618b92bc7",
+      "actual_normalized_sha256": "a4f21d31cb98eeb3caaff7cbc44a19007028fc66c824bcba8247b4b618b92bc7",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/03_mines.txt",
+      "expected_normalized_sha256": "995d2a9a19c99c5b64c3136c886be439c9a7e578d0a796980a1eebdbeddba0bd",
+      "actual_normalized_sha256": "3e9a26aec1edeb6d58a2ca9c62bab946ecb1c8a362d4c8bb18ee538229bb6425",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_method_groups/04_plantations.txt",
+      "expected_normalized_sha256": "7d165e1529ac97336193e787017824e503d44dedad8772fef8fddd6e1ebd3d14",
+      "actual_normalized_sha256": "6add76a10c76b64b187e48e2323e6da776c7ded72872c46f5c400de7264c9259",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_method_groups/05_military.txt",
+      "expected_normalized_sha256": "c10b739e7d80ee7b3abf7e39c97761782bfa22586820eb4f0c6d887cc382dc66",
+      "actual_normalized_sha256": "c10b739e7d80ee7b3abf7e39c97761782bfa22586820eb4f0c6d887cc382dc66",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/06_urban_center.txt",
+      "expected_normalized_sha256": "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
+      "actual_normalized_sha256": "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/07_government.txt",
+      "expected_normalized_sha256": "e1ea7e0286546ca4b2e5ad8bafa35de4e6dec6af59c93b1ff91c99d5815dd6da",
+      "actual_normalized_sha256": "6b257b5bde8d4e5b9728555c1510cbb111a2bfa74602f42a2d0f29f5057ff7cd",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_method_groups/08_monuments.txt",
+      "expected_normalized_sha256": "4be8df3fc16ceb36db13f6b9cccd7ca2ab7f40126229191adaebe107236c8fbd",
+      "actual_normalized_sha256": "4be8df3fc16ceb36db13f6b9cccd7ca2ab7f40126229191adaebe107236c8fbd",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/09_misc_resource.txt",
+      "expected_normalized_sha256": "29676d89f63d05d659b2cbb69eea2361b81e7eeecb016a35d4e7cd1c09c368a2",
+      "actual_normalized_sha256": "29676d89f63d05d659b2cbb69eea2361b81e7eeecb016a35d4e7cd1c09c368a2",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/10_canals.txt",
+      "expected_normalized_sha256": "d65c226189e228a17d61c09bb3f6a7fb9007254b4f78c77b53f55a4b77d2ee0c",
+      "actual_normalized_sha256": "d65c226189e228a17d61c09bb3f6a7fb9007254b4f78c77b53f55a4b77d2ee0c",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/11_private_infrastructure.txt",
+      "expected_normalized_sha256": "188b1828634d7ec7e8673df9fea33799e67cbfe9abfcfe5fcb4ef93f765f2186",
+      "actual_normalized_sha256": "188b1828634d7ec7e8673df9fea33799e67cbfe9abfcfe5fcb4ef93f765f2186",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/12_subsistence.txt",
+      "expected_normalized_sha256": "bd356ce0f6569b1586d01514ed27791f6fee20854ff365763c8d0dcc85e000d6",
+      "actual_normalized_sha256": "bd356ce0f6569b1586d01514ed27791f6fee20854ff365763c8d0dcc85e000d6",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/13_construction.txt",
+      "expected_normalized_sha256": "3e4c55e46aeb0cc8d37fa6597a9ffc1447c9811eb110ffc01a6d7d51c1f3bd66",
+      "actual_normalized_sha256": "3e4c55e46aeb0cc8d37fa6597a9ffc1447c9811eb110ffc01a6d7d51c1f3bd66",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_method_groups/14_companies.txt",
+      "expected_normalized_sha256": "31852c5fac1f49190ce923523f3861887ce64ae68c428d4af7c15df1413a312b",
+      "actual_normalized_sha256": "31852c5fac1f49190ce923523f3861887ce64ae68c428d4af7c15df1413a312b",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/00_dummy.txt",
+      "expected_normalized_sha256": "140d52216e7c7e629885420449a6cc116d4d434fed5f77c6ab8bbe3d646bf38f",
+      "actual_normalized_sha256": "140d52216e7c7e629885420449a6cc116d4d434fed5f77c6ab8bbe3d646bf38f",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/01_industry.txt",
+      "expected_normalized_sha256": "98b5bce603ac098d0b0f18c41de09afe31c3c8e6553363857efd013624783b87",
+      "actual_normalized_sha256": "dd08ec865b0a9e5d65dde0e882fc5fbc338bcf1abc0d3f701103dd3459b76405",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_methods/02_agro.txt",
+      "expected_normalized_sha256": "9d2c9be74569e39a05896b618c3d843880f3ba9dc4958f418250139242eb134f",
+      "actual_normalized_sha256": "9d2c9be74569e39a05896b618c3d843880f3ba9dc4958f418250139242eb134f",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/03_mines.txt",
+      "expected_normalized_sha256": "80eaa71892c2c6da5b5c4e1d954161ec7d4172386a35a6b4fd47603a0565fb39",
+      "actual_normalized_sha256": "dd7ac9300a2b3c551894e186624984d5f3791bdf08462694fcaf3acda97ec276",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_methods/04_plantations.txt",
+      "expected_normalized_sha256": "377e247f8ce334cc5c300ac27c91bffb25f3a84891fdbc678bfddf1bef022184",
+      "actual_normalized_sha256": "377e247f8ce334cc5c300ac27c91bffb25f3a84891fdbc678bfddf1bef022184",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/05_military.txt",
+      "expected_normalized_sha256": "bb07efb8d90563a890ed140aaf2562179d194cea245c1226b849d30a7dd93e34",
+      "actual_normalized_sha256": "bb07efb8d90563a890ed140aaf2562179d194cea245c1226b849d30a7dd93e34",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/06_urban_center.txt",
+      "expected_normalized_sha256": "d9f0e653d3d0c1783fd4e9880fb58a6ada795d0ed3a3fdec011f0d1ce28da71f",
+      "actual_normalized_sha256": "c1b86160eda21483015fc6e052bab2a038f06b060fb59e22ea97d7a08fab8759",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_methods/07_government.txt",
+      "expected_normalized_sha256": "e6123941b73acd7414bac2e0d1ddef33f5f4eeb2789a37ff3025cd6050711b91",
+      "actual_normalized_sha256": "d9942ca514034b07a092f7f225861d823166511331c2745bff99d8eda3809389",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_methods/08_monuments.txt",
+      "expected_normalized_sha256": "5602994997aa661a5a933ffcaf654e370b0916bc061c4bc853d8e894ee586e44",
+      "actual_normalized_sha256": "5602994997aa661a5a933ffcaf654e370b0916bc061c4bc853d8e894ee586e44",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/09_misc_resource.txt",
+      "expected_normalized_sha256": "4bc777873c8a6f116e2c6184e5782b4977b7d6ba9d6bec61f8d1f598087dbdcf",
+      "actual_normalized_sha256": "eda05c4f7df4101d48459c1b077bf9b2a40b3f5e71aaaa26699bbaa9ba5e985e",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_methods/10_canals.txt",
+      "expected_normalized_sha256": "fbb0ea925faf994c6bc40d3f7ba17d6d5f49ad3c98f6b5bbd9a21b976c63b414",
+      "actual_normalized_sha256": "fbb0ea925faf994c6bc40d3f7ba17d6d5f49ad3c98f6b5bbd9a21b976c63b414",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/11_private_infrastructure.txt",
+      "expected_normalized_sha256": "b1be6179a07bc71150ec45fd5c7b7fd14b88d6cba8068775c5e29cd364ccbbec",
+      "actual_normalized_sha256": "b1be6179a07bc71150ec45fd5c7b7fd14b88d6cba8068775c5e29cd364ccbbec",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/12_subsistence.txt",
+      "expected_normalized_sha256": "e0044f7577e51218532bdc1618b37974e9253251a010d6a83e957246767cc125",
+      "actual_normalized_sha256": "e0044f7577e51218532bdc1618b37974e9253251a010d6a83e957246767cc125",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/13_construction.txt",
+      "expected_normalized_sha256": "4bc3595c43c613052dd920d58293f3e9bef7a4423b4c2f8403752f13dc2fd550",
+      "actual_normalized_sha256": "8be38c9ef460fb33577ec6fc8a6c435bc40b7e58863c0c0dfee5fb849a25f9d7",
+      "status": "changed"
+    },
+    {
+      "source": "common/production_methods/14_companies.txt",
+      "expected_normalized_sha256": "8fcf93268ae44d350c345cf78f15fa8067f5a5bc591a4f85dff3860fffb278da",
+      "actual_normalized_sha256": "8fcf93268ae44d350c345cf78f15fa8067f5a5bc591a4f85dff3860fffb278da",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/production_methods/production_methods.md",
+      "expected_normalized_sha256": "7f1d3f42a7b62efa846ece45a9c58c408d7614219500d2a2d952c77e1ce5d892",
+      "actual_normalized_sha256": "7f1d3f42a7b62efa846ece45a9c58c408d7614219500d2a2d952c77e1ce5d892",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/religions/religion.txt",
+      "expected_normalized_sha256": "1f1816ecf630205eb158ee0c5227a60b149378bca3aecc179c97bdeb332fd238",
+      "actual_normalized_sha256": "1f1816ecf630205eb158ee0c5227a60b149378bca3aecc179c97bdeb332fd238",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/00_diplomacy_values.txt",
+      "expected_normalized_sha256": "825ae480eb3d0a5aa1e0135563a73665816cc761ca2ca289832b7bd8e64e8b96",
+      "actual_normalized_sha256": "2e09b9ac76b6d09fa06e926df894f9537422cf8d3f249e2823473f900109bf39",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/00_gfx_route_graphics_values.txt",
+      "expected_normalized_sha256": "fefa9b3b0fdad17ab1fce2d676f3e98018d2cb3e75a8ed70764b24d7591b8e31",
+      "actual_normalized_sha256": "fefa9b3b0fdad17ab1fce2d676f3e98018d2cb3e75a8ed70764b24d7591b8e31",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/00_infamy_values.txt",
+      "expected_normalized_sha256": "0f49d7d673a940d271bf8581386d6a531caf55ddd0d4960cf348c5f7b6156fcb",
+      "actual_normalized_sha256": "63d6a8b8dcfa2274e75d602261cf00b293a48066009aaf12bac56ed4e07b7607",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/01_power_bloc_values.txt",
+      "expected_normalized_sha256": "57ef445cfa211e8c2bd040145997a302183ceb827294e878a87ff76db81bf8fe",
+      "actual_normalized_sha256": "57ef445cfa211e8c2bd040145997a302183ceb827294e878a87ff76db81bf8fe",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/ai_script_values.txt",
+      "expected_normalized_sha256": "ccf6e1af1013717b695214cf90f2684ce3dbc5a1411adae6acffefbe5a27bb06",
+      "actual_normalized_sha256": "634b158dce03bbc6308630447c7f58c10521a5e6c6a39fa7906b4da7b7a57197",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/building_values.txt",
+      "expected_normalized_sha256": "ad61e13b0762f6c174c091c76f406d4bca1d27fddea94b185eba3139dbcc6cf0",
+      "actual_normalized_sha256": "ad61e13b0762f6c174c091c76f406d4bca1d27fddea94b185eba3139dbcc6cf0",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/command_values.txt",
+      "expected_normalized_sha256": "d44ac66f47e3344dcf95f83246ec1e69e1dcd8a5d2052fbfd15628be34ca57aa",
+      "actual_normalized_sha256": "c65595b95fbe72f28cbdb9c4a8c5659757223362d7f01c6a9ee8ba02d4f12b17",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/company_values.txt",
+      "expected_normalized_sha256": "ba8cd59eeb432e9c81d17d12504f8862eddb5e5f0acc2f3625220fefdfb3af63",
+      "actual_normalized_sha256": "ba8cd59eeb432e9c81d17d12504f8862eddb5e5f0acc2f3625220fefdfb3af63",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/cultural_community_values.txt",
+      "expected_normalized_sha256": "1aaedb1f2760af4e991dc587416d1c3c68f7dc2beea5f825319e6cb660491402",
+      "actual_normalized_sha256": "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/decision_values.txt",
+      "expected_normalized_sha256": "1fd465792b4db6abb263069ed1df23a2d105564aaa97492aa460e5399c5644ab",
+      "actual_normalized_sha256": "385822caded45b1548c5e064ec3553852f7d8681086a7466716c3125b112dd2b",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/ep2_japan_values.txt",
+      "expected_normalized_sha256": "c9657c66fa41baf1ae14766bbdfd6ae62dc2f19047bbb1e845cadf5711885562",
+      "actual_normalized_sha256": "fd9c45ea2f3608977f08919392e4d7fd914a83626ee479200ba983cfdef2e2dc",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/event_values.txt",
+      "expected_normalized_sha256": "99e2dfc8e07c8b91a6f9c6bf4616444b4c973fc07c281b057b48b2594280067a",
+      "actual_normalized_sha256": "e4f89480bf30ae78d29d10d1912fa2b1b07e24a20372dcc27de01924c03331a2",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/game_values.txt",
+      "expected_normalized_sha256": "1bd01405a770d0e9420e7f998e9caa53db188b3717c230a8de09b26efb7870fb",
+      "actual_normalized_sha256": "1bd01405a770d0e9420e7f998e9caa53db188b3717c230a8de09b26efb7870fb",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/ideology_values.txt",
+      "expected_normalized_sha256": "c68d528b7c0b2b150b5c50b5353d2c6a7b3656426ab38e5d26dcc3ace2ef4798",
+      "actual_normalized_sha256": "8c682eb663808b8343d1639149b5060659a922cb54e2b48e236ab970a2db2dcf",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/india_values.txt",
+      "expected_normalized_sha256": "ee1466e55f72db120bfbccaa65bbe5afac3e8f5942ed03def1520b4ad5a58302",
+      "actual_normalized_sha256": "ee1466e55f72db120bfbccaa65bbe5afac3e8f5942ed03def1520b4ad5a58302",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/ip4_bloc_values.txt",
+      "expected_normalized_sha256": "e9e0a8f8c155a2e905ef059b6897445b1522e901c976b80ef19c0d7a814f19f1",
+      "actual_normalized_sha256": "e9e0a8f8c155a2e905ef059b6897445b1522e901c976b80ef19c0d7a814f19f1",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/ip4_cuba_values.txt",
+      "expected_normalized_sha256": "513013d00d4a88e8afcc12fb402caae4f33bd3f47363fea15b01a8a192474380",
+      "actual_normalized_sha256": "513013d00d4a88e8afcc12fb402caae4f33bd3f47363fea15b01a8a192474380",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/ip4_je_values.txt",
+      "expected_normalized_sha256": "700d2c241415950211d1b6680f72525a10e4a75829cfdd000df4626e6332ae3d",
+      "actual_normalized_sha256": "700d2c241415950211d1b6680f72525a10e4a75829cfdd000df4626e6332ae3d",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/je_values.txt",
+      "expected_normalized_sha256": "a8b02e9cd1d41a8bec939469c67cbe5593f157ec9abc4fe94c956b1df65e8348",
+      "actual_normalized_sha256": "0ef1891443bf9d32851f3daf5833cbbcc51910bca86b1d2c3714dd54216ab446",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/krakatoa_values.txt",
+      "expected_normalized_sha256": "784313765e069f9b61bca9a7ca69f9745d4c2380253724b1b246da4bc9b32db6",
+      "actual_normalized_sha256": "784313765e069f9b61bca9a7ca69f9745d4c2380253724b1b246da4bc9b32db6",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/lobby_values.txt",
+      "expected_normalized_sha256": "76582a852295e015ce3d4e7498dd171fc1a2965905ff20264fdf542dd3a4272f",
+      "actual_normalized_sha256": "76582a852295e015ce3d4e7498dd171fc1a2965905ff20264fdf542dd3a4272f",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/migration_values.txt",
+      "expected_normalized_sha256": "3b8133bacd562ed7616ea2eb76335d5ae8661ed1751ef88f7aaca6727ab1e41f",
+      "actual_normalized_sha256": "3b8133bacd562ed7616ea2eb76335d5ae8661ed1751ef88f7aaca6727ab1e41f",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/movement_values.txt",
+      "expected_normalized_sha256": "4bc7faf0a965f4afd9455965c10dd68a5b3878002c485c037181c1a3983da9df",
+      "actual_normalized_sha256": "5de6e47e9bf2e77b6a62399c2e5ebe82a899ec5225e4b74332da860e54c6050a",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/negotiation_values.txt",
+      "expected_normalized_sha256": "25763c627ae4c71e71ba71ee7c37928993ff6489f94f4b5c5a59d5e258e9f892",
+      "actual_normalized_sha256": "83868fc13d95807b0b66cbc3aa20ded0b46a50097b8fe934333e1782d97a15a6",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/objective_values.txt",
+      "expected_normalized_sha256": "aa20acd4802cdec406a33f9db3def8a06ed37a7ea896bfa81b230a1a86ead794",
+      "actual_normalized_sha256": "aa20acd4802cdec406a33f9db3def8a06ed37a7ea896bfa81b230a1a86ead794",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/occupation_values.txt",
+      "expected_normalized_sha256": "5438cbc933bb3364de3cede5aa7d4eee38e797a6e8e58a827dc97e62afb65141",
+      "actual_normalized_sha256": "5438cbc933bb3364de3cede5aa7d4eee38e797a6e8e58a827dc97e62afb65141",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/politics_values.txt",
+      "expected_normalized_sha256": "c59a751ad0af697994f83b6f7d19134a10c5e72325b0b7680c8358786e836fb1",
+      "actual_normalized_sha256": "2782a5deaa4b49e55224c8c407028f53da3b2315698eba1d7b121b61314ac427",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/prestige_values.txt",
+      "expected_normalized_sha256": "6532cda9b13d264ebed7b79bb074059fa578cb42131a2e0945a63909f07eca70",
+      "actual_normalized_sha256": "6532cda9b13d264ebed7b79bb074059fa578cb42131a2e0945a63909f07eca70",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/script_values.md",
+      "expected_normalized_sha256": "66431f8e32c467a4b224b87a939189ee26c75ff1c6837f4966c6046cc67725a6",
+      "actual_normalized_sha256": "66431f8e32c467a4b224b87a939189ee26c75ff1c6837f4966c6046cc67725a6",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/static_treaty_acceptance.txt",
+      "expected_normalized_sha256": "2e60b0b95bd9f8e2f2e151a6c4e1a6ffe20ccaa54b6235af4cef9091b7df41ae",
+      "actual_normalized_sha256": "8f480c84001e2d49ce6691b963da0b9056a8580947607c24d68dc835c0132596",
+      "status": "changed"
+    },
+    {
+      "source": "common/script_values/treaty_propose_chance.txt",
+      "expected_normalized_sha256": "7b4ecd6d3ba31a0769dda820d8fa937a2f0363639296c19b66fa9db299a324aa",
+      "actual_normalized_sha256": "7b4ecd6d3ba31a0769dda820d8fa937a2f0363639296c19b66fa9db299a324aa",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/script_values/war_support_values.txt",
+      "expected_normalized_sha256": "547594557cd7cdcfd7cc3599f680aa2dfb2422a94bd7a23e4a8ff0c2fb637898",
+      "actual_normalized_sha256": "75f2b11933f93db68907db5d2516d9296d01fc2850f21b7e8c74f45440a12416",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_buttons/00_hispaniola_buttons.txt",
+      "expected_normalized_sha256": "9ed0337c0c43a063fdfd18d5944d090703986b8c69bc6c4a06ab005cb0dffdfe",
+      "actual_normalized_sha256": "9ed0337c0c43a063fdfd18d5944d090703986b8c69bc6c4a06ab005cb0dffdfe",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/scripted_buttons/04_indian_famines_buttons.txt",
+      "expected_normalized_sha256": "223404898f416fea74ac849416212409e2f3c1394aefe3b2501c290daa036db4",
+      "actual_normalized_sha256": "223404898f416fea74ac849416212409e2f3c1394aefe3b2501c290daa036db4",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/scripted_buttons/05_struggle_for_the_highveld_buttons.txt",
+      "expected_normalized_sha256": "a2036599eb7c08e9b313c412c5dde4e6b9f7e56bc32cb49326bb4bd7869eed08",
+      "actual_normalized_sha256": "1e8fba0619d496ef4c23c167931b656ab1b91771df2f3ccc400ea212183de449",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_buttons/07_japan_buttons.txt",
+      "expected_normalized_sha256": "e33e7944dfb0d958bad5cf987bc3c887b6cf695f632935e70faab346693d1130",
+      "actual_normalized_sha256": "fcfd968e3957205bafaa26aa087dba9c87f78a86da0218083a999760f4a2ed82",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_buttons/scripted_buttons.md",
+      "expected_normalized_sha256": "bb1028f7b843e43dc42473968307ad340e2960099cc50e6907f3cff9a47c2d4d",
+      "actual_normalized_sha256": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_buttons/southamerica_migration_button.txt",
+      "expected_normalized_sha256": "067b17da447293b0613aa1fa0dec36bef40da37f82cb4c1ee9064b5b3b591e6d",
+      "actual_normalized_sha256": "067b17da447293b0613aa1fa0dec36bef40da37f82cb4c1ee9064b5b3b591e6d",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/scripted_effects/00_spanish_flu_effects.txt",
+      "expected_normalized_sha256": "b67627fcd32be867c5546966d10e3dd8770e9370917bfd87eda0835a08c60b97",
+      "actual_normalized_sha256": "b67627fcd32be867c5546966d10e3dd8770e9370917bfd87eda0835a08c60b97",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/scripted_effects/00_victoria_scripted_effects.txt",
+      "expected_normalized_sha256": "243790fbcb837393d40e311e6a8aa3ccee5bb5d36e7e81f58075c7caf3aa0bc1",
+      "actual_normalized_sha256": "89b66a43b4470aa5982a9d7e0093b193be6793b9433a9c5a46dfd88a60896040",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_effects/04_negotiation_scripted_effects.txt",
+      "expected_normalized_sha256": "86c12d3163c3236d362951a62c85026cf32f9918d285ae4cf88de04cea923ea5",
+      "actual_normalized_sha256": "9f729fae956ceeceb4f6a6c76b6d6b7b31b413c7c7d784891ed5600e91f8aec2",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_triggers/00_ai_triggers.txt",
+      "expected_normalized_sha256": "d8da988122619e26e16ce17e8ac196337cdb8d1592f357c45ded4f8cb85d3698",
+      "actual_normalized_sha256": "ffca2b8deef024a9d2703d1297a0bea3a3e931a0b1710e2daea74c48a9dd248b",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_triggers/00_diplomacy_triggers.txt",
+      "expected_normalized_sha256": "6c5b17b5e88d81e5cab3bce8a7e0d5a6d3ebaa92cb32cb8d069be824fa591832",
+      "actual_normalized_sha256": "0c8749e9187d200d67f4a73ebc4926100d9ff0476dfc5dea408cc6cb45654d49",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_triggers/00_gfx_route_graphics_triggers.txt",
+      "expected_normalized_sha256": "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
+      "actual_normalized_sha256": "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/scripted_triggers/00_ip3_victoria_scripted_triggers.txt",
+      "expected_normalized_sha256": "d4765bbff7b101be760d6b782b678f72819a1959629502be2f253684e85fc291",
+      "actual_normalized_sha256": "f08eb3dcfad10219ef5e00d470483f06cb2f6c0c844631c33fc49bdf14180952",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_triggers/00_scripted_triggers.txt",
+      "expected_normalized_sha256": "a4956f5188970963ca62de10a6b856a7000bc87efbebd26784050620b53003b2",
+      "actual_normalized_sha256": "8520d5bdd70d10ebacc56bbe85fc62ff774f229b85d87f7f4325e7ad5b12fea7",
+      "status": "changed"
+    },
+    {
+      "source": "common/scripted_triggers/00_victoria_scripted_triggers.txt",
+      "expected_normalized_sha256": "fbab86ef6bdce62de6ceffed4a96688bd8209422b5342329dc66878ab3d2c96c",
+      "actual_normalized_sha256": "0eebd886a2d9f8bcc3b1f62881d54a84c3cf0944ffcac9914e71cf42862ab29b",
+      "status": "changed"
+    },
+    {
+      "source": "common/ship_modifications/00_ship_modifications.txt",
+      "expected_normalized_sha256": "9a528fb6310e9b85aa4dc3852c869730d76e58f3ce6361f45d161a615c2048b7",
+      "actual_normalized_sha256": "b6b417883b5f24149510a01bfdc4d3c01029d40c0d8ecd786ea679cc4ad49724",
+      "status": "changed"
+    },
+    {
+      "source": "common/ship_modifications/01_utility_modifications.txt",
+      "expected_normalized_sha256": "6978dddd6ab996212831ebe7601f9b5a726665917439cb0d9f5c389471859d4d",
+      "actual_normalized_sha256": "fed1d2d10cd88b3b4d3ec57315ae95907fde566934be2c4930b4a4ba7937ce23",
+      "status": "changed"
+    },
+    {
+      "source": "common/ship_modifications/ship_modifications.md",
+      "expected_normalized_sha256": "03c8e999b855e54379d7169f00cbe4a94648788df700173fd0b4adca48dac1ac",
+      "actual_normalized_sha256": "03c8e999b855e54379d7169f00cbe4a94648788df700173fd0b4adca48dac1ac",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/ship_types/00_ship_types.txt",
+      "expected_normalized_sha256": "2cf9ec3e328c36492ff0bb9d07209cfcf517e4bbec517a45458f7334aa6bea76",
+      "actual_normalized_sha256": "b27f5b5cfaf6b1e2226e59fc06a84fa4dd0a526cea0af8053b3a7d2d55056a55",
+      "status": "changed"
+    },
+    {
+      "source": "common/static_modifiers/00_ep2_02_modifiers.txt",
+      "expected_normalized_sha256": "2efaefd775316be7dcda1eebc5f60851b844b5f93bd9c5bce19c73f91fe318a3",
+      "actual_normalized_sha256": "2efaefd775316be7dcda1eebc5f60851b844b5f93bd9c5bce19c73f91fe318a3",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/static_modifiers/00_ip2_02_modifiers.txt",
+      "expected_normalized_sha256": "74cd0627025f5e35ded042a3a120507783d92b214e030337c71c67054047ef51",
+      "actual_normalized_sha256": "74cd0627025f5e35ded042a3a120507783d92b214e030337c71c67054047ef51",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/static_modifiers/02_event_modifiers.txt",
+      "expected_normalized_sha256": "c2bba6b99a2ccc85b17ee3369a1b84eef4af9452b2504955f8f26627aa8db40c",
+      "actual_normalized_sha256": "7c5cbd3c2e732373d097adf23a7f2866c5f8cdc9f8d798d82cd9689de8000380",
+      "status": "changed"
+    },
+    {
+      "source": "common/static_modifiers/04_decision_modifiers.txt",
+      "expected_normalized_sha256": "91aa05bda1c488c232056edd512133300abfe3dfd9211c4240f72ca7962195ca",
+      "actual_normalized_sha256": "91aa05bda1c488c232056edd512133300abfe3dfd9211c4240f72ca7962195ca",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/static_modifiers/agitators_2_modifiers.txt",
+      "expected_normalized_sha256": "f53ce0251db837603db8d6f8defbd0825c9d624d15868e8abd37459762937bc5",
+      "actual_normalized_sha256": "f53ce0251db837603db8d6f8defbd0825c9d624d15868e8abd37459762937bc5",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/static_modifiers/brazil_1_modifiers.txt",
+      "expected_normalized_sha256": "7568e2cca22ea51296180ecd90560cce843496c59f8ca30a1d066003e28b5b5c",
+      "actual_normalized_sha256": "7568e2cca22ea51296180ecd90560cce843496c59f8ca30a1d066003e28b5b5c",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/static_modifiers/content_1_modifiers.txt",
+      "expected_normalized_sha256": "c135405e9125150223541b1ee882b725184f5e150b44c2cd44bcb052aa9f73f0",
+      "actual_normalized_sha256": "7d431c470721842c23958b3ee19914c88d63d586665bfce7b7861fab9306917c",
+      "status": "changed"
+    },
+    {
+      "source": "common/static_modifiers/content_4_modifiers.txt",
+      "expected_normalized_sha256": "d46a5a80533ca3f5e8c3bf13bf014086e00eb3d8f73ca1f818977b51984511ec",
+      "actual_normalized_sha256": "d46a5a80533ca3f5e8c3bf13bf014086e00eb3d8f73ca1f818977b51984511ec",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/technology/technologies/10_production.txt",
+      "expected_normalized_sha256": "f5b9dd18a3b4b3fd0d3779e85e90294cd7d580b33df662620c4240f3ae6ca6a4",
+      "actual_normalized_sha256": "f5b9dd18a3b4b3fd0d3779e85e90294cd7d580b33df662620c4240f3ae6ca6a4",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/technology/technologies/20_military.txt",
+      "expected_normalized_sha256": "ea78bc29d654cf49173b0631b66436313951a99e51caac28fe95d2f7ada2def4",
+      "actual_normalized_sha256": "97edc59c3dbf387e0b40ac90a4c1ebede6653915480337dedf4c3a31ac91caec",
+      "status": "changed"
+    },
+    {
+      "source": "common/technology/technologies/30_society.txt",
+      "expected_normalized_sha256": "52c0b085e7429cf3961dfeacc4e1891056e2a2e80c740ce7ebcca6f61124e880",
+      "actual_normalized_sha256": "9e4a9ec6b2df956da8104339460b87f2d78b8ae038e394f9dfaebb74e44052ad",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/00_alliance.txt",
+      "expected_normalized_sha256": "505cfc849cb7d66a460b95c36a4e1c4794cae4c4c8e48f3c1a7c6b55dd56564b",
+      "actual_normalized_sha256": "78d6a82a728271e6da09016f6fd6995df665d88a42e8c49feee1f63f7f02cad1",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/01_defensive_pact.txt",
+      "expected_normalized_sha256": "78959100428405cc5530db74f15a221e9b1b432e7d50a176aca3592f54f2e1e5",
+      "actual_normalized_sha256": "9bf85289b4b8098f86ac20f2ccf0087ff84f2bfd38c13aaee0f2de0b20f6095a",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/02_guarantee_independence.txt",
+      "expected_normalized_sha256": "8bda978a27918bf7653fb881f762664478b456ec183888f3933515a682b7091f",
+      "actual_normalized_sha256": "a0a4beea6f090d998516c6118b94555b04261f451adb5b4462d68ab731b42a12",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/03_support_independence.txt",
+      "expected_normalized_sha256": "2a2ba67f9fbc7055d7e1ffc9a0e0f44d44a8d1ebaafcb866b91c6dff4f52b9eb",
+      "actual_normalized_sha256": "bc83cb413b3cb393bfa8436ef28fe9d7b96a63a6c14084ecc1871583b9b8032f",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/04_take_on_debt.txt",
+      "expected_normalized_sha256": "62303a4e50e1fd9fc3149399f7d2a3820ca100215e88325201d59cb38afece8f",
+      "actual_normalized_sha256": "256aedaac47c67aaabb64c2ad2bd99db33d8e50a63bbb3581d1df3022cca78d4",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/05_transfer_money.txt",
+      "expected_normalized_sha256": "9920550c6c4367b70b96ff5b936d37aeb560a15c1aa406785502e32c595fe2c1",
+      "actual_normalized_sha256": "76de90c006e875f097d3df75f00fd545c4a6519dd936f2a2a5671a5cd33be948",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/06_transfer_state.txt",
+      "expected_normalized_sha256": "ff4e4946121b60f1eb59dd5407caca6164a30ef8a3fa8949e522cb81c1e09853",
+      "actual_normalized_sha256": "10d76a72f7e045ba2693d0e06813bbd1d5feaea4d1bcd2876e424d2db67796e8",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/07_foreign_investment_rights.txt",
+      "expected_normalized_sha256": "b652df7cb6f68e5ad38b00ad6dd185a94c5cddd7f094361b50781b90c69197eb",
+      "actual_normalized_sha256": "b3520ddffd960d74339e61d11e526b96efefbc324d00d0e9551aa577382ff61e",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/09_join_power_bloc.txt",
+      "expected_normalized_sha256": "97956072d6ef9891d48cce6673916bcee519447b64d9b9253deba6ea9ff74384",
+      "actual_normalized_sha256": "751ca0543e8dc12a30fa09e82a9abeeed9037ad7664f95229f6ee069c9e16988",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/10_host_power_bloc_embassy.txt",
+      "expected_normalized_sha256": "65cc94ccdb6479a5dfc04e56f060cd6b560bdc39ecf0cb96744d0fd5705ed38e",
+      "actual_normalized_sha256": "0f1e33c06aa8a89297222b982cfd6c08d5521a2b02261e8723133b45626b0ad2",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/11_offer_embassy.txt",
+      "expected_normalized_sha256": "fb28e213a07bc47888ed87b40c7b1faa1c3ee6ee57fcf80a3dc06a6f306455f5",
+      "actual_normalized_sha256": "4aba82e0b253fed0058d325b67a1ef943173c2a1ffda615502a93d9f6bb50132",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/12_military_assistance.txt",
+      "expected_normalized_sha256": "c4499d86dfa5b8fb0a4eccd54bb180f649367a2c47bc2d0f530d581e9775cecc",
+      "actual_normalized_sha256": "2c13b8a53ac2eb74343a14b3a8e314bcbafb03def69b319212485b8615bde9d1",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/13_goods_transfer.txt",
+      "expected_normalized_sha256": "351863a506c4d78012ee79d88ce490a9439e94107bbefca77808c0a7e1edfc1b",
+      "actual_normalized_sha256": "351863a506c4d78012ee79d88ce490a9439e94107bbefca77808c0a7e1edfc1b",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/14_treaty_port.txt",
+      "expected_normalized_sha256": "19d1eb925f219c0219106a38491a33bffbae5daf282eee91bb8c820f053fd643",
+      "actual_normalized_sha256": "19d1eb925f219c0219106a38491a33bffbae5daf282eee91bb8c820f053fd643",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/15_military_access.txt",
+      "expected_normalized_sha256": "521b998bf6c1fd2caca058106b056022a1b9b09bc7eb545734966f91fdbfaa3a",
+      "actual_normalized_sha256": "1872f73129b4846505c909aa035f4b238032069a2936a160b6c1be6970ba7e5f",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/16_non_colonization_agreement.txt",
+      "expected_normalized_sha256": "4e880cb19f481e333c83e8c2619195d722bf88118d4f72c37056e30e068de134",
+      "actual_normalized_sha256": "4e880cb19f481e333c83e8c2619195d722bf88118d4f72c37056e30e068de134",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/17_prohibit_trade_with_global_market.txt",
+      "expected_normalized_sha256": "0300eb8a4ab0d7a491b8d0224a5c1c2cc392c140122453ea4724ec47c2d1fc0c",
+      "actual_normalized_sha256": "fa0f429482e096e7891b5acf4ce80de327b9877f380fda693f95c5aaba7f5350",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/18_acquire_monopoly_for_company.txt",
+      "expected_normalized_sha256": "f052e40bad3a29d3b13a5fb0c33d8d9ad81ff558b2e71d265ddabfb887382e19",
+      "actual_normalized_sha256": "f052e40bad3a29d3b13a5fb0c33d8d9ad81ff558b2e71d265ddabfb887382e19",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/20_law_commitment.txt",
+      "expected_normalized_sha256": "655e1942f0434ca3d10508f5a61c3a349094cb38e6fb53aebb9f944d14403acf",
+      "actual_normalized_sha256": "92360fd58559b8f454a42aebee8418b9829a01cbc637e6b28f1bdfc988f33a0e",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/21_no_tariffs.txt",
+      "expected_normalized_sha256": "4e361356002dd9d440b767bad998b20e73eb4af1a5a0d1999e566a8923e5afab",
+      "actual_normalized_sha256": "4e361356002dd9d440b767bad998b20e73eb4af1a5a0d1999e566a8923e5afab",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/24_transit_rights.txt",
+      "expected_normalized_sha256": "5fb5dfd0f98cccd917f9e66da38635d1023cc46352ff2db9a5d279a54ff2c1fb",
+      "actual_normalized_sha256": "4ca1e997e9294c2764832f4011a08de1fe5d41452a2e52f35e20b50aeba0c70a",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/25_trade_privilege.txt",
+      "expected_normalized_sha256": "ffb9691bf672f36886a35cbfd5930420571232afbc00fda98f7197946c8886b1",
+      "actual_normalized_sha256": "d61d4308671da458e11bfdce31c82caf53153ee29b1d0d35a84ed6c1f61957be",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/26_no_subventions.txt",
+      "expected_normalized_sha256": "7a7348ca4878c1628bb4b494b1a03b436c786424fcf65f19b3e03eacee46cb36",
+      "actual_normalized_sha256": "7a7348ca4878c1628bb4b494b1a03b436c786424fcf65f19b3e03eacee46cb36",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/27_amend_succession.txt",
+      "expected_normalized_sha256": "c89d7adb84c4dbf2bfe2e98cc35c211f57ecf2ea3cf57902d819cca4333ea01b",
+      "actual_normalized_sha256": "c89d7adb84c4dbf2bfe2e98cc35c211f57ecf2ea3cf57902d819cca4333ea01b",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/28_free_text.txt",
+      "expected_normalized_sha256": "00163ab22f22e7b60e70c105dd60bc7a9a76e59483dd22dd6b4989c223edd12f",
+      "actual_normalized_sha256": "00163ab22f22e7b60e70c105dd60bc7a9a76e59483dd22dd6b4989c223edd12f",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/treaty_articles/29_recognize_independence.txt",
+      "expected_normalized_sha256": "eabb1470c5caf473aef23230473522f35694d068eca9a129866b59193d1968fe",
+      "actual_normalized_sha256": "b4e5e28477b4c6088e3057c6a2cfcc21e7016a4e3fca69c12325aa7adfe6e30d",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/30_transfer_subject.txt",
+      "expected_normalized_sha256": "aaba47d47204fca354eb750927d1bdaa2e60426e23ed24e36f9a97d478ec2df9",
+      "actual_normalized_sha256": "d7164584707df011ba0ef3743534234205d2fe57f6ff546519966fde4bccb5f8",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/31_ship_transfer.txt",
+      "expected_normalized_sha256": "2d037475aec298b6205cfd193a7392aae050af07fb90cbfe66d853296fb95561",
+      "actual_normalized_sha256": "438c878d68c53f9f1d0b37de369911c317c5c4077307b6e6523ebb66e8d0a7bf",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/31_toll_exemption.txt",
+      "expected_normalized_sha256": "6ec2032813d809a3f75ad49a2da17f2d2e086e05d62f9535ddc2cd5398b5ddab",
+      "actual_normalized_sha256": "1a282a5c10c6287a8c431b2d3abb33068e8c3ca1323ea700e41f9fe89c30bd94",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/32_no_tolls.txt",
+      "expected_normalized_sha256": "d5409b4ee39d33c2805fa6e8fa52db546e68503b652666dfe7ca2c6e4fd8c535",
+      "actual_normalized_sha256": "ffbff713184a7e2f5eee1fec6c1b98b2adf0b1598c1ae44c8c79aa3e2c209e53",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/33_strait_access.txt",
+      "expected_normalized_sha256": "fe9f2274a0f85652f69263a47dc733c334468594c3cda2112318207ca4e7ee9a",
+      "actual_normalized_sha256": "5a1677e603bfb45fd1b2d615967a130ec9e2afe9ba7b9e8668205dee809ef787",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/34_no_strait_closure.txt",
+      "expected_normalized_sha256": "8a1fd6b469fd7af0bf9e0ee4280c5e9d6569d23e02b5eaf5c706af1832965b0d",
+      "actual_normalized_sha256": "f553547614b157c062b9cc37ece5e4cb4de1631162b139176bb7fbf851526e4b",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/35_non_piracy_agreement.txt",
+      "expected_normalized_sha256": "3e1398d390881b9630c1a7731e5a49548eba4a5040d095b0727e22aad35af402",
+      "actual_normalized_sha256": "e7c1cd95f280a570ae2f885182524993739b701bb03480a7d4738a1b3a9440f4",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/36_abandon_piracy.txt",
+      "expected_normalized_sha256": "70228eee74b37017112b6d9db69fba8ebe8194a2b2f7b82037eab83a10964f0a",
+      "actual_normalized_sha256": "8ce248f3d9fb7ccc800de8c92a57f99c35ff5d435d33b27455f3f4ffe7a2dcff",
+      "status": "changed"
+    },
+    {
+      "source": "common/treaty_articles/treaty_articles.md",
+      "expected_normalized_sha256": "8aa3024c68f12761eec43461dcfd9a0e747f74513d1d3f0d6bd3a369e3aef613",
+      "actual_normalized_sha256": "0db1a61cedd888ff29685838fd5338c6802f0f5f4e2dcb3940de8cb086fe38c9",
+      "status": "changed"
+    },
+    {
+      "source": "common/trigger_localization/00_trigger_localization.txt",
+      "expected_normalized_sha256": "8eaba9c4ae1e025de16ddc3384e53459182f0de88aabf05937b8ac421e397817",
+      "actual_normalized_sha256": "1f2de59b73a1649f5ba37e1ab0824c5b826acf7e538e84d941a7dc18ab88a070",
+      "status": "changed"
+    },
+    {
+      "source": "common/trigger_localization/trigger_localization.md",
+      "expected_normalized_sha256": "491d2c31dcf81ecb62c250f6bb26ff75e4d8501bfcb0a1ad5f6b0bf96d542e08",
+      "actual_normalized_sha256": "491d2c31dcf81ecb62c250f6bb26ff75e4d8501bfcb0a1ad5f6b0bf96d542e08",
+      "status": "unchanged"
+    },
+    {
+      "source": "common/tutorial_lessons/00_tutorial_lessons_promote_ig.txt",
+      "expected_normalized_sha256": "72e4426ad12cfdb5615af471e77b85552486d607626b847d98e994ea9855689f",
+      "actual_normalized_sha256": "72e4426ad12cfdb5615af471e77b85552486d607626b847d98e994ea9855689f",
+      "status": "unchanged"
+    },
+    {
+      "source": "events/agitators_events/algeria_events.txt",
+      "expected_normalized_sha256": "5f5ad379db5714993711178498f5e2241f1147b82ad2afdc818e6d510e673fc8",
+      "actual_normalized_sha256": "0a5dfeee0b01448f0904346d393c5ff93435ffc3c23e3156885902796648e3ed",
+      "status": "changed"
+    },
+    {
+      "source": "events/american_civil_war/acw_wild_west_events.txt",
+      "expected_normalized_sha256": "df8b4654e5c289e4c878fd8f6dc902dfd5b77ca2d34b9c8cf6e6fac3d3238915",
+      "actual_normalized_sha256": "efaf10714f38194443718edf511047e803c34adcb5ec96bc027b97200cfd8ebf",
+      "status": "changed"
+    },
+    {
+      "source": "events/australia_events.txt",
+      "expected_normalized_sha256": "9d9fadc641e9917ddec59905f797ca431e69ce4197358955e7eeb76bec4358da",
+      "actual_normalized_sha256": "38696cabad1628aa7500e117c01befd45c9a5d4acfe6743dbfc84b095bbd87ef",
+      "status": "changed"
+    },
+    {
+      "source": "events/brazil/amazonas.txt",
+      "expected_normalized_sha256": "b224b57ce1ea1f2ee9de0b3844b03e1731b9a54877de88e5c1dc1f5289138135",
+      "actual_normalized_sha256": "d9f7a9db0442e589ef0d3b8be3f1ef931ce659e8c02e31ce051cbed10fab353a",
+      "status": "changed"
+    },
+    {
+      "source": "events/brazil/south_america_migration.txt",
+      "expected_normalized_sha256": "7af6d271eb959f6fbb1bfa4a8de1de4bb79d000c4783db0cc27e5fb26a8fd8b3",
+      "actual_normalized_sha256": "0de17f42520a101c3bde5f244a0ba253e59e8f53d2ebbabb87ee2096e142d6a5",
+      "status": "changed"
+    },
+    {
+      "source": "events/cultural_homeland_events.txt",
+      "expected_normalized_sha256": "7adb75ce3082a6826f9f203f74f3b4069319eb98dc9812bbaf0442a6fd67de6a",
+      "actual_normalized_sha256": "d866a5c3570d23e3a08eb26c5bdc3a44586d08f5a4b690a080909f7f43b17024",
+      "status": "changed"
+    },
+    {
+      "source": "events/french_pretenders_pulse.txt",
+      "expected_normalized_sha256": "ba4f039bc10c2bc7680a4014c3c8521b986e95aee560b88468873a1cf519bd39",
+      "actual_normalized_sha256": "13201057f4b66190c4870ae7a9dc635fbcfacf3867532b9410051187212fc84c",
+      "status": "changed"
+    },
+    {
+      "source": "events/iberia_events/negotiation_events.txt",
+      "expected_normalized_sha256": "57f65c934f27c60dd3439fa6868c4adb4edea56627384dbd7f3997672571fe49",
+      "actual_normalized_sha256": "f738d3fe8d5d828460033d4d4b6b39437021a7f76dc80a2f9e48620a4cccc6ee",
+      "status": "changed"
+    },
+    {
+      "source": "events/india_events/set_hierarchy_events.txt",
+      "expected_normalized_sha256": "6b6e19147d86f59bf19a2958190bd074c2259bff7f14bc0861c084a7cc23ba42",
+      "actual_normalized_sha256": "26e935c3cf1407db24a89da06be3098ce9b4f6975b515c042ff125df4afe9032",
+      "status": "changed"
+    },
+    {
+      "source": "events/japan_events/ep2_hokkaido_events.txt",
+      "expected_normalized_sha256": "58abd41feac944910647c4929af7c8a18066cc0f376ef618a20a9ed55dc30147",
+      "actual_normalized_sha256": "3ea7441b150cdb09ab0b936a9746cb1d8eb04453a9b2bb3a47fa95e5e6fac261",
+      "status": "changed"
+    },
+    {
+      "source": "events/law_events/children_rights_events.txt",
+      "expected_normalized_sha256": "1b8a75290df30ea93fcf1948fd09fffc2175ecd932f7faef585b6952e3d068e2",
+      "actual_normalized_sha256": "5f735e048c3da9e3bb1a362af1a0e2916e0e2461625c225f4d5e18b7b6f076b7",
+      "status": "changed"
+    },
+    {
+      "source": "events/law_events/healthcare_laws.txt",
+      "expected_normalized_sha256": "5d0276d1b6ef3942e6107721117e14299b19ed3033e57842549c78aa3148d65b",
+      "actual_normalized_sha256": "c0bdc957a0944c55984bff2b392a04e44a4de5d49320e67b67cd01e113263f68",
+      "status": "changed"
+    },
+    {
+      "source": "events/law_events/state_atheism.txt",
+      "expected_normalized_sha256": "cb39c1a5badc168a6480bd3a19fb67dc82cfa80c8da7bd830b2fad747e80cf8e",
+      "actual_normalized_sha256": "79e17bbdbe7e20a98a488baaefafe9978eee0329e042c09b1cfeac8bbf728e85",
+      "status": "changed"
+    },
+    {
+      "source": "events/natural_disasters_events.txt",
+      "expected_normalized_sha256": "cf63ca4ff4dbbdb72e9454eaf568f81c87d18abe57180522c55e74ad80545b69",
+      "actual_normalized_sha256": "9bb33170a90f0fc9cbb14c9f443f232dd35ee2cf55f5a5125771f1ad38605593",
+      "status": "changed"
+    },
+    {
+      "source": "events/paralegal_discrimination_events.txt",
+      "expected_normalized_sha256": "6035008b9af5c24f5b41dc8cfac5b3ff878ea56f2071228caa8c2c9f73672e39",
+      "actual_normalized_sha256": "681da2be740046fbbf07922d2959098c7e5c21c451ac5dd23973ecfb260b618b",
+      "status": "changed"
+    },
+    {
+      "source": "events/soi_events/00_lobbies_events_04.txt",
+      "expected_normalized_sha256": "2af9b7ec1fdd28021aeb7af837033ac4f665a5468af6c6a68aa231de57ac5bc6",
+      "actual_normalized_sha256": "a2e252031968ef3b1c41bab8c83b3e0c3f7c95a2e028ab2847ef7a1bd20fca27",
+      "status": "changed"
+    },
+    {
+      "source": "events/spanish_flu_events.txt",
+      "expected_normalized_sha256": "cca18ec49ac4b448fc8f7998696512c57dbcc651b84715ea621ab952036412b7",
+      "actual_normalized_sha256": "09c1c901d3d8c105ed6b8b12e0ddcbd81acad878cbcf5cec8b0f99a903104bd3",
+      "status": "changed"
+    },
+    {
+      "source": "events/standard_of_living_events.txt",
+      "expected_normalized_sha256": "2a41ab15a7e8ce219b9fa4695813203737612d2816873c3708c8e23f56e5a148",
+      "actual_normalized_sha256": "2b41a7d92023eb41e6f049cf2bf02a705ed0923e82c1213e92924a20e797ab35",
+      "status": "changed"
+    },
+    {
+      "source": "events/tech_events/nursing_events.txt",
+      "expected_normalized_sha256": "7c6e74206cd6acb33a203b48b2f74023b1877c506572bb2852dda50e351fa3cb",
+      "actual_normalized_sha256": "8f2673bf160635e41249c5e49ff9f198667d606be929f098211b1ccd97a36831",
+      "status": "changed"
+    },
+    {
+      "source": "events/tech_events/trench_warfare.txt",
+      "expected_normalized_sha256": "07fd8d8d2e95fec338de215a20a59ffeb19823d3eac7859cba7ca8cd017cb0d0",
+      "actual_normalized_sha256": "d89447bea0291473e01b2cdeb69e5a689359b48d99f88bc8fb0a5163deb4979d",
+      "status": "changed"
+    },
+    {
+      "source": "events/trade_route_events.txt",
+      "expected_normalized_sha256": "92c99a87a04577b27f02ec5c6604571a3f4291675d2208aa65cbd1655cb99d8c",
+      "actual_normalized_sha256": "2354ccf692fa444614d970aab4ebd15d5a8d24dfc29e85d3ecbce5b4e1a76f3a",
+      "status": "changed"
+    },
+    {
+      "source": "localization/english/triggers_l_english.yml",
+      "expected_normalized_sha256": "27b0e3eb719daa61e103b87716a932200eeab36b7e9995b6677f2ff56bf5cabe",
+      "actual_normalized_sha256": "26ef51fe5dbab2e5009191087329b54bef84fdf28e68e4c2dc0f0e670b1301d6",
+      "status": "changed"
+    },
+    {
+      "source": "research/situated/victoria3-1.14.5-strategy-scope-r7.json",
+      "expected_normalized_sha256": "3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1",
+      "actual_normalized_sha256": "3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1",
+      "status": "unchanged"
+    }
+  ],
+  "exe_identity": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"
+}
