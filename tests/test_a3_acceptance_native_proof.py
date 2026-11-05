@@ -13,7 +13,8 @@ from test_a3_treaty_acceptance_integration import production  # noqa: F401
 
 from pdx import decision_adapters, decision_interfaces
 from pdx import treaty_acceptance_opportunities as acceptance
-from pdx.parser import parse_bytes
+from pdx.model import Block, Scalar
+from pdx.parser import parse_bytes, parse_text
 from pdx.situated import action_instances, domain_coverage, vanilla_inventory
 from pdx.situated.native_treatments import (
     _acceptance_program_proof,
@@ -26,7 +27,17 @@ from pdx.situated.native_treatments import (
 METADATA = ".metadata/metadata.json"
 
 
-@pytest.fixture(scope="module", params=("no_tariffs", "military_assistance"))
+@pytest.fixture(
+    scope="module",
+    params=(
+        "no_tariffs",
+        "military_assistance",
+        "alliance",
+        "defensive_pact",
+        "guarantee_independence",
+        "support_independence",
+    ),
+)
 def exact_acceptance(production, request):  # noqa: F811
     inputs, adapters, bundle = production
     programs = tuple(writer.acceptance_program for writer in bundle.writers)
@@ -104,7 +115,7 @@ def exact_acceptance(production, request):  # noqa: F811
         for current in programs
     )
     coverage = domain_coverage.native_coverage(inventory, instances, native_sources=native)
-    assert coverage["counts"]["actual_covered"] == 2
+    assert coverage["counts"]["actual_covered"] == 6
     return inventory, native, output, coverage
 
 
@@ -155,7 +166,7 @@ def test_exact_supplied_acceptance_proves_the_program_and_preserves_the_whole_so
     assert row["business_complete"] is False
 
 
-def test_complete_candidate_proves_both_distinct_writers_independently(exact_acceptance):
+def test_complete_candidate_proves_all_distinct_writers_independently(exact_acceptance):
     inventory, native, output, coverage = exact_acceptance
     proofs = [
         _proof((replace(inventory, surfaces=(surface,)), native, output, coverage))
@@ -165,8 +176,8 @@ def test_complete_candidate_proves_both_distinct_writers_independently(exact_acc
     assert {proof["definition"] for proof in proofs} == {
         program.writer_id for program in acceptance.compile_programs()
     }
-    assert len({proof["writer_sha256"] for proof in proofs}) == 2
-    assert len({proof["overlay_sha256"] for proof in proofs}) == 2
+    assert len({proof["writer_sha256"] for proof in proofs}) == 6
+    assert len({proof["overlay_sha256"] for proof in proofs}) == 6
 
 
 @pytest.mark.parametrize(
@@ -278,10 +289,13 @@ def test_acceptance_proof_rejects_changed_identity_context_or_physical_suffix(
     else:
         text = output[program.source].decode()
         overlay = acceptance.render(program)
-        if fault == "source":
-            changed = overlay.replace("scope:source_country", "scope:target_country")
-        elif fault == "target":
-            changed = overlay.replace("scope:target_country", "scope:source_country")
+        if fault in {"source", "target"}:
+            if program.kind == "directed":
+                first_role, second_role = "source_country", "target_country"
+            else:
+                first_role, second_role = "first_country", "second_country"
+            old, new = (first_role, second_role) if fault == "source" else (second_role, first_role)
+            changed = overlay.replace(f"scope:{old}", f"scope:{new}", 1)
         elif fault == "input":
             changed = (
                 overlay.replace("article.input_market_goods(root)", "article.treaty")
@@ -300,11 +314,27 @@ def test_acceptance_proof_rejects_changed_identity_context_or_physical_suffix(
     assert _proof((inventory, native, output, coverage)) == {}
 
 
-def test_exact_acceptance_never_masks_an_opaque_native_sibling(exact_acceptance):
+def test_exact_acceptance_never_masks_changed_native_parent_context(exact_acceptance):
     inventory, native, output, coverage = exact_acceptance
     changed = dict(output)
     source = inventory.surfaces[0].source
-    changed[source] = changed[source].replace(b"value = 0.1", b"value = 0.2", 1)
+    program = next(
+        row
+        for row in acceptance.compile_programs()
+        if row.definition == inventory.surfaces[0].definition
+    )
+    root = parse_text(native[source].decode("utf-8-sig"), path=source).root
+    definition = root.first(program.definition)
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    costs = definition.value.all("cost")
+    assert len(costs) == 1
+    assert isinstance(costs[0].value, Scalar)
+    old_cost = costs[0].value.unquoted
+    new_cost = str(int(old_cost) + 1)
+    changed[source] = changed[source].replace(
+        f"cost = {old_cost}".encode(), f"cost = {new_cost}".encode(), 1
+    )
     assert changed[source] != output[source]
     result = native_treatments(
         inventory, native, changed, coverage=coverage, production_complete=True

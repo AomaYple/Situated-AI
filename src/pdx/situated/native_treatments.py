@@ -2897,6 +2897,208 @@ def _acceptance_program_proof(
         return {}
 
 
+def _regional_resource_program_proof(
+    surface: VanillaSurface,
+    inventory: VanillaInventory,
+    dependencies: _Dependencies,
+    generated_sources: Mapping[str, bytes],
+) -> dict[str, Any]:
+    """Exact current program, metadata, permission closure and physical parent restoration."""
+    from pdx import decision_adapters, decision_interfaces  # noqa: PLC0415
+    from pdx import regional_resource_opportunities as regional  # noqa: PLC0415
+    from pdx.textio import normalized_text  # noqa: PLC0415
+
+    from .decision_ir import ConsumerIRBundle  # noqa: PLC0415
+
+    if (
+        (surface.source, surface.definition, surface.field)
+        != (
+            regional.SOURCE,
+            "ai_strategy_default",
+            regional.FIELD.removeprefix("ai_strategy_default."),
+        )
+        or not dependencies.production_complete
+        or dependencies.source_gaps
+        or dependencies.effective.failures
+    ):
+        return {}
+    try:
+        program = regional.compile_program()
+        writer = program.writer_ir()
+        expected_bundle = ConsumerIRBundle(1, (), (writer,)).as_dict()
+        metadata_raw = generated_sources[".metadata/metadata.json"]
+        metadata = json.loads(metadata_raw)
+        bundle = metadata["situated_actions"]["consumer_ir"]
+        rows = bundle["writers"]
+
+        def canonical(value: object) -> str:
+            return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+        candidates = [
+            r
+            for r in rows
+            if r.get("kind") == writer.kind
+            or r.get("writer_id") == writer.writer_id
+            or "regional_resource_program" in r
+        ]
+        if (
+            len({r["writer_id"] for r in rows}) != len(rows)
+            or bundle["schema"] != 1
+            or type(bundle["writer_count"]) is not int
+            or bundle["writer_count"] != len(rows)
+            or type(bundle["regional_resource_program_writer_count"]) is not int
+            or bundle["regional_resource_program_writer_count"] != 1
+            or canonical(candidates) != canonical(expected_bundle["writers"])
+            or bundle["field_owners"].get(writer.field) != writer.owner
+            or bundle["source_field_owners"].get(f"{writer.source}:{writer.field}") != writer.owner
+        ):
+            return {}
+        for row in rows:
+            if row["writer_id"] == writer.writer_id or row["source"] != writer.source:
+                continue
+            field = row["field"]
+            if (
+                field == writer.field
+                or field.startswith(writer.field + ".")
+                or writer.field.startswith(field + ".")
+            ):
+                return {}
+        contract = metadata["consumer_adapters"]
+        digest = hashlib.sha256(
+            regional.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + regional.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(regional.__file__).read_bytes()
+        ).hexdigest()
+        generator = hashlib.sha256(Path(decision_adapters.__file__).read_bytes()).hexdigest()
+        interfaces = hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()
+        if (
+            canonical(contract["regional_resource_programs"]) != canonical([program.as_dict()])
+            or canonical(contract["regional_resource_consumer_interfaces"])
+            != canonical([decision_interfaces.regional_resource_consumer(program)])
+            or contract["regional_resource_opportunities_sha256"] != digest
+            or contract["generator_sha256"] != generator
+            or metadata["source_fingerprint"]["consumer_adapters_generator_sha256"] != generator
+            or metadata["source_fingerprint"]["consumer_interfaces_sha256"] != interfaces
+            or contract["field_owners"].count(
+                {"source": writer.source, "field": writer.field, "owner": writer.owner}
+            )
+            != 1
+        ):
+            return {}
+        inputs = {
+            name: normalized_text(dependencies.native_bytes[name].decode("utf-8-sig"))
+            for name in regional.SOURCES - {regional.R7}
+        }
+        inputs[regional.R7] = (
+            normalized_text(dependencies.native_bytes[regional.R7].decode("utf-8-sig"))
+            if regional.R7 in dependencies.native_bytes
+            else (regional.config.REPO / regional.R7).read_text(encoding="utf-8")
+        )
+        regional.verify_inputs(inputs)
+        if any(contract["sources"].get(n) != h for n, h in regional.load()["sources"].items()):
+            return {}
+        # Permission-only source bodies must remain exact; strategy siblings may have their own writers.
+        for name in regional.SOURCES - {regional.SOURCE, regional.BUILDINGS, regional.R7}:
+            if dependencies.native_bytes[name] != dependencies.effective_bytes[name]:
+                return {}
+        # Resource building scores have their own audited writers. Only the exact
+        # unlocking fields grant this query permission; unrelated scores do not.
+        for building, _technology in regional.RESOURCE_TECHNOLOGIES:
+            before_unlock, bs = _resolve(
+                dependencies.native.roots[regional.BUILDINGS], building, "unlocking_technologies"
+            )
+            after_unlock, es = _resolve(
+                dependencies.effective.roots[regional.BUILDINGS], building, "unlocking_technologies"
+            )
+            if bs != "found" or es != "found" or _ast(before_unlock) != _ast(after_unlock):
+                return {}
+        native_state_value = regional._block(
+            regional._block(dependencies.native.roots[regional.SOURCE], "ai_strategy_default"),
+            "state_value",
+        )
+        effective_state = regional._block(
+            regional._block(dependencies.effective.roots[regional.SOURCE], "ai_strategy_default"),
+            "state_value",
+        )
+        for building, technology in regional.RESOURCE_TECHNOLOGIES:
+            shape = (
+                "AND",
+                "=",
+                (
+                    ("root", "=", (("has_technology_researched", "=", technology),)),
+                    (f"num_potential_resources(bt:{building})", ">", "0"),
+                ),
+            )
+            if not regional._contains_shape(
+                native_state_value, shape
+            ) or not regional._contains_shape(effective_state, shape):
+                return {}
+        content = generated_sources[writer.source].decode("utf-8-sig")
+        overlay = regional.render(program)
+        if (
+            content.count(overlay) != 1
+            or content.count("# SITAI BEGIN regional_resource_opportunity") != 1
+            or content.count("# SITAI END regional_resource_opportunity") != 1
+            or content.count(f"# ACTION {writer.writer_id}")
+            != overlay.count(f"# ACTION {writer.writer_id}")
+            or any(
+                name != writer.source and f"# ACTION {writer.writer_id}".encode() in raw
+                for name, raw in generated_sources.items()
+            )
+        ):
+            return {}
+        original = parse_bytes(content.replace(overlay, "", 1).encode(), path=writer.source)
+        expected = parse_bytes(
+            regional.patch(inputs, consumer_program=program)[writer.source].encode(),
+            path=writer.source,
+        )
+        native_node, native_state_status = _resolve(
+            dependencies.native.roots[writer.source], "ai_strategy_default", surface.field
+        )
+        current_node, current_state = _resolve(
+            dependencies.effective.roots[writer.source], "ai_strategy_default", surface.field
+        )
+        restored_node, restored_state = _resolve(
+            original.root, "ai_strategy_default", surface.field
+        )
+        expected_node, expected_state = _resolve(
+            expected.root, "ai_strategy_default", surface.field
+        )
+        if (
+            original.errors
+            or expected.errors
+            or native_state_status != "found"
+            or current_state != "found"
+            or restored_state != "found"
+            or expected_state != "found"
+            or _ast(restored_node) != _ast(native_node)
+            or _ast(current_node) != _ast(expected_node)
+        ):
+            return {}
+        return {
+            "family": "regional_resource_program",
+            "definition": writer.writer_id,
+            "status": "proven_generated",
+            "native_source": writer.source,
+            "effective_source": writer.source,
+            "native_ast_sha256": _digest(native_node),
+            "effective_ast_sha256": _digest(current_node),
+            "metadata_sha256": hashlib.sha256(metadata_raw).hexdigest(),
+            "writer_sha256": hashlib.sha256(canonical(candidates[0]).encode()).hexdigest(),
+            "overlay_sha256": hashlib.sha256(overlay.encode()).hexdigest(),
+            "native_inputs": {
+                n: inventory.source_hashes[n] for n in sorted(regional.SOURCES - {regional.R7})
+            },
+            "repository_evidence": {regional.R7: regional.load()["sources"][regional.R7]},
+            "interface_authorized": True,
+            "business_complete": False,
+        }
+    except (OSError, KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+        return {}
+
+
 def _event_health_projection(
     dependencies: _Dependencies, metadata: Mapping[str, Any]
 ) -> dict[str, Any]:
@@ -4207,6 +4409,9 @@ def native_treatments(
                 event_proofs.get(surface.surface_id, {})
                 or _support_program_proof(surface, inventory, dependencies, generated_sources)
                 or _acceptance_program_proof(surface, inventory, dependencies, generated_sources)
+                or _regional_resource_program_proof(
+                    surface, inventory, dependencies, generated_sources
+                )
             )
             if (
                 _registered_event_surface(surface)
@@ -4314,9 +4519,10 @@ def native_treatments(
             row["status"] = "implemented_numeric"
             row["implemented_numeric"] = True
             row["numeric_actions"] = list(covered[surface.declaration_id]["covered_actions"])
-            if continuous_proof.get("family") == "event_program" and row["numeric_actions"] != [
-                continuous_proof["definition"]
-            ]:
+            if continuous_proof.get("family") in {
+                "event_program",
+                "regional_resource_program",
+            } and row["numeric_actions"] != [continuous_proof["definition"]]:
                 row["status"] = "changed_native"
                 row["implemented_numeric"] = False
                 row["numeric_actions"] = []

@@ -23,6 +23,7 @@ from . import (
     famine_opportunities,
     import_blockade_opportunities,
     internal_security_opportunities,
+    regional_resource_opportunities,
     subject_dependence_opportunities,
     technology_opportunities,
     war_pressure_opportunities,
@@ -46,6 +47,8 @@ QUERY_ENGINES = frozenset(
         "AND",
         "any_scope_war",
         "any_scope_treaty",
+        "hokkaido_observation",
+        "scope:target_region",
     }
 )
 _ECONOMY = "common/laws/01_economic_system.txt"
@@ -215,17 +218,20 @@ _ExistingCountryQuery = (
     | technology_opportunities.TechnologyQuery
     | internal_security_opportunities.SecurityQuery
     | colonial_opportunities.ColonialQuery
+    | regional_resource_opportunities.RegionalResourceQuery
     | import_blockade_opportunities.ImportBlockadeQuery
     | culture_opportunities.ReligiousExposureQuery
     | culture_opportunities.CulturalExposureQuery
     | subject_dependence_opportunities.ActualOverlordDependenceQuery
     | event_opportunities.PlagueStateQuery
     | event_opportunities.DisasterFarmQuery
+    | event_opportunities.HokkaidoQuery
     | famine_opportunities.FamineStateQuery
     | war_pressure_opportunities.OwnMultiwarLowSupportQuery
 )
 CountryQuery: TypeAlias = (
     "_ExistingCountryQuery | treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery"
+    " | treaty_acceptance_opportunities.ExistingCommitmentQuery"
 )
 
 
@@ -271,12 +277,16 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         return internal_security_opportunities.query_from_reader(engine, parameters)
     if "colonial_query" in parameters:
         return colonial_opportunities.query_from_reader(engine, parameters)
+    if regional_resource_opportunities.QUERY_PARAMETER in parameters:
+        return regional_resource_opportunities.query_from_reader(engine, parameters)
     if import_blockade_opportunities.QUERY_PARAMETER in parameters:
         return import_blockade_opportunities.query_from_reader(engine, parameters)
     if culture_opportunities.QUERY_PARAMETER in parameters:
         return culture_opportunities.query_from_reader(engine, parameters)
     if subject_dependence_opportunities.QUERY_PARAMETER in parameters:
         return subject_dependence_opportunities.query_from_reader(engine, parameters)
+    if event_opportunities.HOKKAIDO_QUERY_PARAMETER in parameters:
+        return event_opportunities.hokkaido_query_from_reader(engine, parameters)
     if event_opportunities.DISASTER_QUERY_PARAMETER in parameters:
         return event_opportunities.disaster_query_from_reader(engine, parameters)
     if event_opportunities.QUERY_PARAMETER in parameters:
@@ -285,7 +295,7 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         return famine_opportunities.query_from_reader(engine, parameters)
     if war_pressure_opportunities.QUERY_PARAMETER in parameters:
         return war_pressure_opportunities.query_from_reader(engine, parameters)
-    if "military_assistance_query" in parameters:
+    if "military_assistance_query" in parameters or "military_commitment_query" in parameters:
         from . import treaty_acceptance_opportunities  # noqa: PLC0415
 
         return treaty_acceptance_opportunities.query_from_reader(engine, parameters)
@@ -320,7 +330,13 @@ def render(query: CountryQuery) -> str:
     """Pure fixed-template lowering, including type, ID and numeric guards."""
     from . import treaty_acceptance_opportunities  # noqa: PLC0415
 
-    if isinstance(query, treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery):
+    if isinstance(
+        query,
+        (
+            treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery,
+            treaty_acceptance_opportunities.ExistingCommitmentQuery,
+        ),
+    ):
         return treaty_acceptance_opportunities.render_query(query)
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.render(query)
@@ -330,6 +346,8 @@ def render(query: CountryQuery) -> str:
         return internal_security_opportunities.render_query(query)
     if isinstance(query, colonial_opportunities.ColonialQuery):
         return colonial_opportunities.render_query(query)
+    if isinstance(query, regional_resource_opportunities.RegionalResourceQuery):
+        return regional_resource_opportunities.render_query(query)
     if isinstance(query, import_blockade_opportunities.ImportBlockadeQuery):
         return import_blockade_opportunities.render_query(query)
     if isinstance(
@@ -339,6 +357,8 @@ def render(query: CountryQuery) -> str:
         return culture_opportunities.render_query(query)
     if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
         return subject_dependence_opportunities.render_query(query)
+    if isinstance(query, event_opportunities.HokkaidoQuery):
+        return event_opportunities.render_hokkaido_query(query)
     if isinstance(query, event_opportunities.DisasterFarmQuery):
         return event_opportunities.render_disaster_query(query)
     if isinstance(query, event_opportunities.PlagueStateQuery):
@@ -386,7 +406,13 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
     from . import treaty_acceptance_opportunities  # noqa: PLC0415
 
     render(query)
-    if isinstance(query, treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery):
+    if isinstance(
+        query,
+        (
+            treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery,
+            treaty_acceptance_opportunities.ExistingCommitmentQuery,
+        ),
+    ):
         return tuple(sorted(treaty_acceptance_opportunities.SOURCES))
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.required_sources(query)
@@ -396,6 +422,8 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
         return internal_security_opportunities.required_query_sources(query)
     if isinstance(query, colonial_opportunities.ColonialQuery):
         return colonial_opportunities.required_query_sources(query)
+    if isinstance(query, regional_resource_opportunities.RegionalResourceQuery):
+        return regional_resource_opportunities.required_query_sources(query)
     if isinstance(query, import_blockade_opportunities.ImportBlockadeQuery):
         return import_blockade_opportunities.required_query_sources(query)
     if isinstance(
@@ -405,6 +433,8 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
         return culture_opportunities.required_query_sources(query)
     if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
         return subject_dependence_opportunities.required_query_sources(query)
+    if isinstance(query, event_opportunities.HokkaidoQuery):
+        return event_opportunities.required_hokkaido_query_sources(query)
     if isinstance(query, event_opportunities.DisasterFarmQuery):
         return event_opportunities.required_disaster_query_sources(query)
     if isinstance(query, event_opportunities.PlagueStateQuery):
@@ -558,11 +588,13 @@ def compile_query(
     | technology_opportunities.CompiledTechnologyQuery
     | internal_security_opportunities.CompiledSecurityQuery
     | colonial_opportunities.CompiledColonialQuery
+    | regional_resource_opportunities.CompiledRegionalResourceQuery
     | import_blockade_opportunities.CompiledImportBlockadeQuery
     | culture_opportunities.CompiledReligiousExposureQuery
     | subject_dependence_opportunities.CompiledActualOverlordDependenceQuery
     | event_opportunities.CompiledPlagueStateQuery
     | event_opportunities.CompiledDisasterFarmQuery
+    | event_opportunities.CompiledHokkaidoQuery
     | famine_opportunities.CompiledFamineStateQuery
     | war_pressure_opportunities.CompiledOwnMultiwarLowSupportQuery
 ):
@@ -575,6 +607,8 @@ def compile_query(
         return internal_security_opportunities.compile_query(query, texts)
     if isinstance(query, colonial_opportunities.ColonialQuery):
         return colonial_opportunities.compile_query(query, texts)
+    if isinstance(query, regional_resource_opportunities.RegionalResourceQuery):
+        return regional_resource_opportunities.compile_query(query, texts)
     if isinstance(query, import_blockade_opportunities.ImportBlockadeQuery):
         return import_blockade_opportunities.compile_query(query, texts)
     if isinstance(
@@ -586,8 +620,16 @@ def compile_query(
         return subject_dependence_opportunities.compile_query(query, texts)
     from . import treaty_acceptance_opportunities  # noqa: PLC0415
 
-    if isinstance(query, treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery):
+    if isinstance(
+        query,
+        (
+            treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery,
+            treaty_acceptance_opportunities.ExistingCommitmentQuery,
+        ),
+    ):
         return treaty_acceptance_opportunities.compile_query(query, texts)
+    if isinstance(query, event_opportunities.HokkaidoQuery):
+        return event_opportunities.compile_hokkaido_query(query, texts)
     if isinstance(query, event_opportunities.DisasterFarmQuery):
         return event_opportunities.compile_disaster_query(query, texts)
     if isinstance(query, event_opportunities.PlagueStateQuery):

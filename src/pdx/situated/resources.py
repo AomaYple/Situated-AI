@@ -156,7 +156,10 @@ def verify_inherited_writes(files: Mapping[str, str]) -> None:
         canal_opportunities,
         event_opportunities,
         famine_opportunities,
+        native_action_opportunities,
+        native_button_opportunities,
         native_decision_opportunities,
+        regional_resource_opportunities,
     )
 
     inherited = {
@@ -166,6 +169,9 @@ def verify_inherited_writes(files: Mapping[str, str]) -> None:
             event_opportunities.DISASTERS
         ],
         event_opportunities.SOL: event_opportunities.frozen_inputs()[event_opportunities.SOL],
+        event_opportunities.HOKKAIDO: event_opportunities.frozen_inputs()[
+            event_opportunities.HOKKAIDO
+        ],
         famine_opportunities.SOURCE: famine_opportunities.frozen_inputs()[
             famine_opportunities.SOURCE
         ],
@@ -173,6 +179,23 @@ def verify_inherited_writes(files: Mapping[str, str]) -> None:
             native_decision_opportunities.SOURCE
         ],
     }
+
+    inherited[regional_resource_opportunities.SOURCE] = (
+        regional_resource_opportunities.frozen_inputs()[regional_resource_opportunities.SOURCE]
+    )
+    import json  # noqa: PLC0415
+
+    action_inputs = json.loads(native_action_opportunities.FROZEN.read_bytes())["texts"]
+    for source in (
+        "common/diplomatic_actions/34_subjects_exempt_from_service.txt",
+        "common/diplomatic_actions/03_violate_sovereignty.txt",
+        "common/diplomatic_actions/32_subjects_raise_payments.txt",
+    ):
+        inherited[source] = action_inputs[source]
+    button_inputs = native_button_opportunities.frozen_inputs()
+    inherited.update(
+        {spec.source: button_inputs[spec.source] for spec in native_button_opportunities.SPECS}
+    )
 
     def shape(node: Node) -> tuple:
         if isinstance(node, Assignment):

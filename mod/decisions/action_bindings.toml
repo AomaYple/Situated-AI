@@ -112,6 +112,17 @@ disposition = "migrate"
 consumer = "ai_strategy_default.institution_scores.institution_colonial_affairs"
 
 [[bindings]]
+binding_id = "binding_common_ai_strategies_00_default_strategy_txt_colonial_candidate_region_resource_opportunity"
+source = "common/ai_strategies/00_default_strategy.txt"
+definition = "colonial_candidate_region_resource_opportunity"
+field = "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region"
+actor = "root"
+target = "target_region"
+operation = "add"
+disposition = "migrate"
+consumer = "regional_resource:stance_colonize_region"
+
+[[bindings]]
 binding_id = "binding_common_ai_strategies_00_default_strategy_txt_comparative_government_frictions_landowner"
 source = "common/ai_strategies/00_default_strategy.txt"
 definition = "comparative_government_frictions_landowner"
@@ -30890,6 +30901,39 @@ disposition = "migrate"
 consumer = "decree_emergency_relief.ai_weight"
 
 [[bindings]]
+binding_id = "binding_common_diplomatic_actions_03_violate_sovereignty_txt_native_action_sovereignty_default"
+source = "common/diplomatic_actions/03_violate_sovereignty.txt"
+definition = "native_action_sovereignty_default"
+field = "violate_sovereignty.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "violate_sovereignty.ai.propose_score"
+
+[[bindings]]
+binding_id = "binding_common_diplomatic_actions_03_violate_sovereignty_txt_native_action_sovereignty_deficit"
+source = "common/diplomatic_actions/03_violate_sovereignty.txt"
+definition = "native_action_sovereignty_deficit"
+field = "violate_sovereignty.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "violate_sovereignty.ai.propose_score"
+
+[[bindings]]
+binding_id = "binding_common_diplomatic_actions_03_violate_sovereignty_txt_native_action_sovereignty_recovery"
+source = "common/diplomatic_actions/03_violate_sovereignty.txt"
+definition = "native_action_sovereignty_recovery"
+field = "violate_sovereignty.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "violate_sovereignty.ai.propose_score"
+
+[[bindings]]
 binding_id = "binding_common_diplomatic_actions_26_join_power_bloc_txt_native_action_bloc_default"
 source = "common/diplomatic_actions/26_join_power_bloc.txt"
 definition = "native_action_bloc_default"
@@ -30923,6 +30967,39 @@ disposition = "migrate"
 consumer = "join_power_bloc.ai.propose_score"
 
 [[bindings]]
+binding_id = "binding_common_diplomatic_actions_32_subjects_raise_payments_txt_native_action_raise_income_need"
+source = "common/diplomatic_actions/32_subjects_raise_payments.txt"
+definition = "native_action_raise_income_need"
+field = "raise_payments.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "raise_payments.ai.propose_score"
+
+[[bindings]]
+binding_id = "binding_common_diplomatic_actions_32_subjects_raise_payments_txt_native_action_raise_liberty_high"
+source = "common/diplomatic_actions/32_subjects_raise_payments.txt"
+definition = "native_action_raise_liberty_high"
+field = "raise_payments.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "raise_payments.ai.propose_score"
+
+[[bindings]]
+binding_id = "binding_common_diplomatic_actions_32_subjects_raise_payments_txt_native_action_raise_liberty_risk"
+source = "common/diplomatic_actions/32_subjects_raise_payments.txt"
+definition = "native_action_raise_liberty_risk"
+field = "raise_payments.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "raise_payments.ai.propose_score"
+
+[[bindings]]
 binding_id = "binding_common_diplomatic_actions_33_subjects_decrease_payments_txt_native_action_payments_default"
 source = "common/diplomatic_actions/33_subjects_decrease_payments.txt"
 definition = "native_action_payments_default"
@@ -30943,6 +31020,17 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "decrease_payments.ai.propose_score"
+
+[[bindings]]
+binding_id = "binding_common_diplomatic_actions_34_subjects_exempt_from_service_txt_native_action_exempt_service_war"
+source = "common/diplomatic_actions/34_subjects_exempt_from_service.txt"
+definition = "native_action_exempt_service_war"
+field = "exempt_from_service.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "exempt_from_service.ai.propose_score"
 
 [[bindings]]
 binding_id = "binding_common_diplomatic_actions_38_subjects_increase_autonomy_txt_native_action_autonomy_need"
@@ -39756,6 +39844,28 @@ disposition = "migrate"
 consumer = "mobilization_option_truck_transport.ai_weight"
 
 [[bindings]]
+binding_id = "binding_common_scripted_buttons_00_hispaniola_buttons_txt_native_button_haiti_thin_buffer"
+source = "common/scripted_buttons/00_hispaniola_buttons.txt"
+definition = "native_button_haiti_thin_buffer"
+field = "je_haitian_debt_payment_button.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "je_haitian_debt_payment_button.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_scripted_buttons_00_hispaniola_buttons_txt_native_button_haiti_very_thin_buffer"
+source = "common/scripted_buttons/00_hispaniola_buttons.txt"
+definition = "native_button_haiti_very_thin_buffer"
+field = "je_haitian_debt_payment_button.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "je_haitian_debt_payment_button.ai_chance"
+
+[[bindings]]
 binding_id = "binding_common_scripted_buttons_04_indian_famines_buttons_txt_famine_epidemic_control_benefit"
 source = "common/scripted_buttons/04_indian_famines_buttons.txt"
 definition = "famine_epidemic_control_benefit"
@@ -39908,6 +40018,72 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "je_indian_famines_button_work_camps.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_scripted_buttons_07_japan_buttons_txt_native_button_hokkaido_commitment"
+source = "common/scripted_buttons/07_japan_buttons.txt"
+definition = "native_button_hokkaido_commitment"
+field = "button_je_taming_the_north_agriculture_potentials.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "button_je_taming_the_north_agriculture_potentials.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_scripted_buttons_07_japan_buttons_txt_native_button_hokkaido_financing_pressure"
+source = "common/scripted_buttons/07_japan_buttons.txt"
+definition = "native_button_hokkaido_financing_pressure"
+field = "button_je_taming_the_north_agriculture_potentials.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "button_je_taming_the_north_agriculture_potentials.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_scripted_buttons_southamerica_migration_button_txt_native_button_migration_authority_short"
+source = "common/scripted_buttons/southamerica_migration_button.txt"
+definition = "native_button_migration_authority_short"
+field = "southamerica_migration_button.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "southamerica_migration_button.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_scripted_buttons_southamerica_migration_button_txt_native_button_migration_authority_thin"
+source = "common/scripted_buttons/southamerica_migration_button.txt"
+definition = "native_button_migration_authority_thin"
+field = "southamerica_migration_button.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "southamerica_migration_button.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_scripted_buttons_southamerica_migration_button_txt_native_button_migration_influence_short"
+source = "common/scripted_buttons/southamerica_migration_button.txt"
+definition = "native_button_migration_influence_short"
+field = "southamerica_migration_button.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "southamerica_migration_button.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_scripted_buttons_southamerica_migration_button_txt_native_button_migration_influence_thin"
+source = "common/scripted_buttons/southamerica_migration_button.txt"
+definition = "native_button_migration_influence_thin"
+field = "southamerica_migration_button.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "southamerica_migration_button.ai_chance"
 
 [[bindings]]
 binding_id = "binding_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_aircraft_carrier_armor_high_default"

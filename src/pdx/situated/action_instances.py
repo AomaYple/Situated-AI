@@ -147,6 +147,28 @@ def build(
             )
             for program in adapters.acceptance_programs
         )
+    if any("economy" in policy.enabled_domains for _, policy in adapters.policies):
+        result.extend(
+            ActionInstance(
+                action_id=p.writer_id,
+                kind="regional_resource_program",
+                source=p.source,
+                rule_id=p.definition,
+                domain="economy",
+                consumer_field=p.field,
+                operation="add",
+                value=0,
+                condition_facts=tuple(r.key for r in p.readers()),
+                owner="regional_resource_opportunities",
+                vanilla_tail="preserve",
+                evidence=p.evaluation_context().evidence,
+                family_id="overseas",
+                actor_scope="root",
+                target_scope="target_region",
+                evaluation_context=p.evaluation_context(),
+            )
+            for p in adapters.regional_resource_programs
+        )
     for card in explicit:
         consumer = (consumer_contracts or {}).get(card.consumer)
         if consumer is None:
@@ -284,11 +306,12 @@ def missing_witnesses(
     return tuple(
         item.action_id
         for item in instances
-        if item.kind in {"rule_action", "event_program", "acceptance_program"}
+        if item.kind
+        in {"rule_action", "event_program", "acceptance_program", "regional_resource_program"}
         and (
             _output_source(item.source, item.consumer_field),
             item.action_id
-            if item.kind in {"event_program", "acceptance_program"}
+            if item.kind in {"event_program", "acceptance_program", "regional_resource_program"}
             else item.rule_id,
         )
         not in witnesses
@@ -310,11 +333,18 @@ def witness_contract(
             "actor_scope": item.actor_scope,
             "target_scope": item.target_scope,
             "witnessed": (
-                item.kind not in {"rule_action", "event_program", "acceptance_program"}
+                item.kind
+                not in {
+                    "rule_action",
+                    "event_program",
+                    "acceptance_program",
+                    "regional_resource_program",
+                }
                 or (
                     _output_source(item.source, item.consumer_field),
                     item.action_id
-                    if item.kind in {"event_program", "acceptance_program"}
+                    if item.kind
+                    in {"event_program", "acceptance_program", "regional_resource_program"}
                     else item.rule_id,
                 )
                 in found

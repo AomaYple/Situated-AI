@@ -2764,7 +2764,9 @@ def _proven_event_surfaces(
             continue
         if names not in verified:
             texts = {name: normalized_text(inputs[name].decode("utf-8-sig")) for name in names}
-            if program.identity.family == "sol_response":
+            if program.identity.family == "hokkaido":
+                event.verify_hokkaido_inputs(texts)
+            elif program.identity.family == "sol_response":
                 event.verify_sol_inputs(texts)
             else:
                 event._verify_legacy_inputs(texts)

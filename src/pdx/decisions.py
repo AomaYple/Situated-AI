@@ -1254,8 +1254,13 @@ def build(
         and bool(consumer_adapters.acceptance_programs)
         and any("diplomacy" in adapter.enabled_domains for _, adapter in consumer_adapters.policies)
     )
+    regional_enabled = (
+        consumer_adapters is not None
+        and bool(consumer_adapters.regional_resource_programs)
+        and any("economy" in adapter.enabled_domains for _, adapter in consumer_adapters.policies)
+    )
     if (
-        not supply_enabled or not event_enabled or not acceptance_enabled
+        not supply_enabled or not event_enabled or not acceptance_enabled or not regional_enabled
     ) and situated_model.consumer_ir is not None:
         # The configured model is wider than a caller's actual enabled inputs.
         # A disabled adapter must not survive as a claimed production writer.
@@ -1269,6 +1274,7 @@ def build(
                     if (writer.kind != "supply_program" or supply_enabled)
                     and (writer.kind != "event_program" or event_enabled)
                     and (writer.kind != "acceptance_program" or acceptance_enabled)
+                    and (writer.kind != "regional_resource_program" or regional_enabled)
                 ),
             ),
         )

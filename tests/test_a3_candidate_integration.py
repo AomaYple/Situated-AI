@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+from collections import Counter
 from dataclasses import replace
 
 import pytest
@@ -50,7 +51,15 @@ def test_complete_production_event_programs_have_no_unproven_projection(complete
         production_complete=True,
     )
     proofs = _event_program_proofs(inventory, dependencies, output)
-    assert len(proofs) == len(event_opportunities.compile_programs()) == 23
+    programs = event_opportunities.compile_programs()
+    assert len(proofs) == len(programs) == 28
+    assert Counter(program.identity.family for program in programs) == {
+        "healthcare": 2,
+        "plague": 3,
+        "disaster": 16,
+        "sol_response": 2,
+        "hokkaido": 5,
+    }
     assert all(row["interface_authorized"] for row in proofs.values())
 
 

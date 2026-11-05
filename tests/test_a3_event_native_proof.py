@@ -14,6 +14,7 @@ from test_a3_event_integration import production  # noqa: F401
 
 from pdx import config, decision_adapters, decision_interfaces
 from pdx import event_opportunities as event
+from pdx import regional_resource_opportunities as regional_resources
 from pdx.parser import parse_bytes
 from pdx.situated import action_instances, compiler, domain_coverage, vanilla_inventory
 from pdx.situated.native_treatments import (
@@ -46,7 +47,7 @@ def exact_events(production):  # noqa: F811
     native = {source: (config.GAME / source).read_bytes() for source in inputs}
     candidates: list[vanilla_inventory.VanillaSurface] = []
     options: list[vanilla_inventory.VanillaEventOption] = []
-    for source in (event.SOURCE, event.PLAGUE, event.DISASTERS, event.SOL):
+    for source in (event.SOURCE, event.PLAGUE, event.DISASTERS, event.SOL, event.HOKKAIDO):
         parsed = parse_bytes(native[source], path=source)
         for parent in parsed.root.assignments():
             discovered, surfaces = vanilla_inventory._event_candidates(source, parent)
@@ -54,7 +55,7 @@ def exact_events(production):  # noqa: F811
             candidates.extend(surfaces)
     proven = vanilla_inventory._proven_event_surfaces(native, candidates)
     surfaces = tuple(surface for surface in proven if surface.legal)
-    assert len(surfaces) == 23
+    assert len(surfaces) == 28
     inventory = vanilla_inventory.VanillaInventory(
         "exact_supplied_events",
         {source: hashlib.sha256(raw).hexdigest() for source, raw in native.items()},
@@ -97,7 +98,7 @@ def exact_events(production):  # noqa: F811
         for program in event.compile_programs()
     )
     coverage = domain_coverage.native_coverage(inventory, instances, native_sources=native)
-    assert coverage["counts"]["actual_covered"] == 23
+    assert coverage["counts"]["actual_covered"] == 28
     return inventory, native, output, coverage
 
 
@@ -118,8 +119,8 @@ def _proofs(case, *, complete=True):
 
 def test_all_current_real_programs_distinguish_original_and_new_weight_slots(exact_events):
     proofs = _proofs(exact_events)
-    assert len(proofs) == 23
-    assert sum(proof["native_weight_present"] for proof in proofs.values()) == 2
+    assert len(proofs) == 28
+    assert sum(proof["native_weight_present"] for proof in proofs.values()) == 7
     assert sum(not proof["native_weight_present"] for proof in proofs.values()) == 21
     assert {proof["policy"] for proof in proofs.values()} == {
         "additive_to_explicit_native_aiweight",
@@ -129,7 +130,7 @@ def test_all_current_real_programs_distinguish_original_and_new_weight_slots(exa
     report = native_treatments(
         inventory, native, output, coverage=coverage, production_complete=True
     )
-    assert report["counts"]["implemented_numeric"] == 23
+    assert report["counts"]["implemented_numeric"] == 28
     for row in report["rows"]:
         assert row["issues"] == [], row
         assert row["source_protection"]["context_closed"] is True, row
@@ -152,7 +153,7 @@ def test_final_script_whitespace_form_preserves_exact_event_proof(exact_events):
     }
     assert final[event.SOURCE] != output[event.SOURCE]
     case = inventory, native, final, coverage
-    assert len(_proofs(case)) == 23
+    assert len(_proofs(case)) == 28
     # Canonical whitespace does not excuse an additional native definition.
     final[event.SOURCE] += b"\nforged_event = {}\n"
     assert _proofs((inventory, native, final, coverage)) == {}
@@ -328,7 +329,7 @@ def test_effective_caller_drift_and_stale_mutable_mapping_cannot_reuse_proof(exa
         inventory.source_hashes,
         production_complete=True,
     )
-    assert len(_event_program_proofs(inventory, dependencies, output)) == 23
+    assert len(_event_program_proofs(inventory, dependencies, output)) == 28
     output[event.YEARLY] = native[event.YEARLY].replace(
         b"3 = natural_disaster_events.1", b"4 = natural_disaster_events.1", 1
     )
@@ -372,7 +373,12 @@ def events_with_actual_health_writer(exact_events):
     bundle = replace(model.consumer_ir, writers=writers, chain_bindings=(), chains_bound=False)
     inputs = decision_adapters.read_inputs(configured)
     generated, contract = decision_adapters.build(selected, texts=inputs, consumer_ir=bundle)
-    native = {source: (config.GAME / source).read_bytes() for source in inputs}
+    native = {
+        source: (
+            (config.REPO if source == regional_resources.R7 else config.GAME) / source
+        ).read_bytes()
+        for source in inputs
+    }
     inventory = replace(
         inventory,
         source_hashes={source: hashlib.sha256(raw).hexdigest() for source, raw in native.items()},
@@ -401,7 +407,7 @@ def test_real_health_numeric_writer_preserves_complete_referenced_law(
     inventory, native, output, coverage = case
     assert output[event.HEALTH] != native[event.HEALTH]
     proofs = _proofs(case)
-    assert len(proofs) == 23
+    assert len(proofs) == 28
     assert all(
         row["referenced_health_source"]["mode"] == "exact_registered_law_numeric_program"
         for row in proofs.values()
@@ -409,7 +415,7 @@ def test_real_health_numeric_writer_preserves_complete_referenced_law(
     report = native_treatments(
         inventory, native, output, coverage=coverage, production_complete=True
     )
-    assert sum(row["interface"]["control_authorized"] for row in report["rows"]) == 23
+    assert sum(row["interface"]["control_authorized"] for row in report["rows"]) == 28
 
 
 @pytest.mark.parametrize(

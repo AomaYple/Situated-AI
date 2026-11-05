@@ -7,7 +7,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules, decisions, distribution
+from pdx import decision_rules, decisions, distribution, regional_resource_opportunities
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import bindings, compiler, engine_scope, migration_baseline
@@ -70,8 +70,16 @@ def test_complete_production_restores_native_ratio_ast_without_claiming_control(
     assert len(original) == 5
     assert original <= retired
     stance = "strategic_region_stance_type_scores.stance_colonize_region"
-    assert _digest(_strategy_field(produced, stance)) == _digest(_strategy_field(native, stance))
-    assert not any(w.field == f"ai_strategy_default.{stance}" for w in model.consumer_ir.writers)
+    regional = regional_resource_opportunities
+    expected_stance = regional.patch(regional.frozen_inputs())[regional.SOURCE]
+    assert _digest(_strategy_field(produced, stance)) == _digest(
+        _strategy_field(expected_stance, stance)
+    )
+    writers = tuple(
+        w for w in model.consumer_ir.writers if w.field == f"ai_strategy_default.{stance}"
+    )
+    assert len(writers) == 1
+    assert writers[0].validate_regional_resource_program() == regional.compile_program()
     assert any(
         w.field == "ai_strategy_default.wanted_num_supply_ships" for w in model.consumer_ir.writers
     )

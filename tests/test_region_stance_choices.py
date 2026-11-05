@@ -8,7 +8,7 @@ import pytest
 from test_remaining_joint_consumers import _block, _native_number, _render
 from test_situated_joint_witnesses import _facts
 
-from pdx import country_state, decision_adapters, decision_rules
+from pdx import country_state, decision_adapters, decision_rules, regional_resource_opportunities
 from pdx.parser import parse_text
 from pdx.situated import programs
 
@@ -57,7 +57,17 @@ def test_known_route_and_capacity_do_not_invent_actual_region_opportunity(
     assert result.get(FIELD, (None, 0))[1] <= 0
     # Execute the actual production suffix after a native zero. A route/owner
     # capacity fact contains no target-region technology/law/adjacency proof.
-    assert _render(after) == _render(before)
+    expected_root = parse_text(
+        regional_resource_opportunities.patch(regional_resource_opportunities.frozen_inputs())[
+            SOURCE
+        ]
+    ).root
+    for part in FIELD.split("."):
+        expected_root = _block(expected_root, part)
+    assert _render(after) == _render(expected_root)
+    # The original country-route rules remain absent; the distinct typed
+    # regional program only contributes inside original eligibility.
+    assert _render(after) != _render(before)
     assert not any(".".join(rule.field) == FIELD for rule in policy.rules)
     assert FIELD not in decision_rules.evaluate(policy, values, is_ai=False)
     assert FIELD not in decision_rules.evaluate(

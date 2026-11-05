@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Literal
 if TYPE_CHECKING:
     from pdx.decision_rules import RuleSet
     from pdx.event_opportunities import EventProgram
+    from pdx.regional_resource_opportunities import RegionalResourceProgram
     from pdx.treaty_acceptance_opportunities import AcceptanceProgram
 
     from .action_instances import ActionInstance
@@ -55,8 +56,11 @@ class ContextBinding:
             "volcanic_state": ("state", {"auxiliary"}),
             "mega_volcanic_state": ("state", {"auxiliary"}),
             "slums_state": ("state", {"auxiliary"}),
+            "hokkaido_state_scope": ("state", {"auxiliary"}),
             "article": ("treaty_article_options", {"auxiliary"}),
             "source_country": ("country", {"auxiliary"}),
+            "first_country": ("country", {"auxiliary"}),
+            "second_country": ("country", {"auxiliary"}),
             "article_input_market_goods": ("market_goods", {"auxiliary"}),
             "law": ("law", {"auxiliary"}),
             "diplomatic_play": ("diplomatic_play", {"auxiliary"}),
@@ -264,6 +268,55 @@ class WriterDecisionIR:
     supply_program: SupplyProgram | None = None
     event_program: EventProgram | None = None
     acceptance_program: AcceptanceProgram | None = None
+    regional_resource_program: RegionalResourceProgram | None = None
+
+    def validate_regional_resource_program(self) -> RegionalResourceProgram:
+        from pdx.regional_resource_opportunities import RegionalResourceProgram  # noqa: PLC0415
+
+        program = self.regional_resource_program
+        if not isinstance(program, RegionalResourceProgram):
+            raise ValueError("区域资源writer缺少完整程序")
+        program.validate()
+        if (
+            (
+                self.kind,
+                self.writer_id,
+                self.source,
+                self.definition,
+                self.consumer_id,
+                self.field,
+                self.actor,
+                self.target,
+                self.operation,
+                self.owner,
+                self.vanilla_tail,
+            )
+            != (
+                "regional_resource_program",
+                program.writer_id,
+                program.source,
+                program.definition,
+                program.consumer_id,
+                program.field,
+                "root",
+                "target_region",
+                "add",
+                "regional_resource_opportunities",
+                "preserve",
+            )
+            or self.evaluation_context != program.evaluation_context()
+            or self.reader_context_bindings != program.reader_bindings()
+            or self.program is not None
+            or self.supply_program is not None
+            or self.event_program is not None
+            or self.acceptance_program is not None
+            or self.action is not None
+            or self.legacy is not None
+            or self.predicates
+            or self.chain_refs
+        ):
+            raise ValueError("区域资源writer身份、完整程序或上下文漂移")
+        return program
 
     def validate_acceptance_program(self) -> AcceptanceProgram:
         from pdx.treaty_acceptance_opportunities import AcceptanceProgram  # noqa: PLC0415
@@ -430,6 +483,19 @@ class ConsumerIRBundle:
         field_owners: dict[str, set[str]] = {}
         source_field_owners: dict[tuple[str, str], set[str]] = {}
         for item in self.writers:
+            if item.kind == "regional_resource_program":
+                item.validate_regional_resource_program()
+                for other in self.writers:
+                    if other is item or other.source != item.source:
+                        continue
+                    if (
+                        other.field == item.field
+                        or other.field.startswith(item.field + ".")
+                        or item.field.startswith(other.field + ".")
+                    ):
+                        raise ValueError("区域资源消费者父子字段重复写入")
+            elif item.regional_resource_program is not None:
+                raise ValueError("非区域资源writer不能携带区域程序")
             if item.kind == "acceptance_program":
                 item.validate_acceptance_program()
                 for other in self.writers:
@@ -535,6 +601,9 @@ class ConsumerIRBundle:
             "acceptance_program_writer_count": sum(
                 item.kind == "acceptance_program" for item in self.writers
             ),
+            "regional_resource_program_writer_count": sum(
+                item.kind == "regional_resource_program" for item in self.writers
+            ),
             "event_program_writer_count": sum(
                 item.kind == "event_program" for item in self.writers
             ),
@@ -566,6 +635,11 @@ class ConsumerIRBundle:
                     **(
                         {"acceptance_program": item.acceptance_program.as_dict()}
                         if item.acceptance_program is not None
+                        else {}
+                    ),
+                    **(
+                        {"regional_resource_program": item.regional_resource_program.as_dict()}
+                        if item.regional_resource_program is not None
                         else {}
                     ),
                     **(

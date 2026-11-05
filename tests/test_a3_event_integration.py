@@ -58,7 +58,14 @@ def test_real_compiler_and_adapter_emit_the_same_frozen_event_instances(producti
     model = compiler.load_model()
     assert model.consumer_ir is not None
     programs = decision_adapters._event_programs(configured, model.consumer_ir, enabled=True)
-    assert len(programs) == 23
+    assert len(programs) == 28
+    assert {p.option for p in programs} == set(
+        event.OPTIONS
+        + event.PLAGUE_OPTIONS
+        + event.DISASTER_OPTIONS
+        + event.SOL_OPTIONS
+        + event.HOKKAIDO_OPTIONS
+    )
     writers = [row for row in model.consumer_ir.writers if row.kind == "event_program"]
     assert all(row.event_program is program for row, program in zip(writers, programs, strict=True))
     instances = tuple(row for row in model.action_instances if row.kind == "event_program")
@@ -68,6 +75,16 @@ def test_real_compiler_and_adapter_emit_the_same_frozen_event_instances(producti
         **{
             f"event_option:{option}": (0, -10, 10, 10, "delta_to_explicit_native_aiweight")
             for option in event.OPTIONS
+        },
+        **{
+            f"event_option:{option}": (
+                0,
+                -34 if option.endswith(".b") else -2,
+                4,
+                34 if option.endswith(".b") else 4,
+                "delta_to_explicit_native_aiweight",
+            )
+            for option in event.HOKKAIDO_OPTIONS
         },
         **{
             f"event_option:{option}": (
@@ -115,11 +132,17 @@ def test_real_compiler_and_adapter_emit_the_same_frozen_event_instances(producti
     generated, metadata = decision_adapters.build(
         adapters, texts=inputs, enabled_domains=frozenset({"political"}), consumer_ir=bundle
     )
-    assert set(generated) == {event.SOURCE, event.PLAGUE, event.DISASTERS, event.SOL}
+    assert set(generated) == {
+        event.SOURCE,
+        event.PLAGUE,
+        event.DISASTERS,
+        event.SOL,
+        event.HOKKAIDO,
+    }
     assert generated == event.patch(inputs, consumer_programs=programs)
     assert metadata["event_programs"] == [program.as_dict() for program in programs]
     assert isinstance(metadata["field_owners"], list)
-    assert len(metadata["field_owners"]) == 23
+    assert len(metadata["field_owners"]) == 28
     assert action_instances.missing_witnesses(instances, generated) == ()
     assert action_instances.missing_witnesses(instances, {}) == tuple(
         row.action_id for row in instances
@@ -225,12 +248,12 @@ def test_independent_complete_sources_authorize_only_the_current_exact_options(p
     inputs, _, bundle = production
     raw = {source: text.encode("utf-8") for source, text in inputs.items()}
     surfaces: list[vanilla_inventory.VanillaSurface] = []
-    for source in (event.SOURCE, event.PLAGUE, event.DISASTERS, event.SOL):
+    for source in (event.SOURCE, event.PLAGUE, event.DISASTERS, event.SOL, event.HOKKAIDO):
         for definition in parse_text(inputs[source]).top_assignments:
             _, rows = vanilla_inventory._event_candidates(source, definition)
             surfaces.extend(rows)
     proven = vanilla_inventory._proven_event_surfaces(raw, surfaces)
-    assert sum(row.legal for row in proven) == 23
+    assert sum(row.legal for row in proven) == 28
     assert sum(row.legal for row in proven if row.source == event.PLAGUE) == 3
     inventory = vanilla_inventory.VanillaInventory(
         "independent_complete_event_context",
@@ -260,7 +283,7 @@ def test_independent_complete_sources_authorize_only_the_current_exact_options(p
         for writer in bundle.writers
     )
     report = domain_coverage.native_coverage(inventory, instances, native_sources=raw)
-    assert report["counts"]["actual_covered"] == 23
+    assert report["counts"]["actual_covered"] == 28
     assert report["binding_issue_count"] == 0
     assert all(
         row["coverage_status"] == "actual_covered"
@@ -270,7 +293,7 @@ def test_independent_complete_sources_authorize_only_the_current_exact_options(p
     changed = tuple(replace(row, evaluation_context=None) for row in instances)
     failed = domain_coverage.native_coverage(inventory, changed, native_sources=raw)
     assert failed["counts"]["actual_covered"] == 0
-    assert failed["binding_issue_count"] == 23
+    assert failed["binding_issue_count"] == 28
     assert not any(row.legal for row in vanilla_inventory._proven_event_surfaces({}, surfaces))
 
 
@@ -278,10 +301,11 @@ def test_legacy_event_inputs_still_authorize_only_legacy_programs(production):
     inputs, _, _ = production
     raw = {name: inputs[name].encode() for name in event.LEGACY_SOURCES}
     candidates: list[vanilla_inventory.VanillaSurface] = []
-    for source in (event.SOURCE, event.PLAGUE, event.DISASTERS, event.SOL):
+    for source in (event.SOURCE, event.PLAGUE, event.DISASTERS, event.SOL, event.HOKKAIDO):
         for definition in parse_text(inputs[source]).top_assignments:
             _, rows = vanilla_inventory._event_candidates(source, definition)
             candidates.extend(rows)
     proven = vanilla_inventory._proven_event_surfaces(raw, candidates)
     assert sum(row.legal for row in proven) == 21
     assert not any(row.legal for row in proven if row.source == event.SOL)
+    assert not any(row.legal for row in proven if row.source == event.HOKKAIDO)

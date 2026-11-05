@@ -1,0 +1,13 @@
+# Candidate-region potential presence, never output or numeric resource totals.
+schema = 1
+
+[sources]
+"common/ai_strategies/00_default_strategy.txt" = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+"common/ai_regional_objectives/00_ai_regional_objectives.txt" = "4cf75c09ebf4f275b77a015bd0c6e829e0c08d589a859d90c9cc18a44832755a"
+"common/ai_regional_objectives/ai_regional_objectives.md" = "5b48e95ee6293ead6f3bc05eb6cf98a702e27375e1de9c327c5d5f25f5c3c60c"
+"common/buildings/09_misc_resource.txt" = "cdb01907f4e00fe2ce089ea2270dcd5954235df4671683fc74812e4debdfc8e7"
+"common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt" = "1a1f9115b6b3aabf09e52d726f96642b9e5ecf13e4509cdb7f3ed9c8d9b0d1bb"
+"research/situated/victoria3-1.14.5-strategy-scope-r7.json" = "3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1"
+
+[tuning]
+resource_opportunity = 15.0

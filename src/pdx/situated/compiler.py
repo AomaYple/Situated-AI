@@ -748,13 +748,15 @@ def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.Evaluat
 
 
 def _frozen_native_action_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
-    """Exact proposal ROOT; the documented target grants no target_country alias."""
+    """Exact proposal ROOT, with only the proven raise-payments target alias."""
     from .. import native_action_opportunities as native  # noqa: PLC0415, TID252
 
     catalog = native.consumer_catalog()
     frozen_source = native.FROZEN.relative_to(REPO).as_posix()
     return {
-        (row["source"], row["field"]): decision_ir.EvaluationContext(
+        (row["source"], row["field"]): native.batch_evaluation_context(row["source"], row["field"])
+        if row["source"] in native.BATCH_CANDIDATES.values()
+        else decision_ir.EvaluationContext(
             actor_scope=decision_ir.ContextBinding(
                 "root", "country", "actor", row["scope_evidence"], row["scope_evidence_line"]
             ),
@@ -848,6 +850,17 @@ def _frozen_native_decision_contexts() -> dict[tuple[str, str], decision_ir.Eval
             ),
         )
         for row in native_decision.consumer_catalog()
+    }
+
+
+def _frozen_native_button_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Exact native button actor/effect contracts; no target aliases."""
+    from pdx import native_button_opportunities as buttons  # noqa: PLC0415
+
+    buttons.verify_inputs(buttons.frozen_inputs())
+    return {
+        (row["source"], row["field"]): buttons.evaluation_context(row["source"], row["field"])
+        for row in buttons.consumer_catalog()
     }
 
 
@@ -1027,21 +1040,28 @@ def validate_context_readers(
     )
     famine_fields = (
         _frozen_famine_contexts()
-        if (source and source.startswith("common/scripted_buttons/"))
+        if source == "common/scripted_buttons/04_indian_famines_buttons.txt"
         or field.startswith("je_indian_famines_button_")
         else {}
     )
+    button_fields = (
+        _frozen_native_button_contexts()
+        if (source and source.startswith("common/scripted_buttons/"))
+        else {}
+    )
+    button_context = button_fields.get((source, field)) if source is not None else None
     exact_country_context = (
         (
             native_fields.get((source, field))
             or canal_fields.get((source, field))
             or native_decision_fields.get((source, field))
             or famine_fields.get((source, field))
+            or button_context
         )
         if source is not None
         else None
     )
-    if native_fields or canal_fields or native_decision_fields or famine_fields:
+    if native_fields or canal_fields or native_decision_fields or famine_fields or button_fields:
         if (
             exact_country_context is None
             or context != exact_country_context
@@ -1056,6 +1076,26 @@ def validate_context_readers(
         exact_bindings = []
         for key in sorted(keys):
             reader = readers.get(key)
+            if (
+                source == "common/diplomatic_actions/32_subjects_raise_payments.txt"
+                and field == "raise_payments.ai.propose_score"
+            ):
+                from pdx import native_action_opportunities as native_actions  # noqa: PLC0415
+
+                spec = native_actions.BATCH_READERS.get(key)
+                if (
+                    reader is None
+                    or spec is None
+                    or reader != decision_rules.Reader(key=key, **spec)
+                ):
+                    raise ValueError(f"提高付款读取器偏离精确本国或目标身份：{key}")
+                decision_interfaces.reader_scope(reader, actor_path, native_root="country")
+                exact_bindings.append(
+                    (key, "target_country", "country", "target")
+                    if reader.scope == "target_country"
+                    else (key, "root", "country", "actor")
+                )
+                continue
             if reader is None or reader.scope != "root" or reader.path:
                 raise ValueError(f"消费者 {field} 只允许本国ROOT，不提供target或owner观测：{key}")
             if native_decision_fields:
@@ -1064,6 +1104,12 @@ def validate_context_readers(
                 spec = native_decision.derive({"readers": {}})["readers"].get(key)
                 if spec is None or reader != decision_rules.Reader(key=key, **spec):
                     raise ValueError(f"赛事读取器必须保持精确本国事实身份：{key}")
+            if button_context is not None:
+                from pdx import native_button_opportunities as buttons  # noqa: PLC0415
+
+                buttons.validate_reader(
+                    reader, source or "", field, actor_path=actor_path, native_root="country"
+                )
             if famine_fields:
                 from .. import famine_opportunities as famine  # noqa: PLC0415, TID252
 
@@ -1374,7 +1420,12 @@ class SituatedModel:
             result["domain_ports"] = self.port_graph.contract()
         owners_by_source_field: dict[tuple[str, str], set[str]] = {}
         for instance in self.action_instances:
-            if instance.kind not in {"rule_action", "event_program", "acceptance_program"}:
+            if instance.kind not in {
+                "rule_action",
+                "event_program",
+                "acceptance_program",
+                "regional_resource_program",
+            }:
                 continue
             key = (instance.source, instance.consumer_field)
             owners_by_source_field.setdefault(key, set()).add(instance.owner)
@@ -1869,6 +1920,25 @@ def _production_inventory(
                 )
             )
             total += 1
+    if any("economy" in policy.enabled_domains for _, policy in adapters.policies):
+        for regional_program in adapters.regional_resource_programs:
+            consumers.append(
+                ProductionConsumer(
+                    id=regional_program.consumer_id,
+                    field=regional_program.field_path,
+                    source=regional_program.source,
+                    scope="root",
+                    operation="add",
+                    rule_count=1,
+                    max_delta=float(regional_program.scalar.upper),
+                    vanilla_tail="preserve",
+                    numeric_policy="delta_to_native",
+                    scalar_neutral=0,
+                    scalar_lower=float(regional_program.scalar.lower),
+                    scalar_upper=float(regional_program.scalar.upper),
+                )
+            )
+            total += 1
     consumers.sort(key=lambda item: (item.source, item.field))
     return tuple(consumers), total, fingerprints
 
@@ -2031,6 +2101,7 @@ def load_model(
     native_decision_contexts = _frozen_native_decision_contexts()
     decree_contexts = _frozen_decree_contexts()
     famine_contexts = _frozen_famine_contexts()
+    native_button_contexts = _frozen_native_button_contexts()
     context_readers = {}
     instance_contexts = {}
     for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
@@ -2087,6 +2158,7 @@ def load_model(
                 or native_decision_contexts.get((source, field))
                 or decree_contexts.get((source, field))
                 or famine_contexts.get((source, field))
+                or native_button_contexts.get((source, field))
             )
             if context is not None:
                 instance_contexts[(source, rule.id)] = context
@@ -2239,6 +2311,14 @@ def load_model(
                 *(program.writer_ir() for program in adapters.acceptance_programs),
             ),
         )
+    if any("economy" in policy.enabled_domains for _, policy in adapters.policies):
+        consumer_bundle = replace(
+            consumer_bundle,
+            writers=(
+                *consumer_bundle.writers,
+                *(p.writer_ir() for p in adapters.regional_resource_programs),
+            ),
+        )
     migration_baseline.validate_bundle(consumer_bundle)
     consumer_bundle = joint_chain_contract.bind_bundle(
         consumer_bundle,
@@ -2304,6 +2384,12 @@ def load_model(
             for reader in policy.readers
         )
         + tuple((source, key, signature) for (source, key), signature in event_observations.items())
+        + tuple(
+            (p.source, r.key, _reader_signature(r))
+            for p in adapters.regional_resource_programs
+            if any("economy" in policy.enabled_domains for _, policy in adapters.policies)
+            for r in p.readers()
+        )
         + tuple(
             (program.source, reader.key, _reader_signature(reader))
             for program in adapters.acceptance_programs

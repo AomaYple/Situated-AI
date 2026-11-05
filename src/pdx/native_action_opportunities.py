@@ -9,18 +9,81 @@ import tomllib
 from typing import TYPE_CHECKING, Any
 
 from . import config
-from .model import Block, Scalar
+from .model import Assignment, Block, Scalar
 from .parser import parse_text
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from .decision_rules import RuleSet
+    from .situated.decision_ir import EvaluationContext
+
 PARAMETERS = config.REPO / "mod/decisions/native_action_opportunities.toml"
 FROZEN = config.REPO / "research/vanilla-ai/1.14.5/native-action-opportunities.json"
-FROZEN_SHA256 = "4ff80d1ff31b3e92c19130abeab3bb746ff45c8ac9c2f1c5498a86c9f7bfc928"
+FROZEN_SHA256 = "d4da140a0fab33094767f25a6b9e018caab9f9c95f25e3fb48e6984e78026530"
 README = "common/diplomatic_actions/diplomatic_action.md"
 KNOWLEDGE = "da_knowledge_sharing"
 KNOWLEDGE_SOURCE = "common/diplomatic_actions/40_subjects_knowledge_sharing.txt"
+EXEMPT = "exempt_from_service"
+SOVEREIGNTY = "violate_sovereignty"
+RAISE = "raise_payments"
+BATCH_CANDIDATES = {
+    EXEMPT: "common/diplomatic_actions/34_subjects_exempt_from_service.txt",
+    SOVEREIGNTY: "common/diplomatic_actions/03_violate_sovereignty.txt",
+    RAISE: "common/diplomatic_actions/32_subjects_raise_payments.txt",
+}
+ON_ACTIONS = "common/on_actions/00_code_on_actions.txt"
+FINANCE = "events/iberia_events/negotiation_events.txt"
+POPULATION = "common/script_values/building_values.txt"
+TRIGGERS = "common/trigger_localization/00_trigger_localization.txt"
+TRIGGER_UNITS = "localization/english/triggers_l_english.yml"
+# These inputs document why an unproven second capacity penalty is withheld.
+CAPACITY_CANDIDATES = {
+    "increase_relations": ("common/diplomatic_actions/00_relations_actions.txt", "150", "0.25"),
+    "damage_relations": ("common/diplomatic_actions/00_relations_actions.txt", "100", "0.15"),
+    "da_evangelize": ("common/diplomatic_actions/41_subjects_evangelize.txt", "25", "0.05"),
+    "da_support_regime": ("common/diplomatic_actions/39_subjects_support_regime.txt", "50", "0.1"),
+    "support_separatism": ("common/diplomatic_actions/52_nationalism_actions.txt", "100", "0.25"),
+}
+BATCH_READERS: dict[str, dict[str, Any]] = {
+    "war": {"engine": "is_at_war", "scope": "root", "kind": "boolean", "unit": "boolean"},
+    "war_defeat": {
+        "engine": "has_variable",
+        "scope": "root",
+        "kind": "boolean",
+        "unit": "boolean",
+        "argument": "recently_lost_war",
+    },
+    "default": {"engine": "in_default", "scope": "root", "kind": "boolean", "unit": "boolean"},
+    "net_surplus": {
+        "engine": "net_total_income",
+        "scope": "root",
+        "kind": "number",
+        "unit": "currency_per_week",
+    },
+    "cost_country_population": {
+        "engine": "total_population",
+        "scope": "root",
+        "kind": "number",
+        "unit": "persons",
+        "minimum": 0,
+    },
+    "raise_target_liberty": {
+        "engine": "liberty_desire",
+        "scope": "target_country",
+        "kind": "number",
+        "unit": "liberty_0_100",
+        "minimum": 0,
+        "maximum": 100,
+    },
+    "raise_target_population": {
+        "engine": "total_population",
+        "scope": "target_country",
+        "kind": "number",
+        "unit": "persons",
+        "minimum": 0,
+    },
+}
 KNOWLEDGE_READERS: dict[str, dict[str, Any]] = {
     "knowledge_donor_spread": {
         "engine": "modifier:country_tech_spread_mult",
@@ -37,23 +100,30 @@ KNOWLEDGE_READERS: dict[str, dict[str, Any]] = {
     },
 }
 CANDIDATES = {
+    **BATCH_CANDIDATES,
     KNOWLEDGE: KNOWLEDGE_SOURCE,
     "da_increase_autonomy_of_self": "common/diplomatic_actions/38_subjects_increase_autonomy.txt",
     "decrease_payments": "common/diplomatic_actions/33_subjects_decrease_payments.txt",
     "join_power_bloc": "common/diplomatic_actions/26_join_power_bloc.txt",
 }
 SOURCE_HASHES = {
-    KNOWLEDGE_SOURCE: "0e8d089a62180b570dfba7b1bb644238fa3dab6f936d12af9f21b5cedcc5afcd",
-    README: "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
-    CANDIDATES[
-        "da_increase_autonomy_of_self"
-    ]: "533689cd0cb50a664fc7c9b35a9b7ee125080aae27d12c60e2060fbdaa786a0c",
-    CANDIDATES[
-        "decrease_payments"
-    ]: "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df",
-    CANDIDATES[
-        "join_power_bloc"
-    ]: "a66a61d5ee5a86282cec8f09b38bd0e58f3f12ac170f080499b3126370a9c28e",
+    "common/diplomatic_actions/00_relations_actions.txt": "da0af78d69d4d862b15f9181ef70f2df75e6fcfa94c99a8eb171a115ab13bd6d",
+    "common/diplomatic_actions/03_violate_sovereignty.txt": "7e34682aa4f54d39d046f4f2d32bb8cb76b48a9a78cee6375abd2ff66f39efc0",
+    "common/diplomatic_actions/26_join_power_bloc.txt": "a66a61d5ee5a86282cec8f09b38bd0e58f3f12ac170f080499b3126370a9c28e",
+    "common/diplomatic_actions/32_subjects_raise_payments.txt": "a8a6721398b8449cb2fd00ee3e4cd53034d24172552db8bf520a3a3e3212c38f",
+    "common/diplomatic_actions/33_subjects_decrease_payments.txt": "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df",
+    "common/diplomatic_actions/34_subjects_exempt_from_service.txt": "ccf74b2d6b2fa89aed685c441c4731e3ccdcec1aca13ea47990bcec543295335",
+    "common/diplomatic_actions/38_subjects_increase_autonomy.txt": "533689cd0cb50a664fc7c9b35a9b7ee125080aae27d12c60e2060fbdaa786a0c",
+    "common/diplomatic_actions/39_subjects_support_regime.txt": "f14b3d4606b5ba8bda5b0efd1b05bb632c6ca5c0f4527475864771b2e30d0c90",
+    "common/diplomatic_actions/40_subjects_knowledge_sharing.txt": "0e8d089a62180b570dfba7b1bb644238fa3dab6f936d12af9f21b5cedcc5afcd",
+    "common/diplomatic_actions/41_subjects_evangelize.txt": "7104ac353e71f57ab33f953c6c6ad38ebcee6eee2af6dd7946b7c253e126c88c",
+    "common/diplomatic_actions/52_nationalism_actions.txt": "6609ecafba7c840685c9716b8a1d414a2043c06ed1f6e79327679b13d9cce9ed",
+    "common/diplomatic_actions/diplomatic_action.md": "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
+    "common/on_actions/00_code_on_actions.txt": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
+    "common/script_values/building_values.txt": "ad61e13b0762f6c174c091c76f406d4bca1d27fddea94b185eba3139dbcc6cf0",
+    "events/iberia_events/negotiation_events.txt": "57f65c934f27c60dd3439fa6868c4adb4edea56627384dbd7f3997672571fe49",
+    "common/trigger_localization/00_trigger_localization.txt": "8eaba9c4ae1e025de16ddc3384e53459182f0de88aabf05937b8ac421e397817",
+    "localization/english/triggers_l_english.yml": "27b0e3eb719daa61e103b87716a932200eeab36b7e9995b6677f2ff56bf5cabe",
 }
 DOCUMENTATION = {
     "actor": "# IMPORTANT: In the AI block, the AI country is always root and the other country always scope:target, regardless of who proposed the diplomatic action",
@@ -79,16 +149,27 @@ def load() -> dict[str, Any]:
             "bloc_recovery",
             "knowledge_spread_margin",
             "knowledge_spread_weak",
+            "exempt_service_war",
+            "sovereignty_default",
+            "sovereignty_deficit",
+            "sovereignty_recovery",
+            "raise_income_need",
+            "raise_liberty_risk",
+            "raise_liberty_high",
         }
     ):
         raise ValueError("原生外交行动schema或精确来源无效")
     for key, value in data["tuning"].items():
         if type(value) not in {int, float} or not math.isfinite(value):
             raise ValueError("原生外交行动倾向须有限")
-        if not (1 < value <= 1.2 if key == "autonomy_need" else 0.8 <= value < 1):
+        if not (
+            1 < value <= 1.2 if key in {"autonomy_need", "raise_income_need"} else 0.8 <= value < 1
+        ):
             raise ValueError("原生外交行动需求或成本方向及边界无效")
     if not data["tuning"]["knowledge_spread_weak"] < data["tuning"]["knowledge_spread_margin"]:
         raise ValueError("科技共享传播成本须按同因有序分档")
+    if not data["tuning"]["raise_liberty_high"] < data["tuning"]["raise_liberty_risk"]:
+        raise ValueError("提高付款的同因目标风险须有序分档")
     return data
 
 
@@ -108,6 +189,79 @@ def _scalar(parent: Block, key: str, expected: str, op: str = "=") -> None:
         or rows[0].value.unquoted != expected
     ):
         raise ValueError(f"原生外交行动原版效果或资格漂移：{key}")
+
+
+def _shape(node: Assignment | Block | Scalar) -> list[Any]:
+    if isinstance(node, Scalar):
+        return ["scalar", node.text]
+    if isinstance(node, Assignment):
+        if not isinstance(node.value, (Block, Scalar)):
+            raise ValueError("外交完整原版AST缺少值")
+        return ["assignment", node.key, node.op, node.prefix, _shape(node.value)]
+    return ["block", *(_shape(item) for item in node.items)]
+
+
+def _verify_batch(identity: str, action: Block) -> None:
+    ai = _block(action, "ai")
+    _scalar(_block(ai, "propose_score"), "value", "100" if identity == SOVEREIGNTY else "10")
+    if len(_block(ai, "propose_score").items) != 1:
+        raise ValueError("外交新增提案的完整固定原生评分漂移")
+    if identity == EXEMPT:
+        _scalar(action, "requires_approval", "no")
+        pact = _block(action, "pact")
+        _scalar(pact, "cost", "0")
+        _scalar(pact, "forced_duration", "12")
+        _scalar(pact, "exempt_from_service", "yes")
+        _scalar(_block(pact, "second_modifier"), "country_liberty_desire_add", "-0.05")
+        _scalar(_block(ai, "evaluation_chance"), "value", "0.25")
+    elif identity == SOVEREIGNTY:
+        _scalar(action, "requires_approval", "yes")
+        _scalar(action, "violates_sovereignty", "yes")
+        _scalar(_block(action, "potential"), "is_at_war", "yes")
+        for effect, value, joins in (
+            ("accept_effect", "15", "yes"),
+            ("decline_effect", "10", "no"),
+        ):
+            body = _block(action, effect)
+            _scalar(_block(body, "create_incident"), "value", value)
+            joining = _block(_block(body, "scope:target_country"), "violate_sovereignty_join")
+            _scalar(joining, "violator", "root")
+            _scalar(joining, "target", "scope:target_country")
+            _scalar(joining, "join_violator", joins)
+    else:
+        _scalar(action, "requires_approval", "no")
+        pact = _block(action, "pact")
+        _scalar(pact, "cost", "25")
+        _scalar(pact, "maintenance_paid_by", "first_country")
+        _scalar(pact, "income_transfer", "0.1")
+        _scalar(pact, "second_country_gets_income_transfer", "no")
+        _scalar(pact, "income_transfer_based_on_second_country", "yes")
+        _scalar(_block(pact, "second_modifier"), "country_liberty_desire_add", "0.10")
+        _scalar(ai, "max_influence_spending_fraction", "0.1")
+        target_checks = _block(action, "possible").all("scope:target_country")
+        if len(target_checks) != 2 or any(
+            not isinstance(row.value, Block) for row in target_checks
+        ):
+            raise ValueError("提高付款目标资格结构漂移")
+        liberty_check, default_check = (row.value for row in target_checks)
+        if not isinstance(liberty_check, Block) or not isinstance(default_check, Block):
+            raise ValueError("提高付款目标资格缺少数值块")
+        _scalar(liberty_check, "liberty_desire", "75", "<")
+        _scalar(default_check, "in_default", "no")
+        _scalar(_block(ai, "will_propose"), "exists", "scope:target_country")
+        # Same exact AI parent: source-specific alias and actual target getter.
+        breaks = _block(_block(ai, "will_break"), "OR").all("AND")
+        if len(breaks) != 1 or not isinstance(breaks[0].value, Block):
+            raise ValueError("提高付款AI终止目标父结构漂移")
+        target_rows = breaks[0].value.all("scope:target_country")
+        if (
+            len(target_rows) != 1
+            or target_rows[0].op != "?="
+            or not isinstance(target_rows[0].value, Block)
+        ):
+            raise ValueError("提高付款AI目标alias与可选作用域操作符漂移")
+        target = target_rows[0].value
+        _scalar(target, "liberty_desire", "50", ">=")
 
 
 def _verify_knowledge(action: Block) -> None:
@@ -152,11 +306,41 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
     for statement in DOCUMENTATION.values():
         if sum(line.strip() == statement for line in inputs[README].splitlines()) != 1:
             raise ValueError("原生外交行动README的AI ROOT/提案优先单位合同漂移")
+    roots = {}
+    for source, text in inputs.items():
+        if source not in SOURCE_HASHES or not source.endswith(".txt"):
+            continue
+        parsed = parse_text(text, path=source)
+        if parsed.errors:
+            raise ValueError(f"外交冻结完整原版解析失败：{source}")
+        roots[source] = parsed.root
+    for identity, expected in _snapshot()["contracts"].items():
+        source, definition = identity.split("#", 1)
+        if source not in roots or _shape(_block(roots[source], definition)) != expected:
+            raise ValueError(f"外交冻结完整父结构漂移：{identity}")
+    for statement in (
+        'TRIGGER_NET_TOTAL_INCOME: "Weekly total income after expenses is $COMPARATOR$ @money!$NUM|vK$ (Currently @money!$CURRENT_VALUE|vK$)"',
+        'TRIGGER_LIBERTY_DESIRE: "[concept_liberty_desire] is $COMPARATOR$ $NUM|v0$"',
+    ):
+        if sum(line.strip() == statement for line in inputs[TRIGGER_UNITS].splitlines()) != 1:
+            raise ValueError("外交读数单位与真实国家量级证据漂移")
+    for identity, (source, cost, fraction) in CAPACITY_CANDIDATES.items():
+        action = _block(roots[source], identity)
+        _scalar(_block(action, "pact"), "cost", cost)
+        _scalar(_block(action, "ai"), "max_influence_spending_fraction", fraction)
+    lost = _block(_block(_block(roots[ON_ACTIONS], "on_lost_war"), "effect"), "if")
+    remembered = _block(lost, "set_variable")
+    _scalar(remembered, "name", "recently_lost_war")
+    _scalar(remembered, "days", "1825")
+    _scalar(remembered, "value", "yes")
     for identity, source in CANDIDATES.items():
         parsed = parse_text(inputs[source])
         if parsed.errors:
             raise ValueError("原生外交行动完整源解析失败")
         action = _block(parsed.root, identity)
+        if identity in BATCH_CANDIDATES:
+            _verify_batch(identity, action)
+            continue
         if identity == KNOWLEDGE:
             _verify_knowledge(action)
             continue
@@ -202,26 +386,32 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
             _block(ai, "accept_score")
 
 
-def load_baseline() -> dict[str, Any]:
+def _snapshot() -> dict[str, Any]:
     raw = FROZEN.read_bytes()
     if hashlib.sha256(raw).hexdigest() != FROZEN_SHA256:
         raise ValueError("原生外交行动冻结完整源身份漂移")
     data: dict[str, Any] = json.loads(raw)
     if (
-        set(data) != {"schema", "encoding", "sources", "texts"}
+        set(data) != {"schema", "encoding", "sources", "raw_sources", "texts", "contracts"}
         or type(data["schema"]) is not int
         or data["schema"] != 1
         or data["encoding"] != "utf8_without_bom_lf_preserve_whitespace"
         or data["sources"] != load()["sources"]
         or set(data["texts"]) != set(data["sources"])
+        or set(data["raw_sources"]) != set(data["sources"])
     ):
         raise ValueError("原生外交行动冻结完整源schema无效")
+    return data
+
+
+def load_baseline() -> dict[str, Any]:
+    data = _snapshot()
     verify_inputs(data["texts"])
     return data
 
 
 def consumer_catalog() -> dict[str, dict[str, Any]]:
-    """Exact country proposal roles; no target alias or acceptance authorization."""
+    """Exact proposal roles; only raise-payments proves its target-country alias."""
     data = load_baseline()
     lines = data["texts"][README].splitlines()
     evidence = {
@@ -242,10 +432,95 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
             "scope_evidence_line": evidence["actor"],
             "score_evidence_line": evidence["score"],
             "source_sha256": data["sources"][source],
-            "target_binding": "unsupported_not_consumed",
+            "target_binding": "target_country_exact_raise_parent"
+            if identity == RAISE
+            else "unsupported_not_consumed",
+            **(
+                {
+                    "target_evidence": source,
+                    "target_evidence_line": _block(
+                        _block(_block(parse_text(data["texts"][source]).root, identity), "ai"),
+                        "will_propose",
+                    )
+                    .all("exists")[0]
+                    .line,
+                }
+                if identity == RAISE
+                else {}
+            ),
         }
         for identity, source in CANDIDATES.items()
     }
+
+
+def batch_evaluation_context(source: str, field: str) -> EvaluationContext:
+    """Only raise-payments grants its observed same-parent target-country alias."""
+    from .situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
+
+    rows = consumer_catalog()
+    identity = field.split(".", 1)[0]
+    row = rows.get(identity)
+    if (
+        identity not in BATCH_CANDIDATES
+        or row is None
+        or (row["source"], row["field"]) != (source, field)
+    ):
+        raise ValueError("外交批次只授权三个精确提案消费者")
+    actor = ContextBinding("root", "country", "actor", README, row["scope_evidence_line"])
+    targets = (
+        (
+            ContextBinding(
+                "target_country", "country", "target", source, row["target_evidence_line"]
+            ),
+        )
+        if identity == RAISE
+        else ()
+    )
+    return EvaluationContext(
+        actor_scope=actor,
+        targets=targets,
+        evidence=(
+            f"{README}:{actor.line}",
+            f"{README}:{row['score_evidence_line']}",
+            f"{source}:sha256={row['source_sha256']}",
+            *(f"{target.source}:{target.line}" for target in targets),
+        ),
+    )
+
+
+def validate_batch_policy(policy: RuleSet, source: str) -> None:
+    """Exact optional integration guard, with no generic alias authorization."""
+    from .decision_rules import Reader  # noqa: PLC0415
+
+    identity = next((key for key, value in BATCH_CANDIDATES.items() if value == source), None)
+    allowed = {
+        EXEMPT: {"war"},
+        SOVEREIGNTY: {"default", "net_surplus", "war_defeat", "cost_country_population"},
+        RAISE: {"net_surplus", "raise_target_liberty", "raise_target_population"},
+    }
+    if identity is None or policy.actor_path or policy.native_root != "country":
+        raise ValueError("外交批次偏离精确ROOT/source合同")
+    for reader in policy.readers:
+        spec = BATCH_READERS.get(reader.key)
+        if (
+            reader.key not in allowed[identity]
+            or spec is None
+            or reader != Reader(key=reader.key, **spec)
+        ):
+            raise ValueError("外交批次reader偏离完整身份或精确目标合同")
+    for rule in policy.rules:
+        if (
+            rule.field != (identity, "ai", "propose_score")
+            or rule.operation != "multiply"
+            or rule.domain != "diplomacy"
+            or rule.semantic_role not in {"cost", "benefit"}
+            or not (
+                0.8 <= rule.value < 1
+                if rule.semantic_role == "cost"
+                else identity == RAISE and 1 < rule.value <= 1.2
+            )
+        ):
+            raise ValueError("外交批次偏离精确评分与成本/收益边界")
 
 
 def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
@@ -319,10 +594,62 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             "cost",
             [c("knowledge_donor_spread", "<", 0)],
         ),
+        (
+            EXEMPT,
+            "exempt_service_war",
+            "exempt_service_existing_war",
+            "cost",
+            [c("war", "=", True)],
+        ),
+        (
+            SOVEREIGNTY,
+            "sovereignty_default",
+            "sovereignty_escalation_financing",
+            "cost",
+            [c("default", "=", True)],
+        ),
+        (
+            SOVEREIGNTY,
+            "sovereignty_deficit",
+            "sovereignty_escalation_financing",
+            "cost",
+            [c("net_surplus", "<", 0)],
+        ),
+        (
+            SOVEREIGNTY,
+            "sovereignty_recovery",
+            "sovereignty_observed_defeat_recovery",
+            "cost",
+            [c("war_defeat", "=", True)],
+        ),
+        (
+            RAISE,
+            "raise_income_need",
+            "raise_payments_actor_income_need",
+            "benefit",
+            [c("net_surplus", "<", 0)],
+        ),
+        (
+            RAISE,
+            "raise_liberty_risk",
+            "raise_payments_target_instability",
+            "cost",
+            [c("raise_target_liberty", ">=", 50)],
+        ),
+        (
+            RAISE,
+            "raise_liberty_high",
+            "raise_payments_target_instability",
+            "cost",
+            [c("raise_target_liberty", ">=", 65)],
+        ),
     )
     rules = []
     for index, (identity, name, cause, role, conditions) in enumerate(rows):
         reasons = {
+            EXEMPT: "原版协议真实免除目标军役且强制至少12个月；本国已在战争时，放弃已有可征召关系具有有限机会成本，既有目标军力比较、自由欲望收益与cost0保留，不推算目标实际可派军队。",
+            SOVEREIGNTY: "原版侵犯主权接受造成15incident，拒绝也造成10并调用真实参战效果；已观察违约/净收入赤字表示增量升级的同因融资压力，原版败战记忆的恢复成本独立联合，不以已战争资格再惩罚同一战争需求。",
+            RAISE: "本国实际net_total_income赤字增加抽取收入的有限需求；同一合法目标自由欲望50至75区间对持续+0.10自由欲望形成独立可持续风险，65以上同因升档。目标违约及>=75已由原资格排除，25影响力配额不重复；不将10%抽取率当作已知税基或英镑收益。",
             KNOWLEDGE: "捐助方实际country_tech_spread_mult余量与原协议-0.10传播修正形成有限机会成本；低于0.10为有限余量、低于0为较弱传播同因升档，不估算科研量或复制影响力配额；目标rank收益、原资格与执行保持原版",
             "da_increase_autonomy_of_self": "本国高自主愿望提高和平自主交涉需求；近期败战恢复期对原版接受或拒绝均有的关系摩擦设置温和风险，独立联合，不视为战争",
             "decrease_payments": "宗主主动减少付款会降低本国抽取收入；本国违约或实际净收入赤字形成让利财政成本，同一融资原因取强",
@@ -351,6 +678,24 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 unknown_cost_basis="完整原版first_modifier已证明本次捐助实际-0.10传播代价；ROOT传播余量未知但本国实体可读时保留有限较弱传播档，不推定传播健康或免费；未知实体不推定承诺可用。",
                 counterexample="仅精确捐助方ROOT提案；同因成本择强，未知传播保留有本国实体锚的有限档，不读target/owner，不估算研究产量或上限，不复写原>-0.25资格、50影响力和0.1配额；目标rank及完整协议/接受/执行/时间尾部不变。",
             )
+        elif identity == SOVEREIGNTY and name != "sovereignty_recovery":
+            rules[-1].update(
+                conservative_unknown_facts=[
+                    "default" if name == "sovereignty_default" else "net_surplus"
+                ],
+                unknown_cost_required_known_facts=["cost_country_population"],
+                unknown_cost_basis="完整原版已证新增incident和升级执行；融资观察未知且本国实体已知时保留有限风险，不推定违约或战争结果；二者皆未知只撤该分量。",
+            )
+        elif identity == RAISE and name == "raise_liberty_high":
+            rules[-1].update(
+                conservative_unknown_facts=["raise_target_liberty"],
+                unknown_cost_required_known_facts=["raise_target_population"],
+                unknown_cost_basis="精确AI父结构与原版目标税收抽取/自由欲望持续增加已证；目标实体已知但自由欲望未知时保留有限强风险档，不推定目标稳定；目标实体也未知时只撤目标风险，已知本国需求继续。",
+            )
+        if identity in BATCH_CANDIDATES:
+            rules[-1]["counterexample"] = (
+                "仅精确本国propose_score的唯一程序；原资格、目标、接受/拒绝、实际效果、原变量/扫描/零与尾部、玩家及关闭不变。免军役战争与败战记忆须实际已观察；主权融资未知仅有本国实体锚时有限保守。提高付款只读该父AI已证target_country，目标自由欲望未知仅目标实体锚已知时保留成本，不读scope:target/owner替身；已知风险不依赖额外人口读数，恢复后局部退出，收入需求不清除独立目标风险。"
+            )
     used = {condition["fact"] for rule in rules for condition in rule["conditions"]}
     used.update(key for rule in rules for key in rule.get("unknown_cost_required_known_facts", ()))
     available = dict(adapters["readers"])
@@ -358,8 +703,19 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
         if key in available and available[key] != spec:
             raise ValueError("科技共享精确ROOT读取器身份漂移")
         available[key] = dict(spec)
+    for key, spec in BATCH_READERS.items():
+        if key in available and available[key] != spec:
+            raise ValueError(f"外交新增提案读取器完整身份冲突：{key}")
+        available[key] = dict(spec)
     readers = {key: available[key] for key in sorted(used)}
-    if any(reader["scope"] != "root" or reader.get("path") for reader in readers.values()):
+    if any(
+        (
+            reader["scope"] != "root"
+            and key not in {"raise_target_liberty", "raise_target_population"}
+        )
+        or reader.get("path")
+        for key, reader in readers.items()
+    ):
         raise ValueError("原生外交行动只允许已证明本国ROOT观测")
     return {
         "sources": dict(data["sources"]),

@@ -15,6 +15,12 @@ schema = 1
 
 "common/treaty_articles/10_host_power_bloc_embassy.txt" = "65cc94ccdb6479a5dfc04e56f060cd6b560bdc39ecf0cb96744d0fd5705ed38e"
 
+"common/treaty_articles/00_alliance.txt" = "505cfc849cb7d66a460b95c36a4e1c4794cae4c4c8e48f3c1a7c6b55dd56564b"
+"common/treaty_articles/01_defensive_pact.txt" = "78959100428405cc5530db74f15a221e9b1b432e7d50a176aca3592f54f2e1e5"
+"common/treaty_articles/02_guarantee_independence.txt" = "8bda978a27918bf7653fb881f762664478b456ec183888f3933515a682b7091f"
+"common/treaty_articles/03_support_independence.txt" = "2a2ba67f9fbc7055d7e1ffc9a0e0f44d44a8d1ebaafcb866b91c6dff4f52b9eb"
+"common/on_actions/00_code_on_actions.txt" = "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46"
+
 [tuning]
 target_input_need = 6
 source_deficit_cost = 8
@@ -23,3 +29,14 @@ source_default_cost = 12
 [military_tuning]
 source_deficit_cost = 6
 source_default_cost = 10
+
+[commitment_tuning]
+default_cost = 6
+deficit_cost = 3
+recovery_cost = 2
+
+[parent_hashes]
+"alliance" = "78687080cc7917d34b2488408605e32e8d80507ac77916ba3d1554f7d391ce69"
+"defensive_pact" = "249246a1f195c242ac03647291f45840e22c91cddce5cde78b2e964597024ab6"
+"guarantee_independence" = "5c761a54bdf19f4576fb612d88abd9100113a1b9bf60ce232d8305f1492527b6"
+"support_independence" = "1231a67a09aa5346b2c2ed460d49ad168117c7c57b920859977fb28bfa03e15a"

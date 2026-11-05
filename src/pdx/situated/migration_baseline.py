@@ -148,6 +148,29 @@ def _validate_native_retention(row: dict[str, Any], writers: tuple[WriterDecisio
         block = matches[0].value
     if _digest(block) != evidence["ast_sha256"]:
         raise ValueError("历史规则退役原版恢复AST漂移")
+    matching = tuple(
+        writer
+        for writer in writers
+        if any(
+            writer.source == row["source"]
+            and (
+                writer.field == prefix
+                or writer.field.startswith(prefix + ".")
+                or prefix.startswith(writer.field + ".")
+            )
+            for prefix in (row["field"], f"ai_strategy_default.{row['field']}")
+        )
+    )
+    if (
+        row["source"] == "common/ai_strategies/00_default_strategy.txt"
+        and row["field"]
+        == ("ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region")
+        and matching
+    ):
+        if len(matching) != 1 or matching[0].kind != "regional_resource_program":
+            raise ValueError("历史殖民路线退役只允许精确候选区域资源新作者")
+        matching[0].validate_regional_resource_program()
+        return
     if any(
         writer.field == prefix or writer.field.startswith(prefix + ".")
         for writer in writers

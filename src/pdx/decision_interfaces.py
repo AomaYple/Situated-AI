@@ -19,6 +19,7 @@ from .parser import parse_text
 if TYPE_CHECKING:
     from .decision_rules import Reader, RuleSet
     from .event_opportunities import EventProgram
+    from .situated.decision_ir import EvaluationContext
     from .treaty_acceptance_opportunities import AcceptanceProgram
 
 
@@ -274,17 +275,71 @@ _UNITS = {
 
 
 def reader_scope(
-    reader: Reader, actor_path: tuple[str, ...], *, native_root: str | None = None
+    reader: Reader,
+    actor_path: tuple[str, ...],
+    *,
+    native_root: str | None = None,
+    source: str | None = None,
+    field: tuple[str, ...] | None = None,
+    context: EvaluationContext | None = None,
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.key.startswith("commitment_") or "military_commitment_query" in dict(
+        reader.parameters
+    ):
+        from . import treaty_acceptance_opportunities as acceptance  # noqa: PLC0415
+
+        definition = field[0] if field else None
+        if definition not in acceptance.COMMITMENTS:
+            raise ValueError("军事承诺读取器只授权精确四类条约接受字段")
+        program = acceptance.compile_program(definition)
+        if (
+            root != "country"
+            or actor_path
+            or source != program.source
+            or field != program.field_path
+            or context != program.evaluation_context()
+            or reader not in program.readers()
+        ):
+            raise ValueError("军事承诺读取器必须保持精确条约、ROOT和互惠/有向角色上下文")
+        return "country"
+    if (
+        reader.key == "regional_resource_opportunity"
+        or reader.engine == "scope:target_region"
+        or "regional_resource_query" in dict(reader.parameters)
+    ):
+        from . import regional_resource_opportunities as regional  # noqa: PLC0415
+
+        regional_program = regional.compile_program()
+        if (
+            root != "country"
+            or actor_path
+            or reader not in regional_program.readers()
+            or source != regional_program.source
+            or field != regional_program.field_path
+            or context != regional_program.evaluation_context()
+        ):
+            raise ValueError("区域资源读取器只授权精确殖民立场与已证明target_region上下文")
+        return "country"
+    if (
+        reader.key.startswith("hokkaido_")
+        or reader.scope == "hokkaido_state_scope"
+        or reader.engine == "hokkaido_observation"
+        or "event_hokkaido_query" in dict(reader.parameters)
+    ):
+        from . import event_opportunities  # noqa: PLC0415
+
+        return event_opportunities.validate_hokkaido_reader(
+            reader, source, field, context, actor_path=actor_path, native_root=root
+        )
     if reader.key.startswith("sol_response_") or reader.scope == "slums_state":
         from . import event_opportunities  # noqa: PLC0415
 
-        program = next(
+        event_program = next(
             p for p in event_opportunities.compile_programs() if p.option == "sol_events.6.a"
         )
-        expected = {item.key: item for item in program.readers()}
+        expected = {item.key: item for item in event_program.readers()}
         if root != "country" or actor_path or expected.get(reader.key) != reader:
             raise ValueError("生活水平响应只授权精确保存slums_state与本国ROOT读取器")
         return "country" if reader.scope == "root" else "state"
@@ -736,6 +791,13 @@ def validate(rules: RuleSet) -> None:
         ):
             raise ValueError("建设目标消费者只能使用正乘数；其原版人口终止零分位于新增调整之前")
         named = {"root"}
+        if field[0] == "raise_payments":
+            from . import native_action_opportunities as native_actions  # noqa: PLC0415
+
+            native_actions.validate_batch_policy(
+                rules, native_actions.BATCH_CANDIDATES[native_actions.RAISE]
+            )
+            named.add("target_country")
         if field[0] in {
             "state_value",
             "treaty_port_value",
@@ -752,6 +814,20 @@ def validate(rules: RuleSet) -> None:
             named.add("interest_group")
         if any(readers[key].scope not in named for key in rule.input_keys()):
             raise ValueError(f"消费者没有提供读取器的具名作用域：{rule.id}")
+
+
+def regional_resource_consumer(program) -> dict[str, object]:
+    from . import regional_resource_opportunities as regional  # noqa: PLC0415
+
+    program.validate()
+    return {
+        **regional.consumer_catalog(),
+        "role": "vanilla_candidate_region_stance_score",
+        "reader_context_bindings": [list(row) for row in program.reader_bindings()],
+        "scope_evidence_level": "static_complete_native_and_existing_r7; runtime_behavior_unverified",
+        "eligibility_costs_and_execution": "retained_vanilla",
+        "world_scans": 0,
+    }
 
 
 def event_consumer(program: EventProgram) -> dict[str, object]:
@@ -771,13 +847,23 @@ def event_consumer(program: EventProgram) -> dict[str, object]:
 
 
 def acceptance_consumer(program: AcceptanceProgram) -> dict[str, object]:
-    """Exact directed inherent acceptance; current ROOT and optional article inputs."""
+    """Exact inherent acceptance; current ROOT and the article's proven roles."""
     from . import treaty_acceptance_opportunities as acceptance  # noqa: PLC0415
 
     program.validate()
+    for reader in program.readers():
+        if reader.key.startswith("commitment_"):
+            reader_scope(
+                reader,
+                (),
+                native_root="country",
+                source=program.source,
+                field=program.field_path,
+                context=program.evaluation_context(),
+            )
     return {
         **acceptance.consumer_catalog()[program.definition],
-        "role": "vanilla_directed_article_inherent_acceptance",
+        "role": f"vanilla_{program.kind}_article_inherent_acceptance",
         "evaluation_context": program.evaluation_context().as_dict(),
         "reader_context_bindings": [list(row) for row in program.reader_bindings()],
         "scope_evidence_level": "static_complete_native_sources; runtime_behavior_unverified",
@@ -872,15 +958,23 @@ def consumer(
         0
     ].startswith("je_indian_famines_button_"):
         from . import famine_opportunities as famine  # noqa: PLC0415
+        from . import native_button_opportunities as buttons  # noqa: PLC0415
 
+        exact = (source, ".".join(field))
+        famine_pairs = {(row["source"], row["field"]) for row in famine.consumer_catalog()}
+        button_pairs = {(row["source"], row["field"]) for row in buttons.consumer_catalog()}
         if (
-            (source, ".".join(field))
-            not in {(row["source"], row["field"]) for row in famine.consumer_catalog()}
+            exact not in famine_pairs | button_pairs
             or actor_path
             or native_root not in {None, "country"}
         ):
-            raise ValueError("饥荒只授权三个精确country ROOT按钮相对权重")
-        evidence, role = famine.HELP, "vanilla_famine_button_relative_weight"
+            raise ValueError("按钮只授权精确country ROOT消费者相对权重")
+        evidence = famine.HELP
+        role = (
+            "vanilla_famine_button_relative_weight"
+            if exact in famine_pairs
+            else "vanilla_native_button_relative_weight"
+        )
         native_unit = "relative_weight"
     elif leaf == "ai_enact_weight_modifier":
         evidence, role = "common/laws/readme.md", "vanilla_law_candidate_weight"

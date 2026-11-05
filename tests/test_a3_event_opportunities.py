@@ -151,7 +151,11 @@ def test_catalog_proves_exact_option_and_leaves_plague_default_unknown(productio
     native, _ = production
     catalog = event.consumer_catalog()
     assert set(catalog) == set(
-        event.OPTIONS + event.PLAGUE_OPTIONS + event.DISASTER_OPTIONS + event.SOL_OPTIONS
+        event.OPTIONS
+        + event.PLAGUE_OPTIONS
+        + event.DISASTER_OPTIONS
+        + event.SOL_OPTIONS
+        + event.HOKKAIDO_OPTIONS
     )
     assert all(row["native_root"] == "country" for row in catalog.values())
     assert all(

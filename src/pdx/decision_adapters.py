@@ -38,9 +38,11 @@ from . import (
     migration_opportunities,
     mobilization_opportunities,
     native_action_opportunities,
+    native_button_opportunities,
     native_decision_opportunities,
     observation_queries,
     production_inputs,
+    regional_resource_opportunities,
     subject_dependence_opportunities,
     technology_opportunities,
     treaty_acceptance_opportunities,
@@ -133,6 +135,11 @@ class AdapterSet:
     decree_opportunities_sha256: str | None = None
     famine_opportunities_sha256: str | None = None
     native_decision_opportunities_sha256: str | None = None
+    native_button_opportunities_sha256: str | None = None
+    regional_resource_programs: tuple[
+        regional_resource_opportunities.RegionalResourceProgram, ...
+    ] = ()
+    regional_resource_opportunities_sha256: str | None = None
 
 
 def writes(
@@ -180,6 +187,21 @@ def writes(
                     acceptance_program.source,
                     acceptance_program.field_path,
                     "treaty_acceptance_opportunities",
+                )
+            )
+    regional_enabled = (
+        any("economy" in policy.enabled_domains for _, policy in adapters.policies)
+        if enabled_domains is None
+        else "economy" in enabled_domains
+    )
+    if regional_enabled:
+        for regional_program in adapters.regional_resource_programs:
+            regional_program.validate()
+            values.append(
+                (
+                    regional_program.source,
+                    regional_program.field_path,
+                    "regional_resource_opportunities",
                 )
             )
     values.sort()
@@ -233,6 +255,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     migration_digest = None
     canal_digest = None
     native_decision_digest = None
+    native_button_digest = None
     decree_digest = None
     famine_digest = None
     native_action_digest = None
@@ -245,6 +268,8 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     acceptance_digest = None
     acceptance_programs: tuple[treaty_acceptance_opportunities.AcceptanceProgram, ...] = ()
     cost_digest = None
+    regional_programs: tuple[regional_resource_opportunities.RegionalResourceProgram, ...] = ()
+    regional_digest = None
     if source == SOURCE:
         if (
             not isinstance(data["sources"], dict)
@@ -253,6 +278,18 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             or not isinstance(data.get("initial_values", []), list)
         ):
             raise ValueError("公司部门消费者源集合类型无效")
+        regional_programs = (regional_resource_opportunities.compile_program(),)
+        for name, expected in regional_resource_opportunities.load()["sources"].items():
+            if name in data["sources"] and data["sources"][name] != expected:
+                raise ValueError(f"区域资源机会与消费者完整源冲突：{name}")
+            data["sources"][name] = expected
+        regional_digest = hashlib.sha256(
+            regional_resource_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + regional_resource_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(regional_resource_opportunities.__file__).read_bytes()
+        ).hexdigest()
         event_programs = event_opportunities.compile_programs()
         for name, expected in event_opportunities.load()["sources"].items():
             if name in data["sources"] and data["sources"][name] != expected:
@@ -399,6 +436,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             (native_decision_opportunities, "赛事实际行政乘数承诺的有界风险"),
             (decree_opportunities, "同州紧急救济需要与保守成本"),
             (famine_opportunities, "真实饥荒暴露、救济收益与独立死亡成本"),
+            (native_button_opportunities, "精确按钮即时现金与持续资源承诺"),
             (native_action_opportunities, "原生宗属外交提案"),
         ):
             _merge_derivation(data, module.derive(data), description)
@@ -429,6 +467,13 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + native_decision_opportunities.FROZEN.read_bytes()
             + b"\0generator:"
             + Path(native_decision_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        native_button_digest = hashlib.sha256(
+            native_button_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + native_button_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(native_button_opportunities.__file__).read_bytes()
         ).hexdigest()
         native_action_digest = hashlib.sha256(
             native_action_opportunities.PARAMETERS.read_bytes()
@@ -475,14 +520,38 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             path.is_absolute()
             or ".." in path.parts
             or path.as_posix() != name
-            or not name.startswith(("common/", "events/"))
+            or (
+                not name.startswith(("common/", "events/"))
+                and name
+                not in {
+                    regional_resource_opportunities.R7,
+                    "localization/english/triggers_l_english.yml",
+                }
+            )
             or "\\" in name
             or ":" in name
-            or path.suffix not in {".txt", ".md"}
+            or (
+                path.suffix not in {".txt", ".md"}
+                and name
+                not in {
+                    regional_resource_opportunities.R7,
+                    "localization/english/triggers_l_english.yml",
+                }
+            )
             or not isinstance(digest, str)
             or not re.fullmatch(r"[a-f0-9]{64}", digest)
         ):
             raise ValueError("消费者适配原件路径或指纹无效")
+        if (
+            name == regional_resource_opportunities.R7
+            and digest != regional_resource_opportunities.load()["sources"][name]
+        ):
+            raise ValueError("区域R7只允许精确冻结仓库证据")
+        if (
+            name == "localization/english/triggers_l_english.yml"
+            and digest != native_action_opportunities.load()["sources"][name]
+        ):
+            raise ValueError("外交单位只允许精确冻结triggers本地化证据")
     if not isinstance(data["rules"], list) or not data["rules"]:
         raise ValueError("消费者适配不能为空")
     groups: dict[str, list[dict]] = {}
@@ -497,6 +566,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             *native_decision_opportunities.consumer_catalog(),
             *decree_opportunities.consumer_catalog().values(),
             *famine_opportunities.consumer_catalog(),
+            *native_button_opportunities.consumer_catalog(),
             *native_action_opportunities.consumer_catalog().values(),
         )
     }
@@ -548,6 +618,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             if acceptance_digest
             else b""
         )
+        + (
+            b"\0regional_resource_opportunities:" + regional_digest.encode("ascii")
+            if regional_digest
+            else b""
+        )
         + (b"\0event_opportunities:" + event_digest.encode("ascii") if event_digest else b"")
         + (
             b"\0import_blockade_opportunities:" + import_blockade_digest.encode("ascii")
@@ -565,6 +640,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         + (
             b"\0native_decision_opportunities:" + native_decision_digest.encode("ascii")
             if native_decision_digest
+            else b""
+        )
+        + (
+            b"\0native_button_opportunities:" + native_button_digest.encode("ascii")
+            if native_button_digest
             else b""
         )
         + (b"\0decree_opportunities:" + decree_digest.encode("ascii") if decree_digest else b"")
@@ -878,6 +958,9 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         decree_digest,
         famine_digest,
         native_decision_digest,
+        native_button_digest,
+        regional_programs,
+        regional_digest,
     )
     writes(adapters)
     return adapters
@@ -1103,6 +1186,29 @@ def _acceptance_programs(
     return actual if enabled else ()
 
 
+def _regional_programs(
+    adapters: AdapterSet, bundle: ConsumerIRBundle | None, *, enabled: bool
+) -> tuple[regional_resource_opportunities.RegionalResourceProgram, ...]:
+    expected = adapters.regional_resource_programs
+    if bundle is None:
+        if not enabled:
+            return ()
+        from .situated.decision_ir import ConsumerIRBundle  # noqa: PLC0415
+
+        bundle = ConsumerIRBundle(1, (), tuple(p.writer_ir() for p in expected))
+    bundle.as_dict()
+    actual = tuple(
+        w.validate_regional_resource_program()
+        for w in bundle.writers
+        if w.kind == "regional_resource_program"
+    )
+    if actual and actual != expected:
+        raise ValueError("区域资源计划与冻结ConsumerIR完整程序不一致")
+    if enabled and actual != expected:
+        raise ValueError("区域资源计划与冻结ConsumerIR完整程序缺失或重复")
+    return actual if enabled else ()
+
+
 def _initialize(
     text: str,
     items: list[InitialValue],
@@ -1190,7 +1296,12 @@ def read_inputs(
     inputs = {}
     for name, expected in adapters.sources:
         try:
-            text = (game / name).read_text(encoding="utf-8-sig") if texts is None else texts[name]
+            path = (
+                (config.REPO / name)
+                if name == regional_resource_opportunities.R7
+                else (game / name)
+            )
+            text = path.read_text(encoding="utf-8-sig") if texts is None else texts[name]
         except (OSError, KeyError) as exc:
             raise ValueError(f"消费者适配缺少锁定游戏原件：{name}") from exc
         text = normalized_text(text)
@@ -1223,6 +1334,8 @@ def build(
 ) -> tuple[dict[str, str], dict[str, object]]:
     """全输入预检后生成；合成测试可显式注入文本，生产默认读取 config.GAME。"""
     known_domains = {rule.domain for _, policy in adapters.policies for rule in policy.rules}
+    if adapters.regional_resource_programs:
+        known_domains.add("economy")
     if adapters.event_programs:
         known_domains.add(event_opportunities.DOMAIN)
     if adapters.acceptance_programs:
@@ -1253,6 +1366,8 @@ def build(
         native_decision_opportunities.verify_inputs(inputs)
     if adapters.decree_opportunities_sha256 is not None:
         decree_opportunities.verify_inputs(inputs)
+    if adapters.native_button_opportunities_sha256 is not None:
+        native_button_opportunities.verify_inputs(inputs)
     if adapters.famine_opportunities_sha256 is not None:
         famine_opportunities.verify_inputs(inputs)
     if adapters.native_action_opportunities_sha256 is not None:
@@ -1269,6 +1384,13 @@ def build(
         import_blockade_opportunities.verify_inputs(inputs)
     if adapters.treaty_acceptance_opportunities_sha256 is not None or adapters.acceptance_programs:
         treaty_acceptance_opportunities.verify_inputs(inputs)
+    if (
+        adapters.regional_resource_programs
+        or adapters.regional_resource_opportunities_sha256 is not None
+    ):
+        regional_resource_opportunities.verify_inputs(
+            {name: inputs[name] for name in regional_resource_opportunities.SOURCES}
+        )
     state_recovery_evidence: tuple[str, ...] = ()
     if any(
         reader.engine == "devastation"
@@ -1414,7 +1536,37 @@ def build(
                 consumer_program=program,
             )
         )
+    regional_enabled = bool(adapters.regional_resource_programs) and (
+        any("economy" in policy.enabled_domains for _, policy in adapters.policies)
+        if enabled_domains is None
+        else "economy" in enabled_domains
+    )
+    regional_programs = _regional_programs(adapters, consumer_ir, enabled=regional_enabled)
+    for regional_program in regional_programs:
+        query_inputs = {name: inputs[name] for name in regional_resource_opportunities.SOURCES}
+        decision_interfaces.reader_scope(
+            regional_program.readers()[0],
+            (),
+            source=regional_program.source,
+            field=regional_program.field_path,
+            context=regional_program.evaluation_context(),
+        )
+        observation_queries.compile_query(
+            regional_resource_opportunities.RegionalResourceQuery(), query_inputs
+        )
+        files.update(
+            regional_resource_opportunities.patch(
+                query_inputs,
+                overlays={**(overlays or {}), **files},
+                consumer_program=regional_program,
+            )
+        )
     return files, {
+        "regional_resource_programs": [p.as_dict() for p in regional_programs],
+        "regional_resource_consumer_interfaces": [
+            decision_interfaces.regional_resource_consumer(p) for p in regional_programs
+        ],
+        "regional_resource_opportunities_sha256": adapters.regional_resource_opportunities_sha256,
         "schema": 1,
         "evidence": "source_locked_generated_consumer_patches",
         "behavior_verified": False,
@@ -1443,6 +1595,7 @@ def build(
         "war_pressure_opportunities_sha256": adapters.war_pressure_opportunities_sha256,
         "decree_opportunities_sha256": adapters.decree_opportunities_sha256,
         "famine_opportunities_sha256": adapters.famine_opportunities_sha256,
+        "native_button_opportunities_sha256": adapters.native_button_opportunities_sha256,
         "field_owners": [
             {"source": source, "field": ".".join(field), "owner": owner}
             for source, field, owner in owners

@@ -660,7 +660,19 @@ def from_data(
             reader = readers[key]
             if (
                 reader.engine != "total_population"
-                or reader.scope != "root"
+                or (
+                    reader.scope != "root"
+                    and not (
+                        reader.scope == "target_country"
+                        and reader.key == "raise_target_population"
+                        and field == ("raise_payments", "ai", "propose_score")
+                        and unknown_cost == ["raise_target_liberty"]
+                        and readers["raise_target_liberty"].scope == "target_country"
+                        and readers["raise_target_liberty"].engine == "liberty_desire"
+                        and native_root == "country"
+                        and not actor_path
+                    )
+                )
                 or reader.kind != "number"
                 or reader.unit != "persons"
                 or reader.minimum != 0

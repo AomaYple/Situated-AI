@@ -27,6 +27,13 @@ class ExistingMilitarySourceCommitmentQuery:
     """ROOT's bounded current treaties, including frozen/unknown status."""
 
 
+@dataclass(frozen=True, slots=True)
+class ExistingCommitmentQuery:
+    """Exact candidate other party in ROOT's existing treaty collection."""
+
+    definition: str
+
+
 from .situated import programs  # noqa: E402
 
 if TYPE_CHECKING:
@@ -45,6 +52,24 @@ MILITARY_SOURCE = "common/treaty_articles/12_military_assistance.txt"
 POWER_VALUES = "common/script_values/01_power_bloc_values.txt"
 JOIN_BLOC = "common/treaty_articles/09_join_power_bloc.txt"
 HOST_EMBASSY = "common/treaty_articles/10_host_power_bloc_embassy.txt"
+COMMITMENTS = {
+    "alliance": ("common/treaty_articles/00_alliance.txt", "mutual", 150, 343),
+    "defensive_pact": ("common/treaty_articles/01_defensive_pact.txt", "mutual", 100, 222),
+    "guarantee_independence": (
+        "common/treaty_articles/02_guarantee_independence.txt",
+        "directed",
+        50,
+        213,
+    ),
+    "support_independence": (
+        "common/treaty_articles/03_support_independence.txt",
+        "directed",
+        50,
+        218,
+    ),
+}
+DEFEAT_SOURCE = "common/on_actions/00_code_on_actions.txt"
+COMMITMENT_PARAMETERS = "military_commitment_query"
 SOURCES = frozenset(
     {
         SOURCE,
@@ -56,6 +81,8 @@ SOURCES = frozenset(
         POWER_VALUES,
         JOIN_BLOC,
         HOST_EMBASSY,
+        *(meta[0] for meta in COMMITMENTS.values()),
+        DEFEAT_SOURCE,
     }
 )
 DEFINITION = "no_tariffs"
@@ -80,6 +107,10 @@ class AcceptanceSpec:
 SPECS = (
     AcceptanceSpec(DEFINITION, SOURCE, ACTION),
     AcceptanceSpec(MILITARY_DEFINITION, MILITARY_SOURCE, MILITARY_ACTION),
+    *(
+        AcceptanceSpec(name, meta[0], f"treaty_acceptance_{name}")
+        for name, meta in COMMITMENTS.items()
+    ),
 )
 
 
@@ -96,7 +127,8 @@ INPUT_MARKET = "scope:article.input_market_goods(root)"
 def load() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
     if (
-        set(data) != {"schema", "sources", "tuning", "military_tuning"}
+        set(data)
+        != {"schema", "sources", "tuning", "military_tuning", "commitment_tuning", "parent_hashes"}
         or type(data["schema"]) is not int
         or data["schema"] != 1
         or set(data["sources"]) != SOURCES
@@ -122,6 +154,16 @@ def load() -> dict[str, Any]:
         or not 0 < military["source_deficit_cost"] <= military["source_default_cost"] <= 10
     ):
         raise ValueError("军事援助接受成本必须保持有限且有界")
+    costs = data["commitment_tuning"]
+    if (
+        set(costs) != {"default_cost", "deficit_cost", "recovery_cost"}
+        or any(type(v) not in {int, float} or not math.isfinite(v) for v in costs.values())
+        or not 0 < costs["deficit_cost"] <= costs["default_cost"] <= 10
+        or not 0 < costs["recovery_cost"] <= 3
+    ):
+        raise ValueError("军事新增义务有限成本参数无效")
+    if set(data["parent_hashes"]) != set(COMMITMENTS):
+        raise ValueError("军事接受父结构哈希集合漂移")
     return data
 
 
@@ -228,6 +270,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
     ):
         raise ValueError("条约接受财政分量已被原版覆盖，须重新审查")
     _verify_military(roots, doc)
+    _verify_commitments(roots, doc)
     # Independent exact same-stage goods-context evidence; no treaty traversal.
     goods_ai = _block(
         _block(_block(roots[GOODS_TRANSFER], "goods_transfer"), "ai"), "inherent_accept_score"
@@ -346,6 +389,8 @@ class AcceptanceProgram:
     def evaluation_context(self) -> EvaluationContext:
         from .situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
 
+        if self.definition in COMMITMENTS:
+            return _commitment_context(self.definition)
         if self.definition == MILITARY_DEFINITION:
             return EvaluationContext(
                 actor_scope=ContextBinding("root", "country", "actor", DOC, 559),
@@ -395,6 +440,8 @@ class AcceptanceProgram:
     def readers(self) -> tuple[Reader, ...]:
         from .decision_rules import Reader  # noqa: PLC0415
 
+        if self.definition in COMMITMENTS:
+            return _commitment_readers(self.definition)
         if self.definition == MILITARY_DEFINITION:
             return (
                 Reader(
@@ -506,6 +553,8 @@ class AcceptanceProgram:
         )
 
     def reader_bindings(self) -> tuple[tuple[str, str, str, str], ...]:
+        if self.definition in COMMITMENTS:
+            return _commitment_bindings(self.definition)
         if self.definition == MILITARY_DEFINITION:
             return (
                 ("military_article_exists", "article", "treaty_article_options", "auxiliary"),
@@ -581,6 +630,8 @@ class AcceptanceProgram:
 
 def compile_program(definition: str = DEFINITION) -> AcceptanceProgram:
     spec = _spec(definition)
+    if definition in COMMITMENTS:
+        return _compile_commitment(definition)
     if definition == MILITARY_DEFINITION:
         data = load()["military_tuning"]
         return AcceptanceProgram(
@@ -661,7 +712,12 @@ QUERY_PARAMETER = "military_assistance_query"
 
 def query_from_reader(
     engine: str, parameters: Mapping[str, str]
-) -> ExistingMilitarySourceCommitmentQuery:
+) -> ExistingMilitarySourceCommitmentQuery | ExistingCommitmentQuery:
+    if engine == "any_scope_treaty" and set(parameters) == {COMMITMENT_PARAMETERS}:
+        definition = parameters[COMMITMENT_PARAMETERS]
+        if definition not in COMMITMENTS:
+            raise ValueError("军事接受查询定义无效")
+        return ExistingCommitmentQuery(definition)
     if engine != "any_scope_treaty" or parameters != {
         QUERY_PARAMETER: "existing_source_commitment"
     }:
@@ -669,7 +725,9 @@ def query_from_reader(
     return ExistingMilitarySourceCommitmentQuery()
 
 
-def render_query(query: ExistingMilitarySourceCommitmentQuery) -> str:
+def render_query(query: ExistingMilitarySourceCommitmentQuery | ExistingCommitmentQuery) -> str:
+    if type(query) is ExistingCommitmentQuery:
+        return render_commitment_query(query)
     if type(query) is not ExistingMilitarySourceCommitmentQuery:
         raise ValueError("军事援助只授权ROOT既有source承诺固定查询")
     # Existing TreatyArticle has source_country; candidate TreatyArticleOptions
@@ -681,10 +739,13 @@ def render_query(query: ExistingMilitarySourceCommitmentQuery) -> str:
 
 
 def compile_query(
-    query: ExistingMilitarySourceCommitmentQuery, inputs: Mapping[str, str]
+    query: ExistingMilitarySourceCommitmentQuery | ExistingCommitmentQuery,
+    inputs: Mapping[str, str],
 ) -> CompiledQuery:
     from .observation_queries import CompiledQuery  # noqa: PLC0415
 
+    if type(query) is ExistingCommitmentQuery:
+        return compile_commitment_query(query, inputs)
     expression = render_query(query)
     verify_inputs(inputs)
     return CompiledQuery(
@@ -738,6 +799,8 @@ def evaluate(
         return 0
     selected = compile_program() if consumer_program is None else consumer_program
     selected.validate()
+    if selected.definition in COMMITMENTS:
+        return _evaluate_commitment(values, selected)
     if selected.definition == MILITARY_DEFINITION:
         return _evaluate_military(values, selected)
     root, source, target = (values.get(k) for k in ("root", "source", "target"))
@@ -830,8 +893,12 @@ def render(program: AcceptanceProgram) -> str:
         f"\t\t# ACTION {program.writer_id} [{DOMAIN}];\n"
         + programs.render_scalar(
             program.scalar,
-            MILITARY_GUARDS if program.definition == MILITARY_DEFINITION else GUARDS,
-            ai_guard=AI_GUARD,
+            _commitment_guards(program.definition)
+            if program.definition in COMMITMENTS
+            else (MILITARY_GUARDS if program.definition == MILITARY_DEFINITION else GUARDS),
+            ai_guard=_commitment_ai_guard(program.definition)
+            if program.definition in COMMITMENTS
+            else AI_GUARD,
             style="cards",
             domain=DOMAIN,
         )
@@ -949,4 +1016,390 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
         "cost_basis": "first source +0.10 military goods multiplier commitment; total military_expenses>0 is only an explicit soft financing exposure proxy, not goods spending or forecast; -6/-10 design preferences; no influence cost",
         "source_sha256": load()["sources"][MILITARY_SOURCE],
     }
+    for definition, (source, kind, _cost, line) in COMMITMENTS.items():
+        result[definition] = {
+            "source": source,
+            "definition": definition,
+            "field": _spec(definition).field,
+            "native_root": "country",
+            "actor": "root",
+            "kind": kind,
+            "native_unit": "acceptance_score",
+            "operation": "add",
+            "placement": "after_complete_native_inherent_score",
+            "treaty_scope": "unavailable_not_consumed",
+            "scope_evidence": [f"{DOC}:559", f"{DOC}:561", f"{DOC}:562", f"{source}:{line}"],
+            "unknown_policy": "unknown_identity_or_newness=local_exit; known_default_and_deficit_independent_of_recovery; known_recovery_independent_of_finance; no_guessed_war",
+            "cost_basis": "bounded preference for a new obligation to this exact other party; financing tiers same cause, observed defeat recovery independent; no maintenance currency, no goods expense forecast",
+            "source_sha256": load()["sources"][source],
+        }
     return result
+
+
+def _parent_digest(block: Block) -> str:
+    def shape(node):
+        if isinstance(node, Block):
+            return [shape(item) for item in node.items]
+        if isinstance(node, Scalar):
+            return [node.text, node.quoted]
+        return [node.key, node.op, node.prefix, shape(node.value)]
+
+    return hashlib.sha256(
+        json.dumps(shape(block), ensure_ascii=False, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def _verify_commitments(roots: Mapping[str, Block], doc: str) -> None:
+    for required in (
+        "`scope:first_country` is one of the parties that would be bound",
+        "`scope:second_country` is the other party that would be bound",
+        "- `source_country` - if directed",
+        "There is no `scope:treaty` here",
+        "source/target. Mutual articles have first/second.",
+        "- `freeze`: causes the contravening party to have to keep up their end",
+    ):
+        if required not in doc:
+            raise ValueError("军事接受角色/冻结义务合同漂移")
+    for definition, (source, kind, cost, _line) in COMMITMENTS.items():
+        article = _block(roots[source], definition)
+        if _parent_digest(article) != load()["parent_hashes"][definition]:
+            raise ValueError(f"军事接受完整父结构漂移：{definition}")
+        _scalar(article, "kind", kind)
+        _scalar(article, "cost", str(cost))
+        if kind == "directed":
+            _scalar(article, "maintenance_paid_by", "source_country")
+        ai = _block(article, "ai")
+        native = _block(ai, "inherent_accept_score")
+        if _contains(native, "in_default", "=", "yes") or _contains(
+            native, "net_total_income", "<", "0"
+        ):
+            raise ValueError("军事接受已有同因融资原式，须重新审查")
+        if kind == "directed":
+            branch = native.all("if")[0]
+            assert isinstance(branch.value, Block)
+            _scalar(_block(branch.value, "limit"), "scope:source_country", "this", "?=")
+            if not _contains(
+                _block(article, "can_ratify"), "source_country", "=", "scope:source_country"
+            ):
+                raise ValueError("军事接受真实既有条款来源链接漂移")
+        if definition == "support_independence":
+            support = _block(article, "automatically_support")
+            if tuple(s.unquoted for s in support.scalars()) != (
+                "dp_independence",
+                "dp_increase_autonomy",
+                "dp_annex_subject",
+                "dp_hungarian_revolution",
+                "dp_sepoy_mutiny",
+            ):
+                raise ValueError("支持独立真实自动支持义务漂移")
+        if article.all("source_modifier") or _contains(
+            article, "country_military_goods_cost_mult", "=", "0.10"
+        ):
+            raise ValueError("军事义务来源不能假装存在军援军需费用")
+    lost = _block(roots[DEFEAT_SOURCE], "on_lost_war")
+    if not (
+        _contains(lost, "name", "=", "recently_lost_war") and _contains(lost, "days", "=", "1825")
+    ):
+        raise ValueError("真实败战记忆生命周期漂移")
+
+
+def _commitment_context(definition: str) -> EvaluationContext:
+    from .situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
+
+    roles = (
+        (("first_country", 571), ("second_country", 572))
+        if COMMITMENTS[definition][1] == "mutual"
+        else (("source_country", 575), ("target_country", 576))
+    )
+    return EvaluationContext(
+        actor_scope=ContextBinding("root", "country", "actor", DOC, 559),
+        auxiliary_scopes=(
+            ContextBinding("article", "treaty_article_options", "auxiliary", DOC, 560),
+            *(ContextBinding(role, "country", "auxiliary", DOC, line) for role, line in roles),
+        ),
+        evidence=(
+            f"{DOC}:559",
+            f"{DOC}:560",
+            f"{DOC}:561",
+            f"{DOC}:562",
+            f"{DOC}:565",
+            *(f"{DOC}:{line}" for _, line in roles),
+            f"{COMMITMENTS[definition][0]}:{COMMITMENTS[definition][3]}",
+        ),
+    )
+
+
+def _commitment_readers(definition: str) -> tuple[Reader, ...]:
+    from .decision_rules import Reader  # noqa: PLC0415
+
+    roles = (
+        ("first_country", "second_country")
+        if COMMITMENTS[definition][1] == "mutual"
+        else ("source_country", "target_country")
+    )
+    return (
+        Reader(
+            "commitment_article_exists",
+            "exists",
+            "root",
+            "boolean",
+            "boolean",
+            argument="scope:article",
+        ),
+        *(
+            Reader(
+                f"commitment_{role}_exists",
+                "exists",
+                "root",
+                "boolean",
+                "boolean",
+                argument=f"scope:{role}",
+            )
+            for role in roles
+        ),
+        Reader(
+            "commitment_active_exists",
+            "exists",
+            "root",
+            "boolean",
+            "boolean",
+            argument="scope:is_treaty_active",
+        ),
+        Reader(
+            "commitment_renegotiation_exists",
+            "exists",
+            "root",
+            "boolean",
+            "boolean",
+            argument="scope:is_renegotiation",
+        ),
+        Reader("commitment_default", "in_default", "root", "boolean", "boolean"),
+        Reader("commitment_income", "net_total_income", "root", "currency_per_week", "number"),
+        Reader(
+            "commitment_defeat",
+            "has_variable",
+            "root",
+            "boolean",
+            "boolean",
+            argument="recently_lost_war",
+        ),
+        Reader(
+            "commitment_existing",
+            "any_scope_treaty",
+            "root",
+            "boolean",
+            "boolean",
+            parameters=((COMMITMENT_PARAMETERS, definition),),
+        ),
+    )
+
+
+def _commitment_bindings(definition: str) -> tuple[tuple[str, str, str, str], ...]:
+    roles = (
+        ("first_country", "second_country")
+        if COMMITMENTS[definition][1] == "mutual"
+        else ("source_country", "target_country")
+    )
+    return (
+        ("commitment_article_exists", "article", "treaty_article_options", "auxiliary"),
+        *((f"commitment_{role}_exists", role, "country", "auxiliary") for role in roles),
+        *(
+            (key, "root", "country", "actor")
+            for key in (
+                "commitment_active_exists",
+                "commitment_renegotiation_exists",
+                "commitment_default",
+                "commitment_income",
+                "commitment_defeat",
+                "commitment_existing",
+            )
+        ),
+    )
+
+
+def _compile_commitment(definition: str) -> AcceptanceProgram:
+    spec = _spec(definition)
+    tuning = load()["commitment_tuning"]
+    default, deficit, recovery = (
+        tuning[key] for key in ("default_cost", "deficit_cost", "recovery_cost")
+    )
+    return AcceptanceProgram(
+        programs.ScalarProgram(
+            spec.action,
+            "add",
+            0,
+            -default - recovery,
+            0,
+            (
+                programs.ScalarGroup(
+                    "new_obligation_financing",
+                    (
+                        programs.ScalarTerm("commitment_default", spec.action, -default),
+                        programs.ScalarTerm("commitment_deficit", spec.action, -deficit),
+                    ),
+                ),
+                programs.ScalarGroup(
+                    "observed_defeat_recovery",
+                    (programs.ScalarTerm("commitment_recovery", spec.action, -recovery),),
+                ),
+            ),
+        ),
+        source=spec.source,
+        field=spec.field,
+        kind=COMMITMENTS[definition][1],
+    )
+
+
+def render_commitment_query(query: ExistingCommitmentQuery) -> str:
+    if type(query) is not ExistingCommitmentQuery or query.definition not in COMMITMENTS:
+        raise ValueError("军事接受仅授权精确四定义查询")
+    definition = query.definition
+
+    def clause(other: str) -> str:
+        source = (
+            " OR = { NOT = { exists = source_country } source_country = ROOT }"
+            if COMMITMENTS[definition][1] == "directed"
+            else ""
+        )
+        return f"any_scope_treaty = {{ binds = scope:{other} any_scope_article = {{ has_type = {definition}{source} }} }}"
+
+    if COMMITMENTS[definition][1] == "directed":
+        return clause("target_country")
+    return (
+        "OR = { AND = { scope:first_country ?= this "
+        + clause("second_country")
+        + " } AND = { scope:second_country ?= this "
+        + clause("first_country")
+        + " } }"
+    )
+
+
+def compile_commitment_query(
+    query: ExistingCommitmentQuery, inputs: Mapping[str, str]
+) -> CompiledQuery:
+    from .observation_queries import CompiledQuery  # noqa: PLC0415
+
+    verify_inputs(inputs)
+    source, _kind, _cost, line = COMMITMENTS[query.definition]
+    return CompiledQuery(
+        expression=render_commitment_query(query),
+        references=(f"{DOC}:37", f"{DOC}:575", f"{source}:{line}"),
+        source_hashes=tuple(sorted(load()["sources"].items())),
+        local_collections=("country.any_scope_treaty", "treaty.any_scope_article"),
+    )
+
+
+def _commitment_role(definition: str) -> str:
+    if COMMITMENTS[definition][1] == "directed":
+        return _SOURCE_ROLE
+    return "OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country }"
+
+
+def _commitment_ai_guard(definition: str) -> str:
+    roles = (
+        ("first_country", "second_country")
+        if COMMITMENTS[definition][1] == "mutual"
+        else ("source_country", "target_country")
+    )
+    return "exists = ROOT ROOT = { is_ai = yes } exists = scope:article " + " ".join(
+        f"exists = scope:{role}" for role in roles
+    )
+
+
+def _commitment_guards(definition: str) -> dict[str, str]:
+    core = (
+        _commitment_role(definition)
+        + " NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { "
+        + render_commitment_query(ExistingCommitmentQuery(definition))
+        + " }"
+    )
+    return {
+        "commitment_default": core + " in_default = yes",
+        "commitment_deficit": core + " net_total_income < 0",
+        "commitment_recovery": core + " has_variable = recently_lost_war",
+    }
+
+
+def _new_obligation(values: Mapping[str, Any], definition: str, other: str) -> bool:
+    treaties = values.get("existing_treaties")
+    if treaties is None:
+        return False
+    if not isinstance(treaties, (list, tuple)):
+        raise ValueError("军事既有条约须是完整集合或未知")
+    root = values["root"]
+    for treaty in treaties:
+        if not isinstance(treaty, Mapping):
+            raise ValueError("军事既有条约成员须是映射")
+        binds = treaty.get("binds")
+        if binds is not None and (
+            not isinstance(binds, (list, tuple))
+            or any(not isinstance(key, str) or not key for key in binds)
+        ):
+            raise ValueError("军事既有条约双方须是身份列表或未知")
+        if binds is not None and other not in binds:
+            continue
+        articles = treaty.get("articles")
+        if articles is None:
+            return False
+        if not isinstance(articles, (list, tuple)):
+            raise ValueError("军事既有条款须是完整集合或未知")
+        for article in articles:
+            if not isinstance(article, Mapping):
+                raise ValueError("军事既有条款成员须是映射")
+            kind = article.get("type")
+            if kind is None:
+                return False
+            if not isinstance(kind, str) or not kind:
+                raise ValueError("军事既有条款类型须是身份或未知")
+            if kind != definition:
+                continue
+            if COMMITMENTS[definition][1] == "mutual":
+                return False
+            source = article.get("source")
+            if source is not None and (not isinstance(source, str) or not source):
+                raise ValueError("军事既有条款source须是身份或未知")
+            if source is None or source == root:
+                return False
+    return True
+
+
+def _evaluate_commitment(values: Mapping[str, Any], selected: AcceptanceProgram) -> float:
+    definition = selected.definition
+    mutual = COMMITMENTS[definition][1] == "mutual"
+    invalid_roles = ("source", "target") if mutual else ("first", "second")
+    if any(values.get(key) is not None for key in invalid_roles):
+        raise ValueError("军事接受mutual/direct角色不可混用")
+    roles = ("root", "first", "second") if mutual else ("root", "source", "target")
+    root, a, b = (values.get(key) for key in roles)
+    if not all(isinstance(key, str) and key for key in (root, a, b)):
+        return 0.0
+    for key in (
+        "article_exists",
+        "is_treaty_active_exists",
+        "is_renegotiation_exists",
+        "in_default",
+        "war_defeat",
+    ):
+        if values.get(key) is not None and type(values[key]) is not bool:
+            raise ValueError("军事接受布尔事实必须明确布尔或未知")
+    identity = a != b and (root in {a, b} if mutual else root == a)
+    if not identity:
+        return 0.0
+    other = b if root == a else a
+    if not isinstance(other, str):
+        return 0.0
+    core = (
+        values.get("article_exists") is True
+        and values.get("is_treaty_active_exists") is False
+        and values.get("is_renegotiation_exists") is False
+        and _new_obligation(values, definition, other)
+    )
+    income = values.get("net_total_income")
+    return programs.evaluate_scalar(
+        selected.scalar,
+        {
+            "commitment_default": bool(core and values.get("in_default") is True),
+            "commitment_deficit": bool(core and _finite(income) and income < 0),
+            "commitment_recovery": bool(core and values.get("war_defeat") is True),
+        },
+    )

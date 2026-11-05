@@ -172,6 +172,10 @@ def test_only_four_collections_local_market_and_finite_country_queries_are_regis
         "market",
         "OR",
         "AND",
+        "any_scope_war",
+        "any_scope_treaty",
+        "hokkaido_observation",
+        "scope:target_region",
     } == queries.QUERY_ENGINES
     with pytest.raises(ValueError):
         queries.from_reader("any_country", {"threshold": "1"})

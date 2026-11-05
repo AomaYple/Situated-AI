@@ -36,7 +36,7 @@ def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
     plague = resources.pdx_metrics(event_opportunities.frozen_inputs()[event_opportunities.PLAGUE])
     assert plague["persistent_write_sites"] == 23
     assert sum(plague["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 9
-    assert data["limits"]["world_country_scan_sites"] == 1 + 9
+    assert data["limits"]["world_country_scan_sites"] == 1 + 9 + 1
     famine = resources.pdx_metrics(
         famine_opportunities.frozen_inputs()[famine_opportunities.SOURCE]
     )
@@ -61,7 +61,7 @@ def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
     assert (
         sum(native_decisions["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
     )
-    assert data["limits"]["persistent_write_sites"] == 31 + 6 + 23 + 3 + 16 + 3 + 7
+    assert data["limits"]["persistent_write_sites"] == 31 + 6 + 23 + 3 + 16 + 3 + 7 + 10 + 16
     assert data["limits"]["reader_path_length"] == 3
 
 
@@ -211,4 +211,67 @@ def test_military_assistance_new_query_sites_stay_local_and_bounded():
     assert generated["object_scan_sites"] == 23
     assert generated["persistent_write_sites"] == 0
     assert sum(generated["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
-    assert resources.load()["limits"]["object_scan_sites"] == 2300 + 21 + 19 + 4
+    assert (
+        resources.load()["limits"]["object_scan_sites"] == 2300 + 21 + 19 + 4 + 26 + 23 + 5 + 1 + 6
+    )
+
+
+def test_native_button_inherited_writes_and_world_scans_keep_exact_parents():
+    from pdx import native_button_opportunities as buttons
+
+    inputs = buttons.frozen_inputs()
+    totals = {"object_scan_sites": 0, "persistent_write_sites": 0, "world_country_scan_sites": 0}
+    for source in {spec.source for spec in buttons.SPECS}:
+        native = inputs[source]
+        metrics = resources.pdx_metrics(native)
+        for key in ("object_scan_sites", "persistent_write_sites"):
+            totals[key] += metrics[key]
+        totals["world_country_scan_sites"] += sum(
+            metrics["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS
+        )
+        resources.verify_inherited_writes({source: native})
+        for changed in (
+            native + "\nset_variable = forged\n",
+            native + "\nany_country = { always = yes }\n",
+            "forged = { " + native + " }",
+        ):
+            with pytest.raises(ValueError, match="继承变量或世界扫描"):
+                resources.verify_inherited_writes({source: changed})
+    assert totals == {
+        "object_scan_sites": 26,
+        "persistent_write_sites": 10,
+        "world_country_scan_sites": 1,
+    }
+
+
+def test_hokkaido_native_operations_remain_exact_beside_five_local_queries():
+    from pdx import event_opportunities as event
+
+    inputs = event.frozen_inputs()
+    native = inputs[event.HOKKAIDO]
+    generated = event.patch(inputs)[event.HOKKAIDO]
+    original = resources.pdx_metrics(native)
+    actual = resources.pdx_metrics(generated)
+    assert original["object_scan_sites"] == 23
+    assert actual["object_scan_sites"] == 28
+    assert (
+        original["persistent_write_keys"]
+        == actual["persistent_write_keys"]
+        == {
+            "change_variable": 3,
+            "set_global_variable": 8,
+            "set_variable": 5,
+        }
+    )
+    assert sum(actual["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
+    resources.verify_inherited_writes({event.HOKKAIDO: generated})
+    for changed in (
+        generated.replace("change_variable", "set_variable", 1),
+        generated.replace("set_global_variable", "change_global_variable", 1),
+        generated + "\nset_variable = forged\n",
+        generated + "\nany_country = { always = yes }\n",
+        "other = { " + generated + " }",
+    ):
+        assert changed != generated
+        with pytest.raises(ValueError, match="继承变量或世界扫描"):
+            resources.verify_inherited_writes({event.HOKKAIDO: changed})

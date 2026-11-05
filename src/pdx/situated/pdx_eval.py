@@ -525,7 +525,10 @@ def _condition(
     # provided ROOT (including None) always wins over flat decoy facts.
     anchor = (
         (
-            {"ROOT": facts, "scope:is_initiator": facts.get("scope:is_initiator")}
+            {
+                "ROOT": facts,
+                **{key: value for key, value in facts.items() if key.startswith("scope:")},
+            }
             if "ROOT" not in facts
             else facts
         )
@@ -534,7 +537,7 @@ def _condition(
     )
 
     def scope(name: str) -> tuple[bool, Mapping[str, object | None] | None]:
-        context = anchor if name == "ROOT" else facts
+        context = anchor if name == "ROOT" or name.startswith("scope:") else facts
         if name not in context:
             return False, None
         value = context[name]

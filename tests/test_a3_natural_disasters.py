@@ -393,7 +393,7 @@ def test_shared_model_has_all_sixteen_exact_disaster_programs_and_unique_reader_
     assert len(plans) == 16
     assert model.consumer_ir is not None
     writers = tuple(row for row in model.consumer_ir.writers if row.kind == "event_program")
-    assert len(writers) == 23
+    assert len(writers) == 28
     assert {row.definition for row in writers if row.source == event.DISASTERS} == set(
         event.DISASTER_OPTIONS
     )

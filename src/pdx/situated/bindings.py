@@ -83,6 +83,20 @@ def build(
             )
             for rule in policy.rules
         )
+    result.extend(
+        Binding(
+            _binding_id(p.source, p.definition),
+            p.source,
+            p.definition,
+            p.field,
+            "root",
+            "target_region",
+            "add",
+            "migrate",
+            p.consumer_id,
+        )
+        for p in adapters.regional_resource_programs
+    )
     result.sort(key=lambda item: item.binding_id)
     validate(tuple(result), check_complete=False)
     return tuple(result)
@@ -195,7 +209,11 @@ def validate(
         validate_disposition(item)
         if item.operation not in {"add", "multiply"}:
             raise ValueError(f"绑定 operation 无效：{item.binding_id}")
-        if item.actor not in {"root", "owner"} or item.target not in {"none", "target_state"}:
+        if item.actor not in {"root", "owner"} or item.target not in {
+            "none",
+            "target_state",
+            "target_region",
+        }:
             raise ValueError(f"绑定 actor/target 无效：{item.binding_id}")
         if not item.field or not item.consumer:
             raise ValueError(f"绑定字段为空：{item.binding_id}")

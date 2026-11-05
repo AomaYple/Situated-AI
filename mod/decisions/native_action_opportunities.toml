@@ -1,20 +1,39 @@
-# 和平自主交涉、宗主让利和加入势力集团分别绑定本国提案优先级。
+# Exact native diplomatic proposals; thresholds and factors are bounded design assumptions.
 schema = 1
 
 [sources]
-"common/diplomatic_actions/40_subjects_knowledge_sharing.txt" = "0e8d089a62180b570dfba7b1bb644238fa3dab6f936d12af9f21b5cedcc5afcd"
-"common/diplomatic_actions/diplomatic_action.md" = "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c"
-"common/diplomatic_actions/38_subjects_increase_autonomy.txt" = "533689cd0cb50a664fc7c9b35a9b7ee125080aae27d12c60e2060fbdaa786a0c"
-"common/diplomatic_actions/33_subjects_decrease_payments.txt" = "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df"
+"common/diplomatic_actions/00_relations_actions.txt" = "da0af78d69d4d862b15f9181ef70f2df75e6fcfa94c99a8eb171a115ab13bd6d"
+"common/diplomatic_actions/03_violate_sovereignty.txt" = "7e34682aa4f54d39d046f4f2d32bb8cb76b48a9a78cee6375abd2ff66f39efc0"
 "common/diplomatic_actions/26_join_power_bloc.txt" = "a66a61d5ee5a86282cec8f09b38bd0e58f3f12ac170f080499b3126370a9c28e"
+"common/diplomatic_actions/32_subjects_raise_payments.txt" = "a8a6721398b8449cb2fd00ee3e4cd53034d24172552db8bf520a3a3e3212c38f"
+"common/diplomatic_actions/33_subjects_decrease_payments.txt" = "af342203edff8a52b5e265803f372939342e315750d74b4842e7759d1d54c2df"
+"common/diplomatic_actions/34_subjects_exempt_from_service.txt" = "ccf74b2d6b2fa89aed685c441c4731e3ccdcec1aca13ea47990bcec543295335"
+"common/diplomatic_actions/38_subjects_increase_autonomy.txt" = "533689cd0cb50a664fc7c9b35a9b7ee125080aae27d12c60e2060fbdaa786a0c"
+"common/diplomatic_actions/39_subjects_support_regime.txt" = "f14b3d4606b5ba8bda5b0efd1b05bb632c6ca5c0f4527475864771b2e30d0c90"
+"common/diplomatic_actions/40_subjects_knowledge_sharing.txt" = "0e8d089a62180b570dfba7b1bb644238fa3dab6f936d12af9f21b5cedcc5afcd"
+"common/diplomatic_actions/41_subjects_evangelize.txt" = "7104ac353e71f57ab33f953c6c6ad38ebcee6eee2af6dd7946b7c253e126c88c"
+"common/diplomatic_actions/52_nationalism_actions.txt" = "6609ecafba7c840685c9716b8a1d414a2043c06ed1f6e79327679b13d9cce9ed"
+"common/diplomatic_actions/diplomatic_action.md" = "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c"
+"common/on_actions/00_code_on_actions.txt" = "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46"
+"common/script_values/building_values.txt" = "ad61e13b0762f6c174c091c76f406d4bca1d27fddea94b185eba3139dbcc6cf0"
+"events/iberia_events/negotiation_events.txt" = "57f65c934f27c60dd3439fa6868c4adb4edea56627384dbd7f3997672571fe49"
+"common/trigger_localization/00_trigger_localization.txt" = "8eaba9c4ae1e025de16ddc3384e53459182f0de88aabf05937b8ac421e397817"
+"localization/english/triggers_l_english.yml" = "27b0e3eb719daa61e103b87716a932200eeab36b7e9995b6677f2ff56bf5cabe"
 
 [tuning]
 autonomy_need = 1.18
 autonomy_recovery = 0.95
 payments_default = 0.85
 payments_deficit = 0.92
-bloc_default = 0.90
+bloc_default = 0.9
 bloc_deficit = 0.95
 bloc_recovery = 0.95
 knowledge_spread_margin = 0.95
 knowledge_spread_weak = 0.85
+exempt_service_war = 0.9
+sovereignty_default = 0.85
+sovereignty_deficit = 0.93
+sovereignty_recovery = 0.95
+raise_income_need = 1.12
+raise_liberty_risk = 0.9
+raise_liberty_high = 0.82

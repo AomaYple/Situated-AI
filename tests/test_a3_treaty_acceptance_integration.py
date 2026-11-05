@@ -42,7 +42,15 @@ def test_real_compiler_freezes_the_current_accepting_country_article_and_goods(p
     model = compiler.load_model()
     assert model.consumer_ir is not None
     programs = decision_adapters._acceptance_programs(configured, model.consumer_ir, enabled=True)
-    assert len(programs) == 2
+    assert len(programs) == 6
+    assert {p.definition for p in programs} == {
+        "no_tariffs",
+        "military_assistance",
+        "alliance",
+        "defensive_pact",
+        "guarantee_independence",
+        "support_independence",
+    }
     program = next(p for p in programs if p.definition == "no_tariffs")
     writers = tuple(row for row in model.consumer_ir.writers if row.kind == "acceptance_program")
     writer = next(row for row in writers if row.definition == "no_tariffs")

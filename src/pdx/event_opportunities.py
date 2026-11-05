@@ -85,7 +85,36 @@ SOL_SOURCES = frozenset(
         SOL_OWNER,
     }
 )
-FAMILIES = frozenset({"healthcare", "plague", "disaster", "sol_response"})
+HOKKAIDO = "events/japan_events/ep2_hokkaido_events.txt"
+HOKKAIDO_EVENT = "hokkaido_events.3"
+HOKKAIDO_OPTIONS = tuple(HOKKAIDO_EVENT + "." + suffix for suffix in ("a", "b", "c", "e", "g"))
+HOKKAIDO_SOURCES = frozenset(
+    (
+        "common/building_groups/00_building_groups.txt",
+        "common/buildings/09_misc_resource.txt",
+        "common/buildings/12_subsistence.txt",
+        "events/australia_events.txt",
+        "common/journal_entry_groups/00_journal_entries.txt",
+        "events/japan_events/ep2_hokkaido_events.txt",
+        "common/scripted_buttons/07_japan_buttons.txt",
+        "common/scripted_buttons/scripted_buttons.md",
+        "common/journal_entries/07_hokkaido.txt",
+        "common/static_modifiers/00_ep2_02_modifiers.txt",
+        "common/script_values/event_values.txt",
+        "common/scripted_triggers/00_scripted_triggers.txt",
+        "events/agitators_events/algeria_events.txt",
+        "common/decisions/west_america_expidition_decision.txt",
+        "common/buildings/02_agro.txt",
+        "common/buildings/04_plantations.txt",
+        "common/production_methods/02_agro.txt",
+        "common/production_methods/04_plantations.txt",
+        "common/production_method_groups/02_agro.txt",
+        "common/production_method_groups/04_plantations.txt",
+        "common/alert_types/00_alert_types.txt",
+        "common/objective_subgoals/00_subgoals_tutorial.txt",
+    )
+)
+FAMILIES = frozenset({"healthcare", "plague", "disaster", "sol_response", "hokkaido"})
 DISASTER_QUERY_PARAMETER = "event_disaster_query"
 DISASTER_EVENTS = tuple(f"natural_disaster_events.{i}" for i in range(1, 9))
 DISASTER_OPTIONS = tuple(f"{name}.{suffix}" for name in DISASTER_EVENTS for suffix in ("a", "b"))
@@ -129,10 +158,11 @@ def load() -> dict[str, Any]:
             "plague_policy",
             "disaster_policy",
             "sol_response_policy",
+            "hokkaido_policy",
         }
         or type(data["schema"]) is not int
         or data["schema"] != 1
-        or set(data["sources"]) != LEGACY_SOURCES | SOL_SOURCES
+        or set(data["sources"]) != LEGACY_SOURCES | SOL_SOURCES | HOKKAIDO_SOURCES
         or set(data["tuning"]) != {"reform_need", "ignored_opponent_cost", "heard_opponent_benefit"}
     ):
         raise ValueError("事件机会schema/来源/参数不完整")
@@ -217,6 +247,19 @@ def load() -> dict[str, Any]:
         or sol["solvent_refund"] >= sol["recurring_cost"]
     ):
         raise ValueError("面包骚乱完整配对政策必须具有独立有限福利、激进化及经常费用参数")
+    hokkaido = data["hokkaido_policy"]
+    if hokkaido != {
+        "recurring_cost": 2,
+        "covered_cost_refund": 1,
+        "throughput": 2,
+        "high_operation": 2,
+        "potential_demand": 2,
+        "acute_demand": 2,
+        "wheat_replacement": 8,
+        "wheat_large": 20,
+        "wheat_operating": 4,
+    } or any(type(v) is not int for v in hokkaido.values()):
+        raise ValueError("北海道有界政策参数或安全区间漂移")
     return data
 
 
@@ -436,7 +479,7 @@ def _source_roots(inputs: Mapping[str, str], sources: frozenset[str]) -> dict[st
         text = inputs.get(name)
         if not isinstance(text, str) or hashlib.sha256(text.encode()).hexdigest() != digest:
             raise ValueError(f"事件完整原版来源漂移：{name}")
-        if name == SOL_JOURNAL_DOC:
+        if name in {SOL_JOURNAL_DOC, "common/scripted_buttons/scripted_buttons.md"}:
             # Native documentation is evidence, never a PDX script to parse.
             continue
         parsed = parse_text(text)
@@ -608,6 +651,7 @@ def verify_sol_inputs(inputs: Mapping[str, str]) -> None:
 def verify_inputs(inputs: Mapping[str, str]) -> None:
     _verify_legacy_inputs(inputs)
     verify_sol_inputs(inputs)
+    verify_hokkaido_inputs(inputs)
 
 
 def frozen_inputs() -> dict[str, str]:
@@ -636,6 +680,12 @@ class EventPolicyIdentity:
 
 
 POLICIES = {
+    **{
+        name: EventPolicyIdentity(
+            HOKKAIDO, HOKKAIDO_EVENT, "hokkaido", False, "hokkaido_state_scope"
+        )
+        for name in HOKKAIDO_OPTIONS
+    },
     **{name: EventPolicyIdentity(SOURCE, EVENT, "healthcare", False) for name in OPTIONS},
     **{name: EventPolicyIdentity(PLAGUE, PLAGUE_EVENT, "plague", True) for name in PLAGUE_OPTIONS},
     **{
@@ -653,7 +703,13 @@ POLICIES = {
 def required_program_sources(program: EventProgram) -> tuple[str, ...]:
     """Keep existing 21 programs' exact 15-source contracts unchanged."""
     return tuple(
-        sorted(SOL_SOURCES if program.identity.family == "sol_response" else LEGACY_SOURCES)
+        sorted(
+            HOKKAIDO_SOURCES
+            if program.identity.family == "hokkaido"
+            else SOL_SOURCES
+            if program.identity.family == "sol_response"
+            else LEGACY_SOURCES
+        )
     )
 
 
@@ -697,10 +753,30 @@ class EventProgram:
     def validate(self) -> None:
         if self not in compile_programs():
             raise ValueError("事件完整程序与生产参数或精确选项身份不一致")
+        if self.identity.family == "hokkaido":
+            for reader in self.readers():
+                validate_hokkaido_reader(
+                    reader, self.source, self.field_path, self.evaluation_context()
+                )
 
     def evaluation_context(self) -> EvaluationContext:
         from pdx.situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
 
+        if self.identity.family == "hokkaido":
+            return EvaluationContext(
+                actor_scope=ContextBinding(
+                    "root", "country", "actor", "common/scripted_buttons/scripted_buttons.md", 19
+                ),
+                auxiliary_scopes=(
+                    ContextBinding("hokkaido_state_scope", "state", "auxiliary", HOKKAIDO, 477),
+                ),
+                evidence=(
+                    "common/scripted_buttons/scripted_buttons.md:19",
+                    "common/scripted_buttons/07_japan_buttons.txt:414",
+                    "common/journal_entries/07_hokkaido.txt:9",
+                    f"{HOKKAIDO}:477",
+                ),
+            )
         if self.identity.family == "sol_response":
             return EvaluationContext(
                 actor_scope=ContextBinding("root", "country", "actor", SOL_JOURNAL_GROUP, 108),
@@ -749,7 +825,7 @@ class EventProgram:
         )
 
     def reader_bindings(self) -> tuple[tuple[str, str, str, str], ...]:
-        if self.identity.family in {"disaster", "sol_response"}:
+        if self.identity.family in {"disaster", "sol_response", "hokkaido"}:
             return tuple(
                 (
                     reader.key,
@@ -782,6 +858,8 @@ class EventProgram:
     def readers(self) -> tuple[Reader, ...]:
         from pdx.decision_rules import Reader  # noqa: PLC0415
 
+        if self.identity.family == "hokkaido":
+            return hokkaido_readers(self.option)
         if self.identity.family == "sol_response":
             return (
                 Reader(
@@ -987,6 +1065,7 @@ def compile_programs() -> tuple[EventProgram, ...]:
         *_compile_plague_programs(),
         *_compile_disaster_programs(),
         *_compile_sol_programs(),
+        *_compile_hokkaido_programs(),
     )
 
 
@@ -1303,6 +1382,7 @@ def _guards(values: Mapping[str, object], program: EventProgram) -> dict[str, bo
             if index == 4
             else _valid_number(population, 100000)
         )
+    result.update(_hokkaido_guards(values, program))
     return result
 
 
@@ -1492,7 +1572,8 @@ def render(program: EventProgram) -> str:
     if (
         scalar.operation != "add"
         or (scalar.neutral != 0 and not new_policy)
-        or len(scalar.groups) > (4 if new_policy else 2)
+        or len(scalar.groups)
+        > (3 if program.identity.family == "hokkaido" else 4 if new_policy else 2)
     ):
         raise ValueError("事件AIWeight桥只支持已证有限线性加法")
     chunks = [
@@ -1753,4 +1834,507 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
             },
             "source_sha256": load()["sources"][SOL],
         }
+    catalog.update(hokkaido_catalog(inputs))
     return catalog
+
+
+def verify_hokkaido_inputs(inputs: Mapping[str, str]) -> None:
+    """Pin all complete caller/effect/query/PM sources before reading their AST."""
+    roots = _source_roots(inputs, HOKKAIDO_SOURCES)
+    _scalar(
+        _block(
+            roots["common/journal_entry_groups/00_journal_entries.txt"],
+            "je_group_historical_content",
+        ),
+        "context",
+        "country",
+    )
+    journal = _block(roots["common/journal_entries/07_hokkaido.txt"], "je_taming_the_north")
+    _scalar(journal, "group", "je_group_historical_content")
+    buttons = [
+        row.value.unquoted
+        for row in journal.all("scripted_button")
+        if isinstance(row.value, Scalar)
+    ]
+    if "button_je_taming_the_north_agriculture_potentials" not in buttons:
+        raise ValueError("北海道JE调用按钮漂移")
+    button = _block(
+        roots["common/scripted_buttons/07_japan_buttons.txt"],
+        "button_je_taming_the_north_agriculture_potentials",
+    )
+    _scalar(_block(_block(button, "effect"), "trigger_event"), "id", HOKKAIDO_EVENT)
+    event = _block(roots[HOKKAIDO], HOKKAIDO_EVENT)
+    _scalar(event, "type", "country_event")
+    _scalar(event, "placement", "scope:hokkaido_state_scope")
+    state = _block(_block(_block(event, "immediate"), "s:STATE_HOKKAIDO"), "random_scope_state")
+    _scalar(_block(state, "limit"), "owner", "root")
+    _scalar(state, "save_scope_as", "hokkaido_state_scope")
+    _scalar(_block(state, "set_variable"), "name", "optimization_counter_var")
+    _scalar(_block(state, "set_variable"), "value", "0")
+    options = _options(event)
+    if tuple(options) != HOKKAIDO_OPTIONS:
+        raise ValueError("北海道完整五选项漂移")
+    optimize = _block(_block(options[HOKKAIDO_OPTIONS[0]], "scope:hokkaido_state_scope"), "if")
+    _scalar(_block(optimize, "limit"), "var:optimization_counter_var", "0")
+    _scalar(_block(optimize, "add_modifier"), "multiplier", "0.5")
+    rice = _block(options[HOKKAIDO_OPTIONS[1]], "scope:hokkaido_state_scope")
+    replace = _block(rice, "if")
+    _scalar(_block(replace, "limit"), "has_building", "building_wheat_farm")
+    _scalar(replace, "remove_building", "building_wheat_farm")
+    _scalar(_block(replace, "create_building"), "building", "building_rice_farm")
+    _scalar(_block(replace, "create_building"), "level", "3")
+    for suffix, potential in (
+        ("c", "dye_plantation"),
+        ("e", "opium_plantation"),
+        ("g", "vineyard"),
+    ):
+        _scalar(
+            _block(options[HOKKAIDO_EVENT + "." + suffix], "s:STATE_HOKKAIDO"),
+            "add_resource_potential",
+            "building_" + potential,
+        )
+    for name, base in zip(HOKKAIDO_OPTIONS, (10, 70, 5, 10, 10), strict=True):
+        option = options[name]
+        _scalar(_block(option, "ai_chance"), "base", str(base))
+        fee = _block(option, "add_modifier")
+        _scalar(fee, "name", "modifier_introducing_new_crops")
+        _scalar(fee, "days", "normal_modifier_time")
+        _scalar(
+            fee,
+            "multiplier",
+            "money_amount_multiplier_" + ("large" if name.endswith(".a") else "medium"),
+        )
+    values = roots[EVENT_VALUES]
+    _scalar(values, "normal_modifier_time", "1825")
+    for kind, divisor, coefficient, rounding in (
+        ("medium", "100000", "0.25", "100"),
+        ("large", "1000000", "0.5", "1000"),
+    ):
+        if _shape(_block(values, "money_amount_multiplier_" + kind)) != (
+            ("value", "=", "root.gdp"),
+            ("divide", "=", divisor),
+            ("multiply", "=", coefficient),
+            ("round", "=", "yes"),
+            ("multiply", "=", rounding),
+            ("min", "=", "100"),
+        ):
+            raise ValueError("北海道实际取整费用AST漂移")
+    modifiers = roots["common/static_modifiers/00_ep2_02_modifiers.txt"]
+    _scalar(_block(modifiers, "modifier_introducing_new_crops"), "country_expenses_add", "1")
+    for group in ("agriculture", "plantations"):
+        _scalar(
+            _block(modifiers, "modifier_opimizing_existing_variants"),
+            "building_group_bg_" + group + "_throughput_add",
+            "0.04",
+        )
+    # Actual group ancestry is authoritative. Scripted is_farm_building includes
+    # ranching and is_plantation_building includes rubber extraction; neither
+    # receives the native agriculture/plantations throughput modifier.
+    group_root = roots["common/building_groups/00_building_groups.txt"]
+    parents: dict[str, str | None] = {}
+    for row in group_root.assignments():
+        if isinstance(row.value, Block):
+            parent = row.value.all("parent_group")
+            if len(parent) > 1 or (parent and not isinstance(parent[0].value, Scalar)):
+                raise ValueError("北海道建筑组父关系不唯一")
+            parent_value = parent[0].value if parent else None
+            if parent_value is not None and not isinstance(parent_value, Scalar):
+                raise ValueError("北海道建筑组父关系必须为标量")
+            parents[row.key] = parent_value.unquoted if parent_value is not None else None
+    affected: set[str] = set()
+    for group in parents:
+        chain: set[str] = set()
+        current: str | None = group
+        while current is not None:
+            if current in chain or current not in parents:
+                raise ValueError("北海道建筑组父关系循环或缺失")
+            chain.add(current)
+            current = parents[current]
+        if chain & {"bg_agriculture", "bg_plantations"}:
+            affected.add(group)
+    if affected != set(HOKKAIDO_CROP_GROUPS):
+        raise ValueError("北海道真实农业/种植园建筑组闭包漂移")
+    _scalar(
+        _block(roots["common/buildings/02_agro.txt"], "building_livestock_ranch"),
+        "building_group",
+        "bg_ranching",
+    )
+    _scalar(
+        _block(roots["common/buildings/09_misc_resource.txt"], "building_rubber_plantation"),
+        "building_group",
+        "bg_rubber",
+    )
+    australia = _block(
+        _block(
+            _block(_block(roots["events/australia_events.txt"], "emu_war.1"), "trigger"),
+            "any_scope_state",
+        ),
+        "any_scope_building",
+    )
+    group_queries = _block(australia, "OR").all("is_building_group")
+    if [row.value.unquoted for row in group_queries if isinstance(row.value, Scalar)] != [
+        "bg_agriculture",
+        "bg_ranching",
+        "bg_plantations",
+    ]:
+        raise ValueError("北海道建筑组查询原版同形证据漂移")
+
+
+HOKKAIDO_QUERY_PARAMETER = "event_hokkaido_query"
+HOKKAIDO_CROP_GROUPS = (
+    "bg_agriculture",
+    "bg_staple_crops",
+    "bg_subsistence_agriculture",
+    "bg_plantations",
+)
+_HOKKAIDO_GROUP_QUERY = (
+    "OR = { " + " ".join("is_building_group = " + group for group in HOKKAIDO_CROP_GROUPS) + " }"
+)
+HOKKAIDO_QUERIES = {
+    "optimization_zero": "has_variable = optimization_counter_var var:optimization_counter_var = 0",
+    "crops": "any_scope_building = { " + _HOKKAIDO_GROUP_QUERY + " occupancy >= 0.1 }",
+    "crops_high": "any_scope_building = { " + _HOKKAIDO_GROUP_QUERY + " occupancy >= 0.5 }",
+    "wheat": "has_building = building_wheat_farm",
+    "wheat_absent": "NOT = { has_building = building_wheat_farm }",
+    "wheat_large": "any_scope_building = { is_building_type = building_wheat_farm level > 3 }",
+    "wheat_operating": "any_scope_building = { is_building_type = building_wheat_farm occupancy >= 0.5 }",
+    "finance_large": "in_default = no net_fixed_income > money_amount_multiplier_large",
+    "finance_medium": "in_default = no net_fixed_income > money_amount_multiplier_medium",
+}
+for _good in ("grain", "dye", "opium", "wine"):
+    HOKKAIDO_QUERIES[_good + "_demand"] = (
+        f"market = {{ exists = mg:{_good} mg:{_good} = {{ market_goods_delta < 0 }} }}"
+    )
+    HOKKAIDO_QUERIES[_good + "_acute"] = (
+        f"market = {{ exists = mg:{_good} mg:{_good} = {{ market_goods_pricier > 0.25 }} }}"
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class HokkaidoQuery:
+    observation: str
+
+
+@dataclass(frozen=True, slots=True)
+class CompiledHokkaidoQuery:
+    expression: str
+    source_hashes: tuple[tuple[str, str], ...]
+    actor: str
+    local_collections: tuple[str, ...]
+    references: tuple[str, ...] = (
+        "common/scripted_buttons/scripted_buttons.md:19",
+        "common/scripted_buttons/07_japan_buttons.txt:414",
+        "common/journal_entries/07_hokkaido.txt:9",
+        f"{HOKKAIDO}:477",
+    )
+    kind: str = "boolean"
+    world_scans: int = 0
+    runtime_cost: str = (
+        "bounded exact saved-state buildings and actor market observations; not constant time"
+    )
+    unknown_policy: str = (
+        "true_requires_known_witness; complete_false=false; incomplete_without_witness=unknown"
+    )
+
+
+def hokkaido_query_from_reader(engine: str, parameters: Mapping[str, str]) -> HokkaidoQuery:
+    if engine != "hokkaido_observation" or set(parameters) != {HOKKAIDO_QUERY_PARAMETER}:
+        raise ValueError("北海道查询接口身份漂移")
+    query = HokkaidoQuery(parameters[HOKKAIDO_QUERY_PARAMETER])
+    render_hokkaido_query(query)
+    return query
+
+
+def render_hokkaido_query(query: HokkaidoQuery) -> str:
+    if type(query) is not HokkaidoQuery or query.observation not in HOKKAIDO_QUERIES:
+        raise ValueError("北海道查询必须为精确固定有界事实")
+    return HOKKAIDO_QUERIES[query.observation]
+
+
+def required_hokkaido_query_sources(query: HokkaidoQuery) -> tuple[str, ...]:
+    render_hokkaido_query(query)
+    return tuple(sorted(HOKKAIDO_SOURCES))
+
+
+def compile_hokkaido_query(
+    query: HokkaidoQuery, inputs: Mapping[str, str]
+) -> CompiledHokkaidoQuery:
+    expression = render_hokkaido_query(query)
+    verify_hokkaido_inputs(inputs)
+    observation = query.observation
+    actor = (
+        "country"
+        if observation.startswith("finance_") or observation.endswith(("_demand", "_acute"))
+        else "state"
+    )
+    collections = (
+        ("saved_state_buildings",)
+        if observation in {"crops", "crops_high", "wheat_large", "wheat_operating"}
+        else ()
+    )
+    unknown = (
+        "complete_known_wheat_absence=true; known_wheat_witness=false; incomplete_without_witness=unknown; never_negate_unknown_to_true"
+        if observation == "wheat_absent"
+        else "true_requires_known_witness; complete_false=false; incomplete_without_witness=unknown"
+    )
+    return CompiledHokkaidoQuery(
+        expression,
+        tuple((name, load()["sources"][name]) for name in sorted(HOKKAIDO_SOURCES)),
+        actor,
+        collections,
+        unknown_policy=unknown,
+    )
+
+
+def hokkaido_readers(option: str) -> tuple[Reader, ...]:
+    from pdx.decision_rules import Reader  # noqa: PLC0415
+
+    suffix = option.rsplit(".", 1)[-1]
+    if option not in HOKKAIDO_OPTIONS:
+        raise ValueError("北海道选项身份未知")
+    state = (
+        ("optimization_zero", "crops", "crops_high")
+        if suffix == "a"
+        else ("wheat", "wheat_absent", "wheat_large", "wheat_operating")
+        if suffix == "b"
+        else ()
+    )
+    country: tuple[str, ...] = ("finance_large" if suffix == "a" else "finance_medium",)
+    if suffix != "a":
+        good = {"b": "grain", "c": "dye", "e": "opium", "g": "wine"}[suffix]
+        country += (good + "_demand", good + "_acute")
+    readers = [
+        Reader(
+            "hokkaido_exists",
+            "exists",
+            "root",
+            "boolean",
+            "boolean",
+            argument="scope:hokkaido_state_scope",
+        ),
+        Reader(
+            "hokkaido_owned", "owner", "hokkaido_state_scope", "boolean", "boolean", argument="root"
+        ),
+    ]
+    readers.extend(
+        Reader(
+            "hokkaido_" + key,
+            "hokkaido_observation",
+            "hokkaido_state_scope" if key in state else "root",
+            "boolean",
+            "boolean",
+            parameters=((HOKKAIDO_QUERY_PARAMETER, key),),
+        )
+        for key in (*state, *country)
+    )
+    return tuple(readers)
+
+
+def validate_hokkaido_reader(
+    reader: Reader,
+    source: str | None,
+    field: tuple[str, ...] | None,
+    context: EvaluationContext | None,
+    *,
+    actor_path: tuple[str, ...] = (),
+    native_root: str = "country",
+) -> str:
+    """Authorize the complete reader only for its exact event option and proven objects."""
+    program = next(
+        (
+            item
+            for item in compile_programs()
+            if item.identity.family == "hokkaido"
+            and item.source == source
+            and item.field_path == field
+        ),
+        None,
+    )
+    if (
+        program is None
+        or native_root != "country"
+        or actor_path
+        or context != program.evaluation_context()
+        or reader not in program.readers()
+    ):
+        raise ValueError("北海道读取器只授权精确选项、完整签名与已证明国家/保存州上下文")
+    return "country" if reader.scope == "root" else "state"
+
+
+def _compile_hokkaido_programs() -> tuple[EventProgram, ...]:
+    from pdx.situated import programs  # noqa: PLC0415
+
+    p = load()["hokkaido_policy"]
+    result = []
+    for option in HOKKAIDO_OPTIONS:
+        suffix = option.rsplit(".", 1)[-1]
+        groups = [
+            programs.ScalarGroup(
+                "independent_actual_five_year_country_expense",
+                (
+                    programs.ScalarTerm(
+                        "hokkaido_country_cost",
+                        "hokkaido_" + suffix + "_cost",
+                        -p["recurring_cost"],
+                        (
+                            programs.ScalarEffect(
+                                "hokkaido_finance_" + ("large" if suffix == "a" else "medium"),
+                                p["covered_cost_refund"],
+                            ),
+                        ),
+                    ),
+                ),
+            )
+        ]
+        if suffix == "a":
+            groups.append(
+                programs.ScalarGroup(
+                    "actual_current_operating_crops_two_percent_throughput",
+                    (
+                        programs.ScalarTerm(
+                            "hokkaido_crops",
+                            "hokkaido_a_crops",
+                            p["throughput"],
+                            (programs.ScalarEffect("hokkaido_crops_high", p["high_operation"]),),
+                        ),
+                    ),
+                )
+            )
+        else:
+            good = {"b": "grain", "c": "dye", "e": "opium", "g": "wine"}[suffix]
+            guard = "hokkaido_" + good + "_opportunity"
+            groups.append(
+                programs.ScalarGroup(
+                    "potential_only_actual_market_need",
+                    (
+                        programs.ScalarTerm(
+                            guard,
+                            "hokkaido_" + suffix + "_potential",
+                            p["potential_demand"],
+                            (
+                                programs.ScalarEffect(
+                                    "hokkaido_" + good + "_acute", p["acute_demand"]
+                                ),
+                            ),
+                        ),
+                    ),
+                )
+            )
+            if suffix == "b":
+                replacement = programs.ScalarTerm(
+                    "hokkaido_wheat",
+                    "hokkaido_b_replacement",
+                    -p["wheat_replacement"],
+                    (
+                        programs.ScalarEffect("hokkaido_wheat_large", -p["wheat_large"]),
+                        programs.ScalarEffect("hokkaido_wheat_operating", -p["wheat_operating"]),
+                    ),
+                )
+                groups.append(
+                    programs.ScalarGroup(
+                        "destroy_all_wheat_replace_exactly_three_rice", (replacement,)
+                    )
+                )
+        result.append(
+            EventProgram(
+                option,
+                programs.ScalarProgram(
+                    "event_hokkaido_" + suffix,
+                    "add",
+                    0,
+                    -34 if suffix == "b" else -2,
+                    4,
+                    tuple(groups),
+                ),
+            )
+        )
+    return tuple(result)
+
+
+def _hokkaido_guards(values: Mapping[str, object], program: EventProgram) -> dict[str, bool]:
+    core = (
+        program.identity.family == "hokkaido"
+        and values.get("hokkaido_exists") is True
+        and values.get("hokkaido_owned") is True
+    )
+    result = {"hokkaido_country_cost": program.identity.family == "hokkaido"}
+    for size in ("medium", "large"):
+        result["hokkaido_finance_" + size] = values.get("hokkaido_finance_" + size) is True
+    crops = (
+        core
+        and values.get("hokkaido_optimization_zero") is True
+        and values.get("hokkaido_crops") is True
+    )
+    result["hokkaido_crops"] = crops
+    result["hokkaido_crops_high"] = crops and values.get("hokkaido_crops_high") is True
+    wheat = core and values.get("hokkaido_wheat") is True
+    for key in ("wheat", "wheat_large", "wheat_operating"):
+        result["hokkaido_" + key] = wheat and (
+            key == "wheat" or values.get("hokkaido_" + key) is True
+        )
+    for good in ("grain", "dye", "opium", "wine"):
+        result["hokkaido_" + good + "_opportunity"] = (
+            core
+            and values.get("hokkaido_" + good + "_demand") is True
+            and (good != "grain" or values.get("hokkaido_wheat_absent") is True)
+        )
+        result["hokkaido_" + good + "_acute"] = values.get("hokkaido_" + good + "_acute") is True
+    return result
+
+
+_hokkaido_core = "exists = scope:hokkaido_state_scope scope:hokkaido_state_scope = { owner = root }"
+GUARDS["hokkaido_country_cost"] = "is_ai = yes"
+for _key, _expression in HOKKAIDO_QUERIES.items():
+    if _key.startswith("finance_") or _key.endswith(("_demand", "_acute")):
+        GUARDS["hokkaido_" + _key] = _expression
+    else:
+        GUARDS["hokkaido_" + _key] = (
+            _hokkaido_core + " scope:hokkaido_state_scope = { " + _expression + " }"
+        )
+GUARDS["hokkaido_crops"] += (
+    " scope:hokkaido_state_scope = { " + HOKKAIDO_QUERIES["optimization_zero"] + " }"
+)
+for _good in ("grain", "dye", "opium", "wine"):
+    GUARDS["hokkaido_" + _good + "_opportunity"] = (
+        _hokkaido_core + " " + HOKKAIDO_QUERIES[_good + "_demand"]
+    )
+    if _good == "grain":
+        GUARDS["hokkaido_grain_opportunity"] += (
+            " scope:hokkaido_state_scope = { " + HOKKAIDO_QUERIES["wheat_absent"] + " }"
+        )
+
+
+def hokkaido_catalog(inputs: Mapping[str, str]) -> dict[str, dict[str, Any]]:
+    event = _block(parse_text(inputs[HOKKAIDO]).root, HOKKAIDO_EVENT)
+    return {
+        name: {
+            "source": HOKKAIDO,
+            "definition": HOKKAIDO_EVENT,
+            "field": f"option[{name}].ai_chance",
+            "selector": {"event": HOKKAIDO_EVENT, "option_name": name},
+            "native_root": "country",
+            "actor": "root",
+            "target_scope": "scope:hokkaido_state_scope=state; exists and owner=root per state benefit",
+            "native_unit": "event_option_weight",
+            "operation": "add",
+            "placement": "after_existing_aiweight_modifiers",
+            "source_line": _options(event)[name].all("ai_chance")[0].line,
+            "scope_evidence": [
+                "common/scripted_buttons/scripted_buttons.md:19",
+                "common/scripted_buttons/07_japan_buttons.txt:414",
+                f"{HOKKAIDO}:477",
+            ],
+            "default_weight": "known_native_base_preserved",
+            "auxiliary_entity": "exact current saved Hokkaido owned state; not event placement inferred ROOT",
+            "unknown_policy": "state_unknown=benefit_exit; auxiliary_unknown=lower_tier; finance_unknown=retain_independent_cost; wheat_business_profit_and_replacement_money=unknown_not_inferred",
+            "cost_semantics": {
+                "kind": "country_expenses_add",
+                "duration_days": 1825,
+                "multiplier": "money_amount_multiplier_"
+                + ("large" if name.endswith(".a") else "medium"),
+                "pressure": "bounded_preference_not_currency; actual_rounded_macro_against_net_fixed_income; no_fixed_large_medium_ratio",
+            },
+            "source_sha256": load()["sources"][HOKKAIDO],
+        }
+        for name in HOKKAIDO_OPTIONS
+    }

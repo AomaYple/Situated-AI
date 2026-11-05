@@ -27,6 +27,27 @@ schema = 1
 "common/journal_entry_groups/00_journal_entries.txt" = "6265408016db2eb5ed2707acf379f50523468cb81e4feeb04ddab239fef021ef"
 "events/tech_events/nursing_events.txt" = "7c6e74206cd6acb33a203b48b2f74023b1877c506572bb2852dda50e351fa3cb"
 
+"common/building_groups/00_building_groups.txt" = "5f4ba8976a33b0fbc0f391d44029e455ab83bc64d594f26fbb7c70f3a56420c9"
+"common/buildings/09_misc_resource.txt" = "cdb01907f4e00fe2ce089ea2270dcd5954235df4671683fc74812e4debdfc8e7"
+"common/buildings/12_subsistence.txt" = "61e40b3e0e27234b89e24bf4ac3951625a8f69c766ab7775d00e17bb5bc58afc"
+"events/australia_events.txt" = "9d9fadc641e9917ddec59905f797ca431e69ce4197358955e7eeb76bec4358da"
+"events/japan_events/ep2_hokkaido_events.txt" = "58abd41feac944910647c4929af7c8a18066cc0f376ef618a20a9ed55dc30147"
+"common/scripted_buttons/07_japan_buttons.txt" = "e33e7944dfb0d958bad5cf987bc3c887b6cf695f632935e70faab346693d1130"
+"common/scripted_buttons/scripted_buttons.md" = "bb1028f7b843e43dc42473968307ad340e2960099cc50e6907f3cff9a47c2d4d"
+"common/journal_entries/07_hokkaido.txt" = "95d57e04740b5bf006e3252838b4082a15414df1f9ef48bff7048b0ce4c2ace5"
+"common/static_modifiers/00_ep2_02_modifiers.txt" = "2efaefd775316be7dcda1eebc5f60851b844b5f93bd9c5bce19c73f91fe318a3"
+"common/scripted_triggers/00_scripted_triggers.txt" = "a4956f5188970963ca62de10a6b856a7000bc87efbebd26784050620b53003b2"
+"events/agitators_events/algeria_events.txt" = "5f5ad379db5714993711178498f5e2241f1147b82ad2afdc818e6d510e673fc8"
+"common/decisions/west_america_expidition_decision.txt" = "4b191f0dd42db3f3025ed29cca5ce39935fabd4c73aa39abe82930538ef927be"
+"common/buildings/02_agro.txt" = "78cc7634d66fd5c6c68b5e9863c6208cd04a1ba3a8c274c4439374a2587cd0de"
+"common/buildings/04_plantations.txt" = "785248f30a4c7fa6857ee1ea5f1cfae897a6ed27f6219d8c0a18ef6df46aacd8"
+"common/production_methods/02_agro.txt" = "9d2c9be74569e39a05896b618c3d843880f3ba9dc4958f418250139242eb134f"
+"common/production_methods/04_plantations.txt" = "377e247f8ce334cc5c300ac27c91bffb25f3a84891fdbc678bfddf1bef022184"
+"common/production_method_groups/02_agro.txt" = "a4f21d31cb98eeb3caaff7cbc44a19007028fc66c824bcba8247b4b618b92bc7"
+"common/production_method_groups/04_plantations.txt" = "7d165e1529ac97336193e787017824e503d44dedad8772fef8fddd6e1ebd3d14"
+"common/alert_types/00_alert_types.txt" = "399eaa0ed4bb11e29bac7d0de29e2fa1e191cbdbf3b1290fba5abac9b622f912"
+"common/objective_subgoals/00_subgoals_tutorial.txt" = "fa0a1d4bd3135cfb8e534bbef2b599a0b4e03fcde16c8df9df7ebdf8ce67c02b"
+
 [tuning]
 reform_need = 8
 ignored_opponent_cost = 10
@@ -65,3 +86,14 @@ high_exposure = 6
 avoided_radicals = 6
 recurring_cost = 32
 solvent_refund = 20
+
+[hokkaido_policy]
+recurring_cost = 2
+covered_cost_refund = 1
+throughput = 2
+high_operation = 2
+potential_demand = 2
+acute_demand = 2
+wheat_replacement = 8
+wheat_large = 20
+wheat_operating = 4

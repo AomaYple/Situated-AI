@@ -15,6 +15,7 @@ from pdx import (
     decision_adapters,
     decision_rules,
     event_opportunities,
+    regional_resource_opportunities,
     treaty_acceptance_opportunities,
 )
 from pdx.model import Assignment, Block, Scalar
@@ -250,6 +251,17 @@ class _ReviewedNumericContract:
 
 
 def _native_binding(instance: ActionInstance) -> NativeConsumerBinding | None:
+    if instance.kind == "regional_resource_program":
+        p = regional_resource_opportunities.compile_program()
+        if (
+            instance.source != p.source
+            or instance.rule_id != p.definition
+            or instance.consumer_field != p.field
+        ):
+            return None
+        return NativeConsumerBinding(
+            p.source, "ai_strategy_default", p.field.removeprefix("ai_strategy_default.")
+        )
     if instance.kind == "acceptance_program":
         acceptance_program = next(
             (
@@ -613,6 +625,7 @@ class _NativeBindingProofs:
             decree_opportunities,
             famine_opportunities,
             native_action_opportunities,
+            native_button_opportunities,
             native_decision_opportunities,
         )
 
@@ -663,6 +676,15 @@ class _NativeBindingProofs:
                 famine_opportunities,
                 famine_opportunities.frozen_inputs(),
                 compiler._frozen_famine_contexts(),
+                "chance",
+                "none",
+                "country",
+                (),
+            ),
+            (
+                native_button_opportunities,
+                native_button_opportunities.frozen_inputs(),
+                compiler._frozen_native_button_contexts(),
                 "chance",
                 "none",
                 "country",
@@ -735,6 +757,100 @@ class _NativeBindingProofs:
     def context_issue(
         self, instance: ActionInstance, surface: VanillaSurface, *, state_owner_proven: bool
     ) -> str | None:
+        if instance.kind == "regional_resource_program":
+            p = regional_resource_opportunities.compile_program()
+            regional_names = regional_resource_opportunities.SOURCES - {
+                regional_resource_opportunities.R7
+            }
+            if not set(regional_names) <= set(self.sources):
+                return "native_source_contract_unproven"
+            try:
+                regional_resource_opportunities.verify_inputs(
+                    {
+                        n: normalized_text(self.sources[n].decode("utf-8-sig"))
+                        for n in regional_names
+                    }
+                    | {
+                        regional_resource_opportunities.R7: regional_resource_opportunities.config.REPO.joinpath(
+                            regional_resource_opportunities.R7
+                        ).read_text(encoding="utf-8")
+                    }
+                )
+            except ValueError:
+                return "native_source_contract_unproven"
+            from . import vanilla_inventory  # noqa: PLC0415
+
+            parsed = parse_bytes(self.sources[p.source], path=p.source)
+            definition = _ordinary(parsed.root, "ai_strategy_default")
+            if definition is None or not isinstance(definition.value, Block):
+                return "regional_resource_definition_unproven"
+            stance = _ordinary(
+                regional_resource_opportunities._block(
+                    definition.value, "strategic_region_stance_type_scores"
+                ),
+                "stance_colonize_region",
+            )
+            snapshot = json.loads(
+                regional_resource_opportunities.frozen_inputs()[regional_resource_opportunities.R7]
+            )
+            ctx = snapshot["consumers"]["strategic_region_stance_type_scores"]
+            expected_scope = vanilla_inventory._scope(
+                "ai_strategies",
+                tuple(surface.field.split(".")),
+                self.sources,
+                {},
+                definition,
+                p.source,
+                strategy_proof=engine_scope.StrategyScopeEvidence(
+                    True,
+                    (),
+                    (p.source,),
+                    (
+                        engine_scope.StrategyConsumerEvidence(
+                            "strategic_region_stance_type_scores",
+                            ctx["actor_scope"],
+                            ctx["target_scope"],
+                            ctx["operation"],
+                            ctx["capability"],
+                            (
+                                f"{engine_scope.STRATEGY_MANIFEST_ID}:sha256={engine_scope.STRATEGY_MANIFEST_SHA256}",
+                                f"@engine/binaries/victoria3.exe:{ctx['consumer_va']}",
+                            ),
+                        ),
+                    ),
+                ),
+            )
+            if (
+                instance.action_id != p.writer_id
+                or instance.source != p.source
+                or instance.rule_id != p.definition
+                or instance.consumer_field != p.field
+                or instance.domain != "economy"
+                or instance.operation != "add"
+                or instance.value != 0
+                or instance.owner != "regional_resource_opportunities"
+                or instance.vanilla_tail != "preserve"
+                or instance.actor_scope != "root"
+                or instance.target_scope != "target_region"
+                or instance.evaluation_context != p.evaluation_context()
+                or instance.evidence != p.evaluation_context().evidence
+                or instance.condition_facts != tuple(r.key for r in p.readers())
+                or surface.source != p.source
+                or surface.definition != "ai_strategy_default"
+                or surface.field != p.field.removeprefix("ai_strategy_default.")
+                or surface.actor_scope != "country"
+                or surface.target_scope
+                != "scope:target_region=strategic_region;scope:region_score=scalar"
+                or surface.operation != "additive_region_stance_score"
+                or surface.capability != "direct"
+                or stance is None
+                or surface.source_line != stance.line
+                or surface.scope_evidence != expected_scope.evidence
+                or surface.ambiguity
+                or not surface.legal
+            ):
+                return "regional_resource_program_contract_unproven"
+            return None
         if instance.kind == "acceptance_program":
             acceptance = treaty_acceptance_opportunities
             acceptance_program = next(
@@ -859,7 +975,9 @@ class _NativeBindingProofs:
                 name: normalized_text(self.sources[name].decode("utf-8-sig")) for name in names
             }
             try:
-                if program.identity.family == "sol_response":
+                if program.identity.family == "hokkaido":
+                    event_opportunities.verify_hokkaido_inputs(texts)
+                elif program.identity.family == "sol_response":
                     event_opportunities.verify_sol_inputs(texts)
                 else:
                     event_opportunities._verify_legacy_inputs(texts)
@@ -1790,6 +1908,7 @@ def contract(
             "rule_action",
             "event_program",
             "acceptance_program",
+            "regional_resource_program",
         }:
             by_domain[domain].append(instance)
         elif domain in explicit_by_domain and getattr(instance, "kind", "") == "action_card":

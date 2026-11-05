@@ -44,13 +44,13 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.political]
-production_instances = 670
+production_instances = 679
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.population]
-production_instances = 9
+production_instances = 13
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
@@ -68,7 +68,7 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.diplomacy]
-production_instances = 162
+production_instances = 173
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
@@ -98,7 +98,7 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.overseas]
-production_instances = 16
+production_instances = 17
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
