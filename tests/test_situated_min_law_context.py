@@ -24,11 +24,11 @@ def test_min_law_contract_has_country_actor_and_actual_law_instance():
         "operation": "override_pass_chance_threshold",
         "capability": "direct",
         "unit": "pass_chance",
-        "consumer_va": "0x141646d23",
-        "parser_va": "0x1416418b2",
-        "member_offset": "0x9b8",
+        "consumer_va": "0x141829083",
+        "parser_va": "0x141823c13",
+        "member_offset": "0x9d8",
     }
-    assert len(data["observations"]) == 452
+    assert len(data["observations"]) == 737
     assert data["law_instance_type"]["scope_tag"] == "0x31"
     assert data["law_instance_type"]["native_type"] == "CCountryLaw"
 
@@ -56,17 +56,18 @@ def min_law_proof(tmp_path, monkeypatch):
         path.write_bytes(raw)
         inputs[source] = raw
         data["script_hashes"][source] = hashlib.sha256(raw).hexdigest()
-    for source in data["institution_definition_sources"]:
-        raw = "\n".join(f"{key} = {{}}" for key in data["institution_definitions"]).encode()
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-        data["institution_definition_sources"][source] = hashlib.sha256(raw).hexdigest()
-    for source, raw_hex in data["stance_definition_bytes"].items():
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes.fromhex(raw_hex))
     manifest = tmp_path / "strategy.json"
+
+    for support_key in (
+        "institution_definition_bytes",
+        "stance_definition_bytes",
+        "configured_default_script_bytes",
+    ):
+        for source, raw_hex in data[support_key].items():
+            path = game / source
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes.fromhex(raw_hex))
+            inputs[source] = bytes.fromhex(raw_hex)
 
     def freeze():
         raw = json.dumps(data).encode()

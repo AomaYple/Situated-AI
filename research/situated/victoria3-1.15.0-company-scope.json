@@ -1,0 +1,626 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.15.0-windows-x64",
+  "status": "scratch_projection_requires_production_review",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+    "bytes": 99988600
+  },
+  "script_hashes": {
+    "common/company_types/00_companies_africa.txt": "6c1646cdb8848dd6c978d78c0042be5dbfe40b52183fab5a9fb004a69a60a4ef",
+    "common/company_types/00_companies_americas.txt": "059a2651ff5d067e530fea931aab8ebaad5a3a5902e476e24b4b04307609f88e",
+    "common/company_types/00_companies_asia.txt": "a782c7520541e970691d6afcfc7e9d6b3f029c5bad540d77e18e0d8dafb21f15",
+    "common/company_types/00_companies_austria_hungary.txt": "34586ddcd90d3929e5da1397c8e73b15bcd17c61882168da7e981a7976dc1d45",
+    "common/company_types/00_companies_china.txt": "fda545c504e43a3fcf46ed256808970fefa7e40d9fba16cf71fb86b7787e25f2",
+    "common/company_types/00_companies_cots.txt": "a1c6a981d079f968c1496819481a42520e8953ed815270e503816ee0134732f4",
+    "common/company_types/00_companies_ep2.txt": "60c4a700cb2959707429d69c119a547b946c7fc4b02a6ef7029e2225bd5a820e",
+    "common/company_types/00_companies_europe.txt": "9ecb3830464fe325ec7a72db0e89cb9862b059c3d4a5b91c50347218523462c1",
+    "common/company_types/00_companies_france.txt": "fd0667efa1a19fb346010f966d488ed4064b0b4bba5c2403422ed97dc0721621",
+    "common/company_types/00_companies_germany.txt": "132e80475cc27b44dc880515b6cefed238fc864954bd887356f0c114fd54e4d6",
+    "common/company_types/00_companies_great_britain.txt": "957d53a2bae8fee99f3f9c9c212b16cf45cbbc857ce80b04bffcccc7689369d9",
+    "common/company_types/00_companies_ip2.txt": "5c3a63223de8049f6b59f68a2aeab94c37886678f026bbc7662d86910b740a02",
+    "common/company_types/00_companies_ip3.txt": "17f3813e0d7dc44abe8058ce5cf2a26f8b26fbb581b48e85400b1dcc1e4755e4",
+    "common/company_types/00_companies_ip4.txt": "20388448ba082d39ed4c53372ac58c4dfc7f9bb1a934ac9036d70b786ae08adb",
+    "common/company_types/00_companies_ip5.txt": "21564440ac72667c097b7b545d78fcc27faa34b9d354b89e0f755f3eb4ebfa6f",
+    "common/company_types/00_companies_italy.txt": "0c9d32f591584d9c48aaedfef09191a09e80a0cddf8cd6525d401c22806de9e6",
+    "common/company_types/00_companies_japan.txt": "f13b45f316d434047e8c9d0af422e332df075ffe030183151db7c56ccb68067a",
+    "common/company_types/00_companies_mp1.txt": "72204bb022e721a2352281b67b965e904bae3737f83d4fb3513047e90cd20b2d",
+    "common/company_types/00_companies_russia.txt": "78277e62e5ef531c9091924bed4677589619e8690c9746ccaaf09fffa7fcc757",
+    "common/company_types/00_companies_soi.txt": "19a3057939765c5f21d936f7e9acdcb234fef12657ef8c39a5465c9547041a62",
+    "common/company_types/00_companies_totally_normal.txt": "1a79e1682343c1df8d69e42d48575ee80b553cb587a9b23c2847c5e5e257d80e",
+    "common/company_types/00_companies_usa.txt": "de6fa1063d031c0b389f31514961e952c9ce892c48f610c84e22e5796da30114",
+    "common/company_types/99_basic_companies.txt": "d29d1d16891c3ca58ee82b80da08ad9605e50eb0cf253b897af658459245671f"
+  },
+  "limits": [
+    "Only static native candidates; no game run or behavior acceptance.",
+    "Native company construction-target prerequisite is preserved separately from ai_will_do.",
+    "No scope:company, construction-target, charter, saved-scope or additional getter license.",
+    "Only candidate selection/storage traced; full command execution chain and costs are not exhaustively re-proven.",
+    "Explicit nonpositive expression remains expression branch; native final-score rejection is retained."
+  ],
+  "contracts": [
+    {
+      "field": "ai_will_do",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "eligibility",
+      "parser": "0x141730850",
+      "parser_receiver": "0x598",
+      "trigger_member": "0x318",
+      "parser_interface_member": "0x320",
+      "consumer": "0x141732770",
+      "actual_call": "0x141632057",
+      "false_result": "zero_candidate_score",
+      "capability": "direct"
+    },
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "base_candidate_score",
+      "parser": "0x141730850",
+      "parser_receiver": "0x598",
+      "numeric_member": "0x390",
+      "consumer": "0x141732900",
+      "actual_call": "0x141632075",
+      "nonpositive_rejection": "0x141641350",
+      "rejection_target": "0x1416417c1",
+      "capability": "direct"
+    }
+  ],
+  "database_installation": {
+    "family": "company",
+    "static_claim": "getter slot receives the actual native-factory allocated concrete database instance; does not prove a game has executed this path",
+    "getter": "0x1407c85e0",
+    "transaction_registry": "0x145402b90",
+    "resource_type": {
+      "name": ".?AV?$CTransactionResource@V?$unique_ptr@VCCompanyTypeDatabase@@U?$default_delete@VCCompanyTypeDatabase@@@std@@@std@@@NPdxTransactions@@",
+      "vtable": {
+        "label": "company transaction resource vtable with COL pointer",
+        "va": "0x14465c140",
+        "rva": "0x465c140",
+        "file_offset": "0x465b540",
+        "bytes": "00a0b34401000000b0fa784001000000f048674001000000b0d1784001000000f04867400100000070d17840010000005066b44401000000"
+      },
+      "locator": {
+        "label": "company transaction resource COL",
+        "va": "0x144b3a000",
+        "rva": "0x4b3a000",
+        "file_offset": "0x4b39400",
+        "bytes": "01000000000000000000000000a86605d829b50400a0b304"
+      },
+      "descriptor": {
+        "label": "company transaction resource descriptor",
+        "va": "0x14566a800",
+        "rva": "0x566a800",
+        "file_offset": "0x5669200",
+        "bytes": "e08d63440100000000000000000000002e3f41563f24435472616e73616374696f6e5265736f7572636540563f24756e697175655f707472405643436f6d70616e795479706544617461626173654040553f2464656661756c745f64656c657465405643436f6d70616e795479706544617461626173654040407374644040407374644040404e5064785472616e73616374696f6e73404000"
+      }
+    },
+    "resource_vptr": {
+      "label": "company registry vptr",
+      "va": "0x145402b90",
+      "rva": "0x5402b90",
+      "file_offset": "0x5401590",
+      "bytes": "48c1654401000000"
+    },
+    "typed_base": {
+      "name": ".?AV?$CGameDatabase@VCCompanyTypeDatabase@@VCCompanyType@@VCGameDatabaseAssertAccess@@$00@@",
+      "vtable": {
+        "label": "company typed base vtable with COL pointer",
+        "va": "0x144753bf0",
+        "rva": "0x4753bf0",
+        "file_offset": "0x4752ff0",
+        "bytes": "6032c84401000000a05d75410100000040e974410100000060ea744101000000f0c96b4001000000e0eb744101000000f048674001000000"
+      },
+      "locator": {
+        "label": "company typed base COL",
+        "va": "0x144c83260",
+        "rva": "0x4c83260",
+        "file_offset": "0x4c82660",
+        "bytes": "01000000000000000000000090b779055855c8046032c804"
+      },
+      "descriptor": {
+        "label": "company typed base descriptor",
+        "va": "0x14579b790",
+        "rva": "0x579b790",
+        "file_offset": "0x579a190",
+        "bytes": "e08d63440100000000000000000000002e3f41563f244347616d654461746162617365405643436f6d70616e7954797065446174616261736540405643436f6d70616e79547970654040564347616d6544617461626173654173736572744163636573734040243030404000"
+      }
+    },
+    "concrete_live_type": {
+      "name": ".?AVCCompanyTypeDatabase@@",
+      "vtable": {
+        "label": "company concrete database vtable with COL pointer",
+        "va": "0x144754290",
+        "rva": "0x4754290",
+        "file_offset": "0x4753690",
+        "bytes": "5839c844010000002035734101000000a035734101000000c036734101000000f0c96b4001000000e0eb744101000000f048674001000000"
+      },
+      "locator": {
+        "label": "company concrete database COL",
+        "va": "0x144c83958",
+        "rva": "0x4c83958",
+        "file_offset": "0x4c82d58",
+        "bytes": "010000000000000000000000f8ce79054814c8045839c804"
+      },
+      "descriptor": {
+        "label": "company concrete database descriptor",
+        "va": "0x14579cef8",
+        "rva": "0x579cef8",
+        "file_offset": "0x579b8f8",
+        "bytes": "e08d63440100000000000000000000002e3f415643436f6d70616e79547970654461746162617365404000"
+      }
+    },
+    "source_directory": {
+      "name": "common/company_types",
+      "literal": {
+        "label": "company source directory",
+        "va": "0x14474fc70",
+        "rva": "0x474fc70",
+        "file_offset": "0x474f070",
+        "bytes": "636f6d6d6f6e2f636f6d70616e795f747970657300"
+      }
+    },
+    "factory_range": [
+      "0x140756fa0",
+      "0x1407570f5"
+    ],
+    "constructor_call": "0x140756fda",
+    "getter_call_for_install": "0x14075707e",
+    "store_instance": "0x140757086",
+    "actual_consumer_getter_call": "0x140967ad6",
+    "slot_formula": "registry + 0x18 + (sign_extend(thread_local[0x86b8]) << 4); getter validates slot+8 initialized",
+    "observations": [
+      {
+        "label": "company complete typed getter TLS and slot return",
+        "va": "0x1407c85e0",
+        "rva": "0x7c85e0",
+        "file_offset": "0x7c79e0",
+        "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee8d1bd600390bd68610000488b2c2b488b3e83ff107c18488d0574ea40054889442428488d0d7ccbea03e837ff5d038bc74863ff4c63f04d03f64c8d2525a5c30443807cf420000f8591000000488d0d1aa5c304ff15f470d5034803ff41807cfc2000740f488d0d02a5c304ff15c470d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0dc6a4c304ff158870d503e833be6003488bf8428b0c3bf6c101751083c90142890c3b488bcee808bd6003904d8bc44a8b142b488bcfe888bf6003428b043ba801751083c8014289043b488bcee8e1bc6003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e819bfeaffcc"
+      },
+      {
+        "label": "company generic base constructor source path, vtable and definition array",
+        "va": "0x14174e320",
+        "rva": "0x174e320",
+        "file_offset": "0x174d720",
+        "bytes": "48895c241048894c240855565741544155415641574883ec704c8bfa488bf9488d05223700034889014883c108e8de65f2fe4533e44c896720488d4f2833c04889014c896108ff152413dd0290488d0564f7f10248894738488d4f40c5f9efc0c5f811014c8961104c89611841b814000000488d15d7180003e83268f2fe44896760488d054f580003488907488d059d53000348894738488d4f68e87065f2fe90488d9f800000004c89234c896308488d731848897310b94000000065488b042558000000488b288b042939057f6e48040f8f48020000488d05123c00034889064c8d2db8a9c803"
+      },
+      {
+        "label": "company complete factory concrete vtable and getter slot instance install",
+        "va": "0x140756fa0",
+        "rva": "0x756fa0",
+        "file_offset": "0x7563a0",
+        "bytes": "48895c2410574881ec8000000033ffb9880f0000e857b2c503488bd84885c00f8414010000488984249000000048897c2470488d542438488bc8e84173ff0090488b4c24704885c97411488d442438483bc80f95c2488b01ff5020488d0596d2ff03488903488d058ccbff0348894338c5f9efc033c0c5fc1183600f0000488983800f0000c5f877e8039c0001488983680f00004889bb700f0000c683780f000000c7837c0f00006666663fb94000000065488b042558000000488b008b040139050ae247057f42488d05511dc804488983800f000048899c2490000000e85d150700488b084889184885c9740b488b01ba01000000ff1090488b9c24980000004881c4800000005fc3488d0dbfe14705e8d2fac603833db3e14705ff75a9488d0d2a11d703e829fec603488d0d9ee14705e845fac603eb8f488d4c2420e8ad956303488d1566d8c404488d4c2420e8882bc703cc"
+      },
+      {
+        "label": "company actual consumer calls same getter",
+        "va": "0x140967ad6",
+        "rva": "0x967ad6",
+        "file_offset": "0x966ed6",
+        "bytes": "e8050be6ff488b18"
+      },
+      {
+        "label": "company wrapper dereferences transaction slot",
+        "va": "0x140967ad0",
+        "rva": "0x967ad0",
+        "file_offset": "0x966ed0",
+        "bytes": "40534883ec40e8050be6ff488b184885db752a488d05ced8d003c74424381e0000004533c948894424304c8d442430885c243cba04000000e8c3ca4903488bc34883c4405bc3"
+      },
+      {
+        "label": "company actual AI loop obtains definition array",
+        "va": "0x14164125b",
+        "rva": "0x164125b",
+        "file_offset": "0x164065b",
+        "bytes": "e8706832ff4c8ba0800000004863808c000000"
+      }
+    ],
+    "wrapper": "0x140967ad0",
+    "actual_AI_loop_call": "0x14164125b"
+  },
+  "protected_native_boundaries": [
+    {
+      "label": "company qualification call and final score gate",
+      "va": "0x141641311",
+      "rva": "0x1641311",
+      "file_offset": "0x1640711",
+      "bytes": "4533c94c8d4597488bd6498bcee80d030f00488bc6b9fc0a0000488d3c01837d97000f85880400004533c94d8bc6488bd6488d4d8fe8c50cffff48837d8f000f8e6b04000033c0488945"
+    },
+    {
+      "label": "company native candidate advance and winner storage",
+      "va": "0x1416417bb",
+      "rva": "0x16417bb",
+      "file_offset": "0x1640bbb",
+      "bytes": "4d8bee488bd94983c4084c3b65d748bfa00f0000050000000f85b7faffff498dbf180400004c8b75df4d3baf10040000740a4d89af100400004c8937"
+    }
+  ],
+  "observations": [
+    {
+      "label": "country scope RTTI",
+      "va": "0x144cbd3f0",
+      "rva": "0x4cbd3f0",
+      "file_offset": "0x4cbc7f0",
+      "bytes": "010000000000000000000000b8e07c05905bcb04f0d3cb04"
+    },
+    {
+      "label": "country scope name",
+      "va": "0x1457ce0b8",
+      "rva": "0x57ce0b8",
+      "file_offset": "0x57ccab8",
+      "bytes": "e08d63440100000000000000000000002e3f41563f24434a6f6d696e6953637269707453636f70654f626a656374405643436f756e7472794040404000000000e0"
+    },
+    {
+      "label": "country scope vtable",
+      "va": "0x1447898f0",
+      "rva": "0x47898f0",
+      "file_offset": "0x4788cf0",
+      "bytes": "f0e5ca40010000009018794101000000e05e554301000000c05c5543010000007061554301000000e062554301000000e0e5ca4001000000"
+    },
+    {
+      "label": "country scope tag 5",
+      "va": "0x141791890",
+      "rva": "0x1791890",
+      "file_offset": "0x1790c90",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "trigger evaluator forwarding",
+      "va": "0x14097b5f0",
+      "rva": "0x97b5f0",
+      "file_offset": "0x97a9f0",
+      "bytes": "48895c24084c89442418574883ec70c5f829742460488bfa488d5908c74424301f050000488b431048894424388b431889442440c64424440048c744244800000000c5f957c0c5fb11442450c644245801488d4c2430e8d592ecff90488bd7488bcbe8a935bf020fb6"
+    },
+    {
+      "label": "trigger actual evaluation and same root/current",
+      "va": "0x14356ec00",
+      "rva": "0x356ec00",
+      "file_offset": "0x356e000",
+      "bytes": "48895c24084889742410574881ece0030000488bda488bf9488d4c2440e86e10fdff9048895c242033f6488974242848895c2430488d44244048894424384533c0488d542420488bcfe892000000"
+    },
+    {
+      "label": "numeric same root/current context",
+      "va": "0x14097b6f0",
+      "rva": "0x97b6f0",
+      "file_offset": "0x97aaf0",
+      "bytes": "48895c240848896c24104889742418574881ecf0030000498bf9498bd8488bea488bf1498bd0488d4c2450e87045bc029048895c243048895c243848895c2440488d4424504889442448488b84242004000048894424204c8bcf4c8d442430488bd5488bcee826a40300"
+    },
+    {
+      "label": "company RTTI type name",
+      "va": "0x145674970",
+      "rva": "0x5674970",
+      "file_offset": "0x5673370",
+      "bytes": "e08d63440100000000000000000000002e3f415643436f6d70616e795479706540400000"
+    },
+    {
+      "label": "company main RTTI",
+      "va": "0x144c82320",
+      "rva": "0x4c82320",
+      "file_offset": "0x4c81720",
+      "bytes": "010000000000000000000000704967054018b5042023c804"
+    },
+    {
+      "label": "company parser RTTI",
+      "va": "0x144c80e58",
+      "rva": "0x4c80e58",
+      "file_offset": "0x4c80258",
+      "bytes": "010000009805000004000000704967054018b504580ec804"
+    },
+    {
+      "label": "company main vtable",
+      "va": "0x144753890",
+      "rva": "0x4753890",
+      "file_offset": "0x4752c90",
+      "bytes": "20b9674001000000f00e734101000000f048674001000000685cc84401000000"
+    },
+    {
+      "label": "company parser vtable",
+      "va": "0x144751e48",
+      "rva": "0x4751e48",
+      "file_offset": "0x4751248",
+      "bytes": "a0a7774101000000dc10844001000000f04867400100000040dddf4301000000a017844001000000f048674001000000"
+    },
+    {
+      "label": "company parser vbtable",
+      "va": "0x144667010",
+      "rva": "0x4667010",
+      "file_offset": "0x4666410",
+      "bytes": "f8ffffff90050000"
+    },
+    {
+      "label": "company constructor installs vtables",
+      "va": "0x1417304ff",
+      "rva": "0x17304ff",
+      "file_offset": "0x172f8ff",
+      "bytes": "488d058a330203488907488b470848634804488d05301902034889443908488b4708486348048d9170faffff89543904"
+    },
+    {
+      "label": "company trigger and numeric member construction",
+      "va": "0x1417306ab",
+      "rva": "0x17306ab",
+      "file_offset": "0x172faab",
+      "bytes": "4889b718030000488d8f20030000e8d2d5e3014c89b720030000488d8f48030000e85fc5fffe4c89bf20030000488d059153f90248898790030000488d8f98030000e88eca79ff"
+    },
+    {
+      "label": "company parser thunk",
+      "va": "0x1408417a0",
+      "rva": "0x8417a0",
+      "file_offset": "0x840ba0",
+      "bytes": "486341fc482bc8e9a4f0ee00"
+    },
+    {
+      "label": "ai_will_do atom",
+      "va": "0x144968540",
+      "rva": "0x4968540",
+      "file_offset": "0x4967940",
+      "bytes": "df29000000000000a8e8924401000000"
+    },
+    {
+      "label": "ai_will_do literal",
+      "va": "0x14492e8a8",
+      "rva": "0x492e8a8",
+      "file_offset": "0x492dca8",
+      "bytes": "61695f77696c6c5f646f00"
+    },
+    {
+      "label": "ai_weight atom",
+      "va": "0x144975a70",
+      "rva": "0x4975a70",
+      "file_offset": "0x4974e70",
+      "bytes": "ce5300000000000098f2934401000000"
+    },
+    {
+      "label": "ai_weight literal",
+      "va": "0x14493f298",
+      "rva": "0x493f298",
+      "file_offset": "0x493e698",
+      "bytes": "61695f77656967687400"
+    },
+    {
+      "label": "company low dispatch",
+      "va": "0x14173086d",
+      "rva": "0x173086d",
+      "file_offset": "0x172fc6d",
+      "bytes": "4181f8a95c00000f8f3a0300000f84200300004181f86f2c00000f8f7a0200000f84f40100004181e89c0000000f84d30100004183e8190f84b50100004181e8650200000f846a0100004181e8060200000f84d40000004181f8bf2400000f85c904000083b9bcfdffff000f8495000000"
+    },
+    {
+      "label": "company trigger parser",
+      "va": "0x141730973",
+      "rva": "0x1730973",
+      "file_offset": "0x172fd73",
+      "bytes": "4881c188fdffffe8c101e40141b805000000488b8388fdffff488d8b88fdffffe91d050000"
+    },
+    {
+      "label": "company trigger parser actual vcall",
+      "va": "0x141730eb5",
+      "rva": "0x1730eb5",
+      "file_offset": "0x17302b5",
+      "bytes": "488bd7ff50"
+    },
+    {
+      "label": "company weight dispatch",
+      "va": "0x141730b07",
+      "rva": "0x1730b07",
+      "file_offset": "0x172ff07",
+      "bytes": "4181e8ce530000747e"
+    },
+    {
+      "label": "company weight parser",
+      "va": "0x141730b8e",
+      "rva": "0x1730b8e",
+      "file_offset": "0x172ff8e",
+      "bytes": "4881c1f8fdffff488b01ff5018e91b030000"
+    },
+    {
+      "label": "company eligibility no construction targets guard",
+      "va": "0x141732790",
+      "rva": "0x1732790",
+      "file_offset": "0x1731b90",
+      "bytes": "488bf2488bf983b95403000000750732c0e93c010000"
+    },
+    {
+      "label": "company eligibility country context and evaluator",
+      "va": "0x1417327e6",
+      "rva": "0x17327e6",
+      "file_offset": "0x1731be6",
+      "bytes": "b80500000066894424208b46184889442428488d8f180300004439713c750540b701eb11488d542420e8dc8d24ff0fb6f8488b5d50"
+    },
+    {
+      "label": "company weight branch country and evaluator",
+      "va": "0x141732920",
+      "rva": "0x1732920",
+      "file_offset": "0x1731d20",
+      "bytes": "498bf0488bfa488d999003000083bba800000000750f488b05d38d4a04488902e93c0100004533ff44897c24304c897c243844897c2440488d4c2448e80f51f7fe488d4d30e8c61ff4fe4c8d35e7cc30034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b461848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcbe8065912ff"
+    },
+    {
+      "label": "numeric evaluator forwarding",
+      "va": "0x1408582c0",
+      "rva": "0x8582c0",
+      "file_offset": "0x8576c0",
+      "bytes": "4c8bdc49895b0849896b104989731849897b2041564883ec70c5f829742460498be94d8bf0488bda488bf9c744243043090000488b81b0000000498943c08b81b800000089442440c64424440049c743d000000000c5f957c0c5fb11442450c644245801498d4bb8e8f3c5feff90488b8424a0000000488338007507488d87b000000048894424204c8bcd4d8bc6488bd3488d4f08e896331200"
+    },
+    {
+      "label": "company actual gate and score call",
+      "va": "0x14163203f",
+      "rva": "0x163203f",
+      "file_offset": "0x163143f",
+      "bytes": "498bd94d8bf84c8bf2488bf933f6448bee89742430498bc8e81407100084c0750b488937488bc7e9e00b00004d8bc6488d55a7498bcfe886081000"
+    },
+    {
+      "label": "company AI owner resolution",
+      "va": "0x14164118d",
+      "rva": "0x164118d",
+      "file_offset": "0x164058d",
+      "bytes": "4c8bf94883c108e807bd0eff488bf0"
+    },
+    {
+      "label": "company AI candidate iteration",
+      "va": "0x14164125b",
+      "rva": "0x164125b",
+      "file_offset": "0x164065b",
+      "bytes": "e8706832ff4c8ba0800000004863808c000000498d04c4488945d74c3be00f846505000048bfa00f0000050000000f1f80000000004d8b3424"
+    },
+    {
+      "label": "company AI native qualification and score skip",
+      "va": "0x141641311",
+      "rva": "0x1641311",
+      "file_offset": "0x1640711",
+      "bytes": "4533c94c8d4597488bd6498bcee80d030f00488bc6b9fc0a0000488d3c01837d97000f85880400004533c94d8bc6488bd6488d4d8fe8c50cffff48837d8f000f8e6b040000"
+    },
+    {
+      "label": "company next candidate and selected storage",
+      "va": "0x1416417c1",
+      "rva": "0x16417c1",
+      "file_offset": "0x1640bc1",
+      "bytes": "4983c4084c3b65d748bfa00f0000050000000f85b7faffff498dbf180400004c8b75df4d3baf10040000740a4d89af100400004c8937"
+    },
+    {
+      "label": "company numeric vtable",
+      "va": "0x1446c5a70",
+      "rva": "0x46c5a70",
+      "file_offset": "0x46c4e70",
+      "bytes": "f0dbed4001000000d0dcdf4301000000f04867400100000070daed400100000050b9554301000000f048674001000000"
+    },
+    {
+      "label": "company virtual base installation",
+      "va": "0x141730492",
+      "rva": "0x1730492",
+      "file_offset": "0x172f892",
+      "bytes": "488d05776bf30248894108eb04488b"
+    },
+    {
+      "label": "company transaction resource vtable with COL pointer",
+      "va": "0x14465c140",
+      "rva": "0x465c140",
+      "file_offset": "0x465b540",
+      "bytes": "00a0b34401000000b0fa784001000000f048674001000000b0d1784001000000f04867400100000070d17840010000005066b44401000000"
+    },
+    {
+      "label": "company transaction resource COL",
+      "va": "0x144b3a000",
+      "rva": "0x4b3a000",
+      "file_offset": "0x4b39400",
+      "bytes": "01000000000000000000000000a86605d829b50400a0b304"
+    },
+    {
+      "label": "company transaction resource descriptor",
+      "va": "0x14566a800",
+      "rva": "0x566a800",
+      "file_offset": "0x5669200",
+      "bytes": "e08d63440100000000000000000000002e3f41563f24435472616e73616374696f6e5265736f7572636540563f24756e697175655f707472405643436f6d70616e795479706544617461626173654040553f2464656661756c745f64656c657465405643436f6d70616e795479706544617461626173654040407374644040407374644040404e5064785472616e73616374696f6e73404000"
+    },
+    {
+      "label": "company registry vptr",
+      "va": "0x145402b90",
+      "rva": "0x5402b90",
+      "file_offset": "0x5401590",
+      "bytes": "48c1654401000000"
+    },
+    {
+      "label": "company typed base vtable with COL pointer",
+      "va": "0x144753bf0",
+      "rva": "0x4753bf0",
+      "file_offset": "0x4752ff0",
+      "bytes": "6032c84401000000a05d75410100000040e974410100000060ea744101000000f0c96b4001000000e0eb744101000000f048674001000000"
+    },
+    {
+      "label": "company typed base COL",
+      "va": "0x144c83260",
+      "rva": "0x4c83260",
+      "file_offset": "0x4c82660",
+      "bytes": "01000000000000000000000090b779055855c8046032c804"
+    },
+    {
+      "label": "company typed base descriptor",
+      "va": "0x14579b790",
+      "rva": "0x579b790",
+      "file_offset": "0x579a190",
+      "bytes": "e08d63440100000000000000000000002e3f41563f244347616d654461746162617365405643436f6d70616e7954797065446174616261736540405643436f6d70616e79547970654040564347616d6544617461626173654173736572744163636573734040243030404000"
+    },
+    {
+      "label": "company concrete database vtable with COL pointer",
+      "va": "0x144754290",
+      "rva": "0x4754290",
+      "file_offset": "0x4753690",
+      "bytes": "5839c844010000002035734101000000a035734101000000c036734101000000f0c96b4001000000e0eb744101000000f048674001000000"
+    },
+    {
+      "label": "company concrete database COL",
+      "va": "0x144c83958",
+      "rva": "0x4c83958",
+      "file_offset": "0x4c82d58",
+      "bytes": "010000000000000000000000f8ce79054814c8045839c804"
+    },
+    {
+      "label": "company concrete database descriptor",
+      "va": "0x14579cef8",
+      "rva": "0x579cef8",
+      "file_offset": "0x579b8f8",
+      "bytes": "e08d63440100000000000000000000002e3f415643436f6d70616e79547970654461746162617365404000"
+    },
+    {
+      "label": "company source directory",
+      "va": "0x14474fc70",
+      "rva": "0x474fc70",
+      "file_offset": "0x474f070",
+      "bytes": "636f6d6d6f6e2f636f6d70616e795f747970657300"
+    },
+    {
+      "label": "company complete typed getter TLS and slot return",
+      "va": "0x1407c85e0",
+      "rva": "0x7c85e0",
+      "file_offset": "0x7c79e0",
+      "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee8d1bd600390bd68610000488b2c2b488b3e83ff107c18488d0574ea40054889442428488d0d7ccbea03e837ff5d038bc74863ff4c63f04d03f64c8d2525a5c30443807cf420000f8591000000488d0d1aa5c304ff15f470d5034803ff41807cfc2000740f488d0d02a5c304ff15c470d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0dc6a4c304ff158870d503e833be6003488bf8428b0c3bf6c101751083c90142890c3b488bcee808bd6003904d8bc44a8b142b488bcfe888bf6003428b043ba801751083c8014289043b488bcee8e1bc6003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e819bfeaffcc"
+    },
+    {
+      "label": "company generic base constructor source path, vtable and definition array",
+      "va": "0x14174e320",
+      "rva": "0x174e320",
+      "file_offset": "0x174d720",
+      "bytes": "48895c241048894c240855565741544155415641574883ec704c8bfa488bf9488d05223700034889014883c108e8de65f2fe4533e44c896720488d4f2833c04889014c896108ff152413dd0290488d0564f7f10248894738488d4f40c5f9efc0c5f811014c8961104c89611841b814000000488d15d7180003e83268f2fe44896760488d054f580003488907488d059d53000348894738488d4f68e87065f2fe90488d9f800000004c89234c896308488d731848897310b94000000065488b042558000000488b288b042939057f6e48040f8f48020000488d05123c00034889064c8d2db8a9c803"
+    },
+    {
+      "label": "company complete factory concrete vtable and getter slot instance install",
+      "va": "0x140756fa0",
+      "rva": "0x756fa0",
+      "file_offset": "0x7563a0",
+      "bytes": "48895c2410574881ec8000000033ffb9880f0000e857b2c503488bd84885c00f8414010000488984249000000048897c2470488d542438488bc8e84173ff0090488b4c24704885c97411488d442438483bc80f95c2488b01ff5020488d0596d2ff03488903488d058ccbff0348894338c5f9efc033c0c5fc1183600f0000488983800f0000c5f877e8039c0001488983680f00004889bb700f0000c683780f000000c7837c0f00006666663fb94000000065488b042558000000488b008b040139050ae247057f42488d05511dc804488983800f000048899c2490000000e85d150700488b084889184885c9740b488b01ba01000000ff1090488b9c24980000004881c4800000005fc3488d0dbfe14705e8d2fac603833db3e14705ff75a9488d0d2a11d703e829fec603488d0d9ee14705e845fac603eb8f488d4c2420e8ad956303488d1566d8c404488d4c2420e8882bc703cc"
+    },
+    {
+      "label": "company actual consumer calls same getter",
+      "va": "0x140967ad6",
+      "rva": "0x967ad6",
+      "file_offset": "0x966ed6",
+      "bytes": "e8050be6ff488b18"
+    },
+    {
+      "label": "company wrapper dereferences transaction slot",
+      "va": "0x140967ad0",
+      "rva": "0x967ad0",
+      "file_offset": "0x966ed0",
+      "bytes": "40534883ec40e8050be6ff488b184885db752a488d05ced8d003c74424381e0000004533c948894424304c8d442430885c243cba04000000e8c3ca4903488bc34883c4405bc3"
+    },
+    {
+      "label": "company actual AI loop obtains definition array",
+      "va": "0x14164125b",
+      "rva": "0x164125b",
+      "file_offset": "0x164065b",
+      "bytes": "e8706832ff4c8ba0800000004863808c000000"
+    },
+    {
+      "label": "company qualification call and final score gate",
+      "va": "0x141641311",
+      "rva": "0x1641311",
+      "file_offset": "0x1640711",
+      "bytes": "4533c94c8d4597488bd6498bcee80d030f00488bc6b9fc0a0000488d3c01837d97000f85880400004533c94d8bc6488bd6488d4d8fe8c50cffff48837d8f000f8e6b04000033c0488945"
+    },
+    {
+      "label": "company native candidate advance and winner storage",
+      "va": "0x1416417bb",
+      "rva": "0x16417bb",
+      "file_offset": "0x1640bbb",
+      "bytes": "4d8bee488bd94983c4084c3b65d748bfa00f0000050000000f85b7faffff498dbf180400004c8b75df4d3baf10040000740a4d89af100400004c8937"
+    }
+  ]
+}

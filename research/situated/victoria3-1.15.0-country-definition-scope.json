@@ -1,0 +1,984 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.15.0-windows-x64",
+  "status": "scratch_projection_requires_production_review",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+    "bytes": 99988600,
+    "image_base": "0x140000000"
+  },
+  "script_hashes": {
+    "common/country_creation/00_releasable_countries.txt": "5871e73752d436c4877f34d5d39727ba4dc244af262f5c6c4d8fa289d5e50937",
+    "common/country_formation/00_formable_countries.txt": "38159e8a60379a6b6943d964c5dfe4f037fb794d66e8d8270c3a4887e5345ebd",
+    "common/country_formation/00_major_formables.txt": "df6c873820cd73267ee50becc31b9f8d9fbe754074198b021e5b767c6f914580"
+  },
+  "limits": [
+    "Exhaustive native qualifications, creation gather predicates, command execution and costs beyond queue insertion.",
+    "war_goal_holder explicit scope and future/formed/released target country are not licensed by ai_will_do actor proof.",
+    "No game runtime or product acceptance."
+  ],
+  "contracts": [
+    {
+      "family": "country_creation",
+      "hook": "ai_will_do",
+      "actor": "country",
+      "target": "definition_only:country_creation",
+      "operation": "eligibility",
+      "directness": "direct",
+      "definition_trigger_member": "0xb0",
+      "parser_subobject": "0x228",
+      "actual_consumer": "0x1415cf250",
+      "trigger_call": "0x1415cf47b",
+      "false_skip": "0x1415cf56f",
+      "named_targets_proven": []
+    },
+    {
+      "family": "country_formation",
+      "hook": "ai_will_do",
+      "actor": "country",
+      "target": "definition_only:country_formation",
+      "operation": "eligibility",
+      "directness": "direct",
+      "definition_trigger_member": "0xa0",
+      "parser_subobject": "0x3d0",
+      "actual_consumer": "0x1415ceed0",
+      "trigger_call": "0x1415cf06d",
+      "false_skip": "0x1415cf15a",
+      "named_targets_proven": []
+    }
+  ],
+  "database_installations": [
+    {
+      "family": "creation",
+      "static_claim": "getter slot receives the actual native-factory allocated concrete database instance; does not prove a game has executed this path",
+      "getter": "0x1407cdcf0",
+      "transaction_registry": "0x1453fe4e0",
+      "resource_type": {
+        "name": ".?AV?$CTransactionResource@V?$unique_ptr@VCCountryCreationDatabase@@U?$default_delete@VCCountryCreationDatabase@@@std@@@std@@@NPdxTransactions@@",
+        "vtable": {
+          "label": "creation transaction resource vtable with COL pointer",
+          "va": "0x14465ec20",
+          "rva": "0x465ec20",
+          "file_offset": "0x465e020",
+          "bytes": "783fb54401000000b0fa784001000000f048674001000000b0d1784001000000f04867400100000070d1784001000000e88cb54401000000"
+        },
+        "locator": {
+          "label": "creation transaction resource COL",
+          "va": "0x144b53f78",
+          "rva": "0x4b53f78",
+          "file_offset": "0x4b53378",
+          "bytes": "01000000000000000000000000c56705d8a9b504783fb504"
+        },
+        "descriptor": {
+          "label": "creation transaction resource descriptor",
+          "va": "0x14567c500",
+          "rva": "0x567c500",
+          "file_offset": "0x567af00",
+          "bytes": "e08d63440100000000000000000000002e3f41563f24435472616e73616374696f6e5265736f7572636540563f24756e697175655f707472405643436f756e7472794372656174696f6e44617461626173654040553f2464656661756c745f64656c657465405643436f756e7472794372656174696f6e44617461626173654040407374644040407374644040404e5064785472616e73616374696f6e73404000"
+        }
+      },
+      "resource_vptr": {
+        "label": "creation registry vptr",
+        "va": "0x1453fe4e0",
+        "rva": "0x53fe4e0",
+        "file_offset": "0x53fcee0",
+        "bytes": "28ec654401000000"
+      },
+      "typed_base": {
+        "name": ".?AV?$CGameDatabase@VCCountryCreationDatabase@@VCCountryCreation@@VCGameDatabaseAssertAccess@@$00@@",
+        "vtable": {
+          "label": "creation typed base vtable with COL pointer",
+          "va": "0x144752108",
+          "rva": "0x4752108",
+          "file_offset": "0x4751508",
+          "bytes": "204ec84401000000205e754101000000f0f974410100000010fb744101000000f0c96b400100000090fc744101000000f048674001000000"
+        },
+        "locator": {
+          "label": "creation typed base COL",
+          "va": "0x144c84e20",
+          "rva": "0x4c84e20",
+          "file_offset": "0x4c84220",
+          "bytes": "010000000000000000000000706b79051829c804204ec804"
+        },
+        "descriptor": {
+          "label": "creation typed base descriptor",
+          "va": "0x145796b70",
+          "rva": "0x5796b70",
+          "file_offset": "0x5795570",
+          "bytes": "e08d63440100000000000000000000002e3f41563f244347616d654461746162617365405643436f756e7472794372656174696f6e446174616261736540405643436f756e7472794372656174696f6e4040564347616d6544617461626173654173736572744163636573734040243030404000"
+        }
+      },
+      "concrete_live_type": {
+        "name": ".?AVCCountryCreationDatabase@@",
+        "vtable": {
+          "label": "creation concrete database vtable with COL pointer",
+          "va": "0x1447534a8",
+          "rva": "0x47534a8",
+          "file_offset": "0x47528a8",
+          "bytes": "703bc844010000007079734101000000f0f974410100000010fb744101000000f07973410100000090fc744101000000f048674001000000"
+        },
+        "locator": {
+          "label": "creation concrete database COL",
+          "va": "0x144c83b70",
+          "rva": "0x4c83b70",
+          "file_offset": "0x4c82f70",
+          "bytes": "01000000000000000000000020917905d042c804703bc804"
+        },
+        "descriptor": {
+          "label": "creation concrete database descriptor",
+          "va": "0x145799120",
+          "rva": "0x5799120",
+          "file_offset": "0x5797b20",
+          "bytes": "e08d63440100000000000000000000002e3f415643436f756e7472794372656174696f6e4461746162617365404000"
+        }
+      },
+      "source_directory": {
+        "name": "common/country_creation",
+        "literal": {
+          "label": "creation source directory",
+          "va": "0x144672698",
+          "rva": "0x4672698",
+          "file_offset": "0x4671a98",
+          "bytes": "636f6d6d6f6e2f636f756e7472795f6372656174696f6e00"
+        }
+      },
+      "factory_range": [
+        "0x140773f60",
+        "0x140774150"
+      ],
+      "constructor_call": "0x140773fa2",
+      "getter_call_for_install": "0x14077409b",
+      "store_instance": "0x1407740a3",
+      "actual_consumer_getter_call": "0x1415cf2a8",
+      "slot_formula": "registry + 0x18 + (sign_extend(thread_local[0x86b8]) << 4); getter validates slot+8 initialized",
+      "observations": [
+        {
+          "label": "creation complete typed getter TLS and slot return",
+          "va": "0x1407cdcf0",
+          "rva": "0x7cdcf0",
+          "file_offset": "0x7cd0f0",
+          "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee8c166600390bd68610000488b2c2b488b3e83ff107c18488d05649340054889442428488d0d6c74ea03e827a85d038bc74863ff4c63f04d03f64c8d256507c30443807cf420000f8591000000488d0d5a07c304ff15e419d5034803ff41807cfc2000740f488d0d4207c304ff15b419d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0d0607c304ff157819d503e823676003488bf8428b0c3bf6c101751083c90142890c3b488bcee8f8656003904d8bc44a8b142b488bcfe878686003428b043ba801751083c8014289043b488bcee8d1656003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e80968eaffcc"
+        },
+        {
+          "label": "creation generic base constructor source path, vtable and definition array",
+          "va": "0x14174f420",
+          "rva": "0x174f420",
+          "file_offset": "0x174e820",
+          "bytes": "48895c241048894c240855565741544155415641574883ec704c8bfa488bf9488d05ca2900034889014883c108e8de54f2fe4533e44c896720488d4f2833c04889014c896108ff152402dd0290488d0564e6f10248894738488d4f40c5f9efc0c5f811014c8961104c89611841b817000000488d15ff31f202e83257f2fe44896760488d05672c0003488907488d052536000348894738488d4f68e87054f2fe90488d9f800000004c89234c896308488d731848897310b94000000065488b042558000000488b288b042939057f5d48040f8f30020000488d05524600034889064c8d2db898c803"
+        },
+        {
+          "label": "creation complete factory concrete vtable and getter slot instance install",
+          "va": "0x140773f60",
+          "rva": "0x773f60",
+          "file_offset": "0x773360",
+          "bytes": "48895c241048896c2418565741564881ec8000000033f6b9b00f0000e88fe2c303488bd84885c00f847001000048898424a00000004889742470488d542438488bc8e879b4fd0090488b4c24704885c97411488d442438483bc80f95c2488b01ff5020488d05e6f4fd03488903488d0554effd0348894338c5f9efc033c0c5fc1183600f0000488983800f0000c5f877e84bcbfe00488983680f00004889b3700f0000c683780f000000c7837c0f00006666663f41be4000000065488b042558000000488b38418b043e3905401246050f8fe3000000488d2d834dc6044889ab800f0000c5f9efc033c0c5fc1183880f0000488983a80f0000c5f877e87fcafe00488983900f00004889b3980f0000c683a00f000000c783a40f00006666663f418b043e3905e61146057f424889aba80f000048899c24a0000000e8509c0500488b084889184885c9740b488b01ba01000000ff10904c8d9c2480000000498b5b28498b6b30498be3415e5f5ec3488d0d9b114605e8ae2ac503833d8f114605ff75a9488d0d0641d503e8052ec503488d0d7a114605e8212ac503eb8f488d4c2420e889c56103488d154208c304488d4c2420e8645bc50390488d0d50114605e8632ac503833d44114605ff0f8504ffffff488d0db740d503e8b62dc503488d0d2b114605e8d229c503e9e7feffffcc"
+        },
+        {
+          "label": "creation actual consumer calls same getter",
+          "va": "0x1415cf2a8",
+          "rva": "0x15cf2a8",
+          "file_offset": "0x15ce6a8",
+          "bytes": "e843ea1fff488b18"
+        }
+      ]
+    },
+    {
+      "family": "formation",
+      "static_claim": "getter slot receives the actual native-factory allocated concrete database instance; does not prove a game has executed this path",
+      "getter": "0x1407cde70",
+      "transaction_registry": "0x1453ff340",
+      "resource_type": {
+        "name": ".?AV?$CTransactionResource@V?$unique_ptr@VCCountryFormationDatabase@@U?$default_delete@VCCountryFormationDatabase@@@std@@@std@@@NPdxTransactions@@",
+        "vtable": {
+          "label": "formation transaction resource vtable with COL pointer",
+          "va": "0x144668428",
+          "rva": "0x4668428",
+          "file_offset": "0x4667828",
+          "bytes": "e875b34401000000b0fa784001000000f048674001000000b0d1784001000000f04867400100000070d17840010000003077b24401000000"
+        },
+        "locator": {
+          "label": "formation transaction resource COL",
+          "va": "0x144b375e8",
+          "rva": "0x4b375e8",
+          "file_offset": "0x4b369e8",
+          "bytes": "010000000000000000000000101e65053849b404e875b304"
+        },
+        "descriptor": {
+          "label": "formation transaction resource descriptor",
+          "va": "0x145651e10",
+          "rva": "0x5651e10",
+          "file_offset": "0x5650810",
+          "bytes": "e08d63440100000000000000000000002e3f41563f24435472616e73616374696f6e5265736f7572636540563f24756e697175655f707472405643436f756e747279466f726d6174696f6e44617461626173654040553f2464656661756c745f64656c657465405643436f756e747279466f726d6174696f6e44617461626173654040407374644040407374644040404e5064785472616e73616374696f6e73404000"
+        }
+      },
+      "resource_vptr": {
+        "label": "formation registry vptr",
+        "va": "0x1453ff340",
+        "rva": "0x53ff340",
+        "file_offset": "0x53fdd40",
+        "bytes": "3084664401000000"
+      },
+      "typed_base": {
+        "name": ".?AV?$CGameDatabase@VCCountryFormationDatabase@@VCCountryFormation@@VCGameDatabaseAssertAccess@@$00@@",
+        "vtable": {
+          "label": "formation typed base vtable with COL pointer",
+          "va": "0x144753108",
+          "rva": "0x4753108",
+          "file_offset": "0x4752508",
+          "bytes": "a037c8440100000040e9734101000000e00a754101000000000c754101000000f0c96b4001000000800d754101000000f048674001000000"
+        },
+        "locator": {
+          "label": "formation typed base COL",
+          "va": "0x144c837a0",
+          "rva": "0x4c837a0",
+          "file_offset": "0x4c82ba0",
+          "bytes": "010000000000000000000000e07b79053828c804a037c804"
+        },
+        "descriptor": {
+          "label": "formation typed base descriptor",
+          "va": "0x145797be0",
+          "rva": "0x5797be0",
+          "file_offset": "0x57965e0",
+          "bytes": "e08d63440100000000000000000000002e3f41563f244347616d654461746162617365405643436f756e747279466f726d6174696f6e446174616261736540405643436f756e747279466f726d6174696f6e4040564347616d6544617461626173654173736572744163636573734040243030404000"
+        }
+      },
+      "concrete_live_type": {
+        "name": ".?AVCCountryFormationDatabase@@",
+        "vtable": {
+          "label": "formation concrete database vtable with COL pointer",
+          "va": "0x144752858",
+          "rva": "0x4752858",
+          "file_offset": "0x4751c58",
+          "bytes": "781ac8440100000040e9734101000000e00a754101000000000c754101000000f0c96b4001000000800d754101000000f048674001000000"
+        },
+        "locator": {
+          "label": "formation concrete database COL",
+          "va": "0x144c81a78",
+          "rva": "0x4c81a78",
+          "file_offset": "0x4c80e78",
+          "bytes": "01000000000000000000000030b879050863c804781ac804"
+        },
+        "descriptor": {
+          "label": "formation concrete database descriptor",
+          "va": "0x14579b830",
+          "rva": "0x579b830",
+          "file_offset": "0x579a230",
+          "bytes": "e08d63440100000000000000000000002e3f415643436f756e747279466f726d6174696f6e4461746162617365404000"
+        }
+      },
+      "source_directory": {
+        "name": "common/country_formation",
+        "literal": {
+          "label": "formation source directory",
+          "va": "0x1446726b0",
+          "rva": "0x46726b0",
+          "file_offset": "0x4671ab0",
+          "bytes": "636f6d6d6f6e2f636f756e7472795f666f726d6174696f6e00"
+        }
+      },
+      "factory_range": [
+        "0x140774210",
+        "0x1407742c2"
+      ],
+      "constructor_call": "0x140774244",
+      "getter_call_for_install": "0x140774282",
+      "store_instance": "0x14077428a",
+      "actual_consumer_getter_call": "0x1415cef1b",
+      "slot_formula": "registry + 0x18 + (sign_extend(thread_local[0x86b8]) << 4); getter validates slot+8 initialized",
+      "observations": [
+        {
+          "label": "formation complete typed getter TLS and slot return",
+          "va": "0x1407cde70",
+          "rva": "0x7cde70",
+          "file_offset": "0x7cd270",
+          "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee84165600390bd68610000488b2c2b488b3e83ff107c18488d05e49140054889442428488d0dec72ea03e8a7a65d038bc74863ff4c63f04d03f64c8d254514c30443807cf420000f8591000000488d0d3a14c304ff156418d5034803ff41807cfc2000740f488d0d2214c304ff153418d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0de613c304ff15f817d503e8a3656003488bf8428b0c3bf6c101751083c90142890c3b488bcee878646003904d8bc44a8b142b488bcfe8f8666003428b043ba801751083c8014289043b488bcee851646003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e88966eaffcc"
+        },
+        {
+          "label": "formation generic base constructor source path, vtable and definition array",
+          "va": "0x141750510",
+          "rva": "0x1750510",
+          "file_offset": "0x174f910",
+          "bytes": "48895c241048894c240855565741544155415641574883ec704c8bfa488bf9488d05da2800034889014883c108e8ee43f2fe4533e44c896720488d4f2833c04889014c896108ff1534f1dc0290488d0574d5f10248894738488d4f40c5f9efc0c5f811014c8961104c89611841b818000000488d152721f202e84246f2fe44896760488d05772b0003488907488d055d16000348894738488d4f68e88043f2fe90488d9f800000004c89234c896308488d731848897310b94000000065488b042558000000488b288b042939058f4c48040f8f30020000488d05c23500034889064c8d2dc887c803"
+        },
+        {
+          "label": "formation complete factory concrete vtable and getter slot instance install",
+          "va": "0x140774210",
+          "rva": "0x774210",
+          "file_offset": "0x773610",
+          "bytes": "40534881ec80000000b9600f0000e8eddfc303488bd84885c0747b488984249000000048c744247000000000488d542438488bc8e8c7c2fd0090488b4c24704885c97411488d442438483bc80f95c2488b01ff5020488d05f4e5fd03488903488d058ae8fd034889433848899c2490000000e8e99b0500488b084889184885c9740b488b01ba01000000ff10904881c4800000005bc3488d4c2420e8e0c36103488d159906c304488d4c2420e8bb59c503cc"
+        },
+        {
+          "label": "formation actual consumer calls same getter",
+          "va": "0x1415cef1b",
+          "rva": "0x15cef1b",
+          "file_offset": "0x15ce31b",
+          "bytes": "e850ef1fff488b18"
+        }
+      ]
+    }
+  ],
+  "protected_native_boundaries": [
+    {
+      "label": "formation only trigger receiver membera0",
+      "va": "0x1415cf051",
+      "rva": "0x15cf051",
+      "file_offset": "0x15ce451",
+      "bytes": "b80500000066894580418b471848894588488d8ea0000000488d5580e87ec53aff"
+    },
+    {
+      "label": "formation false skip and command queue",
+      "va": "0x1415cf157",
+      "rva": "0x15cf157",
+      "file_offset": "0x15ce557",
+      "bytes": "4084f60f84a4000000b930000000e8a630de02488bd04885c00f84b2000000488d056b3e0a034889020fb64c2458884a088b4c245c894a0c8b4c2460894a108b4c2464894a14488d05a4c90c03488902488d059ac00c03488942188b442470894220488d0560e30c03488902488d0546d50c0348894218488b4424784889422848899518010000488d9518010000498bcce863a9ebff488b8d180100004885c9740b488b01ba01000000ff10904883c708e958fdffff"
+    },
+    {
+      "label": "creation only trigger receiver memberb0",
+      "va": "0x1415cf45f",
+      "rva": "0x15cf45f",
+      "file_offset": "0x15ce85f",
+      "bytes": "b805000000668945a0418b4618488945a8488d55a0488d8bb0000000e870c13aff"
+    },
+    {
+      "label": "creation false skip and command queue",
+      "va": "0x1415cf56c",
+      "rva": "0x15cf56c",
+      "file_offset": "0x15ce96c",
+      "bytes": "4084ff0f84e4000000b950000000e8912cde02488bf84885c00f8466010000488d05563a0a034889070fb64c2458884f088b4c245c894f0c8b4c2460894f108b4c2464894f14488d0567d60c03488907488d051dc30c03488947188b442470894720488d054bd30c03488907488d0501bd0c0348894718488b442478488947280fb645808847300fb645818847318b4584894734c5f9efc033c0c5f811473848894748488d4f38e818530aff448b4d944c8b45888b5744488d4f38e8f47a3cff4889bdb8010000488d95b8010000498bcce80ea5ebff488b8db80100004885c9740b488b01ba01000000ff1090488b55884885d2740e488b4d9844896d94488b01ff50104883"
+    }
+  ],
+  "observations": [
+    {
+      "label": "complete object locator",
+      "va": "0x144c80c30",
+      "rva": "0x4c80c30",
+      "file_offset": "0x4c80030",
+      "bytes": "010000002802000004000000802165053871b504300cc804"
+    },
+    {
+      "label": "COL pointer and vtable slots",
+      "va": "0x144753528",
+      "rva": "0x4753528",
+      "file_offset": "0x4752928",
+      "bytes": "300cc844010000001ca77741010000001c06844001000000f04867400100000040dddf43010000000012844001000000f048674001000000703dc84401000000a05c754101000000902e6c4001000000"
+    },
+    {
+      "label": "complete object locator",
+      "va": "0x144c81128",
+      "rva": "0x4c81128",
+      "file_offset": "0x4c80528",
+      "bytes": "010000000000000000000000802165053871b5042811c804"
+    },
+    {
+      "label": "COL pointer and vtable slots",
+      "va": "0x144751a10",
+      "rva": "0x4751a10",
+      "file_offset": "0x4750e10",
+      "bytes": "2811c8440100000020b9674001000000205c734101000000f048674001000000703ec8440100000088a7774101000000a03d7541010000008840c844010000004ca7774101000000d04d754101000000"
+    },
+    {
+      "label": "RTTI descriptor and full name",
+      "va": "0x145652180",
+      "rva": "0x5652180",
+      "file_offset": "0x5650b80",
+      "bytes": "e08d63440100000000000000000000002e3f415643436f756e7472794372656174696f6e404000"
+    },
+    {
+      "label": "complete object locator",
+      "va": "0x144c810e8",
+      "rva": "0x4c810e8",
+      "file_offset": "0x4c804e8",
+      "bytes": "010000000000000000000000389267057817b504e810c804"
+    },
+    {
+      "label": "COL pointer and vtable slots",
+      "va": "0x144753a18",
+      "rva": "0x4753a18",
+      "file_offset": "0x4752e18",
+      "bytes": "e810c8440100000020b967400100000070b7734101000000a0c27341010000004013c84401000000f4a777410100000000da7441010000001852c844010000002046674001000000d075674001000000"
+    },
+    {
+      "label": "complete object locator",
+      "va": "0x144c85ab8",
+      "rva": "0x4c85ab8",
+      "file_offset": "0x4c84eb8",
+      "bytes": "01000000d003000004000000389267057817b504b85ac804"
+    },
+    {
+      "label": "COL pointer and vtable slots",
+      "va": "0x144753690",
+      "rva": "0x4753690",
+      "file_offset": "0x4752a90",
+      "bytes": "b85ac8440100000058a77741010000006819844001000000f04867400100000040dddf4301000000001c844001000000f048674001000000e82fc844010000007033744101000000b033744101000000"
+    },
+    {
+      "label": "RTTI descriptor and full name",
+      "va": "0x145679238",
+      "rva": "0x5679238",
+      "file_offset": "0x5677c38",
+      "bytes": "e08d63440100000000000000000000002e3f415643436f756e747279466f726d6174696f6e404000"
+    },
+    {
+      "label": "database COL pointer and vtable",
+      "va": "0x144752108",
+      "rva": "0x4752108",
+      "file_offset": "0x4751508",
+      "bytes": "204ec84401000000205e754101000000f0f974410100000010fb744101000000f0c96b400100000090fc744101000000"
+    },
+    {
+      "label": "database RTTI COL",
+      "va": "0x144c84e20",
+      "rva": "0x4c84e20",
+      "file_offset": "0x4c84220",
+      "bytes": "010000000000000000000000706b79051829c804204ec804"
+    },
+    {
+      "label": "typed database name",
+      "va": "0x145796b70",
+      "rva": "0x5796b70",
+      "file_offset": "0x5795570",
+      "bytes": "e08d63440100000000000000000000002e3f41563f244347616d654461746162617365405643436f756e7472794372656174696f6e446174616261736540405643436f756e7472794372656174696f6e4040564347616d6544617461626173654173736572744163636573734040243030404000"
+    },
+    {
+      "label": "database COL pointer and vtable",
+      "va": "0x144753108",
+      "rva": "0x4753108",
+      "file_offset": "0x4752508",
+      "bytes": "a037c8440100000040e9734101000000e00a754101000000000c754101000000f0c96b4001000000800d754101000000"
+    },
+    {
+      "label": "database RTTI COL",
+      "va": "0x144c837a0",
+      "rva": "0x4c837a0",
+      "file_offset": "0x4c82ba0",
+      "bytes": "010000000000000000000000e07b79053828c804a037c804"
+    },
+    {
+      "label": "typed database name",
+      "va": "0x145797be0",
+      "rva": "0x5797be0",
+      "file_offset": "0x57965e0",
+      "bytes": "e08d63440100000000000000000000002e3f41563f244347616d654461746162617365405643436f756e747279466f726d6174696f6e446174616261736540405643436f756e747279466f726d6174696f6e4040564347616d6544617461626173654173736572744163636573734040243030404000"
+    },
+    {
+      "label": "ai_will_do atom 0x29df",
+      "va": "0x144968540",
+      "rva": "0x4968540",
+      "file_offset": "0x4967940",
+      "bytes": "df29000000000000a8e8924401000000"
+    },
+    {
+      "label": "ai_will_do literal",
+      "va": "0x14492e8a8",
+      "rva": "0x492e8a8",
+      "file_offset": "0x492dca8",
+      "bytes": "61695f77696c6c5f646f00"
+    },
+    {
+      "label": "creation vbtable",
+      "va": "0x144663798",
+      "rva": "0x4663798",
+      "file_offset": "0x4662b98",
+      "bytes": "f8ffffff20020000"
+    },
+    {
+      "label": "creation vbtable install",
+      "va": "0x14173570c",
+      "rva": "0x173570c",
+      "file_offset": "0x1734b0c",
+      "bytes": "488d0585e0f20248894108eb04488b4108"
+    },
+    {
+      "label": "creation main/parser vtable and vtordisp",
+      "va": "0x141735779",
+      "rva": "0x1735779",
+      "file_offset": "0x1734b79",
+      "bytes": "488d0598c20103488907488b470848634804488d059edd01034889443908488b4708486348048d91e0fdffff89543904"
+    },
+    {
+      "label": "creation trigger carrier b0 interface b8 ctor",
+      "va": "0x1417357ee",
+      "rva": "0x17357ee",
+      "file_offset": "0x1734bee",
+      "bytes": "4c8d359bf7f2024c89b7b0000000488d8fb8000000e88884e301"
+    },
+    {
+      "label": "creation parser thunk",
+      "va": "0x140841200",
+      "rva": "0x841200",
+      "file_offset": "0x840600",
+      "bytes": "486341fc482bc8e9d446ef0048"
+    },
+    {
+      "label": "creation parser ai_will_do compare",
+      "va": "0x1417358e0",
+      "rva": "0x17358e0",
+      "file_offset": "0x1734ce0",
+      "bytes": "48895c2408574883ec70488bda4181f8df2900000f8f750100000f84080100004181f82005"
+    },
+    {
+      "label": "creation parser interface b8 duplicate check",
+      "va": "0x141735a08",
+      "rva": "0x1735a08",
+      "file_offset": "0x1734e08",
+      "bytes": "488db990feffff837f34000f84bc010000c5f9efc0c5"
+    },
+    {
+      "label": "creation parser country parse tag5",
+      "va": "0x141735bd5",
+      "rva": "0x1735bd5",
+      "file_offset": "0x1734fd5",
+      "bytes": "488bcfe863afe301488b0741b805000000488bd3488bcfff5020"
+    },
+    {
+      "label": "formation vbtable",
+      "va": "0x14466bbb8",
+      "rva": "0x466bbb8",
+      "file_offset": "0x466afb8",
+      "bytes": "f8ffffffc8030000"
+    },
+    {
+      "label": "formation vbtable install",
+      "va": "0x14173af33",
+      "rva": "0x173af33",
+      "file_offset": "0x173a333",
+      "bytes": "488d057e0cf30248894108eb04488b4108"
+    },
+    {
+      "label": "formation main/parser vtable and vtordisp",
+      "va": "0x14173afa0",
+      "rva": "0x173afa0",
+      "file_offset": "0x173a3a0",
+      "bytes": "488d05798a0103488907488b470848634804488d05df8601034889443908488b4708486348048d9138fcffff89543904"
+    },
+    {
+      "label": "formation trigger carrier a0 interface a8 ctor",
+      "va": "0x14173b01f",
+      "rva": "0x173b01f",
+      "file_offset": "0x173a41f",
+      "bytes": "4c8d356a9ff2024c89b7a0000000488d8fa8000000e8572ce301"
+    },
+    {
+      "label": "formation parser thunk",
+      "va": "0x140841c00",
+      "rva": "0x841c00",
+      "file_offset": "0x841000",
+      "bytes": "486341fc482bc8e9f495ef0048"
+    },
+    {
+      "label": "formation parser path ai_will_do and interface a8",
+      "va": "0x14173b200",
+      "rva": "0x173b200",
+      "file_offset": "0x173a600",
+      "bytes": "48895c240848897c241055488bec4883ec60488bda4181f8c95900000f8f7f0200000f845b0200004181f86f2c00000f8fc10100000f84580100004181f8200500000f84e80000004181f8cd0900000f84bd0000004181f8df2900000f8545030000488db9d8fcffff837f34000f84b5040000"
+    },
+    {
+      "label": "formation parser country parse tag5",
+      "va": "0x14173b728",
+      "rva": "0x173b728",
+      "file_offset": "0x173ab28",
+      "bytes": "488bcfe81054e30141b805000000488b07488bd3488bcfff5020"
+    },
+    {
+      "label": "formation owner actor ID resolver and DB getter",
+      "va": "0x1415ceeff",
+      "rva": "0x15ceeff",
+      "file_offset": "0x15ce2ff",
+      "bytes": "488b41108b4850898d18010000488d8d18010000e888df15ff4c8bf8e850ef1fff488b18"
+    },
+    {
+      "label": "formation DB array iteration and definition pointer",
+      "va": "0x1415cef53",
+      "rva": "0x15cef53",
+      "file_offset": "0x15ce353",
+      "bytes": "488bbb800000004863838c0000004c8d34c7493bfe0f849f020000488d1dabd358ff488d1594d70c03488d0d9de50c03488b37"
+    },
+    {
+      "label": "formation qualification actor plus definition",
+      "va": "0x1415cef95",
+      "rva": "0x15cef95",
+      "file_offset": "0x15ce395",
+      "bytes": "418b47188944247048894c24504889542468488974247844896c2430488d4c2438e875590aff90488b4424684c8b48284533c0488d9508010000488d4c24684c3bcb7507e842d358ffeb0341ffd1"
+    },
+    {
+      "label": "formation native qualification skip",
+      "va": "0x1415cf007",
+      "rva": "0x15cf007",
+      "file_offset": "0x15ce407",
+      "bytes": "85db0f85f5010000"
+    },
+    {
+      "label": "formation actor tag5 plus definition a0 bool call",
+      "va": "0x1415cf051",
+      "rva": "0x15cf051",
+      "file_offset": "0x15ce451",
+      "bytes": "b80500000066894580418b471848894588488d8ea0000000488d5580e87ec53aff"
+    },
+    {
+      "label": "formation ai_will_do false skips candidate",
+      "va": "0x1415cf157",
+      "rva": "0x15cf157",
+      "file_offset": "0x15ce557",
+      "bytes": "4084f60f84a4000000"
+    },
+    {
+      "label": "formation command enqueue",
+      "va": "0x1415cf1e8",
+      "rva": "0x15cf1e8",
+      "file_offset": "0x15ce5e8",
+      "bytes": "e863a9ebff"
+    },
+    {
+      "label": "formation next candidate",
+      "va": "0x1415cf204",
+      "rva": "0x15cf204",
+      "file_offset": "0x15ce604",
+      "bytes": "4883c708e958fdffff"
+    },
+    {
+      "label": "creation owner actor and DB getter",
+      "va": "0x1415cf27f",
+      "rva": "0x15cf27f",
+      "file_offset": "0x15ce67f",
+      "bytes": "488b41108b4850898db8010000488d8db8010000e808dc15ff4c8bf0488d8de0000000e8591d70ff90e843ea1fff488b1848"
+    },
+    {
+      "label": "creation candidate gather invocation",
+      "va": "0x1415cf326",
+      "rva": "0x15cf326",
+      "file_offset": "0x15ce726",
+      "bytes": "4c8d4c24304c8d85e0000000498bd6488bcbe8b3871600"
+    },
+    {
+      "label": "creation candidate plus qualification",
+      "va": "0x1415cf36e",
+      "rva": "0x15cf36e",
+      "file_offset": "0x15ce76e",
+      "bytes": "488b1ec6442458004c896c245c44896c2464418b46188944247048894c2450488954246848895c247866c745800100c74584ffffffff488d4d88e883550aff9044896c2430488d4c2438e873550aff90488b4424684c8b48284533c0488d95a8010000488d4c24684c3bcf7507e850e258ffeb0341ffd1"
+    },
+    {
+      "label": "creation qualification and additional native field skip",
+      "va": "0x1415cf409",
+      "rva": "0x15cf409",
+      "file_offset": "0x15ce809",
+      "bytes": "85ff0f854802000039bbec0000000f843c020000"
+    },
+    {
+      "label": "creation actor tag5 plus definition b0 bool call",
+      "va": "0x1415cf45f",
+      "rva": "0x15cf45f",
+      "file_offset": "0x15ce85f",
+      "bytes": "b805000000668945a0418b4618488945a8488d55a0488d8bb0000000e870c13aff"
+    },
+    {
+      "label": "creation ai_will_do false skips candidate",
+      "va": "0x1415cf56c",
+      "rva": "0x15cf56c",
+      "file_offset": "0x15ce96c",
+      "bytes": "4084ff0f84e4000000"
+    },
+    {
+      "label": "creation command enqueue",
+      "va": "0x1415cf63d",
+      "rva": "0x15cf63d",
+      "file_offset": "0x15cea3d",
+      "bytes": "e80ea5ebff"
+    },
+    {
+      "label": "creation candidate advance",
+      "va": "0x1415cf670",
+      "rva": "0x15cf670",
+      "file_offset": "0x15cea70",
+      "bytes": "4883c608493bf70f85"
+    },
+    {
+      "label": "creation gather entry and DB receiver",
+      "va": "0x141737af0",
+      "rva": "0x1737af0",
+      "file_offset": "0x1736ef0",
+      "bytes": "488bc448895010564883ec5048895808498bf0488968f033ed488978e8488bba680d00004c8960e04c8be24c8968d84d8be94c8970d04c8bf14c8978c8486382740d0000488d0487483bf80f84610200"
+    },
+    {
+      "label": "creation first index append",
+      "va": "0x141737cb8",
+      "rva": "0x1737cb8",
+      "file_offset": "0x17370b8",
+      "bytes": "458b480c488bce4d8b008b560ce856f425ff"
+    },
+    {
+      "label": "creation second index append",
+      "va": "0x141737d71",
+      "rva": "0x1737d71",
+      "file_offset": "0x1737171",
+      "bytes": "458b480c488bce4d8b008b560ce89df325ff"
+    },
+    {
+      "label": "creation DB index builder definition traversal",
+      "va": "0x141737faf",
+      "rva": "0x1737faf",
+      "file_offset": "0x17373af",
+      "bytes": "498b8f800000004963878c0000004889b424e000000048894d7f488d04c1488945a7483bc8"
+    },
+    {
+      "label": "creation original definition pointer retained in local77",
+      "va": "0x141738010",
+      "rva": "0x1738010",
+      "file_offset": "0x1737410",
+      "bytes": "488b0948894d77488b7158486341644c8d2cc6493bf50f846c010000"
+    },
+    {
+      "label": "creation first index definition insertion",
+      "va": "0x141738167",
+      "rva": "0x1738167",
+      "file_offset": "0x1737567",
+      "bytes": "488b4f10488bd0488b4577488904d1ff471c4883c608493bf50f85aafeffff48"
+    },
+    {
+      "label": "creation second index definition insertion",
+      "va": "0x1417382f3",
+      "rva": "0x17382f3",
+      "file_offset": "0x17376f3",
+      "bytes": "488b4f10488bd0488b4577488904d1ff471c4883c608493bf50f852fffffff4c"
+    },
+    {
+      "label": "boolean wrapper forwards supplied actor frame",
+      "va": "0x14097b5f0",
+      "rva": "0x97b5f0",
+      "file_offset": "0x97a9f0",
+      "bytes": "48895c24084c89442418574883ec70c5f829742460488bfa488d5908c74424301f050000488b431048894424388b431889442440c64424440048c744244800000000c5f957c0c5fb11442450c644245801488d4c2430e8d592ecff90488bd7488bcbe8a935bf020fb6d8807c2444007474c5fb107424"
+    },
+    {
+      "label": "actual boolean evaluator copies supplied actor context",
+      "va": "0x14356ec00",
+      "rva": "0x356ec00",
+      "file_offset": "0x356e000",
+      "bytes": "48895c24084889742410574881ece0030000488bda488bf9488d4c2440e86e10fdff9048895c242033f6488974242848895c2430488d44244048894424384533c0488d542420488bcfe8920000000fb6d84839b424680100007445448b842474"
+    },
+    {
+      "label": "creation path and database vtable install",
+      "va": "0x14174f48c",
+      "rva": "0x174f48c",
+      "file_offset": "0x174e88c",
+      "bytes": "41b817000000488d15ff31f202e83257f2fe44896760488d05672c000348890748"
+    },
+    {
+      "label": "formation path and database vtable install",
+      "va": "0x14175057c",
+      "rva": "0x175057c",
+      "file_offset": "0x174f97c",
+      "bytes": "41b818000000488d152721f202e84246f2fe44896760488d05772b000348890748"
+    },
+    {
+      "label": "creation source directory",
+      "va": "0x144672698",
+      "rva": "0x4672698",
+      "file_offset": "0x4671a98",
+      "bytes": "636f6d6d6f6e2f636f756e7472795f6372656174696f6e00"
+    },
+    {
+      "label": "formation source directory",
+      "va": "0x1446726b0",
+      "rva": "0x46726b0",
+      "file_offset": "0x4671ab0",
+      "bytes": "636f6d6d6f6e2f636f756e7472795f666f726d6174696f6e00"
+    },
+    {
+      "label": "creation generic DB registry getter",
+      "va": "0x1407cdcf0",
+      "rva": "0x7cdcf0",
+      "file_offset": "0x7cd0f0",
+      "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee8c166600390bd68610000488b2c2b488b3e83ff107c18488d05649340054889442428488d0d6c74ea03e827a85d038bc74863ff4c63f04d03f64c8d256507c30443807cf420000f8591000000488d0d5a07c304ff15e419d5034803ff41807cfc2000740f488d0d4207c304ff15b419d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0d0607c304ff157819d503e823676003488bf8428b0c3bf6c101751083c90142890c3b488bcee8f8656003904d8bc44a8b142b488bcfe878686003428b043ba801751083c8014289043b488bcee8d1656003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e80968ea"
+    },
+    {
+      "label": "formation generic DB registry getter",
+      "va": "0x1407cde70",
+      "rva": "0x7cde70",
+      "file_offset": "0x7cd270",
+      "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee84165600390bd68610000488b2c2b488b3e83ff107c18488d05e49140054889442428488d0dec72ea03e8a7a65d038bc74863ff4c63f04d03f64c8d254514c30443807cf420000f8591000000488d0d3a14c304ff156418d5034803ff41807cfc2000740f488d0d2214c304ff153418d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0de613c304ff15f817d503e8a3656003488bf8428b0c3bf6c101751083c90142890c3b488bcee878646003904d8bc44a8b142b488bcfe8f8666003428b043ba801751083c8014289043b488bcee851646003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e88966ea"
+    },
+    {
+      "label": "creation transaction resource vtable with COL pointer",
+      "va": "0x14465ec20",
+      "rva": "0x465ec20",
+      "file_offset": "0x465e020",
+      "bytes": "783fb54401000000b0fa784001000000f048674001000000b0d1784001000000f04867400100000070d1784001000000e88cb54401000000"
+    },
+    {
+      "label": "creation transaction resource COL",
+      "va": "0x144b53f78",
+      "rva": "0x4b53f78",
+      "file_offset": "0x4b53378",
+      "bytes": "01000000000000000000000000c56705d8a9b504783fb504"
+    },
+    {
+      "label": "creation transaction resource descriptor",
+      "va": "0x14567c500",
+      "rva": "0x567c500",
+      "file_offset": "0x567af00",
+      "bytes": "e08d63440100000000000000000000002e3f41563f24435472616e73616374696f6e5265736f7572636540563f24756e697175655f707472405643436f756e7472794372656174696f6e44617461626173654040553f2464656661756c745f64656c657465405643436f756e7472794372656174696f6e44617461626173654040407374644040407374644040404e5064785472616e73616374696f6e73404000"
+    },
+    {
+      "label": "creation registry vptr",
+      "va": "0x1453fe4e0",
+      "rva": "0x53fe4e0",
+      "file_offset": "0x53fcee0",
+      "bytes": "28ec654401000000"
+    },
+    {
+      "label": "creation typed base vtable with COL pointer",
+      "va": "0x144752108",
+      "rva": "0x4752108",
+      "file_offset": "0x4751508",
+      "bytes": "204ec84401000000205e754101000000f0f974410100000010fb744101000000f0c96b400100000090fc744101000000f048674001000000"
+    },
+    {
+      "label": "creation concrete database vtable with COL pointer",
+      "va": "0x1447534a8",
+      "rva": "0x47534a8",
+      "file_offset": "0x47528a8",
+      "bytes": "703bc844010000007079734101000000f0f974410100000010fb744101000000f07973410100000090fc744101000000f048674001000000"
+    },
+    {
+      "label": "creation concrete database COL",
+      "va": "0x144c83b70",
+      "rva": "0x4c83b70",
+      "file_offset": "0x4c82f70",
+      "bytes": "01000000000000000000000020917905d042c804703bc804"
+    },
+    {
+      "label": "creation concrete database descriptor",
+      "va": "0x145799120",
+      "rva": "0x5799120",
+      "file_offset": "0x5797b20",
+      "bytes": "e08d63440100000000000000000000002e3f415643436f756e7472794372656174696f6e4461746162617365404000"
+    },
+    {
+      "label": "creation complete typed getter TLS and slot return",
+      "va": "0x1407cdcf0",
+      "rva": "0x7cdcf0",
+      "file_offset": "0x7cd0f0",
+      "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee8c166600390bd68610000488b2c2b488b3e83ff107c18488d05649340054889442428488d0d6c74ea03e827a85d038bc74863ff4c63f04d03f64c8d256507c30443807cf420000f8591000000488d0d5a07c304ff15e419d5034803ff41807cfc2000740f488d0d4207c304ff15b419d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0d0607c304ff157819d503e823676003488bf8428b0c3bf6c101751083c90142890c3b488bcee8f8656003904d8bc44a8b142b488bcfe878686003428b043ba801751083c8014289043b488bcee8d1656003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e80968eaffcc"
+    },
+    {
+      "label": "creation generic base constructor source path, vtable and definition array",
+      "va": "0x14174f420",
+      "rva": "0x174f420",
+      "file_offset": "0x174e820",
+      "bytes": "48895c241048894c240855565741544155415641574883ec704c8bfa488bf9488d05ca2900034889014883c108e8de54f2fe4533e44c896720488d4f2833c04889014c896108ff152402dd0290488d0564e6f10248894738488d4f40c5f9efc0c5f811014c8961104c89611841b817000000488d15ff31f202e83257f2fe44896760488d05672c0003488907488d052536000348894738488d4f68e87054f2fe90488d9f800000004c89234c896308488d731848897310b94000000065488b042558000000488b288b042939057f5d48040f8f30020000488d05524600034889064c8d2db898c803"
+    },
+    {
+      "label": "creation complete factory concrete vtable and getter slot instance install",
+      "va": "0x140773f60",
+      "rva": "0x773f60",
+      "file_offset": "0x773360",
+      "bytes": "48895c241048896c2418565741564881ec8000000033f6b9b00f0000e88fe2c303488bd84885c00f847001000048898424a00000004889742470488d542438488bc8e879b4fd0090488b4c24704885c97411488d442438483bc80f95c2488b01ff5020488d05e6f4fd03488903488d0554effd0348894338c5f9efc033c0c5fc1183600f0000488983800f0000c5f877e84bcbfe00488983680f00004889b3700f0000c683780f000000c7837c0f00006666663f41be4000000065488b042558000000488b38418b043e3905401246050f8fe3000000488d2d834dc6044889ab800f0000c5f9efc033c0c5fc1183880f0000488983a80f0000c5f877e87fcafe00488983900f00004889b3980f0000c683a00f000000c783a40f00006666663f418b043e3905e61146057f424889aba80f000048899c24a0000000e8509c0500488b084889184885c9740b488b01ba01000000ff10904c8d9c2480000000498b5b28498b6b30498be3415e5f5ec3488d0d9b114605e8ae2ac503833d8f114605ff75a9488d0d0641d503e8052ec503488d0d7a114605e8212ac503eb8f488d4c2420e889c56103488d154208c304488d4c2420e8645bc50390488d0d50114605e8632ac503833d44114605ff0f8504ffffff488d0db740d503e8b62dc503488d0d2b114605e8d229c503e9e7feffffcc"
+    },
+    {
+      "label": "creation actual consumer calls same getter",
+      "va": "0x1415cf2a8",
+      "rva": "0x15cf2a8",
+      "file_offset": "0x15ce6a8",
+      "bytes": "e843ea1fff488b18"
+    },
+    {
+      "label": "formation transaction resource vtable with COL pointer",
+      "va": "0x144668428",
+      "rva": "0x4668428",
+      "file_offset": "0x4667828",
+      "bytes": "e875b34401000000b0fa784001000000f048674001000000b0d1784001000000f04867400100000070d17840010000003077b24401000000"
+    },
+    {
+      "label": "formation transaction resource COL",
+      "va": "0x144b375e8",
+      "rva": "0x4b375e8",
+      "file_offset": "0x4b369e8",
+      "bytes": "010000000000000000000000101e65053849b404e875b304"
+    },
+    {
+      "label": "formation transaction resource descriptor",
+      "va": "0x145651e10",
+      "rva": "0x5651e10",
+      "file_offset": "0x5650810",
+      "bytes": "e08d63440100000000000000000000002e3f41563f24435472616e73616374696f6e5265736f7572636540563f24756e697175655f707472405643436f756e747279466f726d6174696f6e44617461626173654040553f2464656661756c745f64656c657465405643436f756e747279466f726d6174696f6e44617461626173654040407374644040407374644040404e5064785472616e73616374696f6e73404000"
+    },
+    {
+      "label": "formation registry vptr",
+      "va": "0x1453ff340",
+      "rva": "0x53ff340",
+      "file_offset": "0x53fdd40",
+      "bytes": "3084664401000000"
+    },
+    {
+      "label": "formation typed base vtable with COL pointer",
+      "va": "0x144753108",
+      "rva": "0x4753108",
+      "file_offset": "0x4752508",
+      "bytes": "a037c8440100000040e9734101000000e00a754101000000000c754101000000f0c96b4001000000800d754101000000f048674001000000"
+    },
+    {
+      "label": "formation concrete database vtable with COL pointer",
+      "va": "0x144752858",
+      "rva": "0x4752858",
+      "file_offset": "0x4751c58",
+      "bytes": "781ac8440100000040e9734101000000e00a754101000000000c754101000000f0c96b4001000000800d754101000000f048674001000000"
+    },
+    {
+      "label": "formation concrete database COL",
+      "va": "0x144c81a78",
+      "rva": "0x4c81a78",
+      "file_offset": "0x4c80e78",
+      "bytes": "01000000000000000000000030b879050863c804781ac804"
+    },
+    {
+      "label": "formation concrete database descriptor",
+      "va": "0x14579b830",
+      "rva": "0x579b830",
+      "file_offset": "0x579a230",
+      "bytes": "e08d63440100000000000000000000002e3f415643436f756e747279466f726d6174696f6e4461746162617365404000"
+    },
+    {
+      "label": "formation complete typed getter TLS and slot return",
+      "va": "0x1407cde70",
+      "rva": "0x7cde70",
+      "file_offset": "0x7cd270",
+      "bytes": "48895c240848896c241048897424185741544155415641574883ec3065488b042558000000488b1841bf70860000418b041f41bdb88600004a8d342ba801751083c8014189041f488bcee84165600390bd68610000488b2c2b488b3e83ff107c18488d05e49140054889442428488d0dec72ea03e8a7a65d038bc74863ff4c63f04d03f64c8d254514c30443807cf420000f8591000000488d0d3a14c304ff156418d5034803ff41807cfc2000740f488d0d2214c304ff153418d503eb6a430fb644f42084c074144b8b4cf4184885c9740a488b01ba01000000ff1043c644f420014bc744f41800000000488d0de613c304ff15f817d503e8a3656003488bf8428b0c3bf6c101751083c90142890c3b488bcee878646003904d8bc44a8b142b488bcfe8f8666003428b043ba801751083c8014289043b488bcee851646003904a63042b48c1e0044883c0184903c480780800741d488b5c2460488b6c2468488b7424704883c430415f415e415d415c5fc3e88966eaffcc"
+    },
+    {
+      "label": "formation generic base constructor source path, vtable and definition array",
+      "va": "0x141750510",
+      "rva": "0x1750510",
+      "file_offset": "0x174f910",
+      "bytes": "48895c241048894c240855565741544155415641574883ec704c8bfa488bf9488d05da2800034889014883c108e8ee43f2fe4533e44c896720488d4f2833c04889014c896108ff1534f1dc0290488d0574d5f10248894738488d4f40c5f9efc0c5f811014c8961104c89611841b818000000488d152721f202e84246f2fe44896760488d05772b0003488907488d055d16000348894738488d4f68e88043f2fe90488d9f800000004c89234c896308488d731848897310b94000000065488b042558000000488b288b042939058f4c48040f8f30020000488d05c23500034889064c8d2dc887c803"
+    },
+    {
+      "label": "formation complete factory concrete vtable and getter slot instance install",
+      "va": "0x140774210",
+      "rva": "0x774210",
+      "file_offset": "0x773610",
+      "bytes": "40534881ec80000000b9600f0000e8eddfc303488bd84885c0747b488984249000000048c744247000000000488d542438488bc8e8c7c2fd0090488b4c24704885c97411488d442438483bc80f95c2488b01ff5020488d05f4e5fd03488903488d058ae8fd034889433848899c2490000000e8e99b0500488b084889184885c9740b488b01ba01000000ff10904881c4800000005bc3488d4c2420e8e0c36103488d159906c304488d4c2420e8bb59c503cc"
+    },
+    {
+      "label": "formation actual consumer calls same getter",
+      "va": "0x1415cef1b",
+      "rva": "0x15cef1b",
+      "file_offset": "0x15ce31b",
+      "bytes": "e850ef1fff488b18"
+    },
+    {
+      "label": "formation false skip and command queue",
+      "va": "0x1415cf157",
+      "rva": "0x15cf157",
+      "file_offset": "0x15ce557",
+      "bytes": "4084f60f84a4000000b930000000e8a630de02488bd04885c00f84b2000000488d056b3e0a034889020fb64c2458884a088b4c245c894a0c8b4c2460894a108b4c2464894a14488d05a4c90c03488902488d059ac00c03488942188b442470894220488d0560e30c03488902488d0546d50c0348894218488b4424784889422848899518010000488d9518010000498bcce863a9ebff488b8d180100004885c9740b488b01ba01000000ff10904883c708e958fdffff"
+    },
+    {
+      "label": "creation false skip and command queue",
+      "va": "0x1415cf56c",
+      "rva": "0x15cf56c",
+      "file_offset": "0x15ce96c",
+      "bytes": "4084ff0f84e4000000b950000000e8912cde02488bf84885c00f8466010000488d05563a0a034889070fb64c2458884f088b4c245c894f0c8b4c2460894f108b4c2464894f14488d0567d60c03488907488d051dc30c03488947188b442470894720488d054bd30c03488907488d0501bd0c0348894718488b442478488947280fb645808847300fb645818847318b4584894734c5f9efc033c0c5f811473848894748488d4f38e818530aff448b4d944c8b45888b5744488d4f38e8f47a3cff4889bdb8010000488d95b8010000498bcce80ea5ebff488b8db80100004885c9740b488b01ba01000000ff1090488b55884885d2740e488b4d9844896d94488b01ff50104883"
+    }
+  ]
+}

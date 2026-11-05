@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, replace
+import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -15,21 +16,21 @@ REPO = Path(__file__).resolve().parents[3]
 MANIFEST_ID = "research/situated/victoria3-1.15.0-technology-scope.json"
 MANIFEST = REPO / MANIFEST_ID
 MANIFEST_SHA256 = "1c928bf462a07b399f9058256c1c97cd85cda6a036aea73bac47eae6dcd44336"
-STRATEGY_MANIFEST_ID = "research/situated/victoria3-1.14.5-strategy-scope-r7.json"
+STRATEGY_MANIFEST_ID = "research/situated/victoria3-1.15.0-strategy-scope.json"
 STRATEGY_MANIFEST = REPO / STRATEGY_MANIFEST_ID
-STRATEGY_MANIFEST_SHA256 = "3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1"
-COUNTRY_MANIFEST_ID = "research/situated/victoria3-1.14.5-country-definition-scope.json"
+STRATEGY_MANIFEST_SHA256 = "de0d8bfa8e65ed08d13a57fa2cf2b7d400ffc9eee6932377aab53af4a8ebd9b4"
+COUNTRY_MANIFEST_ID = "research/situated/victoria3-1.15.0-country-definition-scope.json"
 COUNTRY_MANIFEST = REPO / COUNTRY_MANIFEST_ID
-COUNTRY_MANIFEST_SHA256 = "55aca9f3024ce6d7c607926838df778e1711d5eaad6fcad307acbcf485734a88"
-COMPANY_MANIFEST_ID = "research/situated/victoria3-1.14.5-company-scope.json"
+COUNTRY_MANIFEST_SHA256 = "359268ea61b41c02ed5c847a8ea3348709469c7b8443d6679f279d7b85c10562"
+COMPANY_MANIFEST_ID = "research/situated/victoria3-1.15.0-company-scope.json"
 COMPANY_MANIFEST = REPO / COMPANY_MANIFEST_ID
-COMPANY_MANIFEST_SHA256 = "fb28823262158216c31b892e3f8fae62852e14d9b79a14f7e75c0adcc8229f8d"
-COMPANY_DEFAULT_MANIFEST_ID = "research/situated/victoria3-1.14.5-company-default-scope.json"
+COMPANY_MANIFEST_SHA256 = "5c3eb599bec7baaed593eba925817e70e59066bb3276691696b1a2b9e033353a"
+COMPANY_DEFAULT_MANIFEST_ID = "research/situated/victoria3-1.15.0-company-default-scope.json"
 COMPANY_DEFAULT_MANIFEST = REPO / COMPANY_DEFAULT_MANIFEST_ID
-COMPANY_DEFAULT_MANIFEST_SHA256 = "3295f597b36c531ca9ae671240bae0f0fa6a698ca9a67cf2c095927bd0378c6e"
-LAW_MANIFEST_ID = "research/situated/victoria3-1.14.5-law-scope.json"
+COMPANY_DEFAULT_MANIFEST_SHA256 = "dca3d318f98e6dc6848e0c61edc5db448fdb72090bf40805e3672e8d7dd2403e"
+LAW_MANIFEST_ID = "research/situated/victoria3-1.15.0-law-scope.json"
 LAW_MANIFEST = REPO / LAW_MANIFEST_ID
-LAW_MANIFEST_SHA256 = "eb96a222582705af59147adc6da9e6f2b11533e05a73eb9583e55171f79b0ba9"
+LAW_MANIFEST_SHA256 = "290f597a250c00c726abbde45282c6d20c0f207a54f6b888506864887f76f2de"
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +83,21 @@ class LawScopeEvidence:
     references: tuple[str, ...] = ()
 
 
+def _manifest_data(raw: bytes) -> dict[str, Any]:
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"原生证据包含重复字段：{key}")
+            result[key] = value
+        return result
+
+    data: dict[str, Any] = json.loads(raw, object_pairs_hook=unique_object)
+    if not isinstance(data, dict):
+        raise ValueError("原生证据根节点必须是对象")
+    return data
+
+
 def _verified_manifest(
     game: Path,
     inputs: Mapping[str, bytes],
@@ -89,13 +105,16 @@ def _verified_manifest(
     manifest_id: str,
     expected_hash: str,
     label: str,
+    family: str | None = None,
 ) -> tuple[dict[str, Any], tuple[tuple[str, str], ...], bool]:
     """共享原字节校验机制；每个 consumer 的许可仍由独立 manifest 决定。"""
     manifest_bytes = manifest.read_bytes()
     manifest_hash = hashlib.sha256(manifest_bytes).hexdigest()
     if manifest_hash != expected_hash:
         raise ValueError(f"{label}已变化，必须重新独立复核")
-    data = json.loads(manifest_bytes)
+    data = _manifest_data(manifest_bytes)
+    if family is not None:
+        _validate_transport(data, family, label)
     hashes = {f"@evidence/{manifest_id}": manifest_hash}
     executable = game.parent / "binaries/victoria3.exe"
     try:
@@ -117,448 +136,268 @@ def _verified_manifest(
                 raise ValueError(f"{label}字节不一致：{point['label']}")
     verified = all(
         source in inputs and hashlib.sha256(inputs[source]).hexdigest() == digest
-        for source, digest in data["script_hashes"].items()
+        for source, digest in {
+            **data["script_hashes"],
+            **data.get("supporting_script_hashes", {}),
+        }.items()
     )
+    if verified:
+        hashes.update(data["script_hashes"])
+        hashes.update(data.get("supporting_script_hashes", {}))
     return data, tuple(sorted(hashes.items())), verified
 
 
-def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
-    """Keep each additional exact consumer and dynamic object identity pinned."""
-    expected = {
-        "wanted_construction_output": {
-            "actor_scope": "country",
-            "target_scope": "none",
-            "operation": "additive_construction_output_target",
-            "unit": "construction_output",
-            "capability": "direct",
-            "consumer_va": "0x141646580",
-            "parser_va": "0x14164185e",
-            "member_offset": "0x16a0",
-        },
-        "institution_scores": {
-            "actor_scope": "country",
-            "target_scope": "definition_only:institution_type",
-            "operation": "additive_score",
-            "unit": "score",
-            "capability": "direct",
-            "consumer_va": "0x141644a3a",
-            "parser_va": "0x1416417cc",
-            "member_offset": "0x3d0",
-            "definition_key": "resolved institution definition pointer; not a named script scope",
-        },
-        "min_law_chance_to_pass": {
-            "actor_scope": "country",
-            "target_scope": "scope:law=law",
-            "operation": "override_pass_chance_threshold",
-            "capability": "direct",
-            "unit": "pass_chance",
-            "consumer_va": "0x141646d23",
-            "parser_va": "0x1416418b2",
-            "member_offset": "0x9b8",
-        },
-    }
-    expected.update(
-        {
-            "wargoal_scores": {
-                "actor_scope": "country",
-                "target_scope": "scope:target_country=country;scope:target_state=state",
-                "operation": "additive_score",
-                "unit": "score",
-                "capability": "direct",
-                "parser_va": "0x141641285",
-                "consumer_va": "0x1416438ea",
-                "member_offset": "0x1d8",
-                "child_projection": "exact enum child numeric body",
-            },
-            "secret_goal_scores": {
-                "actor_scope": "country",
-                "target_scope": "scope:target_country=country",
-                "operation": "additive_score",
-                "unit": "score",
-                "capability": "direct",
-                "parser_va": "0x141641481",
-                "consumer_va": "0x1416436fd",
-                "member_offset": "0x2a0",
-                "child_projection": "exact enum child.score only; trigger remains native filter",
-            },
-            "wanted_navy_size": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_navy_size_target",
-                "unit": "naval_administration_levels",
-                "capability": "direct",
-                "parser_va": "0x141641888",
-                "member_offset": "0x1a60",
-                "consumer_va": "0x1415ad3b7",
-            },
-            "ship_construction_output_multiplier": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_ship_construction_output_multiplier",
-                "unit": "multiplier",
-                "capability": "direct",
-                "parser_va": "0x141641cb2",
-                "member_offset": "0x1be0",
-                "consumer_va": "0x1415adadb",
-            },
-        }
-    )
-    expected.update(
-        {
-            "aggression": {
-                "actor_scope": "country",
-                "target_scope": "scope:target_country=country",
-                "operation": "additive_aggression",
-                "unit": "play_start_tendency",
-                "capability": "direct",
-                "parser_va": "0x14164154a",
-                "member_offset": "0x1160",
-                "consumer_va": "0x14164546f",
-            },
-            "nationalization_desire": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_nationalization_desire",
-                "unit": "desire",
-                "capability": "direct",
-                "parser_va": "0x141641a74",
-                "member_offset": "0xd78",
-                "consumer_va": "0x141647ecd",
-            },
-            "max_active_stances": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_active_stance_limit",
-                "unit": "count",
-                "capability": "direct",
-                "parser_va": "0x141641ca0",
-                "member_offset": "0x498",
-                "consumer_va": "0x14164805c",
-            },
-            "wanted_marines": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_marine_size_target",
-                "unit": "barracks_levels",
-                "capability": "direct",
-                "parser_va": "0x141641b77",
-                "member_offset": "0x18e0",
-                "consumer_va": "0x14164441d",
-            },
-            "economic_vs_government_spending_balance": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_spending_balance",
-                "unit": "debt_threshold_ratio",
-                "capability": "direct",
-                "parser_va": "0x141641b62",
-                "member_offset": "0x1760",
-                "consumer_va": "0x14164684d",
-            },
-            "target_marine_formation_size": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_marine_formation_size_target",
-                "unit": "units_per_formation",
-                "capability": "direct",
-                "parser_va": "0x141641b8c",
-                "member_offset": "0x19a0",
-                "consumer_va": "0x1416445ad",
-            },
-            "unacceptable_infamy_level": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "first_positive_infamy_limit_override",
-                "unit": "infamy",
-                "capability": "direct",
-                "parser_va": "0x14164145d",
-                "member_offset": "0xfe0",
-                "consumer_va": "0x1416440fd",
-            },
-            "undesirable_infamy_level": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "first_positive_infamy_limit_override",
-                "unit": "infamy",
-                "capability": "direct",
-                "parser_va": "0x14164146f",
-                "member_offset": "0xf20",
-                "consumer_va": "0x141643f6d",
-            },
-            "diplomatic_play_neutrality": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_positive_active_neutrality",
-                "unit": "score",
-                "capability": "direct",
-                "parser_va": "0x141641834",
-                "member_offset": "0x608",
-                "consumer_va": "0x14164783c",
-            },
-            "diplomatic_play_boldness": {
-                "actor_scope": "country",
-                "target_scope": "scope:diplomatic_play=diplomatic_play",
-                "operation": "native_randomized_additive_boldness",
-                "unit": "score",
-                "capability": "direct",
-                "parser_va": "0x141641849",
-                "member_offset": "0x6c0",
-                "consumer_va": "0x1416476aa",
-            },
-        }
-    )
-    expected.update(
-        {
-            "treaty_category_scores": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_treaty_category_score",
-                "unit": "score",
-                "capability": "direct",
-                "parser_va": "0x141640e0a",
-                "consumer_va": "0x141643aa9",
-                "member_offset": "0x1f0",
-                "child_projection": "exact enum child numeric body",
-            },
-            "strategic_region_stance_type_scores": {
-                "actor_scope": "country",
-                "target_scope": "scope:target_region=strategic_region;scope:region_score=scalar",
-                "operation": "additive_region_stance_score",
-                "unit": "score",
-                "capability": "direct",
-                "parser_va": "0x141641aa8",
-                "consumer_va": "0x14164842a",
-                "member_offset": "0x470",
-                "child_projection": "exact stance definition child numeric body",
-                "definition_key": "resolved strategic region stance definition pointer; not a named script scope",
-            },
-            "wanted_num_supply_ships": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_supply_ship_count_target",
-                "unit": "ships",
-                "capability": "direct",
-                "parser_va": "0x141641bcb",
-                "consumer_va": "0x1415ad63f",
-                "member_offset": "0x1b20",
-            },
-            "max_ship_design_complexity": {
-                "actor_scope": "country",
-                "target_scope": "none",
-                "operation": "additive_ship_design_complexity_limit",
-                "unit": "modification_levels",
-                "capability": "direct",
-                "parser_va": "0x141641bb6",
-                "consumer_va": "0x1414b716c",
-                "member_offset": "0x1d60",
-            },
-        }
-    )
-    for field, contract in expected.items():
-        if data.get("consumers", {}).get(field) != contract:
-            raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
-    if set(data.get("consumers", {})) != {
-        "diplomatic_play_neutrality",
-        "obligation_value",
-        "wargoal_maneuvers_fraction",
-        "max_regressiveness",
-        "wanted_army_size",
-        "weight",
-        "recklessness",
-        "change_law_chance",
-        "subject_value",
-        "revolution_aversion",
-        "wargoal_scores",
-        "target_marine_formation_size",
-        "unacceptable_infamy_level",
-        "secret_goal_scores",
-        "nationalization_desire",
-        "possible",
-        "ship_construction_output_multiplier",
-        "diplomatic_play_boldness",
-        "wanted_marines",
-        "become_subject_value",
-        "min_law_chance_to_pass",
-        "institution_scores",
-        "economic_vs_government_spending_balance",
-        "undesirable_infamy_level",
-        "max_progressiveness",
-        "max_active_stances",
-        "aggression",
-        "wanted_navy_size",
-        "wanted_construction_output",
-        "treaty_category_scores",
-        "strategic_region_stance_type_scores",
-        "wanted_num_supply_ships",
-        "max_ship_design_complexity",
-    }:
-        raise ValueError("锁定策略消费者字段合同集合不一致")
-    if data.get("strategy_score_keys") != {
-        "wargoal_scores": [
-            "annex_country",
-            "ban_slavery",
-            "break_enforced_treaties",
-            "colonization_rights",
-            "conquer_state",
-            "contain_threat",
-            "demand_no_strait_closure",
-            "demand_no_tolls",
-            "demand_strait_access",
-            "demand_toll_exemption",
-            "enforce_treaty_article",
-            "force_nationalization",
-            "foreign_investment_rights",
-            "humiliation",
-            "increase_autonomy",
-            "independence",
-            "join_power_bloc",
-            "leave_power_bloc",
-            "liberate_country",
-            "liberate_subject",
-            "make_subject",
-            "open_market",
-            "reduce_autonomy",
-            "regime_change",
-            "release_as_subject",
-            "return_state",
-            "revoke_all_claims",
-            "revoke_claim",
-            "secession",
-            "take_treaty_port",
-            "transfer_subject",
-            "unification",
-            "unification_leadership",
-            "custom",
-        ],
-        "treaty_category_scores": [
-            "economy",
-            "trade",
-            "military",
-            "military_defense",
-            "ideology",
-            "expansion",
-            "power_bloc",
-            "other",
-            "none",
-        ],
-        "secret_goal_scores": [
-            "none",
-            "befriend",
-            "reconcile",
-            "protect",
-            "antagonize",
-            "conquer",
-            "dominate",
-            "comply",
-            "defy",
-        ],
-    }:
-        raise ValueError("锁定策略评分枚举证据不一致")
-    if data.get("native_unprojected_contexts") != {
-        "wargoal_scores": {
-            "diplomatic_play": {
-                "status": "unprojected_unknown",
-                "scope_tag": "0x1c",
-                "key_va": "0x145a94914",
-                "registration_va": "0x1416438d0",
-                "condition": "play id != -1",
-                "reader_authorization": False,
-            }
-        }
-    }:
-        raise ValueError("锁定策略未投影上下文证据不一致")
-    if data.get("diplomatic_play_instance_type") != {
-        "scope_tag": "0x1c",
-        "native_type": "CDiplomaticPlay",
-        "type_descriptor_va": "0x14546bc20",
-        "link_type_descriptor_va": "0x145720d10",
-        "link_col_va": "0x144c31608",
-        "link_vftable_va": "0x144716e80",
-        "link_method_va": "0x14277ac90",
-        "resolver_va": "0x1407e7250",
-    }:
-        raise ValueError("锁定策略外交博弈实例类型证据不一致")
-    if data.get("law_instance_type") != {
-        "scope_tag": "0x31",
-        "native_type": "CCountryLaw",
-        "type_descriptor_va": "0x14546c288",
-        "link_type_descriptor_va": "0x145720b00",
-        "link_vftable_va": "0x144717330",
-        "link_method_va": "0x14277b340",
-        "resolver_va": "0x140cb3cc0",
-        "law_type_output_tag": "0x32",
-    }:
-        raise ValueError("锁定策略法律实例类型证据不一致")
+# Reviewed 1.15.0 semantic blocks, independent of mutable EXE/source transport pins.
+# Each digest covers the entire named JSON value (sorted keys, compact ASCII JSON).
+# This pins all consumers, parser/member/tuple/enum/type/default/merge evidence,
+# rather than retaining a partial set of obsolete address comparisons.
+_NATIVE_CONTRACT_HASHES: dict[str, dict[str, str]] = {
+    "STRATEGY": {
+        "schema": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "evidence_category": "1b351803b41a378a9efd4d34f250afe6055d0237c3839890bad2bfd6ca8b0efc",
+        "baseline": "3f4cb597b03b781850163772bf023b2a8dbeaffc28c234221b40e3b5f983ace4",
+        "consumers": "59da3af21d462edba2bdbc4360e46e9c0f7c2f2c5b412d73c4d2c2563b159be1",
+        "rtti": "62b1cc985c5996a363c6cfdf911f6d9bcc55f6f17ab2356cdda54cb44b86c254",
+        "scalar_dispatch": "5ac2bbc97af44517d8ed2b93f7db563894c3a7f3e322105daa2937612f25a01f",
+        "additional_scalar_consumers": "e3d90cd23e0ea825424bcd9d46030310511aeb13663d24264d672670c85a48fc",
+        "additional_scope_registrations": "a275fae2148ff7d06f20b5b959ee38ef26e2dc2c01c813600eda602ee183fe54",
+        "institution_definition_sources": "f21785c53b65e2d2efde4b7461bbf233d55f40bed56ce6b19fa5135f9d185481",
+        "institution_definitions": "41366b098c0a02e3229b2d42e62001cd2959221a6f4449b52ecc58ffdebdbaf6",
+        "institution_definition_bytes": "c0a3788d9e1a94d07b2550cb8911df2ab7c88f5ccb9e12f7aad7c9629bc1d6d3",
+        "stance_definition_sources": "ee4d8c6b3868aea41b0453c45fb849731511898dea94d0d4c21bec462641a1cb",
+        "stance_definitions": "5ebe21afeb70e1b6693c3b468558f124b90b991dad17ff569b8375546a57ccff",
+        "stance_definition_bytes": "375db6ac1a33b95dcc83014a2258a9bb05e4b69c6ca8ca3d37b685c6f3ddedb8",
+        "strategy_score_keys": "ce89d742cd883a9b6a42e895b2916c54c16e698b7f70f78d4b844da2f64e19cf",
+        "strategy_field_merges": "1197bb03b7d62f2ba057c745e2d123a919c6f69fbf0766ce1cb612bdc46ad726",
+        "native_unprojected_contexts": "ed11b96cb44b65400047307b98adac9d0fcced36e4102ab38b960edab3a8ae4c",
+        "law_instance_type": "c95fcc55cfee6ae3752f2b5753cb8f09212c85268cb139c1265af9d39b657712",
+        "diplomatic_play_instance_type": "97bbb3f44062fbe75bff215dd715c6fb0e010e79c1de65fc38ee6ccb1619e90e",
+        "strategic_region_type": "d2b44d46212819d6d5e18da37419ad14e751f3e4675533cc42e43109a41db4a9",
+        "native_proof": "fdf059cfa6ea2113f46717f91f53ad94633e67e937c660d50098eb9cdabc625f",
+        "supporting_script_hashes": "14626119947549062c961205c7f0e29bc8cc693c39235f3dda402128364cd1ce",
+        "configured_default_script_bytes": "ce305205c4876621fea7d944d0c3da60db95b9d137d4d61cf1fb21449def7f3b",
+    },
+    "COMPANY": {
+        "schema": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "evidence_category": "1b351803b41a378a9efd4d34f250afe6055d0237c3839890bad2bfd6ca8b0efc",
+        "baseline": "3f4cb597b03b781850163772bf023b2a8dbeaffc28c234221b40e3b5f983ace4",
+        "contracts": "e36c90c2c9b5330456f4f18f86b1a1568474a26fed3c48b17f2915b0dbfeaf4f",
+        "database_installation": "8fea7e81103da038a7e0b3ea3951e8ab0dcb8a7bcdd1ebeef20a75f8d10506b5",
+        "protected_native_boundaries": "15e177a6be369f325f9da37c16c50270b2b03d924e92255405db3704195f4f34",
+    },
+    "COMPANY_DEFAULT": {
+        "schema": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "evidence_category": "1b351803b41a378a9efd4d34f250afe6055d0237c3839890bad2bfd6ca8b0efc",
+        "baseline": "3f4cb597b03b781850163772bf023b2a8dbeaffc28c234221b40e3b5f983ace4",
+        "contracts": "b5d333f9899cd73e44765a444e16bffa57e972937b3ecdde7008f36307da1386",
+        "implicit_companies": "08dbd56cda59fc0f267163fa29fbcf069708d7c610d70ebd5e9a582d399bd534",
+    },
+    "LAW": {
+        "schema": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "evidence_category": "1b351803b41a378a9efd4d34f250afe6055d0237c3839890bad2bfd6ca8b0efc",
+        "baseline": "3f4cb597b03b781850163772bf023b2a8dbeaffc28c234221b40e3b5f983ace4",
+        "contract": "7f43fb34cc55b5eb31e26d09bd1ec0b049ebc0cf82478181dbfc47e7ead13937",
+        "native_contract_detail": "e70543b2577881704cd6e3e494a4783a56319f639da97143525d900f78d7c9b0",
+        "database_installation": "a9e299196bae351c241afa1f782752cba84af539775435da577b01d2e6913fa9",
+        "protected_native_boundaries": "cbbf883e6ef242e19cd344b164b0e86408b0814e8b0d9534a701c2829313424a",
+        "control_flow_checks": "34ae6220ada2c39ff1d470a38b990954992d0ca7c4ed322b6ad97f8835211169",
+    },
+    "COUNTRY": {
+        "schema": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "evidence_category": "1b351803b41a378a9efd4d34f250afe6055d0237c3839890bad2bfd6ca8b0efc",
+        "baseline": "3f4cb597b03b781850163772bf023b2a8dbeaffc28c234221b40e3b5f983ace4",
+        "contracts": "3189d6155f047e94347793c98cebd7209c0ab2247a2b53736fb1f4678a1990d9",
+        "database_installations": "4ebc1ee9e16b8c31a4cb8dce7145a52b25ef9ed0b1ed7396c6efc551194eb267",
+        "protected_native_boundaries": "93fce818b43492270ca6f4b02bfa1295de536f002befef1ca194b6af2a22789f",
+    },
+}
 
-    if data.get("strategic_region_type") != {
-        "scope_tag": "0x52",
-        "native_database": "CStrategicRegionsDatabase",
-        "link_type_descriptor_va": "0x145721980",
-        "link_col_va": "0x144c32f08",
-        "link_vftable_va": "0x14471a600",
-        "link_method_va": "0x142784d40",
-        "resolver_va": "0x1411352c0",
-        "id_member": "0x10",
-    }:
-        raise ValueError("锁定策略区域实例类型证据不一致")
-    if data.get("stance_definition_sources") != {
-        "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt": "add54c251b0fb2a37a6038b308ed9e67709d44f7ec0a5aac0bc03346afccb91d"
-    }:
-        raise ValueError("锁定策略区域 stance 定义来源证据不一致")
-    if data.get("stance_definitions") != {
-        "stance_none": {
-            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
-            "line": 3,
-        },
-        "stance_conquer_region": {
-            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
-            "line": 7,
-        },
-        "stance_protect_region": {
-            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
-            "line": 14,
-        },
-        "stance_colonize_region": {
-            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
-            "line": 21,
-        },
-    }:
-        raise ValueError("锁定策略区域 stance 定义身份证据不一致")
-    stance_bytes = data.get("stance_definition_bytes", {})
-    if set(stance_bytes) != set(data["stance_definition_sources"]) or any(
-        hashlib.sha256(bytes.fromhex(raw)).hexdigest() != data["stance_definition_sources"][source]
-        for source, raw in stance_bytes.items()
-    ):
-        raise ValueError("锁定策略区域 stance 定义原始字节不一致")
-    if data.get("strategy_field_merges") != {
-        "treaty_category_scores": {
-            "default_call": "0x141598094",
-            "active_call": "0x1415980ba",
-            "add_va": "0x1415980bf",
-            "operation": "additive_treaty_category_score",
-        },
-        "strategic_region_stance_type_scores": {
-            "default_insert": "0x1415ca52d",
-            "active_append": "0x1415ca548",
-            "debug_call": "0x1415ca5c2",
-            "call": "0x1415ca65d",
-            "add_va": "0x1415ca666",
-            "operation": "additive_region_stance_score",
-        },
-        "wanted_num_supply_ships": {
-            "default_call": "0x1415ad63f",
-            "active_call": "0x1415ad7f2",
-            "add_va": "0x1415ad8cf",
-            "operation": "additive_supply_ship_count_target",
-        },
-        "max_ship_design_complexity": {
-            "default_call": "0x1414b716c",
-            "active_call": "0x1414b730f",
-            "add_va": "0x1414b73e3",
-            "operation": "additive_ship_design_complexity_limit",
-        },
-    }:
-        raise ValueError("锁定策略同字段默认及活动策略合并证据不一致")
+
+# Descriptive metadata has no reason to vary with synthetic EXE/source transport.
+_NATIVE_METADATA_HASHES = {
+    "STRATEGY": {
+        "limits": "54e194180fc96e20b60beb5703977491b494f839eae52dd7e2e68d922da12db1",
+        "historical_comparison": "d483f0f3cf597d6fc8ae165d433e933477755fc824501a8c765c7a9e8ebec2b0",
+        "revision": "324e635150952ef001e0318f4c7b3123c033ac061377184146954a60b5878b1b",
+    },
+    "COMPANY": {
+        "status": "3fa80e1e24abf883f5d441fdb87d513547bb3fcc4b625c778dbcd5e172493b7e",
+        "limits": "f7c6232c4f7b7bc1ff83f88ca3af8c7f06bccb044e88cc96ec5df54d533d7efe",
+    },
+    "COMPANY_DEFAULT": {
+        "status": "3fa80e1e24abf883f5d441fdb87d513547bb3fcc4b625c778dbcd5e172493b7e",
+        "limits": "d036287c8c28cd3b042e813058c89e5a3c02d98f6ebc136e139306d035da648e",
+    },
+    "LAW": {
+        "status": "3fa80e1e24abf883f5d441fdb87d513547bb3fcc4b625c778dbcd5e172493b7e",
+        "limits": "49b014a6838fd7262b8975e42e0793011cc31d128dd1def8fa76588099f47760",
+        "inventory_snapshot": "3cd23de32446b6b165f99cc65bdffbde633f5ae1e0060cab3d542978e4b122f1",
+    },
+    "COUNTRY": {
+        "status": "3fa80e1e24abf883f5d441fdb87d513547bb3fcc4b625c778dbcd5e172493b7e",
+        "limits": "e5704a3dfc03db5d42a0d7edc385f22668914728cfd59bba81e8a70161876ff2",
+    },
+}
+for _family, _metadata in _NATIVE_METADATA_HASHES.items():
+    _NATIVE_CONTRACT_HASHES[_family].update(_metadata)
+
+
+_SOURCE_DIRECTORIES = {
+    "STRATEGY": ("common/ai_strategies",),
+    "COMPANY": ("common/company_types",),
+    "COMPANY_DEFAULT": ("common/company_types", "common/defines"),
+    "LAW": ("common/laws",),
+    "COUNTRY": ("common/country_creation", "common/country_formation"),
+}
+_TRANSPORT_KEYS = {
+    family: {"exe", "observations", "script_hashes"} for family in _SOURCE_DIRECTORIES
+}
+_TRANSPORT_KEYS["COMPANY_DEFAULT"].add("parent_scope_manifest")
+_TRANSPORT_KEYS["LAW"].add("all_law_source_hashes")
+
+
+def _is_hash(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def _is_hex(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"0x[0-9a-fA-F]+", value) is not None
+
+
+def _validate_transport(data: Mapping[str, Any], family: str, label: str) -> None:
+    """Reject unknown family/nested metadata while permitting valid synthetic repins."""
+
+    def require(condition: bool, field: str) -> None:
+        if not condition:
+            raise ValueError(f"{label}未知字段或元数据形状不一致：{field}")
+
+    require(set(data) == set(_NATIVE_CONTRACT_HASHES[family]) | _TRANSPORT_KEYS[family], "root")
+    exe = data["exe"]
+    optional_exe = {"path", "image_base"} if family == "COUNTRY" else {"path"}
+    require(isinstance(exe, dict), "exe")
+    require({"sha256", "bytes"} <= set(exe) <= {"sha256", "bytes"} | optional_exe, "exe")
+    require(_is_hash(exe["sha256"]), "exe.sha256")
+    require(type(exe["bytes"]) is int and exe["bytes"] > 0, "exe.bytes")
+    if "path" in exe:
+        require(exe["path"] == "binaries/victoria3.exe", "exe.path")
+    if "image_base" in exe:
+        require(_is_hex(exe["image_base"]), "exe.image_base")
+    observations = data["observations"]
+    require(isinstance(observations, list) and bool(observations), "observations")
+    for point in observations:
+        require(isinstance(point, dict), "observations[]")
+        require(
+            set(point)
+            in ({"label", "file_offset", "bytes"}, {"label", "file_offset", "bytes", "va", "rva"}),
+            "observations[]",
+        )
+        require(isinstance(point["label"], str) and bool(point["label"]), "observations.label")
+        require(_is_hex(point["file_offset"]), "observations.file_offset")
+        require(
+            isinstance(point["bytes"], str)
+            and re.fullmatch(r"(?:[0-9a-fA-F]{2})+", point["bytes"]) is not None,
+            "observations.bytes",
+        )
+        if "va" in point:
+            require(_is_hex(point["va"]) and _is_hex(point["rva"]), "observations.va/rva")
+    for key in ("script_hashes", "all_law_source_hashes"):
+        if key not in data:
+            continue
+        sources = data[key]
+        require(isinstance(sources, dict), key)
+        for source, digest in sources.items():
+            require(
+                isinstance(source, str)
+                and bool(source)
+                and not source.startswith("/")
+                and not any(part in {"", ".", ".."} for part in source.split("/"))
+                and "\\" not in source
+                and ":" not in source
+                and source.endswith(".txt")
+                and any(
+                    f"/{directory}/" in "/" + source for directory in _SOURCE_DIRECTORIES[family]
+                ),
+                key,
+            )
+            require(_is_hash(digest), key)
+    if family == "LAW":
+        require(
+            all(
+                data["all_law_source_hashes"].get(source) == digest
+                for source, digest in data["script_hashes"].items()
+            ),
+            "all_law_source_hashes.predicate_subset",
+        )
+    if family == "COMPANY_DEFAULT":
+        parent = data["parent_scope_manifest"]
+        require(
+            isinstance(parent, dict) and set(parent) == {"path", "sha256"}, "parent_scope_manifest"
+        )
+        require(
+            parent["path"] == COMPANY_MANIFEST_ID and _is_hash(parent["sha256"]),
+            "parent_scope_manifest",
+        )
+
+
+def _validate_native_contracts(data: Mapping[str, Any], family: str, label: str) -> None:
+    _validate_transport(data, family, label)
+    for key, expected in _NATIVE_CONTRACT_HASHES[family].items():
+        raw = json.dumps(data.get(key), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        if hashlib.sha256(raw.encode()).hexdigest() != expected:
+            detail = {
+                "consumers": "消费者字段合同",
+                "strategy_score_keys": "评分枚举",
+                "diplomatic_play_instance_type": "外交博弈实例",
+                "contract": "的字段合同",
+            }.get(key, key)
+            raise ValueError(f"{label}{detail}{'不一致' if key == 'contract' else '证据不一致'}")
+
+
+def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
+    """Pin all 33 contracts and all current native semantics after transport repinning."""
+    _validate_native_contracts(data, "STRATEGY", "锁定策略")
+
+
+def _source_set(game: Path, directories: tuple[str, ...]) -> set[str]:
+    return {
+        path.relative_to(game).as_posix()
+        for path in game.rglob("*.txt")
+        if path.is_file()
+        and any(
+            f"/{directory}/" in "/" + path.relative_to(game).as_posix() for directory in directories
+        )
+    }
+
+
+def _require_source_set(
+    game: Path, directories: tuple[str, ...], expected: Mapping[str, str], label: str
+) -> None:
+    if _source_set(game, directories) != set(expected):
+        raise ValueError(f"当前{label}原件集合与锁定证据不同，可能存在新增或覆盖定义")
+
+
+def _input_source_closure(
+    inputs: Mapping[str, bytes], directories: tuple[str, ...], expected: Mapping[str, str]
+) -> bool:
+    actual = {
+        source
+        for source in inputs
+        if source.endswith(".txt")
+        and any(f"/{directory}/" in "/" + source for directory in directories)
+    }
+    return actual == set(expected) and all(
+        source in inputs and hashlib.sha256(inputs[source]).hexdigest() == digest
+        for source, digest in expected.items()
+    )
+
+
+def _live_inputs(
+    game: Path, directories: tuple[str, ...], required: Mapping[str, str]
+) -> dict[str, bytes]:
+    return {
+        source: (game / source).read_bytes()
+        for source in _source_set(game, directories) | set(required)
+    }
 
 
 def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeEvidence:
@@ -570,8 +409,17 @@ def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeE
         STRATEGY_MANIFEST_ID,
         STRATEGY_MANIFEST_SHA256,
         "锁定策略作用域证据",
+        family="STRATEGY",
     )
     _validate_strategy_contracts(data)
+    verified = verified and all(
+        _input_source_closure(inputs, directories, expected)
+        for directories, expected in (
+            (("common/ai_strategies",), data["script_hashes"]),
+            (("common/institutions",), data["institution_definition_sources"]),
+            (("common/ai_strategic_region_stance_types",), data["stance_definition_sources"]),
+        )
+    )
     if not verified:
         return StrategyScopeEvidence(False, hashes)
     manifest_hash = STRATEGY_MANIFEST_SHA256
@@ -597,50 +445,29 @@ def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeE
 
 
 def strategy_snapshot() -> bytes:
-    """Read pinned historical evidence, without claiming current EXE verification."""
+    """Read current pinned static evidence without claiming live EXE verification."""
     raw = STRATEGY_MANIFEST.read_bytes()
     if hashlib.sha256(raw).hexdigest() != STRATEGY_MANIFEST_SHA256:
         raise ValueError("锁定策略作用域证据已变化，必须重新独立复核")
-    _validate_strategy_contracts(json.loads(raw))
+    _validate_strategy_contracts(_manifest_data(raw))
     return raw
 
 
 def verify_strategy_game(game: Path) -> StrategyScopeEvidence:
     """Require actual pinned scripts and EXE at the production boundary."""
-    data = json.loads(strategy_snapshot())
-    inputs = {source: (game / source).read_bytes() for source in data["script_hashes"]}
+    data = _manifest_data(strategy_snapshot())
+    sources = {**data["script_hashes"], **data["supporting_script_hashes"]}
+    inputs = _live_inputs(
+        game,
+        ("common/ai_strategies", "common/institutions", "common/ai_strategic_region_stance_types"),
+        sources,
+    )
     proof = strategy_evidence(game, inputs)
     if not proof.verified:
-        raise ValueError("当前原版策略脚本或 EXE 与锁定策略作用域证据不一致")
-    definition_sources = data["institution_definition_sources"]
-    actual_sources = {
-        path.relative_to(game).as_posix()
-        for path in game.rglob("*.txt")
-        if path.is_file() and "/common/institutions/" in "/" + path.relative_to(game).as_posix()
-    }
-    if actual_sources != set(definition_sources):
-        raise ValueError("当前制度定义原件集合与锁定策略证据不同，可能存在新增或覆盖定义")
-    for source, digest in definition_sources.items():
-        if hashlib.sha256((game / source).read_bytes()).hexdigest() != digest:
-            raise ValueError("当前制度定义原件与锁定策略作用域证据不一致")
-    stance_sources = data["stance_definition_sources"]
-    actual_stance_sources = {
-        path.relative_to(game).as_posix()
-        for path in game.rglob("*.txt")
-        if path.is_file()
-        and "/common/ai_strategic_region_stance_types/" in "/" + path.relative_to(game).as_posix()
-    }
-    if actual_stance_sources != set(stance_sources):
-        raise ValueError("当前区域 stance 定义原件集合与锁定策略证据不同")
-    for source, digest in stance_sources.items():
-        if hashlib.sha256((game / source).read_bytes()).hexdigest() != digest:
-            raise ValueError("当前区域 stance 定义原件与锁定策略作用域证据不一致")
-    return replace(
-        proof,
-        source_hashes=tuple(
-            sorted((*proof.source_hashes, *definition_sources.items(), *stance_sources.items()))
-        ),
-    )
+        raise ValueError(
+            "当前策略、制度定义或区域 stance 定义原件集合、脚本、支持来源或 EXE 与锁定证据不一致"
+        )
+    return proof
 
 
 def company_snapshot() -> bytes:
@@ -648,12 +475,13 @@ def company_snapshot() -> bytes:
     raw = COMPANY_MANIFEST.read_bytes()
     if hashlib.sha256(raw).hexdigest() != COMPANY_MANIFEST_SHA256:
         raise ValueError("锁定公司作用域证据已变化，必须重新独立复核")
+    _validate_native_contracts(_manifest_data(raw), "COMPANY", "锁定公司作用域证据")
     return raw
 
 
 def verify_company_game(game: Path) -> CompanyScopeEvidence:
     """生产公司选择必须重新核对当前原版脚本和引擎字节。"""
-    data = json.loads(company_snapshot())
+    data = _manifest_data(company_snapshot())
     expected = set(data["script_hashes"])
     actual = {
         path.relative_to(game).as_posix()
@@ -674,70 +502,8 @@ def company_default_snapshot() -> bytes:
     raw = COMPANY_DEFAULT_MANIFEST.read_bytes()
     if hashlib.sha256(raw).hexdigest() != COMPANY_DEFAULT_MANIFEST_SHA256:
         raise ValueError("锁定公司缺省权重证据已变化，必须重新独立复核")
-    data = json.loads(raw)
-    expected = {
-        "field": "ai_weight",
-        "actor": "country",
-        "target": "definition_only:company_type",
-        "operation": "missing_base_candidate_score",
-        "capability": "exact_default_initializer",
-        "consumer": "0x14169a3b0",
-        "numeric_member": "0x390",
-        "empty_expression_member": "0xa8",
-        "empty_expression_branch": "0x14169a3dd",
-        "nonempty_expression_branch": "0x14169a3f5",
-        "default_load": "0x14169a3e6",
-        "default_global": "0x1459d2a08",
-        "result_store": "0x14169a3ed",
-        "result_return": "0x14169a531",
-        "define_namespace": "NAI",
-        "define_key": "COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
-        "define_field": "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
-        "define_source": "common/defines/00_ai.txt",
-        "define_line": 1161,
-        "default_value": 1,
-        "define_setter": "0x140975a20",
-        "define_global_write": "0x140975a56",
-        "define_binding": "0x140975a70",
-        "define_registration": "0x140975a90",
-        "actual_call": "0x1415c9855",
-        "nonpositive_rejection": "0x141510b30",
-        "source_requirement": "exactly_missing_ai_weight_only",
-        "explicit_empty_requirement": "reject_initializer",
-        "explicit_nonpositive_requirement": "preserve_native_score_and_rejection",
-    }
-    identities = (
-        ("company_basic_agriculture_1", 1),
-        ("company_basic_agriculture_2", 68),
-        ("company_basic_fabrics", 139),
-        ("company_basic_colonial_plantations_1", 207),
-        ("company_basic_colonial_plantations_2", 273),
-        ("company_basic_silk_and_dye", 343),
-        ("company_basic_wine_and_fruit", 400),
-        ("company_basic_fishing", 456),
-        ("company_basic_forestry", 524),
-        ("company_basic_oil", 583),
-        ("company_basic_gold_mining", 631),
-        ("company_basic_metal_mining", 680),
-        ("company_basic_mineral_mining", 737),
-        ("company_basic_food", 793),
-        ("company_basic_paper", 857),
-        ("company_basic_home_goods", 918),
-        ("company_basic_textiles", 987),
-        ("company_basic_steel", 1049),
-        ("company_basic_metalworks", 1111),
-        ("company_basic_shipyards", 1178),
-        ("company_basic_chemicals", 1228),
-        ("company_basic_motors", 1297),
-        ("company_basic_munitions", 1355),
-        ("company_basic_electrics", 1424),
-        ("company_basic_weapons", 1473),
-        ("company_construction_power_bloc", 1543),
-    )
-    if data.get("contracts") != [expected] or data.get("implicit_companies") != [
-        {"id": key, "line": line} for key, line in identities
-    ]:
-        raise ValueError("锁定公司缺省权重的精确合同或定义身份不一致")
+    data = _manifest_data(raw)
+    _validate_native_contracts(data, "COMPANY_DEFAULT", "锁定公司缺省权重的精确合同或定义身份")
     if set(data.get("script_hashes", {})) != {
         "common/defines/00_ai.txt",
         "common/company_types/99_basic_companies.txt",
@@ -754,7 +520,7 @@ def company_default_snapshot() -> bytes:
 
 def verify_company_defaults_game(game: Path) -> CompanyScopeEvidence:
     """Require both exact default evidence and the full parent company scope proof."""
-    data = json.loads(company_default_snapshot())
+    data = _manifest_data(company_default_snapshot())
     inputs = {source: (game / source).read_bytes() for source in data["script_hashes"]}
     _, hashes, verified = _verified_manifest(
         game,
@@ -763,6 +529,7 @@ def verify_company_defaults_game(game: Path) -> CompanyScopeEvidence:
         COMPANY_DEFAULT_MANIFEST_ID,
         COMPANY_DEFAULT_MANIFEST_SHA256,
         "锁定公司缺省权重证据",
+        family="COMPANY_DEFAULT",
     )
     if not verified:
         raise ValueError("当前公司缺省权重来源或 EXE 与锁定证据不一致")
@@ -774,9 +541,9 @@ def verify_company_defaults_game(game: Path) -> CompanyScopeEvidence:
         (
             *parent.references,
             f"{COMPANY_DEFAULT_MANIFEST_ID}:sha256={COMPANY_DEFAULT_MANIFEST_SHA256}",
-            "@engine/binaries/victoria3.exe:0x14169a3dd",
-            "@engine/binaries/victoria3.exe:0x14169a3e6",
-            "@engine/binaries/victoria3.exe:0x140975a56",
+            f"@engine/binaries/victoria3.exe:{data['contracts'][0]['empty_expression_branch']}",
+            f"@engine/binaries/victoria3.exe:{data['contracts'][0]['default_load']}",
+            f"@engine/binaries/victoria3.exe:{data['contracts'][0]['define_global_write']}",
         ),
     )
 
@@ -791,9 +558,10 @@ def company_default_evidence(game: Path, inputs: Mapping[str, bytes]) -> Company
         COMPANY_DEFAULT_MANIFEST_ID,
         COMPANY_DEFAULT_MANIFEST_SHA256,
         "锁定公司缺省权重证据",
+        family="COMPANY_DEFAULT",
     )
     parent = company_evidence(game, inputs)
-    parent_data = json.loads(company_snapshot())
+    parent_data = _manifest_data(company_snapshot())
     actual = {
         source
         for source in inputs
@@ -815,9 +583,9 @@ def company_default_evidence(game: Path, inputs: Mapping[str, bytes]) -> Company
         (
             *parent.references,
             f"{COMPANY_DEFAULT_MANIFEST_ID}:sha256={COMPANY_DEFAULT_MANIFEST_SHA256}",
-            "@engine/binaries/victoria3.exe:0x14169a3dd",
-            "@engine/binaries/victoria3.exe:0x14169a3e6",
-            "@engine/binaries/victoria3.exe:0x140975a56",
+            f"@engine/binaries/victoria3.exe:{data['contracts'][0]['empty_expression_branch']}",
+            f"@engine/binaries/victoria3.exe:{data['contracts'][0]['default_load']}",
+            f"@engine/binaries/victoria3.exe:{data['contracts'][0]['define_global_write']}",
         ),
     )
 
@@ -831,7 +599,19 @@ def country_evidence(game: Path, inputs: Mapping[str, bytes]) -> CountryScopeEvi
         COUNTRY_MANIFEST_ID,
         COUNTRY_MANIFEST_SHA256,
         "锁定国家定义作用域证据",
+        family="COUNTRY",
     )
+    _validate_native_contracts(data, "COUNTRY", "锁定国家定义作用域证据")
+    actual_sources = {
+        source
+        for source in inputs
+        if source.endswith(".txt")
+        and (
+            "/common/country_creation/" in "/" + source
+            or "/common/country_formation/" in "/" + source
+        )
+    }
+    verified = verified and actual_sources == set(data["script_hashes"])
     if not verified:
         return CountryScopeEvidence(False, hashes)
     return CountryScopeEvidence(
@@ -851,7 +631,15 @@ def company_evidence(game: Path, inputs: Mapping[str, bytes]) -> CompanyScopeEvi
         COMPANY_MANIFEST_ID,
         COMPANY_MANIFEST_SHA256,
         "锁定公司作用域证据",
+        family="COMPANY",
     )
+    _validate_native_contracts(data, "COMPANY", "锁定公司作用域证据")
+    actual_sources = {
+        source
+        for source in inputs
+        if source.endswith(".txt") and ("/common/company_types/" in "/" + source)
+    }
+    verified = verified and actual_sources == set(data["script_hashes"])
     if not verified:
         return CompanyScopeEvidence(False, hashes)
     return CompanyScopeEvidence(
@@ -871,17 +659,13 @@ def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
         LAW_MANIFEST_ID,
         LAW_MANIFEST_SHA256,
         "锁定法律作用域证据",
+        family="LAW",
     )
-    if data.get("contract") != {
-        "family": "laws",
-        "hook": "ai_will_do",
-        "actor": "country",
-        "target": "definition_only:law_type",
-        "operation": "eligibility",
-        "capability": "direct",
-        "named_targets_proven": [],
-    }:
-        raise ValueError("锁定法律作用域证据的字段合同不一致")
+    _validate_native_contracts(data, "LAW", "锁定法律作用域证据")
+    sources = data["all_law_source_hashes"]
+    verified = verified and _input_source_closure(inputs, ("common/laws",), sources)
+    if verified:
+        hashes = tuple(sorted({**dict(hashes), **sources}.items()))
     if not verified:
         return LawScopeEvidence(False, hashes)
     return LawScopeEvidence(
@@ -890,11 +674,40 @@ def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
         tuple(sorted(data["script_hashes"])),
         (
             f"{LAW_MANIFEST_ID}:sha256={LAW_MANIFEST_SHA256}",
-            "@engine/binaries/victoria3.exe:0x141548e39",  # 实际候选资格门
-            "@engine/binaries/victoria3.exe:0x14170c2a0",  # 国家触发器包装器
-            "@engine/binaries/victoria3.exe:0x141709d64",  # ai_will_do 精确解析分支
+            f"@engine/binaries/victoria3.exe:{data['native_contract_detail']['qualification_call']}",  # 实际候选资格门
+            f"@engine/binaries/victoria3.exe:{data['native_contract_detail']['consumer']}",  # 国家触发器包装器
+            f"@engine/binaries/victoria3.exe:{data['native_contract_detail']['parser']}",  # ai_will_do 精确解析分支
         ),
     )
+
+
+def verify_country_game(game: Path) -> CountryScopeEvidence:
+    """Verify both complete current country definition families against real installation bytes."""
+    data = _manifest_data(COUNTRY_MANIFEST.read_bytes())
+    _validate_native_contracts(data, "COUNTRY", "锁定国家定义作用域证据")
+    _require_source_set(
+        game,
+        ("common/country_creation", "common/country_formation"),
+        data["script_hashes"],
+        "国家定义",
+    )
+    proof = country_evidence(
+        game, {source: (game / source).read_bytes() for source in data["script_hashes"]}
+    )
+    if not proof.verified:
+        raise ValueError("当前原版国家定义或 EXE 与锁定证据不一致")
+    return proof
+
+
+def verify_law_game(game: Path) -> LawScopeEvidence:
+    """Verify all law source files, including definitions without ai_will_do."""
+    data = _manifest_data(LAW_MANIFEST.read_bytes())
+    _validate_native_contracts(data, "LAW", "锁定法律作用域证据")
+    sources = data["all_law_source_hashes"]
+    proof = law_evidence(game, _live_inputs(game, ("common/laws",), sources))
+    if not proof.verified:
+        raise ValueError("当前原版法律原件集合、脚本或 EXE 与锁定证据不一致")
+    return proof
 
 
 def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologyScopeEvidence:
@@ -946,5 +759,7 @@ __all__ = [
     "technology_evidence",
     "verify_company_defaults_game",
     "verify_company_game",
+    "verify_country_game",
+    "verify_law_game",
     "verify_strategy_game",
 ]

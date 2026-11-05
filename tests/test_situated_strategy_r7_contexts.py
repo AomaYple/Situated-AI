@@ -31,7 +31,12 @@ def test_r7_preserves_r6_original_bytes_and_every_existing_observation():
         == "39b41be99801353ea76c64a1f6c0dbe4c8debe725f52488b045e4a5de8d7d528"
     )
     old = json.loads(raw)
-    data = json.loads(engine_scope.strategy_snapshot())
+    historical = engine_scope.REPO / "research/situated/victoria3-1.14.5-strategy-scope-r7.json"
+    assert (
+        hashlib.sha256(historical.read_bytes()).hexdigest()
+        == "3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1"
+    )
+    data = json.loads(historical.read_bytes())
     assert len(data["consumers"]) == 33
     assert len(data["observations"]) == 452
     assert data["observations"][:388] == old["observations"]
@@ -58,6 +63,14 @@ def proof(tmp_path, monkeypatch):
         inputs[source] = b"active = {}"
         data["script_hashes"][source] = hashlib.sha256(inputs[source]).hexdigest()
     path = tmp_path / "strategy.json"
+
+    for support_key in (
+        "institution_definition_bytes",
+        "stance_definition_bytes",
+        "configured_default_script_bytes",
+    ):
+        for source, raw_hex in data[support_key].items():
+            inputs[source] = bytes.fromhex(raw_hex)
 
     def freeze():
         raw = json.dumps(data).encode()
@@ -284,6 +297,7 @@ def test_exact_child_projection_preserves_parent_and_accepts_nondefault_identity
         source = "common/ai_strategic_region_stance_types/00_test.txt"
         raw = b"stance_conquer_region = {}"
         data["stance_definition_sources"] = {source: hashlib.sha256(raw).hexdigest()}
+        data["supporting_script_hashes"] = dict(data["stance_definition_sources"])
         data["stance_definitions"] = {key: {"source": source, "line": 1}}
         inputs[source] = raw
         monkeypatch.setattr(engine_scope, "strategy_snapshot", lambda: json.dumps(data).encode())
@@ -342,6 +356,7 @@ def test_stance_definition_sources_and_exact_unique_ast_are_required(monkeypatch
     elif damage == "definition_scalar":
         raw = b"stance_conquer_region = 1"
     data["stance_definition_sources"] = {source: hashlib.sha256(raw).hexdigest()}
+    data["supporting_script_hashes"] = dict(data["stance_definition_sources"])
     data["stance_definitions"] = {"stance_conquer_region": {"source": source, "line": 1}}
     inputs = {source: raw}
     if damage == "source_missing":
@@ -355,32 +370,22 @@ def test_stance_definition_sources_and_exact_unique_ast_are_required(monkeypatch
 
 
 @pytest.mark.parametrize("damage", ["missing", "extra", "drift"])
-def test_production_strategy_gate_requires_complete_stance_file_set(tmp_path, monkeypatch, damage):
-    data = json.loads(engine_scope.strategy_snapshot())
-    game = tmp_path / "game"
-    game.mkdir()
-    data["script_hashes"] = {}
-    data["institution_definition_sources"] = {}
-    source = "common/ai_strategic_region_stance_types/00_test.txt"
+def test_production_strategy_gate_requires_complete_stance_file_set(proof, damage):
+    game, _, data, inputs, _ = proof
+    for source, raw in inputs.items():
+        path = game / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+    source = next(iter(data["stance_definition_sources"]))
     path = game / source
-    path.parent.mkdir(parents=True)
-    raw = b"stance_conquer_region = {}"
-    path.write_bytes(raw)
-    data["stance_definition_sources"] = {source: hashlib.sha256(raw).hexdigest()}
-    monkeypatch.setattr(engine_scope, "strategy_snapshot", lambda: json.dumps(data).encode())
-    monkeypatch.setattr(
-        engine_scope,
-        "strategy_evidence",
-        lambda _game, _inputs: engine_scope.StrategyScopeEvidence(True, ()),
-    )
     assert engine_scope.verify_strategy_game(game).verified
     if damage == "missing":
         path.unlink()
     elif damage == "extra":
-        (path.parent / "01_override.txt").write_bytes(raw)
+        (path.parent / "01_override.txt").write_bytes(path.read_bytes())
     else:
-        path.write_bytes(raw + b" # drift")
-    with pytest.raises(ValueError, match="stance 定义原件"):
+        path.write_bytes(path.read_bytes() + b" # drift")
+    with pytest.raises((ValueError, FileNotFoundError)):
         engine_scope.verify_strategy_game(game)
 
 

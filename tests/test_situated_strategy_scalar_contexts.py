@@ -66,6 +66,14 @@ def scalar_proof(tmp_path, monkeypatch):
         data["script_hashes"][source] = hashlib.sha256(inputs[source]).hexdigest()
     path = tmp_path / "strategy.json"
 
+    for support_key in (
+        "institution_definition_bytes",
+        "stance_definition_bytes",
+        "configured_default_script_bytes",
+    ):
+        for source, raw_hex in data[support_key].items():
+            inputs[source] = bytes.fromhex(raw_hex)
+
     def freeze():
         raw = json.dumps(data).encode()
         path.write_bytes(raw)

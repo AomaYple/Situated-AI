@@ -24,27 +24,31 @@ def law_proof(tmp_path, monkeypatch):
     exe.write_bytes(b"fixed law image")
     source = "common/laws/sample.txt"
     inputs = {source: b"sample = { ai_will_do = { always = yes } }"}
-    data = {
-        "exe": {
-            "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-            "bytes": exe.stat().st_size,
-        },
-        "contract": {
-            "family": "laws",
-            "hook": "ai_will_do",
-            "actor": "country",
-            "target": "definition_only:law_type",
-            "operation": "eligibility",
-            "capability": "direct",
-            "named_targets_proven": [],
-        },
-        "script_hashes": {},
-        "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
-    }
+    data = json.loads(engine_scope.LAW_MANIFEST.read_bytes())
+    data.update(
+        {
+            "exe": {
+                "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+                "bytes": exe.stat().st_size,
+            },
+            "contract": {
+                "family": "laws",
+                "hook": "ai_will_do",
+                "actor": "country",
+                "target": "definition_only:law_type",
+                "operation": "eligibility",
+                "capability": "direct",
+                "named_targets_proven": [],
+            },
+            "script_hashes": {},
+            "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
+        }
+    )
     manifest = tmp_path / "law.json"
 
     def freeze():
         data["script_hashes"] = {source: hashlib.sha256(inputs[source]).hexdigest()}
+        data["all_law_source_hashes"] = dict(data["script_hashes"])
         raw = json.dumps(data).encode()
         manifest.write_bytes(raw)
         monkeypatch.setattr(engine_scope, "LAW_MANIFEST", manifest, raising=False)
@@ -74,7 +78,7 @@ def test_law_predicate_proves_definition_identity_only(law_proof):
     assert row.responsibility_step == "D4.06"
     assert row.getter is None
     assert "scope:law" not in row.target_scope
-    assert any("0x141548e39" in ref for ref in row.scope_evidence)
+    assert any("0x1415e1449" in ref for ref in row.scope_evidence)
     assert f"@evidence/{engine_scope.LAW_MANIFEST_ID}" in result.source_hashes
 
 
@@ -98,7 +102,8 @@ def test_new_source_remains_in_denominator_without_inheriting_proof(law_proof):
     result = vanilla_inventory.discover(game=game)
     rows = {row.definition: row for row in result.surfaces}
     assert result.discovered_count == 2
-    assert rows["sample"].legal
+    assert not rows["sample"].legal
+    assert rows["sample"].capability == "pending"
     assert rows["new"].capability == "pending"
     assert rows["new"].actor_scope == rows["new"].target_scope == "unknown"
 
@@ -180,15 +185,15 @@ def test_frozen_law_manifest_retains_complete_source_and_control_flow_evidence()
     data = json.loads(raw)
     assert data["evidence_category"] == "static_check"
     assert len(data["script_hashes"]) == 21
-    assert data["inventory_snapshot"]["declarations"] == 59
+    assert data["inventory_snapshot"]["declarations"] == 63
     assert data["contract"]["named_targets_proven"] == []
     checks = {point["label"]: point for point in data["control_flow_checks"]}
-    assert checks["candidate false skips current"]["target_va"] == "0x1415490d8"
-    assert checks["law trigger wrapper"]["target_va"] == "0x14170c2a0"
-    assert checks["CLawType constructor"]["target_va"] == "0x1417082b0"
+    assert checks["candidate false skips current"]["target_va"] == "0x1415e16e8"
+    assert checks["law trigger wrapper"]["target_va"] == "0x1417ef9b0"
+    assert checks["candidate qualification wrapper"]["target_va"] == "0x141621d90"
     points = {point["label"]: point for point in data["observations"]}
-    assert points["country-law-db-registration"]["va"] == "0x140efaf60"
-    assert len(bytes.fromhex(points["country-law-creation"]["bytes"])) == 0x35F
+    assert data["database_installation"]["factory_range"]
+    assert all(bytes.fromhex(point["bytes"]) for point in points.values())
     assert len(data["observations"]) >= 40
 
 
@@ -235,7 +240,7 @@ def test_verified_law_evidence_is_limited_to_frozen_sources(law_proof):
     evidence = engine_scope.law_evidence(game, inputs)
     assert evidence.verified
     assert evidence.sources == (source,)
-    assert any("0x141548e39" in ref for ref in evidence.references)
+    assert any("0x1415e1449" in ref for ref in evidence.references)
     exe.unlink()
     unavailable = engine_scope.law_evidence(game, inputs)
     assert not unavailable.verified

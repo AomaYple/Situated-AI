@@ -26,14 +26,14 @@ def test_snapshot_authorizes_only_exact_construction_and_institution_consumers()
     assert construction["actor_scope"] == "country"
     assert construction["target_scope"] == "none"
     assert construction["operation"] == "additive_construction_output_target"
-    assert construction["consumer_va"] == "0x141646580"
-    assert construction["member_offset"] == "0x16a0"
+    assert construction["consumer_va"] == "0x1418288e0"
+    assert construction["member_offset"] == "0x16c0"
     institution = contracts["institution_scores"]
     assert institution["actor_scope"] == "country"
     assert institution["target_scope"] == "definition_only:institution_type"
     assert institution["operation"] == "additive_score"
-    assert institution["consumer_va"] == "0x141644a3a"
-    assert institution["member_offset"] == "0x3d0"
+    assert institution["consumer_va"] == "0x141826d9a"
+    assert institution["member_offset"] == "0x3f0"
     assert (
         not {
             "wanted_construction_input_goods_surplus_ratio",
@@ -68,18 +68,18 @@ def construction_institution_proof(tmp_path, monkeypatch):
         path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
-    for source in data["institution_definition_sources"]:
-        raw = "\n".join(f"{key} = {{}}" for key in data["institution_definitions"]).encode()
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-        inputs[source] = raw
-        data["institution_definition_sources"][source] = hashlib.sha256(raw).hexdigest()
-    for source, raw_hex in data["stance_definition_bytes"].items():
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes.fromhex(raw_hex))
     manifest = tmp_path / "strategy.json"
+
+    for support_key in (
+        "institution_definition_bytes",
+        "stance_definition_bytes",
+        "configured_default_script_bytes",
+    ):
+        for source, raw_hex in data[support_key].items():
+            path = game / source
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes.fromhex(raw_hex))
+            inputs[source] = bytes.fromhex(raw_hex)
 
     def freeze():
         raw = json.dumps(data).encode()
@@ -138,8 +138,8 @@ def test_production_verification_keeps_definition_identity_out_of_named_scopes(
     )
     construction = by_field["wanted_construction_output"]
     assert (construction.actor, construction.target) == ("country", "none")
-    assert "@engine/binaries/victoria3.exe:0x141644a3a" in institution.references
-    assert "@engine/binaries/victoria3.exe:0x141646580" in construction.references
+    assert "@engine/binaries/victoria3.exe:0x141826d9a" in institution.references
+    assert "@engine/binaries/victoria3.exe:0x1418288e0" in construction.references
 
 
 @pytest.mark.parametrize("index", range(28))

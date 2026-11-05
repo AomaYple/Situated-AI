@@ -24,8 +24,8 @@ pytestmark = pytest.mark.unit
 @pytest.mark.parametrize(
     ("field", "target", "actor_line", "target_line", "address"),
     [
-        ("recklessness", "target_country", 43, 44, "0x1416452bf"),
-        ("wargoal_maneuvers_fraction", "enemy_country", 75, 76, "0x141647b8f"),
+        ("recklessness", "target_country", 43, 44, "0x14182761f"),
+        ("wargoal_maneuvers_fraction", "enemy_country", 75, 76, "0x141829eef"),
     ],
 )
 def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
@@ -338,18 +338,17 @@ def current_game_fixture(monkeypatch, tmp_path):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(source.encode())
         data["script_hashes"][source] = hashlib.sha256(path.read_bytes()).hexdigest()
-    for source in data["institution_definition_sources"]:
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(source.encode())
-        data["institution_definition_sources"][source] = hashlib.sha256(
-            path.read_bytes()
-        ).hexdigest()
-    for source, raw_hex in data["stance_definition_bytes"].items():
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes.fromhex(raw_hex))
     manifest = tmp_path / "manifest.json"
+
+    for support_key in (
+        "institution_definition_bytes",
+        "stance_definition_bytes",
+        "configured_default_script_bytes",
+    ):
+        for source, raw_hex in data[support_key].items():
+            path = game / source
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes.fromhex(raw_hex))
 
     def freeze():
         raw = json.dumps(data, indent=2).encode()

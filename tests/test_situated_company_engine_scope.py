@@ -23,14 +23,17 @@ def company_proof(tmp_path, monkeypatch):
     exe.write_bytes(b"fixed company image")
     source = "common/company_types/sample.txt"
     inputs = {source: b"sample = { ai_will_do = { always = yes } ai_weight = { value = 1 } }"}
-    data = {
-        "exe": {
-            "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-            "bytes": exe.stat().st_size,
-        },
-        "script_hashes": {},
-        "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
-    }
+    data = json.loads(engine_scope.COMPANY_MANIFEST.read_bytes())
+    data.update(
+        {
+            "exe": {
+                "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+                "bytes": exe.stat().st_size,
+            },
+            "script_hashes": {},
+            "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
+        }
+    )
     manifest = tmp_path / "company.json"
 
     def freeze():
@@ -135,5 +138,5 @@ def test_company_frozen_attestation_has_separate_members():
     contracts = {row["field"]: row for row in data["contracts"]}
     assert contracts["ai_will_do"]["trigger_member"] == "0x318"
     assert contracts["ai_weight"]["numeric_member"] == "0x390"
-    assert len(data["script_hashes"]) == 22
-    assert len(data["observations"]) == 30
+    assert len(data["script_hashes"]) == 23
+    assert len(data["observations"]) == 55

@@ -1,0 +1,268 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.15.0-windows-x64",
+  "status": "scratch_projection_requires_production_review",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+    "bytes": 99988600
+  },
+  "script_hashes": {
+    "common/defines/00_ai.txt": "c5f7b5f493a4e00a20539eea423d39e1463d3047f5aef49175ea9e3966cd732d",
+    "common/company_types/99_basic_companies.txt": "d29d1d16891c3ca58ee82b80da08ad9605e50eb0cf253b897af658459245671f"
+  },
+  "limits": [
+    "Native emptiness branch alone cannot distinguish absent source field from explicit empty expression.",
+    "Only source AST absence permits initializer; explicit empty is not promoted to missing.",
+    "Native expression outputs, including zero/negative, and downstream rejection must remain authoritative."
+  ],
+  "parent_scope_manifest": {
+    "path": "research/situated/victoria3-1.15.0-company-scope.json",
+    "sha256": "5c3eb599bec7baaed593eba925817e70e59066bb3276691696b1a2b9e033353a"
+  },
+  "contracts": [
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "missing_base_candidate_score",
+      "consumer": "0x141732900",
+      "numeric_member": "0x390",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x14173292d",
+      "nonempty_expression_branch": "0x141732945",
+      "default_load": "0x141732936",
+      "default_global": "0x145bdb710",
+      "result_store": "0x14173293d",
+      "result_return": "0x141732a81",
+      "define_namespace": "NAI",
+      "define_key": "COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_source": "common/defines/00_ai.txt",
+      "define_line": 1137,
+      "default_value": 1,
+      "define_setter": "0x141182140",
+      "define_global_write": "0x141182176",
+      "define_binding": "0x141182190",
+      "define_registration": "0x1411821b0",
+      "source_requirement": "exactly_missing_ai_weight_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_nonpositive_requirement": "preserve_native_score_and_rejection",
+      "capability": "exact_default_initializer",
+      "define_field": "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "actual_call": "0x141632075",
+      "nonpositive_rejection": "0x141641350"
+    }
+  ],
+  "implicit_companies": [
+    {
+      "id": "company_basic_agriculture_1",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1
+    },
+    {
+      "id": "company_basic_agriculture_2",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 68
+    },
+    {
+      "id": "company_basic_fabrics",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 139
+    },
+    {
+      "id": "company_basic_colonial_plantations_1",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 207
+    },
+    {
+      "id": "company_basic_colonial_plantations_2",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 273
+    },
+    {
+      "id": "company_basic_silk_and_dye",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 343
+    },
+    {
+      "id": "company_basic_wine_and_fruit",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 400
+    },
+    {
+      "id": "company_basic_fishing",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 456
+    },
+    {
+      "id": "company_basic_forestry",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 524
+    },
+    {
+      "id": "company_basic_oil",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 583
+    },
+    {
+      "id": "company_basic_gold_mining",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 631
+    },
+    {
+      "id": "company_basic_metal_mining",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 680
+    },
+    {
+      "id": "company_basic_mineral_mining",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 740
+    },
+    {
+      "id": "company_basic_food",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 796
+    },
+    {
+      "id": "company_basic_paper",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 860
+    },
+    {
+      "id": "company_basic_home_goods",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 921
+    },
+    {
+      "id": "company_basic_textiles",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 990
+    },
+    {
+      "id": "company_basic_steel",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1052
+    },
+    {
+      "id": "company_basic_metalworks",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1114
+    },
+    {
+      "id": "company_basic_shipyards",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1181
+    },
+    {
+      "id": "company_basic_chemicals",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1231
+    },
+    {
+      "id": "company_basic_motors",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1300
+    },
+    {
+      "id": "company_basic_munitions",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1358
+    },
+    {
+      "id": "company_basic_electrics",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1427
+    },
+    {
+      "id": "company_basic_weapons",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1477
+    },
+    {
+      "id": "company_construction_power_bloc",
+      "path": "common/company_types/99_basic_companies.txt",
+      "line": 1547
+    }
+  ],
+  "observations": [
+    {
+      "label": "company expression default fork",
+      "va": "0x141732920",
+      "rva": "0x1732920",
+      "file_offset": "0x1731d20",
+      "bytes": "498bf0488bfa488d999003000083bba800000000750f488b05d38d4a04488902e93c010000"
+    },
+    {
+      "label": "company return",
+      "va": "0x141732a81",
+      "rva": "0x1732a81",
+      "file_offset": "0x1731e81",
+      "bytes": "488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "default typed setter and global write",
+      "va": "0x141182140",
+      "rva": "0x1182140",
+      "file_offset": "0x1181540",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee817cb67ff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c24304889059395a5044883c4205fc3"
+    },
+    {
+      "label": "define binding",
+      "va": "0x141182190",
+      "rva": "0x1182190",
+      "file_offset": "0x1181590",
+      "bytes": "488bca4c8d0d7695a504488d15bb4b55034c8d05e8e45503e913993000"
+    },
+    {
+      "label": "define registration",
+      "va": "0x1411821b0",
+      "rva": "0x11821b0",
+      "file_offset": "0x11815b0",
+      "bytes": "4c8d0d5995a5044c8d05d2e45503488d15974b5503e9e6512f00"
+    },
+    {
+      "label": "NAI literal",
+      "va": "0x1446d6d5c",
+      "rva": "0x46d6d5c",
+      "file_offset": "0x46d615c",
+      "bytes": "4e414900"
+    },
+    {
+      "label": "default define key literal",
+      "va": "0x1446e0690",
+      "rva": "0x46e0690",
+      "file_offset": "0x46dfa90",
+      "bytes": "434f4d50414e595f545950455f44454641554c545f424153455f57454947485400"
+    },
+    {
+      "label": "define initial namespace key registration",
+      "va": "0x141181dfb",
+      "rva": "0x1181dfb",
+      "file_offset": "0x11811fb",
+      "bytes": "4c8d358ee855034c8d3d534f550341b803000000498bd7e82975cd0289854802000041b820000000498bd6e81575cd0289854c020000488d8d4002000048894c24284c8d8d48020000448bc0488d55a8488bcbe8dd644f02"
+    },
+    {
+      "label": "define global bridge initial call",
+      "va": "0x141182062",
+      "rva": "0x1182062",
+      "file_offset": "0x1181462",
+      "bytes": "488b8d40020000488b01488b5020488d0539010000483bd0751b4c8d0d8d96a5044d8bc6498bd7488d0dc04c5503e81b532f00eb02ffd2"
+    },
+    {
+      "label": "default define vtable setter binding registration",
+      "va": "0x14470bbc8",
+      "rva": "0x470bbc8",
+      "file_offset": "0x470afc8",
+      "bytes": "204667400100000090211841010000004021184101000000d021184101000000b0211841010000006022184101000000a022184101000000"
+    },
+    {
+      "label": "default define object installs vtable",
+      "va": "0x141181dcd",
+      "rva": "0x1181dcd",
+      "file_offset": "0x11811cd",
+      "bytes": "488d05f49d58034889057d53a904"
+    }
+  ]
+}

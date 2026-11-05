@@ -27,14 +27,17 @@ def country_proof(tmp_path, monkeypatch):
     exe.write_bytes(b"fixed country image")
     source = "common/country_creation/sample.txt"
     inputs = {source: b"sample = { ai_will_do = { always = yes } }\n"}
-    data = {
-        "exe": {
-            "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-            "bytes": exe.stat().st_size,
-        },
-        "script_hashes": {source: hashlib.sha256(inputs[source]).hexdigest()},
-        "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
-    }
+    data = json.loads(engine_scope.COUNTRY_MANIFEST.read_bytes())
+    data.update(
+        {
+            "exe": {
+                "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+                "bytes": exe.stat().st_size,
+            },
+            "script_hashes": {source: hashlib.sha256(inputs[source]).hexdigest()},
+            "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
+        }
+    )
     manifest = tmp_path / "country.json"
 
     def freeze():
@@ -113,7 +116,8 @@ def test_new_source_does_not_inherit(country_proof):
     game, _, _, inputs, _, _ = country_proof
     inputs["common/country_creation/new.txt"] = b"other = { ai_will_do = { always = yes } }"
     rows = {row.definition: row for row in vanilla_inventory.discover(game=game).surfaces}
-    assert rows["sample"].capability == "direct"
+    # A new source invalidates the complete family proof, including existing definitions.
+    assert rows["sample"].capability == "pending"
     assert rows["other"].capability == "pending"
 
 
@@ -185,7 +189,7 @@ def test_frozen_manifest_keeps_raw_evidence():
     raw = engine_scope.COUNTRY_MANIFEST.read_bytes()
     assert hashlib.sha256(raw).hexdigest() == engine_scope.COUNTRY_MANIFEST_SHA256
     data = json.loads(raw)
-    assert data["exe"]["bytes"] == 97774200
+    assert data["exe"]["bytes"] == 99988600
     assert len(data["script_hashes"]) == 3
     assert len(data["observations"]) >= 55
     assert {c["family"] for c in data["contracts"]} == {"country_creation", "country_formation"}

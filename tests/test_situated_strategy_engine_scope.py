@@ -30,19 +30,15 @@ def strategy_proof(tmp_path, monkeypatch):
     data["exe"] = {"sha256": hashlib.sha256(exe.read_bytes()).hexdigest(), "bytes": 20}
     data["script_hashes"] = {source: hashlib.sha256(inputs[source]).hexdigest()}
     data["observations"] = [{"label": "fixture", "file_offset": "0x0", "bytes": b"fixed".hex()}]
-    for definition_source in data["institution_definition_sources"]:
-        raw = "\n".join(f"{key} = {{}}" for key in data["institution_definitions"]).encode()
-        path = game / definition_source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-        inputs[definition_source] = raw
-        data["institution_definition_sources"][definition_source] = hashlib.sha256(raw).hexdigest()
-    for definition_source, raw_hex in data["stance_definition_bytes"].items():
-        raw = bytes.fromhex(raw_hex)
-        path = game / definition_source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
     manifest = tmp_path / "strategy.json"
+
+    for support_key in (
+        "institution_definition_bytes",
+        "stance_definition_bytes",
+        "configured_default_script_bytes",
+    ):
+        for source, raw_hex in data[support_key].items():
+            inputs[source] = bytes.fromhex(raw_hex)
 
     def freeze():
         raw = json.dumps(data).encode()
@@ -70,7 +66,7 @@ def strategy_proof(tmp_path, monkeypatch):
         ),
         ("max_progressiveness", "none", "override_progressiveness_limit", "direct"),
         ("max_regressiveness", "none", "override_regressiveness_limit", "direct"),
-        ("change_law_chance", "none", "additive_percentage_chance", "direct"),
+        ("change_law_chance", "none", "override_percentage_chance", "direct"),
         (
             "wargoal_maneuvers_fraction",
             "scope:enemy_country=country",
@@ -159,11 +155,10 @@ def test_same_source_duplicate_strategy_without_field_invalidates_first(
         vanilla_inventory, "_inputs", lambda _: (dict(inputs), ("ai_strategies",), ("game",))
     )
     inventory = vanilla_inventory.discover(game=game)
-    assert inventory.discovered_count == 1
+    rows = [row for row in inventory.surfaces if "/common/ai_strategies/" in "/" + row.source]
+    assert len(rows) == 1
     assert inventory.legal_count == 0
-    assert (
-        inventory.surfaces[0].ambiguity == "duplicate_strategy_definition_merge_semantics_unknown"
-    )
+    assert rows[0].ambiguity == "duplicate_strategy_definition_merge_semantics_unknown"
 
 
 @pytest.mark.parametrize(
@@ -179,10 +174,11 @@ def test_other_source_duplicate_blocks_original_even_without_its_field(
     )
     inventory = vanilla_inventory.discover(game=game)
     assert inventory.legal_count == 0
-    assert all(row.capability == "pending" for row in inventory.surfaces)
+    rows = [row for row in inventory.surfaces if "/common/ai_strategies/" in "/" + row.source]
+    assert rows
+    assert all(row.capability == "pending" for row in rows)
     assert all(
-        row.ambiguity == "duplicate_strategy_definition_merge_semantics_unknown"
-        for row in inventory.surfaces
+        row.ambiguity == "duplicate_strategy_definition_merge_semantics_unknown" for row in rows
     )
 
 
