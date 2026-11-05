@@ -7,7 +7,19 @@ schema = 1
 "common/treaty_articles/21_no_tariffs.txt" = "4e361356002dd9d440b767bad998b20e73eb4af1a5a0d1999e566a8923e5afab"
 "common/treaty_articles/treaty_articles.md" = "8aa3024c68f12761eec43461dcfd9a0e747f74513d1d3f0d6bd3a369e3aef613"
 
+"common/treaty_articles/12_military_assistance.txt" = "c4499d86dfa5b8fb0a4eccd54bb180f649367a2c47bc2d0f530d581e9775cecc"
+
+"common/script_values/01_power_bloc_values.txt" = "57ef445cfa211e8c2bd040145997a302183ceb827294e878a87ff76db81bf8fe"
+
+"common/treaty_articles/09_join_power_bloc.txt" = "97956072d6ef9891d48cce6673916bcee519447b64d9b9253deba6ea9ff74384"
+
+"common/treaty_articles/10_host_power_bloc_embassy.txt" = "65cc94ccdb6479a5dfc04e56f060cd6b560bdc39ecf0cb96744d0fd5705ed38e"
+
 [tuning]
 target_input_need = 6
 source_deficit_cost = 8
 source_default_cost = 12
+
+[military_tuning]
+source_deficit_cost = 6
+source_default_cost = 10

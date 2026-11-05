@@ -71,6 +71,7 @@ TAXONOMY = (
         "行政与国家能力",
         (
             "bureaucracy",
+            "produced_bureaucracy",
             "infrastructure",
             "tax_shortfall",
             "tax_capacity",
@@ -198,6 +199,8 @@ PROFILE_ROLES = {
         "capacity": (
             "army_size",
             "bureaucracy",
+            "produced_bureaucracy",
+            "modifier:country_tech_spread_mult",
             "fixed_income",
             "gdp",
             "gold_reserves",

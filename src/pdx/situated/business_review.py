@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, cast
 
 from pdx import config
@@ -21,11 +22,15 @@ from .native_treatments import (
     _declaration,
     _Dependencies,
     _digest,
+    _event_program_proofs,
+    _family,
     _numeric_shape,
+    _path,
     _registered_numeric_value,
     _resolve,
     _Sources,
     _support_program_proof,
+    _variable_boundary,
 )
 
 if TYPE_CHECKING:
@@ -35,6 +40,31 @@ if TYPE_CHECKING:
     from .vanilla_inventory import VanillaInventory
 
 CONTRACT = config.REPO / "research/situated/a3-native-business-review.json"
+_COMMON_IDENTITIES = "8a55029fbcbcc7307aff5eb8cd47256a222cc0a3993f3607cfc3c21444bfeb61"
+_RETENTION_IDENTITIES = "b19ccbc944a5175a397d6d7e5fa9a1f380e87f2c74a7cbb239ca0a5c88c49f5e"
+_RETENTION_EVIDENCE = "b431daf4f8d5cff99c0220f59e4e0c28a20b141ed4ca3518f31ff9e5104a42a6"
+
+
+def search_inputs(game: Path | None = None) -> dict[str, bytes]:
+    """Read the frozen no-caller search scope without granting runtime access.
+
+    Inventory inputs include verified declared DLC mounts and relevant docs;
+    all root common/events text is also required because an unrelated AI-free
+    file can still introduce a journal-entry invocation.
+    """
+    from .vanilla_inventory import _contained, _inputs  # noqa: PLC0415
+
+    root = config.GAME if game is None else game
+    inputs, _, _ = _inputs(root)
+    for directory in ("common", "events"):
+        for path in sorted((root / directory).rglob("*.txt")):
+            _contained(root, path)
+            inputs[path.relative_to(root).as_posix()] = path.read_bytes()
+    return inputs
+
+
+def _identities(values) -> str:
+    return hashlib.sha256(json.dumps(sorted(values), separators=(",", ":")).encode()).hexdigest()
 
 
 def load(path: Path = CONTRACT) -> dict[str, Any]:
@@ -42,15 +72,49 @@ def load(path: Path = CONTRACT) -> dict[str, Any]:
     if (
         data.get("schema") != 1
         or data.get("C1_complete") is not False
+        or data.get("business_complete") is not False
         or data.get("common_denominator") != 8856
         or data.get("event_option_denominator") != 4840
-        or len(data.get("rows", ())) != 1086
+        or len(data.get("rows", ())) != 1107
         or len(data.get("retained_event_rows", ())) != 395
-        or len(data.get("unresolved_common_ids", ())) != 493
+        or len(data.get("unresolved_common_ids", ())) != 472
         or len(data.get("unresolved_event_option_rows", ())) != 4445
     ):
         raise ValueError("A3业务复核必须保持独立冻结分母和真实未决状态")
     ids = [row["surface_id"] for row in data["rows"]] + data["unresolved_common_ids"]
+    migrated = [
+        row for row in data["rows"] if row.get("business_family") == "common_tail_exact_retention"
+    ]
+    if (
+        _identities(ids) != _COMMON_IDENTITIES
+        or _identities(row["surface_id"] for row in migrated) != _RETENTION_IDENTITIES
+        or len(migrated) != 21
+        or len({row["reason_index"] for row in migrated}) != 21
+        or any(not row.get("business_support_ids") for row in migrated)
+        or any(
+            identity not in data.get("business_supports", {})
+            for row in migrated
+            for identity in row["business_support_ids"]
+        )
+    ):
+        raise ValueError("A3业务迁移必须保持旧身份全集及21项精确处置")
+    evidence = {
+        "rows": migrated,
+        "contexts": {
+            row["parent_context"]: data["parent_contexts"].get(row["parent_context"])
+            for row in migrated
+        },
+        "supports": data.get("business_supports"),
+        "group": data["groups"].get("common_tail_exact_retention"),
+        "change": data.get("common_retention_change"),
+    }
+    if (
+        hashlib.sha256(
+            json.dumps(evidence, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        != _RETENTION_EVIDENCE
+    ):
+        raise ValueError("A3业务精确保留理由和支持闭包身份漂移")
     if len(set(ids)) != len(ids):
         raise ValueError("A3业务复核重复或混淆具体候选身份")
     for row in data["rows"]:
@@ -75,6 +139,7 @@ def review(
     treatments: Mapping[str, Any],
     *,
     data: Mapping[str, Any] | None = None,
+    search_sources: Mapping[str, bytes] | None = None,
 ) -> dict[str, Any]:
     """Validate current bytes; native/native identity alone never signs a row."""
     data = load() if data is None else data
@@ -85,6 +150,16 @@ def review(
     surfaces = {surface.surface_id: surface for surface in inventory.surfaces}
     protected = {row["surface_id"]: row for row in treatments["rows"]}
     source_hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in native_sources.items()}
+    # Search-only bytes prove the absence of callers; they do not become
+    # declarations, readers or members of the decision inventory denominator.
+    search_bytes = dict(native_sources if search_sources is None else search_sources)
+    aliases: dict[str, str] = {}
+    for name, raw in search_bytes.items():
+        _path(name)
+        if not isinstance(raw, bytes) or aliases.get(name.casefold(), name) != name:
+            raise ValueError("A3调用搜索来源必须是无路径别名的完整字节")
+        aliases[name.casefold()] = name
+    search_hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in search_bytes.items()}
     inherited = _Dependencies(native, native, native_sources, native_sources, source_hashes)
     current = _Dependencies(
         effective,
@@ -94,6 +169,8 @@ def review(
         source_hashes,
     )
     reference_cache: dict[str, bool] = {}
+    event_proofs: dict[str, dict[str, Any]] | None = None
+    support_cache: dict[str, bool] = {}
     production_hashes = {
         name: hashlib.sha256(raw).hexdigest() for name, raw in generated_sources.items()
     }
@@ -101,7 +178,9 @@ def review(
         treatments.get("production_hashes") == production_hashes
         and treatments.get("source_hashes_verified") == source_hashes
         and all(
-            inventory.source_hashes.get(name) == digest for name, digest in source_hashes.items()
+            source_hashes.get(name) == digest
+            for name, digest in inventory.source_hashes.items()
+            if not name.startswith("@")
         )
     )
     child_dependencies = _Dependencies(
@@ -208,13 +287,23 @@ def review(
                 and _digest(before) == _digest(after)
                 and current.opaque_operands(after, numeric=True).get(proof["definition"])
                 == proof["native_occurrences"]
+                and native.owners.get((_family(source), callers[0].key))
+                == effective.owners.get((_family(source), callers[0].key))
+                == [source]
+                and _variable_boundary(native.roots[source], effective.roots[source])
             )
         else:
             before, state = _resolve(native.roots[source], proof["definition"], "__body__")
             if state != "found" or _digest(before) != proof["native_ast_sha256"]:
                 raise ValueError("A3业务引用AST漂移")
             after, state = _resolve(effective.roots[source], proof["definition"], "__body__")
-            preserved = state == "found" and _digest(before) == _digest(after)
+            owner = (proof["family"], proof["definition"])
+            preserved = (
+                state == "found"
+                and _digest(before) == _digest(after)
+                and native.owners.get(owner) == effective.owners.get(owner) == [source]
+                and _variable_boundary(native.roots[source], effective.roots[source])
+            )
         reference_cache[identity] = preserved
         return preserved
 
@@ -222,6 +311,106 @@ def review(
         # Validate every frozen proof even when a sibling is unproven.
         checked = [reference(identity) for identity in ids]
         return all(checked)
+
+    def invocation_boundary(closed: Mapping[str, Any]) -> bool:
+        """Recheck the finite exact caller set behind an unreachable test JE."""
+        # No-call evidence requires every raw file from the frozen mounted
+        # inventory and complete root common/events search, including no-hit
+        # sources and DLC descriptors. Extra supplied files are scanned too.
+        if (
+            not candidate_bound
+            or any(
+                search_hashes.get(source) != digest
+                for source, digest in closed["source_hashes"].items()
+            )
+            or any(search_bytes.get(source, raw) != raw for source, raw in native_sources.items())
+        ):
+            return False
+        names = set(closed["names"])
+        occurrences = []
+
+        def visit(value, source, path):
+            if isinstance(value, Assignment):
+                if value.key in names:
+                    occurrences.append([source, list(path), value.key, "definition_or_call"])
+                visit(value.value, source, (*path, value.key))
+            elif isinstance(value, Block):
+                for index, child in enumerate(value.items):
+                    visit(child, source, (*path, index))
+            elif isinstance(value, Scalar) and value.unquoted in names:
+                occurrences.append([source, list(path), value.unquoted, "operand"])
+
+        # A raw no-hit is sufficient for unrelated syntax (for example DNA
+        # payloads). Every possible hit must parse, including newly supplied
+        # native files and current output; a malformed hit remains unproven.
+        needles = tuple(name.encode("utf-8") for name in names)
+        candidates = {}
+        for source, raw in {**search_bytes, **native_sources, **generated_sources}.items():
+            if not source.endswith(".txt"):
+                continue
+            try:
+                raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                return False
+            if any(needle in raw for needle in needles):
+                candidates[source] = raw
+        callers = _Sources(candidates)
+        if callers.failures:
+            return False
+        for source, root in sorted(callers.roots.items()):
+            visit(root, source, ())
+        return bool(occurrences == closed["occurrences"])
+
+    def business_support(identity: str) -> bool:
+        """Preserve explicit rationale witnesses, including actual JE callers.
+
+        These static definitions grant no runtime permissions. The one changed
+        plague event is accepted only by the existing complete EventProgram proof.
+        """
+        nonlocal event_proofs
+        if identity in support_cache:
+            return support_cache[identity]
+        # A cycle is not a license to skip the child witness.
+        support_cache[identity] = False
+        support = data["business_supports"][identity]
+        if "closed_invocations" in support and not invocation_boundary(
+            support["closed_invocations"]
+        ):
+            return False
+        source, definition = support["source"], support["definition"]
+        before = parent(source, definition, support["parent_ast_sha256"], support["source_sha256"])
+        owner = (_family(source), definition)
+        if native.owners.get(owner) != [source] or effective.owners.get(owner) != [source]:
+            return False
+        after, state = _resolve(effective.roots[source], definition, "__body__")
+        references_preserved = references(support["named_reference_proof_ids"])
+        if (
+            not references_preserved
+            or state != "found"
+            or not _variable_boundary(native.roots[source], effective.roots[source])
+        ):
+            return False
+        child_checks = [business_support(child) for child in support["supporting_definition_ids"]]
+        children_preserved = all(child_checks)
+        if not children_preserved:
+            return False
+        if _ast(before) == _ast(after):
+            support_cache[identity] = True
+            return True
+        if (source, definition) != (
+            "events/spanish_flu_events.txt",
+            "plague.5",
+        ) or not candidate_bound:
+            return False
+        if event_proofs is None:
+            event_proofs = _event_program_proofs(inventory, child_dependencies, generated_sources)
+        matches = [
+            s for s in inventory.surfaces if s.source == source and s.definition == definition
+        ]
+        support_cache[identity] = len(matches) == 3 and all(
+            s.surface_id in event_proofs for s in matches
+        )
+        return support_cache[identity]
 
     def source_projection(surface, proof: Mapping[str, Any], *, container: bool) -> bool:
         """Recheck all registered leaves and the entire ordered current source."""
@@ -462,6 +651,137 @@ def review(
             and source_projection(surface, proof, container=False)
         )
 
+    def registered_sibling_ir_current(source: str, policy) -> bool:
+        from pdx import decision_rules  # noqa: PLC0415
+
+        from . import action_instances, bindings, compiler, decision_ir, ir  # noqa: PLC0415
+
+        contexts = (
+            compiler._frozen_native_decision_contexts()
+            if source == "common/decisions/00_decisions.txt"
+            else compiler._frozen_mobilization_contexts()
+            if source == "common/mobilization_options/00_mobilization_option.txt"
+            else {}
+        )
+        if not contexts:
+            return False
+        empty = decision_rules.RuleSet((), (), "0" * 64, "0" * 64, frozenset())
+        adapters = replace(
+            child_dependencies.parameter_adapters,
+            policies=((source, policy),),
+            event_programs=(),
+            acceptance_programs=(),
+            supply=None,
+        )
+        rules = {rule.id: rule for rule in policy.rules}
+        readers = {reader.key: reader for reader in policy.readers}
+        instances = tuple(
+            replace(
+                instance,
+                evaluation_context=contexts.get((source, instance.consumer_field)),
+            )
+            for instance in action_instances.build(empty, adapters)
+        )
+        if any(instance.evaluation_context is None for instance in instances):
+            return False
+        bundle = decision_ir.compile_consumer_ir(
+            (),
+            (),
+            (),
+            ir.from_rules((source, rule) for rule in policy.rules),
+            bindings.build(information=empty, adapters=adapters),
+            instances,
+        )
+        bundle = replace(
+            bundle,
+            writers=tuple(
+                replace(
+                    writer,
+                    reader_context_bindings=compiler.validate_context_readers(
+                        writer.field,
+                        contexts[source, writer.field],
+                        readers,
+                        rules[writer.definition].conditions,
+                        actor_path=policy.actor_path,
+                        input_keys=tuple(rules[writer.definition].input_keys()),
+                        source=source,
+                        native_root=policy.native_root,
+                    ),
+                )
+                for writer in bundle.writers
+            ),
+        )
+        expected = bundle.as_dict()
+        metadata = json.loads(generated_sources[".metadata/metadata.json"])
+        actual = metadata["situated_actions"]["consumer_ir"]
+        rows = actual["writers"]
+        ids = [row["writer_id"] for row in rows]
+        current = sorted(
+            (row for row in rows if row.get("source") == source), key=lambda row: row["writer_id"]
+        )
+        return (
+            type(actual["schema"]) is int
+            and actual["schema"] == 1
+            and type(actual["writer_count"]) is int
+            and actual["writer_count"] == len(rows)
+            and len(ids) == len(set(ids))
+            and json.dumps(current, sort_keys=True)
+            == json.dumps(expected["writers"], sort_keys=True)
+            and all(actual["field_owners"].get(k) == v for k, v in expected["field_owners"].items())
+            and all(
+                actual["source_field_owners"].get(k) == v
+                for k, v in expected["source_field_owners"].items()
+            )
+        )
+
+    def retained_source_with_registered_siblings(source: str) -> bool:
+        """A retained sibling may coexist with other exactly registered writers.
+
+        Recompute the complete source oracle and every controlled child's
+        dependency proof. Native identity or a copied parent receipt alone
+        cannot authorize a sibling's current change.
+        """
+        if _ast(native.roots[source]) == _ast(effective.roots[source]):
+            return True
+        contract = child_dependencies._parameter_contract(source)
+        if not contract:
+            return False
+        policy, groups, identity = contract
+        oracle = child_dependencies._parameter_program_root(source, identity)
+        if (
+            oracle is None
+            or _ast(oracle) != _ast(effective.roots[source])
+            or not _variable_boundary(native.roots[source], effective.roots[source])
+            or not registered_sibling_ir_current(source, policy)
+        ):
+            return False
+        for path in groups:
+            definition, *parts = path
+            field = ".".join(parts)
+            matches = [
+                surface
+                for surface in inventory.surfaces
+                if (surface.source, surface.definition, surface.field)
+                == (source, definition, field)
+            ]
+            if len(matches) != 1:
+                return False
+            surface = matches[0]
+            child = protected.get(surface.surface_id, {})
+            before, bstate = _resolve(native.roots[source], definition, field)
+            after, astate = _resolve(effective.roots[source], definition, field)
+            if (
+                before is None
+                or after is None
+                or bstate != astate
+                or bstate != "found"
+                or child.get("status") != "implemented_numeric"
+                or child.get("interface", {}).get("control_authorized") is not True
+                or not child_receipt_current(surface, before, after, child)
+            ):
+                return False
+        return True
+
     parents = {}
     for identity, context in data["parent_contexts"].items():
         parents[identity] = parent(
@@ -493,8 +813,18 @@ def review(
             raise ValueError("A3业务精确字段AST漂移")
         proof = protected.get(surface.surface_id, {})
         references_preserved = references(context["named_reference_proof_ids"])
+        support_checks = [
+            business_support(identity) for identity in row.get("business_support_ids", [])
+        ]
+        support_preserved = all(support_checks)
         preserved = (
             treatments.get("production_manifest_complete_asserted") is True
+            and candidate_bound
+            and support_preserved
+            and (
+                row.get("business_family") != "common_tail_exact_retention"
+                or retained_source_with_registered_siblings(surface.source)
+            )
             and proof.get("source_protection", {}).get("proven") is True
             and proof.get("native_ast_sha256") == row["field_ast_sha256"]
             and proof.get("effective_ast_sha256") == row["field_ast_sha256"]
@@ -566,6 +896,10 @@ def review(
         references_preserved = references(row["named_reference_proof_ids"])
         preserved = (
             treatments.get("production_manifest_complete_asserted") is True
+            and candidate_bound
+            and native.owners[_family(row["source"]), row["definition"]] == [row["source"]]
+            and effective.owners[_family(row["source"]), row["definition"]] == [row["source"]]
+            and _variable_boundary(native.roots[row["source"]], effective.roots[row["source"]])
             and state == "found"
             and _digest(after) == _digest(node)
             and references_preserved

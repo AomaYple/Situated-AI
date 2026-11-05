@@ -54,6 +54,7 @@ class ContextBinding:
             "cyclone_state": ("state", {"auxiliary"}),
             "volcanic_state": ("state", {"auxiliary"}),
             "mega_volcanic_state": ("state", {"auxiliary"}),
+            "slums_state": ("state", {"auxiliary"}),
             "article": ("treaty_article_options", {"auxiliary"}),
             "source_country": ("country", {"auxiliary"}),
             "article_input_market_goods": ("market_goods", {"auxiliary"}),

@@ -1,0 +1,16 @@
+# Olympic administrative exposure only; native prestige reward and 5 weight retained.
+# Thresholds 100/500 balance and 5000 output are bounded design assumptions.
+schema = 1
+
+[sources]
+"common/decisions/00_decisions.txt" = "06173784f4f68a4c4f292b0534abfaf53889fe7e7055c4f124085f23acecff0f"
+"common/decisions/000_decisions_help.txt" = "174b16778da4328061ff95a7e42159b05f3302bd1dfa7d674b86cc88765a96a7"
+"common/static_modifiers/04_decision_modifiers.txt" = "91aa05bda1c488c232056edd512133300abfe3dfd9211c4240f72ca7962195ca"
+"common/script_values/event_values.txt" = "99e2dfc8e07c8b91a6f9c6bf4616444b4c973fc07c281b057b48b2594280067a"
+"common/decisions/canal_decisions.txt" = "2f46ece1ac9f3377056c91a52dd74fecd9e342d2d8e402f75b926e4929d4fbd0"
+"common/script_values/negotiation_values.txt" = "25763c627ae4c71e71ba71ee7c37928993ff6489f94f4b5c5a59d5e258e9f892"
+"common/scripted_effects/04_negotiation_scripted_effects.txt" = "86c12d3163c3236d362951a62c85026cf32f9918d285ae4cf88de04cea923ea5"
+
+[tuning]
+thin_buffer = 0.90
+strong_exposure = 0.80

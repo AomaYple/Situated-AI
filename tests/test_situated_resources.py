@@ -24,7 +24,12 @@ def test_each_frozen_budget_hard_fails_above_boundary(key):
 
 def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
     data = resources.load()
-    from pdx import canal_opportunities, event_opportunities, famine_opportunities
+    from pdx import (
+        canal_opportunities,
+        event_opportunities,
+        famine_opportunities,
+        native_decision_opportunities,
+    )
 
     native = canal_opportunities.frozen_inputs()[canal_opportunities.SOURCE]
     assert resources.pdx_metrics(native)["persistent_write_sites"] == 6
@@ -46,7 +51,17 @@ def test_source_budget_is_complete_and_prevents_new_world_scans_or_state():
         "set_global_variable": 2,
     }
     assert sum(disaster["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
-    assert data["limits"]["persistent_write_sites"] == 31 + 6 + 23 + 3 + 16
+    native_decisions = resources.pdx_metrics(
+        native_decision_opportunities.frozen_inputs()[native_decision_opportunities.SOURCE]
+    )
+    assert native_decisions["persistent_write_keys"] == {
+        "set_variable": 2,
+        "set_global_variable": 1,
+    }
+    assert (
+        sum(native_decisions["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
+    )
+    assert data["limits"]["persistent_write_sites"] == 31 + 6 + 23 + 3 + 16 + 3 + 7
     assert data["limits"]["reader_path_length"] == 3
 
 
@@ -142,3 +157,58 @@ def test_disaster_inherited_state_counters_and_original_parents_are_exact():
     ):
         with pytest.raises(ValueError, match="继承变量或世界扫描"):
             resources.verify_inherited_writes({event.DISASTERS: changed})
+
+
+def test_native_decision_writes_cannot_be_added_replaced_or_moved():
+    from pdx import native_decision_opportunities as native
+
+    original = native.frozen_inputs()[native.SOURCE]
+    resources.verify_inherited_writes({native.SOURCE: original})
+    for changed in (
+        original.replace("name = revive_olympics_decision_taken", "name = forged_memory", 1),
+        original.replace("value = yes", "value = no", 1),
+        original.replace("set_global_variable", "change_global_variable", 1),
+        original + "\nset_variable = forged\n",
+        original + "\nany_country = { always = yes }\n",
+        "other = { " + original + " }",
+    ):
+        assert changed != original
+        with pytest.raises(ValueError, match="继承变量或世界扫描"):
+            resources.verify_inherited_writes({native.SOURCE: changed})
+
+
+def test_sol_inherited_state_and_local_scans_are_exact_native_operations():
+    from pdx import event_opportunities as event
+
+    inputs = event.frozen_inputs()
+    native = inputs[event.SOL]
+    generated = event.patch(inputs)[event.SOL]
+    metrics = resources.pdx_metrics(native)
+    assert metrics["persistent_write_keys"] == {"set_variable": 7}
+    assert metrics["object_scan_sites"] == 21
+    assert sum(metrics["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
+    resources.verify_inherited_writes({event.SOL: generated})
+    for changed in (
+        generated.replace("set_variable", "change_variable", 1),
+        generated + "\nset_variable = forged\n",
+        "forged = { " + generated + " }",
+        generated + "\nany_country = { always = yes }\n",
+    ):
+        with pytest.raises(ValueError, match="继承变量"):
+            resources.verify_inherited_writes({event.SOL: changed})
+
+
+def test_military_assistance_new_query_sites_stay_local_and_bounded():
+    from pdx import treaty_acceptance_opportunities as acceptance
+
+    inputs = acceptance.frozen_inputs()
+    program = acceptance.compile_program("military_assistance")
+    native = resources.pdx_metrics(inputs[program.source])
+    generated = resources.pdx_metrics(
+        acceptance.patch(inputs, consumer_program=program)[program.source]
+    )
+    assert native["object_scan_sites"] == 19
+    assert generated["object_scan_sites"] == 23
+    assert generated["persistent_write_sites"] == 0
+    assert sum(generated["object_scan_keys"].get(key, 0) for key in resources.WORLD_SCANS) == 0
+    assert resources.load()["limits"]["object_scan_sites"] == 2300 + 21 + 19 + 4

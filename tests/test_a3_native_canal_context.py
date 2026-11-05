@@ -63,8 +63,8 @@ def production():
 
 def test_real_production_context_ir_readers_and_roles(production):
     _, model, policies, instances, _, _ = production
-    assert len(instances) == 11
-    assert len({(item.source, item.consumer_field) for item in instances}) == 5
+    assert len(instances) == 17
+    assert len({(item.source, item.consumer_field) for item in instances}) == 8
     assert model.consumer_ir is not None
     for instance in instances:
         policy = policies[instance.source]
@@ -116,9 +116,9 @@ def test_independent_inventory_closes_exact_registered_consumers_only(production
         inventory, instances, native_sources=inputs, production_policies=policies
     )
     assert report["binding_issue_count"] == 0
-    assert report["counts"]["actual_covered"] == 5
-    assert report["denominator"] == 5
-    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 11
+    assert report["counts"]["actual_covered"] == 8
+    assert report["denominator"] == 8
+    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 17
 
 
 def test_actual_adapter_generation_preserves_complete_source_and_joint_numbers(production):
@@ -137,7 +137,7 @@ def test_actual_adapter_generation_preserves_complete_source_and_joint_numbers(p
     )
     consumers = metadata["consumers"]
     assert isinstance(consumers, list)
-    assert len(consumers) == 4
+    assert len(consumers) == 5
     for source, policy in policies:
         stripped = re.sub(
             r"(?m)^\s*# SITAI BEGIN information:[^\n]+\n.*?^\s*# SITAI END information:[^\n]+\n",
@@ -157,11 +157,13 @@ def test_actual_adapter_generation_preserves_complete_source_and_joint_numbers(p
         for field in policy.groups():
             name = ".".join(field)
             if source == canal.SOURCE:
-                base, expected = 10, 6.5
+                base, expected = (10, 6.5) if name in canal.FIELDS else (10, 8)
             elif source == native.CANDIDATES["decrease_payments"]:
                 base, expected = 10, 8.5
             elif source == native.CANDIDATES["join_power_bloc"]:
                 base, expected = 20, 17
+            elif source == native.CANDIDATES["da_knowledge_sharing"]:
+                base, expected = 10, 10
             else:
                 base, expected = 100, 113
             assert _native_number(base, _overlay(generated[source], name), facts) == pytest.approx(

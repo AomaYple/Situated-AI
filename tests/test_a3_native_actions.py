@@ -22,6 +22,7 @@ AUTONOMY = "da_increase_autonomy_of_self"
 PAYMENTS = "decrease_payments"
 BLOC = "join_power_bloc"
 BASES = {AUTONOMY: 100, PAYMENTS: 10, BLOC: 20}
+LEGACY_CANDIDATES = (AUTONOMY, PAYMENTS, BLOC)
 
 
 @pytest.fixture(scope="module")
@@ -38,7 +39,9 @@ def compiled(derived):
     inputs.update(actions.load_baseline()["texts"])
     words = frozenset(decision_adapters.reader_evidence(inputs))
     results = {}
-    for identity, source in actions.CANDIDATES.items():
+    # Knowledge sharing has separate conservative-unknown donor witnesses.
+    for identity in LEGACY_CANDIDATES:
+        source = actions.CANDIDATES[identity]
         rules = [
             {key: value for key, value in row.items() if key != "source"}
             for row in derived["rules"]
@@ -111,7 +114,7 @@ def test_independent_hand_calculations_match_reference_and_pdx(
 
 
 def test_foreign_country_and_owner_decoys_cannot_supply_actor_observations(compiled):
-    for identity in actions.CANDIDATES:
+    for identity in LEGACY_CANDIDATES:
         policy, generated, _, _ = compiled[identity]
         assert all(reader.scope == "root" and not reader.path for reader in policy.readers)
         values = dict.fromkeys(reader.key for reader in policy.readers)
@@ -132,7 +135,7 @@ def test_foreign_country_and_owner_decoys_cannot_supply_actor_observations(compi
 
 
 def test_complete_original_ordered_ast_and_all_other_action_fields_retained(compiled):
-    for identity in actions.CANDIDATES:
+    for identity in LEGACY_CANDIDATES:
         _, generated, native, _ = compiled[identity]
         stripped = re.sub(
             r"(?m)^\s*# SITAI BEGIN information:[^\n]+\n.*?^\s*# SITAI END information:[^\n]+\n",
@@ -154,7 +157,7 @@ def test_complete_original_ordered_ast_and_all_other_action_fields_retained(comp
 
 
 def test_player_disable_and_unknown_local_facts_keep_original_scores(compiled):
-    for identity in actions.CANDIDATES:
+    for identity in LEGACY_CANDIDATES:
         policy, generated, native, words = compiled[identity]
         values: dict[str, object] = {
             "liberty": 90,
@@ -186,9 +189,16 @@ def test_catalog_and_complete_source_contract_do_not_authorize_other_diplomatic_
     frozen = actions.load_baseline()
     actions.verify_inputs(frozen["texts"])
     catalog = actions.consumer_catalog()
-    assert set(catalog) == {AUTONOMY, PAYMENTS, BLOC}
-    assert len(derived["rules"]) == 7
-    assert set(derived["readers"]) == {"liberty", "war_defeat", "default", "net_surplus"}
+    assert set(catalog) == {*LEGACY_CANDIDATES, "da_knowledge_sharing"}
+    assert len(derived["rules"]) == 9
+    assert set(derived["readers"]) == {
+        "liberty",
+        "war_defeat",
+        "default",
+        "net_surplus",
+        "knowledge_donor_spread",
+        "knowledge_donor_population",
+    }
     assert all(row["scope_evidence_line"] == 118 for row in catalog.values())
     assert all(row["score_evidence_line"] == 140 for row in catalog.values())
     assert all(
@@ -198,7 +208,7 @@ def test_catalog_and_complete_source_contract_do_not_authorize_other_diplomatic_
         row["native_unit"] == "score" and row["operation"] == "multiply" for row in catalog.values()
     )
     assert all(row["target_binding"] == "unsupported_not_consumed" for row in catalog.values())
-    assert len({row["field"] for row in derived["rules"]}) == 3
+    assert len({row["field"] for row in derived["rules"]}) == 4
     # No loans boolean means neither ordinary low-debt borrowing nor an
     # unmeasured principal transfer is invented as an additional penalty.
     assert "loans" not in derived["readers"]

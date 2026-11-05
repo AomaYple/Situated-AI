@@ -38,6 +38,7 @@ from . import (
     migration_opportunities,
     mobilization_opportunities,
     native_action_opportunities,
+    native_decision_opportunities,
     observation_queries,
     production_inputs,
     subject_dependence_opportunities,
@@ -131,6 +132,7 @@ class AdapterSet:
     war_pressure_opportunities_sha256: str | None = None
     decree_opportunities_sha256: str | None = None
     famine_opportunities_sha256: str | None = None
+    native_decision_opportunities_sha256: str | None = None
 
 
 def writes(
@@ -230,6 +232,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     cooperation_digest = None
     migration_digest = None
     canal_digest = None
+    native_decision_digest = None
     decree_digest = None
     famine_digest = None
     native_action_digest = None
@@ -272,7 +275,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + b"\0generator:"
             + Path(import_blockade_opportunities.__file__).read_bytes()
         ).hexdigest()
-        acceptance_programs = (treaty_acceptance_opportunities.compile_program(),)
+        acceptance_programs = treaty_acceptance_opportunities.compile_programs()
         for name, expected in treaty_acceptance_opportunities.load()["sources"].items():
             if name in data["sources"] and data["sources"][name] != expected:
                 raise ValueError(f"条约接受与消费者完整源冲突：{name}")
@@ -393,6 +396,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ).hexdigest()
         for module, description in (
             (canal_opportunities, "运河调查实际行政与融资成本"),
+            (native_decision_opportunities, "赛事实际行政乘数承诺的有界风险"),
             (decree_opportunities, "同州紧急救济需要与保守成本"),
             (famine_opportunities, "真实饥荒暴露、救济收益与独立死亡成本"),
             (native_action_opportunities, "原生宗属外交提案"),
@@ -418,6 +422,13 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + canal_opportunities.FROZEN.read_bytes()
             + b"\0generator:"
             + Path(canal_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        native_decision_digest = hashlib.sha256(
+            native_decision_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + native_decision_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(native_decision_opportunities.__file__).read_bytes()
         ).hexdigest()
         native_action_digest = hashlib.sha256(
             native_action_opportunities.PARAMETERS.read_bytes()
@@ -483,6 +494,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         (row["source"], row["field"])
         for row in (
             *canal_opportunities.consumer_catalog(),
+            *native_decision_opportunities.consumer_catalog(),
             *decree_opportunities.consumer_catalog().values(),
             *famine_opportunities.consumer_catalog(),
             *native_action_opportunities.consumer_catalog().values(),
@@ -550,6 +562,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             else b""
         )
         + (b"\0canal_opportunities:" + canal_digest.encode("ascii") if canal_digest else b"")
+        + (
+            b"\0native_decision_opportunities:" + native_decision_digest.encode("ascii")
+            if native_decision_digest
+            else b""
+        )
         + (b"\0decree_opportunities:" + decree_digest.encode("ascii") if decree_digest else b"")
         + (b"\0famine_opportunities:" + famine_digest.encode("ascii") if famine_digest else b"")
         + (
@@ -860,6 +877,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         war_pressure_digest,
         decree_digest,
         famine_digest,
+        native_decision_digest,
     )
     writes(adapters)
     return adapters
@@ -1231,6 +1249,8 @@ def build(
         migration_opportunities.verify_inputs(inputs)
     if adapters.canal_opportunities_sha256 is not None:
         canal_opportunities.verify_inputs(inputs)
+    if adapters.native_decision_opportunities_sha256 is not None:
+        native_decision_opportunities.verify_inputs(inputs)
     if adapters.decree_opportunities_sha256 is not None:
         decree_opportunities.verify_inputs(inputs)
     if adapters.famine_opportunities_sha256 is not None:

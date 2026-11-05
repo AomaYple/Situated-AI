@@ -201,6 +201,22 @@ suez_canal_purchase = {
 			}
 			multiply = 0
 		}
+
+		# SITAI BEGIN information:suez_canal_purchase.ai_chance
+		# ACTION program_a60ba8d4e9ee1cc9 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a60ba8d4e9ee1cc9_canal_purchase_cashflow_negative
+			add = { value = 0
+				# canal_suez_purchase_deficit [geography]; 购买非玩家卖方土地时原版新增每周30000、120月开支；当前净总收支不足和既有亏损分档取强，独立于储备/净固定收入加分，不复制调查行政或通用违约成本。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { net_total_income >= 0 NOT = { net_total_income >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income < 0 } } } } }  } else = { add = -0.2 } } } }
+				# canal_suez_purchase_shortfall [geography]; 购买非玩家卖方土地时原版新增每周30000、120月开支；当前净总收支不足和既有亏损分档取强，独立于储备/净固定收入加分，不复制调查行政或通用违约成本。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { net_total_income >= 0 NOT = { net_total_income >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income < 30000 } } } } }  } else = { add = -0.1 } } } }
+			}
+			min = 0.8
+			max = 1
+		} }
+		# SITAI END information:suez_canal_purchase.ai_chance
 	}
 }
 
@@ -408,5 +424,21 @@ panama_canal_purchase = {
 			}
 			multiply = 0
 		}
+
+		# SITAI BEGIN information:panama_canal_purchase.ai_chance
+		# ACTION program_5f2a92bbdab5e732 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5f2a92bbdab5e732_canal_purchase_cashflow_negative
+			add = { value = 0
+				# canal_panama_purchase_deficit [geography]; 购买非玩家卖方土地时原版新增每周30000、120月开支；当前净总收支不足和既有亏损分档取强，独立于储备/净固定收入加分，不复制调查行政或通用违约成本。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { net_total_income >= 0 NOT = { net_total_income >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income < 0 } } } } }  } else = { add = -0.2 } } } }
+				# canal_panama_purchase_shortfall [geography]; 购买非玩家卖方土地时原版新增每周30000、120月开支；当前净总收支不足和既有亏损分档取强，独立于储备/净固定收入加分，不复制调查行政或通用违约成本。
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { net_total_income >= 0 NOT = { net_total_income >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income < 30000 } } } } }  } else = { add = -0.1 } } } }
+			}
+			min = 0.8
+			max = 1
+		} }
+		# SITAI END information:panama_canal_purchase.ai_chance
 	}
 }

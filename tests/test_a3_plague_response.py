@@ -279,7 +279,14 @@ def test_fixed_query_readers_contexts_and_current_installation_proof(production)
         assert compiled.expression == event.render_query(query)
         assert compiled.local_collections == ("owned_states",)
         assert compiled.world_scans == 0
-        assert set(dict(compiled.source_hashes)) == set(inputs)
+        assert dict(compiled.source_hashes) == {
+            source: hashlib.sha256(inputs[source].encode()).hexdigest()
+            for source in event.LEGACY_SOURCES
+        }
+        # SOL's later evidence does not expand the older epidemic query's
+        # permissions or make its fifteen-source contract depend on that family.
+        legacy = {source: inputs[source] for source in event.LEGACY_SOURCES}
+        assert observation_queries.compile_query(query, legacy) == compiled
     for plan in plans:
         assert plan.evaluation_context().auxiliary_scopes == ()
         assert len(plan.readers()) == 6

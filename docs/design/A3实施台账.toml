@@ -8,6 +8,20 @@ freeze = "2026-11-05 / Victoria 3 1.14.5 / A3-0 initial-direction-freeze"
 
 # 精确业务补盘追加；保持原82项，不以批量保留或已存在接线签完成。
 [[obligations]]
+id = "B05.5.7"
+parent = "B05.5"
+title = "奥林匹克复兴决议的行政承诺与产出规模暴露"
+status = "implemented"
+question = "原版只判断行政余额大于零，未区分913天行政乘数承诺下的薄余额及高产出暴露；如何有限表达风险而不改变原版资格与正分？"
+acceptance = "精确revive_olympic_games_decision.ai_chance/country ROOT；薄余额基础档不依赖产出，余额与高产出强档同因择强；余额未知有真实本国锚时保守成本、产出未知退低档；完整保留原5分/战争与博弈零/资格/收益成本/执行及全部同源决议，独立手算、IR/PDX和完整当前来源保护通过。"
+source_paths = ["src/pdx/native_decision_opportunities.py", "mod/decisions/native_decision_opportunities.toml", "tests/test_a3_olympic.py"]
+consumer_investigation = "common/decisions/00_decisions.txt revive_olympic_games_decision.ai_chance，country ROOT由000_decisions_help.txt证明；04_decision_modifiers.txt实际声望+100及行政乘数-0.1，event_values.txt short_modifier_time=913；produced_bureaucracy精确数值getter从原运河及原算术取证。"
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/native_decision_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "b393af20af773509b3106ad63f819eae07e82d5c1545c9696a3ecda5f2390ec3"}, {"role" = "consumer", "path" = "src/pdx/native_decision_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "b393af20af773509b3106ad63f819eae07e82d5c1545c9696a3ecda5f2390ec3"}, {"role" = "witness", "path" = "tests/test_a3_olympic.py", "kind" = "python_symbol", "identity" = "test_hand_calculated_overlay_matches_reference_and_actual_pdx", "sha256" = "43825e1b4af26cf9b741ede6e1cbf3a2309d8ac0885cada85e554cb2f9ef1849"}, {"role" = "witness", "path" = "tests/test_a3_olympic.py", "kind" = "python_symbol", "identity" = "test_full_parent_siblings_execution_and_disabled_output_preserved", "sha256" = "43825e1b4af26cf9b741ede6e1cbf3a2309d8ac0885cada85e554cb2f9ef1849"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
+
+[[obligations]]
 id = "B05.5.5"
 parent = "B05.5"
 title = "印度饥荒三个按钮的救济、铁路与死亡取舍"
@@ -25,28 +39,57 @@ rationale = "仅关闭三项精确饥荒按钮的实现义务；真实效果与�
 id = "B05.5.6"
 parent = "B05.5"
 title = "八个自然灾害事件的十六选项完整处境政策"
-status = "in_progress"
+status = "implemented"
 question = "自然灾害1至8事件未声明ai_chance，救灾效果、金额尺度及经常费用期限却不同，是否可加入完整显式处境选择？"
 acceptance = "逐事件country ROOT/实际AI调用与保存州身份取证；全16选项定义有意显式政策，不冒充未知缺省概率等价；普通/巨灾/农业及Krakatoa分支分别核对真实效果和913/1825日费用，有正反、未知、尾部、玩家、关闭、参考/PDX见证。"
 source_paths = ["src/pdx/event_opportunities.py", "src/pdx/situated/vanilla_inventory.py", "mod/decisions/event_opportunities.toml"]
 consumer_investigation = "events/natural_disasters_events.txt natural_disaster_events.1–.8全部成对选项；原实际.6条件为coastal+earthquake，不按名称改资格。"
-existing_state = "八个完整事件十六选项已接入共享EventProgram/ScalarProgram、各自保存州及真实经常费用；独立审查与生成模型/PDX见证已通过。完整原版审计仍不能解析事件option物理路径，必须补齐精确来源保护证明后才能签完整实现。"
-gap = "缺少事件option[NAME].ai_chance的当前物理声明与完整生产来源保护证明；不得以21个coverage接线、标准包或局部AST恢复代签完整审计出口。"
-evidence = []
-
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "compile_programs", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "consumer", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "witness", "path" = "tests/test_a3_natural_disasters.py", "kind" = "python_symbol", "identity" = "test_complete_pairs_hand_computed_numeric_outputs", "sha256" = "e6f4bae91a6604b2eb23ff157f0970b2bbe673d7d458bf8e1b8c22fca5596d4b"}, {"role" = "witness", "path" = "tests/test_a3_natural_disasters.py", "kind" = "python_symbol", "identity" = "test_all_original_text_and_complete_effect_ast_restored_exactly", "sha256" = "e6f4bae91a6604b2eb23ff157f0970b2bbe673d7d458bf8e1b8c22fca5596d4b"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B09.3.2"
 parent = "B09.3"
 title = "科技共享捐助方的真实传播机会成本"
-status = "pending"
+status = "implemented"
 question = "da_knowledge_sharing提案仅1+目标rank，捐助方tech_spread -0.10与受方+0.25是否遗漏本国传播弱势的独立机会成本？"
 acceptance = "原版传播>-0.25资格及50影响力成本不改；精确ROOT/目标/传播getter权限先证，已合法但传播弱势与充裕的反事实独立；排除影响力配额同因重复，实际IR/PDX/未知/关闭/玩家及完整尾部保护。"
 source_paths = ["src/pdx/native_action_opportunities.py", "src/pdx/decision_interfaces.py", "src/pdx/situated/compiler.py"]
-consumer_investigation = "外交业务审计的da_knowledge_sharing.ai.propose_score及其实际source/target传播modifier；现只调查，不授权借用未证目标别名。"
-existing_state = "原资格已经防止极弱传播捐助；提案优先尚不区分仍合法范围内传播代价。"
-gap = "新增判断须独立于既有资格，无法确认getter时保持unknown，不泛称引擎不支持。"
-evidence = []
+consumer_investigation = "common/diplomatic_actions/40_subjects_knowledge_sharing.txt da_knowledge_sharing.ai.propose_score；精确country ROOT捐助方modifier:country_tech_spread_mult，原first_modifier=-0.10、second_modifier=0.25、first_country承担50影响力及12月期限。"
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/native_action_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "084b00484d3f7f0a5f78b5c47fe39db55f39768490b0cd4801c8f998705667ef"}, {"role" = "consumer", "path" = "src/pdx/native_action_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "084b00484d3f7f0a5f78b5c47fe39db55f39768490b0cd4801c8f998705667ef"}, {"role" = "witness", "path" = "tests/test_a3_knowledge_sharing.py", "kind" = "python_symbol", "identity" = "test_independent_hand_multipliers_match_real_pdx_and_shared_ir", "sha256" = "b3e8508b49b7935751f47b03af8c157399770373d01e2843c7fb82ee4da5bdcf"}, {"role" = "witness", "path" = "tests/test_a3_knowledge_sharing.py", "kind" = "python_symbol", "identity" = "test_full_ordered_native_ast_pact_eligibility_target_rank_and_request_preserved", "sha256" = "b3e8508b49b7935751f47b03af8c157399770373d01e2843c7fb82ee4da5bdcf"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
+
+[[obligations]]
+id = "B08.3.4"
+parent = "B08.3"
+title = "苏伊士运河购买的真实持续现金流代价"
+status = "implemented"
+question = "原储备大于1500万可加分，但该路径未区分当前现金流不足与亏损；本次购买每周30000、120月承诺是否应形成独立有界风险？"
+acceptance = "精确suez_canal_purchase.ai_chance/country ROOT；本次net_total_income不足30000和负值同因择强，未知费用以已知本国实体锚保守处理；保留储备/净固定收入加分、资格、战争终结零、全部原效果与玩家卖方异步接受拒绝；实际IR/PDX、完整源及标准包证明。"
+source_paths = ["src/pdx/canal_opportunities.py", "mod/decisions/canal_opportunities.toml", "tests/test_a3_canal_purchase.py"]
+consumer_investigation = "common/decisions/canal_decisions.txt suez_canal_purchase.ai_chance；common/static_modifiers/content_1_modifiers.txt suez_purchase实际每周30000，非玩家卖方分支挂接120月，玩家卖方由原canal_events继续异步处理。"
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "consumer", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "witness", "path" = "tests/test_a3_canal_purchase.py", "kind" = "python_symbol", "identity" = "test_purchase_cashflow_hand_numbers_and_actual_pdx_preserve_native_twenty", "sha256" = "8827993db576d8c9a9a037b0a22f8c5fa910972858350ac97fada98944cb54a2"}, {"role" = "witness", "path" = "tests/test_a3_canal_purchase.py", "kind" = "python_symbol", "identity" = "test_each_purchase_writes_only_its_own_exact_consumer", "sha256" = "8827993db576d8c9a9a037b0a22f8c5fa910972858350ac97fada98944cb54a2"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
+
+[[obligations]]
+id = "B08.3.5"
+parent = "B08.3"
+title = "巴拿马运河购买的真实持续现金流代价"
+status = "implemented"
+question = "巴拿马购买独立于勘测的每周30000、120月实际承诺，是否在保留原储备/净固定收入政策下区分当前承受压力？"
+acceptance = "精确panama_canal_purchase.ai_chance及该运河原地理/目标身份，独立PDX数值与阈值两侧；同因择强、未知/关闭/玩家回退、战争零与完整资格/变量/异步卖方路径保护，实际完整生成和包核对。"
+source_paths = ["src/pdx/canal_opportunities.py", "mod/decisions/canal_opportunities.toml", "tests/test_a3_canal_purchase.py"]
+consumer_investigation = "common/decisions/canal_decisions.txt panama_canal_purchase.ai_chance；content_1_modifiers.txt panama_purchase实际费用30000/周120月；完整源与苏伊士分别定位，不借用其候选身份。"
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "consumer", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "witness", "path" = "tests/test_a3_canal_purchase.py", "kind" = "python_symbol", "identity" = "test_purchase_cashflow_hand_numbers_and_actual_pdx_preserve_native_twenty", "sha256" = "8827993db576d8c9a9a037b0a22f8c5fa910972858350ac97fada98944cb54a2"}, {"role" = "witness", "path" = "tests/test_a3_canal_purchase.py", "kind" = "python_symbol", "identity" = "test_each_purchase_writes_only_its_own_exact_consumer", "sha256" = "8827993db576d8c9a9a037b0a22f8c5fa910972858350ac97fada98944cb54a2"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B09.2.2"
@@ -66,82 +109,88 @@ evidence = []
 id = "B05.5.4"
 parent = "B05.5"
 title = "紧急救济政令的真实灾害需要与承受代价"
-status = "pending"
+status = "implemented"
 question = "紧急救济已有州灾害资格，但平均SOL不低于期望时AI权重仍为零，是否遗漏独立灾害需要？"
 acceptance = "锁定政令州ROOT与owner上下文，在共享程序中让真实灾害需要独立参与，相关成本联合；保留原资格、效果、rank缩放成本和政治尾部；有独立参考、实际PDX、对象隔离、未知及关闭见证。"
 source_paths = ["src/pdx/decision_adapters.py", "src/pdx/decision_interfaces.py", "src/pdx/situated/compiler.py"]
 consumer_investigation = "common/decrees/00_decree.txt:179 decree_emergency_relief.ai_weight；起始value0不是拒绝尾零；原政治multiply0.5仍执行。"
-existing_state = "完整原版资格含饥荒/受创/收成/饥饿人口，但唯一add100依赖average_sol<average_expected_sol。"
-gap = "实际灾害与平均生活差不等价；精确政令上下文、消费者角色及新需要尚须实施。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/decree_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "1e16610ffc9a7b3639e643017cb10391e047f742a1fb11837f13249d26e143a8"}, {"role" = "consumer", "path" = "src/pdx/decree_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "1e16610ffc9a7b3639e643017cb10391e047f742a1fb11837f13249d26e143a8"}, {"role" = "witness", "path" = "tests/test_a3_decree_relief.py", "kind" = "python_symbol", "identity" = "test_hand_computed_native_sol_disaster_cost_unknown_and_tail", "sha256" = "719737bfe088399e92ca08397f3144d1cd7a9b94b1e2142abc4a89aaa823c137"}, {"role" = "witness", "path" = "tests/test_a3_decree_relief.py", "kind" = "python_symbol", "identity" = "test_full_original_tokens_eligibility_effect_cost_and_order_preserved", "sha256" = "719737bfe088399e92ca08397f3144d1cd7a9b94b1e2142abc4a89aaa823c137"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B10.4.2"
 parent = "B10.4"
 title = "本国多场低支持战争与新增扩张承诺"
-status = "pending"
+status = "implemented"
 question = "本国至少两场各自低战争支持的真实负担，是否遗漏于新增征服目标机会成本？"
 acceptance = "本国战争集合、逐战本国支持过滤后count、阈值两侧和缺失三值精确；有界成本进入既有征服消费者，与原战败恢复同因取强、融资独立，保留原版尾部和对象资格。"
 source_paths = ["src/pdx/observation_queries.py", "src/pdx/situated/pdx_eval.py", "src/pdx/decision_adapters.py"]
 consumer_investigation = "原版any_scope_war/has_war_support(target=root/owner)及count语法具有真实调用和文档，不能泛称未暴露。"
-existing_state = "现有at_war/战败/军力不是本国过滤后的低支持战争数量。"
-gap = "新增有限查询与一个真实新增扩张承诺的共享因果成本，不伪造和平writer或胜率。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/war_pressure_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "edec29092ec5b252f8772689a5e986f5c468a4de7e5007f137e767e6535174c0"}, {"role" = "consumer", "path" = "src/pdx/decision_adapters.py", "kind" = "python_symbol", "identity" = "build", "sha256" = "504760a19940a830a23e4b3483a7b202f47b1dd969758c5b068bdd04a1ba1cef"}, {"role" = "witness", "path" = "tests/test_a3_war_pressure.py", "kind" = "python_symbol", "identity" = "test_hand_calculated_cost_same_war_cause_strongest_and_independent_financing", "sha256" = "a3a4d3546ae1dcbd38cd1e1cf9a5dd41fa02989ba30eb31d59763bfd94863ee4"}, {"role" = "witness", "path" = "tests/test_a3_war_pressure.py", "kind" = "python_symbol", "identity" = "test_full_native_ordered_ast_zero_disable_and_own_collection_preservation", "sha256" = "a3a4d3546ae1dcbd38cd1e1cf9a5dd41fa02989ba30eb31d59763bfd94863ee4"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
 
 # 2026-11-05 C1补盘新增义务；独立common8856面不覆盖events全部AI选项。
 # 不删除初始方向项、不将pending改为完成；证据详见tools/out/a3/scope-disposition-audit.md。
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B12.4.2"
 parent = "B12.4"
 title = "自主外交提案独立融资与恢复代价"
-status = "pending"
+status = "implemented"
 question = "da_increase_autonomy_of_self.ai.propose_score原版100及匈牙利JE倍率之外，是否遗漏本国融资与已观察恢复成本？"
 acceptance = "证明外交提案ROOT及目标身份，新增有界独立成本并保留possible/will_propose/accept/effects；同目标正反、未知、玩家、关闭、原版尾部与真实PDX见证。"
 source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
 consumer_investigation = "原件common/diplomatic_actions/38_subjects_increase_autonomy.txt:352，da_increase_autonomy_of_self.ai.propose_score；独立于已有wargoal_scores.increase_autonomy风险。"
-existing_state = "原版提案分100，仅特定匈牙利JE乘3；现有A3自主战争目标成本不能代替外交行动提案。"
-gap = "已确认合法数值面存在、原版该分量遗漏融资和恢复观察；需精确外交数值适配/上下文合同，不能复用错误target或改资格。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/native_action_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "084b00484d3f7f0a5f78b5c47fe39db55f39768490b0cd4801c8f998705667ef"}, {"role" = "consumer", "path" = "src/pdx/native_action_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "084b00484d3f7f0a5f78b5c47fe39db55f39768490b0cd4801c8f998705667ef"}, {"role" = "witness", "path" = "tests/test_a3_native_actions.py", "kind" = "python_symbol", "identity" = "test_independent_hand_calculations_match_reference_and_pdx", "sha256" = "83fe14ee0a40a8bd2c8716b7386d8ee52b6ff374a835237b84cec98041c7e6a4"}, {"role" = "witness", "path" = "tests/test_a3_native_actions.py", "kind" = "python_symbol", "identity" = "test_complete_original_ordered_ast_and_all_other_action_fields_retained", "sha256" = "83fe14ee0a40a8bd2c8716b7386d8ee52b6ff374a835237b84cec98041c7e6a4"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B12.2.2"
 parent = "B12.2"
 title = "降低附属付款的宗主机会成本"
-status = "pending"
+status = "implemented"
 question = "decrease_payments.ai.propose_score固定10，宗主融资压力应如何与保护关系及附属自主需要共同参与？"
 acceptance = "精确宗主ROOT和目标附属；原关系/保护/liberty资格不改，独立融资机会成本有界且未知保守；实际参考/PDX、对象互换、退出与尾部见证。"
 source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
 consumer_investigation = "common/diplomatic_actions/33_subjects_decrease_payments.txt:79，decrease_payments.ai.propose_score；现原版will_propose已处理关系/态度/liberty/策略。"
-existing_state = "原版提案分固定10，无本国收支/违约分量；资格和减免支付效果仍由原版管理。"
-gap = "新增本国已观察融资的独立有界机会成本，不能把付款宽免当创造收入；需新精确外交适配。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/native_action_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "084b00484d3f7f0a5f78b5c47fe39db55f39768490b0cd4801c8f998705667ef"}, {"role" = "consumer", "path" = "src/pdx/native_action_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "084b00484d3f7f0a5f78b5c47fe39db55f39768490b0cd4801c8f998705667ef"}, {"role" = "witness", "path" = "tests/test_a3_native_actions.py", "kind" = "python_symbol", "identity" = "test_independent_hand_calculations_match_reference_and_pdx", "sha256" = "83fe14ee0a40a8bd2c8716b7386d8ee52b6ff374a835237b84cec98041c7e6a4"}, {"role" = "witness", "path" = "tests/test_a3_native_actions.py", "kind" = "python_symbol", "identity" = "test_complete_original_ordered_ast_and_all_other_action_fields_retained", "sha256" = "83fe14ee0a40a8bd2c8716b7386d8ee52b6ff374a835237b84cec98041c7e6a4"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B08.3.2"
 parent = "B08.3"
 title = "苏伊士运河勘测的持续承诺代价"
-status = "pending"
+status = "implemented"
 question = "suez_survey_decision.ai_chance仅以produced_bureaucracy总量及原版战争/策略条件判断，是否应另计净官僚和融资负担？"
 acceptance = "保留原版总官僚/地理/利益/科技和终结零，仅在真实合法决议数值端表达净官僚/融资成本；局部未知、玩家、关闭、原版效果及PDX正反见证。"
 source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
 consumer_investigation = "common/decisions/canal_decisions.txt，suez_survey_decision.ai_chance；produced_bureaucracy>5000不等于可用bureaucracy充足。"
-existing_state = "原版已保护科技/利益/地理、孤立主义、战争和博弈状态；未观察净官僚、违约和收支。"
-gap = "精确决议ai_chance上下文/单位适配与独立持续承诺成本；不授予运河建成或购买资格。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "consumer", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "witness", "path" = "tests/test_a3_canals.py", "kind" = "python_symbol", "identity" = "test_independent_net_cost_manual_reference_and_native_pdx", "sha256" = "d85a0480988ca54cbd0428c2bb8b046a3dce144df8eba5da4611588706e8934d"}, {"role" = "witness", "path" = "tests/test_a3_canals.py", "kind" = "python_symbol", "identity" = "test_native_zero_and_terminal_zero_are_never_overridden", "sha256" = "d85a0480988ca54cbd0428c2bb8b046a3dce144df8eba5da4611588706e8934d"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B08.3.3"
 parent = "B08.3"
 title = "巴拿马运河勘测的持续承诺代价"
-status = "pending"
+status = "implemented"
 question = "panama_survey_decision.ai_chance的独立候选对象是否遗漏净官僚和融资负担？"
 acceptance = "独立核对巴拿马原版资格、零与效果；同一produced_bureaucracy下仅改变净官僚/融资应改变有界成本；对象隔离、未知、关闭及真实PDX见证。"
 source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/compiler.py", "src/pdx/decision_adapters.py"]
 consumer_investigation = "common/decisions/canal_decisions.txt，panama_survey_decision.ai_chance；不得仅用苏伊士样例代签第二候选。"
-existing_state = "原版已有总官僚阈值、战争和孤立主义零；没有净融资/可用官僚独立分量。"
-gap = "在共享参数化实现中保留精确对象身份和各自资格；新增成本，不复制通用海外倍率。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "consumer", "path" = "src/pdx/canal_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "92cd87dc84673b61d12c1bca698b06d96bd0e1ea0c4a35c1605eed482f1d678d"}, {"role" = "witness", "path" = "tests/test_a3_canals.py", "kind" = "python_symbol", "identity" = "test_independent_net_cost_manual_reference_and_native_pdx", "sha256" = "d85a0480988ca54cbd0428c2bb8b046a3dce144df8eba5da4611588706e8934d"}, {"role" = "witness", "path" = "tests/test_a3_canals.py", "kind" = "python_symbol", "identity" = "test_native_zero_and_terminal_zero_are_never_overridden", "sha256" = "d85a0480988ca54cbd0428c2bb8b046a3dce144df8eba5da4611588706e8934d"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B05.5.2"
@@ -160,27 +209,29 @@ evidence = []
 id = "B05.5.3"
 parent = "B05.5"
 title = "公共医疗改革事件的处境与政治成本"
-status = "pending"
+status = "implemented"
 question = "healthcare_laws.5的两个50基权重只在忽视反对者分支按IG approval扣分，是否遗漏真实支持/反对规模及社会受益？"
 acceptance = "先证country_event内option.ai_chance的实际调用ROOT与base/modifier语法，保留转法取消/已存IG/随机效果资格；只用可证事实的独立收益/政治成本，不把law候选当已生效制度。"
 source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/decision_adapters.py", "src/pdx/situated/compiler.py"]
 consumer_investigation = "events/law_events/healthcare_laws.txt，healthcare_laws.5 options healthcare_laws.5.a/.b，country_event、placement ROOT，ai_chance行413/448。"
-existing_state = "原版触发限当前转公共医疗、现慈善/私保、有非边缘反对IG；a按该IG approval<-5扣25，b固定50。"
-gap = "有实质改革/政治取舍的精确事件选项候选，接口语义及新增因果仍待确认；不能以现law适配器代签。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "compile_programs", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "consumer", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "witness", "path" = "tests/test_a3_event_opportunities.py", "kind" = "python_symbol", "identity" = "test_shared_program_and_actual_weight_ast_have_handwritten_tradeoffs", "sha256" = "181d90b3e595bc2c3fc8cc15dd9560d8bbef7c2ae60e202551d9bd993308a46f"}, {"role" = "witness", "path" = "tests/test_a3_event_opportunities.py", "kind" = "python_symbol", "identity" = "test_complete_native_ast_preserved_and_only_one_suffix_per_exact_option", "sha256" = "181d90b3e595bc2c3fc8cc15dd9560d8bbef7c2ae60e202551d9bd993308a46f"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B06.3.2"
 parent = "B06.3"
 title = "疫情响应事件的健康与经济代价"
-status = "pending"
+status = "implemented"
 question = "plague.5封锁/措施/无响应三选项无显式ai_chance，默认措施选项；能否合法表达实际疫情暴露与经济成本的处境取舍？"
 acceptance = "证明合法新增AIWeight槽、真实AI调用及country ROOT，显式三选项政策以独立设计和原版事实验收；不声称等价于未证的缺省权重。保留疾病事件、6月修正、冷却、原作用域和实际响应标记可并存的边界；未知必要授权保持未完成。"
 source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/decision_adapters.py", "src/pdx/situated/compiler.py"]
 consumer_investigation = "events/spanish_flu_events.txt plague.5 country_event placement ROOT，options plague.5.a/.b/.c；由spanish_flu_response触发，b为default。"
-existing_state = "三选项实际设置plague_lockdown/plague_measures及患病州6月修正，c移除措施；现无显式AI权重。"
-gap = "真实健康/经济取舍需纳入调查，不因缺ai_chance静默遗漏；接口和可读成本未证前保持待确认。"
-evidence = []
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "compile_programs", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "consumer", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "witness", "path" = "tests/test_a3_plague_response.py", "kind" = "python_symbol", "identity" = "test_all_three_handwritten_tradeoffs_match_shared_program_and_actual_native_ast", "sha256" = "b2bac17b67d28e8b28bb3ffb3ab52ea99e2135d5cbb61d6cb62e7eb47a92cb0a"}, {"role" = "witness", "path" = "tests/test_a3_plague_response.py", "kind" = "python_symbol", "identity" = "test_full_original_text_and_all_random_effects_and_scope_writes_are_byte_preserved", "sha256" = "b2bac17b67d28e8b28bb3ffb3ab52ea99e2135d5cbb61d6cb62e7eb47a92cb0a"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
 
 [[obligations]]
 id = "B01.1.1"
@@ -1144,3 +1195,83 @@ existing_state = "新增四条规则进入统一标量生产链及5902条绑定�
 gap = "无需求不发奖励；高价未知仍保留基础缺口，已知独立成本不被需求遮蔽；不预测利润、不创造资格、不覆盖玩家路径。"
 evidence = [{"role" = "source", "path" = "src/pdx/building_opportunities.py", "kind" = "python_symbol", "identity" = "derive", "sha256" = "97cd48a3f69daa41b43ae88948d487a6b98739219625b8362e49aea0f943dcd0"}, {"role" = "consumer", "path" = "src/pdx/building_opportunities.py", "kind" = "python_symbol", "identity" = "_configuration", "sha256" = "97cd48a3f69daa41b43ae88948d487a6b98739219625b8362e49aea0f943dcd0"}, {"role" = "witness", "path" = "tests/test_a3_art_academy.py", "kind" = "python_symbol", "identity" = "test_hand_numbers_match_actual_production_pdx_with_independent_owner_facts", "sha256" = "46db93a3632326100b55eee5a0419b59cd855182b85ae96b6e5603ee5e7a0eeb"}, {"role" = "witness", "path" = "tests/test_a3_art_academy.py", "kind" = "python_symbol", "identity" = "test_native_full_definition_order_romanticism_metternich_and_other_buildings_preserved", "sha256" = "46db93a3632326100b55eee5a0419b59cd855182b85ae96b6e5603ee5e7a0eeb"}]
 rationale = "限定关闭艺术学院一个精确消费者的新增需要；83项局部见证与独立审查、统一生成、模型集成及完整原版当前字段证明已核对。集中回归228通过1失败的材料未知期待另经独立配方调查修复，修后整文件15通过；不将其冒充整套全绿或B02/C1/A3完成。"
+
+[[obligations]]
+id = "B06.2.2"
+parent = "B06.2"
+title = "首都面包骚乱两选项的州福利、激进化与独立持续费用"
+status = "implemented"
+question = "sol_events.6 的救济与放任如何按真实保存州收益和国家持续费用作完整成对取舍？"
+acceptance = "两精确country ROOT选项使用同一EventProgram；存在/归属/人口只约束州收益，不能抹去国家1825天持续成本；已知非违约仅返还一部分成本；原JE随机、保存州、变量、效果、玩家与关闭完整保留，参考/实际PDX与当前整包来源证明通过。"
+source_paths = ["src/pdx/event_opportunities.py", "mod/decisions/event_opportunities.toml", "tests/test_a3_sol6.py"]
+consumer_investigation = "events/standard_of_living_events.txt sol_events.6.a/.b；je_sol_1经crises country group实际monthly调用，starvation_palliative_modifier及normal_modifier_time为真实费用与1825日期限。"
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "compile_programs", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "consumer", "path" = "src/pdx/event_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "d4038a3c41ac4659b283a7ea6b480acdfd6e8797917643d60988b56be8f092c0"}, {"role" = "witness", "path" = "tests/test_a3_sol6.py", "kind" = "python_symbol", "identity" = "test_missing_state_benefit_preserves_independent_country_expense", "sha256" = "1a5ed4c594bfe5d3c76e1e654d6dfb0e543cd8ac97263d9454ca2b304b6bec1d"}, {"role" = "witness", "path" = "tests/test_a3_sol6.py", "kind" = "python_symbol", "identity" = "test_every_overlay_removal_restores_native_and_exact_player_effects", "sha256" = "1a5ed4c594bfe5d3c76e1e654d6dfb0e543cd8ac97263d9454ca2b304b6bec1d"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
+
+[[obligations]]
+id = "B09.2.3"
+parent = "B09.2"
+title = "军事援助首次source承诺的独立融资风险"
+status = "implemented"
+question = "ROOT作为军事援助source新增军需加价时，是否须与免费target及既有承诺区别？"
+acceptance = "精确military_assistance.ai.inherent_accept_score；ROOT/source/target/新签生命周期及本国既有source article查询先证；有限正总军费仅作暴露代理，default -10优先deficit -6，target 0；原拒绝、尾部、真实效果及读取依据完整保护，双程序IR/PDX与当前完整源通过。"
+source_paths = ["src/pdx/treaty_acceptance_opportunities.py", "tests/test_a3_military_assistance.py", "tests/test_a3_acceptance_native_proof.py"]
+consumer_investigation = "common/treaty_articles/12_military_assistance.txt；source军需乘数+0.10与target -0.1，维护25影响力不重算；条约帮助与同inherent阶段军费getter证据独立冻结。"
+existing_state = "精确消费者已接统一生产IR/PDX；本批541项集中定向检查、108项完整候选保护检查、当前完整原版审计、生成逐字节核对及实际标准包均通过。具体事实与失败修复见A3结果收据。"
+gap = "该精确工作项没有待实现缺口；业务覆盖、同方向其余义务及其他军事接受面不由本项代签。静态证据不证明引擎行为、长期平衡或运行性能。"
+evidence = [{"role" = "source", "path" = "src/pdx/treaty_acceptance_opportunities.py", "kind" = "python_symbol", "identity" = "compile_program", "sha256" = "e6426b9f9e651f77aab9fdd3a03fe3155c99be174dda346464fe9f7f222d57f0"}, {"role" = "consumer", "path" = "src/pdx/treaty_acceptance_opportunities.py", "kind" = "python_symbol", "identity" = "consumer_catalog", "sha256" = "e6426b9f9e651f77aab9fdd3a03fe3155c99be174dda346464fe9f7f222d57f0"}, {"role" = "witness", "path" = "tests/test_a3_military_assistance.py", "kind" = "python_symbol", "identity" = "test_independent_truth_table_and_actual_pdx", "sha256" = "8f7e87fbbe102135a89d4bd9085ccb4dd72558f4a22c4dc8f43614f0c981066a"}, {"role" = "witness", "path" = "tests/test_a3_military_assistance.py", "kind" = "python_symbol", "identity" = "test_native_whole_source_tail_qualification_and_effects_preserved", "sha256" = "8f7e87fbbe102135a89d4bd9085ccb4dd72558f4a22c4dc8f43614f0c981066a"}, {"role" = "witness", "path" = "tests/test_a3_candidate_integration.py", "kind" = "python_symbol", "identity" = "test_complete_production_event_programs_have_no_unproven_projection", "sha256" = "c3a815aba31e8b78ca062e4ad6e765142fed2bc118eddb7c131489eb8913640b"}]
+rationale = "只关闭本项列出的精确生产实现：独立算术与实际PDX、对象/未知/玩家/关闭、完整原版资格效果与尾部保护及当前候选出口已验证。不关闭方向容器、C1业务全集或整个A3。"
+
+[[obligations]]
+id = "B01.4.2"
+parent = "B01.4"
+title = "海地还款按钮的一次支出与现金缓冲"
+status = "pending"
+question = "同样可支付500000，执行后储备接近零与有充足现金是否应具有不同倾向？"
+acceptance = "精确je_haitian_debt_payment_button.ai_chance/ROOT；真实500000即时支出和500每周减负分别取证；已知储备薄缓冲有界正倍率成本，不改原资格；四档JE与法国侧真实效果保留，未知、玩家、关闭、完整源和PDX反事实通过。"
+source_paths = ["src/pdx/decision_adapters.py", "src/pdx/decision_interfaces.py", "src/pdx/situated/vanilla_inventory.py"]
+consumer_investigation = "common/scripted_buttons/00_hispaniola_buttons.txt:62；scripted_buttons.md country ROOT；01_hispaniola JE及agitators_2四档modifier证明。"
+existing_state = "已确认原50评分不读付款后现金缓冲，当前无该消费者生产writer。"
+gap = "1000周只是静态费用比，不预测偿还回本；不能把JE modifier当country modifier或猜法国侧额外分支。"
+evidence = []
+
+[[obligations]]
+id = "B06.4.2"
+parent = "B06.4"
+title = "南美移民按钮的五年权威与影响力承诺"
+status = "pending"
+question = "启动前是否应区分固定100权威费用与影响力乘数负担，而不是事后单选事件才判断？"
+acceptance = "精确southamerica_migration_button.ai_chance/country ROOT；两个资源不同因、分别有单位和合法getter；保留基础机会与有界成本，未知不抹已知成本；不新增世界扫描，不借尚未选出的目标州；原三JE、迁移先发生及五年费用完整保护，参考/实际PDX通过。"
+source_paths = ["src/pdx/decision_adapters.py", "src/pdx/decision_interfaces.py", "src/pdx/situated/vanilla_inventory.py"]
+consumer_investigation = "common/scripted_buttons/southamerica_migration_button.txt:92；sa_migration.1 immediate先创建迁移、唯一option加sa_migration_cost；实际影响力-0.25及权威固定100，normal_modifier_time1825。"
+existing_state = "已确认原50不读两项资源承诺；authority现有精确getter可用，influence须补同国家外交AI读取依据。"
+gap = "不将0.25乘当前余额当实际损失；produced_influence的本地化出现不证明数值读取；单选事件不是是否迁移的消费者。"
+evidence = []
+
+[[obligations]]
+id = "B02.1.2"
+parent = "B02.1"
+title = "北海道农业开发启动的有界持续承诺"
+status = "pending"
+question = "按钮固定10如何表达所有后续真实方案都承担五年费用而不猜尚未选中的方案？"
+acceptance = "精确button_je_taming_the_north_agriculture_potentials.ai_chance；按实际候选均有正持续费用的有界代理处理融资，不把tooltip medium当确定费用；保留学院/次数/五年冷却/变量/JE资格，独立参考与完整源通过。"
+source_paths = ["src/pdx/decision_adapters.py", "src/pdx/situated/vanilla_inventory.py"]
+consumer_investigation = "common/scripted_buttons/07_japan_buttons.txt:426；07_hokkaido JE挂载；hokkaido_events.3的a为large、b/c/e/g为medium真实费用五年。"
+existing_state = "已确认原10不读承诺压力，当前没有该按钮生产writer。"
+gap = "large与medium取整及min100不同，不能假设固定比例或始终同序；本项不代签五个方案的收益/替换成本。"
+evidence = []
+
+[[obligations]]
+id = "B02.1.3"
+parent = "B02.1"
+title = "北海道五个农业方案的现有产业、资源潜力与替换成本"
+status = "pending"
+question = "固定10/70/5/10/10如何区分真实吞吐、替换稻田和新增商品潜力的收益与费用？"
+acceptance = "逐精确hokkaido_events.3.a/b/c/e/g冻结country与保存州合同；区分当前经营和潜力，不提前兑现产出；费用独立，b删除现wheat与level3稻田替换代价不能隐藏；a计数每次重置不得假造累积；全选项资格/原权重/效果/未知/关闭/玩家/PDX与整源保护通过。"
+source_paths = ["src/pdx/event_opportunities.py", "src/pdx/situated/vanilla_inventory.py"]
+consumer_investigation = "events/japan_events/ep2_hokkaido_events.txt:446；真实费用宏及00_ep2_02_modifiers.txt:232，实际保存北海道与资源/建筑操作逐项取证。"
+existing_state = "已确认五个实际方案无处境生产策略，按钮启动与事件选择须分别实施。"
+gap = "潜力不是已建/盈利，不能在缺实际选项合法集合时平均权重算期望费用；未知州只退出州收益，不能抹国家费用。"
+evidence = []

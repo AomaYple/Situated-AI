@@ -17,14 +17,33 @@ if TYPE_CHECKING:
 
 PARAMETERS = config.REPO / "mod/decisions/native_action_opportunities.toml"
 FROZEN = config.REPO / "research/vanilla-ai/1.14.5/native-action-opportunities.json"
-FROZEN_SHA256 = "915cdeb746bcdac4a079f440e458eee2d491144ac063dfa376880f2dc689fa64"
+FROZEN_SHA256 = "4ff80d1ff31b3e92c19130abeab3bb746ff45c8ac9c2f1c5498a86c9f7bfc928"
 README = "common/diplomatic_actions/diplomatic_action.md"
+KNOWLEDGE = "da_knowledge_sharing"
+KNOWLEDGE_SOURCE = "common/diplomatic_actions/40_subjects_knowledge_sharing.txt"
+KNOWLEDGE_READERS: dict[str, dict[str, Any]] = {
+    "knowledge_donor_spread": {
+        "engine": "modifier:country_tech_spread_mult",
+        "scope": "root",
+        "unit": "modifier_ratio",
+        "kind": "number",
+    },
+    "knowledge_donor_population": {
+        "engine": "total_population",
+        "scope": "root",
+        "unit": "persons",
+        "kind": "number",
+        "minimum": 0,
+    },
+}
 CANDIDATES = {
+    KNOWLEDGE: KNOWLEDGE_SOURCE,
     "da_increase_autonomy_of_self": "common/diplomatic_actions/38_subjects_increase_autonomy.txt",
     "decrease_payments": "common/diplomatic_actions/33_subjects_decrease_payments.txt",
     "join_power_bloc": "common/diplomatic_actions/26_join_power_bloc.txt",
 }
 SOURCE_HASHES = {
+    KNOWLEDGE_SOURCE: "0e8d089a62180b570dfba7b1bb644238fa3dab6f936d12af9f21b5cedcc5afcd",
     README: "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
     CANDIDATES[
         "da_increase_autonomy_of_self"
@@ -58,6 +77,8 @@ def load() -> dict[str, Any]:
             "bloc_default",
             "bloc_deficit",
             "bloc_recovery",
+            "knowledge_spread_margin",
+            "knowledge_spread_weak",
         }
     ):
         raise ValueError("原生外交行动schema或精确来源无效")
@@ -66,6 +87,8 @@ def load() -> dict[str, Any]:
             raise ValueError("原生外交行动倾向须有限")
         if not (1 < value <= 1.2 if key == "autonomy_need" else 0.8 <= value < 1):
             raise ValueError("原生外交行动需求或成本方向及边界无效")
+    if not data["tuning"]["knowledge_spread_weak"] < data["tuning"]["knowledge_spread_margin"]:
+        raise ValueError("科技共享传播成本须按同因有序分档")
     return data
 
 
@@ -87,6 +110,38 @@ def _scalar(parent: Block, key: str, expected: str, op: str = "=") -> None:
         raise ValueError(f"原生外交行动原版效果或资格漂移：{key}")
 
 
+def _verify_knowledge(action: Block) -> None:
+    groups = _block(action, "groups").items
+    if (
+        len(groups) != 2
+        or any(not isinstance(item, Scalar) for item in groups)
+        or [str(item) for item in groups] != ["power_bloc_leader", "overlord"]
+    ):
+        raise ValueError("科技共享捐助方角色漂移")
+    _scalar(action, "requires_approval", "no")
+    pact = _block(action, "pact")
+    _scalar(pact, "cost", "50")
+    _scalar(pact, "maintenance_paid_by", "first_country")
+    _scalar(pact, "forced_duration", "12")
+    _scalar(_block(pact, "first_modifier"), "country_tech_spread_mult", "-0.10")
+    recipient = _block(pact, "second_modifier")
+    _scalar(recipient, "country_tech_spread_mult", "0.25")
+    _scalar(recipient, "country_liberty_desire_add", "-0.05")
+    ai = _block(action, "ai")
+    _scalar(ai, "max_influence_spending_fraction", "0.1")
+    _scalar(_block(ai, "evaluation_chance"), "value", "0.25")
+    score = _block(ai, "propose_score")
+    _scalar(score, "value", "1")
+    rank = _block(score, "add")
+    _scalar(rank, "value", "scope:target_country.country_rank")
+    _scalar(rank, "multiply", "1")
+    _scalar(_block(ai, "will_propose"), "modifier:country_tech_spread_mult", "-0.25", ">")
+    _scalar(
+        _block(_block(ai, "will_break"), "OR"), "modifier:country_tech_spread_mult", "-0.5", "<="
+    )
+    _block(ai, "accept_score")
+
+
 def verify_inputs(inputs: Mapping[str, str]) -> None:
     """Require full normalized installed sources, then prove exact role and effects."""
     data = load()
@@ -102,6 +157,9 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
         if parsed.errors:
             raise ValueError("原生外交行动完整源解析失败")
         action = _block(parsed.root, identity)
+        if identity == KNOWLEDGE:
+            _verify_knowledge(action)
+            continue
         group = {
             "da_increase_autonomy_of_self": "subject",
             "decrease_payments": "overlord",
@@ -247,10 +305,25 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             "cost",
             [c("war_defeat", "=", True)],
         ),
+        (
+            KNOWLEDGE,
+            "knowledge_spread_margin",
+            "knowledge_sharing_donor_spread",
+            "cost",
+            [c("knowledge_donor_spread", "<", 0.10)],
+        ),
+        (
+            KNOWLEDGE,
+            "knowledge_spread_weak",
+            "knowledge_sharing_donor_spread",
+            "cost",
+            [c("knowledge_donor_spread", "<", 0)],
+        ),
     )
     rules = []
     for index, (identity, name, cause, role, conditions) in enumerate(rows):
         reasons = {
+            KNOWLEDGE: "捐助方实际country_tech_spread_mult余量与原协议-0.10传播修正形成有限机会成本；低于0.10为有限余量、低于0为较弱传播同因升档，不估算科研量或复制影响力配额；目标rank收益、原资格与执行保持原版",
             "da_increase_autonomy_of_self": "本国高自主愿望提高和平自主交涉需求；近期败战恢复期对原版接受或拒绝均有的关系摩擦设置温和风险，独立联合，不视为战争",
             "decrease_payments": "宗主主动减少付款会降低本国抽取收入；本国违约或实际净收入赤字形成让利财政成本，同一融资原因取强",
             "join_power_bloc": "加入新势力集团是本国新增外部成员承诺；违约与实际净收入赤字同因择强，近期败战恢复的机会成本独立联合。仅温和调整提案优先级，不推断固定会费、军事义务或直接付款；原版杠杆、凝聚、态度、恶名和关系收益完整保留",
@@ -271,8 +344,21 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 "counterexample": "仅精确propose_score；原版目标资格、will_propose、概率、接受/拒绝、冷却、付款和执行完整保留。未知身份或败战撤相关项；融资压力未知只按有本国实体锚的生产成本合同保留有限档，正常低债借款不罚；不读未证明target_country别名、不改变双方身份、不强制执行。",
             }
         )
+        if identity == KNOWLEDGE:
+            rules[-1].update(
+                conservative_unknown_facts=["knowledge_donor_spread"],
+                unknown_cost_required_known_facts=["knowledge_donor_population"],
+                unknown_cost_basis="完整原版first_modifier已证明本次捐助实际-0.10传播代价；ROOT传播余量未知但本国实体可读时保留有限较弱传播档，不推定传播健康或免费；未知实体不推定承诺可用。",
+                counterexample="仅精确捐助方ROOT提案；同因成本择强，未知传播保留有本国实体锚的有限档，不读target/owner，不估算研究产量或上限，不复写原>-0.25资格、50影响力和0.1配额；目标rank及完整协议/接受/执行/时间尾部不变。",
+            )
     used = {condition["fact"] for rule in rules for condition in rule["conditions"]}
-    readers = {key: adapters["readers"][key] for key in sorted(used)}
+    used.update(key for rule in rules for key in rule.get("unknown_cost_required_known_facts", ()))
+    available = dict(adapters["readers"])
+    for key, spec in KNOWLEDGE_READERS.items():
+        if key in available and available[key] != spec:
+            raise ValueError("科技共享精确ROOT读取器身份漂移")
+        available[key] = dict(spec)
+    readers = {key: available[key] for key in sorted(used)}
     if any(reader["scope"] != "root" or reader.get("path") for reader in readers.values()):
         raise ValueError("原生外交行动只允许已证明本国ROOT观测")
     return {

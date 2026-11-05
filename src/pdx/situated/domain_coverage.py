@@ -251,9 +251,17 @@ class _ReviewedNumericContract:
 
 def _native_binding(instance: ActionInstance) -> NativeConsumerBinding | None:
     if instance.kind == "acceptance_program":
-        acceptance_program = treaty_acceptance_opportunities.compile_program()
+        acceptance_program = next(
+            (
+                p
+                for p in treaty_acceptance_opportunities.compile_programs()
+                if p.definition == instance.rule_id
+            ),
+            None,
+        )
         if (
-            instance.source != acceptance_program.source
+            acceptance_program is None
+            or instance.source != acceptance_program.source
             or instance.rule_id != acceptance_program.definition
             or instance.consumer_field != acceptance_program.field
         ):
@@ -605,6 +613,7 @@ class _NativeBindingProofs:
             decree_opportunities,
             famine_opportunities,
             native_action_opportunities,
+            native_decision_opportunities,
         )
 
         # These modules freeze complete normalized sources. The independent
@@ -627,6 +636,15 @@ class _NativeBindingProofs:
                 canal_opportunities,
                 canal_opportunities.frozen_inputs(),
                 compiler._frozen_canal_contexts(),
+                "chance",
+                "none",
+                "country",
+                (),
+            ),
+            (
+                native_decision_opportunities,
+                native_decision_opportunities.frozen_inputs(),
+                compiler._frozen_native_decision_contexts(),
                 "chance",
                 "none",
                 "country",
@@ -719,7 +737,11 @@ class _NativeBindingProofs:
     ) -> str | None:
         if instance.kind == "acceptance_program":
             acceptance = treaty_acceptance_opportunities
-            acceptance_program = acceptance.compile_program()
+            acceptance_program = next(
+                (p for p in acceptance.compile_programs() if p.definition == instance.rule_id), None
+            )
+            if acceptance_program is None:
+                return "acceptance_program_identity_unproven"
             if not set(acceptance.SOURCES) <= set(self.sources):
                 return "native_source_contract_unproven"
             texts = {
@@ -733,13 +755,18 @@ class _NativeBindingProofs:
             from . import vanilla_inventory  # noqa: PLC0415
 
             declaration = _ordinary(
-                parse_bytes(self.sources[acceptance.SOURCE], path=acceptance.SOURCE).root,
-                acceptance.DEFINITION,
+                parse_bytes(
+                    self.sources[acceptance_program.source], path=acceptance_program.source
+                ).root,
+                acceptance_program.definition,
             )
             if declaration is None:
                 return "acceptance_definition_unproven"
             native_scope = vanilla_inventory._treaty_scope(
-                ("ai", "inherent_accept_score"), self.sources, declaration, acceptance.SOURCE
+                ("ai", "inherent_accept_score"),
+                self.sources,
+                declaration,
+                acceptance_program.source,
             )
             ai = (
                 _ordinary(declaration.value, "ai") if isinstance(declaration.value, Block) else None
@@ -825,14 +852,17 @@ class _NativeBindingProofs:
                 or surface.scope_evidence != tuple(row["scope_evidence"])
             ):
                 return "event_program_contract_unproven"
-            names = event_opportunities.load()["sources"]
+            names = event_opportunities.required_program_sources(program)
             if not set(names) <= set(self.sources):
                 return "native_source_contract_unproven"
             texts = {
                 name: normalized_text(self.sources[name].decode("utf-8-sig")) for name in names
             }
             try:
-                event_opportunities.verify_inputs(texts)
+                if program.identity.family == "sol_response":
+                    event_opportunities.verify_sol_inputs(texts)
+                else:
+                    event_opportunities._verify_legacy_inputs(texts)
             except ValueError:
                 return "native_source_contract_unproven"
             return None
@@ -851,6 +881,11 @@ class _NativeBindingProofs:
             )
             or (
                 surface.source == "common/decisions/canal_decisions.txt"
+                and surface.field == "ai_chance"
+            )
+            or (
+                surface.source == "common/decisions/00_decisions.txt"
+                and surface.definition == "revive_olympic_games_decision"
                 and surface.field == "ai_chance"
             )
             or (

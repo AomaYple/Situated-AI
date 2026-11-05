@@ -13,7 +13,7 @@ import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from . import (
     colonial_opportunities,
@@ -31,6 +31,10 @@ from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
 
+if TYPE_CHECKING:
+    from . import treaty_acceptance_opportunities
+
+
 QUERY_ENGINES = frozenset(
     {
         "any_political_movement",
@@ -41,6 +45,7 @@ QUERY_ENGINES = frozenset(
         "OR",
         "AND",
         "any_scope_war",
+        "any_scope_treaty",
     }
 )
 _ECONOMY = "common/laws/01_economic_system.txt"
@@ -199,7 +204,7 @@ class OwnBuildingActiveMethod:
     minimum_level: int = 1
 
 
-CountryQuery = (
+_ExistingCountryQuery = (
     LawMovementSupport
     | LawInterestGroupSupport
     | AnyStateMarketAccessBelow
@@ -218,6 +223,9 @@ CountryQuery = (
     | event_opportunities.DisasterFarmQuery
     | famine_opportunities.FamineStateQuery
     | war_pressure_opportunities.OwnMultiwarLowSupportQuery
+)
+CountryQuery: TypeAlias = (
+    "_ExistingCountryQuery | treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery"
 )
 
 
@@ -277,6 +285,10 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         return famine_opportunities.query_from_reader(engine, parameters)
     if war_pressure_opportunities.QUERY_PARAMETER in parameters:
         return war_pressure_opportunities.query_from_reader(engine, parameters)
+    if "military_assistance_query" in parameters:
+        from . import treaty_acceptance_opportunities  # noqa: PLC0415
+
+        return treaty_acceptance_opportunities.query_from_reader(engine, parameters)
     if engine == "any_political_movement" and set(parameters) == {"law", "minimum_support"}:
         query: CountryQuery = LawMovementSupport(
             parameters["law"], _decimal(parameters["minimum_support"])
@@ -306,6 +318,10 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
 
 def render(query: CountryQuery) -> str:
     """Pure fixed-template lowering, including type, ID and numeric guards."""
+    from . import treaty_acceptance_opportunities  # noqa: PLC0415
+
+    if isinstance(query, treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery):
+        return treaty_acceptance_opportunities.render_query(query)
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.render(query)
     if isinstance(query, technology_opportunities.TechnologyQuery):
@@ -367,7 +383,11 @@ def render(query: CountryQuery) -> str:
 
 
 def required_sources(query: CountryQuery) -> tuple[str, ...]:
+    from . import treaty_acceptance_opportunities  # noqa: PLC0415
+
     render(query)
+    if isinstance(query, treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery):
+        return tuple(sorted(treaty_acceptance_opportunities.SOURCES))
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.required_sources(query)
     if isinstance(query, technology_opportunities.TechnologyQuery):
@@ -564,6 +584,10 @@ def compile_query(
         return culture_opportunities.compile_query(query, texts)
     if isinstance(query, subject_dependence_opportunities.ActualOverlordDependenceQuery):
         return subject_dependence_opportunities.compile_query(query, texts)
+    from . import treaty_acceptance_opportunities  # noqa: PLC0415
+
+    if isinstance(query, treaty_acceptance_opportunities.ExistingMilitarySourceCommitmentQuery):
+        return treaty_acceptance_opportunities.compile_query(query, texts)
     if isinstance(query, event_opportunities.DisasterFarmQuery):
         return event_opportunities.compile_disaster_query(query, texts)
     if isinstance(query, event_opportunities.PlagueStateQuery):

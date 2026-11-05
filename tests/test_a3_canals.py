@@ -20,10 +20,15 @@ def policy():
         "schema": 1,
         "baseline_sha256": canals.load()["sources"][canals.SOURCE],
         "domains": {"geography": True},
-        "readers": derived["readers"],
+        "readers": {
+            key: reader
+            for key, reader in derived["readers"].items()
+            if key in {"bureaucracy", "default"}
+        },
         "rules": [
             {key: value for key, value in rule.items() if key != "source"}
             for rule in derived["rules"]
+            if rule["field"] in canals.FIELDS
         ],
     }
     return programs.enable(
@@ -142,10 +147,18 @@ def test_complete_help_effects_and_two_exact_consumers_are_frozen():
     inputs = canals.frozen_inputs()
     canals.verify_inputs(inputs)
     catalog = canals.consumer_catalog()
-    assert {row["field"] for row in catalog} == set(canals.FIELDS)
+    assert {row["field"] for row in catalog} == {*canals.FIELDS, *canals.PURCHASE_FIELDS}
     assert all(row["native_root"] == "country" and row["actor"] == "root" for row in catalog)
     assert all(row["operation"] == "multiply" and row["native_base"] == 0 for row in catalog)
-    assert all(row["cost"] == 1000 and row["cost_source"] == canals.MODIFIERS for row in catalog)
+    surveys = [row for row in catalog if row["field"] in canals.FIELDS]
+    purchases = [row for row in catalog if row["field"] in canals.PURCHASE_FIELDS]
+    assert all(row["cost"] == 1000 and row["cost_source"] == canals.MODIFIERS for row in surveys)
+    assert all(
+        row["cost"] == 30000
+        and row["duration_months"] == 120
+        and row["cost_source"] == canals.PURCHASE_MODIFIERS
+        for row in purchases
+    )
     for source in inputs:
         with pytest.raises(ValueError, match="漂移"):
             canals.verify_inputs({**inputs, source: inputs[source] + "\n# drift"})

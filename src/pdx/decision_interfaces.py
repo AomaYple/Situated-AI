@@ -162,6 +162,7 @@ _COUNTRY_NUMBER = frozenset(
         "navy_size",
         "average_sol",
         "bureaucracy",
+        "produced_bureaucracy",
         "fixed_income",
         "gdp",
         "gold_reserves",
@@ -175,6 +176,7 @@ _COUNTRY_NUMBER = frozenset(
         "scaled_debt",
         "net_total_income",
         "weeks_until_bankruptcy",
+        "modifier:country_tech_spread_mult",
         "relations:root",
         "country_fervor_primary_culture",
         "num_defensive_pacts",
@@ -226,6 +228,7 @@ _UNITS = {
     "navy_size": "ships",
     "average_sol": "standard_of_living",
     "bureaucracy": "capacity_balance",
+    "produced_bureaucracy": "capacity_output",
     "authority": "capacity_balance",
     "influence": "capacity_balance",
     "num_companies": "company_count",
@@ -247,6 +250,7 @@ _UNITS = {
     "radical_fraction": "ratio",
     "scaled_debt": "debt_to_credit_ratio",
     "weeks_until_bankruptcy": "weeks",
+    "modifier:country_tech_spread_mult": "modifier_ratio",
     "relations:root": "relations_minus100_100",
     "country_fervor_primary_culture": "fervor_points",
     "primary_cultures_percent_state": "ratio",
@@ -274,6 +278,65 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.key.startswith("sol_response_") or reader.scope == "slums_state":
+        from . import event_opportunities  # noqa: PLC0415
+
+        program = next(
+            p for p in event_opportunities.compile_programs() if p.option == "sol_events.6.a"
+        )
+        expected = {item.key: item for item in program.readers()}
+        if root != "country" or actor_path or expected.get(reader.key) != reader:
+            raise ValueError("生活水平响应只授权精确保存slums_state与本国ROOT读取器")
+        return "country" if reader.scope == "root" else "state"
+    if reader.key.startswith("military_") and reader.key in {
+        "military_article_exists",
+        "military_source_exists",
+        "military_target_exists",
+        "military_active_exists",
+        "military_renegotiation_exists",
+        "military_default",
+        "military_income",
+        "military_expenses",
+        "military_existing_source_commitment",
+    }:
+        from . import treaty_acceptance_opportunities as acceptance  # noqa: PLC0415
+
+        expected = {
+            item.key: item for item in acceptance.compile_program("military_assistance").readers()
+        }
+        if root != "country" or actor_path or expected.get(reader.key) != reader:
+            raise ValueError("军事援助只授权本国ROOT精确首次承诺读取器")
+        return "country"
+    if reader.engine == "produced_bureaucracy" and (
+        root != "country"
+        or actor_path
+        or reader.key != "olympic_bureaucracy_output"
+        or reader.scope != "root"
+        or reader.path
+        or reader.kind != "number"
+        or reader.unit != "capacity_output"
+        or reader.minimum != 0
+        or reader.maximum is not None
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+    ):
+        raise ValueError("赛事行政产出必须保持精确本国ROOT数值签名")
+    if reader.engine == "modifier:country_tech_spread_mult" and (
+        root != "country"
+        or actor_path
+        or reader.key != "knowledge_donor_spread"
+        or reader.scope != "root"
+        or reader.kind != "number"
+        or reader.unit != "modifier_ratio"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.minimum is not None
+        or reader.maximum is not None
+    ):
+        raise ValueError("科技共享传播修正必须保持精确本国ROOT无界数值签名")
     if reader.engine == "state_population":
         from . import event_opportunities  # noqa: PLC0415
 
@@ -582,15 +645,28 @@ def validate(rules: RuleSet) -> None:
         reader_scope(reader, rules.actor_path, native_root=rules.native_root)
     for rule in rules.rules:
         field = rule.field[1:] if rule.field[0] == "ai_strategy_default" else rule.field
+        if any(
+            readers[key].engine == "modifier:country_tech_spread_mult" for key in rule.input_keys()
+        ) and (
+            field != ("da_knowledge_sharing", "ai", "propose_score")
+            or rules.native_root != "country"
+            or rules.actor_path
+            or rule.operation != "multiply"
+            or not 0.8 <= rule.value < 1
+            or rule.semantic_role != "cost"
+        ):
+            raise ValueError("传播机会成本只授权精确科技共享捐助方提案")
         if field[0] in {
             "da_increase_autonomy_of_self",
             "decrease_payments",
+            "da_knowledge_sharing",
             "suez_survey_decision",
             "panama_survey_decision",
         }:
             expected = (
                 (field[0], "ai", "propose_score")
-                if field[0] in {"da_increase_autonomy_of_self", "decrease_payments"}
+                if field[0]
+                in {"da_increase_autonomy_of_self", "decrease_payments", "da_knowledge_sharing"}
                 else (field[0], "ai_chance")
             )
             if (
@@ -604,6 +680,19 @@ def validate(rules: RuleSet) -> None:
                 )
             ):
                 raise ValueError("原生提案/运河调查只支持精确country ROOT正倍率消费者")
+        if (
+            field[0] == "revive_olympic_games_decision"
+            or any(readers[key].engine == "produced_bureaucracy" for key in rule.input_keys())
+        ) and (
+            field != ("revive_olympic_games_decision", "ai_chance")
+            or rules.native_root != "country"
+            or rules.actor_path
+            or rule.operation != "multiply"
+            or not 0.75 <= rule.value < 1
+            or rule.semantic_role != "cost"
+            or any(readers[key].scope != "root" or readers[key].path for key in rule.input_keys())
+        ):
+            raise ValueError("赛事行政风险只授权精确country ROOT有界成本消费者")
         if "actual_overlord_relations" in rule.input_keys() and field != (
             "ai_strategy_subject_overlord_compliance",
             "weight",
@@ -718,6 +807,7 @@ def consumer(
         "da_increase_autonomy_of_self",
         "decrease_payments",
         "join_power_bloc",
+        "da_knowledge_sharing",
     }:
         from .native_action_opportunities import consumer_catalog  # noqa: PLC0415
 
@@ -733,6 +823,20 @@ def consumer(
             raise ValueError("原生外交行动只授权已登记精确country ROOT提案优先字段")
         evidence, role = row["scope_evidence"], "vanilla_diplomatic_action_proposal_priority"
         native_unit = "score"
+    elif (
+        source == "common/decisions/00_decisions.txt" or field[0] == "revive_olympic_games_decision"
+    ):
+        from . import native_decision_opportunities as native_decision  # noqa: PLC0415
+
+        if (
+            (source, ".".join(field))
+            not in {(row["source"], row["field"]) for row in native_decision.consumer_catalog()}
+            or actor_path
+            or native_root not in {None, "country"}
+        ):
+            raise ValueError("赛事只授权精确country ROOT决议相对权重")
+        evidence, role = native_decision.HELP, "vanilla_country_decision_relative_weight"
+        native_unit = "relative_weight"
     elif source == "common/decisions/canal_decisions.txt" or field[0] in {
         "suez_survey_decision",
         "panama_survey_decision",

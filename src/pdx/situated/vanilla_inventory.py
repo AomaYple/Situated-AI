@@ -61,6 +61,9 @@ _REQUIRED_DIRS = frozenset(
         # Exact event effects need their complete modifier definitions as
         # context evidence; scanning does not authorize modifier writers.
         "static_modifiers",
+        # Owning-country context of journal-triggered event opportunities.
+        # This evidence directory grants no AI writer permissions by itself.
+        "journal_entry_groups",
     }
 )
 _OBSERVATION_DIRS = frozenset({"script_values", "scripted_triggers"})
@@ -2752,12 +2755,22 @@ def _proven_event_surfaces(
     """Authorize exact reviewed event slots after complete native context proof."""
     from pdx import event_opportunities as event  # noqa: PLC0415
 
-    names = event.load()["sources"]
-    if not set(names) <= set(inputs):
-        return surfaces
-    texts = {name: normalized_text(inputs[name].decode("utf-8-sig")) for name in names}
-    event.verify_inputs(texts)
-    catalog = {row["field"]: row for row in event.consumer_catalog().values()}
+    catalog = {}
+    verified: set[tuple[str, ...]] = set()
+    consumers = event.consumer_catalog()
+    for program in event.compile_programs():
+        names = tuple(sorted(event.required_program_sources(program)))
+        if not set(names) <= inputs.keys():
+            continue
+        if names not in verified:
+            texts = {name: normalized_text(inputs[name].decode("utf-8-sig")) for name in names}
+            if program.identity.family == "sol_response":
+                event.verify_sol_inputs(texts)
+            else:
+                event._verify_legacy_inputs(texts)
+            verified.add(names)
+        catalog_row = consumers[program.option]
+        catalog[catalog_row["field"]] = catalog_row
     result = []
     for surface in surfaces:
         resolved = surface

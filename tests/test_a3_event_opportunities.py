@@ -150,7 +150,9 @@ def test_source_drift_and_binding_clamp_are_hard_failures(production):
 def test_catalog_proves_exact_option_and_leaves_plague_default_unknown(production):
     native, _ = production
     catalog = event.consumer_catalog()
-    assert set(catalog) == set(event.OPTIONS + event.PLAGUE_OPTIONS + event.DISASTER_OPTIONS)
+    assert set(catalog) == set(
+        event.OPTIONS + event.PLAGUE_OPTIONS + event.DISASTER_OPTIONS + event.SOL_OPTIONS
+    )
     assert all(row["native_root"] == "country" for row in catalog.values())
     assert all(
         catalog[name]["default_weight"] == "unsupported_not_consumed" for name in event.OPTIONS

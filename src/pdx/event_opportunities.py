@@ -45,6 +45,47 @@ DISASTERS = "events/natural_disasters_events.txt"
 YEARLY = "common/on_actions/00_on_actions_yearly.txt"
 EVENT_VALUES = "common/script_values/event_values.txt"
 STATE_POPULATION = "events/american_civil_war/acw_wild_west_events.txt"
+SOL = "events/standard_of_living_events.txt"
+SOL_JOURNAL = "common/journal_entries/00_standard_of_living.txt"
+SOL_JOURNAL_DOC = "common/journal_entries/journal_entries.md"
+SOL_JOURNAL_GROUP = "common/journal_entry_groups/00_journal_entries.txt"
+SOL_OWNER = "events/tech_events/nursing_events.txt"
+SOL_EVENT = "sol_events.6"
+SOL_OPTIONS = ("sol_events.6.a", "sol_events.6.b")
+SOL_PARENT_SHAPE = "042dd023917f3320d3641e83b783df0c69bee9f208f1d9f003dd63950fae7ece"
+LEGACY_SOURCES = frozenset(
+    {
+        SOURCE,
+        MODIFIERS,
+        ON_ACTIONS,
+        SYNTAX,
+        PLAGUE,
+        HEALTH,
+        PLAGUE_DECISION,
+        PLAGUE_MODIFIERS,
+        PLAGUE_EFFECTS,
+        PLAGUE_JOURNAL,
+        FINANCE,
+        DISASTERS,
+        YEARLY,
+        EVENT_VALUES,
+        STATE_POPULATION,
+    }
+)
+SOL_SOURCES = frozenset(
+    {
+        SOL,
+        SOL_JOURNAL,
+        SOL_JOURNAL_DOC,
+        SOL_JOURNAL_GROUP,
+        PLAGUE_MODIFIERS,
+        EVENT_VALUES,
+        FINANCE,
+        STATE_POPULATION,
+        SOL_OWNER,
+    }
+)
+FAMILIES = frozenset({"healthcare", "plague", "disaster", "sol_response"})
 DISASTER_QUERY_PARAMETER = "event_disaster_query"
 DISASTER_EVENTS = tuple(f"natural_disaster_events.{i}" for i in range(1, 9))
 DISASTER_OPTIONS = tuple(f"{name}.{suffix}" for name in DISASTER_EVENTS for suffix in ("a", "b"))
@@ -80,27 +121,18 @@ DOMAIN = "political"
 def load() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
     if (
-        set(data) != {"schema", "sources", "tuning", "plague_policy", "disaster_policy"}
+        set(data)
+        != {
+            "schema",
+            "sources",
+            "tuning",
+            "plague_policy",
+            "disaster_policy",
+            "sol_response_policy",
+        }
         or type(data["schema"]) is not int
         or data["schema"] != 1
-        or set(data["sources"])
-        != {
-            SOURCE,
-            MODIFIERS,
-            ON_ACTIONS,
-            SYNTAX,
-            PLAGUE,
-            HEALTH,
-            PLAGUE_DECISION,
-            PLAGUE_MODIFIERS,
-            PLAGUE_EFFECTS,
-            PLAGUE_JOURNAL,
-            FINANCE,
-            DISASTERS,
-            YEARLY,
-            EVENT_VALUES,
-            STATE_POPULATION,
-        }
+        or set(data["sources"]) != LEGACY_SOURCES | SOL_SOURCES
         or set(data["tuning"]) != {"reform_need", "ignored_opponent_cost", "heard_opponent_benefit"}
     ):
         raise ValueError("事件机会schema/来源/参数不完整")
@@ -167,6 +199,24 @@ def load() -> dict[str, Any]:
         and disaster["ordinary_relief"] < disaster["mega_relief"]
     ):
         raise ValueError("灾害减损及经常费用档方向漂移")
+    sol = data["sol_response_policy"]
+    if (
+        set(sol)
+        != {
+            "base",
+            "lower_sol",
+            "high_exposure",
+            "avoided_radicals",
+            "recurring_cost",
+            "solvent_refund",
+        }
+        or any(
+            type(v) not in {int, float} or not math.isfinite(v) or not 0 < v <= 50
+            for v in sol.values()
+        )
+        or sol["solvent_refund"] >= sol["recurring_cost"]
+    ):
+        raise ValueError("面包骚乱完整配对政策必须具有独立有限福利、激进化及经常费用参数")
     return data
 
 
@@ -378,16 +428,26 @@ def _verify_disasters(roots: Mapping[str, Block], inputs: Mapping[str, str]) -> 
     _scalar(population, "state_population", "100000", "<")
 
 
-def verify_inputs(inputs: Mapping[str, str]) -> None:
+def _source_roots(inputs: Mapping[str, str], sources: frozenset[str]) -> dict[str, Block]:
     roots = {}
-    for name, digest in load()["sources"].items():
+    hashes = load()["sources"]
+    for name in sorted(sources):
+        digest = hashes[name]
         text = inputs.get(name)
         if not isinstance(text, str) or hashlib.sha256(text.encode()).hexdigest() != digest:
             raise ValueError(f"事件完整原版来源漂移：{name}")
+        if name == SOL_JOURNAL_DOC:
+            # Native documentation is evidence, never a PDX script to parse.
+            continue
         parsed = parse_text(text)
         if parsed.errors:
             raise ValueError(f"事件完整原版解析失败：{name}")
         roots[name] = parsed.root
+    return roots
+
+
+def _verify_legacy_inputs(inputs: Mapping[str, str]) -> None:
+    roots = _source_roots(inputs, LEGACY_SOURCES)
     event = _block(roots[SOURCE], EVENT)
     _scalar(event, "type", "country_event")
     _scalar(event, "placement", "ROOT")
@@ -464,6 +524,92 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
     )
 
 
+def verify_sol_inputs(inputs: Mapping[str, str]) -> None:
+    """Prove this exact pair and all nine caller/effect/reader sources."""
+    from pdx.situated.native_treatments import _digest  # noqa: PLC0415
+
+    roots = _source_roots(inputs, SOL_SOURCES)
+    event = _block(roots[SOL], SOL_EVENT)
+    if _digest(roots[SOL].all(SOL_EVENT)[0]) != SOL_PARENT_SHAPE:
+        raise ValueError("面包骚乱完整父事件AST漂移")
+    _scalar(event, "type", "country_event")
+    saved = _block(_block(event, "immediate"), "random_scope_state")
+    _scalar(_block(saved, "limit"), "is_capital", "yes")
+    _scalar(saved, "save_scope_as", "slums_state")
+    options = _options(event)
+    if tuple(options) != SOL_OPTIONS or any(option.all("ai_chance") for option in options.values()):
+        raise ValueError("面包骚乱完整双选项未声明AI权重底本漂移")
+    _scalar(options[SOL_OPTIONS[0]], "default_option", "yes")
+    expense = _block(options[SOL_OPTIONS[0]], "add_modifier")
+    _scalar(expense, "name", "starvation_palliative_modifier")
+    _scalar(expense, "multiplier", "money_amount_multiplier_small")
+    _scalar(expense, "days", "normal_modifier_time")
+    welfare = _block(_block(options[SOL_OPTIONS[0]], "scope:slums_state"), "add_modifier")
+    _scalar(welfare, "name", "bread_riots_modifier")
+    _scalar(welfare, "days", "normal_modifier_time")
+    radical = _block(_block(options[SOL_OPTIONS[1]], "scope:slums_state"), "add_radicals_in_state")
+    _scalar(radical, "strata", "lower")
+    _scalar(radical, "value", "medium_radicals")
+    _scalar(
+        _block(roots[PLAGUE_MODIFIERS], "bread_riots_modifier"),
+        "state_lower_strata_standard_of_living_add",
+        "1",
+    )
+    _scalar(
+        _block(roots[PLAGUE_MODIFIERS], "starvation_palliative_modifier"),
+        "country_expenses_add",
+        "1",
+    )
+    _scalar(roots[EVENT_VALUES], "medium_radicals", "0.05")
+    _scalar(roots[EVENT_VALUES], "normal_modifier_time", "1825")
+    if _shape(_block(roots[EVENT_VALUES], "money_amount_multiplier_small")) != (
+        ("value", "=", "root.gdp"),
+        ("divide", "=", "100000"),
+        ("multiply", "=", "0.15"),
+        ("round", "=", "yes"),
+        ("multiply", "=", "100"),
+        ("min", "=", "100"),
+    ):
+        raise ValueError("面包骚乱GDP经常费用脚本值AST漂移")
+    journal = _block(roots[SOL_JOURNAL], "je_sol_1")
+    _scalar(journal, "group", "je_group_crises")
+    calls = _block(_block(journal, "on_monthly_pulse"), "random_events")
+    if _shape(calls) != (
+        ("100", "=", "0"),
+        ("10", "=", "sol_events.3"),
+        ("10", "=", "sol_events.4"),
+        ("10", "=", "sol_events.5"),
+        ("10", "=", SOL_EVENT),
+    ):
+        raise ValueError("面包骚乱JE月度调用分布漂移")
+    _scalar(_block(roots[SOL_JOURNAL_GROUP], "je_group_crises"), "context", "country")
+    doc = inputs[SOL_JOURNAL_DOC].splitlines()
+    if doc[365:367] != [
+        "        # root = owning country or no scope",
+        "        on_monthly_pulse = {",
+    ]:
+        raise ValueError("面包骚乱JE月度ROOT原版说明漂移")
+    nursing_state = _block(
+        _block(
+            _block(_block(roots[SOL_OWNER], "nursing_events.2"), "immediate"), "ordered_scope_war"
+        ),
+        "random_scope_front",
+    )
+    _scalar(_block(_block(nursing_state, "random_scope_state"), "limit"), "owner", "root")
+    population = _block(
+        _block(_block(roots[STATE_POPULATION], "wild_west.1"), "trigger"), "any_scope_state"
+    )
+    _scalar(population, "state_population", "100000", "<")
+    finance = _block(roots[FINANCE], "amazonas.1")
+    _scalar(finance, "type", "country_event")
+    _scalar(_block(finance, "trigger"), "in_default", "no")
+
+
+def verify_inputs(inputs: Mapping[str, str]) -> None:
+    _verify_legacy_inputs(inputs)
+    verify_sol_inputs(inputs)
+
+
 def frozen_inputs() -> dict[str, str]:
     data = json.loads(FROZEN.read_text(encoding="utf-8"))
     if (
@@ -497,7 +643,18 @@ POLICIES = {
         for name, scope in zip(DISASTER_EVENTS, DISASTER_SCOPES, strict=True)
         for option in (name + ".a", name + ".b")
     },
+    **{
+        name: EventPolicyIdentity(SOL, SOL_EVENT, "sol_response", True, "slums_state")
+        for name in SOL_OPTIONS
+    },
 }
+
+
+def required_program_sources(program: EventProgram) -> tuple[str, ...]:
+    """Keep existing 21 programs' exact 15-source contracts unchanged."""
+    return tuple(
+        sorted(SOL_SOURCES if program.identity.family == "sol_response" else LEGACY_SOURCES)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -544,6 +701,18 @@ class EventProgram:
     def evaluation_context(self) -> EvaluationContext:
         from pdx.situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
 
+        if self.identity.family == "sol_response":
+            return EvaluationContext(
+                actor_scope=ContextBinding("root", "country", "actor", SOL_JOURNAL_GROUP, 108),
+                auxiliary_scopes=(ContextBinding("slums_state", "state", "auxiliary", SOL, 622),),
+                evidence=(
+                    f"{SOL_JOURNAL_GROUP}:108",
+                    f"{SOL_JOURNAL_DOC}:366",
+                    f"{SOL_JOURNAL}:4",
+                    f"{SOL_JOURNAL}:78",
+                    f"{SOL}:622",
+                ),
+            )
         if self.identity.family == "disaster":
             line = DISASTER_SAVED_LINES[DISASTER_EVENTS.index(self.event)]
             return EvaluationContext(
@@ -580,7 +749,7 @@ class EventProgram:
         )
 
     def reader_bindings(self) -> tuple[tuple[str, str, str, str], ...]:
-        if self.identity.family == "disaster":
+        if self.identity.family in {"disaster", "sol_response"}:
             return tuple(
                 (
                     reader.key,
@@ -613,6 +782,34 @@ class EventProgram:
     def readers(self) -> tuple[Reader, ...]:
         from pdx.decision_rules import Reader  # noqa: PLC0415
 
+        if self.identity.family == "sol_response":
+            return (
+                Reader(
+                    "sol_response_state_exists",
+                    "exists",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    argument="scope:slums_state",
+                ),
+                Reader(
+                    "sol_response_state_owned",
+                    "owner",
+                    "slums_state",
+                    "boolean",
+                    "boolean",
+                    argument="root",
+                ),
+                Reader(
+                    "sol_response_state_population",
+                    "state_population",
+                    "slums_state",
+                    "persons",
+                    "number",
+                    minimum=0,
+                ),
+                Reader("sol_response_default", "in_default", "root", "boolean", "boolean"),
+            )
         if self.identity.family == "disaster":
             scope = cast("str", self.identity.saved_state)
             readers: tuple[Reader, ...] = (
@@ -716,6 +913,7 @@ class EventProgram:
         )
 
     def as_dict(self) -> dict[str, object]:
+        hashes = load()["sources"]
         return {
             "option": self.option,
             "event": self.event,
@@ -731,7 +929,7 @@ class EventProgram:
             "evaluation_context": self.evaluation_context().as_dict(),
             "reader_context_bindings": [list(row) for row in self.reader_bindings()],
             "readers": [asdict(reader) for reader in self.readers()],
-            "source_hashes": load()["sources"],
+            "source_hashes": {name: hashes[name] for name in required_program_sources(self)},
             "policy": (
                 "explicit_new_three_option_policy_native_default_unknown"
                 if self.identity.family == "plague"
@@ -784,7 +982,71 @@ def compile_programs() -> tuple[EventProgram, ...]:
             ),
         )
         result.append(EventProgram(option, scalar))
-    return (*result, *_compile_plague_programs(), *_compile_disaster_programs())
+    return (
+        *result,
+        *_compile_plague_programs(),
+        *_compile_disaster_programs(),
+        *_compile_sol_programs(),
+    )
+
+
+def _compile_sol_programs() -> tuple[EventProgram, ...]:
+    from pdx.situated import programs  # noqa: PLC0415
+
+    policy = load()["sol_response_policy"]
+    result = []
+    for suffix, sign in (("a", 1), ("b", -1)):
+        groups = (
+            programs.ScalarGroup(
+                "actual_saved_lower_strata_sol",
+                (
+                    programs.ScalarTerm(
+                        "sol_response_core",
+                        f"sol_response_{suffix}_lower_sol",
+                        sign * policy["lower_sol"],
+                        (
+                            programs.ScalarEffect(
+                                "sol_response_high", sign * policy["high_exposure"]
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            programs.ScalarGroup(
+                "avoided_saved_lower_strata_radicalization",
+                (
+                    programs.ScalarTerm(
+                        "sol_response_core",
+                        f"sol_response_{suffix}_radicals",
+                        sign * policy["avoided_radicals"],
+                    ),
+                ),
+            ),
+            programs.ScalarGroup(
+                "independent_five_year_country_recurring_expense",
+                (
+                    programs.ScalarTerm(
+                        "sol_response_country_cost",
+                        f"sol_response_{suffix}_financing",
+                        -sign * policy["recurring_cost"],
+                        (
+                            programs.ScalarEffect(
+                                "sol_response_solvent", sign * policy["solvent_refund"]
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        result.append(
+            EventProgram(
+                SOL_EVENT + "." + suffix,
+                programs.ScalarProgram(
+                    f"event_sol_response_{suffix}", "add", policy["base"], 12, 88, groups
+                ),
+            )
+        )
+    return tuple(result)
 
 
 def _compile_plague_programs() -> tuple[EventProgram, ...]:
@@ -1012,6 +1274,19 @@ def _guards(values: Mapping[str, object], program: EventProgram) -> dict[str, bo
         ),
     }
     result["disaster_solvent"] = values.get("disaster_default") is False
+    population = values.get("sol_response_state_population")
+    core = (
+        program.identity.family == "sol_response"
+        and values.get("sol_response_state_exists") is True
+        and values.get("sol_response_state_owned") is True
+        and _valid_number(population, 1)
+    )
+    result["sol_response_core"] = core
+    result["sol_response_high"] = core and _valid_number(population, 100000)
+    # The native country expense is unconditional; saved-state uncertainty
+    # removes only the state benefits, never this independent commitment.
+    result["sol_response_country_cost"] = program.identity.family == "sol_response"
+    result["sol_response_solvent"] = values.get("sol_response_default") is False
     for index, event in enumerate(DISASTER_EVENTS):
         fact_prefix = "disaster_" + DISASTER_SCOPES[index]
         population = values.get(fact_prefix + "_population")
@@ -1034,19 +1309,34 @@ def _guards(values: Mapping[str, object], program: EventProgram) -> dict[str, bo
 def evaluate(
     values: Mapping[str, object],
     *,
-    is_ai: bool,
+    is_ai: bool | None,
     enabled_domains: frozenset[str] = frozenset({DOMAIN}),
+    enabled_families: frozenset[str] = FAMILIES,
     consumer_programs: tuple[EventProgram, ...] | None = None,
 ) -> dict[str, float]:
+    if is_ai is None:
+        return {}
     if type(is_ai) is not bool:
         raise ValueError("事件AI身份必须为已知布尔")
     if not is_ai or DOMAIN not in enabled_domains:
         return {}
     selected = compile_programs() if consumer_programs is None else consumer_programs
-    return {row.option: row.evaluate(values, is_ai=is_ai) for row in selected}
+    if not enabled_families <= FAMILIES:
+        raise ValueError("事件政策family开关含未知身份")
+    return {
+        row.option: row.evaluate(values, is_ai=is_ai)
+        for row in selected
+        if row.identity.family in enabled_families
+    }
 
 
 GUARDS = {
+    "sol_response_core": "exists = scope:slums_state scope:slums_state = { owner = root state_population >= 1 }",
+    "sol_response_high": "exists = scope:slums_state scope:slums_state = { owner = root state_population >= 100000 }",
+    # The exact event context already proves country ROOT. This actor guard
+    # deliberately has no saved-state dependency, matching native add_modifier.
+    "sol_response_country_cost": "is_ai = yes",
+    "sol_response_solvent": "in_default = no",
     "social_need": "average_sol >= 0 average_sol < 8",
     "opponent_exists": "exists = scope:anti_public_healthcare_ig",
     "opponent_cheap": "exists = scope:anti_public_healthcare_ig scope:anti_public_healthcare_ig = { ig_clout >= 0 ig_clout < 0.2 }",
@@ -1118,18 +1408,18 @@ def render_disaster_query(query: DisasterFarmQuery) -> str:
 
 def required_disaster_query_sources(query: DisasterFarmQuery) -> tuple[str, ...]:
     render_disaster_query(query)
-    return tuple(sorted(load()["sources"]))
+    return tuple(sorted(LEGACY_SOURCES))
 
 
 def compile_disaster_query(
     query: DisasterFarmQuery, inputs: Mapping[str, str]
 ) -> CompiledDisasterFarmQuery:
     expression = render_disaster_query(query)
-    verify_inputs(inputs)
+    _verify_legacy_inputs(inputs)
     return CompiledDisasterFarmQuery(
         expression,
         (f"{DISASTERS}:334", f"{DISASTERS}:349"),
-        tuple(sorted(load()["sources"].items())),
+        tuple((name, load()["sources"][name]) for name in sorted(LEGACY_SOURCES)),
     )
 
 
@@ -1176,16 +1466,16 @@ def render_query(query: PlagueStateQuery) -> str:
 
 def required_query_sources(query: PlagueStateQuery) -> tuple[str, ...]:
     render_query(query)
-    return tuple(sorted(load()["sources"]))
+    return tuple(sorted(LEGACY_SOURCES))
 
 
 def compile_query(query: PlagueStateQuery, inputs: Mapping[str, str]) -> CompiledPlagueStateQuery:
     expression = render_query(query)
-    verify_inputs(inputs)
+    _verify_legacy_inputs(inputs)
     return CompiledPlagueStateQuery(
         expression,
         (f"{PLAGUE_DECISION}:3", f"{PLAGUE}:403", f"{PLAGUE}:480", f"{PLAGUE_MODIFIERS}:728"),
-        tuple(sorted(load()["sources"].items())),
+        tuple((name, load()["sources"][name]) for name in sorted(LEGACY_SOURCES)),
     )
 
 
@@ -1275,16 +1565,20 @@ def patch(
     inputs: Mapping[str, str],
     *,
     enabled_domains: frozenset[str] = frozenset({DOMAIN}),
+    enabled_families: frozenset[str] = FAMILIES,
     consumer_programs: tuple[EventProgram, ...] | None = None,
 ) -> dict[str, str]:
     verify_inputs(inputs)
     if DOMAIN not in enabled_domains:
         return {}
+    if not enabled_families <= FAMILIES:
+        raise ValueError("事件政策family开关含未知身份")
     selected = compile_programs() if consumer_programs is None else consumer_programs
     if {row.option: row for row in selected} != {
         row.option: row for row in compile_programs()
     } or len(selected) != len(POLICIES):
         raise ValueError("事件选项程序集合缺失、重复或漂移")
+    selected = tuple(program for program in selected if program.identity.family in enabled_families)
     result = {}
     for source in sorted({program.source for program in selected}):
         text = inputs[source]
@@ -1414,5 +1708,49 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
                 "applies_to": identity.event + ".b",
             },
             "source_sha256": load()["sources"][DISASTERS],
+        }
+    sol_event = _block(parse_text(inputs[SOL]).root, SOL_EVENT)
+    sol_options = _options(sol_event)
+    for name in SOL_OPTIONS:
+        line = next(row.line for row in sol_event.all("option") if row.value is sol_options[name])
+        catalog[name] = {
+            "source": SOL,
+            "definition": SOL_EVENT,
+            "field": f"option[{name}].ai_chance",
+            "selector": {"event": SOL_EVENT, "option_name": name},
+            "native_root": "country",
+            "actor": "root",
+            "target_scope": "none",
+            "native_unit": "event_option_weight",
+            "operation": "add",
+            "placement": "new_explicit_complete_paired_ai_policy",
+            "scope_evidence": [
+                f"{SOL_JOURNAL_GROUP}:108",
+                f"{SOL_JOURNAL_DOC}:366",
+                f"{SOL_JOURNAL}:78",
+                f"{SOL}:622",
+                f"{SOL}:{line}",
+            ],
+            "source_line": line,
+            "auxiliary_entity": "scope:slums_state=state; exact event immediate random_scope_state capital; require current owner=ROOT",
+            "unknown_policy": "saved_state_missing_or_owner_or_population_unknown=state_benefits_exit_country_cost_retained; high_exposure_unknown=base_welfare_only; financing_unknown=retain_declared_recurring_cost",
+            "default_weight": "unknown_not_inferred; intentional_new_explicit_ai_policy",
+            "benefit_semantics": {
+                "relief_option": SOL_OPTIONS[0],
+                "lower_strata_standard_of_living_add": 1,
+                "relief_duration_days": 1825,
+                "rejection_option": SOL_OPTIONS[1],
+                "rejection_radical_strata": "lower",
+                "rejection_radical_operand": "medium_radicals=0.05",
+                "high_exposure": "saved_state_total_population>=100000; bounded_proxy_not_lower_strata_count",
+            },
+            "cost_semantics": {
+                "kind": "country_expenses_add",
+                "modifier_value": 1,
+                "gdp_multiplier": "money_amount_multiplier_small",
+                "duration_days": 1825,
+                "applies_to": SOL_OPTIONS[0],
+            },
+            "source_sha256": load()["sources"][SOL],
         }
     return catalog

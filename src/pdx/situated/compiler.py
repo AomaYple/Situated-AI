@@ -772,11 +772,11 @@ def _frozen_native_action_contexts() -> dict[tuple[str, str], decision_ir.Evalua
 
 
 def _frozen_canal_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
-    """Country survey decisions preserve the native relative weight and zero tail."""
+    """Exact country survey and purchase decisions retain relative weight and zero."""
     from .. import canal_opportunities as canal  # noqa: PLC0415, TID252
 
     raw = canal.FROZEN.read_bytes()
-    frozen_hash = "01c5e51daa6959f9fdb86d81f73c2b132d30ea18f137357f02b5f4215f38d3fb"
+    frozen_hash = "3aba522ae0d84dcc01d69c2ee0beb2300646b22fd0ebf71098c157490827ebc4"
     if hashlib.sha256(raw).hexdigest() != frozen_hash:
         raise ValueError("运河冻结完整源身份漂移，必须独立复核后重新pin")
     inputs = canal.frozen_inputs()
@@ -808,6 +808,46 @@ def _frozen_canal_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCont
             ),
         )
         for row in canal.consumer_catalog()
+    }
+
+
+def _frozen_native_decision_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Exact Olympic country decision retains native reward, weight and zero."""
+    from .. import native_decision_opportunities as native_decision  # noqa: PLC0415, TID252
+
+    raw = native_decision.FROZEN.read_bytes()
+    frozen_hash = "767347dd9504deb6355aece0721b9f42c97f94cf9d60a414d400ae3a5e7489f7"
+    if hashlib.sha256(raw).hexdigest() != frozen_hash:
+        raise ValueError("赛事冻结完整源身份漂移，必须独立复核后重新pin")
+    inputs = native_decision.frozen_inputs()
+    source = native_decision.FROZEN.relative_to(REPO).as_posix()
+    markers = (
+        "# A decision is evaluated in country scope.",
+        "# The scripted weight which determines how likely AI is to take it amongst all possible decisions (country scope).",
+        "# Similar to event options. If it evaluates to 0, AI will not take the decision. Evaluates to 1 if unspecified",
+    )
+    lines = inputs[native_decision.HELP].splitlines()
+    locations = [
+        [i + 1 for i, line in enumerate(lines) if line.strip() == marker] for marker in markers
+    ]
+    if any(len(found) != 1 for found in locations):
+        raise ValueError("赛事country ROOT及相对权重/零分帮助合同不唯一")
+    return {
+        (row["source"], row["field"]): decision_ir.EvaluationContext(
+            actor_scope=decision_ir.ContextBinding(
+                "root", "country", "actor", native_decision.HELP, locations[0][0]
+            ),
+            evidence=(
+                f"{source}:sha256={frozen_hash}",
+                *(f"{native_decision.HELP}:{found[0]}" for found in locations),
+                *(
+                    f"{name}:sha256={digest}"
+                    for name, digest in sorted(native_decision.load()["sources"].items())
+                ),
+                f"{row['source']}:consumer={row['field']}:relative_weight_preserve_zero",
+            ),
+        )
+        for row in native_decision.consumer_catalog()
     }
 
 
@@ -979,6 +1019,12 @@ def validate_context_readers(
         or field.split(".", 1)[0] in {"suez_survey_decision", "panama_survey_decision"}
         else {}
     )
+    native_decision_fields = (
+        _frozen_native_decision_contexts()
+        if source == "common/decisions/00_decisions.txt"
+        or field.split(".", 1)[0] == "revive_olympic_games_decision"
+        else {}
+    )
     famine_fields = (
         _frozen_famine_contexts()
         if (source and source.startswith("common/scripted_buttons/"))
@@ -989,12 +1035,13 @@ def validate_context_readers(
         (
             native_fields.get((source, field))
             or canal_fields.get((source, field))
+            or native_decision_fields.get((source, field))
             or famine_fields.get((source, field))
         )
         if source is not None
         else None
     )
-    if native_fields or canal_fields or famine_fields:
+    if native_fields or canal_fields or native_decision_fields or famine_fields:
         if (
             exact_country_context is None
             or context != exact_country_context
@@ -1011,6 +1058,12 @@ def validate_context_readers(
             reader = readers.get(key)
             if reader is None or reader.scope != "root" or reader.path:
                 raise ValueError(f"消费者 {field} 只允许本国ROOT，不提供target或owner观测：{key}")
+            if native_decision_fields:
+                from pdx import native_decision_opportunities as native_decision  # noqa: PLC0415
+
+                spec = native_decision.derive({"readers": {}})["readers"].get(key)
+                if spec is None or reader != decision_rules.Reader(key=key, **spec):
+                    raise ValueError(f"赛事读取器必须保持精确本国事实身份：{key}")
             if famine_fields:
                 from .. import famine_opportunities as famine  # noqa: PLC0415, TID252
 
@@ -1975,6 +2028,7 @@ def load_model(
     mobilization_contexts = _frozen_mobilization_contexts()
     native_action_contexts = _frozen_native_action_contexts()
     canal_contexts = _frozen_canal_contexts()
+    native_decision_contexts = _frozen_native_decision_contexts()
     decree_contexts = _frozen_decree_contexts()
     famine_contexts = _frozen_famine_contexts()
     context_readers = {}
@@ -2030,6 +2084,7 @@ def load_model(
                 or mobilization_contexts.get((source, field))
                 or native_action_contexts.get((source, field))
                 or canal_contexts.get((source, field))
+                or native_decision_contexts.get((source, field))
                 or decree_contexts.get((source, field))
                 or famine_contexts.get((source, field))
             )

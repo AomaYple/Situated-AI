@@ -157,6 +157,17 @@ def _digest(node: Assignment | Block | Scalar | None) -> str:
 
 
 def _resolve(root: Block, definition: str, field: str) -> tuple[Assignment | None, str]:
+    if field.startswith("option["):
+        option, state = _event_option(root, definition, field)
+        if option is None or not isinstance(option.value, Block):
+            return None, state
+        weights = option.value.all("ai_chance")
+        if len(weights) != 1:
+            return None, "ambiguous" if weights else "missing"
+        weight = weights[0]
+        return (
+            (weight, "found") if weight.op == "=" and weight.prefix is None else (None, "ambiguous")
+        )
     matches = root.all(definition)
     if len(matches) != 1:
         return None, "ambiguous" if matches else "missing"
@@ -180,6 +191,13 @@ def _resolve(root: Block, definition: str, field: str) -> tuple[Assignment | Non
 
 def _declarations(root: Block, definition: str, field: str) -> list[Assignment]:
     """Locate physical declarations without choosing engine duplicate semantics."""
+    if field.startswith("option["):
+        option, _ = _event_option(root, definition, field)
+        return (
+            [row for row in option.value.all("ai_chance") if row.prefix is None]
+            if option is not None and isinstance(option.value, Block)
+            else []
+        )
     nodes = root.all(definition)
     if field != "__body__":
         for part in field.split("."):
@@ -192,12 +210,47 @@ def _declarations(root: Block, definition: str, field: str) -> list[Assignment]:
     return [node for node in nodes if node.prefix is None]
 
 
+def _event_option(root: Block, definition: str, field: str) -> tuple[Assignment | None, str]:
+    """Read a physical named option; navigation alone grants no numeric permission."""
+    match = re.fullmatch(r"option\[([^\[\]\s]+)\]\.ai_chance", field)
+    parent, state = _resolve(root, definition, "__body__")
+    if match is None or parent is None or not isinstance(parent.value, Block):
+        return None, "missing" if match is None else state
+    options = []
+    for row in parent.value.all("option"):
+        if row.op != "=" or row.prefix is not None or not isinstance(row.value, Block):
+            return None, "ambiguous"
+        names = row.value.all("name")
+        if len(names) != 1 or not isinstance(names[0].value, Scalar):
+            return None, "ambiguous"
+        if names[0].op != "=" or names[0].prefix is not None:
+            return None, "ambiguous"
+        if names[0].value.unquoted == match[1]:
+            options.append(row)
+    if len(options) != 1:
+        return None, "ambiguous" if options else "missing"
+    return options[0], "found"
+
+
 def _declaration(root: Block, surface: VanillaSurface) -> Assignment | None:
     occurrence = surface.declaration_occurrence
     if type(occurrence) is not int or occurrence < 1:
         return None
     nodes = _declarations(root, surface.definition, surface.field)
+    if not nodes and occurrence == 1 and _registered_event_surface(surface):
+        node, state = _event_option(root, surface.definition, surface.field)
+        return node if state == "found" else None
     return nodes[occurrence - 1] if occurrence <= len(nodes) else None
+
+
+def _registered_event_surface(surface: VanillaSurface) -> bool:
+    from pdx import event_opportunities  # noqa: PLC0415
+
+    return any(
+        (surface.source, surface.definition, surface.field)
+        == (identity.source, identity.event, f"option[{option}].ai_chance")
+        for option, identity in event_opportunities.POLICIES.items()
+    )
 
 
 def _context_digest(surface: VanillaSurface) -> str:
@@ -450,6 +503,13 @@ def _numeric_shape(node: Assignment, native: Assignment | None = None) -> bool:
 def _kind(surface: VanillaSurface, node: Assignment) -> str:
     if node.op != "=" or node.prefix is not None:
         return "needs_review"
+    if (
+        surface.operation == "event_option_weight"
+        and surface.legal
+        and surface.capability == "direct"
+        and _registered_event_surface(surface)
+    ):
+        return "dynamic_numeric"
     family, field, value = _family(surface.source), surface.field, node.value
     if surface.operation in _EXACT_DEFAULT_OPERATIONS.values():
         return (
@@ -2618,16 +2678,20 @@ def _acceptance_program_proof(
 
     if (
         (surface.source, surface.definition, surface.field)
-        != (acceptance.SOURCE, acceptance.DEFINITION, "ai.inherent_accept_score")
+        not in {
+            (p.source, p.definition, "ai.inherent_accept_score")
+            for p in acceptance.compile_programs()
+        }
         or not dependencies.production_complete
         or dependencies.source_gaps
         or dependencies.effective.failures
     ):
         return {}
     try:
-        program = acceptance.compile_program()
+        programs = acceptance.compile_programs()
+        program = next(p for p in programs if p.definition == surface.definition)
         writer = program.writer_ir()
-        expected_bundle = ConsumerIRBundle(1, (), (writer,)).as_dict()
+        expected_bundle = ConsumerIRBundle(1, (), tuple(p.writer_ir() for p in programs)).as_dict()
         metadata_raw = generated_sources[".metadata/metadata.json"]
         metadata = json.loads(metadata_raw)
         bundle = metadata["situated_actions"]["consumer_ir"]
@@ -2648,17 +2712,19 @@ def _acceptance_program_proof(
 
         if (
             len(ids) != len(set(ids))
+            or type(bundle["schema"]) is not int
+            or bundle["schema"] != 1
             or type(bundle["writer_count"]) is not int
             or bundle["writer_count"] != len(rows)
             or type(bundle["acceptance_program_writer_count"]) is not int
-            or bundle["acceptance_program_writer_count"] != 1
+            or bundle["acceptance_program_writer_count"] != len(programs)
             or canonical(candidates) != canonical(expected_bundle["writers"])
             or bundle["field_owners"].get(writer.field) != writer.owner
             or bundle["source_field_owners"].get(f"{writer.source}:{writer.field}") != writer.owner
         ):
             return {}
         for row in rows:
-            if row is candidates[0] or row.get("source") != writer.source:
+            if row.get("writer_id") == writer.writer_id or row.get("source") != writer.source:
                 continue
             field = row["field"]
             if not isinstance(field, str):
@@ -2687,9 +2753,9 @@ def _acceptance_program_proof(
         owners = [row for row in contract["field_owners"] if row.get("source") == writer.source]
         expected_owner = {"source": writer.source, "field": writer.field, "owner": writer.owner}
         if (
-            canonical(contract["acceptance_programs"]) != canonical([program.as_dict()])
+            canonical(contract["acceptance_programs"]) != canonical([p.as_dict() for p in programs])
             or canonical(contract["acceptance_consumer_interfaces"])
-            != canonical([decision_interfaces.acceptance_consumer(program)])
+            != canonical([decision_interfaces.acceptance_consumer(p) for p in programs])
             or contract["treaty_acceptance_opportunities_sha256"] != program_digest
             or contract["generator_sha256"] != generator
             or fingerprint["consumer_adapters_generator_sha256"] != generator
@@ -2700,6 +2766,35 @@ def _acceptance_program_proof(
             return {}
         for source, digest in acceptance.load()["sources"].items():
             if contract["sources"].get(source) != digest:
+                return {}
+        # The program's getter witnesses and caller contexts are permissions
+        # only while their current native evidence is preserved. An unchanged
+        # score does not protect a helper used solely as a reader witness.
+        for source in (acceptance.DOC, acceptance.INCOME, acceptance.POWER_VALUES):
+            if not source.endswith(".txt"):
+                if dependencies.effective_bytes.get(source) != dependencies.native_bytes[source]:
+                    return {}
+            elif _ast(dependencies.native.roots[source]) != _ast(
+                dependencies.effective.roots[source]
+            ):
+                return {}
+        for source, definition in (
+            (acceptance.GOODS_TRANSFER, "goods_transfer"),
+            (acceptance.MONEY_TRANSFER, "money_transfer"),
+            (acceptance.JOIN_BLOC, "join_power_bloc"),
+            (acceptance.HOST_EMBASSY, "host_power_bloc_embassy"),
+        ):
+            before_caller, before_state = _resolve(
+                dependencies.native.roots[source], definition, "ai.inherent_accept_score"
+            )
+            after_caller, after_state = _resolve(
+                dependencies.effective.roots[source], definition, "ai.inherent_accept_score"
+            )
+            if (
+                before_state != "found"
+                or after_state != "found"
+                or _ast(before_caller) != _ast(after_caller)
+            ):
                 return {}
         native_proofs = domain_coverage._NativeBindingProofs(
             inventory, dependencies.native_bytes, {}
@@ -2786,7 +2881,11 @@ def _acceptance_program_proof(
             "native_ast_sha256": _digest(before),
             "effective_ast_sha256": _digest(after),
             "metadata_sha256": hashlib.sha256(metadata_raw).hexdigest(),
-            "writer_sha256": hashlib.sha256(canonical(candidates[0]).encode()).hexdigest(),
+            "writer_sha256": hashlib.sha256(
+                canonical(
+                    next(row for row in candidates if row["writer_id"] == writer.writer_id)
+                ).encode()
+            ).hexdigest(),
             "overlay_sha256": hashlib.sha256(overlay.encode()).hexdigest(),
             "native_inputs": {
                 name: inventory.source_hashes[name] for name in sorted(acceptance.SOURCES)
@@ -2794,6 +2893,426 @@ def _acceptance_program_proof(
             "interface_authorized": True,
             "business_complete": False,
         }
+    except (OSError, KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+        return {}
+
+
+def _event_health_projection(
+    dependencies: _Dependencies, metadata: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Protect the referenced law file, projecting only its current registered AI program."""
+    from pdx import decision_rules, event_opportunities  # noqa: PLC0415
+
+    from . import action_instances, bindings, compiler, decision_ir, ir  # noqa: PLC0415
+
+    source = event_opportunities.HEALTH
+    before = dependencies.native.roots[source]
+    after = dependencies.effective.roots[source]
+    for node in before.assignments():
+        if node.is_variable:
+            continue
+        if dependencies.native.owners["laws", node.key] != [
+            source
+        ] or dependencies.effective.owners["laws", node.key] != [source]:
+            return {}
+    if _ast(before) == _ast(after):
+        return {"mode": "retained_complete_law_source", "source": source}
+    contract = dependencies._parameter_contract(source)
+    if contract is None:
+        return {}
+    policy, groups, contract_sha = contract
+    oracle = dependencies._parameter_program_root(source, contract_sha)
+    if oracle is None or _ast(after) != _ast(oracle) or not _variable_boundary(before, after):
+        return {}
+    doc = "common/laws/readme.md"
+    if (
+        hashlib.sha256(dependencies.native_bytes[doc]).hexdigest() != compiler._LAW_NATIVE_SHA256
+        or dependencies.effective_bytes[doc] != dependencies.native_bytes[doc]
+    ):
+        return {}
+    context = compiler.law_evaluation_context(dependencies.native_bytes[doc].decode("utf-8-sig"))
+    empty = decision_rules.RuleSet((), (), "0" * 64, "0" * 64, frozenset())
+    adapters = replace(
+        dependencies.parameter_adapters,
+        policies=((source, policy),),
+        event_programs=(),
+        acceptance_programs=(),
+        supply=None,
+    )
+    instances = tuple(
+        replace(instance, evaluation_context=context)
+        for instance in action_instances.build(empty, adapters)
+    )
+    bundle = decision_ir.compile_consumer_ir(
+        (),
+        (),
+        (),
+        ir.from_rules((source, rule) for rule in policy.rules),
+        bindings.build(information=empty, adapters=adapters),
+        instances,
+    )
+    readers = {reader.key: reader for reader in policy.readers}
+    rules = {rule.id: rule for rule in policy.rules}
+    bundle = replace(
+        bundle,
+        writers=tuple(
+            replace(
+                writer,
+                reader_context_bindings=compiler.validate_context_readers(
+                    "ai_enact_weight_modifier",
+                    context,
+                    readers,
+                    rules[writer.definition].conditions,
+                    actor_path=policy.actor_path,
+                    input_keys=tuple(rules[writer.definition].input_keys()),
+                    source=source,
+                    native_root=policy.native_root,
+                ),
+            )
+            for writer in bundle.writers
+        ),
+    )
+    expected = bundle.as_dict()
+    actual = metadata["situated_actions"]["consumer_ir"]
+    current = [row for row in actual["writers"] if row.get("source") == source]
+
+    def canonical(value: object) -> str:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+    if (
+        canonical(sorted(current, key=lambda row: row["writer_id"]))
+        != canonical(expected["writers"])
+        or any(
+            actual["field_owners"].get(field) != owner
+            for field, owner in expected["field_owners"].items()
+        )
+        or any(
+            actual["source_field_owners"].get(field) != owner
+            for field, owner in expected["source_field_owners"].items()
+        )
+    ):
+        return {}
+    expected_owners = sorted(
+        [
+            {"source": source, "field": ".".join(field), "owner": "consumer_adapters"}
+            for field in groups
+        ],
+        key=canonical,
+    )
+    owners = [
+        row for row in metadata["consumer_adapters"]["field_owners"] if row.get("source") == source
+    ]
+    if sorted(owners, key=canonical) != expected_owners:
+        return {}
+    projections = []
+    for field in groups:
+        definition, *parts = field
+        path = ".".join(parts)
+        native, bstate = _resolve(before, definition, path)
+        effective, astate = _resolve(after, definition, path)
+        if native is None or effective is None or bstate != astate or bstate != "found":
+            return {}
+        surface = next(
+            (row for row in metadata["consumer_adapters"]["consumers"] if row["source"] == source),
+            None,
+        )
+        if surface is None:
+            return {}
+        # The exact program oracle protects every generated predicate; retain
+        # the existing original/parameterized Reader dependency closure too.
+        from .vanilla_inventory import _Scope, _surface  # noqa: PLC0415
+
+        inventory_surface = _surface(
+            source,
+            definition,
+            path,
+            native.line,
+            _Scope(
+                actor="country",
+                target="none",
+                operation="additive_score",
+                capability="direct",
+                evidence=context.evidence,
+            ),
+        )
+        proofs, valid = dependencies.check(
+            native, effective, numeric=True, surface=inventory_surface
+        )
+        if not valid:
+            return {}
+        projections.append(
+            {
+                "field": ".".join(field),
+                "native_ast_sha256": _digest(native),
+                "effective_ast_sha256": _digest(effective),
+                "dependencies": proofs,
+            }
+        )
+    return {
+        "mode": "exact_registered_law_numeric_program",
+        "source": source,
+        "consumer_contract_sha256": contract_sha,
+        "native_source_sha256": hashlib.sha256(dependencies.native_bytes[source]).hexdigest(),
+        "effective_source_sha256": hashlib.sha256(dependencies.effective_bytes[source]).hexdigest(),
+        "numeric_projections": projections,
+    }
+
+
+def _event_program_proofs(
+    inventory: VanillaInventory,
+    dependencies: _Dependencies,
+    generated_sources: Mapping[str, bytes],
+) -> dict[str, dict[str, Any]]:
+    """Validate one immutable candidate's complete exact event writer set once.
+
+    A physical option without ai_chance remains an option, never a fabricated
+    native numeric node. New policies and existing-weight suffixes have separate
+    receipts, both requiring whole-source restoration and the exact shared IR.
+    """
+    from pdx import decision_adapters, decision_interfaces, event_opportunities  # noqa: PLC0415
+    from pdx.textio import normalized_text  # noqa: PLC0415
+
+    from . import action_instances, domain_coverage  # noqa: PLC0415
+    from .decision_ir import ConsumerIRBundle  # noqa: PLC0415
+
+    if (
+        not dependencies.production_complete
+        or dependencies.source_gaps
+        or dependencies.native.failures
+        or dependencies.effective.failures
+        or inventory.parse_failures
+    ):
+        return {}
+    try:
+        programs = event_opportunities.compile_programs()
+        sources = event_opportunities.load()["sources"]
+        if any(
+            dependencies.effective_bytes.get(source) != raw
+            for source, raw in generated_sources.items()
+        ):
+            return {}
+        frozen = json.loads(event_opportunities.FROZEN.read_bytes())
+        texts = {}
+        for source, digest in sources.items():
+            raw = dependencies.native_bytes[source]
+            if (
+                inventory.source_hashes.get(source) != hashlib.sha256(raw).hexdigest()
+                or frozen["raw_source_hashes"].get(source) != hashlib.sha256(raw).hexdigest()
+            ):
+                return {}
+            text = normalized_text(raw.decode("utf-8-sig"))
+            if hashlib.sha256(text.encode()).hexdigest() != digest:
+                return {}
+            texts[source] = text
+        event_opportunities.verify_inputs(texts)
+        # Exact caller/effect/query witnesses are retained sources. The health
+        # law's independently registered AI program is checked below together
+        # with its complete nonnumeric source boundary.
+        output_sources = {program.source for program in programs}
+        for source in set(sources) - output_sources - {event_opportunities.HEALTH}:
+            if not source.endswith(".txt"):
+                if dependencies.effective_bytes.get(source) != dependencies.native_bytes[source]:
+                    return {}
+            elif _ast(dependencies.native.roots[source]) != _ast(
+                dependencies.effective.roots[source]
+            ):
+                return {}
+        writers = tuple(program.writer_ir() for program in programs)
+        expected_bundle = ConsumerIRBundle(1, (), writers).as_dict()
+        metadata_raw = generated_sources[".metadata/metadata.json"]
+        metadata = json.loads(metadata_raw)
+        bundle = metadata["situated_actions"]["consumer_ir"]
+        rows = bundle["writers"]
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            return {}
+        ids = [row["writer_id"] for row in rows]
+        event_sources = {program.source for program in programs}
+        selected = [
+            row
+            for row in rows
+            if row.get("kind") == "event_program"
+            or "event_program" in row
+            or row.get("writer_id") in {writer.writer_id for writer in writers}
+            or row.get("source") in event_sources
+        ]
+
+        def canonical(value: object) -> str:
+            return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+        if (
+            len(ids) != len(set(ids))
+            or type(bundle["schema"]) is not int
+            or bundle["schema"] != 1
+            or type(bundle["writer_count"]) is not int
+            or bundle["writer_count"] != len(rows)
+            or type(bundle["event_program_writer_count"]) is not int
+            or bundle["event_program_writer_count"] != len(programs)
+            or canonical(selected) != canonical(expected_bundle["writers"])
+            or any(bundle["field_owners"].get(w.field) != w.owner for w in writers)
+            or any(
+                bundle["source_field_owners"].get(f"{w.source}:{w.field}") != w.owner
+                for w in writers
+            )
+        ):
+            return {}
+        contract = metadata["consumer_adapters"]
+        digest = hashlib.sha256(
+            event_opportunities.PARAMETERS.read_bytes()
+            + b"\0baseline:"
+            + event_opportunities.FROZEN.read_bytes()
+            + b"\0generator:"
+            + Path(event_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        generator = hashlib.sha256(Path(decision_adapters.__file__).read_bytes()).hexdigest()
+        interfaces = hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()
+        owners = [row for row in contract["field_owners"] if row.get("source") in event_sources]
+        expected_owners = [
+            {"source": w.source, "field": w.field, "owner": w.owner} for w in writers
+        ]
+        if (
+            canonical(contract["event_programs"]) != canonical([p.as_dict() for p in programs])
+            or canonical(contract["event_consumer_interfaces"])
+            != canonical([decision_interfaces.event_consumer(p) for p in programs])
+            or contract["event_opportunities_sha256"] != digest
+            or contract["generator_sha256"] != generator
+            or metadata["source_fingerprint"]["consumer_adapters_generator_sha256"] != generator
+            or metadata["source_fingerprint"]["consumer_interfaces_sha256"] != interfaces
+            or sorted(owners, key=canonical) != sorted(expected_owners, key=canonical)
+            or any(contract["sources"].get(source) != digest for source, digest in sources.items())
+        ):
+            return {}
+        health_projection = _event_health_projection(dependencies, metadata)
+        if not health_projection:
+            return {}
+        outputs = event_opportunities.patch(texts, consumer_programs=programs)
+        restored = dict(outputs)
+        for source, expected in outputs.items():
+            # The adapter is also used directly. The final Mod build removes
+            # line-end padding and writes one terminal newline. Accept these
+            # two exact production forms, never arbitrary AST-only edits.
+            canonical_script = re.sub(r"(?m)[\t ]+$", "", expected).rstrip("\n") + "\n"
+            if generated_sources[source] not in (expected.encode(), canonical_script.encode()):
+                return {}
+        for program in programs:
+            overlay = event_opportunities.render(program)
+            content = restored[program.source]
+            begin = f"# SITAI BEGIN event:{program.option}"
+            end = f"# SITAI END event:{program.option}"
+            marker = f"# ACTION {program.writer_id} ["
+            if (
+                content.count(overlay) != 1
+                or content.count(begin) != 1
+                or content.count(end) != 1
+                or content.count(marker) != overlay.count(marker)
+                or any(
+                    source != program.source
+                    and source.endswith(".txt")
+                    and (begin.encode() in raw or marker.encode() in raw)
+                    for source, raw in generated_sources.items()
+                )
+            ):
+                return {}
+            restored[program.source] = content.replace(overlay, "", 1)
+        if any(restored[source] != texts[source] for source in outputs):
+            return {}
+        native_proofs = domain_coverage._NativeBindingProofs(
+            inventory, dependencies.native_bytes, {}
+        )
+        catalog = event_opportunities.consumer_catalog()
+        result = {}
+        for program, writer in zip(programs, writers, strict=True):
+            matches = [
+                s
+                for s in inventory.surfaces
+                if (s.source, s.definition, s.field)
+                == (program.source, program.event, catalog[program.option]["field"])
+            ]
+            if len(matches) != 1:
+                return {}
+            surface = matches[0]
+            instance = action_instances.ActionInstance(
+                action_id=writer.writer_id,
+                kind=writer.kind,
+                source=writer.source,
+                rule_id=writer.definition,
+                domain="political",
+                consumer_field=writer.field,
+                operation="add",
+                value=0,
+                condition_facts=tuple(r.key for r in program.readers()),
+                owner=writer.owner,
+                vanilla_tail=writer.vanilla_tail,
+                evidence=program.evaluation_context().evidence,
+                family_id="political",
+                evaluation_context=program.evaluation_context(),
+            )
+            if (
+                surface.declaration_occurrence != 1
+                or surface.ambiguity
+                or not surface.legal
+                or native_proofs.context_issue(instance, surface, state_owner_proven=False)
+                is not None
+            ):
+                return {}
+            option, state = _event_option(
+                dependencies.native.roots[program.source], program.event, surface.field
+            )
+            before, bstate = _resolve(
+                dependencies.native.roots[program.source], program.event, surface.field
+            )
+            after, astate = _resolve(
+                dependencies.effective.roots[program.source], program.event, surface.field
+            )
+            if (
+                option is None
+                or state != "found"
+                or after is None
+                or astate != "found"
+                or (program.identity.explicit and (before is not None or bstate != "missing"))
+                or (not program.identity.explicit and (before is None or bstate != "found"))
+                or (before or option).line != surface.source_line
+            ):
+                return {}
+            result[surface.surface_id] = {
+                "family": "event_program",
+                "definition": program.writer_id,
+                "status": "proven_generated",
+                "native_source": program.source,
+                "effective_source": program.source,
+                "native_ast_sha256": _digest(before or option),
+                "effective_ast_sha256": _digest(after),
+                "native_parent_ast_sha256": _digest(option),
+                "native_weight_present": before is not None,
+                "native_declaration_kind": "existing_aiweight"
+                if before is not None
+                else "event_option_without_aiweight",
+                "native_source_sha256": hashlib.sha256(
+                    dependencies.native_bytes[program.source]
+                ).hexdigest(),
+                "effective_source_sha256": hashlib.sha256(
+                    generated_sources[program.source]
+                ).hexdigest(),
+                "restored_source_sha256": hashlib.sha256(
+                    restored[program.source].encode()
+                ).hexdigest(),
+                "restoration": "whole_source_utf8_without_bom_lf_preserve_whitespace",
+                "metadata_sha256": hashlib.sha256(metadata_raw).hexdigest(),
+                "writer_sha256": hashlib.sha256(
+                    canonical(expected_bundle["writers"][programs.index(program)]).encode()
+                ).hexdigest(),
+                "overlay_sha256": hashlib.sha256(
+                    event_opportunities.render(program).encode()
+                ).hexdigest(),
+                "native_inputs": {s: inventory.source_hashes[s] for s in sorted(sources)},
+                "context": program.evaluation_context().as_dict(),
+                "referenced_health_source": health_projection,
+                "policy": "additive_to_explicit_native_aiweight"
+                if before is not None
+                else "new_explicit_ai_policy_native_default_unknown",
+                "interface_authorized": True,
+                "business_complete": False,
+            }
+        return result
     except (OSError, KeyError, TypeError, AttributeError, UnicodeError, ValueError):
         return {}
 
@@ -3294,11 +3813,25 @@ def _responsibility_axes(
         additions = {**implicit, **enums}
         masks_before: dict[int, str] = {}
         masks_after: dict[int, str] = {}
+        event_additions: dict[int, dict[str, Any]] = {}
         for surface, row in members:
             if row["status"] != "implemented_numeric" or before is None or after is None:
                 continue
             bnode, bstate = _resolve(before, surface.definition, surface.field)
             anode, astate = _resolve(after, surface.definition, surface.field)
+            event_proof = next(
+                (proof for proof in row["dependencies"] if proof["family"] == "event_program"),
+                None,
+            )
+            if (
+                event_proof is not None
+                and event_proof.get("native_weight_present") is False
+                and bnode is None
+                and bstate == "missing"
+                and anode is not None
+                and astate == "found"
+            ):
+                event_additions[id(anode)] = event_proof
             if bnode is not None and anode is not None and bstate == astate == "found":
                 masks_before[id(bnode)] = surface.declaration_id
                 masks_after[id(anode)] = surface.declaration_id
@@ -3307,6 +3840,7 @@ def _responsibility_axes(
             value: Assignment | Block | Scalar | None,
             masks: Mapping[int, str],
             additions: Mapping[int, dict[str, Any]] = additions,
+            event_additions: Mapping[int, dict[str, Any]] = event_additions,
         ) -> object:
             if isinstance(value, Assignment):
                 if id(value) in masks:
@@ -3327,7 +3861,11 @@ def _responsibility_axes(
             if isinstance(value, Block):
                 return [
                     "block",
-                    [boundary(item, masks) for item in value.items if id(item) not in additions],
+                    [
+                        boundary(item, masks)
+                        for item in value.items
+                        if id(item) not in additions and id(item) not in event_additions
+                    ],
                 ]
             return _ast(value)
 
@@ -3435,6 +3973,7 @@ def _responsibility_axes(
                 "controlled_numeric_declarations": sorted(masks_before.values()),
                 "implicit_numeric_projections": list(implicit.values()),
                 "implicit_enum_projections": list(enums.values()),
+                "new_event_policy_projections": list(event_additions.values()),
                 "issues": source_issues,
                 "native_source_sha256": hashlib.sha256(
                     dependencies.native_bytes[source]
@@ -3483,11 +4022,13 @@ def _responsibility_axes(
             )
             and (
                 changed_dependency
+                or "generated_event_program_unproven" in row["issues"]
                 or (
                     row["ast_status"] == "changed"
                     and (
                         not known
                         or "generated_numeric_shape_unproven" in row["issues"]
+                        or "generated_event_program_unproven" in row["issues"]
                         or not row["source_protection"]["context_closed"]
                         or not row["source_protection"]["dependencies_closed"]
                     )
@@ -3520,6 +4061,7 @@ def native_treatments(
     """
     if type(production_complete) is not bool:
         raise ValueError("native treatment production manifest assertion must be boolean")
+    native_sources, generated_sources = dict(native_sources), dict(generated_sources)
     aliases: dict[str, str] = {}
     for mapping in (native_sources, generated_sources):
         seen: set[str] = set()
@@ -3551,6 +4093,7 @@ def native_treatments(
         production_complete=production_complete,
     )
     covered, receipt_issues = _coverage_rows(inventory, coverage)
+    event_proofs = _event_program_proofs(inventory, dependencies, generated_sources)
     unknown_scopes = set(inventory.unknown_scopes)
     rows: list[dict[str, Any]] = []
     for surface in inventory.surfaces:
@@ -3592,6 +4135,12 @@ def native_treatments(
         }
         rows.append(row)
         issues = row["issues"]
+        if (
+            _registered_event_surface(surface)
+            and surface.source in generated_sources
+            and surface.surface_id not in event_proofs
+        ):
+            issues.append("generated_event_program_unproven")
         nroot = native.roots.get(surface.source)
         if nroot is None:
             issues.append(
@@ -3654,16 +4203,29 @@ def native_treatments(
         effective_consumer = enode
         continuous_proof = {}
         if not same and kind == "dynamic_numeric":
-            continuous_proof = _support_program_proof(
-                surface, inventory, dependencies, generated_sources
-            ) or _acceptance_program_proof(surface, inventory, dependencies, generated_sources)
+            continuous_proof = (
+                event_proofs.get(surface.surface_id, {})
+                or _support_program_proof(surface, inventory, dependencies, generated_sources)
+                or _acceptance_program_proof(surface, inventory, dependencies, generated_sources)
+            )
+            if (
+                _registered_event_surface(surface)
+                and not continuous_proof
+                and "generated_event_program_unproven" not in issues
+            ):
+                issues.append("generated_event_program_unproven")
         if continuous_proof:
             # The complete typed program and restored native tail were already
             # checked as one overlay. Re-run dependency closure on the untouched
             # native node so generated program operands cannot borrow opaque names.
+            new_event = continuous_proof.get("native_weight_present") is False
             main_proofs, dependencies_proven = dependencies.check(
-                node, node, numeric=True, surface=surface
+                node, node, numeric=not new_event, surface=None if new_event else surface
             )
+            if continuous_proof.get("family") == "event_program":
+                row["native_declaration_kind"] = continuous_proof["native_declaration_kind"]
+                row["native_weight_present"] = not new_event
+                row["numeric_policy"] = continuous_proof["policy"]
             main_proofs.append(continuous_proof)
         elif not same and kind == "dynamic_numeric" and not _numeric_shape(enode, node):
             row["resolved_numeric_value"] = _registered_numeric_value(
@@ -3752,6 +4314,13 @@ def native_treatments(
             row["status"] = "implemented_numeric"
             row["implemented_numeric"] = True
             row["numeric_actions"] = list(covered[surface.declaration_id]["covered_actions"])
+            if continuous_proof.get("family") == "event_program" and row["numeric_actions"] != [
+                continuous_proof["definition"]
+            ]:
+                row["status"] = "changed_native"
+                row["implemented_numeric"] = False
+                row["numeric_actions"] = []
+                issues.append("event_program_coverage_writer_mismatch")
         else:
             row["status"] = "changed_native"
     implicit_projections = _implicit_numeric_projections(

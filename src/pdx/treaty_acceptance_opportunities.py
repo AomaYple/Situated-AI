@@ -1,4 +1,4 @@
-"""Exact directed no-tariffs acceptance; ROOT is the country being checked.
+"""Exact directed article acceptance; ROOT is the country being checked.
 
 Article inputs are optional until proven present. This bridge owns only the
 inherent acceptance suffix, never proposal/input selection, eligibility,
@@ -12,6 +12,7 @@ import json
 import math
 import re
 import tomllib
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
@@ -19,12 +20,18 @@ from . import config
 from .lexer import ATOM, LBRACE, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
-from .situated import programs
+
+
+@dataclass(frozen=True, slots=True)
+class ExistingMilitarySourceCommitmentQuery:
+    """ROOT's bounded current treaties, including frozen/unknown status."""
+
+
+from .situated import programs  # noqa: E402
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from .decision_rules import Reader
+    from .observation_queries import CompiledQuery
     from .situated.decision_ir import EvaluationContext, WriterDecisionIR
 
 PARAMETERS = config.REPO / "mod/decisions/treaty_acceptance_opportunities.toml"
@@ -34,18 +41,62 @@ DOC = "common/treaty_articles/treaty_articles.md"
 GOODS_TRANSFER = "common/treaty_articles/13_goods_transfer.txt"
 MONEY_TRANSFER = "common/treaty_articles/05_transfer_money.txt"
 INCOME = "common/journal_entries/06_portugal_politics.txt"
-SOURCES = frozenset({SOURCE, DOC, GOODS_TRANSFER, MONEY_TRANSFER, INCOME})
+MILITARY_SOURCE = "common/treaty_articles/12_military_assistance.txt"
+POWER_VALUES = "common/script_values/01_power_bloc_values.txt"
+JOIN_BLOC = "common/treaty_articles/09_join_power_bloc.txt"
+HOST_EMBASSY = "common/treaty_articles/10_host_power_bloc_embassy.txt"
+SOURCES = frozenset(
+    {
+        SOURCE,
+        DOC,
+        GOODS_TRANSFER,
+        MONEY_TRANSFER,
+        INCOME,
+        MILITARY_SOURCE,
+        POWER_VALUES,
+        JOIN_BLOC,
+        HOST_EMBASSY,
+    }
+)
 DEFINITION = "no_tariffs"
 FIELD = "no_tariffs.ai.inherent_accept_score"
 DOMAIN = "diplomacy"
 ACTION = "treaty_acceptance_no_tariffs"
+MILITARY_DEFINITION = "military_assistance"
+MILITARY_ACTION = "treaty_acceptance_military_assistance"
+
+
+@dataclass(frozen=True, slots=True)
+class AcceptanceSpec:
+    definition: str
+    source: str
+    action: str
+
+    @property
+    def field(self) -> str:
+        return f"{self.definition}.ai.inherent_accept_score"
+
+
+SPECS = (
+    AcceptanceSpec(DEFINITION, SOURCE, ACTION),
+    AcceptanceSpec(MILITARY_DEFINITION, MILITARY_SOURCE, MILITARY_ACTION),
+)
+
+
+def _spec(definition: str) -> AcceptanceSpec:
+    matches = [spec for spec in SPECS if spec.definition == definition]
+    if len(matches) != 1:
+        raise ValueError("条约接受程序必须使用精确登记定义")
+    return matches[0]
+
+
 INPUT_MARKET = "scope:article.input_market_goods(root)"
 
 
 def load() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
     if (
-        set(data) != {"schema", "sources", "tuning"}
+        set(data) != {"schema", "sources", "tuning", "military_tuning"}
         or type(data["schema"]) is not int
         or data["schema"] != 1
         or set(data["sources"]) != SOURCES
@@ -64,6 +115,13 @@ def load() -> dict[str, Any]:
         or not 0 < tuning["source_deficit_cost"] <= tuning["source_default_cost"] <= 12
     ):
         raise ValueError("条约接受倾向必须保持有限且有界")
+    military = data["military_tuning"]
+    if (
+        set(military) != {"source_deficit_cost", "source_default_cost"}
+        or any(type(v) not in {int, float} or not math.isfinite(v) for v in military.values())
+        or not 0 < military["source_deficit_cost"] <= military["source_default_cost"] <= 10
+    ):
+        raise ValueError("军事援助接受成本必须保持有限且有界")
     return data
 
 
@@ -169,6 +227,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
         native, "net_total_income", "<", "0"
     ):
         raise ValueError("条约接受财政分量已被原版覆盖，须重新审查")
+    _verify_military(roots, doc)
     # Independent exact same-stage goods-context evidence; no treaty traversal.
     goods_ai = _block(
         _block(_block(roots[GOODS_TRANSFER], "goods_transfer"), "ai"), "inherent_accept_score"
@@ -184,6 +243,59 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
         raise ValueError("条约接受ROOT违约读数证据漂移")
     if not _contains(roots[INCOME], "net_total_income", ">", "0"):
         raise ValueError("条约接受实际净收入读数证据漂移")
+
+
+def _verify_military(roots: Mapping[str, Block], doc: str) -> None:
+    article = _block(roots[MILITARY_SOURCE], MILITARY_DEFINITION)
+    _scalar(article, "kind", "directed")
+    _scalar(article, "cost", "25")
+    _scalar(article, "maintenance_paid_by", "source_country")
+    source = _block(article, "source_modifier")
+    _scalar(source, "country_military_goods_cost_mult", "0.10")
+    targets = article.all("target_modifier")
+    if not any(
+        isinstance(row.value, Block)
+        and _contains(row.value, "country_military_goods_cost_mult", "=", "-0.1")
+        for row in targets
+    ):
+        raise ValueError("军事援助真实target军需减费漂移")
+    native = _block(_block(article, "ai"), "inherent_accept_score")
+    # The first native if is the ROOT/source branch; the later if owns the
+    # native binding-period tail, which must remain untouched.
+    branches = native.all("if")
+    if len(branches) != 2 or not isinstance(branches[0].value, Block):
+        raise ValueError("军事援助完整inherent父结构漂移")
+    source_branch = branches[0].value
+    _scalar(_block(source_branch, "limit"), "scope:source_country", "this", "?=")
+    if not any(
+        isinstance(row.value, Block) and _contains(row.value, "has_type", "=", MILITARY_DEFINITION)
+        for row in source_branch.all("if")
+    ):
+        raise ValueError("军事援助ROOT既有条约集合证据漂移")
+    ratify = _block(article, "can_ratify")
+    if not _contains(ratify, "source_country", "=", "scope:source_country"):
+        raise ValueError("军事援助既有article真实source_country链接证据漂移")
+    helper = _block(roots[POWER_VALUES], "ai_accept_join_request_score_treaties")
+    if not _contains(helper, "military_expenses", "<", "2000"):
+        raise ValueError("军事援助实际总军费getter证据漂移")
+    for path, definition in (
+        (JOIN_BLOC, "join_power_bloc"),
+        (HOST_EMBASSY, "host_power_bloc_embassy"),
+    ):
+        inherent = _block(_block(_block(roots[path], definition), "ai"), "inherent_accept_score")
+        if not _contains(inherent, "add", "=", "ai_accept_join_request_score_treaties"):
+            raise ValueError("军事援助同阶段军费getter调用证据漂移")
+    for required in (
+        "`scope:is_treaty_active`: only set when the treaty is already in force",
+        "`scope:is_renegotiation`: only set when the treaty is being renegotiated",
+        'article (in other words: it applies to the "giving" party).',
+    ):
+        if required not in doc:
+            raise ValueError("军事援助source/生命周期原版文档证据漂移")
+    if _contains(native, "in_default", "=", "yes") or _contains(
+        native, "net_total_income", "<", "0"
+    ):
+        raise ValueError("军事援助财政成本已被原版覆盖，须重新审查")
 
 
 def frozen_inputs() -> dict[str, str]:
@@ -217,23 +329,48 @@ class AcceptanceProgram:
 
     @property
     def definition(self) -> str:
-        return DEFINITION
+        return self.field.split(".")[0]
 
     @property
     def consumer_id(self) -> str:
-        return ACTION
+        return _spec(self.definition).action
 
     @property
     def field_path(self) -> tuple[str, ...]:
-        return (DEFINITION, "ai", "inherent_accept_score")
+        return (self.definition, "ai", "inherent_accept_score")
 
     def validate(self) -> None:
-        if self != compile_program():
+        if self != compile_program(self.definition):
             raise ValueError("条约接受程序身份/参数/分组漂移")
 
     def evaluation_context(self) -> EvaluationContext:
         from .situated.decision_ir import ContextBinding, EvaluationContext  # noqa: PLC0415
 
+        if self.definition == MILITARY_DEFINITION:
+            return EvaluationContext(
+                actor_scope=ContextBinding("root", "country", "actor", DOC, 559),
+                auxiliary_scopes=(
+                    ContextBinding("article", "treaty_article_options", "auxiliary", DOC, 560),
+                    ContextBinding("source_country", "country", "auxiliary", DOC, 575),
+                    ContextBinding("target_country", "country", "auxiliary", DOC, 576),
+                ),
+                evidence=(
+                    f"{DOC}:559",
+                    f"{DOC}:560",
+                    f"{DOC}:561",
+                    f"{DOC}:562",
+                    f"{DOC}:565",
+                    f"{DOC}:575",
+                    f"{DOC}:576",
+                    f"{MILITARY_SOURCE}:27",
+                    f"{MILITARY_SOURCE}:29",
+                    f"{MILITARY_SOURCE}:109",
+                    f"{MILITARY_SOURCE}:329",
+                    f"{POWER_VALUES}:1231",
+                    f"{JOIN_BLOC}:346",
+                    f"{HOST_EMBASSY}:389",
+                ),
+            )
         return EvaluationContext(
             actor_scope=ContextBinding("root", "country", "actor", DOC, 559),
             auxiliary_scopes=(
@@ -258,6 +395,64 @@ class AcceptanceProgram:
     def readers(self) -> tuple[Reader, ...]:
         from .decision_rules import Reader  # noqa: PLC0415
 
+        if self.definition == MILITARY_DEFINITION:
+            return (
+                Reader(
+                    "military_article_exists",
+                    "exists",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    argument="scope:article",
+                ),
+                Reader(
+                    "military_source_exists",
+                    "exists",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    argument="scope:source_country",
+                ),
+                Reader(
+                    "military_target_exists",
+                    "exists",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    argument="scope:target_country",
+                ),
+                Reader(
+                    "military_active_exists",
+                    "exists",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    argument="scope:is_treaty_active",
+                ),
+                Reader(
+                    "military_renegotiation_exists",
+                    "exists",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    argument="scope:is_renegotiation",
+                ),
+                Reader("military_default", "in_default", "root", "boolean", "boolean"),
+                Reader(
+                    "military_income", "net_total_income", "root", "currency_per_week", "number"
+                ),
+                Reader(
+                    "military_expenses", "military_expenses", "root", "currency_per_week", "number"
+                ),
+                Reader(
+                    "military_existing_source_commitment",
+                    "any_scope_treaty",
+                    "root",
+                    "boolean",
+                    "boolean",
+                    parameters=((QUERY_PARAMETER, "existing_source_commitment"),),
+                ),
+            )
         return (
             Reader(
                 "acceptance_article_exists",
@@ -311,6 +506,23 @@ class AcceptanceProgram:
         )
 
     def reader_bindings(self) -> tuple[tuple[str, str, str, str], ...]:
+        if self.definition == MILITARY_DEFINITION:
+            return (
+                ("military_article_exists", "article", "treaty_article_options", "auxiliary"),
+                ("military_source_exists", "source_country", "country", "auxiliary"),
+                ("military_target_exists", "target_country", "country", "auxiliary"),
+                *(
+                    (key, "root", "country", "actor")
+                    for key in (
+                        "military_active_exists",
+                        "military_renegotiation_exists",
+                        "military_default",
+                        "military_income",
+                        "military_expenses",
+                        "military_existing_source_commitment",
+                    )
+                ),
+            )
         return (
             ("acceptance_article_exists", "article", "treaty_article_options", "auxiliary"),
             ("acceptance_source_exists", "source_country", "country", "auxiliary"),
@@ -367,7 +579,34 @@ class AcceptanceProgram:
         )
 
 
-def compile_program() -> AcceptanceProgram:
+def compile_program(definition: str = DEFINITION) -> AcceptanceProgram:
+    spec = _spec(definition)
+    if definition == MILITARY_DEFINITION:
+        data = load()["military_tuning"]
+        return AcceptanceProgram(
+            programs.ScalarProgram(
+                spec.action,
+                "add",
+                0,
+                -data["source_default_cost"],
+                0,
+                (
+                    programs.ScalarGroup(
+                        "source_goods_financing",
+                        (
+                            programs.ScalarTerm(
+                                "military_source_default", spec.action, -data["source_default_cost"]
+                            ),
+                            programs.ScalarTerm(
+                                "military_source_deficit", spec.action, -data["source_deficit_cost"]
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            source=spec.source,
+            field=spec.field,
+        )
     data = load()["tuning"]
     cost = data["source_default_cost"]
     return AcceptanceProgram(
@@ -403,6 +642,10 @@ def compile_program() -> AcceptanceProgram:
     )
 
 
+def compile_programs() -> tuple[AcceptanceProgram, ...]:
+    return tuple(compile_program(spec.definition) for spec in SPECS)
+
+
 _SOURCE_ROLE = "scope:source_country ?= this NOT = { scope:target_country ?= this }"
 _TARGET_ROLE = "scope:target_country ?= this NOT = { scope:source_country ?= this }"
 GUARDS = {
@@ -413,11 +656,73 @@ GUARDS = {
     "target_input_need": _TARGET_ROLE
     + f' exists = "{INPUT_MARKET}" "{INPUT_MARKET}" = {{ market_goods_delta < 0 }}',
 }
+QUERY_PARAMETER = "military_assistance_query"
+
+
+def query_from_reader(
+    engine: str, parameters: Mapping[str, str]
+) -> ExistingMilitarySourceCommitmentQuery:
+    if engine != "any_scope_treaty" or parameters != {
+        QUERY_PARAMETER: "existing_source_commitment"
+    }:
+        raise ValueError("军事援助查询只接受精确既有source承诺身份")
+    return ExistingMilitarySourceCommitmentQuery()
+
+
+def render_query(query: ExistingMilitarySourceCommitmentQuery) -> str:
+    if type(query) is not ExistingMilitarySourceCommitmentQuery:
+        raise ValueError("军事援助只授权ROOT既有source承诺固定查询")
+    # Existing TreatyArticle has source_country; candidate TreatyArticleOptions
+    # never supplies a treaty link. Missing existing source blocks firstness.
+    return (
+        "any_scope_treaty = { any_scope_article = { has_type = military_assistance "
+        "OR = { NOT = { exists = source_country } source_country = ROOT } } }"
+    )
+
+
+def compile_query(
+    query: ExistingMilitarySourceCommitmentQuery, inputs: Mapping[str, str]
+) -> CompiledQuery:
+    from .observation_queries import CompiledQuery  # noqa: PLC0415
+
+    expression = render_query(query)
+    verify_inputs(inputs)
+    return CompiledQuery(
+        expression=expression,
+        references=(
+            f"{MILITARY_SOURCE}:97",
+            f"{MILITARY_SOURCE}:107",
+            f"{MILITARY_SOURCE}:109",
+            f"{MILITARY_SOURCE}:329",
+            f"{MILITARY_SOURCE}:331",
+        ),
+        source_hashes=tuple(sorted(load()["sources"].items())),
+        local_collections=("country.any_scope_treaty", "treaty.any_scope_article"),
+    )
+
+
+MILITARY_CORE_GUARD = (
+    _SOURCE_ROLE
+    + " NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation }"
+    + " military_expenses > 0 NOT = { "
+    + render_query(ExistingMilitarySourceCommitmentQuery())
+    + " }"
+)
+MILITARY_GUARDS = {
+    "military_source_default": MILITARY_CORE_GUARD + " in_default = yes",
+    "military_source_deficit": MILITARY_CORE_GUARD + " net_total_income < 0",
+}
+
 AI_GUARD = "exists = ROOT ROOT = { is_ai = yes } exists = scope:article exists = scope:source_country exists = scope:target_country"
 
 
 def _finite(value: object) -> TypeGuard[int | float]:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def evaluate(
@@ -431,6 +736,10 @@ def evaluate(
         raise ValueError("条约接受AI身份必须为已知布尔")
     if not is_ai or DOMAIN not in enabled_domains:
         return 0
+    selected = compile_program() if consumer_program is None else consumer_program
+    selected.validate()
+    if selected.definition == MILITARY_DEFINITION:
+        return _evaluate_military(values, selected)
     root, source, target = (values.get(k) for k in ("root", "source", "target"))
     if (
         any(not isinstance(v, str) or not v for v in (root, source, target))
@@ -455,15 +764,78 @@ def evaluate(
     return programs.evaluate_scalar(selected.scalar, guards)
 
 
+def _evaluate_military(values: Mapping[str, Any], selected: AcceptanceProgram) -> float:
+    root, source, target = (values.get(key) for key in ("root", "source", "target"))
+    if values.get("first") is not None or values.get("second") is not None:
+        raise ValueError("军事援助directed上下文不得使用mutual角色")
+    identities = all(isinstance(value, str) and value for value in (root, source, target))
+    treaties = values.get("existing_treaties")
+    if treaties is not None and not isinstance(treaties, (list, tuple)):
+        raise ValueError("军事援助既有条约必须是完整集合或未知")
+    new = treaties is not None
+    for treaty in treaties or ():
+        if not isinstance(treaty, Mapping):
+            raise ValueError("军事援助既有条约成员必须是映射")
+        articles = treaty.get("articles")
+        if articles is None:
+            new = False
+            continue
+        if not isinstance(articles, (list, tuple)):
+            raise ValueError("军事援助既有条款必须是完整集合或未知")
+        for article in articles:
+            if not isinstance(article, Mapping):
+                raise ValueError("军事援助既有条款成员必须是映射")
+            kind = article.get("type")
+            if kind is None:
+                new = False
+                continue
+            if not isinstance(kind, str) or not kind:
+                raise ValueError("军事援助既有条款type必须是非空身份或未知")
+            if kind == MILITARY_DEFINITION:
+                existing_source = article.get("source")
+                if existing_source is not None and (
+                    not isinstance(existing_source, str) or not existing_source
+                ):
+                    raise ValueError("军事援助既有source必须是非空身份或未知")
+                if existing_source is None or existing_source == root:
+                    new = False
+    for key in ("is_treaty_active_exists", "is_renegotiation_exists", "in_default"):
+        if values.get(key) is not None and type(values[key]) is not bool:
+            raise ValueError("军事援助标记和default必须是布尔或未知")
+    expenses, income = values.get("military_expenses"), values.get("net_total_income")
+    core = (
+        identities
+        and root == source
+        and root != target
+        and values.get("article_exists") is True
+        and values.get("is_treaty_active_exists") is False
+        and values.get("is_renegotiation_exists") is False
+        and new
+        and _finite(expenses)
+        and expenses > 0
+    )
+    return programs.evaluate_scalar(
+        selected.scalar,
+        {
+            "military_source_default": bool(core and values.get("in_default") is True),
+            "military_source_deficit": bool(core and _finite(income) and income < 0),
+        },
+    )
+
+
 def render(program: AcceptanceProgram) -> str:
     program.validate()
     return (
-        f"\n\t\t# SITAI BEGIN treaty_acceptance:{DEFINITION}\n"
+        f"\n\t\t# SITAI BEGIN treaty_acceptance:{program.definition}\n"
         f"\t\t# ACTION {program.writer_id} [{DOMAIN}];\n"
         + programs.render_scalar(
-            program.scalar, GUARDS, ai_guard=AI_GUARD, style="cards", domain=DOMAIN
+            program.scalar,
+            MILITARY_GUARDS if program.definition == MILITARY_DEFINITION else GUARDS,
+            ai_guard=AI_GUARD,
+            style="cards",
+            domain=DOMAIN,
         )
-        + f"\t\t# SITAI END treaty_acceptance:{DEFINITION}\n\t\t"
+        + f"\t\t# SITAI END treaty_acceptance:{program.definition}\n\t\t"
     )
 
 
@@ -498,29 +870,32 @@ def patch(
     verify_inputs(inputs)
     if DOMAIN not in enabled_domains:
         return {}
-    text = (overlays or {}).get(SOURCE, inputs[SOURCE])
-    if f"SITAI BEGIN treaty_acceptance:{DEFINITION}" in text:
+    selected = compile_program() if consumer_program is None else consumer_program
+    selected.validate()
+    source, definition = selected.source, selected.definition
+    text = (overlays or {}).get(source, inputs[source])
+    if f"SITAI BEGIN treaty_acceptance:{definition}" in text:
         raise ValueError("条约接受物理writer已由本程序写入，拒绝重复作者")
     parsed = parse_text(text)
     if parsed.errors:
         raise ValueError("条约接受overlay解析失败")
-    ai = _block(_block(parsed.root, DEFINITION), "ai")
+    ai = _block(_block(parsed.root, definition), "ai")
     native = _block(ai, "inherent_accept_score")
     original = _block(
-        _block(_block(parse_text(inputs[SOURCE]).root, DEFINITION), "ai"), "inherent_accept_score"
+        _block(_block(parse_text(inputs[source]).root, definition), "ai"), "inherent_accept_score"
     )
     if _shape(native) != _shape(original):
         raise ValueError("条约接受物理评分已有其他改动，拒绝双作者")
     offset = _close_offset(text, ai.all("inherent_accept_score")[0].line)
     selected = compile_program() if consumer_program is None else consumer_program
-    return {SOURCE: text[:offset] + render(selected) + text[offset:]}
+    return {source: text[:offset] + render(selected) + text[offset:]}
 
 
 def consumer_catalog() -> dict[str, dict[str, Any]]:
     inputs = frozen_inputs()
     ai = _block(_block(parse_text(inputs[SOURCE]).root, DEFINITION), "ai")
     lines = inputs[DOC].splitlines()
-    return {
+    result = {
         DEFINITION: {
             "source": SOURCE,
             "definition": DEFINITION,
@@ -544,3 +919,34 @@ def consumer_catalog() -> dict[str, dict[str, Any]]:
             "source_sha256": load()["sources"][SOURCE],
         }
     }
+
+    military_ai = _block(
+        _block(parse_text(inputs[MILITARY_SOURCE]).root, MILITARY_DEFINITION), "ai"
+    )
+    result[MILITARY_DEFINITION] = {
+        "source": MILITARY_SOURCE,
+        "definition": MILITARY_DEFINITION,
+        "field": _spec(MILITARY_DEFINITION).field,
+        "native_root": "country",
+        "actor": "root",
+        "kind": "directed",
+        "native_unit": "acceptance_score",
+        "operation": "add",
+        "placement": "after_complete_native_inherent_score",
+        "source_country": "giving_party_pays_actual_country_military_goods_cost_mult_plus_0.10",
+        "target_country": "receiving_party_gets_country_military_goods_cost_mult_minus_0.10",
+        "treaty_scope": "unavailable_not_consumed",
+        "input": "no article input; bounded ROOT existing treaty/article/source_country only",
+        "scope_evidence": [
+            f"{DOC}:558",
+            f"{MILITARY_SOURCE}:{military_ai.all('inherent_accept_score')[0].line}",
+            f"{MILITARY_SOURCE}:109",
+            f"{POWER_VALUES}:1231",
+            f"{JOIN_BLOC}:346",
+            f"{HOST_EMBASSY}:389",
+        ],
+        "unknown_policy": "missing_roles_article_newness_or_positive_finite_expenses=local_exit; known_default=-10; else_known_deficit=-6; otherwise=0; target=0",
+        "cost_basis": "first source +0.10 military goods multiplier commitment; total military_expenses>0 is only an explicit soft financing exposure proxy, not goods spending or forecast; -6/-10 design preferences; no influence cost",
+        "source_sha256": load()["sources"][MILITARY_SOURCE],
+    }
+    return result

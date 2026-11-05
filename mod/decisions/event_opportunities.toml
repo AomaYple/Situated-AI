@@ -21,6 +21,12 @@ schema = 1
 
 "events/american_civil_war/acw_wild_west_events.txt" = "df8b4654e5c289e4c878fd8f6dc902dfd5b77ca2d34b9c8cf6e6fac3d3238915"
 
+"events/standard_of_living_events.txt" = "2a41ab15a7e8ce219b9fa4695813203737612d2816873c3708c8e23f56e5a148"
+"common/journal_entries/00_standard_of_living.txt" = "6de98d21d08b52cb7ab83f577e1a60854a722a6584a0a28b9602a5e1fcd64c77"
+"common/journal_entries/journal_entries.md" = "8af044b1223866f3ddc59f837ccb9c370d5fda08f74e371274549288aaa3e380"
+"common/journal_entry_groups/00_journal_entries.txt" = "6265408016db2eb5ed2707acf379f50523468cb81e4feeb04ddab239fef021ef"
+"events/tech_events/nursing_events.txt" = "7c6e74206cd6acb33a203b48b2f74023b1877c506572bb2852dda50e351fa3cb"
+
 [tuning]
 reform_need = 8
 ignored_opponent_cost = 10
@@ -51,3 +57,11 @@ small_recurring_cost = 4
 medium_recurring_cost = 8
 large_recurring_cost = 20
 solvent_cost_fraction = 0.5
+
+[sol_response_policy]
+base = 50
+lower_sol = 18
+high_exposure = 6
+avoided_radicals = 6
+recurring_cost = 32
+solvent_refund = 20

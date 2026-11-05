@@ -218,8 +218,9 @@ def native_report() -> dict[str, object]:
     _policy, _extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
     model = load_model()
     scope = vanilla_inventory.discover()
+    search_sources = business_review.search_inputs()
     sources = {
-        source: (config.GAME / source).read_bytes()
+        source: search_sources[source]
         for source in scope.source_hashes
         if not source.startswith("@")
     }
@@ -257,6 +258,7 @@ def native_report() -> dict[str, object]:
             for name, text in generated.items()
         },
         treatments,
+        search_sources=search_sources,
     )
     return {
         "schema": 1,

@@ -284,7 +284,7 @@ def from_data(
             or not isinstance(item["engine"], str)
             or (
                 not _NAME.fullmatch(item["engine"])
-                and item["engine"] != "relations:root"
+                and item["engine"] not in {"relations:root", "modifier:country_tech_spread_mult"}
                 and item["engine"] not in observation_queries.QUERY_ENGINES
             )
         ):

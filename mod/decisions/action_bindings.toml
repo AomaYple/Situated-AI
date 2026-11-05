@@ -30736,6 +30736,39 @@ disposition = "migrate"
 consumer = "company_construction_power_bloc.ai_weight"
 
 [[bindings]]
+binding_id = "binding_common_decisions_00_decisions_txt_olympic_output_exposure"
+source = "common/decisions/00_decisions.txt"
+definition = "olympic_output_exposure"
+field = "revive_olympic_games_decision.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "revive_olympic_games_decision.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_decisions_00_decisions_txt_olympic_thin_buffer"
+source = "common/decisions/00_decisions.txt"
+definition = "olympic_thin_buffer"
+field = "revive_olympic_games_decision.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "revive_olympic_games_decision.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_decisions_00_decisions_txt_olympic_very_thin_buffer"
+source = "common/decisions/00_decisions.txt"
+definition = "olympic_very_thin_buffer"
+field = "revive_olympic_games_decision.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "revive_olympic_games_decision.ai_chance"
+
+[[bindings]]
 binding_id = "binding_common_decisions_canal_decisions_txt_canal_panama_administration"
 source = "common/decisions/canal_decisions.txt"
 definition = "canal_panama_administration"
@@ -30758,6 +30791,28 @@ disposition = "migrate"
 consumer = "panama_survey_decision.ai_chance"
 
 [[bindings]]
+binding_id = "binding_common_decisions_canal_decisions_txt_canal_panama_purchase_deficit"
+source = "common/decisions/canal_decisions.txt"
+definition = "canal_panama_purchase_deficit"
+field = "panama_canal_purchase.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "panama_canal_purchase.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_decisions_canal_decisions_txt_canal_panama_purchase_shortfall"
+source = "common/decisions/canal_decisions.txt"
+definition = "canal_panama_purchase_shortfall"
+field = "panama_canal_purchase.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "panama_canal_purchase.ai_chance"
+
+[[bindings]]
 binding_id = "binding_common_decisions_canal_decisions_txt_canal_suez_administration"
 source = "common/decisions/canal_decisions.txt"
 definition = "canal_suez_administration"
@@ -30778,6 +30833,28 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "suez_survey_decision.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_decisions_canal_decisions_txt_canal_suez_purchase_deficit"
+source = "common/decisions/canal_decisions.txt"
+definition = "canal_suez_purchase_deficit"
+field = "suez_canal_purchase.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "suez_canal_purchase.ai_chance"
+
+[[bindings]]
+binding_id = "binding_common_decisions_canal_decisions_txt_canal_suez_purchase_shortfall"
+source = "common/decisions/canal_decisions.txt"
+definition = "canal_suez_purchase_shortfall"
+field = "suez_canal_purchase.ai_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "suez_canal_purchase.ai_chance"
 
 [[bindings]]
 binding_id = "binding_common_decrees_00_decree_txt_decree_relief_actual_disaster_need"
@@ -30888,6 +30965,28 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "da_increase_autonomy_of_self.ai.propose_score"
+
+[[bindings]]
+binding_id = "binding_common_diplomatic_actions_40_subjects_knowledge_sharing_txt_native_action_knowledge_spread_margin"
+source = "common/diplomatic_actions/40_subjects_knowledge_sharing.txt"
+definition = "native_action_knowledge_spread_margin"
+field = "da_knowledge_sharing.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "da_knowledge_sharing.ai.propose_score"
+
+[[bindings]]
+binding_id = "binding_common_diplomatic_actions_40_subjects_knowledge_sharing_txt_native_action_knowledge_spread_weak"
+source = "common/diplomatic_actions/40_subjects_knowledge_sharing.txt"
+definition = "native_action_knowledge_spread_weak"
+field = "da_knowledge_sharing.ai.propose_score"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "da_knowledge_sharing.ai.propose_score"
 
 [[bindings]]
 binding_id = "binding_common_laws_00_army_model_txt_coordinated_layered_law_security_mass_conscription"

@@ -152,7 +152,12 @@ def check(files: Mapping[str, str], model: SituatedModel) -> dict[str, object]:
 
 def verify_inherited_writes(files: Mapping[str, str]) -> None:
     """Inherited state and world scans are exact operations, never spare slots."""
-    from pdx import canal_opportunities, event_opportunities, famine_opportunities  # noqa: PLC0415
+    from pdx import (  # noqa: PLC0415
+        canal_opportunities,
+        event_opportunities,
+        famine_opportunities,
+        native_decision_opportunities,
+    )
 
     inherited = {
         canal_opportunities.SOURCE: canal_opportunities.frozen_inputs()[canal_opportunities.SOURCE],
@@ -160,8 +165,12 @@ def verify_inherited_writes(files: Mapping[str, str]) -> None:
         event_opportunities.DISASTERS: event_opportunities.frozen_inputs()[
             event_opportunities.DISASTERS
         ],
+        event_opportunities.SOL: event_opportunities.frozen_inputs()[event_opportunities.SOL],
         famine_opportunities.SOURCE: famine_opportunities.frozen_inputs()[
             famine_opportunities.SOURCE
+        ],
+        native_decision_opportunities.SOURCE: native_decision_opportunities.frozen_inputs()[
+            native_decision_opportunities.SOURCE
         ],
     }
 
