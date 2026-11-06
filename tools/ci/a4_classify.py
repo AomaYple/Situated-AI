@@ -1839,6 +1839,8 @@ def current_intake(sources: Any) -> dict[str, Any]:
     if value["package"]["kind"] != "file" or value["package"]["identity"] != "whole_file":
         raise ValueError("current package requires complete artifact identity")
     sources.verify(value["package"])
+    if successor and value["package"]["path"] == PACKAGE:
+        raise ValueError("successor current package must be distinct from historical PACKAGE")
     nodes = value["witness_nodes"]
     if not nodes or len(set(nodes)) != len(nodes):
         raise ValueError("current candidate requires unique independent current witness nodes")
