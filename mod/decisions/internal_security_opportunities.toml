@@ -5,6 +5,14 @@ schema = 1
 "common/laws/00_internal_security.txt" = "d1faa617a0cd77c0ae0facac3c576b4019fe3b04d8e1e2b370852b1da91ac31e"
 "common/scripted_triggers/00_ai_triggers.txt" = "ffca2b8deef024a9d2703d1297a0bea3a3e931a0b1710e2daea74c48a9dd248b"
 
+"common/decisions/ip4_portugal_decisions.txt" = "30fcd95c3d67aa02b071e98bd4b5b491b47daa9e1fae9ccb79323cac75934af7"
+"common/scripted_effects/00_victoria_ip4_scripted_effects.txt" = "7c6b90960c2e43fdbeb62f4d98e19aeadf5e507781af229ebe92378fd9bb38d7"
+"common/scripted_progress_bars/00_ip4_victoria_progress_bars.txt" = "aabfb2e01e3110708941b2d6c5b736b54aff4f8522427d23ffbb32caa102887d"
+"common/script_values/ip4_je_values.txt" = "700d2c241415950211d1b6680f72525a10e4a75829cfdd000df4626e6332ae3d"
+"common/diplomatic_actions/40_subjects_knowledge_sharing.txt" = "bbbb6e12e9dea1f48a0e3226b895c3854554b8ed1435ae071f17b2e72a3a102e"
+
+"common/journal_entries/01_coup.txt" = "7e5c43a32de90be472583aac03e46db41350b605dea7c817145998e719f7b491"
+
 [candidates]
 law_third_section = "common/laws/00_internal_security.txt"
 law_okhrana = "common/laws/00_internal_security.txt"
@@ -16,6 +24,8 @@ law_shinsengumi = "common/laws/00_internal_security.txt"
 law_guaranteed_liberties = "common/laws/00_internal_security.txt"
 
 [tuning]
+coup_change = 4
+coup_loss = -4
 agenda_base = 6
 agenda_strong = 10
 movement_change_base = 8

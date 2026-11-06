@@ -41,12 +41,12 @@ law_merchant_navy = {
 			# GROUP program_d06836025e9175f9_positive
 			add = { value = 0
 				# coordinated_layered_law_naval_merchant_navy [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_evidence_need_overseas = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no sitai_context_layer_stable = yes } } add = 6 }
 			}
 			# GROUP program_d06836025e9175f9_negative
 			add = { value = 0
 				# political_capacity_law_merchant_navy [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 6
@@ -112,7 +112,7 @@ law_jeune_ecole = {
 			# GROUP program_ae29863c25662918_negative
 			add = { value = 0
 				# political_capacity_law_jeune_ecole [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 0
@@ -175,12 +175,12 @@ law_professional_navy = {
 			# GROUP program_0c5872b1bd6b4a3f_positive
 			add = { value = 0
 				# coordinated_layered_law_naval_professional_navy [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_evidence_need_overseas = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no sitai_context_layer_expansion = yes } } add = 6 }
 			}
 			# GROUP program_0c5872b1bd6b4a3f_negative
 			add = { value = 0
 				# political_capacity_law_professional_navy [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 6
@@ -241,7 +241,7 @@ law_diplomatic_navy = {
 			# GROUP program_2cb30cce476edf73_negative
 			add = { value = 0
 				# political_capacity_law_diplomatic_navy [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 0

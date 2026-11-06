@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from . import config
-from .model import Block, Scalar
+from .model import Assignment, Block, Scalar
 from .parser import parse_text
 
 if TYPE_CHECKING:
@@ -39,8 +39,50 @@ _CANDIDATES = frozenset(
         "law_guaranteed_liberties",
     }
 )
+_COUP_SOURCES = (
+    "common/decisions/ip4_portugal_decisions.txt",
+    "common/scripted_effects/00_victoria_ip4_scripted_effects.txt",
+    "common/scripted_progress_bars/00_ip4_victoria_progress_bars.txt",
+    "common/script_values/ip4_je_values.txt",
+    "common/diplomatic_actions/40_subjects_knowledge_sharing.txt",
+    "common/journal_entries/01_coup.txt",
+)
+_COUP_PROOFS = (
+    (
+        "common/decisions/ip4_portugal_decisions.txt",
+        ("decision_depose_ruling_dynasty", "possible"),
+        "50e428b44296fb527f30857dd953d1973798df4d33f28f83369f3fdd06127630",
+    ),
+    (
+        "common/scripted_effects/00_victoria_ip4_scripted_effects.txt",
+        ("create_coup_from_character",),
+        "3350d7b3a90971f1af46bcb2b6b86253d5b1b7599725e5c2eb2af015e128b43b",
+    ),
+    (
+        "common/scripted_progress_bars/00_ip4_victoria_progress_bars.txt",
+        ("je_ip4_coup_progress_bar",),
+        "4c03b69e3e0ae21210af8dc55930cb07cc093529a4db0930b9dd56b7afb9d563",
+    ),
+    (
+        "common/script_values/ip4_je_values.txt",
+        ("country_coup_resistance",),
+        "e826ada33ca9c671fff1b43d88e2c2cafd33d0a8de9e77d1ea47628ddc9cc42c",
+    ),
+    (
+        "common/diplomatic_actions/40_subjects_knowledge_sharing.txt",
+        ("da_knowledge_sharing",),
+        "d01aefd0d2de6e7df86cbf0d1aec2c84820c47827b71a7ed0dc35ee89b6a40f1",
+    ),
+    (
+        "common/journal_entries/01_coup.txt",
+        ("je_ip4_coup",),
+        "91956aa9de5f5b9fbbd45465f7aa34a21f8bf3cc280aee01ad3da5dd453ed158",
+    ),
+)
 _TUNING = frozenset(
     {
+        "coup_change",
+        "coup_loss",
         "agenda_base",
         "agenda_strong",
         "movement_change_base",
@@ -86,7 +128,7 @@ def load() -> dict[str, Any]:
         or data["schema"] != 1
     ):
         raise ValueError("内部安全机会schema无效")
-    if set(data["sources"]) != {LAW_SOURCE, QUERY_SOURCE} or any(
+    if set(data["sources"]) != {LAW_SOURCE, QUERY_SOURCE, *_COUP_SOURCES} or any(
         not isinstance(value, str) or not re.fullmatch(r"[a-f0-9]{64}", value)
         for value in data["sources"].values()
     ):
@@ -100,7 +142,9 @@ def load() -> dict[str, Any]:
     ):
         raise ValueError("内部安全评分参数必须为有限有界数值")
     if not (
-        0 < tuning["agenda_base"] <= tuning["agenda_strong"]
+        0 < tuning["coup_change"] <= 8
+        and -8 <= tuning["coup_loss"] < 0
+        and 0 < tuning["agenda_base"] <= tuning["agenda_strong"]
         and 0 < tuning["movement_change_base"] <= tuning["movement_change_invested"]
         and tuning["movement_loss_invested"] <= tuning["movement_loss_base"] < 0
         and tuning["new_administration_cost"] < 0
@@ -188,6 +232,19 @@ def inventory(inputs: Mapping[str, str]) -> dict[str, Any]:
                     raise ValueError(f"内部安全新效果尚未登记责任：{row.key}")
                 channel = _CHANNELS.get(row.key)
                 reason = "observed_movement_exposure" if channel else _NO_EXPOSURE[row.key]
+                if (
+                    row.key == "country_coup_resistance_add"
+                    and parent is None
+                    and law
+                    in {
+                        "law_national_guard",
+                        "law_secret_police",
+                        "law_guaranteed_liberties",
+                        "law_extraordinary_commission",
+                    }
+                    and container == "institution_modifier"
+                ):
+                    reason = "observed_active_coup_base_law_transition_only"
                 if parent is not None:
                     channel = None
                     reason = "variant_parent_effect_merging_requires_independent_contract"
@@ -237,7 +294,13 @@ class CompiledSecurityQuery:
     runtime_cost: str = "existential traversal of owned political movements"
 
 
-def query_from_reader(engine: str, parameters: Mapping[str, str]) -> SecurityQuery:
+def query_from_reader(
+    engine: str, parameters: Mapping[str, str]
+) -> SecurityQuery | SecurityCoupQuery:
+    if parameters.get("security_query") == "active_coup_positive_resistance":
+        if engine != "AND" or set(parameters) != {"security_query"}:
+            raise ValueError("政变观测必须保持精确国家AND无参数合同")
+        return SecurityCoupQuery()
     if (
         engine != "any_political_movement"
         or set(parameters) != {"security_query", "threshold"}
@@ -250,7 +313,11 @@ def query_from_reader(engine: str, parameters: Mapping[str, str]) -> SecurityQue
     return query
 
 
-def render_query(query: SecurityQuery) -> str:
+def render_query(query: SecurityQuery | SecurityCoupQuery) -> str:
+    if type(query) is SecurityCoupQuery:
+        return (
+            "AND = { has_journal_entry = je_ip4_coup modifier:country_coup_resistance_mult > -1 }"
+        )
     if type(query) is not SecurityQuery or type(query.minimum_radicalism) not in {int, float}:
         raise ValueError("内部安全查询类型无效")
     if query.minimum_radicalism not in {0.25, 0.75}:
@@ -261,13 +328,21 @@ def render_query(query: SecurityQuery) -> str:
     )
 
 
-def required_query_sources(query: SecurityQuery) -> tuple[str, ...]:
+def required_query_sources(query: SecurityQuery | SecurityCoupQuery) -> tuple[str, ...]:
+    if type(query) is SecurityCoupQuery:
+        return _COUP_SOURCES
     render_query(query)
     return (QUERY_SOURCE,)
 
 
-def compile_query(query: SecurityQuery, inputs: Mapping[str, str]) -> CompiledSecurityQuery:
+def compile_query(
+    query: SecurityQuery | SecurityCoupQuery, inputs: Mapping[str, str]
+) -> CompiledSecurityQuery:
+    if type(query) is SecurityCoupQuery:
+        return _compile_coup_query(query, inputs)
     expression = render_query(query)
+    if not isinstance(query, SecurityQuery):
+        raise ValueError("内部安全查询类型无效")
     data = load()
     text = inputs.get(QUERY_SOURCE)
     if text is None or hashlib.sha256(text.encode()).hexdigest() != data["sources"][QUERY_SOURCE]:
@@ -292,7 +367,8 @@ def compile_query(query: SecurityQuery, inputs: Mapping[str, str]) -> CompiledSe
     visit(movement)
     if {value for value, _line in observed} != {0.25, 0.75} or len(observed) != 2:
         raise ValueError("内部安全原版运动阈值分母漂移")
-    line = next(line for value, line in observed if value == query.minimum_radicalism)
+    threshold = query.minimum_radicalism
+    line = next(line for value, line in observed if value == threshold)
     return CompiledSecurityQuery(
         expression,
         (f"{QUERY_SOURCE}:{line}",),
@@ -387,7 +463,7 @@ def derive(adapters: Mapping[str, Any], inputs: Mapping[str, str] | None = None)
                 -tuning[f"agenda_{tier}"],
                 [_condition(key, "=", True), _condition(current(law), "=", True)],
                 "候选法已实际生效时撤回同档已观察议程偏好；未知现行法不抹去独立已知的国内诉求",
-                semantic_role="unspecified",
+                semantic_role="benefit",
             )
 
     for tier, threshold in (("base", "0.25"),):
@@ -455,6 +531,7 @@ def derive(adapters: Mapping[str, Any], inputs: Mapping[str, str] | None = None)
                         semantic_role="benefit" if improving else "cost",
                     )
 
+    _derive_coup_rules({"readers": readers, "rules": rules}, inputs)
     used = {condition["fact"] for rule in rules for condition in rule["conditions"]}
     for key in sorted(used - readers.keys()):
         if key not in adapters["readers"]:
@@ -470,3 +547,197 @@ def derive(adapters: Mapping[str, Any], inputs: Mapping[str, str] | None = None)
         ],
         "native_effects": native,
     }
+
+
+@dataclass(frozen=True, slots=True)
+class SecurityCoupQuery:
+    """Actual actor-owned coup and a strictly positive resistance multiplier."""
+
+
+def _compile_coup_query(
+    query: SecurityCoupQuery, inputs: Mapping[str, str]
+) -> CompiledSecurityQuery:
+    hashes = load()["sources"]
+    roots = {}
+    for source in _COUP_SOURCES:
+        text = inputs.get(source)
+        if text is None or hashlib.sha256(text.encode()).hexdigest() != hashes[source]:
+            raise ValueError(f"政变完整原版来源漂移：{source}")
+        parsed = parse_text(text)
+        if parsed.errors:
+            raise ValueError(f"政变完整原版解析失败：{source}")
+        roots[source] = parsed.root
+    decision, creation, progress, values, _comparison, journal = _COUP_SOURCES
+    possible = _child(_child(roots[decision], "decision_depose_ruling_dynasty"), "possible")
+    if _scalar(_child(possible, "NOR"), "has_journal_entry") != "je_ip4_coup":
+        raise ValueError("政变JE国家消费者漂移")
+    owner = _child(
+        _child(_child(roots[creation], "create_coup_from_character"), "$CHARACTER$"), "owner"
+    )
+    if _scalar(_child(owner, "add_journal_entry"), "type") != "je_ip4_coup":
+        raise ValueError("政变JE所有者漂移")
+    weekly = _child(
+        _child(_child(roots[progress], "je_ip4_coup_progress_bar"), "weekly_progress"), "owner"
+    )
+    subtracts = [
+        row
+        for row in weekly.all("subtract")
+        if isinstance(row.value, Block)
+        and _scalar(row.value, "value") == "owner.country_coup_resistance"
+    ]
+    if len(subtracts) != 1:
+        raise ValueError("政变抵抗消费者漂移")
+    resistance = _child(roots[values], "country_coup_resistance")
+    if [row.key for row in resistance.assignments()] != ["add", "add", "multiply"]:
+        raise ValueError("政变抵抗公式次序漂移")
+    additions = resistance.all("add")
+    if (
+        not isinstance(additions[1].value, Block)
+        or _scalar(additions[1].value, "add") != "modifier:country_coup_resistance_add"
+    ):
+        raise ValueError("政变抵抗加法来源漂移")
+    multiplier = _child(resistance, "multiply")
+    if (
+        _scalar(multiplier, "value") != "1"
+        or _scalar(multiplier, "add") != "modifier:country_coup_resistance_mult"
+    ):
+        raise ValueError("政变抵抗乘数漂移")
+    references: list[str] = []
+    for source, parts, expected in _COUP_PROOFS:
+        parent = roots[source]
+        for part in parts:
+            parent = _child(parent, part)
+        digest = hashlib.sha256(
+            json.dumps(_coup_ast(parent), ensure_ascii=False, separators=(",", ":")).encode()
+        ).hexdigest()
+        if digest != expected:
+            raise ValueError(f"政变完整父AST漂移：{source}:{'.'.join(parts)}")
+        references.append(f"{source}:{parent.line}")
+    entry = _child(roots[journal], "je_ip4_coup")
+    if _scalar(entry, "scripted_progress_bar") != "je_ip4_coup_progress_bar":
+        raise ValueError("政变JE到进度条连接漂移")
+    outcomes = entry.all("outcome")
+    if len(outcomes) != 4:
+        raise ValueError("政变结局分母漂移")
+    # The whole JE parent above includes the complete >=120 victory and <=0
+    # failure triggers/effects. These independent exact subtrees also document
+    # and verify which direction the proposed resistance preference serves.
+    success = outcomes[0].value
+    failure = outcomes[1].value
+    if not isinstance(success, Block) or not isinstance(failure, Block):
+        raise ValueError("政变结局形状漂移")
+    success_progress = _child(
+        _child(_child(success, "trigger"), "custom_tooltip"), "scope:journal_entry"
+    )
+    failure_or = _child(_child(failure, "trigger"), "OR")
+    failure_progress = _child(_child(failure_or, "custom_tooltip"), "scope:journal_entry")
+    for parent, operator, expected_value in (
+        (success_progress, ">=", "120"),
+        (failure_progress, "<=", "0"),
+    ):
+        rows = parent.all("scripted_bar_progress(je_ip4_coup_progress_bar)")
+        if (
+            len(rows) != 1
+            or rows[0].op != operator
+            or not isinstance(rows[0].value, Scalar)
+            or rows[0].value.unquoted != expected_value
+        ):
+            raise ValueError("政变推进方向漂移")
+        references.append(f"{journal}:{rows[0].line}")
+    if (
+        _scalar(_child(_child(success, "effect"), "show_as_tooltip"), "ip4_coup_victory_effect")
+        != "yes"
+    ):
+        raise ValueError("政变成功后果漂移")
+    failure_effect = _child(failure, "effect")
+    if (
+        _scalar(failure_effect, "je_ip4_coup_cleanup") != "yes"
+        or _scalar(_child(failure_effect, "change_global_variable"), "name") != "failed_coups"
+    ):
+        raise ValueError("政变失败后果漂移")
+    refs = tuple(references)
+    return CompiledSecurityQuery(
+        render_query(query),
+        refs,
+        tuple((s, hashes[s]) for s in _COUP_SOURCES),
+        local_collections=(),
+        unknown_policy="missing_JE_or_multiplier=unknown; absent_active_JE=false",
+        runtime_cost="two actor-country scalar predicates; no traversal",
+    )
+
+
+def _derive_coup_rules(result: dict[str, Any], inputs: Mapping[str, str]) -> None:
+    compile_query(SecurityCoupQuery(), inputs)
+    laws = inventory(inputs)["laws"]
+    base = (
+        "law_national_guard",
+        "law_secret_police",
+        "law_guaranteed_liberties",
+        "law_extraordinary_commission",
+    )
+    readers, rules = result["readers"], result["rules"]
+    readers["security_active_coup_positive_resistance"] = {
+        "engine": "AND",
+        "scope": "root",
+        "kind": "boolean",
+        "unit": "boolean",
+        "parameters": {"security_query": "active_coup_positive_resistance"},
+    }
+
+    def effect(law: str) -> float:
+        rows = [
+            row for row in laws[law]["effects"] if row["field"] == "country_coup_resistance_add"
+        ]
+        if (
+            laws[law]["parent"] is not None
+            or len(rows) != 1
+            or rows[0]["unit"] != "per_invested_level"
+        ):
+            raise ValueError("政变基础法律效果合同漂移")
+        value = rows[0]["value"]
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise ValueError("政变基础法律效果值必须为数值")
+        return float(value)
+
+    for origin in base:
+        for candidate in base:
+            delta = effect(candidate) - effect(origin)
+            if not delta:
+                continue
+            conditions = [
+                _condition(f"security_current_{origin}", "=", True),
+                _condition(f"security_current_{candidate}", "=", False),
+                _condition("home_affairs_investment", ">=", 1),
+                _condition("security_active_coup_positive_resistance", "=", True),
+            ]
+            if origin == "law_secret_police":
+                conditions.extend(
+                    _condition(f"security_current_{variant}", "=", False)
+                    for variant in ("law_shinsengumi", "law_third_section", "law_okhrana")
+                )
+            rules.append(
+                {
+                    "id": f"internal_security_{candidate}_from_{origin}_coup_resistance",
+                    "source": LAW_SOURCE,
+                    "field": f"{candidate}.ai_enact_weight_modifier",
+                    "domain": "political",
+                    "priority": 74900 + len(rules),
+                    "operation": "add",
+                    "value": load()["tuning"]["coup_change" if delta > 0 else "coup_loss"],
+                    "semantic_role": "benefit" if delta > 0 else "cost",
+                    "contribution_group": "law_security_actual_coup_resistance",
+                    "conditions": conditions,
+                    "why": "本国活动政变实际消费抵抗，比较基础现行与候选法每级抵抗差；已观察投资和正向乘数守卫方向，不预测法律完成时间或政变结果",
+                    "counterexample": "与运动因果分组并一次联合；未知局部退出，变体父合并不代签；原版资格、科技、ai_will_do、请愿、玩家与关闭保留",
+                }
+            )
+
+
+def _coup_ast(node: object) -> object:
+    if isinstance(node, Scalar):
+        return ("scalar", node.text, node.quoted)
+    if isinstance(node, Assignment):
+        return ("assignment", node.key, node.op, node.prefix, _coup_ast(node.value))
+    if isinstance(node, Block):
+        return ("block", tuple(_coup_ast(item) for item in node.items))
+    return None

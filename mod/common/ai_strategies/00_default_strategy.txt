@@ -184,13 +184,13 @@ ai_strategy_default = {
 			# GROUP program_9dc583a0e57190ff_political_crisis_aversion_positive
 			add = { value = 0
 				# coordinated_layered_information_revolution_recovery [political]; 恢复层级提高革命风险规避，保留原版政治和革命资格
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } add = 0.25 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_layer_recovery = yes } } add = 0.25 }
 				# political_insurrection_aversion [political]; 当前真实政治危机提高避免革命的有限倾向；战争不屏蔽国内风险
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_insurrectionary_interest_groups = yes } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { has_insurrectionary_interest_groups = yes } } add = 0.2 }
 				# political_legitimacy_crisis_aversion [political]; 当前真实政治危机提高避免革命的有限倾向；战争不屏蔽国内风险
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 } } add = 0.2 }
 				# political_default_risk [political]; 财政违约提高避免革命的原版倾向，不禁止立法
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { in_default = yes } } add = 0.2 }
 			}
 			min = 1
 			max = 1.25
@@ -210,11 +210,11 @@ ai_strategy_default = {
 			# GROUP program_81df4fbe5bc2d7d0_positive
 			add = { value = 0
 				# coordinated_layered_political_law_threshold [political]; 政治危机提高改革成功率要求，避免把不稳定误判为改革窗口
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_political = yes sitai_context_need_political = yes } } add = 4 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_need_political = yes } } add = 4 }
 				# comparative_government_frictions_union [political]; 有实力的执政集团不满且政府合法性低时，提高启动新立法所需的最低通过机会
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 exists = ig:ig_trade_unions ig:ig_trade_unions = { is_in_government = yes ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 ig_approval < 0 } } } add = 3 }
+				else_if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 exists = ig:ig_trade_unions ig:ig_trade_unions = { is_in_government = yes ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 ig_approval < 0 } } } add = 3 }
 				# comparative_government_frictions_landowner [political]; 有实力的执政集团不满且政府合法性低时，提高启动新立法所需的最低通过机会
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 exists = ig:ig_landowners ig:ig_landowners = { is_in_government = yes ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 ig_approval < 0 } } } add = 3 }
+				else_if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 exists = ig:ig_landowners ig:ig_landowners = { is_in_government = yes ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 ig_approval < 0 } } } add = 3 }
 			}
 			min = 0
 			max = 4
@@ -265,9 +265,9 @@ ai_strategy_default = {
 			add = { value = 0
 				# SITAI CHAIN LJ08/LJ08.negotiation_local_political_capacity writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj08_negotiation_local_political_capacity
 				# lj08_negotiation_local_political_capacity [political]; 有意迁移旧候选IG组织与反对目标：只在实际具名amenability处于政策接受窗口0<值<=1且本国激进比例至少25%时给予有限谈判倾向；合法性至少50且无叛乱只升档。不将amenability称为clout或approval，数值为原生fixed-point值的add而非百分比
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes scope:amenability > 0 scope:amenability <= 1 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no } } add = 0.25 }
+				if = { limit = { exists = ROOT ROOT = { scope:amenability > 0 scope:amenability <= 1 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no } } add = 0.25 }
 				# remaining_organized_negotiation_need [political]; 有意迁移旧候选IG组织与反对目标：只在实际具名amenability处于政策接受窗口0<值<=1且本国激进比例至少25%时给予有限谈判倾向；合法性至少50且无叛乱只升档。不将amenability称为clout或approval，数值为原生fixed-point值的add而非百分比
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes scope:amenability > 0 scope:amenability <= 1 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { scope:amenability > 0 scope:amenability <= 1 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 0.1 }
 			}
 			min = 0
 			max = 0.25
@@ -1751,7 +1751,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_487cd54db5adbbf4_negative
 			add = { value = 0
 				# ai_strategy_default_wargoal_maneuvers_fraction [diplomacy]; 和平违约时适度减少额外战争目标的机动投入，不改变战争目标合法性和代价
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -0.1 }
 			}
 			min = 0.9
 			max = 1
@@ -1799,14 +1799,14 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_15c035bd1ad270a3_colonial_actual_activity_need_positive
 			add = { value = 0
 				# colonial_activity_need [economy]; 本国拥有正在殖民中的真实州，产生制度投资需求；殖民能力和空闲殖民法不构成活动，不要求财政健康才承认需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs any_scope_state = { is_under_colonization = yes } } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_colonial_affairs any_scope_state = { is_under_colonization = yes } } } add = 0.18 }
 			}
 			# GROUP program_15c035bd1ad270a3_colonial_inactive_priority_withdrawal_negative
 			add = { value = 0
 				# colonial_activity_inactive_invested [economy]; 完整本国州集合证实没有实际殖民项目，已投入制度降低新增优先级；不是强制撤销制度，不把未知集合或能力值当无活动
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs NOT = { any_scope_state = { is_under_colonization = yes } } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = -0.15 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_colonial_affairs NOT = { any_scope_state = { is_under_colonization = yes } } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = -0.15 }
 				# colonial_activity_inactive [economy]; 完整本国州集合证实没有实际殖民项目，已投入制度降低新增优先级；不是强制撤销制度，不把未知集合或能力值当无活动
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs NOT = { any_scope_state = { is_under_colonization = yes } } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = -0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_colonial_affairs NOT = { any_scope_state = { is_under_colonization = yes } } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = -0.08 }
 			}
 			# GROUP program_15c035bd1ad270a3_colonial_institution_administrative_pressure_negative
 			add = { value = 0
@@ -1816,14 +1816,14 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_15c035bd1ad270a3_colonial_institution_financing_pressure_negative
 			add = { value = 0
 				# coordinated_institution_colonial_affairs_financial_cost [fiscal]; 和平且已实际违约时计入殖民制度的融资机会成本；不覆盖独立行政压力，不以正常借款冒充违约
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.25 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -0.25 }
 			}
 			# GROUP program_15c035bd1ad270a3_colonial_invested_priority_withdrawal_negative
 			add = { value = 0
 				# colonial_activity_deeply_invested [economy]; 已有较多实际投入时撤回部分新增优先级，保留独立真实活动需求；原版每等级效果未被更改，也不推断需求已满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs any_scope_state = { is_under_colonization = yes } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 5 } } } add = -0.14 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_colonial_affairs any_scope_state = { is_under_colonization = yes } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 5 } } } add = -0.14 }
 				# colonial_activity_invested [economy]; 已有较多实际投入时撤回部分新增优先级，保留独立真实活动需求；原版每等级效果未被更改，也不推断需求已满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs any_scope_state = { is_under_colonization = yes } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = -0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_colonial_affairs any_scope_state = { is_under_colonization = yes } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = -0.1 }
 			}
 			min = 0.5
 			max = 1.18
@@ -1845,34 +1845,34 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_f5f8d2ca42dfbbf3_institution_financing_pressure_negative
 			add = { value = 0
 				# administrative_cost_guard [economy]; 违约且和平时降低新增社会保障制度的支出倾向
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.2 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -0.2 } }
 				# social_security_default_pressure [fiscal]; 真实违约在战时和和平都形成社保融资代价；与既有和平违约成本同因择强，正常贷款不另扣分
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.15 } } } }
 			}
 			# GROUP program_f5f8d2ca42dfbbf3_institution_social_security_invested_priority_withdrawal_negative
 			add = { value = 0
 				# institution_priority_social_security_0_deeply_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_social_security institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 5 } average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 } } add = -0.05 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_social_security institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 5 } average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 } } add = -0.05 }
 				# institution_priority_social_security_0_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_social_security institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 } } add = -0.03 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_social_security institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 } } add = -0.03 }
 			}
 			# GROUP program_f5f8d2ca42dfbbf3_social_security_need_positive
 			add = { value = 0
 				# SITAI CHAIN LJ07/LJ07.grain_social_capacity writer=rule_action_mod_decisions_information_toml_lj07_grain_social_capacity
 				# lj07_grain_social_capacity [political]; 粮食短缺与低生活水平、行政和净收入承载同时存在且无叛乱时，社会保障倾向有限升档；健康、稳定和粮食仍由不同消费者表达
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 bureaucracy > 0 net_total_income > 0 has_insurrectionary_interest_groups = no in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.12 }
+				if = { limit = { exists = ROOT ROOT = { average_sol >= 0 average_sol < 8 bureaucracy > 0 net_total_income > 0 has_insurrectionary_interest_groups = no in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.12 }
 				# social_welfare_population_pressure [political]; 大人口国家生活水平较低且有行政承载时，提高社会保障制度的原版投资相对权重
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population >= 2000000 bureaucracy > 0 } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { in_default = no is_at_war = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population >= 2000000 bureaucracy > 0 } } add = 0.1 }
 				# social_security_direct_living_pressure [political]; 已知低生活水平与实际人口形成社保基础需求；正常借款、净收入或行政不足不消灭需求，独立代价共同计算
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 } } add = 0.08 }
 				# SITAI CHAIN LJ07/LJ07.grain_social_foundation writer=rule_action_mod_decisions_information_toml_lj07_grain_social_foundation
 				# lj07_grain_social_foundation [political]; 根市场粮食价格和供需余额同时显示短缺时，提高社会保障制度的有限基础倾向；原版资格、行政承载、维护和执行继续优先
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy >= 0 net_total_income >= 0 in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.06 }
+				else_if = { limit = { exists = ROOT ROOT = { bureaucracy >= 0 net_total_income >= 0 in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.06 }
 				# social_welfare_local_foundation [political]; 已知有居民、生活水平较低且具备财政和行政承载时，提供低强度社会保障投资倾向；不以大国或和平为前提
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 bureaucracy > 0 } } add = 0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { in_default = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 bureaucracy > 0 } } add = 0.05 }
 				# SITAI CHAIN LJ04/LJ04.welfare_zero_administration_foundation writer=rule_action_mod_decisions_information_toml_lj04_welfare_zero_administration_foundation
 				# lj04_welfare_zero_administration_foundation [political]; 行政缺口实际修复到零且民生需求仍在时提供低强度制度关注，正余量继续使用既有档；不以行政候选当作已修复
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 bureaucracy = 0 } } add = 0.02 }
+				else_if = { limit = { exists = ROOT ROOT = { in_default = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 bureaucracy = 0 } } add = 0.02 }
 			}
 			min = 0.65
 			max = 1.12
@@ -1899,20 +1899,20 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_125f4f881e104ff4_institution_workplace_safety_invested_priority_withdrawal_negative
 			add = { value = 0
 				# institution_priority_workplace_safety_0_deeply_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_workplace_safety institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 5 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = -0.06 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_workplace_safety institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 5 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = -0.06 }
 				# institution_priority_workplace_safety_0_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_workplace_safety institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = -0.03 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_workplace_safety institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = -0.03 }
 			}
 			# GROUP program_125f4f881e104ff4_safety_institution_need_positive
 			add = { value = 0
 				# institution_supply_safety_capacity [political]; 实际劳动安全制度已存在且本国劳工占比达到有限阈值，原版每级减少工作条件压力；不把低生活水平自动当劳动安全损失；财政和行政均已证时取同因最高档，不叠加低档
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
 				# institution_supply_safety_funded [political]; 实际劳动安全制度已存在且本国劳工占比达到有限阈值，原版每级减少工作条件压力；不把低生活水平自动当劳动安全损失；已观察非违约且正净流量支持同因较高档，不承担需求存在的付款门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } in_default = no net_total_income > 0 } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } in_default = no net_total_income > 0 } } add = 0.2 }
 				# institution_supply_safety_administrative [political]; 实际劳动安全制度已存在且本国劳工占比达到有限阈值，原版每级减少工作条件压力；不把低生活水平自动当劳动安全损失；正行政余量仅为同因扩容能力升档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } bureaucracy > 0 } } add = 0.18 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } bureaucracy > 0 } } add = 0.18 }
 				# institution_supply_safety_need [political]; 实际劳动安全制度已存在且本国劳工占比达到有限阈值，原版每级减少工作条件压力；不把低生活水平自动当劳动安全损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_workplace_safety pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = 0.1 }
 			}
 			min = 0.69
 			max = 1.25
@@ -1939,20 +1939,20 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_337277355525ba92_institution_schools_invested_priority_withdrawal_negative
 			add = { value = 0
 				# institution_priority_schools_0_deeply_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 5 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 } } add = -0.06 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 5 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 } } add = -0.06 }
 				# institution_priority_schools_0_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 3 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 } } add = -0.03 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 3 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 } } add = -0.03 }
 			}
 			# GROUP program_337277355525ba92_school_education_need_positive
 			add = { value = 0
 				# remaining_school_capacity [political]; 识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门；只有本档已观察资金或行政容量可升档，单项未知留其他已证档
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
+				if = { limit = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
 				# remaining_school_fiscal [political]; 识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门；只有本档已观察资金或行政容量可升档，单项未知留其他已证档
 				else_if = { limit = { AND = { AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } exists = ROOT ROOT = { total_population >= 0 total_population > 0 } } AND = { exists = ROOT ROOT = { in_default = no } exists = ROOT ROOT = { net_total_income > 0 } } } } add = 0.2 }
 				# remaining_school_administrative [political]; 识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门；只有本档已观察资金或行政容量可升档，单项未知留其他已证档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 bureaucracy > 0 } } add = 0.18 }
+				else_if = { limit = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 bureaucracy > 0 } } add = 0.18 }
 				# remaining_school_catchup_need [political]; 识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门
-				else_if = { limit = { AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } exists = ROOT ROOT = { total_population >= 0 total_population > 0 } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 total_population >= 0 total_population > 0 } } add = 0.1 }
 			}
 			min = 0.69
 			max = 1.25
@@ -1979,20 +1979,20 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_de2152c7a4bcad1c_institution_police_invested_priority_withdrawal_negative
 			add = { value = 0
 				# institution_priority_police_0_deeply_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 5 } any_scope_state = { turmoil > 0.1 } } } add = -0.06 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 5 } any_scope_state = { turmoil > 0.1 } } } add = -0.06 }
 				# institution_priority_police_0_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -0.03 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } any_scope_state = { turmoil > 0.1 } } } add = -0.03 }
 			}
 			# GROUP program_de2152c7a4bcad1c_police_institution_need_positive
 			add = { value = 0
 				# institution_supply_police_capacity [political]; 实际警察制度已存在且本国至少一州动乱超过有限阈值，原版制度减少同州动乱效果；不是全球激进比例或外国州；财政和行政均已证时取同因最高档，不叠加低档
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police any_scope_state = { turmoil > 0.1 } in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_police any_scope_state = { turmoil > 0.1 } in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
 				# institution_supply_police_funded [political]; 实际警察制度已存在且本国至少一州动乱超过有限阈值，原版制度减少同州动乱效果；不是全球激进比例或外国州；已观察非违约且正净流量支持同因较高档，不承担需求存在的付款门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police any_scope_state = { turmoil > 0.1 } in_default = no net_total_income > 0 } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_police any_scope_state = { turmoil > 0.1 } in_default = no net_total_income > 0 } } add = 0.2 }
 				# institution_supply_police_administrative [political]; 实际警察制度已存在且本国至少一州动乱超过有限阈值，原版制度减少同州动乱效果；不是全球激进比例或外国州；正行政余量仅为同因扩容能力升档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police any_scope_state = { turmoil > 0.1 } bureaucracy > 0 } } add = 0.18 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_police any_scope_state = { turmoil > 0.1 } bureaucracy > 0 } } add = 0.18 }
 				# institution_supply_police_need [political]; 实际警察制度已存在且本国至少一州动乱超过有限阈值，原版制度减少同州动乱效果；不是全球激进比例或外国州
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police any_scope_state = { turmoil > 0.1 } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_police any_scope_state = { turmoil > 0.1 } } } add = 0.1 }
 			}
 			min = 0.69
 			max = 1.25
@@ -2016,31 +2016,31 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# health_default_pressure [fiscal]; 已观察违约在战争与和平都计入健康制度融资机会成本，同因旧违约和恢复压力择强
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.25 } } } }
 				# coordinated_institution_health_system_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_health_system_financial_cost
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.25 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -0.25 } }
 				# coordinated_layered_health_recovery [fiscal]; 财政恢复期降低新增制度承诺，保留原版最低制度和执行路径
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } add = -0.18 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { sitai_context_need_fiscal = yes sitai_context_layer_recovery = yes } } add = -0.18 } }
 			}
 			# GROUP program_0ae15f692b6a6549_health_law_specific_need_positive
 			add = { value = 0
 				# SITAI CHAIN LJ07/LJ07.grain_health_social_capacity writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj07_grain_health_social_capacity
 				# lj07_grain_health_social_capacity [political]; 慈善医疗食品保障与实际粮食短缺、低生活水平同时相关时提高同一需求档；低生活水平仅作压力代理，不证明已观察死亡率收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system average_sol >= 0 average_sol < 8 exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.16 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_charitable_health_system average_sol >= 0 average_sol < 8 exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.16 }
 				# health_public_low_living_need [political]; 当前公保每级普遍生活水平加0.5；已观察低生活水平时形成具体生活水平改善需求，保留独立行政和融资代价
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_health_insurance average_sol >= 0 average_sol < 10 } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_health_insurance average_sol >= 0 average_sol < 10 } } add = 0.1 }
 				# SITAI CHAIN LJ07/LJ07.grain_health_foundation writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj07_grain_health_foundation
 				# lj07_grain_health_foundation [political]; 当前慈善医疗每级提供食品保障；根市场粮价和余额同时显示短缺时形成有限食品保障需求，不由财政行政健康与否删除需求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_charitable_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.08 }
 			}
 			# GROUP program_0ae15f692b6a6549_institution_health_system_invested_priority_withdrawal_negative
 			add = { value = 0
 				# institution_priority_health_system_1_deeply_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 5 } has_law_or_variant = law_type:law_charitable_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = -0.05 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 5 } has_law_or_variant = law_type:law_charitable_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = -0.05 }
 				# institution_priority_health_system_0_deeply_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 5 } has_law_or_variant = law_type:law_public_health_insurance average_sol >= 0 average_sol < 10 } } add = -0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 5 } has_law_or_variant = law_type:law_public_health_insurance average_sol >= 0 average_sol < 10 } } add = -0.05 }
 				# institution_priority_health_system_1_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 3 } has_law_or_variant = law_type:law_charitable_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = -0.03 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 3 } has_law_or_variant = law_type:law_charitable_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = -0.03 }
 				# institution_priority_health_system_0_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 3 } has_law_or_variant = law_type:law_public_health_insurance average_sol >= 0 average_sol < 10 } } add = -0.03 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 3 } has_law_or_variant = law_type:law_public_health_insurance average_sol >= 0 average_sol < 10 } } add = -0.03 }
 			}
 			min = 0.5
 			max = 1.16
@@ -2057,13 +2057,13 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_00747a8b04762e8f_home_institution_need_positive
 			add = { value = 0
 				# institution_supply_home_capacity [political]; 实际内政制度已存在且本国已观察叛乱倾向利益集团，原版制度降低革命和分离进度；不是一般反对或低合法性；财政和行政均已证时取同因最高档，不叠加低档
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.25 }
 				# institution_supply_home_funded [political]; 实际内政制度已存在且本国已观察叛乱倾向利益集团，原版制度降低革命和分离进度；不是一般反对或低合法性；已观察非违约且正净流量支持同因较高档，不承担需求存在的付款门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes in_default = no net_total_income > 0 } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes in_default = no net_total_income > 0 } } add = 0.2 }
 				# institution_supply_home_administrative [political]; 实际内政制度已存在且本国已观察叛乱倾向利益集团，原版制度降低革命和分离进度；不是一般反对或低合法性；正行政余量仅为同因扩容能力升档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes bureaucracy > 0 } } add = 0.18 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes bureaucracy > 0 } } add = 0.18 }
 				# institution_supply_home_need [political]; 实际内政制度已存在且本国已观察叛乱倾向利益集团，原版制度降低革命和分离进度；不是一般反对或低合法性
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_home_affairs has_insurrectionary_interest_groups = yes } } add = 0.1 }
 			}
 			# GROUP program_00747a8b04762e8f_institution_administrative_pressure_negative
 			add = { value = 0
@@ -2078,9 +2078,9 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_00747a8b04762e8f_institution_home_affairs_invested_priority_withdrawal_negative
 			add = { value = 0
 				# institution_priority_home_affairs_0_deeply_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 5 } has_insurrectionary_interest_groups = yes } } add = -0.06 }
+				if = { limit = { exists = ROOT ROOT = { has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 5 } has_insurrectionary_interest_groups = yes } } add = -0.06 }
 				# institution_priority_home_affairs_0_invested [economy]; 本制度对应的真实既有需求仍存在且已有实际投入时，有限撤回新增优先级；保留需求余量、独立融资和行政成本，不把达到设计档位当作需求满足
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } has_insurrectionary_interest_groups = yes } } add = -0.03 }
+				else_if = { limit = { exists = ROOT ROOT = { has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } has_insurrectionary_interest_groups = yes } } add = -0.03 }
 			}
 			min = 0.69
 			max = 1.25
@@ -2250,10 +2250,10 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_63a8c672f0f6b531_positive
 			add = { value = 0
 				# structural_stable_government_member [political]; 在合法性稳定且没有叛乱时，为有实力且满意的现有执政集团保留小幅路线惯性；1.05是消费者定义的相对政府权重
-				if = { limit = { exists = scope:interest_group scope:interest_group = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 ig_approval >= 0 is_in_government = yes } exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no } } add = 1.05 }
+				if = { limit = { exists = scope:interest_group scope:interest_group = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 ig_approval >= 0 is_in_government = yes } exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no } } add = 1.05 }
 				# SITAI CHAIN LJ08/LJ08.government_local_continuity writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj08_government_local_continuity
 				# lj08_government_local_continuity [political]; 只对当前已执政且有实际实力与非负认可的候选集团保留较低档惯性；中等合法性不必等待完整财政健康才有合法政府比较
-				else_if = { limit = { exists = scope:interest_group scope:interest_group = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.1 ig_approval >= 0 is_in_government = yes } exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no } } add = 0.5 }
+				else_if = { limit = { exists = scope:interest_group scope:interest_group = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.1 ig_approval >= 0 is_in_government = yes } exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no } } add = 0.5 }
 			}
 			min = 0
 			max = 1.05
@@ -3669,24 +3669,24 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			add = { value = 0
 				# SITAI CHAIN LJ14/LJ14.homeland_isolation_cost writer=rule_action_mod_decisions_information_toml_lj14_homeland_isolation_cost
 				# lj14_homeland_isolation_cost [geography]; 同一非己有本土州市场孤立的地理机会成本，不等同绝对不可达或海外
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root is_isolated_from_market = yes } } add = { value = -0.1 desc = SITAI_RULE_LJ14_HOMELAND_ISOLATION_COST_REASON } }
+				if = { limit = { exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root is_isolated_from_market = yes } } add = { value = -0.1 desc = SITAI_RULE_LJ14_HOMELAND_ISOLATION_COST_REASON } }
 			}
 			# GROUP program_033ceb9fe07b5f3a_external_state_opportunity_positive
 			add = { value = 0
 				# remaining_homeland_fervor [identity]; 同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes country_fervor_primary_culture > 10 has_strategy = ai_strategy_territorial_expansion } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } primary_cultures_percent_state = { target_country = root value >= 0.25 } is_isolated_from_market = no } } add = { value = 0.2 desc = SITAI_RULE_REMAINING_HOMELAND_FERVOR_REASON } }
+				if = { limit = { exists = ROOT ROOT = { country_fervor_primary_culture > 10 has_strategy = ai_strategy_territorial_expansion } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } primary_cultures_percent_state = { target_country = root value >= 0.25 } is_isolated_from_market = no } } add = { value = 0.2 desc = SITAI_RULE_REMAINING_HOMELAND_FERVOR_REASON } }
 				# geographic_port_continuity [geography]; 同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_treaty_port = yes } } add = { value = 0.15 desc = SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON } }
+				else_if = { limit = { exists = scope:target_state scope:target_state = { NOT = { owner = root } is_treaty_port = yes } } add = { value = 0.15 desc = SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON } }
 				# market_access_state_value [market]; 同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_state scope:target_state = { NOT = { owner = root } market_access >= 0 market_access <= 1 market_access >= 0.8 is_isolated_from_market = no } } add = { value = 0.1 desc = SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON } }
+				else_if = { limit = { exists = scope:target_state scope:target_state = { NOT = { owner = root } market_access >= 0 market_access <= 1 market_access >= 0.8 is_isolated_from_market = no } } add = { value = 0.1 desc = SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON } }
 				# SITAI CHAIN LJ14/LJ14.connected_homeland_foundation writer=rule_action_mod_decisions_information_toml_lj14_connected_homeland_foundation
 				# lj14_connected_homeland_foundation [identity]; 同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } primary_cultures_percent_state = { target_country = root value >= 0.25 } is_isolated_from_market = no } } add = { value = 0.05 desc = SITAI_RULE_LJ14_CONNECTED_HOMELAND_FOUNDATION_REASON } }
+				else_if = { limit = { exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } primary_cultures_percent_state = { target_country = root value >= 0.25 } is_isolated_from_market = no } } add = { value = 0.05 desc = SITAI_RULE_LJ14_CONNECTED_HOMELAND_FOUNDATION_REASON } }
 			}
 			# GROUP program_033ceb9fe07b5f3a_external_state_reconstruction_negative
 			add = { value = 0
 				# remaining_external_state_reconstruction_cost [geography]; 原版战败修复记忆使新增外部州让位于重建的机会成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_state scope:target_state = { NOT = { owner = root } } } add = { value = -0.08 desc = SITAI_RULE_REMAINING_EXTERNAL_STATE_RECONSTRUCTION_COST_REASON } }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_state scope:target_state = { NOT = { owner = root } } } add = { value = -0.08 desc = SITAI_RULE_REMAINING_EXTERNAL_STATE_RECONSTRUCTION_COST_REASON } }
 			}
 			min = 0.54
 			max = 1.2
@@ -3838,14 +3838,14 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_c6427f69a8f93ddb_embargo_access_need_positive
 			add = { value = 0
 				# remaining_embargo_access_naval_capacity [diplomacy]; 同一目标国禁运且已有海军容量证明有限接入机会；实际目标海军比较仅表达投射容量或风险，不预测胜率
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 navy_size > "scope:target_country.navy_size" } exists = scope:target_country scope:target_country = { has_diplomatic_pact = { type = embargo who = root } navy_size >= 0 } } add = 3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { has_diplomatic_pact = { type = embargo who = root } } exists = ROOT ROOT = { navy_size >= 0 navy_size > 0 } exists = scope:target_country scope:target_country = { navy_size >= 0 } exists = ROOT ROOT = { navy_size >= 0 navy_size > "scope:target_country.navy_size" } } } add = 3 }
 				# remaining_embargo_access_need [diplomacy]; 同一目标国禁运且已有海军容量证明有限接入机会；实际目标海军比较仅表达投射容量或风险，不预测胜率
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } exists = scope:target_country scope:target_country = { has_diplomatic_pact = { type = embargo who = root } } } add = 1 }
+				else_if = { limit = { exists = ROOT ROOT = { navy_size >= 0 navy_size > 0 } exists = scope:target_country scope:target_country = { has_diplomatic_pact = { type = embargo who = root } } } add = 1 }
 			}
 			# GROUP program_c6427f69a8f93ddb_embargo_naval_risk_negative
 			add = { value = 0
 				# remaining_embargo_access_naval_risk [diplomacy]; 同一目标国禁运且已有海军容量证明有限接入机会；实际目标海军比较仅表达投射容量或风险，不预测胜率
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 navy_size < "scope:target_country.navy_size" } exists = scope:target_country scope:target_country = { has_diplomatic_pact = { type = embargo who = root } navy_size >= 0 } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { has_diplomatic_pact = { type = embargo who = root } } exists = ROOT ROOT = { navy_size >= 0 navy_size > 0 } exists = scope:target_country scope:target_country = { navy_size >= 0 } exists = ROOT ROOT = { navy_size >= 0 navy_size < "scope:target_country.navy_size" } } } add = -3 }
 			}
 			min = -3
 			max = 3
@@ -4259,17 +4259,17 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_8dfa8604a8717995_subject_defense_risk_negative
 			add = { value = 0
 				# remaining_subject_defense_risk [subjects]; 同一潜在属国的已观察军队大于本国形成有限防御承诺风险，不预测战争胜率或直接行政费用
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size < "scope:target_country.army_size" } exists = scope:target_country scope:target_country = { NOT = { is_subject_of = root } army_size >= 0 } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { NOT = { is_subject_of = root } } exists = scope:target_country scope:target_country = { army_size >= 0 } exists = ROOT ROOT = { army_size >= 0 army_size < "scope:target_country.army_size" } } } add = -3 }
 			}
 			# GROUP program_8dfa8604a8717995_subject_relationship_positive
 			add = { value = 0
 				# remaining_friendly_subject_strong [diplomacy]; 本候选关系、是否既有属国及同单位GDP比较决定有限连续性或友好机会，不推断征服或援助已经成功
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 NOT = { is_subject_of = root } gdp >= 0 gdp < "ROOT.gdp" relations:root >= 80 } } add = 3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } exists = scope:target_country scope:target_country = { NOT = { is_subject_of = root } } exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 gdp < "ROOT.gdp" } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 80 } } } add = 3 }
 				# SITAI CHAIN LJ12/LJ12.existing_subject_insolvency_continuity writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj12_existing_subject_insolvency_continuity
 				# lj12_existing_subject_insolvency_continuity [subjects]; 本候选关系、是否既有属国及同单位GDP比较决定有限连续性或友好机会，不推断征服或援助已经成功
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { is_subject_of = root } } add = 1 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { is_subject_of = root } } add = 1 }
 				# remaining_friendly_subject_need [diplomacy]; 本候选关系、是否既有属国及同单位GDP比较决定有限连续性或友好机会，不推断征服或援助已经成功
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 NOT = { is_subject_of = root } gdp >= 0 gdp < "ROOT.gdp" } } add = 1 }
+				else_if = { limit = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } exists = scope:target_country scope:target_country = { NOT = { is_subject_of = root } } exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 gdp < "ROOT.gdp" } } } add = 1 }
 			}
 			min = -3
 			max = 3
@@ -4510,19 +4510,19 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			add = { value = 0
 				# SITAI CHAIN LJ12/LJ12.existing_overlord_autonomy_cost writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj12_existing_overlord_autonomy_cost
 				# lj12_existing_overlord_autonomy_cost [subjects]; 确认正是当前宗主且自治诉求高时计入主权机会成本，战争不抹去既有关系成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:overlord liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { is_subject_of = scope:overlord liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = -3 }
 			}
 			# GROUP program_27a464d5d32be0d2_overlord_relationship_positive
 			add = { value = 0
 				# remaining_friendly_overlord_strong [diplomacy]; 同一候选宗主已观察友好关系形成有限保护选项，候选和平只支持强关系升档，不猜偿债援助
-				if = { limit = { exists = scope:overlord scope:overlord = { relations:root >= -100 relations:root <= 100 relations:root >= 80 is_at_war = no } exists = ROOT ROOT = { is_ai = yes } } add = 3 }
+				if = { limit = { exists = scope:overlord scope:overlord = { relations:root >= -100 relations:root <= 100 relations:root >= 80 is_at_war = no } } add = 3 }
 				# remaining_friendly_overlord_need [diplomacy]; 同一候选宗主已观察友好关系形成有限保护选项，候选和平只支持强关系升档，不猜偿债援助
-				else_if = { limit = { exists = scope:overlord scope:overlord = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } exists = ROOT ROOT = { is_ai = yes } } add = 1 }
+				else_if = { limit = { exists = scope:overlord scope:overlord = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = 1 }
 			}
 			# GROUP program_27a464d5d32be0d2_overlord_war_risk_negative
 			add = { value = 0
 				# remaining_overlord_war_risk [subjects]; 同一候选宗主已在战争中形成有限卷入风险，独立于本国是否战争与友好关系
-				if = { limit = { exists = scope:overlord scope:overlord = { is_at_war = yes } exists = ROOT ROOT = { is_ai = yes } } add = -3 }
+				if = { limit = { exists = scope:overlord scope:overlord = { is_at_war = yes } } add = -3 }
 			}
 			min = -6
 			max = 3
@@ -6317,7 +6317,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			add = { value = 0
 				# SITAI CHAIN LJ05/LJ05.fiscal_construction_guard writer=rule_action_mod_decisions_information_toml_fiscal_construction_guard
 				# fiscal_construction_guard [fiscal]; 已观察违约独立降低新增建设承诺，战争不抹去融资机会成本；不取消已有施工
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 OR = { total_population >= 0 NOT = { total_population >= 0 } } } } add = { value = 0 if = { limit = { exists = ROOT ROOT = { NOT = { in_default = yes } } }  } else = { add = -0.25 } } } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 OR = { total_population >= 0 NOT = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.25 } } } }
 				# SITAI CHAIN LJ05/LJ05.liquidity_construction_guard writer=rule_action_mod_decisions_information_toml_liquidity_construction_guard
 				# liquidity_construction_guard [fiscal]; 未违约但正借贷、高债务且26周内破产的实际联合压力降低新建设目标；正常低债贷款不惩罚
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 OR = { total_population >= 0 NOT = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } } }  } else = { add = -0.15 } } } }
@@ -6335,11 +6335,11 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# remaining_industrial_construction_need_funded [economy]; 原版工业路线与实际工具订单缺口共同证明有限建设机会，不凭健康重复奖励工业路线；已证非违约与正净流量只升资金档，未知保留基础需求
 				if = { limit = { AND = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } exists = ROOT ROOT = { has_strategy = ai_strategy_industrial_expansion } AND = { exists = ROOT ROOT = { in_default = no } exists = ROOT ROOT = { net_total_income > 0 } } } } add = 0.25 }
 				# remaining_industrial_construction_need [economy]; 实际工具订单缺口独立证明有限本地建设需要；工业策略只影响增强档，不充当基础需要门槛
-				else_if = { limit = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 0.1 }
 			}
 			# GROUP program_b427caf53e358817__relation_school_knowledge_foundation
 			add = { value = 0
-				min = { value = 0 if = { limit = { AND = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } AND = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools } exists = ROOT ROOT = { has_institution = institution_schools } exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } } } add = 0.025 } }
+				min = { value = 0 if = { limit = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } } add = 0.025 } }
 			}
 			min = 0.75
 			max = 1.475
@@ -6477,17 +6477,17 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_3bf128a6f2cf9d74_regional_conquest_financing_pressure_negative
 			add = { value = 0
 				# coordinated_strategic_region_stance_type_scores_stance_conquer_region_financial_cost [fiscal]; 和平且已实际违约时降低新增地区征服承诺倾向；与政治阻力及已观察恢复需求分别联合
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -5 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -5 }
 			}
 			# GROUP program_3bf128a6f2cf9d74_regional_conquest_political_pressure_negative
 			add = { value = 0
 				# coordinated_strategic_region_stance_type_scores_stance_conquer_region_political_cost [diplomacy]; 和平时已观察严重合法性、叛乱与激进化危机增加征服的国内政治机会成本；不覆盖独立融资与恢复代价
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } } add = -5 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } } add = -5 }
 			}
 			# GROUP program_3bf128a6f2cf9d74_regional_conquest_recovery_pressure_negative
 			add = { value = 0
 				# coordinated_layered_conquer_region_tradeoff [diplomacy]; 恢复需求降低再次领土扩张的机会优先级，既有条约、关系和军力约束继续优先
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_reconstruction = yes sitai_context_evidence_need_reconstruction = yes } } add = -4 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_evidence_need_reconstruction = yes } } add = -4 }
 			}
 			min = -14
 			max = 0
@@ -6675,7 +6675,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_region }
 	add = {
 		value = 0
-		if = { limit = { scope:target_region = { any_scope_state = { owner = { OR = { is_country_type = unrecognized is_country_type = decentralized } } OR = { AND = { root = { has_technology_researched = pumpjacks } "num_potential_resources(bt:building_oil_rig)" > 0 } AND = { root = { has_technology_researched = rubber_mastication } "num_potential_resources(bt:building_rubber_plantation)" > 0 } } } } } add = { value = 15 } }
+		if = { limit = { exists = ROOT ROOT = { scope:target_region = { any_scope_state = { owner = { OR = { is_country_type = unrecognized is_country_type = decentralized } } OR = { AND = { root = { has_technology_researched = pumpjacks } "num_potential_resources(bt:building_oil_rig)" > 0 } AND = { root = { has_technology_researched = rubber_mastication } "num_potential_resources(bt:building_rubber_plantation)" > 0 } } } } } } add = { value = 15 } }
 		min = 0
 		max = 15
 	}
@@ -6737,12 +6737,12 @@ if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_regi
 			# GROUP program_651f749e57549662_positive
 			add = { value = 0
 				# coordinated_layered_information_stances_overseas [diplomacy]; 海外投射能力提高原版兴趣范围上限的相对倾向
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_evidence_need_overseas = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
 			# GROUP program_651f749e57549662_negative
 			add = { value = 0
 				# diplomatic_overextension [diplomacy]; 违约时适度收缩同时维持的战略立场数量
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -0.2 }
 			}
 			min = 0.8
 			max = 1.1
@@ -6791,8 +6791,8 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION industrial_foundation [economy]; 适度放宽生产建设借款阈值，同时承认会收紧政府预算；债务、净流量与行政成本降低净支持，战争本身不禁止基础建设。
 		if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { in_default = no AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } NOT = { OR = { in_default = yes } } sitai_context_need_education = yes } } } add = { value = -0.025 } }
 		if = { limit = { ROOT ?= {  AND = { is_ai = yes in_default = no NOT = { OR = { in_default = yes } } sitai_context_evidence_need_industry = yes } } } add = { value = 0.025 } }
-		if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { in_default = no AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } NOT = { OR = { in_default = yes } } AND = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools } exists = ROOT ROOT = { has_institution = institution_schools } exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } } } } add = { value = -0.025 } }
-		if = { limit = { ROOT ?= {  AND = { is_ai = yes in_default = no NOT = { OR = { in_default = yes } } AND = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools } exists = ROOT ROOT = { has_institution = institution_schools } exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } } } } add = { value = 0.025 } }
+		if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { in_default = no AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } NOT = { OR = { in_default = yes } } exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } } } add = { value = -0.025 } }
+		if = { limit = { ROOT ?= {  AND = { is_ai = yes in_default = no NOT = { OR = { in_default = yes } } exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } } } add = { value = 0.025 } }
 		if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { in_default = no AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } NOT = { OR = { in_default = yes } } } } } add = { value = -0.1 } }
 		if = { limit = { ROOT ?= {  AND = { is_ai = yes in_default = no NOT = { OR = { in_default = yes } } } } } add = { value = 0.15 } }
 		if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { in_default = no AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } NOT = { OR = { in_default = yes } } } } } add = { value = 0 if = { limit = { AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt > 0.4 } } exists = ROOT ROOT = { NOT = { net_total_income < 0 } } exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } }  } else = { add = 0.08 } } }
@@ -6821,20 +6821,20 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.15 } } } }
 				# SITAI CHAIN LJ10/LJ10.defensive_pact_flow_pressure writer=rule_action_mod_decisions_information_toml_lj10_defensive_pact_flow_pressure
 				# lj10_defensive_pact_flow_pressure [military]; 和平且净流量承压时，本国已关联的防御协定标记条款作为小幅减少重复新增军备承诺的信号；高优先防御及明确威胁仍优先
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no net_total_income < 0 num_defensive_pacts >= 0 num_defensive_pacts >= 1 wanted_army_size_script_value > "ROOT.wanted_marines_size_script_value" } } add = -0.05 } }
+				max = { value = 0 if = { limit = { AND = { exists = ROOT ROOT = { is_at_war = no } exists = ROOT ROOT = { in_default = no } exists = ROOT ROOT = { net_total_income < 0 } exists = ROOT ROOT = { num_defensive_pacts >= 0 num_defensive_pacts >= 1 } exists = ROOT ROOT = {  } exists = ROOT ROOT = { wanted_army_size_script_value > "ROOT.wanted_marines_size_script_value" } } } add = -0.05 } }
 			}
 			# GROUP program_411c7092a1697cba_military_target_demand_positive
 			add = { value = 0
 				# wartime_army_capacity [military]; 非违约、净流量与行政正余量共同证明完整承载升档；它是已有战争需求的最高容量档，不再是战争基础需求的总开关
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.2 }
 				# wartime_army_fiscal_capacity [military]; 战争需求在已证非违约且净流量为正时使用财政承载中档，不要求行政余量同时为正；只选最强档，不与基础档累乘或累加
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes in_default = no net_total_income > 0 } } add = 0.12 }
 				# wartime_army_administrative_capacity [military]; 已证行政正余量允许战争需求使用行政承载中档；财政成本另算，不把行政余量当偿付健康，也不要求先有盈余
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes bureaucracy > 0 } } add = 0.11 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes bureaucracy > 0 } } add = 0.11 }
 				# army_threat_capacity [military]; 军力偏低、外部代价较高且经济可承受时提高原版常备军目标
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size < 50 infamy >= 0 infamy > 25 gdp >= 0 gdp > 0 in_default = no } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { army_size >= 0 army_size < 50 infamy >= 0 infamy > 25 gdp >= 0 gdp > 0 in_default = no } } add = 0.1 }
 				# wartime_army_foundation [military]; 已知战争独立证明基础防御需求，常备军目标小幅提高；财政盈余、行政余量与非违约不再成为全部需求的共同门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes } } add = 0.08 }
 			}
 			min = 0.85
 			max = 1.2
@@ -6854,12 +6854,12 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_d68d909f36327903_positive
 			add = { value = 0
 				# coordinated_layered_naval_wanted_marines_overseas [military]; 海外需求与强承受力支持海军组织和船舶准备；现有补给、军需成本规则优先
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes sitai_context_known_expansion_capacity = yes sitai_context_expansion_capacity = yes } } add = 0.12 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_evidence_need_overseas = yes sitai_context_expansion_capacity = yes } } add = 0.12 }
 			}
 			# GROUP program_d68d909f36327903_negative
 			add = { value = 0
 				# ai_strategy_default_wanted_marines [military]; 和平违约时有限削减额外远征海军需求，战争和正常财政不适用；保留原版防御与行动约束
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -0.1 }
 			}
 			min = 0.9
 			max = 1.12
@@ -6894,12 +6894,12 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_0132401baea89e14_positive
 			add = { value = 0
 				# coordinated_layered_naval_target_marine_formation_size_overseas [military]; 海外需求与强承受力支持海军组织和船舶准备；现有补给、军需成本规则优先
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes sitai_context_known_expansion_capacity = yes sitai_context_expansion_capacity = yes } } add = 0.12 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_evidence_need_overseas = yes sitai_context_expansion_capacity = yes } } add = 0.12 }
 			}
 			# GROUP program_0132401baea89e14_negative
 			add = { value = 0
 				# ai_strategy_default_target_marine_formation_size [military]; 和平违约时有限削减额外远征海军需求，战争和正常财政不适用；保留原版防御与行动约束
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes } } add = -0.1 }
 			}
 			min = 0.9
 			max = 1.12
@@ -6924,18 +6924,18 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_41fedd6d9777c5f3_military_target_demand_positive
 			add = { value = 0
 				# coordinated_layered_information_navy_overseas [military]; 海外投射与稳健能力共同提高海军目标权重
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_evidence_need_overseas = yes sitai_context_layer_stable = yes } } add = 0.18 }
 				# wartime_navy_capacity [military]; 非违约、净流量与行政正余量共同支持完整海军容量高档；高档与基础、单项容量及既有海外需求互为最强已知档
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.12 }
 				# SITAI CHAIN LJ13/LJ13.navy_existing_capacity writer=rule_action_mod_decisions_information_toml_navy_existing_capacity
 				# navy_existing_capacity [military]; 经济与储备可承受且海军规模偏低时提高原版海军目标
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size < 10 gdp >= 0 gdp > 0 gold_reserves >= 0 gold_reserves >= 100 in_default = no } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { navy_size >= 0 navy_size < 10 gdp >= 0 gdp > 0 gold_reserves >= 0 gold_reserves >= 100 in_default = no } } add = 0.1 }
 				# wartime_navy_fiscal_capacity [military]; 已证非违约与净流量盈余使战争海军需求升到财政中档；行政未知不抹去已证财政容量，最强同因果档只取一次
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 } } add = 0.09 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes in_default = no net_total_income > 0 } } add = 0.09 }
 				# wartime_navy_administrative_capacity [military]; 已证行政正余量让战争海军需求升到行政中档，财政成本独立净算；相同强度的财政与行政中档互为容量档，不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes bureaucracy > 0 } } add = 0.09 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes bureaucracy > 0 } } add = 0.09 }
 				# wartime_navy_foundation [military]; 已知战争证明有限的海军基础防御需求，不以偿付健康、财政盈余和行政充足全满足作为开启条件
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = 0.06 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes } } add = 0.06 }
 			}
 			min = 0.8
 			max = 1.18
@@ -6961,9 +6961,9 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_b735bc99189d0715_naval_supply_need_positive
 			add = { value = 0
 				# institution_supply_supply_funded [military]; 同一海军战争需求上，已观察非违约与正净流量只支持同因较高档，贷款不作需求总门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 in_default = no net_total_income > 0 } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = yes navy_size >= 0 navy_size > 0 in_default = no net_total_income > 0 } } add = 0.2 }
 				# institution_supply_supply_need [military]; 已有正海军且本国正在战争形成原版海军补给目标的有限需求；和平路线与行政健康本身不是补给任务
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes navy_size >= 0 navy_size > 0 } } add = 0.1 }
 			}
 			min = 0.85
 			max = 1.2
@@ -6983,9 +6983,9 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_0f1adcf998db0418_ship_commitment_positive
 			add = { value = 0
 				# military_capacity_ship_funded [military]; 同一现实战争承诺上，已证非违约与正净流量只支持同因高档；正常贷款与行政缺口不抹基础需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes in_default = no net_total_income > 0 } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { navy_size >= 0 navy_size > 0 is_at_war = yes in_default = no net_total_income > 0 } } add = 0.18 }
 				# military_capacity_ship_need [military]; 实际本国战争且已有正海军/陆军形成维护和防御编制的有限需求代理；不预测敌情或目标缺口，不把路线或总体健康当任务
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.1 }
 			}
 			# GROUP program_0f1adcf998db0418_ship_financing_negative
 			add = { value = 0
@@ -7052,7 +7052,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# structural_naval_capital_cost_battle_line [military]; 和平违约且借贷时，适度降低资本密集船类的相对新增编制倾向
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes OR = { AND = { scaled_debt >= 0 OR = { taking_loans = yes NOT = { taking_loans = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } } }  } else = { add = -0.2 } } } }
 				# coordinated_layered_battle_line_fiscal [military]; 和平财政压力降低昂贵主力舰新增承诺，保留海军原版资格和维护
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } add = -0.15 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { sitai_context_need_fiscal = yes is_at_war = no } } add = -0.15 } }
 			}
 			min = 0.8
 			max = 1
@@ -7178,7 +7178,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# structural_naval_capital_cost_carriers [military]; 和平违约且借贷时，适度降低资本密集船类的相对新增编制倾向
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes OR = { AND = { scaled_debt >= 0 OR = { taking_loans = yes NOT = { taking_loans = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } } }  } else = { add = -0.2 } } } }
 				# coordinated_layered_carriers_fiscal [military]; 和平财政压力降低昂贵主力舰新增承诺，保留海军原版资格和维护
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } add = -0.15 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { sitai_context_need_fiscal = yes is_at_war = no } } add = -0.15 } }
 			}
 			min = 0.8
 			max = 1
@@ -7333,12 +7333,12 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_b62d26e6403377c7_positive
 			add = { value = 0
 				# coordinated_layered_information_artillery_war [military]; 战争提高安全优先级，但新增军备目标仍需已知可承受；不削弱原版基本防御
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_security = yes sitai_context_need_security = yes in_default = no net_total_income > 0 bureaucracy > 0 has_technology_researched = artillery } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_need_security = yes in_default = no net_total_income > 0 bureaucracy > 0 has_technology_researched = artillery } } add = 0.2 }
 			}
 			# GROUP program_b62d26e6403377c7_negative
 			add = { value = 0
 				# military_artillery_affordability [military]; 已有炮兵科技但和平违约时调整昂贵编制的相对权重
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes has_technology_researched = artillery } } add = -0.15 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = no in_default = yes has_technology_researched = artillery } } add = -0.15 }
 			}
 			min = 0.85
 			max = 1.2
@@ -7424,10 +7424,10 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_32f45ce59e89380f_conscript_commitment_positive
 			add = { value = 0
 				# military_capacity_conscript_funded [military]; 同一现实战争承诺上，已证非违约与正净流量只支持同因高档；正常贷款与行政缺口不抹基础需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes in_default = no net_total_income > 0 } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { army_size >= 0 army_size > 0 is_at_war = yes in_default = no net_total_income > 0 } } add = 0.18 }
 				# SITAI CHAIN LJ11/LJ11.military_capacity_conscript_need writer=rule_action_common_ai_strategies_00_default_strategy_txt_military_capacity_conscript_need
 				# military_capacity_conscript_need [military]; 实际本国战争且已有正海军/陆军形成维护和防御编制的有限需求代理；不预测敌情或目标缺口，不把路线或总体健康当任务
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.1 }
 			}
 			# GROUP program_32f45ce59e89380f_conscript_financing_negative
 			add = { value = 0
@@ -7466,7 +7466,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# structural_ownership_financial_cost [economy]; 和平财政紧张时，对原版已经存在的国有化倾向计入有限流动性机会成本
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes OR = { AND = { scaled_debt >= 0 OR = { taking_loans = yes NOT = { taking_loans = yes } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } } }  } else = { add = -0.2 } } } }
 				# coordinated_layered_fiscal_nationalization [fiscal]; 偿付压力降低新增国有化承诺，避免把所有问题转成财政支出
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } add = -0.2 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { sitai_context_need_fiscal = yes is_at_war = no } } add = -0.2 } }
 			}
 			min = 0.8
 			max = 1
@@ -8965,14 +8965,14 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_bde15622cf8ffd9b_cooperation_financing_positive
 			add = { value = 0
 				# cooperation_reconcile_default [diplomacy]; 当前融资或原版限时败战状态提高缓和关系的相对价值，不重复原版关系、意识形态、集团及游说评分
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = 8 }
+				if = { limit = { exists = ROOT ROOT = { in_default = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = 8 }
 				# cooperation_reconcile_liquidity [diplomacy]; 当前融资或原版限时败战状态提高缓和关系的相对价值，不重复原版关系、意识形态、集团及游说评分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = 5 }
+				else_if = { limit = { exists = ROOT ROOT = { taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = 5 }
 			}
 			# GROUP program_bde15622cf8ffd9b_cooperation_recovery_positive
 			add = { value = 0
 				# cooperation_reconcile_recovery [diplomacy]; 当前融资或原版限时败战状态提高缓和关系的相对价值，不重复原版关系、意识形态、集团及游说评分
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = 6 }
 			}
 			min = 0
 			max = 14
@@ -9291,7 +9291,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_972b558553ef9521_cooperation_recovery_negative
 			add = { value = 0
 				# cooperation_protect_recovery [diplomacy]; 当前融资、影响力或败战恢复分别提高新增保护承诺的机会成本，不假称已参战或预知对手
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -6 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -6 }
 			}
 			min = -18
 			max = 0
@@ -9584,26 +9584,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_dfcad701c30eae90_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_secret_antagonize_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_dfcad701c30eae90_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_secret_antagonize_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_secret_antagonize_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_secret_antagonize_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_dfcad701c30eae90_target_reputation_negative
 			add = { value = 0
 				# target_strategy_secret_antagonize_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_dfcad701c30eae90_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_secret_antagonize_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -18
 			max = 0
@@ -10158,26 +10158,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_9f62fc8ff22bc465_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_secret_conquer_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_9f62fc8ff22bc465_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_secret_conquer_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_secret_conquer_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_secret_conquer_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_9f62fc8ff22bc465_target_reputation_negative
 			add = { value = 0
 				# target_strategy_secret_conquer_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_9f62fc8ff22bc465_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_secret_conquer_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -18
 			max = 0
@@ -10696,26 +10696,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_35125f3cc0d49149_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_secret_dominate_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_35125f3cc0d49149_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_secret_dominate_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_secret_dominate_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_secret_dominate_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_35125f3cc0d49149_target_reputation_negative
 			add = { value = 0
 				# target_strategy_secret_dominate_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_35125f3cc0d49149_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_secret_dominate_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -18
 			max = 0
@@ -10736,13 +10736,13 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_66c341cb0fdc4605_economic_cooperation_need_positive
 			add = { value = 0
 				# remaining_economy_resource_price [diplomacy]; 原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款；已观察高价只升档，价格未知保留缺口基础
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_resource_expansion exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { has_strategy = ai_strategy_resource_expansion exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# remaining_economy_industrial_price [diplomacy]; 原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款；已观察高价只升档，价格未知保留缺口基础
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { has_strategy = ai_strategy_industrial_expansion exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# remaining_economy_resource_need [diplomacy]; 原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_resource_expansion exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_strategy = ai_strategy_resource_expansion exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 } } } } add = 0.1 }
 				# remaining_economy_industrial_need [diplomacy]; 原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_strategy = ai_strategy_industrial_expansion exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 0.1 }
 			}
 			min = 1
 			max = 1.2
@@ -10760,17 +10760,17 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_98d0378032f1f61d_trade_access_need_positive
 			add = { value = 0
 				# remaining_trade_iron_price [market]; 实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润；已观察高价只升档，价格未知保留缺口基础
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# remaining_trade_tools_price [market]; 实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润；已观察高价只升档，价格未知保留缺口基础
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# remaining_trade_grain_price [market]; 实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润；已观察高价只升档，价格未知保留缺口基础
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# remaining_trade_iron_need [market]; 实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 } } } } add = 0.1 }
 				# remaining_trade_tools_need [market]; 实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 0.1 }
 				# remaining_trade_grain_need [market]; 实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 0.1 }
 			}
 			min = 1
 			max = 1.2
@@ -10792,11 +10792,11 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_744c04813acfbd58_positive
 			add = { value = 0
 				# subject_defense_cooperation [subjects]; 属国在可负担时稍重视防御合作类别
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes in_default = no } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_subject = yes in_default = no } } add = 0.2 }
 				# identity_expansion_defense [identity]; 沿原有扩张路线时保留可负担的防御合作关注
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no has_strategy = ai_strategy_territorial_expansion } } add = 0.15 }
+				else_if = { limit = { exists = ROOT ROOT = { in_default = no is_at_war = no has_strategy = ai_strategy_territorial_expansion } } add = 0.15 }
 				# coordinated_layered_information_defense_security [military]; 安全需求提高原版防御合作候选，不替代外交可达性
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_security = yes sitai_context_need_security = yes } } add = 0.15 }
+				else_if = { limit = { exists = ROOT ROOT = { sitai_context_need_security = yes } } add = 0.15 }
 			}
 			min = 1
 			max = 1.2
@@ -10870,6 +10870,11 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_f55d3147c62ef5fe [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
 			value = 0
+			# GROUP program_f55d3147c62ef5fe_ongoing_multiwar_commitment_cost_negative
+			add = { value = 0
+				# war_pressure_conquer_state [diplomacy]; 本国至少两场现行战争各自对本国支持度低于50，对同一已知conquer_state新增领土敌对承诺形成有限机会成本；现行多线承诺占用与近期败战后的有限恢复负担分别成立并分别退出，使用独立因果组联合；既有融资另按独立事实联合，不修改原版战争支持或实际成本
+				if = { limit = { exists = ROOT ROOT = { any_scope_war = { count >= 2 has_war_support = { target = root value < 50 } } } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+			}
 			# GROUP program_f55d3147c62ef5fe_target_domestic_political_pressure_negative
 			add = { value = 0
 				# target_strategy_goal_conquer_state_political [diplomacy]; 本国低合法性、已存在叛乱倾向IG与较高激进人口共同证明政治资源压力，独立于同候选金融/关系/安全成本；没有和平共同总门
@@ -10889,31 +10894,29 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			}
 			# GROUP program_f55d3147c62ef5fe_target_reconstruction_opportunity_negative
 			add = { value = 0
-				# war_pressure_conquer_state [diplomacy]; 本国至少两场现行战争各自对本国支持度低于50，对同一已知conquer_state新增领土敌对承诺形成有限机会成本；与近期败战恢复同组取强，不把当前战争和战败记忆重复扣分，融资按独立事实联合
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_war = { count >= 2 has_war_support = { target = root value < 50 } } } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 				# target_strategy_goal_conquer_state_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_f55d3147c62ef5fe_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_goal_conquer_state_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_goal_conquer_state_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_goal_conquer_state_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_f55d3147c62ef5fe_target_reputation_negative
 			add = { value = 0
 				# target_strategy_goal_conquer_state_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_f55d3147c62ef5fe_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_goal_conquer_state_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
-			min = -21
+			min = -23
 			max = 0
 		} }
 		# SITAI END information:ai_strategy_default.wargoal_scores.conquer_state
@@ -11112,26 +11115,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_2721137862747a33_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_goal_transfer_subject_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_2721137862747a33_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_goal_transfer_subject_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_goal_transfer_subject_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_goal_transfer_subject_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_2721137862747a33_target_reputation_negative
 			add = { value = 0
 				# target_strategy_goal_transfer_subject_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_2721137862747a33_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_goal_transfer_subject_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -20
 			max = 0
@@ -11270,26 +11273,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_6ba0c255c976d6fe_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_goal_make_subject_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_6ba0c255c976d6fe_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_goal_make_subject_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_goal_make_subject_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_goal_make_subject_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_6ba0c255c976d6fe_target_reputation_negative
 			add = { value = 0
 				# target_strategy_goal_make_subject_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_6ba0c255c976d6fe_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_goal_make_subject_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -20
 			max = 0
@@ -11316,19 +11319,19 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_3fbdf2fcd642a354_target_freedom_need_positive
 			add = { value = 0
 				# target_strategy_liberty_increase_autonomy_strong [diplomacy]; 本国实际为本候选宗主的属国且已观察高自主愿望，形成提高自主或独立的有限需求；不把任意外国、非属国或贷款当等价事实；更强已证自主愿望或友好解放关系仅支持同因高档，不重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 90 } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 90 } } add = 0.18 }
 				# target_strategy_liberty_increase_autonomy_need [diplomacy]; 本国实际为本候选宗主的属国且已观察高自主愿望，形成提高自主或独立的有限需求；不把任意外国、非属国或贷款当等价事实
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.1 }
 			}
 			# GROUP program_3fbdf2fcd642a354_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_liberty_increase_autonomy_reconstruction [diplomacy]; 本国原版有限期战败记忆使新增自主交涉承诺有温和恢复机会成本；不把战败当失去自主诉求，也不把自主交涉等同战争或新增永久记忆
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country has_variable = recently_lost_war } } add = -0.05 }
+				if = { limit = { exists = ROOT ROOT = { is_subject_of = scope:target_country has_variable = recently_lost_war } } add = -0.05 }
 			}
 			# GROUP program_3fbdf2fcd642a354_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_liberty_increase_autonomy_security [diplomacy]; 同候选实际宗主陆军规模超过本国，形成自主交涉可能升级的有限安全暴露；自主交涉可和平达成，风险比独立更温和，不将营数当战力、胜率或必然战争
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -0.05 }
+				if = { limit = { AND = { exists = ROOT ROOT = { is_subject_of = scope:target_country } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -0.05 }
 			}
 			min = 0.8
 			max = 1.18
@@ -11413,26 +11416,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_183e5a5c321389fa_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_goal_reduce_autonomy_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root } } add = -2 }
 			}
 			# GROUP program_183e5a5c321389fa_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_goal_reduce_autonomy_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_goal_reduce_autonomy_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root has_truce_with = root } } add = -4 }
 				# target_strategy_goal_reduce_autonomy_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_183e5a5c321389fa_target_reputation_negative
 			add = { value = 0
 				# target_strategy_goal_reduce_autonomy_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root } } add = -3 }
 			}
 			# GROUP program_183e5a5c321389fa_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_goal_reduce_autonomy_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 is_subject_of = root army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = scope:target_country scope:target_country = { is_subject_of = root } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -20
 			max = 0
@@ -11597,26 +11600,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_4d37add3a774690f_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_goal_regime_change_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_4d37add3a774690f_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_goal_regime_change_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_goal_regime_change_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_goal_regime_change_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_4d37add3a774690f_target_reputation_negative
 			add = { value = 0
 				# target_strategy_goal_regime_change_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_4d37add3a774690f_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_goal_regime_change_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -18
 			max = 0
@@ -12057,26 +12060,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_1a73047e66d882aa_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_goal_annex_country_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_1a73047e66d882aa_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_goal_annex_country_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_goal_annex_country_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_goal_annex_country_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_1a73047e66d882aa_target_reputation_negative
 			add = { value = 0
 				# target_strategy_goal_annex_country_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_1a73047e66d882aa_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_goal_annex_country_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 army_size >= 0 army_size > "ROOT.army_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -3 }
 			}
 			min = -21
 			max = 0
@@ -12106,26 +12109,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_28c6d6f62f420bde_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_goal_colonization_rights_reconstruction [diplomacy]; 本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -2 }
 			}
 			# GROUP program_28c6d6f62f420bde_target_relationship_commitment_negative
 			add = { value = 0
 				# target_strategy_goal_colonization_rights_alliance [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
+				if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_treaty_alliance_with = { TARGET = root } } } add = -4 }
 				# target_strategy_goal_colonization_rights_truce [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 has_truce_with = root } } add = -4 }
 				# target_strategy_goal_colonization_rights_friendship [diplomacy]; 对同一候选已存在停战/联盟/友好关系形成敌对转换的关系承诺成本；这些观测同一外交关系原因只取最强，非三次重复处罚
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -2 }
 			}
 			# GROUP program_28c6d6f62f420bde_target_reputation_negative
 			add = { value = 0
 				# target_strategy_goal_colonization_rights_reputation [diplomacy]; 本国已有较高实际恶名，对同一候选继续施加敌对承诺增加外交声誉机会风险；不是具体战争目标恶名收费预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
+				if = { limit = { exists = ROOT ROOT = { infamy >= 0 infamy >= 50 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -3 }
 			}
 			# GROUP program_28c6d6f62f420bde_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_goal_colonization_rights_security [diplomacy]; 同一候选实际海军/陆军规模超过本国，对本承诺形成有限安全风险；不是胜率预测，不假定实际编制武器配方或把市场小枪当统一付款门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 navy_size >= 0 navy_size > "ROOT.navy_size" } } add = -3 }
+				if = { limit = { AND = { exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } exists = ROOT ROOT = { navy_size >= 0 } exists = scope:target_country scope:target_country = { navy_size >= 0 navy_size > "ROOT.navy_size" } } } add = -3 }
 			}
 			min = -18
 			max = 0
@@ -12224,9 +12227,9 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_6dac99e2a3d40b8a_target_freedom_need_positive
 			add = { value = 0
 				# target_strategy_liberty_liberate_subject_strong [diplomacy]; 实际本候选是属国且其自身高自由愿望形成有限解放需求；本国自由愿望不能代供，原版目标敌对宗主/资格仍保留；更强已证自主愿望或友好解放关系仅支持同因高档，不重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = 0.18 }
+				if = { limit = { exists = scope:target_country scope:target_country = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = 0.18 }
 				# target_strategy_liberty_liberate_subject_need [diplomacy]; 实际本候选是属国且其自身高自由愿望形成有限解放需求；本国自由愿望不能代供，原版目标敌对宗主/资格仍保留
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.1 }
+				else_if = { limit = { exists = scope:target_country scope:target_country = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.1 }
 			}
 			min = 1
 			max = 1.18
@@ -12400,19 +12403,19 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			# GROUP program_112825f7646d4ffb_target_freedom_need_positive
 			add = { value = 0
 				# target_strategy_liberty_independence_strong [diplomacy]; 本国实际为本候选宗主的属国且已观察高自主愿望，形成提高自主或独立的有限需求；不把任意外国、非属国或贷款当等价事实；更强已证自主愿望或友好解放关系仅支持同因高档，不重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 90 } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 90 } } add = 0.18 }
 				# target_strategy_liberty_independence_need [diplomacy]; 本国实际为本候选宗主的属国且已观察高自主愿望，形成提高自主或独立的有限需求；不把任意外国、非属国或贷款当等价事实
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { is_subject_of = scope:target_country liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.1 }
 			}
 			# GROUP program_112825f7646d4ffb_target_reconstruction_opportunity_negative
 			add = { value = 0
 				# target_strategy_liberty_independence_reconstruction [diplomacy]; 本国原版有限期战败记忆表明恢复中的机会成本，独立承诺应与恢复需求权衡；不新增永久惩罚，也不把独立需求归零
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country has_variable = recently_lost_war } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { is_subject_of = scope:target_country has_variable = recently_lost_war } } add = -0.1 }
 			}
 			# GROUP program_112825f7646d4ffb_target_security_exposure_negative
 			add = { value = 0
 				# target_strategy_liberty_independence_security [diplomacy]; 同一实际宗主的陆军营数超过本国，对独立承诺形成有限安全风险；不把人数差当战力或胜率预测，不假定盟友参战及独立必然通过战争
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject_of = scope:target_country army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -0.15 }
+				if = { limit = { AND = { exists = ROOT ROOT = { is_subject_of = scope:target_country } exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } } add = -0.15 }
 			}
 			min = 0.55
 			max = 1.18

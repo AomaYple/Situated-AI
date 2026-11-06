@@ -219,6 +219,7 @@ _ExistingCountryQuery = (
     | company_observations.CompanyQuery
     | technology_opportunities.TechnologyQuery
     | internal_security_opportunities.SecurityQuery
+    | internal_security_opportunities.SecurityCoupQuery
     | colonial_opportunities.ColonialQuery
     | regional_resource_opportunities.RegionalResourceQuery
     | import_blockade_opportunities.ImportBlockadeQuery
@@ -344,7 +345,13 @@ def render(query: CountryQuery) -> str:
         return company_observations.render(query)
     if isinstance(query, technology_opportunities.TechnologyQuery):
         return technology_opportunities.render_query(query)
-    if isinstance(query, internal_security_opportunities.SecurityQuery):
+    if isinstance(
+        query,
+        (
+            internal_security_opportunities.SecurityQuery,
+            internal_security_opportunities.SecurityCoupQuery,
+        ),
+    ):
         return internal_security_opportunities.render_query(query)
     if isinstance(query, colonial_opportunities.ColonialQuery):
         return colonial_opportunities.render_query(query)
@@ -420,7 +427,13 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
         return company_observations.required_sources(query)
     if isinstance(query, technology_opportunities.TechnologyQuery):
         return technology_opportunities.required_query_sources(query)
-    if isinstance(query, internal_security_opportunities.SecurityQuery):
+    if isinstance(
+        query,
+        (
+            internal_security_opportunities.SecurityQuery,
+            internal_security_opportunities.SecurityCoupQuery,
+        ),
+    ):
         return internal_security_opportunities.required_query_sources(query)
     if isinstance(query, colonial_opportunities.ColonialQuery):
         return colonial_opportunities.required_query_sources(query)
@@ -605,7 +618,13 @@ def compile_query(
         return company_observations.compile_query(query, texts)
     if isinstance(query, technology_opportunities.TechnologyQuery):
         return technology_opportunities.compile_query(query, texts)
-    if isinstance(query, internal_security_opportunities.SecurityQuery):
+    if isinstance(
+        query,
+        (
+            internal_security_opportunities.SecurityQuery,
+            internal_security_opportunities.SecurityCoupQuery,
+        ),
+    ):
         return internal_security_opportunities.compile_query(query, texts)
     if isinstance(query, colonial_opportunities.ColonialQuery):
         return colonial_opportunities.compile_query(query, texts)

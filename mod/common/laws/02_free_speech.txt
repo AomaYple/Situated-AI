@@ -44,30 +44,30 @@ law_outlawed_dissent = {
 			# GROUP program_df4720efbfa3ee5e_negative
 			add = { value = 0
 				# political_capacity_law_outlawed_dissent [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_df4720efbfa3ee5e_law_authority_transition_positive
 			add = { value = 0
 				# law_context_law_outlawed_dissent_law_protected_speech_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_protected_speech authority < 0 } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_protected_speech authority < 0 } } add = 6 }
 				# law_context_law_outlawed_dissent_law_right_of_assembly_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_of_assembly authority < 0 } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_of_assembly authority < 0 } } add = 6 }
 				# law_context_law_outlawed_dissent_law_censorship_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_censorship authority < 0 } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_censorship authority < 0 } } add = 6 }
 			}
 			# GROUP program_df4720efbfa3ee5e_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_outlawed_dissent_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_outlawed_dissent_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_df4720efbfa3ee5e_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_outlawed_dissent_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_outlawed_dissent } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_outlawed_dissent } } add = -10 }
 				# law_context_law_outlawed_dissent_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_outlawed_dissent } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_outlawed_dissent value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_outlawed_dissent } } add = -6 }
 			}
 			min = -20
 			max = 16
@@ -113,33 +113,33 @@ law_censorship = {
 			# GROUP program_17c3be0a048549aa_negative
 			add = { value = 0
 				# political_capacity_law_censorship [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_17c3be0a048549aa_law_authority_transition_positive
 			add = { value = 0
 				# law_context_law_censorship_law_protected_speech_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_protected_speech authority < 0 } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_protected_speech authority < 0 } } add = 6 }
 				# law_context_law_censorship_law_right_of_assembly_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_of_assembly authority < 0 } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_of_assembly authority < 0 } } add = 6 }
 			}
 			# GROUP program_17c3be0a048549aa_law_authority_transition_negative
 			add = { value = 0
 				# law_context_law_censorship_law_outlawed_dissent_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_outlawed_dissent authority < 100 } } add = -8 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_outlawed_dissent authority < 100 } } add = -8 }
 			}
 			# GROUP program_17c3be0a048549aa_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_censorship_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_censorship_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_17c3be0a048549aa_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_censorship_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_censorship } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_censorship } } add = -10 }
 				# law_context_law_censorship_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_censorship } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_censorship value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_censorship } } add = -6 }
 			}
 			min = -28
 			max = 16
@@ -184,38 +184,38 @@ law_right_of_assembly = {
 			# GROUP program_577c5c4a9a3bd4db_positive
 			add = { value = 0
 				# coordinated_layered_civic_law_right_of_assembly [political]; 可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.15 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.3 } } add = 5 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.15 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.3 } } add = 5 }
 			}
 			# GROUP program_577c5c4a9a3bd4db_negative
 			add = { value = 0
 				# political_capacity_law_right_of_assembly [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_577c5c4a9a3bd4db_law_authority_transition_positive
 			add = { value = 0
 				# law_context_law_right_of_assembly_law_protected_speech_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_protected_speech authority < 0 } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_protected_speech authority < 0 } } add = 6 }
 			}
 			# GROUP program_577c5c4a9a3bd4db_law_authority_transition_negative
 			add = { value = 0
 				# law_context_law_right_of_assembly_law_censorship_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_censorship authority < 50 } } add = -8 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_censorship authority < 50 } } add = -8 }
 				# law_context_law_right_of_assembly_law_outlawed_dissent_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_outlawed_dissent authority < 150 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_outlawed_dissent authority < 150 } } add = -8 }
 			}
 			# GROUP program_577c5c4a9a3bd4db_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_right_of_assembly_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_right_of_assembly_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_577c5c4a9a3bd4db_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_right_of_assembly_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_right_of_assembly } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_right_of_assembly } } add = -10 }
 				# law_context_law_right_of_assembly_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_right_of_assembly } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_of_assembly value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_right_of_assembly } } add = -6 }
 			}
 			min = -28
 			max = 21
@@ -278,35 +278,35 @@ law_protected_speech = {
 			# GROUP program_12d070e3bcd534bb_positive
 			add = { value = 0
 				# coordinated_layered_civic_law_protected_speech [political]; 可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value < 0.25 } } } add = 5 }
+				if = { limit = { exists = ROOT ROOT = { sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value < 0.25 } } } add = 5 }
 			}
 			# GROUP program_12d070e3bcd534bb_negative
 			add = { value = 0
 				# political_capacity_law_protected_speech [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_12d070e3bcd534bb_law_authority_transition_negative
 			add = { value = 0
 				# law_context_law_protected_speech_law_right_of_assembly_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_of_assembly authority < 50 } } add = -8 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_of_assembly authority < 50 } } add = -8 }
 				# law_context_law_protected_speech_law_censorship_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_censorship authority < 100 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_censorship authority < 100 } } add = -8 }
 				# law_context_law_protected_speech_law_outlawed_dissent_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_outlawed_dissent authority < 200 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_outlawed_dissent authority < 200 } } add = -8 }
 			}
 			# GROUP program_12d070e3bcd534bb_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_protected_speech_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_protected_speech_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_12d070e3bcd534bb_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_protected_speech_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_protected_speech } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_protected_speech } } add = -10 }
 				# law_context_law_protected_speech_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_protected_speech } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_protected_speech value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_protected_speech } } add = -6 }
 			}
 			min = -28
 			max = 15

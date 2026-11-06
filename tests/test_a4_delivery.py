@@ -11,6 +11,7 @@ import urllib.parse
 import urllib.request
 import zipfile
 from datetime import UTC, datetime
+from email.message import Message
 from types import SimpleNamespace
 
 import pytest
@@ -492,13 +493,15 @@ def test_asset_redirect_never_forwards_api_credential(monkeypatch):
             assert timeout <= 40
             requests.append(request)
             if len(requests) == 1:
+                headers = Message()
+                headers["Location"] = (
+                    "https://release-assets.githubusercontent.com/github-production-release-asset/1/asset?signature=safe"
+                )
                 raise urllib.error.HTTPError(
                     request.full_url,
                     302,
                     "redirect",
-                    {
-                        "Location": "https://release-assets.githubusercontent.com/github-production-release-asset/1/asset?signature=safe"
-                    },
+                    headers,
                     None,
                 )
             return Response(b"asset bytes")
@@ -529,9 +532,9 @@ def test_asset_redirect_rejects_unsafe_target_before_second_request(monkeypatch,
     class Opener:
         def open(self, request, *, timeout):
             requests.append((request, timeout))
-            raise urllib.error.HTTPError(
-                request.full_url, 302, "redirect", {"Location": location}, None
-            )
+            headers = Message()
+            headers["Location"] = location
+            raise urllib.error.HTTPError(request.full_url, 302, "redirect", headers, None)
 
     monkeypatch.setattr(urllib.request, "build_opener", lambda *_args: Opener())
     reader = delivery.GitHubReader("owner/repo", credential="test-secret")

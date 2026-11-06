@@ -312,9 +312,10 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 "operation": "multiply",
                 "value": data["tuning"][suffix],
                 "semantic_role": "benefit",
-                # Existing steamers price/balance variants use the default group.
-                # Actual import/blockade observations join that same envelope so
-                # simultaneous proxies never add independent positive rewards.
+                # Distinct observations share one bounded mission preference
+                # envelope, not a claim that their physical causes are equal.
+                # No observed route/marginal protected cargo permits addition.
+                "contribution_group": "external_supply_mission_pressure",
                 "conditions": [
                     {"fact": "war", "op": "=", "value": True},
                     {"fact": "navy", "op": ">", "value": 0},
@@ -323,8 +324,8 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                         for mode in observations
                     ],
                 ],
-                "why": "真实市场军需进口暴露或本国州封锁使既有次要舰队保护任务获得有限相对优先；同原因取强，不创建舰队或预算承诺",
-                "counterexample": "军需进口是本国所属市场总量/依赖，可能陆运或涉及同市场其他国家，绝非已知海路进口、来源集中度或convoy损失。仅已存在海军且正在战争时表达有界风险偏好；进口与封锁同因取强，不重复steamers价格/余额代理。未知本地市场/州集合只退出新需要，不撤既有需要；无战争、无海军、玩家、关闭保持原版，主力舰队保护零保持零。",
+                "why": "真实市场军需进口暴露或本国州封锁使既有次要舰队保护任务获得有限相对优先；对同一任务采用风险偏好饱和包络，不宣称三项物理原因相同，不创建舰队或预算承诺",
+                "counterexample": "军需进口是本国所属市场总量/依赖，可能陆运或涉及同市场其他国家，绝非已知海路进口、来源集中度或convoy损失。仅已存在海军且正在战争时表达有界风险偏好；进口、封锁与steamers分别保留来源；未观察具体海路或额外受保护货物，故同一任务风险偏好取强，独立海运边际需要仍待实现。未知本地市场/州集合只退出新需要，不撤既有需要；无战争、无海军、玩家、关闭保持原版，主力舰队保护零保持零。",
             }
         )
     return {

@@ -67,13 +67,13 @@ building_government_administration = {
 			# GROUP program_23cf35935032bc42_administrative_capacity_repair_positive
 			add = { value = 0
 				# administrative_government_building_funded_repair [economy]; 行政赤字且两项融资状态均已证实健康时使用修复强档；正常借款走弱档，违约走基础档，未知只退出强化而不虚构健康；候选不是已建成能力
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes bureaucracy < 0 in_default = no taking_loans = no } } } add = 0.25 }
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { bureaucracy < 0 in_default = no taking_loans = no } } } add = 0.25 }
 				# administrative_government_building_borrowed_repair [economy]; 正常借贷且行政赤字时保留比健康档弱的局部修复；借贷增加承诺成本但不一刀切关闭解决承载瓶颈的行动
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = no taking_loans = yes bureaucracy < 0 } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { in_default = no taking_loans = yes bureaucracy < 0 } } } add = 0.1 }
 				# administrative_government_building_emergency_repair [economy]; 违约且行政赤字时保留有界的紧急行政修复；它解决当前承载约束而不把违约视为健康，也不放宽实际成本与资格
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes bureaucracy < 0 } } } add = 0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { in_default = yes bureaucracy < 0 } } } add = 0.05 }
 				# administrative_government_building_bureaucracy_repair [economy]; 已知行政赤字形成最低修复需求；财政状态未知也不升健康档，仅保留1.05基础，已知融资代价在独立组共同参与
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes bureaucracy < 0 } } } add = 0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { bureaucracy < 0 } } } add = 0.05 }
 			}
 			# GROUP program_23cf35935032bc42_administrative_financing_pressure_negative
 			add = { value = 0
@@ -85,7 +85,7 @@ building_government_administration = {
 			# GROUP program_23cf35935032bc42_administrative_local_tax_capacity_positive
 			add = { value = 0
 				# administrative_local_tax_capacity_repair [fiscal]; 已整合候选州的征税容量真实低于同州使用量；独立于全国官僚缺口，不要求现有PM或财政健康
-				if = { limit = { exists = ROOT ROOT = { is_incorporated = yes tax_capacity < "ROOT.tax_capacity_usage" exists = owner owner = { is_ai = yes } } } add = 0.1 }
+				if = { limit = { AND = { exists = ROOT ROOT = { is_incorporated = yes } exists = ROOT ROOT = {  } exists = ROOT ROOT = { tax_capacity < "ROOT.tax_capacity_usage" } } } add = 0.1 }
 			}
 			min = 0.5
 			max = 1.35
@@ -222,22 +222,27 @@ building_university = {
 				# knowledge_university_observed_default_cost [fiscal]; 所有者实际违约为新增公费大学提供独立偿付成本；不屏蔽低识字需求
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { AND = { OR = { in_default = yes NOT = { in_default = yes } } } AND = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = yes } } } } } }  } else = { add = -0.15 } } } }
 			}
-			# GROUP program_50f41da1b83f7ffd_building_output_demand_positive
+			# GROUP program_50f41da1b83f7ffd_university_innovation_need_positive
 			add = { value = 0
-				# knowledge_university_prepared_pm_analytical_philosophy_department [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_analytical_philosophy_department } exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
-				# knowledge_university_prepared_pm_philosophy_department [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_philosophy_department } exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
-				# knowledge_university_prepared_pm_scholastic_education [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_scholastic_education } exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
+				# knowledge_university_below_effective_cap [economy]; 有效所有者国家实际capped创新A低于当前精确正cap C，形成独立创新服务需求；+.10是Mod设计系数
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = {  } } exists = ROOT ROOT = { exists = owner owner = { country_innovation >= 0 country_innovation < "ROOT.owner.modifier:country_weekly_innovation_max_add" } } } add = 0.1 }
+			}
+			# GROUP program_50f41da1b83f7ffd_university_qualification_service_positive
+			add = { value = 0
+				# knowledge_university_prepared_pm_analytical_philosophy_department [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字资格服务能力需求；不把现有大学当新建资格
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_analytical_philosophy_department } exists = owner owner = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
+				# knowledge_university_prepared_pm_philosophy_department [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字资格服务能力需求；不把现有大学当新建资格
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_philosophy_department } exists = owner owner = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
+				# knowledge_university_prepared_pm_scholastic_education [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字资格服务能力需求；不把现有大学当新建资格
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_scholastic_education } exists = owner owner = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
 				# SITAI CHAIN LJ03/LJ03.university_completed_knowledge_foundation writer=rule_action_common_buildings_07_government_txt_knowledge_university_researched_foundation
-				# knowledge_university_researched_foundation [political]; 低识字且原版学术科技确实完成时升档同一知识能力需求；原版大学科技资格仍由原版保留
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 has_technology_researched = academia } } } add = 0.15 }
-				# knowledge_university_low_literacy_need [political]; 国家实际低识字形成对大学创新和资格供给的有限需求；不把大学等同学校或直接识字增长，不要求该州已经有大学
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } } add = 0.1 }
+				# knowledge_university_researched_foundation [political]; 低识字且原版学术科技确实完成时升档同一资格服务能力需求；原版大学科技资格仍由原版保留
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 has_technology_researched = academia } } } add = 0.15 }
+				# knowledge_university_low_literacy_need [political]; 国家实际低识字作为大学资格服务与长期人才能力的有限代理；旧混合claim中的创新部分改由独立实际cap规则表达；不把大学等同学校或直接识字增长，不要求该州已经有大学
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } } add = 0.1 }
 			}
 			min = 0.65
-			max = 1.2
+			max = 1.3
 		} }
 		# SITAI END information:building_university.ai_value
 	}

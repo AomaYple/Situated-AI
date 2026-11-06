@@ -7,6 +7,7 @@ import subprocess
 import sys
 from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -145,7 +146,7 @@ def test_current_native_protection_preserves_complete_tail_parent_and_sibling():
         "}\nother_field = { value = 2 }\n}\n"
     )
     changed = original.replace("multiply = 1.1", "multiply = 1.22")
-    values = {"migration_files": {path.removeprefix("mod/"): {}}}
+    values: dict[str, Any] = {"migration_files": {path.removeprefix("mod/"): {}}}
     classify.protect_current_native(
         _TextSources({path: changed}), _TextSources({path: original}), values
     )

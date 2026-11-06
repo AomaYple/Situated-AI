@@ -13,11 +13,11 @@ import math
 import re
 import tomllib
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeGuard, cast
 
 from . import config
-from .lexer import ATOM, LBRACE, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
 
@@ -228,6 +228,10 @@ def _roots(inputs: Mapping[str, str]) -> dict[str, Block]:
 
 
 def verify_inputs(inputs: Mapping[str, str]) -> None:
+    from . import power_bloc_membership as membership  # noqa: PLC0415
+
+    if membership.SOURCE in inputs:
+        membership.verify_inputs(inputs)
     roots = _roots(inputs)
     doc = inputs[DOC]
     start = doc.index("#### inherent_accept_score scopes")
@@ -583,11 +587,109 @@ class AcceptanceProgram:
             ("acceptance_delta", "article_input_market_goods", "market_goods", "auxiliary"),
         )
 
+    def predicate_ports(self):
+        from .decision_rules import Predicate  # noqa: PLC0415
+        from .situated import program_ports  # noqa: PLC0415
+
+        def rows(*items):
+            return tuple(Predicate(*item) for item in items)
+
+        if self.definition in COMMITMENTS:
+            core: tuple[tuple[str, str, bool | int], ...] = (
+                ("commitment_active_exists", "=", False),
+                ("commitment_renegotiation_exists", "=", False),
+                ("commitment_existing", "=", False),
+            )
+            predicates = {
+                "commitment_default": rows(*core, ("commitment_default", "=", True)),
+                "commitment_deficit": rows(*core, ("commitment_income", "<", 0)),
+                "commitment_recovery": rows(*core, ("commitment_defeat", "=", True)),
+            }
+            guard_roles = {
+                "commitment_default": "cost",
+                "commitment_deficit": "cost",
+                "commitment_recovery": "cost",
+            }
+        elif self.definition == MILITARY_DEFINITION:
+            core = (
+                ("military_active_exists", "=", False),
+                ("military_renegotiation_exists", "=", False),
+                ("military_existing_source_commitment", "=", False),
+                ("military_expenses", ">", 0),
+            )
+            predicates = {
+                "military_source_default": rows(*core, ("military_default", "=", True)),
+                "military_source_deficit": rows(*core, ("military_income", "<", 0)),
+            }
+            guard_roles = {
+                "military_source_default": "cost",
+                "military_source_deficit": "cost",
+            }
+        else:
+            predicates = {
+                "source_tariff_commitment": rows(
+                    ("acceptance_input_exists", "=", True), ("acceptance_tariffs", "=", True)
+                ),
+                "source_cheap": rows(
+                    ("acceptance_default", "=", False), ("acceptance_income", ">=", 0)
+                ),
+                "source_deficit": rows(
+                    ("acceptance_default", "=", False), ("acceptance_income", "<", 0)
+                ),
+                "target_input_need": rows(
+                    ("acceptance_input_exists", "=", True), ("acceptance_delta", "<", 0)
+                ),
+            }
+            # The cheap/deficit effects waive part of the same source financing
+            # cost. A positive numeric effect does not make it a new benefit.
+            guard_roles = {
+                "source_tariff_commitment": "cost",
+                "source_cheap": "cost",
+                "source_deficit": "cost",
+                "target_input_need": "benefit",
+            }
+        proof = tuple(f"{key}:sha256={value}" for key, value in sorted(load()["sources"].items()))
+        identity = hashlib.sha256(
+            PARAMETERS.read_bytes() + b"\0generator:" + Path(__file__).read_bytes()
+        ).hexdigest()
+        return program_ports.bind(
+            scalar=self.scalar,
+            source=self.source,
+            definition=self.definition,
+            context=self.evaluation_context(),
+            readers=self.readers(),
+            reader_bindings=self.reader_bindings(),
+            predicates=predicates,
+            guard_roles=guard_roles,
+            source_sha256=identity,
+            source_proofs=proof,
+            domain=DOMAIN,
+        )
+
+    def port_guards(self):
+        guards = self.predicate_ports().render()
+        if self.definition in COMMITMENTS:
+            envelope = _commitment_role(self.definition)
+            return {key: envelope + " " + value for key, value in guards.items()}
+        if self.definition == MILITARY_DEFINITION:
+            return {key: _SOURCE_ROLE + " " + value for key, value in guards.items()}
+        return {
+            key: (
+                _SOURCE_ROLE + " "
+                if key == "source_tariff_commitment"
+                else _TARGET_ROLE + " "
+                if key == "target_input_need"
+                else ""
+            )
+            + value
+            for key, value in guards.items()
+        }
+
     def writer_ir(self) -> WriterDecisionIR:
         from .situated.decision_ir import WriterDecisionIR  # noqa: PLC0415
 
         self.validate()
-        return WriterDecisionIR(
+        writer = WriterDecisionIR(
             writer_id=self.writer_id,
             kind="acceptance_program",
             source=self.source,
@@ -604,6 +706,8 @@ class AcceptanceProgram:
             reader_context_bindings=self.reader_bindings(),
         )
 
+        return replace(writer, port_contributions=self.predicate_ports().contributions(writer))
+
     def as_dict(self) -> dict[str, object]:
         return {
             **asdict(self),
@@ -617,6 +721,7 @@ class AcceptanceProgram:
             "readers": [asdict(reader) for reader in self.readers()],
             "role_predicates": {"source": _SOURCE_ROLE, "target": _TARGET_ROLE},
             "source_hashes": load()["sources"],
+            "predicate_ports": self.predicate_ports().as_dict(),
         }
 
     def evaluate(self, values: Mapping[str, Any], *, is_ai: bool, enabled: bool = True) -> float:
@@ -694,19 +799,30 @@ def compile_program(definition: str = DEFINITION) -> AcceptanceProgram:
 
 
 def compile_programs() -> tuple[AcceptanceProgram, ...]:
-    return tuple(compile_program(spec.definition) for spec in SPECS)
+    from . import power_bloc_membership as membership  # noqa: PLC0415
+
+    return (*(compile_program(spec.definition) for spec in SPECS), membership.compile_program())
+
+
+def program_source_hashes() -> dict[str, str]:
+    from . import power_bloc_membership as membership  # noqa: PLC0415
+
+    sources = dict(load()["sources"])
+    for name, digest in membership.source_hashes().items():
+        if name in sources and sources[name] != digest:
+            raise ValueError("membership and treaty source identity conflict")
+        sources[name] = digest
+    return sources
+
+
+def membership_dependency_bytes() -> bytes:
+    from . import power_bloc_membership as membership  # noqa: PLC0415
+
+    return membership.dependency_bytes()
 
 
 _SOURCE_ROLE = "scope:source_country ?= this NOT = { scope:target_country ?= this }"
 _TARGET_ROLE = "scope:target_country ?= this NOT = { scope:source_country ?= this }"
-GUARDS = {
-    "source_tariff_commitment": _SOURCE_ROLE
-    + f' exists = "{INPUT_MARKET}" has_any_tariffs_on = scope:article.input_goods',
-    "source_cheap": "in_default = no net_total_income >= 0",
-    "source_deficit": "in_default = no net_total_income < 0",
-    "target_input_need": _TARGET_ROLE
-    + f' exists = "{INPUT_MARKET}" "{INPUT_MARKET}" = {{ market_goods_delta < 0 }}',
-}
 QUERY_PARAMETER = "military_assistance_query"
 
 
@@ -762,18 +878,6 @@ def compile_query(
     )
 
 
-MILITARY_CORE_GUARD = (
-    _SOURCE_ROLE
-    + " NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation }"
-    + " military_expenses > 0 NOT = { "
-    + render_query(ExistingMilitarySourceCommitmentQuery())
-    + " }"
-)
-MILITARY_GUARDS = {
-    "military_source_default": MILITARY_CORE_GUARD + " in_default = yes",
-    "military_source_deficit": MILITARY_CORE_GUARD + " net_total_income < 0",
-}
-
 AI_GUARD = "exists = ROOT ROOT = { is_ai = yes } exists = scope:article exists = scope:source_country exists = scope:target_country"
 
 
@@ -815,14 +919,17 @@ def evaluate(
     default, income, delta = (
         values.get(k) for k in ("in_default", "net_total_income", "input_goods_delta")
     )
-    guards = {
-        "source_tariff_commitment": source_role
-        and goods_present
-        and values.get("tariffs_on_input") is True,
-        "source_cheap": default is False and _finite(income) and income >= 0,
-        "source_deficit": default is False and _finite(income) and income < 0,
-        "target_input_need": target_role and goods_present and _finite(delta) and delta < 0,
-    }
+    guards = selected.predicate_ports().evaluate(
+        {
+            "acceptance_input_exists": goods_present,
+            "acceptance_tariffs": values.get("tariffs_on_input"),
+            "acceptance_default": default,
+            "acceptance_income": income,
+            "acceptance_delta": delta,
+        }
+    )
+    guards["source_tariff_commitment"] &= source_role
+    guards["target_input_need"] &= target_role
     selected = compile_program() if consumer_program is None else consumer_program
     return programs.evaluate_scalar(selected.scalar, guards)
 
@@ -866,37 +973,35 @@ def _evaluate_military(values: Mapping[str, Any], selected: AcceptanceProgram) -
         if values.get(key) is not None and type(values[key]) is not bool:
             raise ValueError("军事援助标记和default必须是布尔或未知")
     expenses, income = values.get("military_expenses"), values.get("net_total_income")
-    core = (
-        identities
-        and root == source
-        and root != target
-        and values.get("article_exists") is True
-        and values.get("is_treaty_active_exists") is False
-        and values.get("is_renegotiation_exists") is False
-        and new
-        and _finite(expenses)
-        and expenses > 0
+    core = identities and root == source and root != target and values.get("article_exists") is True
+    guards = selected.predicate_ports().evaluate(
+        {
+            "military_active_exists": values.get("is_treaty_active_exists"),
+            "military_renegotiation_exists": values.get("is_renegotiation_exists"),
+            "military_existing_source_commitment": None if treaties is None else not new,
+            "military_expenses": expenses,
+            "military_default": values.get("in_default"),
+            "military_income": income,
+        }
     )
     return programs.evaluate_scalar(
-        selected.scalar,
-        {
-            "military_source_default": bool(core and values.get("in_default") is True),
-            "military_source_deficit": bool(core and _finite(income) and income < 0),
-        },
+        selected.scalar, {key: bool(core and value) for key, value in guards.items()}
     )
 
 
 def render(program: AcceptanceProgram) -> str:
+    from . import power_bloc_membership as membership  # noqa: PLC0415
+
     program.validate()
     return (
         f"\n\t\t# SITAI BEGIN treaty_acceptance:{program.definition}\n"
         f"\t\t# ACTION {program.writer_id} [{DOMAIN}];\n"
         + programs.render_scalar(
             program.scalar,
-            _commitment_guards(program.definition)
-            if program.definition in COMMITMENTS
-            else (MILITARY_GUARDS if program.definition == MILITARY_DEFINITION else GUARDS),
-            ai_guard=_commitment_ai_guard(program.definition)
+            program.port_guards(),
+            ai_guard="exists = ROOT ROOT = { is_ai = yes }"
+            if membership.is_membership(program)
+            else _commitment_ai_guard(program.definition)
             if program.definition in COMMITMENTS
             else AI_GUARD,
             style="cards",
@@ -904,27 +1009,6 @@ def render(program: AcceptanceProgram) -> str:
         )
         + f"\t\t# SITAI END treaty_acceptance:{program.definition}\n\t\t"
     )
-
-
-def _close_offset(text: str, line: int) -> int:
-    tokens = tokenize(text)
-    matches = [
-        i
-        for i, t in enumerate(tokens)
-        if t.kind == ATOM and t.value == "inherent_accept_score" and t.line == line
-    ]
-    if len(matches) != 1 or tokens[matches[0] + 2].kind != LBRACE:
-        raise ValueError("条约接受评分精确块定位不唯一")
-    starts = [0]
-    for fragment in text.splitlines(keepends=True):
-        starts.append(starts[-1] + len(fragment))
-    depth = 0
-    for token in tokens[matches[0] + 2 :]:
-        depth += token.kind == LBRACE
-        depth -= token.kind == RBRACE
-        if depth == 0:
-            return starts[token.line - 1] + token.col - 1
-    raise ValueError("条约接受评分块未闭合")
 
 
 def patch(
@@ -946,14 +1030,13 @@ def patch(
     parsed = parse_text(text)
     if parsed.errors:
         raise ValueError("条约接受overlay解析失败")
-    ai = _block(_block(parsed.root, definition), "ai")
-    native = _block(ai, "inherent_accept_score")
-    original = _block(
-        _block(_block(parse_text(inputs[source]).root, definition), "ai"), "inherent_accept_score"
-    )
+    from . import decision_rules  # noqa: PLC0415
+
+    native = decision_rules._block_at(parsed.root, selected.field_path)
+    original = decision_rules._block_at(parse_text(inputs[source]).root, selected.field_path)
     if _shape(native) != _shape(original):
         raise ValueError("条约接受物理评分已有其他改动，拒绝双作者")
-    offset = _close_offset(text, ai.all("inherent_accept_score")[0].line)
+    offset = decision_rules._offsets(text, {selected.field_path})[selected.field_path]
     selected = compile_program() if consumer_program is None else consumer_program
     return {source: text[:offset] + render(selected) + text[offset:]}
 
@@ -1306,20 +1389,6 @@ def _commitment_ai_guard(definition: str) -> str:
     )
 
 
-def _commitment_guards(definition: str) -> dict[str, str]:
-    core = (
-        _commitment_role(definition)
-        + " NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { "
-        + render_commitment_query(ExistingCommitmentQuery(definition))
-        + " }"
-    )
-    return {
-        "commitment_default": core + " in_default = yes",
-        "commitment_deficit": core + " net_total_income < 0",
-        "commitment_recovery": core + " has_variable = recently_lost_war",
-    }
-
-
 def _new_obligation(values: Mapping[str, Any], definition: str, other: str) -> bool:
     treaties = values.get("existing_treaties")
     if treaties is None:
@@ -1388,18 +1457,19 @@ def _evaluate_commitment(values: Mapping[str, Any], selected: AcceptanceProgram)
     other = b if root == a else a
     if not isinstance(other, str):
         return 0.0
-    core = (
-        values.get("article_exists") is True
-        and values.get("is_treaty_active_exists") is False
-        and values.get("is_renegotiation_exists") is False
-        and _new_obligation(values, definition, other)
-    )
-    income = values.get("net_total_income")
-    return programs.evaluate_scalar(
-        selected.scalar,
+    core = values.get("article_exists") is True
+    guards = selected.predicate_ports().evaluate(
         {
-            "commitment_default": bool(core and values.get("in_default") is True),
-            "commitment_deficit": bool(core and _finite(income) and income < 0),
-            "commitment_recovery": bool(core and values.get("war_defeat") is True),
-        },
+            "commitment_active_exists": values.get("is_treaty_active_exists"),
+            "commitment_renegotiation_exists": values.get("is_renegotiation_exists"),
+            "commitment_existing": None
+            if values.get("existing_treaties") is None
+            else not _new_obligation(values, definition, other),
+            "commitment_default": values.get("in_default"),
+            "commitment_income": values.get("net_total_income"),
+            "commitment_defeat": values.get("war_defeat"),
+        }
+    )
+    return programs.evaluate_scalar(
+        selected.scalar, {key: bool(core and value) for key, value in guards.items()}
     )

@@ -1,0 +1,2081 @@
+schema = 1
+scope = ["B01", "B02", "B03", "B04"]
+semantics = "exact_existing_predicate_guard_only; unspecified_remains_pending"
+sources = [
+  "common/ai_strategies/00_default_strategy.txt",
+  "common/buildings/01_industry.txt",
+  "common/buildings/02_agro.txt",
+  "common/buildings/03_mines.txt",
+  "common/buildings/04_plantations.txt",
+  "common/buildings/06_urban_center.txt",
+  "common/buildings/07_government.txt",
+  "common/buildings/09_misc_resource.txt",
+  "common/buildings/11_private_infrastructure.txt",
+  "common/company_types/00_companies_africa.txt",
+  "common/company_types/00_companies_americas.txt",
+  "common/company_types/00_companies_asia.txt",
+  "common/company_types/00_companies_austria_hungary.txt",
+  "common/company_types/00_companies_china.txt",
+  "common/company_types/00_companies_cots.txt",
+  "common/company_types/00_companies_ep2.txt",
+  "common/company_types/00_companies_europe.txt",
+  "common/company_types/00_companies_france.txt",
+  "common/company_types/00_companies_germany.txt",
+  "common/company_types/00_companies_great_britain.txt",
+  "common/company_types/00_companies_ip2.txt",
+  "common/company_types/00_companies_ip3.txt",
+  "common/company_types/00_companies_ip4.txt",
+  "common/company_types/00_companies_ip5.txt",
+  "common/company_types/00_companies_italy.txt",
+  "common/company_types/00_companies_japan.txt",
+  "common/company_types/00_companies_mp1.txt",
+  "common/company_types/00_companies_russia.txt",
+  "common/company_types/00_companies_soi.txt",
+  "common/company_types/00_companies_totally_normal.txt",
+  "common/company_types/00_companies_usa.txt",
+  "common/company_types/99_basic_companies.txt",
+  "common/laws/01_education_system.txt",
+  "common/laws/01_taxation.txt",
+  "common/laws/02_childrens_rights.txt",
+  "common/mobilization_options/00_mobilization_option.txt",
+  "common/technology/technologies/10_production.txt",
+  "common/technology/technologies/20_military.txt",
+  "common/technology/technologies/30_society.txt",
+  "common/treaty_articles/00_alliance.txt",
+  "common/treaty_articles/01_defensive_pact.txt",
+  "common/treaty_articles/02_guarantee_independence.txt",
+  "common/treaty_articles/07_foreign_investment_rights.txt",
+  "common/treaty_articles/24_transit_rights.txt",
+  "common/treaty_articles/25_trade_privilege.txt",
+  "common/treaty_articles/31_toll_exemption.txt",
+  "common/treaty_articles/32_no_tolls.txt",
+  "common/treaty_articles/33_strait_access.txt",
+  "common/treaty_articles/34_no_strait_closure.txt",
+  "mod/decisions/information.toml",
+]
+
+[hard_cap]
+ports = 3544
+origins = 1806
+uses = 3601
+partitions = 505
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_colonial_affairs"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_home_affairs"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_police"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_workplace_safety"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.nationalization_desire"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wanted_num_supply_ships"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_arms_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_artillery_foundry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_automotive_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_chemical_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_electrics_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_explosives_factory.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_food_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_furniture_manufactory.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_glassworks.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_motor_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_munition_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_paper_mill.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_shipyard.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_steel_mill.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_synthetics_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_textile_mill.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_tooling_workshop.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_livestock_ranch.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_maize_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_millet_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_rice_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_rye_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_vineyard.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_wheat_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_coal_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_copper_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_gold_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_iron_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_lead_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_sulfur_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_banana_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_coffee_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_cotton_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_dye_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_opium_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_silk_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_sugar_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_tea_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_tobacco_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/06_urban_center.txt"
+field = "building_art_academy.ai_value"
+
+[[consumers]]
+source = "common/buildings/06_urban_center.txt"
+field = "building_power_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/07_government.txt"
+field = "building_government_administration.ai_value"
+
+[[consumers]]
+source = "common/buildings/07_government.txt"
+field = "building_university.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_fishing_wharf.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_logging_camp.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_oil_rig.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_rubber_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_whaling_station.ai_value"
+
+[[consumers]]
+source = "common/buildings/11_private_infrastructure.txt"
+field = "building_railway.ai_value"
+
+[[consumers]]
+source = "common/company_types/00_companies_africa.txt"
+field = "company_egyptian_rail.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_africa.txt"
+field = "company_misr.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_africa.txt"
+field = "company_suez_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_bunge_born.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_caribbean_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_csfa.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_el_aguila.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_famae.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_fundidora_monterrey.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_hbc.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_kablin.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_la_rosada.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_panama_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_peruvian_amazon.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_allatini_mills.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_b_grimm.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_east_india_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_great_indian_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_imperial_arsenal.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_imperial_tobacco.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_nam_dinh.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_orient_express.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_ottoman_tobacco_regie.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_san_miguel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_sunhwaguk.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_tata.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_william_sandford.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_galician_carpathian_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_manfred_weiss.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_mav.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_oevg.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_skoda.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_foochow_arsenal.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_hanyang_arsenal.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_jingdezhen.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_kaiping_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_argentinian_wine.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_cordoba_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_eea.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_electricidad_de_caracas.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_estaleiro_maua.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_estanifera_llallagua.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_fundicao_ipanema.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_pernambuco_textiles.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_rossi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_sao_paulo_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_sudamericana_de_vapores.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_a_markwald_and_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_broken_hill_proprietary_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_ferranti_ltd.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_guthrie.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_maschinenfabrik_oerlikon.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_nhm.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_noda_shoyu.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_oriental_consolidated_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_ramirez.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_siam_electrical_company_limited.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_societe_francaise_charbonnages_du_tonkin.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_sumitomo.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_tokyo_electric_light_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_van_vlissingen_en_dudok_van_heel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_white_star_line.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_yasuda.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_aker_mek.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_altos_hornos_de_vizcaya.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ap_moller.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_basileiades.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ccci.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_cfr.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_chr_hansens.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_duro_y_compania.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ericsson.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_espana_industrial.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_franco_belge.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_gotaverken.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_john_cockerill.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_kouppas.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_lilpop.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_lkab.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_mozambique_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_nederlandse_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_nokia.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_philips.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_romanian_star.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_trubia.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ursus.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_zastava.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_cgv.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_dmc.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_fcm.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_mines_anzin.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_saint_etienne.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_schneider_creusot.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_societe_mokta_el_hadid.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_basf.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_krupp.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_prussian_state_railways.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_rheinmetall.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_schichau.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_siemens_and_halske.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_armstrong_whitworth.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_bolckow_vaughan.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_gwr.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_j_p_coats.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_john_brown.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_assam_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_bengal_coal_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_bombay_burmah_trading_corporation.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_bombay_dyeing_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_calcutta_electric.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_david_sassoon.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_madura_mills.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_ralli_brothers.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_steel_brothers.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_wadia_shipbuilders.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_elso_budapesti_gozmalom.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_erste_brunner.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_getzner_mutter.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_jakub_klein.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_klanicko_drustvo.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_mate_gavrilovic.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_oesterreichisch_alpine_montangesellschaft.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_stabilimento_tecnico_di_fiume.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_united_tobacco_factories.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_bacardi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_douro_wine_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_gran_azucarera.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_hispano_suiza.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_office_cherifien_des_phosphates.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_pedro_domecq.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_rodriguez_arguelles_y_cia.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_secn.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_uniao_fabril.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_ynchausti_y_compania.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_dobrush_paper.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_fiskars.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_grodno_tobacco.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_kharitonenko_and_son.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_kreenholmi_manufaktuur.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_malaxa.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_maslosoyuz.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_poznanski_cotton_products.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_resita_works.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_russo-baltic_wagon_factory.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_ansaldo.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_fiat.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_ilva.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_ricordi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_stt.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_japan.txt"
+field = "company_mantetsu.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_japan.txt"
+field = "company_mitsubishi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_japan.txt"
+field = "company_mitsui.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_anglo_sicilian_sulphur_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_colt_firearms.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_compania_sansinena_de_carnes_congeladas.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_de_beers.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_gebruder_thonet.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_imperial_ethiopian_railways.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_jiangnan_weaving_bureaus.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_john_holt.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_kinkozan_sobei.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_konigliche_porzellan_manufaktur_meissen.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_lanfang_kongsi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_lee_wilson.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_ludwig_moser_and_sons.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_maison_worth.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_mantero_seta.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_maple_and_co.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_massey_harris.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_norsk_hydro.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_ong_lung_sheng_tea_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_paradox.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_russian_american_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_branobel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_izhevsk_arms_plant.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_john_hughes.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_putilov_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_savva_morozov.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_vodka_monopoly.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_anglo_persian_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_da_afghan_nassaji_sherkat.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_guinness.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_hanseong_jeongi_hoesa.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_iranian_state_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_kirgizian_mining_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_moscow_irrigation_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_national_iranian_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_nicolas_portalis.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_opium_export_monopoly.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_oriental_development_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_perskhlopok.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_persshelk.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_sherkat_shemali.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_sherkate_eslamiya.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_tashkent_railroad.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_turkish_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_west_ural_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_totally_normal.txt"
+field = "company_ingolstadt_electrical_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_ford_motor.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_general_electric.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_standard_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_united_fruit.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_us_steel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_william_cramp.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_agriculture_1.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_agriculture_2.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_chemicals.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_colonial_plantations_1.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_colonial_plantations_2.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_electrics.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_fabrics.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_fishing.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_food.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_forestry.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_gold_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_home_goods.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_metal_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_metalworks.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_mineral_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_motors.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_munitions.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_paper.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_shipyards.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_silk_and_dye.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_steel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_textiles.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_weapons.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_wine_and_fruit.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_construction_power_bloc.ai_weight"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_no_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_private_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_public_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_religious_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_consumption_based_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_graduated_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_land_based_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_per_capita_based_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_proportional_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_childrens_rights.txt"
+field = "law_compulsory_primary_school.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_balloon_recon.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_chemical_weapons.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_chocolate.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_extra_supplies.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_field_hospitals.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_first_aid.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_flamethrowers.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_liquor.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_luxurious_supplies.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_machinegunners.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_motorized_recon.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_opium.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_rail_transport.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_tobacco.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_truck_transport.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "aniline.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "arc_welding.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "art_silk.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "atmospheric_engine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "automatic_bottle_blowers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "baking_powder.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "bessemer_process.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "canneries.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "chemical_bleaching.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "combustion_engine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "compression_ignition.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "conveyors.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "cotton_gin.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "crystal_glass.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "distillation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "dough_rollers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "dynamite.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electric_arc_process.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electric_railway.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electrical_capacitors.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electrical_generation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "enclosure.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "flash_freezing.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "fractional_distillation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "improved_fertilizer.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "intensive_agriculture.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "lathe.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "manufacturies.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "mechanical_tools.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "mechanized_farming.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "mechanized_workshops.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "nitrogen_fixation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "nitroglycerin.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "oil_turbine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "open_hearth_process.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "pasteurization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "plastics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "pneumatic_tools.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "prospecting.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "pumpjacks.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "radio.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "railways.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "reinforced_concrete.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "rotary_valve_engine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "rubber_mastication.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "sericulture.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "shaft_mining.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "shift_work.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steam_donkey.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steam_turbine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steel_railway_cars.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steelworking.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "telephone.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "threshing_machine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "vacuum_canning.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "vulcanization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "watertube_boiler.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "admiralty.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "army_reserves.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "artillery.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "automatic_machine_guns.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "battlefleet_tactics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "battleship_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "bolt_action_rifles.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "breech_loading_artillery.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "carrier_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "chemical_warfare.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "concrete_dockyards.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "concrete_fortifications.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "defense_in_depth.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "destroyer.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "dreadnought_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "drydocks.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "electric_telegraph.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "enlistment_offices.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "field_works.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "flamethrowers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "floating_harbor.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "gantry_cranes.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "general_staff.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "gunsmithing.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "handcranked_machine_gun.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "hydraulic_cranes.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "ironclad_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "jeune_ecole.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "landing_craft.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "line_infantry.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "logistics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "mandatory_service.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "military_aviation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "military_drill.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "military_statistics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "mobile_armor.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "modern_nursing.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "monitor_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "napoleonic_warfare.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "navigation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "nco_training.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "paddle_steamer.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "percussion_cap.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "power_of_the_purse.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "pre_dreadnought_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "repeaters.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "rifling.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "screw_frigate.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "sea_lane_strategies.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "self_propelled_torpedoes.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "shell_gun.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "standing_army.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "stormtroopers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "submarine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "trench_works.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "triage.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "war_propaganda.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "wargaming.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "academia.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "analytical_philosophy.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "anarchism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "antibiotics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "banking.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "behaviorism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "camera.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "central_archives.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "central_banking.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "central_planning.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "centralization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "civilizing_mission.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "colonization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_charters.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_management.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "corporatism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "currency_standards.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "democracy.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "dialectics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "egalitarianism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "elevator.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "empiricism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "feminism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "film.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "human_rights.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "identification_documents.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "international_exchange_standards.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "international_relations.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "international_trade.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "investment_banks.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "joint_stock_companies.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "labor_movement.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "law_enforcement.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "macroeconomics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "malaria_prevention.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mass_communication.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mass_propaganda.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mass_surveillance.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "medical_degrees.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "modern_financial_instruments.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "modern_sewerage.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "multilateral_alliances.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mutual_funds.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "nationalism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "organized_sports.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "pan-nationalism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "paved_roads.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "pharmaceuticals.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "philosophical_pragmatism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "political_agitation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "postal_savings.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "psychiatry.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "psychoanalysis.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "quinine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "rationalism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "realism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "romanticism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "socialism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "steel_frame_buildings.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "stock_exchange.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "tech_bureaucracy.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "urban_planning.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "urbanization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "zeppelins.ai_weight"
+
+[[consumers]]
+source = "common/treaty_articles/00_alliance.txt"
+field = "alliance.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/01_defensive_pact.txt"
+field = "defensive_pact.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/02_guarantee_independence.txt"
+field = "guarantee_independence.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/07_foreign_investment_rights.txt"
+field = "foreign_investment_rights.ai.evaluation_chance"
+
+[[consumers]]
+source = "common/treaty_articles/24_transit_rights.txt"
+field = "transit_rights.ai.evaluation_chance"
+
+[[consumers]]
+source = "common/treaty_articles/25_trade_privilege.txt"
+field = "trade_privilege.ai.evaluation_chance"
+
+[[consumers]]
+source = "common/treaty_articles/31_toll_exemption.txt"
+field = "toll_exemption.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/32_no_tolls.txt"
+field = "no_tolls.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/33_strait_access.txt"
+field = "strait_access.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/34_no_strait_closure.txt"
+field = "no_strait_closure.ai.proposal_weight"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "institution_scores.institution_schools"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "institution_scores.institution_social_security"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "wanted_construction_output"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "wanted_navy_size"

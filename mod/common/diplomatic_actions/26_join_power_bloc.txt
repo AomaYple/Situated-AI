@@ -279,7 +279,7 @@ join_power_bloc = {
 			# GROUP program_5df2d54ac6115397_bloc_membership_recovery_negative
 			add = { value = 0
 				# native_action_bloc_recovery [diplomacy]; 加入新势力集团是本国新增外部成员承诺；违约与实际净收入赤字同因择强，近期败战恢复的机会成本独立联合。仅温和调整提案优先级，不推断固定会费、军事义务或直接付款；原版杠杆、凝聚、态度、恶名和关系收益完整保留
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } } add = -0.05 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } } add = -0.05 }
 			}
 			min = 0.85
 			max = 1

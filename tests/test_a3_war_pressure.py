@@ -270,17 +270,17 @@ def _witness(production, supports, *, defeat=False, default=False, population=1,
         ([49, None], {}, 20),
         ([100, None], {}, 20),
         ([49, None, 49], {}, 17),
-        ([49, 49], {"defeat": True}, 17),
+        ([49, 49], {"defeat": True}, 15),
         ([49, 50], {"defeat": True}, 18),
         ([49, None], {"defeat": True}, 18),
         ([49, 49], {"default": True}, 14),
-        ([49, 49], {"default": True, "defeat": True}, 14),
+        ([49, 49], {"default": True, "defeat": True}, 12),
         ([49, 49], {"population": None}, 20),
         ([49, 49], {"population": 0}, 20),
         ([49, 49], {"ai": False}, 20),
     ],
 )
-def test_hand_calculated_cost_same_war_cause_strongest_and_independent_financing(
+def test_hand_calculated_cost_independent_multiwar_recovery_and_financing(
     production, supports, kwargs, expected
 ):
     actual, delta, _ = _witness(production, supports, **kwargs)

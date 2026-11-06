@@ -445,7 +445,8 @@ def load_capture(sources: Any) -> dict[str, Any]:
     """Read the fixed lossless capture; shared by registration and classification."""
     cache_key = "a4:accepted-capture-payload"
     if cache_key in sources.jsons:
-        return sources.jsons[cache_key]
+        cached: dict[str, object] = sources.jsons[cache_key]
+        return cached
     manifest = sources.json(ROOT_PATH)
     required = {
         "schema",
@@ -497,7 +498,7 @@ def load_capture(sources: Any) -> dict[str, Any]:
     del chunks
     if len(raw) != manifest["raw_bytes"] or sha(raw) != manifest["raw_sha256"]:
         raise ValueError("missing/reordered/truncated capture shard")
-    payload = strict_json(raw)
+    payload: dict[str, object] = strict_json(raw)
     del raw
     for key in (
         "actual_version",

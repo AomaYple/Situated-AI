@@ -964,6 +964,19 @@ def current_evidence_ports(model: Any, target: str) -> dict[str, Any]:
             branches += node.key in {"if", "else_if", "else"}
             if node.value is not None:
                 stack.append((node.value, depth + 1))
+    # The explicit partition includes supporting school/fiscal/action guards;
+    # retain each exact source, definition, port and role from that graph.
+    construction_uses = graph.explicit_uses
+    construction_ports: set[str] = set()
+    pending = [use.port for use in construction_uses]
+    while pending:
+        port_id = pending.pop()
+        if port_id in construction_ports:
+            continue
+        construction_ports.add(port_id)
+        pending.extend(graph.node(port_id).dependencies)
+    if not construction_uses or not construction_ports:
+        raise ValueError("current construction graph has no exact construction uses")
     result = {
         "graph": graph.contract(),
         "contributions": {
@@ -981,8 +994,20 @@ def current_evidence_ports(model: Any, target: str) -> dict[str, Any]:
         "static_budget": {
             "ports": len(graph.ports),
             "uses": len(graph.uses),
-            "max_expanded_leaves": max(dict(graph.expansions).values()),
-            "max_evaluation_cost": max(dict(graph.costs).values()),
+            "max_expanded_leaves": max(graph.expanded_leaves(port.id) for port in graph.ports),
+            "max_evaluation_cost": max(
+                graph.guard(use.source, use.definition, use.port).evaluation_cost
+                for use in graph.uses
+            ),
+            "construction_ports": len(construction_ports),
+            "construction_uses": len(construction_uses),
+            "construction_max_expanded_leaves": max(
+                graph.expanded_leaves(port_id) for port_id in construction_ports
+            ),
+            "construction_max_evaluation_cost": max(
+                graph.guard(use.source, use.definition, use.port).evaluation_cost
+                for use in construction_uses
+            ),
             "construction_nodes": nodes,
             "construction_depth": max_depth,
             "construction_branches": branches,

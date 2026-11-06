@@ -802,14 +802,18 @@ def _file_size_specs() -> list[KeyedTableSpec]:
             )
         )
     for key_column, size_column in ((0, 1), (3, 4)):
+
+        def effect_file_sizes(col: int = size_column) -> list[tuple[str, dict[int, str]]]:
+            return [
+                (p.name, {col: f"{p.stat().st_size:,}"})
+                for p in sorted((config.GAME / "common/effect_localization").glob("*.txt"))
+            ]
+
         specs.append(
             KeyedTableSpec(
                 name=f"doc17 效果本地化文件字节{key_column}",
                 header="| 文件 | 字节 | | 文件 | 字节 |",
-                cells=lambda col=size_column: [
-                    (p.name, {col: f"{p.stat().st_size:,}"})
-                    for p in sorted((config.GAME / "common/effect_localization").glob("*.txt"))
-                ],
+                cells=effect_file_sizes,
                 key_column=key_column,
                 append_new=False,
             )

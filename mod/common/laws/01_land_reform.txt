@@ -76,9 +76,9 @@ law_serfdom = {
 			# GROUP program_73dbe6162b40e094_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_serfdom_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_serfdom value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_serfdom value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_serfdom_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_serfdom value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_serfdom value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_73dbe6162b40e094_law_political_pressure_negative
 			add = { value = 0
@@ -164,9 +164,9 @@ law_manorialism = {
 			# GROUP program_11f344bc90be6236_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_manorialism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_manorialism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_manorialism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_manorialism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_manorialism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_manorialism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_11f344bc90be6236_law_political_pressure_negative
 			add = { value = 0
@@ -281,9 +281,9 @@ law_tenant_farmers = {
 			# GROUP program_28fdb081160986f6_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_tenant_farmers_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_tenant_farmers value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_tenant_farmers value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_tenant_farmers_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_tenant_farmers value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_tenant_farmers value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_28fdb081160986f6_law_political_pressure_negative
 			add = { value = 0
@@ -293,7 +293,7 @@ law_tenant_farmers = {
 			# GROUP program_28fdb081160986f6_law_rural_transition_positive
 			add = { value = 0
 				# law_context_law_tenant_farmers_law_serfdom_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
 			}
 			min = -10
 			max = 22
@@ -362,9 +362,9 @@ law_latifundias = {
 			# GROUP program_a308205c79991a89_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_latifundias_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_latifundias value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_latifundias value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_latifundias_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_latifundias value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_latifundias value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_a308205c79991a89_law_political_pressure_negative
 			add = { value = 0
@@ -433,9 +433,9 @@ law_expanded_latifundias = {
 			# GROUP program_473e9bb2fa53078c_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_expanded_latifundias_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_expanded_latifundias value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_expanded_latifundias value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_expanded_latifundias_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_expanded_latifundias value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_expanded_latifundias value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_473e9bb2fa53078c_law_political_pressure_negative
 			add = { value = 0
@@ -532,9 +532,9 @@ law_commercialized_agriculture = {
 			# GROUP program_e1078c83afe28952_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_commercialized_agriculture_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_commercialized_agriculture value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_commercialized_agriculture value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_commercialized_agriculture_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_commercialized_agriculture value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_commercialized_agriculture value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_e1078c83afe28952_law_political_pressure_negative
 			add = { value = 0
@@ -665,9 +665,9 @@ law_peasant_proprietorship = { # Homesteading for old world countries
 			# GROUP program_850da58071245d17_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_peasant_proprietorship_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_peasant_proprietorship value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_peasant_proprietorship value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_peasant_proprietorship_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_peasant_proprietorship value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_peasant_proprietorship value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_850da58071245d17_law_political_pressure_negative
 			add = { value = 0
@@ -677,9 +677,9 @@ law_peasant_proprietorship = { # Homesteading for old world countries
 			# GROUP program_850da58071245d17_law_rural_transition_positive
 			add = { value = 0
 				# law_context_law_peasant_proprietorship_law_tenant_farmers_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
 				# law_context_law_peasant_proprietorship_law_serfdom_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
 			}
 			min = -10
 			max = 22
@@ -795,9 +795,9 @@ law_homesteading = {
 			# GROUP program_64211edbb5cbd2c8_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_homesteading_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_homesteading value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_homesteading value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_homesteading_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_homesteading value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_homesteading value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_64211edbb5cbd2c8_law_political_pressure_negative
 			add = { value = 0
@@ -807,9 +807,9 @@ law_homesteading = {
 			# GROUP program_64211edbb5cbd2c8_law_rural_transition_positive
 			add = { value = 0
 				# law_context_law_homesteading_law_tenant_farmers_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
 				# law_context_law_homesteading_law_serfdom_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
 			}
 			min = -10
 			max = 22
@@ -881,9 +881,9 @@ law_collectivized_agriculture = {
 			# GROUP program_1e916042be02dd6d_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_collectivized_agriculture_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_collectivized_agriculture value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_collectivized_agriculture value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_collectivized_agriculture_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_collectivized_agriculture value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_collectivized_agriculture value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_1e916042be02dd6d_law_political_pressure_negative
 			add = { value = 0

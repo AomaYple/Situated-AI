@@ -323,6 +323,14 @@ def derive(
                 {**identity, "reason": "missing_verified_building_recipe", "goods": []}
             )
             continue
+        if building == "building_copper_mine":
+            if _outputs(sector)[0] != ["copper"]:
+                raise ValueError("铜矿缺少完整必选PMG共同正铜产出证据")
+            # Exact custom demand/pressure rules use the same common program.
+            # Native input/profit/workforce/qualification/infrastructure/time/
+            # queue costs are already retained; do not copy generic penalties.
+            covered.append({**identity, "goods": ["copper"], "cost": "retain_native_cost"})
+            continue
         goods, reasons = _outputs(sector)
         uncovered.extend({**identity, **reason} for reason in reasons)
         if goods:
@@ -348,6 +356,7 @@ def derive(
                     "value": chosen["demand_multiplier"],
                     "priority": int(chosen["priority_base"]) + len(rules),
                     "contribution_group": "building_output_demand",
+                    "semantic_role": "benefit",
                     "conditions": [
                         {"fact": fact, "op": "=", "value": True},
                         {"fact": balance_key, "op": "<", "value": 0.0},
@@ -389,6 +398,7 @@ def derive(
                         "value": chosen[f"{tier}_multiplier"],
                         "priority": int(chosen["priority_base"]) + len(rules),
                         "contribution_group": "building_output_demand",
+                        "semantic_role": "benefit",
                         "conditions": conditions,
                         "why": f"必选基础PMG全部方法共同正产出{good}；所有者市场缺口为基础机会，高价只升档同一需求",
                         "counterexample": "配方机会不是active PM或当前产出；未知局部退出，饱和退出，保留原版资格、实际成本、玩家与尾部",
@@ -427,6 +437,7 @@ def derive(
                         "value": chosen[f"{name}_multiplier"],
                         "priority": int(chosen["priority_base"]) + len(rules),
                         "contribution_group": group,
+                        "semantic_role": "cost",
                         "conditions": [{"fact": fact, "op": op, "value": value}],
                         "why": why,
                         "counterexample": "该成本未知只撤回本项，不声称财政或承载健康；需求与其他已知成本继续联合，保留玩家与关闭路径",
@@ -461,6 +472,7 @@ def derive(
             conditions,
             group="building_local_goods_demand",
             *,
+            semantic_role,
             building=building,
             field=field,
         ):
@@ -474,6 +486,7 @@ def derive(
                     "value": value,
                     "priority": int(chosen["priority_base"]) + len(rules),
                     "contribution_group": group,
+                    "semantic_role": semantic_role,
                     "conditions": conditions,
                     "why": "同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合",
                     "counterexample": "未知仅退出对应分量；不推断未来PM、订单或利润，原版首座引导、资格、成本、玩家和尾部保留",
@@ -481,8 +494,13 @@ def derive(
             )
 
         demand = {"fact": price_key, "op": ">", "value": 0.25}
-        local_rule("demand", 1.1, [demand])
-        local_rule("pressure", 1.15, [{"fact": price_key, "op": ">", "value": 0.5}])
+        local_rule("demand", 1.1, [demand], semantic_role="benefit")
+        local_rule(
+            "pressure",
+            1.15,
+            [{"fact": price_key, "op": ">", "value": 0.5}],
+            semantic_role="benefit",
+        )
         for method in methods:
             pm_key = f"pm_active_{building}_{method['id']}".replace("-", "_")
             readers[pm_key] = {
@@ -531,13 +549,14 @@ def derive(
                             {"fact": f"state_owner_{material}_price", "op": ">", "value": 0.5},
                         ],
                         f"building_active_input_{material}",
+                        semantic_role="cost",
                     )
             # Principle variants retain their existing infrastructure-ready
             # and exact cost rules. Avoid duplicating that auxiliary readiness
             # across this additional local demand; basic/pressure tiers cover
             # every variant and leave room for the recovery refinement.
             if not method["id"].endswith("_principle_transport_3"):
-                local_rule(f"{method['id']}_ready", 1.2, ready)
+                local_rule(f"{method['id']}_ready", 1.2, ready, semantic_role="benefit")
     return {
         "sources": dict(frozen["sources"]),
         "readers": dict(sorted(readers.items())),

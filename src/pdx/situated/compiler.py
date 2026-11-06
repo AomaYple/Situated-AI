@@ -32,6 +32,8 @@ from . import (
     action_instances,
     bindings,
     commitment,
+    consumer_port_graph,
+    consumer_ports,
     decision_ir,
     domain_coverage,
     engine_scope,
@@ -87,6 +89,8 @@ SUPPORTING_SOURCES = (
     "action_bindings.toml",
     "domain_actions.toml",
     "domain_ports.toml",
+    "economy_consumer_ports.toml",
+    "consumer_ports.toml",
 )
 
 
@@ -334,6 +338,14 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
     text = raw.decode("utf-8")
     data = json.loads(raw)
     specs = {
+        "weight": (None, "base_candidate_score", "candidate_score", "0x141656424"),
+        "revolution_aversion": (
+            None,
+            "override_revolution_aversion",
+            "daily_stop_tendency",
+            "0x141828ecd",
+        ),
+        "wanted_army_size": (None, "additive_army_size_target", "barracks_levels", "0x1418265ed"),
         "recklessness": (
             "target_country",
             "additive_strength_estimate_multiplier",
@@ -462,6 +474,9 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         }
     )
     parser_members = {
+        "weight": ("0x14182304a", "0xb8"),
+        "revolution_aversion": ("0x141823bfe", "0x918"),
+        "wanted_army_size": ("0x141823bd4", "0x1840"),
         "recklessness": ("0x141823b41", "0x10c0"),
         "wargoal_maneuvers_fraction": ("0x141823c67", "0x798"),
         "wanted_construction_output": ("0x141823bbf", "0x16c0"),
@@ -496,6 +511,8 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 if field == "wargoal_scores"
                 else f"scope:{target}=country"
                 if target is not None
+                else "definition_only:ai_strategy"
+                if field == "weight"
                 else "definition_only:institution_type"
                 if field == "institution_scores"
                 else "scope:target_region=strategic_region;scope:region_score=scalar"
@@ -597,6 +614,8 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 *(
                     (f"{source}:definition_only:institution_type",)
                     if field == "institution_scores"
+                    else (f"{source}:definition_only:ai_strategy",)
+                    if field == "weight"
                     else ()
                 ),
             ),
@@ -1022,6 +1041,8 @@ def validate_context_readers(
     input_keys: tuple[str, ...] = (),
     source: str | None = None,
     native_root: str | None = None,
+    economic_contexts: tuple[decision_ir.EvaluationContext, decision_ir.EvaluationContext]
+    | None = None,
 ) -> tuple[tuple[str, str, str, str], ...]:
     """Bind existing observations to evidenced objects, never authorize getters."""
     if (source is not None and source.startswith("common/decrees/")) or field.startswith("decree_"):
@@ -1056,6 +1077,20 @@ def validate_context_readers(
                 else (key, "root", "state", "auxiliary")
             )
         return tuple(decree_bindings)
+    if source is not None and source.startswith(
+        ("common/buildings/", "common/technology/technologies/")
+    ):
+        return consumer_ports.validate_context_readers(
+            source,
+            field,
+            context,
+            readers,
+            predicates,
+            actor_path=actor_path,
+            native_root=native_root,
+            input_keys=input_keys,
+            evidenced_contexts=economic_contexts,
+        )
     native_fields = (
         _frozen_native_action_contexts()
         if (source and source.startswith("common/diplomatic_actions/"))
@@ -1207,6 +1242,39 @@ def validate_context_readers(
         ):
             raise ValueError(f"消费者 {field} 不是已证明的精确枚举数值子块")
         field = family
+    if field == "wanted_army_size" and (
+        source
+        not in {"mod/decisions/information.toml", "common/ai_strategies/00_default_strategy.txt"}
+        or context != _frozen_strategy_contexts()["wanted_army_size"]
+    ):
+        raise ValueError("军队目标读取器必须绑定精确已审国家ROOT")
+    if field == "revolution_aversion" and (
+        source
+        not in {"mod/decisions/information.toml", "common/ai_strategies/00_default_strategy.txt"}
+        or context != _frozen_strategy_contexts()["revolution_aversion"]
+    ):
+        raise ValueError("革命回避读取器必须保持精确原生override国家ROOT")
+    if field == "strategy.weight" or field.startswith("ai_ship_category_weights."):
+        from . import strategy_candidate_frames  # noqa: PLC0415
+
+        candidates = strategy_candidate_frames.frozen_contexts()
+        if field == "strategy.weight" and not any(
+            pair[0] == source and pair[1].endswith(".weight") and candidate == context
+            for pair, candidate in candidates.items()
+        ):
+            raise ValueError("策略评分读取器必须绑定精确已审定义国家ROOT")
+        if field.startswith("ai_ship_category_weights.") and (
+            source is None or candidates.get((source, field)) != context
+        ):
+            raise ValueError("舰船类别读取器必须绑定精确已审字段国家ROOT")
+    if field == "fleet.mission_type_weights.protect_supply":
+        from . import fleet_mission_frame  # noqa: PLC0415
+
+        if (
+            source != "common/ai_strategies/00_default_strategy.txt"
+            or context != fleet_mission_frame.frozen_context()
+        ):
+            raise ValueError("护航任务读取器必须绑定精确已审国家ROOT")
     shapes = {
         "subject_value": {"root": ("country", "actor"), "target_country": ("country", "target")},
         "recklessness": {"root": ("country", "actor"), "target_country": ("country", "target")},
@@ -1262,6 +1330,15 @@ def validate_context_readers(
     shapes["wanted_num_supply_ships"] = {"root": ("country", "actor")}
     shapes["max_ship_design_complexity"] = {"root": ("country", "actor")}
     shapes["wanted_navy_size"] = {"root": ("country", "actor")}
+    shapes["wanted_army_size"] = {"root": ("country", "actor")}
+    shapes["revolution_aversion"] = {"root": ("country", "actor")}
+    shapes["strategy.weight"] = {"root": ("country", "actor")}
+    shapes["ai_ship_category_weights"] = {"root": ("country", "actor")}
+    for category in ("battle_line", "carriers"):
+        shapes[f"ai_ship_category_weights.ai_ship_category_{category}"] = {
+            "root": ("country", "actor")
+        }
+    shapes["fleet.mission_type_weights.protect_supply"] = {"root": ("country", "actor")}
     shapes["ship_construction_output_multiplier"] = {"root": ("country", "actor")}
     for scalar in (
         "nationalization_desire",
@@ -1318,6 +1395,12 @@ def validate_context_readers(
             "wargoal_scores",
             "secret_goal_scores",
             "wanted_navy_size",
+            "wanted_army_size",
+            "revolution_aversion",
+            "strategy.weight",
+            "ai_ship_category_weights.ai_ship_category_battle_line",
+            "ai_ship_category_weights.ai_ship_category_carriers",
+            "fleet.mission_type_weights.protect_supply",
             "ship_construction_output_multiplier",
             "aggression",
             "nationalization_desire",
@@ -2137,6 +2220,7 @@ def load_model(
     observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))
     law_context = _frozen_law_context()
     company_context = _frozen_company_context()
+    building_context, technology_context = consumer_ports.evaluation_contexts()
     ship_modification_contexts = _frozen_ship_modification_contexts()
     treaty_contexts = _frozen_treaty_contexts()
     mobilization_contexts = _frozen_mobilization_contexts()
@@ -2146,6 +2230,11 @@ def load_model(
     decree_contexts = _frozen_decree_contexts()
     famine_contexts = _frozen_famine_contexts()
     native_button_contexts = _frozen_native_button_contexts()
+    from . import fleet_mission_frame, strategy_candidate_frames  # noqa: PLC0415
+
+    fleet_context = fleet_mission_frame.frozen_context()
+    candidate_contexts = strategy_candidate_frames.frozen_contexts()
+    fleet_field = "fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
     context_readers = {}
     instance_contexts = {}
     for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
@@ -2180,7 +2269,11 @@ def load_model(
             ):
                 raise ValueError(f"目标策略消费者不是精确普通数值子块：{field}")
             context = (
-                observed_contexts.get(field)
+                fleet_context
+                if source == "common/ai_strategies/00_default_strategy.txt" and field == fleet_field
+                else candidate_contexts[(source, field)]
+                if (source, field) in candidate_contexts
+                else observed_contexts.get(field)
                 if source
                 in {
                     "mod/decisions/information.toml",
@@ -2192,6 +2285,14 @@ def load_model(
                 and rule.field[-1] == "ai_enact_weight_modifier"
                 else company_context
                 if source.startswith("common/company_types/")
+                and len(rule.field) == 2
+                and rule.field[-1] == "ai_weight"
+                else building_context
+                if source.startswith("common/buildings/")
+                and len(rule.field) == 2
+                and rule.field[-1] == "ai_value"
+                else technology_context
+                if source.startswith("common/technology/technologies/")
                 and len(rule.field) == 2
                 and rule.field[-1] == "ai_weight"
                 else ship_modification_contexts.get((source, field))
@@ -2207,7 +2308,12 @@ def load_model(
             if context is not None:
                 instance_contexts[(source, rule.id)] = context
                 reader_field = (
-                    "ai_enact_weight_modifier"
+                    "fleet.mission_type_weights.protect_supply"
+                    if source == "common/ai_strategies/00_default_strategy.txt"
+                    and field == fleet_field
+                    else "strategy.weight"
+                    if (source, field) in candidate_contexts and field.endswith(".weight")
+                    else "ai_enact_weight_modifier"
                     if source.startswith("common/laws/")
                     else "company.ai_weight"
                     if source.startswith("common/company_types/")
@@ -2225,6 +2331,7 @@ def load_model(
                     actor_path=policy.actor_path,
                     input_keys=tuple(rule.input_keys()),
                     source=source,
+                    economic_contexts=(building_context, technology_context),
                     native_root=policy.native_root,
                 )
     original_readers = (
@@ -2256,6 +2363,38 @@ def load_model(
         context_readers[key] = _action_context_readers(
             decision_row, context, declared_facts, support_model, original_readers
         )
+    actual_policies = (("mod/decisions/information.toml", information), *adapters.policies)
+    port_source_proofs: dict[str | tuple[str, str], tuple[str, ...]] = {
+        **{
+            source: (
+                f"{source}:baseline_sha256={policy.baseline_sha256}",
+                f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
+            )
+            for source, policy in adapters.policies
+        },
+        "mod/decisions/information.toml": (
+            f"research/vanilla-ai/1.15.0/00_default_strategy.txt:sha256={hashlib.sha256(baseline_text.encode()).hexdigest()}",
+            f"decision_interfaces.scripted_trigger_snapshot:sha256={hashlib.sha256(decision_interfaces.scripted_trigger_snapshot()).hexdigest()}",
+            f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
+        ),
+        ("mod/decisions/information.toml", "war_defeat"): (
+            json.dumps(
+                decision_interfaces.war_memory_contract(), sort_keys=True, separators=(",", ":")
+            ),
+            f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
+        ),
+    }
+    # Exact getter proof augments ordinary source/interface proof, never replaces
+    # actual normal policy.source_sha256 or documented context evidence.
+    from .. import innovation_readers  # noqa: PLC0415, TID252
+
+    for source, policy in actual_policies:
+        for reader in policy.readers:
+            if reader.engine in innovation_readers.ENGINES:
+                port_source_proofs[(source, reader.key)] = (
+                    *port_source_proofs.get(source, ()),
+                    *innovation_readers.proof(reader.engine),
+                )
     graph = ports.from_data(
         supporting["domain_ports.toml"],
         readers={
@@ -2274,25 +2413,41 @@ def load_model(
                 *adapters.policies,
             )
         },
-        source_proofs={
-            **{
-                source: (
-                    f"{source}:baseline_sha256={policy.baseline_sha256}",
-                    f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
-                )
-                for source, policy in adapters.policies
-            },
-            "mod/decisions/information.toml": (
-                f"research/vanilla-ai/1.15.0/00_default_strategy.txt:sha256={hashlib.sha256(baseline_text.encode()).hexdigest()}",
-                f"decision_interfaces.scripted_trigger_snapshot:sha256={hashlib.sha256(decision_interfaces.scripted_trigger_snapshot()).hexdigest()}",
-                f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
-            ),
-            ("mod/decisions/information.toml", "war_defeat"): (
-                json.dumps(
-                    decision_interfaces.war_memory_contract(), sort_keys=True, separators=(",", ":")
-                ),
-                f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
-            ),
+        source_proofs=port_source_proofs,
+    )
+    economic_consumers = consumer_ports.selected_consumers(
+        supporting["economy_consumer_ports.toml"]
+    )
+    selector = supporting["consumer_ports.toml"]
+    selected_consumers = consumer_ports.selected_proven_consumers(selector)
+    actual_observed_consumers = {
+        (source, ".".join(rule.field))
+        for source, policy in actual_policies
+        for rule in policy.rules
+        if (source, rule.id) in instance_contexts
+        and instance_contexts[(source, rule.id)].status == "observed"
+    }
+    if set(selected_consumers) != actual_observed_consumers or not set(economic_consumers).issubset(
+        selected_consumers
+    ):
+        raise ValueError("全部当前已证明RuleSet消费者与冻结精确选集不一致")
+    batch_graph = consumer_ports.derive(
+        actual_policies,
+        selected_consumers=selected_consumers,
+        contexts=instance_contexts,
+        reader_bindings=context_readers,
+        source_proofs=port_source_proofs,
+        hard_cap=selector["hard_cap"],
+    )
+    graph = consumer_port_graph.combine(
+        graph,
+        batch_graph,
+        rules_by_writer={
+            (source, rule.id): rule for source, policy in actual_policies for rule in policy.rules
+        },
+        readers_by_source={
+            source: {reader.key: reader for reader in policy.readers}
+            for source, policy in actual_policies
         },
     )
     origin_map = {
@@ -2301,10 +2456,23 @@ def load_model(
     # Facts, ports and the writer's executable contribution refer to one raw
     # identity. Predicate fact IDs/triggers remain stable and retain thresholds.
     fact_origins: dict[str, set[str]] = {}
+    fact_ids = {fact.id for fact in facts}
     for port in graph.ports:
-        if port.reader_key is not None:
-            fact_origins.setdefault(port.reader_key[1], set()).update(origin_map[port.id])
-        if port.id in {fact.id for fact in facts} and len(origin_map[port.id]) == 1:
+        for reader_key, reader, aliases in (
+            (port.reader_key, port.reader, port.reader_aliases),
+            (port.reference_key, port.reference_reader, port.reference_aliases),
+        ):
+            if reader_key is None or reader is None:
+                continue
+            origin_signature = ports._canonical(ports.reader_signature(reader))
+            identities = {
+                origin.identity
+                for origin in graph.origins(port.id)
+                if origin.reader_source == reader_key[0] and origin.signature == origin_signature
+            }
+            for _alias_source, alias_key in aliases or (reader_key,):
+                fact_origins.setdefault(alias_key, set()).update(identities)
+        if port.id in fact_ids and len(origin_map[port.id]) == 1:
             fact_origins.setdefault(port.id, set()).update(origin_map[port.id])
     facts = tuple(
         replace(fact, identity=next(iter(fact_origins[fact.id])))
@@ -2352,8 +2520,7 @@ def load_model(
                 reader_context_bindings=context_readers.get((writer.source, writer.definition), ()),
                 port_contributions=tuple(
                     ports.contribution(writer, use, graph)
-                    for use in graph.uses
-                    if (use.source, use.definition) == (writer.source, writer.definition)
+                    for use in graph.writer_uses(writer.source, writer.definition)
                 ),
             )
             for writer in consumer_bundle.writers
@@ -2417,6 +2584,14 @@ def load_model(
     goals = tuple((item.id, item.priority) for item in goal_specs)
     hashes = {
         "law_enact_context_document": _LAW_DOC_SHA256,
+        "innovation_reader_snapshot": hashlib.sha256(innovation_readers.snapshot()).hexdigest(),
+        "technology_context_snapshot": engine_scope.MANIFEST_SHA256,
+        **{
+            f"{module.__name__}_generator": hashlib.sha256(
+                Path(str(module.__file__)).read_bytes()
+            ).hexdigest()
+            for module in (ports, consumer_ports, consumer_port_graph, innovation_readers)
+        },
         "strategy_context_snapshot": engine_scope.STRATEGY_MANIFEST_SHA256,
         "company_context_snapshot": engine_scope.COMPANY_MANIFEST_SHA256,
         "building_defaults_snapshot": hashlib.sha256(building_defaults.snapshot()).hexdigest(),
@@ -3278,17 +3453,21 @@ def compile_policy(
             compiled, readers=relation_readers, rule_relation_bindings=relation_bindings
         )
         port_bindings = []
-        for use in model.port_graph.uses:
-            if use.source != exact_source or use.role not in {
+        compiled_rules_by_id = {rule.id: rule for rule in compiled.rules}
+        for use in model.port_graph.source_uses(exact_source or "empty"):
+            if use.role not in {
                 "need",
                 "capacity",
                 "recovery",
                 "cost",
+                "condition",
             }:
                 continue
-            port_rule = next((rule for rule in compiled.rules if rule.id == use.definition), None)
+            port_rule = compiled_rules_by_id.get(use.definition)
             if port_rule is None:
-                raise ValueError(f"端口缺少具体规则term: {use.definition}")
+                # A caller may compile an exact field subset of this policy.
+                # Only that subset owns executable guards in the result.
+                continue
             port_binding = ports.PortBinding(
                 use.source,
                 use.definition,
@@ -3300,6 +3479,11 @@ def compile_policy(
                     writer_by_key[(use.source, use.definition)], use, model.port_graph
                 ),
                 writer_by_key[(use.source, use.definition)],
+                cost_predicates=port_rule.conditions if use.role == "cost" else (),
+                pressure_facts=port_rule.conservative_unknown_facts if use.role == "cost" else (),
+                unknown_cost_anchors=port_rule.unknown_cost_required_known_facts
+                if use.role == "cost"
+                else (),
             )
             port_binding.validate(port_rule, readers)
             port_bindings.append(port_binding)

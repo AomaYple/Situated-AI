@@ -239,6 +239,8 @@ _COUNTRY_NUMBER = frozenset(
         "scaled_debt",
         "net_total_income",
         "weeks_until_bankruptcy",
+        "country_innovation",
+        "modifier:country_weekly_innovation_max_add",
         "modifier:country_tech_spread_mult",
         "relations:root",
         "country_fervor_primary_culture",
@@ -313,6 +315,8 @@ _UNITS = {
     "radical_fraction": "ratio",
     "scaled_debt": "debt_to_credit_ratio",
     "weeks_until_bankruptcy": "weeks",
+    "country_innovation": "weekly_innovation_points",
+    "modifier:country_weekly_innovation_max_add": "weekly_innovation_points",
     "modifier:country_tech_spread_mult": "modifier_ratio",
     "relations:root": "relations_minus100_100",
     "country_fervor_primary_culture": "fervor_points",
@@ -347,6 +351,22 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.key.startswith("bloc_membership_") or reader.scope == "actor":
+        from . import power_bloc_membership as membership  # noqa: PLC0415
+
+        membership_program = membership.compile_program()
+        if (
+            root != "country"
+            or actor_path
+            or source != membership_program.source
+            or field != membership_program.field_path
+            or context != membership_program.evaluation_context()
+            or reader not in membership_program.readers()
+        ):
+            raise ValueError(
+                "membership reader requires exact receiving ROOT and actual inviter context"
+            )
+        return "power_bloc" if reader.path else "country"
     if reader.engine.startswith("scope:") or reader.key == "negotiation_amenability":
         from . import negotiation_context  # noqa: PLC0415
 
@@ -430,6 +450,10 @@ def reader_scope(
         if root != "country" or actor_path or expected.get(reader.key) != reader:
             raise ValueError("军事援助只授权本国ROOT精确首次承诺读取器")
         return "country"
+    if reader.engine in {"country_innovation", "modifier:country_weekly_innovation_max_add"}:
+        from . import innovation_readers  # noqa: PLC0415
+
+        innovation_readers.validate_reader(reader, actor_path, root)
     if reader.engine == "produced_bureaucracy" and (
         root != "country"
         or actor_path
@@ -936,9 +960,29 @@ def event_consumer(program: EventProgram) -> dict[str, object]:
 
 def acceptance_consumer(program: AcceptanceProgram) -> dict[str, object]:
     """Exact inherent acceptance; current ROOT and the article's proven roles."""
+    from . import power_bloc_membership as membership  # noqa: PLC0415
     from . import treaty_acceptance_opportunities as acceptance  # noqa: PLC0415
 
     program.validate()
+    if membership.is_membership(program):
+        for reader in program.readers():
+            reader_scope(
+                reader,
+                (),
+                native_root="country",
+                source=program.source,
+                field=program.field_path,
+                context=program.evaluation_context(),
+            )
+        return {
+            **membership.consumer_catalog(),
+            "role": "vanilla_power_bloc_invitation_acceptance",
+            "evaluation_context": program.evaluation_context().as_dict(),
+            "reader_context_bindings": [list(row) for row in program.reader_bindings()],
+            "scope_evidence_level": "static_complete_native_sources; runtime_behavior_unverified",
+            "eligibility_costs_and_execution": "retained_vanilla",
+            "world_scans": 0,
+        }
     for reader in program.readers():
         if reader.key.startswith("commitment_"):
             reader_scope(

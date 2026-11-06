@@ -364,10 +364,11 @@
       "building_oil_rig",
       "building_coffee_plantation",
       "building_sugar_plantation",
-      "building_banana_plantation"
+      "building_banana_plantation",
+      "building_copper_mine"
     ],
     "dynamic_local_writer_permission": false,
-    "copper_initializer_permission": false,
+    "copper_initializer_permission": true,
     "reference_denominator": {
       "global_candidates": 215,
       "member_displacement_candidates": 5076

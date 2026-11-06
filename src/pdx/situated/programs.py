@@ -865,13 +865,8 @@ def evaluate(
     semantic = {item.action_id: item for item in policy.semantic_ir}
     for identity, value in (guard_overrides or {}).items():
         item = semantic.get(identity)
-        if (
-            item is None
-            or type(value) is not bool
-            or _conservative(item)
-            or item.semantic_role == "cost"
-        ):
-            raise ValueError("端口守卫替换必须绑定已知非成本规则和明确布尔值")
+        if item is None or type(value) is not bool or _conservative(item):
+            raise ValueError("端口守卫替换必须绑定普通已知规则和明确布尔值")
     readers = {reader.key: reader for reader in policy.readers}
     for identity, states in (cost_overrides or {}).items():
         if (

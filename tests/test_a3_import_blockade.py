@@ -280,7 +280,9 @@ def test_frozen_derivation_offline_and_current_loader_single_writer(monkeypatch,
     assert exposure.derive(raw) == expected
     assert len(expected["rules"]) == 2
     assert len(expected["covered"]) == 1
-    assert {r.get("contribution_group", "") for r in expected["rules"]} == {""}
+    assert {r["contribution_group"] for r in expected["rules"]} == {
+        "external_supply_mission_pressure"
+    }
     assert all(r["semantic_role"] == "benefit" for r in expected["rules"])
     loaded = decision_adapters.load()
     policy = dict(loaded.policies)[exposure.SOURCE]

@@ -27,9 +27,9 @@ law_no_migration_controls = {
 			# GROUP program_04e422f5babfced4_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_no_migration_controls_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_no_migration_controls value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_no_migration_controls value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_no_migration_controls_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_no_migration_controls value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_no_migration_controls value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_04e422f5babfced4_law_political_pressure_negative
 			add = { value = 0
@@ -105,9 +105,9 @@ law_migration_controls = {
 			# GROUP program_baf9cc550d40a8f5_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_migration_controls_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_migration_controls value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_migration_controls value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_migration_controls_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_migration_controls value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_migration_controls value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_baf9cc550d40a8f5_law_political_pressure_negative
 			add = { value = 0
@@ -185,9 +185,9 @@ law_closed_borders = {
 			# GROUP program_24ae214bfc2ea86a_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_closed_borders_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_closed_borders value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_closed_borders value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_closed_borders_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_closed_borders value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_closed_borders value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_24ae214bfc2ea86a_law_political_pressure_negative
 			add = { value = 0

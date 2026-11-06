@@ -577,6 +577,9 @@ def package_inputs(
         from . import building_defaults  # noqa: PLC0415
 
         building_defaults.verify_game(config.GAME)
+        from . import innovation_readers  # noqa: PLC0415
+
+        innovation_readers.verify_game(config.GAME)
         engine_scope.verify_company_defaults_game(config.GAME)
         company_sectors.verify_game(config.GAME)
         equipment_opportunities.verify_game(config.GAME)

@@ -316,6 +316,7 @@ kind = "number"
 
 [[rules]]
 id = "lj04_welfare_zero_administration_foundation"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_social_security"
 contribution_group = "social_security_need"
@@ -332,6 +333,7 @@ counterexample = "零余量不创造制度等级或资格，原版实际成本�
 
 [[rules]]
 id = "social_welfare_population_pressure"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_social_security"
 contribution_group = "social_security_need"
@@ -349,6 +351,7 @@ counterexample = "人口、生活水平或行政能力未知时回退原版；�
 
 [[rules]]
 id = "social_welfare_local_foundation"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_social_security"
 contribution_group = "social_security_need"
@@ -365,6 +368,7 @@ counterexample = "违约、需求不成立或承载不足时不介入；未知�
 
 [[rules]]
 id = "lj07_grain_social_foundation"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_social_security"
 contribution_group = "social_security_need"
@@ -383,6 +387,7 @@ counterexample = "不把粮食压力改写成治安或免费福利；任一粮�
 
 [[rules]]
 id = "lj07_grain_social_capacity"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_social_security"
 contribution_group = "social_security_need"
@@ -435,6 +440,7 @@ counterexample = "不直接创建军队或改变战斗数值；财政危机、�
 
 [[rules]]
 id = "political_default_risk"
+semantic_role = "benefit"
 contribution_group = "political_crisis_aversion"
 domain = "political"
 field = "revolution_aversion"
@@ -448,6 +454,7 @@ counterexample = "非违约国家保持原版；不修改真实法律资格"
 
 [[rules]]
 id = "political_insurrection_aversion"
+semantic_role = "benefit"
 domain = "political"
 field = "revolution_aversion"
 contribution_group = "political_crisis_aversion"
@@ -459,6 +466,7 @@ counterexample = "局部未知退出本项，不禁止立法、不改变原版�
 
 [[rules]]
 id = "political_legitimacy_crisis_aversion"
+semantic_role = "benefit"
 domain = "political"
 field = "revolution_aversion"
 contribution_group = "political_crisis_aversion"
@@ -470,6 +478,7 @@ counterexample = "局部未知退出本项，不禁止立法、不改变原版�
 
 [[rules]]
 id = "administrative_cost_guard"
+semantic_role = "cost"
 intent = "fiscal_recovery"
 domain = "economy"
 field = "institution_scores.institution_social_security"
@@ -717,6 +726,7 @@ counterexample = "单项事实未知只取消相关高档，不取消已知战�
 
 [[rules]]
 id = "coordinated_layered_information_revolution_recovery"
+semantic_role = "benefit"
 contribution_group = "political_crisis_aversion"
 field = "revolution_aversion"
 domain = "political"
@@ -775,6 +785,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 
 [[rules]]
 id = "social_security_direct_living_pressure"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_social_security"
 contribution_group = "social_security_need"
@@ -808,6 +819,7 @@ counterexample = "违约未知只退出该成本；不将战争当免费承诺�
 
 [[rules]]
 id = "remaining_reconstruction_need"
+semantic_role = "benefit"
 domain = "economy"
 field = "wanted_construction_output"
 contribution_group = "construction_recovery_need"
@@ -819,6 +831,7 @@ counterexample = "核心或本原因未知只退出本原因，不假定健康�
 
 [[rules]]
 id = "remaining_reconstruction_need_funded"
+semantic_role = "benefit"
 domain = "economy"
 field = "wanted_construction_output"
 contribution_group = "construction_recovery_need"
@@ -831,6 +844,7 @@ auxiliary_facts = [ "net_surplus" ]
 
 [[rules]]
 id = "remaining_industrial_construction_need"
+semantic_role = "benefit"
 domain = "economy"
 field = "wanted_construction_output"
 contribution_group = "construction_supply_need"
@@ -842,6 +856,7 @@ counterexample = "核心或本原因未知只退出本原因，不假定健康�
 
 [[rules]]
 id = "remaining_industrial_construction_need_funded"
+semantic_role = "benefit"
 domain = "economy"
 field = "wanted_construction_output"
 contribution_group = "construction_supply_need"
@@ -884,6 +899,7 @@ counterexample = "核心或本原因未知只退出本原因，不假定健康�
 
 [[rules]]
 id = "remaining_school_catchup_need"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_schools"
 contribution_group = "school_education_need"
@@ -895,6 +911,7 @@ counterexample = "核心或本原因未知只退出本原因，不假定健康�
 
 [[rules]]
 id = "remaining_school_fiscal"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_schools"
 contribution_group = "school_education_need"
@@ -907,6 +924,7 @@ auxiliary_facts = [ "net_surplus" ]
 
 [[rules]]
 id = "remaining_school_administrative"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_schools"
 contribution_group = "school_education_need"
@@ -919,6 +937,7 @@ auxiliary_facts = [ "bureaucracy" ]
 
 [[rules]]
 id = "remaining_school_capacity"
+semantic_role = "benefit"
 domain = "political"
 field = "institution_scores.institution_schools"
 contribution_group = "school_education_need"

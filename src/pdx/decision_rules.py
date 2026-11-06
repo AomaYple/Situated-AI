@@ -285,7 +285,12 @@ def from_data(
             or (
                 not _NAME.fullmatch(item["engine"])
                 and item["engine"]
-                not in {"relations:root", "modifier:country_tech_spread_mult", "scope:amenability"}
+                not in {
+                    "relations:root",
+                    "modifier:country_tech_spread_mult",
+                    "modifier:country_weekly_innovation_max_add",
+                    "scope:amenability",
+                }
                 and item["engine"] not in observation_queries.QUERY_ENGINES
             )
         ):
@@ -831,7 +836,7 @@ def evaluate_ir(
         for binding in rules.port_bindings:
             rule = next(item for item in rules.rules if item.id == binding.definition)
             binding.validate(rule, {r.key: r for r in rules.readers})
-            if binding.role == "cost":
+            if binding.role == "cost" and rule.conservative_unknown_facts:
                 cost_overrides[binding.definition] = binding.cost_values(
                     values, {r.key: r for r in rules.readers}
                 )
@@ -1238,6 +1243,15 @@ def patch(
     ):
         words |= decision_interfaces.proven_reader_words()
 
+    if any(
+        readers[key].engine in {"country_innovation", "modifier:country_weekly_innovation_max_add"}
+        for key in used_reader_keys
+    ):
+        from . import innovation_readers  # noqa: PLC0415
+
+        innovation_readers.snapshot()
+        words |= innovation_readers.ENGINES
+
     for reader in rules.readers:
         if reader.key not in used_reader_keys:
             continue
@@ -1424,9 +1438,11 @@ def patch(
                     port_guard = port_binding.graph.guard(
                         port_binding.source, rule.id, port_binding.port
                     )
-                    if port_binding.role != "cost":
+                    if port_binding.role != "cost" or not rule.conservative_unknown_facts:
                         guards[rule.id] = port_guard.when_true
-                    if rule.required_known_facts and port_binding.role != "cost":
+                    if rule.required_known_facts and (
+                        port_binding.role != "cost" or not rule.conservative_unknown_facts
+                    ):
                         _, _, _, known = guard_parts(replace(rule, conditions=()))
                         guards[rule.id] = (
                             "AND = { " + guards[rule.id] + " " + " ".join(known) + " }"
@@ -1435,7 +1451,7 @@ def patch(
                     cost_guards[rule.id] = cost_guard_parts(rule)
                     if port_binding is not None and port_binding.role == "cost":
                         core, _ = cost_guards[rule.id]
-                        cost_guards[rule.id] = (core, port_guard.when_false)
+                        cost_guards[rule.id] = (core, port_binding.cost_guard())
                 if (description := description_key(rule)) is not None:
                     descriptions[rule.id] = description
                 writer = bundle_writers.get((str(consumer_source), rule.id))

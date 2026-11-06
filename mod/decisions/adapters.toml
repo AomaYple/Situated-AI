@@ -1714,6 +1714,12 @@ unit = "boolean"
 kind = "boolean"
 
 [[initial_values]]
+source = "common/buildings/03_mines.txt"
+field = "building_copper_mine.ai_value"
+define_source = "common/defines/00_ai.txt"
+define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
+
+[[initial_values]]
 source = "common/buildings/01_industry.txt"
 field = "building_arms_industry.ai_value"
 define_source = "common/defines/00_ai.txt"
@@ -2855,6 +2861,21 @@ scope = "root"
 kind = "boolean"
 unit = "boolean"
 parameters = { building_type = "building_tooling_workshop", production_method = "pm_watertube_boiler_building_tooling_workshop" }
+
+[readers.state_owner_innovation]
+engine = "country_innovation"
+scope = "root"
+unit = "weekly_innovation_points"
+kind = "number"
+minimum = 0
+path = ["owner"]
+
+[readers.state_owner_innovation_cap]
+engine = "modifier:country_weekly_innovation_max_add"
+scope = "root"
+unit = "weekly_innovation_points"
+kind = "number"
+path = ["owner"]
 
 [readers.pm_active_building_university_pm_analytical_philosophy_department]
 engine = "is_production_method_active"
@@ -8168,18 +8189,34 @@ why = "所有者实际违约对新增铁路承诺提供独立偿付成本；不�
 counterexample = "基本需求不要求现有建筑、具体PM、借款/违约健康或战略层；实际配方及投入只提供准备升档或独立成本，未知仅退出对应分量，不猜测未来采用配方。大学提供创新与资格而非直接识字；铁路需求只读本州基础设施。原版科技、可建资格、成本、工资、就业、效果、零值与执行保留。"
 
 [[rules]]
+id = "knowledge_university_below_effective_cap"
+source = "common/buildings/07_government.txt"
+field = "building_university.ai_value"
+domain = "economy"
+priority = 20506
+contribution_group = "university_innovation_need"
+semantic_role = "benefit"
+operation = "multiply"
+value = 1.1
+conditions = [
+  { fact = "state_owner_innovation", op = "<", value = { fact = "state_owner_innovation_cap" } },
+]
+why = "有效所有者国家实际capped创新A低于当前精确正cap C，形成独立创新服务需求；+.10是Mod设计系数"
+counterexample = "不要求低识字、已有大学、academia完成、纸张就绪或正现金流；仅创新分量在cap饱和/非正/未知时退出，独立资格服务与既有成本和原版资格/JE/玩家路径保留；owner不代表payer"
+
+[[rules]]
 id = "knowledge_university_low_literacy_need"
 source = "common/buildings/07_government.txt"
 field = "building_university.ai_value"
 domain = "political"
 priority = 20500
-contribution_group = "building_output_demand"
+contribution_group = "university_qualification_service"
 operation = "multiply"
 value = 1.1
 conditions = [
   { fact = "state_owner_literacy", op = "<", value = 0.5 },
 ]
-why = "国家实际低识字形成对大学创新和资格供给的有限需求；不把大学等同学校或直接识字增长，不要求该州已经有大学"
+why = "国家实际低识字作为大学资格服务与长期人才能力的有限代理；旧混合claim中的创新部分改由独立实际cap规则表达；不把大学等同学校或直接识字增长，不要求该州已经有大学"
 counterexample = "基本需求不要求现有建筑、具体PM、借款/违约健康或战略层；实际配方及投入只提供准备升档或独立成本，未知仅退出对应分量，不猜测未来采用配方。大学提供创新与资格而非直接识字；铁路需求只读本州基础设施。原版科技、可建资格、成本、工资、就业、效果、零值与执行保留。"
 
 [[rules]]
@@ -8188,14 +8225,14 @@ source = "common/buildings/07_government.txt"
 field = "building_university.ai_value"
 domain = "political"
 priority = 20501
-contribution_group = "building_output_demand"
+contribution_group = "university_qualification_service"
 operation = "multiply"
 value = 1.15
 conditions = [
   { fact = "state_owner_literacy", op = "<", value = 0.5 },
   { fact = "state_owner_academia_completed", op = "=", value = true },
 ]
-why = "低识字且原版学术科技确实完成时升档同一知识能力需求；原版大学科技资格仍由原版保留"
+why = "低识字且原版学术科技确实完成时升档同一资格服务能力需求；原版大学科技资格仍由原版保留"
 counterexample = "基本需求不要求现有建筑、具体PM、借款/违约健康或战略层；实际配方及投入只提供准备升档或独立成本，未知仅退出对应分量，不猜测未来采用配方。大学提供创新与资格而非直接识字；铁路需求只读本州基础设施。原版科技、可建资格、成本、工资、就业、效果、零值与执行保留。"
 
 [[rules]]
@@ -8204,7 +8241,7 @@ source = "common/buildings/07_government.txt"
 field = "building_university.ai_value"
 domain = "political"
 priority = 20502
-contribution_group = "building_output_demand"
+contribution_group = "university_qualification_service"
 operation = "multiply"
 value = 1.2
 conditions = [
@@ -8213,7 +8250,7 @@ conditions = [
   { fact = "state_owner_paper_balance", op = ">=", value = 0 },
   { fact = "state_owner_paper_price", op = "<=", value = 0.25 },
 ]
-why = "实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格"
+why = "实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字资格服务能力需求；不把现有大学当新建资格"
 counterexample = "基本需求不要求现有建筑、具体PM、借款/违约健康或战略层；实际配方及投入只提供准备升档或独立成本，未知仅退出对应分量，不猜测未来采用配方。大学提供创新与资格而非直接识字；铁路需求只读本州基础设施。原版科技、可建资格、成本、工资、就业、效果、零值与执行保留。"
 
 [[rules]]
@@ -8222,7 +8259,7 @@ source = "common/buildings/07_government.txt"
 field = "building_university.ai_value"
 domain = "political"
 priority = 20503
-contribution_group = "building_output_demand"
+contribution_group = "university_qualification_service"
 operation = "multiply"
 value = 1.2
 conditions = [
@@ -8231,7 +8268,7 @@ conditions = [
   { fact = "state_owner_paper_balance", op = ">=", value = 0 },
   { fact = "state_owner_paper_price", op = "<=", value = 0.25 },
 ]
-why = "实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格"
+why = "实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字资格服务能力需求；不把现有大学当新建资格"
 counterexample = "基本需求不要求现有建筑、具体PM、借款/违约健康或战略层；实际配方及投入只提供准备升档或独立成本，未知仅退出对应分量，不猜测未来采用配方。大学提供创新与资格而非直接识字；铁路需求只读本州基础设施。原版科技、可建资格、成本、工资、就业、效果、零值与执行保留。"
 
 [[rules]]
@@ -8240,7 +8277,7 @@ source = "common/buildings/07_government.txt"
 field = "building_university.ai_value"
 domain = "political"
 priority = 20504
-contribution_group = "building_output_demand"
+contribution_group = "university_qualification_service"
 operation = "multiply"
 value = 1.2
 conditions = [
@@ -8249,7 +8286,7 @@ conditions = [
   { fact = "state_owner_paper_balance", op = ">=", value = 0 },
   { fact = "state_owner_paper_price", op = "<=", value = 0.25 },
 ]
-why = "实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格"
+why = "实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字资格服务能力需求；不把现有大学当新建资格"
 counterexample = "基本需求不要求现有建筑、具体PM、借款/违约健康或战略层；实际配方及投入只提供准备升档或独立成本，未知仅退出对应分量，不猜测未来采用配方。大学提供创新与资格而非直接识字；铁路需求只读本州基础设施。原版科技、可建资格、成本、工资、就业、效果、零值与执行保留。"
 
 [[rules]]
@@ -11095,6 +11132,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_institution_colonial_affairs_financial_cost"
+semantic_role = "cost"
 contribution_group = "colonial_institution_financing_pressure"
 intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
@@ -11126,6 +11164,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_institution_health_system_financial_cost"
+semantic_role = "cost"
 intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_health_system"
@@ -11175,6 +11214,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_affirmative_action"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_affirmative_action.ai_enact_weight_modifier"
@@ -11190,6 +11230,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_anarchy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_anarchy.ai_enact_weight_modifier"
@@ -11205,6 +11246,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_appointed_bureaucrats"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
@@ -11220,6 +11262,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_autocracy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_autocracy.ai_enact_weight_modifier"
@@ -11235,6 +11278,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_bakufu"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_bakufu.ai_enact_weight_modifier"
@@ -11250,6 +11294,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_censorship"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_censorship.ai_enact_weight_modifier"
@@ -11265,6 +11310,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_census_voting"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_census_voting.ai_enact_weight_modifier"
@@ -11280,6 +11326,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_charitable_health_system"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_charitable_health_system.ai_enact_weight_modifier"
@@ -11296,6 +11343,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_chiefdom"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_chiefdom.ai_enact_weight_modifier"
@@ -11311,6 +11359,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_chiefs_distribute_aid"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_chiefs_distribute_aid.ai_enact_weight_modifier"
@@ -11326,6 +11375,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_child_labor_allowed"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_child_labor_allowed.ai_enact_weight_modifier"
@@ -11341,6 +11391,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_colonial_exploitation"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_colonial_exploitation.ai_enact_weight_modifier"
@@ -11356,6 +11407,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_colonial_resettlement"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_colonial_resettlement.ai_enact_weight_modifier"
@@ -11371,6 +11423,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_colonial_slavery"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_colonial_slavery.ai_enact_weight_modifier"
@@ -11386,6 +11439,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_compulsory_primary_school"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -11402,6 +11456,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_corporate_state"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_corporate_state.ai_enact_weight_modifier"
@@ -11417,6 +11472,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_council_republic"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_council_republic.ai_enact_weight_modifier"
@@ -11432,6 +11488,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_crownland_diets"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_crownland_diets.ai_enact_weight_modifier"
@@ -11447,6 +11504,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_cultural_exclusion"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_cultural_exclusion.ai_enact_weight_modifier"
@@ -11462,6 +11520,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_debt_slavery"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_debt_slavery.ai_enact_weight_modifier"
@@ -11477,6 +11536,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_dedicated_police"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_dedicated_police.ai_enact_weight_modifier"
@@ -11492,6 +11552,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_diplomatic_navy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_diplomatic_navy.ai_enact_weight_modifier"
@@ -11507,6 +11568,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_elder_council"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_elder_council.ai_enact_weight_modifier"
@@ -11522,6 +11584,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_elected_bureaucrats"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -11537,6 +11600,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_ethnostate"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_ethnostate.ai_enact_weight_modifier"
@@ -11552,6 +11616,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_freedom_of_conscience"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_freedom_of_conscience.ai_enact_weight_modifier"
@@ -11567,6 +11632,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_frontier_colonization"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_frontier_colonization.ai_enact_weight_modifier"
@@ -11582,6 +11648,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_guaranteed_liberties"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_guaranteed_liberties.ai_enact_weight_modifier"
@@ -11597,6 +11664,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hereditary_bureaucrats"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_hereditary_bureaucrats.ai_enact_weight_modifier"
@@ -11612,6 +11680,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hindu_caste_codified"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_hindu_caste_codified.ai_enact_weight_modifier"
@@ -11627,6 +11696,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hindu_caste_enforced"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_hindu_caste_enforced.ai_enact_weight_modifier"
@@ -11642,6 +11712,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hindu_caste_not_enforced"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_hindu_caste_not_enforced.ai_enact_weight_modifier"
@@ -11657,6 +11728,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_intermediate_edo_system"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_intermediate_edo_system.ai_enact_weight_modifier"
@@ -11672,6 +11744,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_jeune_ecole"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_jeune_ecole.ai_enact_weight_modifier"
@@ -11687,6 +11760,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_landed_voting"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_landed_voting.ai_enact_weight_modifier"
@@ -11702,6 +11776,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_lax_edo_system"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_lax_edo_system.ai_enact_weight_modifier"
@@ -11717,6 +11792,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_legacy_slavery"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_legacy_slavery.ai_enact_weight_modifier"
@@ -11732,6 +11808,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_local_police"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_local_police.ai_enact_weight_modifier"
@@ -11747,6 +11824,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_mass_conscription"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_mass_conscription.ai_enact_weight_modifier"
@@ -11762,6 +11840,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_merchant_navy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_merchant_navy.ai_enact_weight_modifier"
@@ -11777,6 +11856,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_militarized_police"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_militarized_police.ai_enact_weight_modifier"
@@ -11792,6 +11872,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_millet_system"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_millet_system.ai_enact_weight_modifier"
@@ -11807,6 +11888,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_monarchy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_monarchy.ai_enact_weight_modifier"
@@ -11822,6 +11904,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_multicultural"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_multicultural.ai_enact_weight_modifier"
@@ -11837,6 +11920,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_national_guard"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_national_guard.ai_enact_weight_modifier"
@@ -11852,6 +11936,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_national_militia"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_national_militia.ai_enact_weight_modifier"
@@ -11867,6 +11952,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_national_supremacy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_national_supremacy.ai_enact_weight_modifier"
@@ -11882,6 +11968,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_neo_absolutism"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_neo_absolutism.ai_enact_weight_modifier"
@@ -11897,6 +11984,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_colonial_affairs"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_no_colonial_affairs.ai_enact_weight_modifier"
@@ -11912,6 +12000,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_health_system"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_no_health_system.ai_enact_weight_modifier"
@@ -11928,6 +12017,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_home_affairs"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_no_home_affairs.ai_enact_weight_modifier"
@@ -11943,6 +12033,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_police"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_no_police.ai_enact_weight_modifier"
@@ -11958,6 +12049,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_schools"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_no_schools.ai_enact_weight_modifier"
@@ -11973,6 +12065,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_social_security"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_no_social_security.ai_enact_weight_modifier"
@@ -11988,6 +12081,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_womens_rights"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_no_womens_rights.ai_enact_weight_modifier"
@@ -12003,6 +12097,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_workers_rights"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_labor_rights.txt"
 field = "law_no_workers_rights.ai_enact_weight_modifier"
@@ -12018,6 +12113,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_old_age_pension"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -12034,6 +12130,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_oligarchy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_oligarchy.ai_enact_weight_modifier"
@@ -12049,6 +12146,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_organic_regulation"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_organic_regulation.ai_enact_weight_modifier"
@@ -12064,6 +12162,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_outlawed_dissent"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_outlawed_dissent.ai_enact_weight_modifier"
@@ -12079,6 +12178,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_parliamentary_republic"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_parliamentary_republic.ai_enact_weight_modifier"
@@ -12094,6 +12194,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_peasant_levies"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_peasant_levies.ai_enact_weight_modifier"
@@ -12109,6 +12210,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_people_of_the_book"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_people_of_the_book.ai_enact_weight_modifier"
@@ -12124,6 +12226,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_poor_laws"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -12140,6 +12243,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_presidential_republic"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_presidential_republic.ai_enact_weight_modifier"
@@ -12155,6 +12259,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_private_health_insurance"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_private_health_insurance.ai_enact_weight_modifier"
@@ -12171,6 +12276,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_private_schools"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -12187,6 +12293,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_professional_army"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_professional_army.ai_enact_weight_modifier"
@@ -12202,6 +12309,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_professional_navy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_professional_navy.ai_enact_weight_modifier"
@@ -12217,6 +12325,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_protected_speech"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_protected_speech.ai_enact_weight_modifier"
@@ -12232,6 +12341,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_public_health_insurance"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_public_health_insurance.ai_enact_weight_modifier"
@@ -12248,6 +12358,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_public_schools"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_public_schools.ai_enact_weight_modifier"
@@ -12264,6 +12375,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_racial_segregation"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_racial_segregation.ai_enact_weight_modifier"
@@ -12279,6 +12391,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_regulatory_bodies"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -12295,6 +12408,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_religious_schools"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_religious_schools.ai_enact_weight_modifier"
@@ -12311,6 +12425,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_restricted_child_labor"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -12327,6 +12442,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_right_of_assembly"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_right_of_assembly.ai_enact_weight_modifier"
@@ -12342,6 +12458,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_secret_police"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_secret_police.ai_enact_weight_modifier"
@@ -12357,6 +12474,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_shinsengumi"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_shinsengumi.ai_enact_weight_modifier"
@@ -12372,6 +12490,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_single_party_state"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_single_party_state.ai_enact_weight_modifier"
@@ -12387,6 +12506,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_slave_trade"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_slave_trade.ai_enact_weight_modifier"
@@ -12402,6 +12522,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_slavery_banned"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_slavery_banned.ai_enact_weight_modifier"
@@ -12417,6 +12538,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_social_monarchy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_social_monarchy.ai_enact_weight_modifier"
@@ -12432,6 +12554,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_state_atheism"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_state_atheism.ai_enact_weight_modifier"
@@ -12447,6 +12570,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_state_religion"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_state_religion.ai_enact_weight_modifier"
@@ -12462,6 +12586,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_strict_edo_system"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_strict_edo_system.ai_enact_weight_modifier"
@@ -12477,6 +12602,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_technocracy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_technocracy.ai_enact_weight_modifier"
@@ -12492,6 +12618,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_terakoya"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_terakoya.ai_enact_weight_modifier"
@@ -12507,6 +12634,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_theocracy"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_theocracy.ai_enact_weight_modifier"
@@ -12522,6 +12650,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_total_separation"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_total_separation.ai_enact_weight_modifier"
@@ -12537,6 +12666,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_universal_suffrage"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_universal_suffrage.ai_enact_weight_modifier"
@@ -12552,6 +12682,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_wage_subsidies"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -12568,6 +12699,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_warrior_caste"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_warrior_caste.ai_enact_weight_modifier"
@@ -12583,6 +12715,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_wealth_voting"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_wealth_voting.ai_enact_weight_modifier"
@@ -12598,6 +12731,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_women_in_the_fields"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_women_in_the_fields.ai_enact_weight_modifier"
@@ -12613,6 +12747,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_women_in_the_workplace"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_women_in_the_workplace.ai_enact_weight_modifier"
@@ -12628,6 +12763,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_women_own_property"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_women_own_property.ai_enact_weight_modifier"
@@ -12643,6 +12779,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_womens_suffrage"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_womens_suffrage.ai_enact_weight_modifier"
@@ -12658,6 +12795,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_worker_protections"
+semantic_role = "cost"
 intent = "stabilization"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -12674,6 +12812,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "structural_school_access"
+semantic_role = "benefit"
 source = "common/laws/01_education_system.txt"
 field = "law_public_schools.ai_enact_weight_modifier"
 domain = "political"
@@ -12690,6 +12829,7 @@ counterexample = "当前法律与识字率只定义具体改革需求，不代�
 
 [[rules]]
 id = "structural_school_secularization"
+semantic_role = "benefit"
 source = "common/laws/01_education_system.txt"
 field = "law_public_schools.ai_enact_weight_modifier"
 domain = "political"
@@ -16338,6 +16478,8 @@ intent = "wartime_defense"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
 domain = "military"
+semantic_role = "benefit"
+contribution_group = "external_supply_mission_pressure"
 priority = 100
 value = 1.25
 operation = "multiply"
@@ -16351,6 +16493,8 @@ intent = "wartime_defense"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
 domain = "military"
+semantic_role = "benefit"
+contribution_group = "external_supply_mission_pressure"
 priority = 99
 value = 1.10
 operation = "multiply"
@@ -16364,6 +16508,8 @@ intent = "wartime_defense"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
 domain = "military"
+semantic_role = "benefit"
+contribution_group = "external_supply_mission_pressure"
 priority = 98
 value = 1.10
 operation = "multiply"
@@ -16400,6 +16546,7 @@ counterexample = "识字、行政、净收入、借贷、违约和战争不构�
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
 id = "coordinated_layered_health_recovery"
+semantic_role = "cost"
 field = "ai_strategy_default.institution_scores.institution_health_system"
 domain = "fiscal"
 priority = 21
@@ -16461,6 +16608,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/00_army_model.txt"
 id = "coordinated_layered_law_security_professional_army"
+semantic_role = "benefit"
 field = "law_professional_army.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16473,6 +16621,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/00_internal_security.txt"
 id = "coordinated_layered_law_security_national_guard"
+semantic_role = "benefit"
 field = "law_national_guard.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16485,6 +16634,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/00_army_model.txt"
 id = "coordinated_layered_law_security_mass_conscription"
+semantic_role = "benefit"
 field = "law_mass_conscription.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16497,6 +16647,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/00_navy_model.txt"
 id = "coordinated_layered_law_naval_professional_navy"
+semantic_role = "benefit"
 field = "law_professional_navy.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16509,6 +16660,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/00_navy_model.txt"
 id = "coordinated_layered_law_naval_merchant_navy"
+semantic_role = "benefit"
 field = "law_merchant_navy.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16521,6 +16673,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/01_colonial_affairs.txt"
 id = "coordinated_layered_law_colonial_colonial_resettlement"
+semantic_role = "benefit"
 field = "law_colonial_resettlement.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16570,6 +16723,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/02_free_speech.txt"
 id = "coordinated_layered_civic_law_right_of_assembly"
+semantic_role = "benefit"
 field = "law_right_of_assembly.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16582,6 +16736,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/02_rights_of_women.txt"
 id = "coordinated_layered_civic_law_women_in_the_workplace"
+semantic_role = "benefit"
 field = "law_women_in_the_workplace.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16594,6 +16749,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/00_distribution_of_power.txt"
 id = "coordinated_layered_civic_law_census_voting"
+semantic_role = "benefit"
 field = "law_census_voting.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16606,6 +16762,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/laws/02_free_speech.txt"
 id = "coordinated_layered_civic_law_protected_speech"
+semantic_role = "benefit"
 field = "law_protected_speech.ai_enact_weight_modifier"
 domain = "political"
 priority = 20
@@ -16740,6 +16897,7 @@ counterexample = "未知实际配方、产出需求、投入成本、基础设�
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
 id = "lj07_grain_health_foundation"
+semantic_role = "benefit"
 field = "ai_strategy_default.institution_scores.institution_health_system"
 domain = "political"
 priority = 42010
@@ -16757,6 +16915,7 @@ counterexample = "只改变当前慈善医疗食品保障对应的有界需求�
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
 id = "lj07_grain_health_social_capacity"
+semantic_role = "benefit"
 field = "ai_strategy_default.institution_scores.institution_health_system"
 domain = "political"
 priority = 42011
@@ -18557,6 +18716,7 @@ argument = "law_type:law_no_schools"
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
 id = "health_public_low_living_need"
+semantic_role = "benefit"
 field = "ai_strategy_default.institution_scores.institution_health_system"
 domain = "political"
 contribution_group = "health_law_specific_need"
@@ -18588,6 +18748,7 @@ counterexample = "不把正常借款视为违约，不撤销已知慈善食品�
 [[rules]]
 source = "common/laws/01_education_system.txt"
 id = "public_school_private_peasant_access"
+semantic_role = "benefit"
 field = "law_public_schools.ai_enact_weight_modifier"
 domain = "political"
 contribution_group = "public_school_access_need"
@@ -18605,6 +18766,7 @@ counterexample = "当前法律与识字率只定义具体改革需求，不代�
 [[rules]]
 source = "common/laws/01_education_system.txt"
 id = "public_school_no_schools_access"
+semantic_role = "benefit"
 field = "law_public_schools.ai_enact_weight_modifier"
 domain = "political"
 contribution_group = "public_school_access_need"
@@ -18673,6 +18835,7 @@ parameters = { institution = "institution_health_system" }
 
 [[rules]]
 id = "health_reform_charity_new_food_security"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_charitable_health_system.ai_enact_weight_modifier"
@@ -18690,6 +18853,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_public_new_universal_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_public_health_insurance.ai_enact_weight_modifier"
@@ -18802,6 +18966,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_public_private_universal_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_public_health_insurance.ai_enact_weight_modifier"
@@ -18852,6 +19017,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_public_charity_universal_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_public_health_insurance.ai_enact_weight_modifier"
@@ -18902,6 +19068,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_private_charity_food_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_private_health_insurance.ai_enact_weight_modifier"
@@ -18920,6 +19087,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_public_charity_food_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_public_health_insurance.ai_enact_weight_modifier"
@@ -18938,6 +19106,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_private_charity_administrative_saving"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_private_health_insurance.ai_enact_weight_modifier"
@@ -18955,6 +19124,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_private_public_administrative_saving"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_private_health_insurance.ai_enact_weight_modifier"
@@ -18972,6 +19142,7 @@ counterexample = "只改变有界法律偏好，不估算金额、行政资源�
 
 [[rules]]
 id = "health_reform_private_public_universal_access_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_health_system.txt"
 field = "law_private_health_insurance.ai_enact_weight_modifier"
@@ -19039,6 +19210,7 @@ parameters = { state_query = "tax_capacity_shortfall" }
 
 [[rules]]
 id = "bureaucracy_reform_appointed_tax_collection"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
@@ -19072,6 +19244,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_police_existing"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19088,6 +19261,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_police_deficit"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19122,6 +19296,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_home_affairs_existing"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19138,6 +19313,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_home_affairs_deficit"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19172,6 +19348,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_colonial_affairs_existing"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19188,6 +19365,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_colonial_affairs_deficit"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19222,6 +19400,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_health_existing"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19238,6 +19417,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_health_deficit"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19272,6 +19452,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_schools_existing"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19288,6 +19469,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_schools_deficit"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19322,6 +19504,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_social_security_existing"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19338,6 +19521,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_social_security_deficit"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19372,6 +19556,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_workplace_safety_existing"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19388,6 +19573,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_institution_saving_workplace_safety_deficit"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19405,6 +19591,7 @@ conditions = [
 
 [[rules]]
 id = "bureaucracy_reform_elected_appointed_tax_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
@@ -19512,6 +19699,7 @@ argument = "law_type:law_terakoya"
 
 [[rules]]
 id = "social_reform_poor_laws_new_security_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -19560,6 +19748,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_new_security_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -19608,6 +19797,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_new_employer_floor"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -19624,6 +19814,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_new_security_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19672,6 +19863,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_new_employer_floor"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19688,6 +19880,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_new_workforce_supply"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19704,6 +19897,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_poor_laws_living_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -19721,6 +19915,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_poor_laws_living_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -19738,6 +19933,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_poor_laws_employer_floor_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -19755,6 +19951,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_poor_laws_employer_floor_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -19772,6 +19969,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_poor_laws_living_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19789,6 +19987,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_poor_laws_living_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19806,6 +20005,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_poor_laws_employer_floor_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19823,6 +20023,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_poor_laws_employer_floor_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19840,6 +20041,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_poor_laws_workforce"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19891,6 +20093,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_wage_subsidies_living_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19908,6 +20111,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_wage_subsidies_living_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19925,6 +20129,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_wage_subsidies_employer_floor_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19942,6 +20147,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_wage_subsidies_employer_floor_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -19959,6 +20165,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_old_age_pension_from_wage_subsidies_workforce"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
@@ -20010,6 +20217,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_pension_transfer_loss_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20027,6 +20235,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_pension_transfer_loss_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20044,6 +20253,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_pension_wage_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20061,6 +20271,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_pension_employer_relief"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20078,6 +20289,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_pension_workforce_recovery"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20095,6 +20307,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_pension_financing_relief_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20112,6 +20325,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_pension_financing_relief_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20129,6 +20343,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_pension_transfer_loss_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -20146,6 +20361,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_pension_transfer_loss_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -20163,6 +20379,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_pension_wage_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -20180,6 +20397,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_pension_employer_relief"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -20197,6 +20415,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_pension_workforce_recovery"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -20214,6 +20433,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_pension_financing_relief_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -20231,6 +20451,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_wage_subsidies_from_pension_financing_relief_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
@@ -20248,6 +20469,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_wage_income_loss_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20265,6 +20487,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_wage_employer_relief_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20282,6 +20505,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_wage_income_loss_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20299,6 +20523,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_poor_laws_from_wage_employer_relief_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
@@ -20316,6 +20541,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_regulatory_bodies_new_safety_15"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -20333,6 +20559,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_regulatory_bodies_new_safety_25"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -20367,6 +20594,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_new_safety_15"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20384,6 +20612,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_new_safety_25"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20418,6 +20647,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_new_wage_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20435,6 +20665,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_new_employer_burden"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20452,6 +20683,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_from_regulatory_wage_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20469,6 +20701,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_from_regulatory_employer_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20486,6 +20719,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_regulatory_bodies_from_protections_wage_loss_1"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -20503,6 +20737,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_regulatory_bodies_from_protections_employer_relief_1"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -20520,6 +20755,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_from_regulatory_wage_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20537,6 +20773,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_worker_protections_from_regulatory_employer_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
@@ -20554,6 +20791,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_regulatory_bodies_from_protections_wage_loss_3"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -20571,6 +20809,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_regulatory_bodies_from_protections_employer_relief_3"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -20588,6 +20827,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_child_labor_industrial_workforce_mortality"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -20604,6 +20844,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_child_labor_industrial_workforce_mortality_high"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -20620,6 +20861,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_child_labor_peasant_share_mortality"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -20636,6 +20878,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_child_labor_peasant_share_mortality_high"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -20652,6 +20895,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_child_labor_income_loss_12"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -20668,6 +20912,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_child_labor_income_loss_8"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -20684,6 +20929,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_child_labor_school_capacity"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -20701,6 +20947,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_child_labor_industrial_workforce_mortality"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20717,6 +20964,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_child_labor_industrial_workforce_mortality_high"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20733,6 +20981,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_child_labor_peasant_share_mortality"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20749,6 +20998,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_child_labor_peasant_share_mortality_high"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20765,6 +21015,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_child_labor_income_loss_12"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20781,6 +21032,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_child_labor_income_loss_8"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20797,6 +21049,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_child_labor_school_capacity"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20814,6 +21067,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_restricted_child_labor_industrial_workforce_mortality"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20830,6 +21084,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_restricted_child_labor_industrial_workforce_mortality_high"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20846,6 +21101,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_restricted_child_labor_peasant_share_mortality"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20862,6 +21118,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_restricted_child_labor_peasant_share_mortality_high"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20878,6 +21135,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_restricted_child_labor_income_loss_12"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20894,6 +21152,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_restricted_child_labor_income_loss_8"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20910,6 +21169,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_compulsory_primary_school_from_restricted_child_labor_school_capacity"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -20927,6 +21187,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_new_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -20944,6 +21205,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_new_wealth_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -20996,6 +21258,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_religious_schools_new_access"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_religious_schools.ai_enact_weight_modifier"
@@ -21047,6 +21310,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_religious_schools_from_private_access_low_sol"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_religious_schools.ai_enact_weight_modifier"
@@ -21067,6 +21331,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_from_religious_access_loss_low_sol"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -21086,6 +21351,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_religious_schools_from_private_access_peasant"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_religious_schools.ai_enact_weight_modifier"
@@ -21107,6 +21373,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_from_religious_access_loss_peasant"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -21146,6 +21413,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_from_religious_administration_saving"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -21164,6 +21432,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_from_public_access_loss_low_sol"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -21183,6 +21452,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_from_public_access_loss_peasant"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -21203,6 +21473,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_religious_schools_from_public_access_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_religious_schools.ai_enact_weight_modifier"
@@ -21221,6 +21492,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_private_schools_from_public_administration_saving"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -21239,6 +21511,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_religious_schools_from_public_administration_saving"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/01_education_system.txt"
 field = "law_religious_schools.ai_enact_weight_modifier"
@@ -21257,6 +21530,7 @@ counterexample = "分数仅为同一原版法律消费者的有界偏好，不�
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_compulsory_mortality_industrial_workforce_base"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -21273,6 +21547,7 @@ conditions = [
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_compulsory_mortality_industrial_workforce_high"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -21289,6 +21564,7 @@ conditions = [
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_compulsory_mortality_peasant_share_base"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -21305,6 +21581,7 @@ conditions = [
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_compulsory_mortality_peasant_share_high"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -21321,6 +21598,7 @@ conditions = [
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_compulsory_income_relief_12"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -21337,6 +21615,7 @@ conditions = [
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_compulsory_income_relief_8"
+semantic_role = "benefit"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -21353,6 +21632,7 @@ conditions = [
 
 [[rules]]
 id = "social_reform_restricted_child_labor_from_compulsory_school_capacity_loss"
+semantic_role = "cost"
 domain = "political"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
@@ -21515,6 +21795,7 @@ operation = "add"
 
 [[rules]]
 id = "remaining_organized_negotiation_need"
+semantic_role = "benefit"
 domain = "political"
 field = "ai_strategy_default.negotiation_chance"
 contribution_group = "organized_negotiation_need"
@@ -21528,6 +21809,7 @@ operation = "add"
 
 [[rules]]
 id = "lj08_negotiation_local_political_capacity"
+semantic_role = "benefit"
 domain = "political"
 field = "ai_strategy_default.negotiation_chance"
 contribution_group = "organized_negotiation_need"
@@ -21556,6 +21838,7 @@ parameters = { state_query = "turmoil_above", threshold = "0.1" }
 
 [[rules]]
 id = "institution_supply_safety_need"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_workplace_safety"
 domain = "political"
@@ -21569,6 +21852,7 @@ counterexample = "倍率和阈值是有界设计选择，不是引擎等价参�
 
 [[rules]]
 id = "institution_supply_safety_funded"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_workplace_safety"
 domain = "political"
@@ -21583,6 +21867,7 @@ auxiliary_facts = [ "net_surplus" ]
 
 [[rules]]
 id = "institution_supply_safety_administrative"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_workplace_safety"
 domain = "political"
@@ -21597,6 +21882,7 @@ auxiliary_facts = [ "bureaucracy" ]
 
 [[rules]]
 id = "institution_supply_safety_capacity"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_workplace_safety"
 domain = "political"
@@ -21637,6 +21923,7 @@ counterexample = "倍率和阈值是有界设计选择，不是引擎等价参�
 
 [[rules]]
 id = "institution_supply_police_need"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_police"
 domain = "political"
@@ -21650,6 +21937,7 @@ counterexample = "倍率和阈值是有界设计选择，不是引擎等价参�
 
 [[rules]]
 id = "institution_supply_police_funded"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_police"
 domain = "political"
@@ -21664,6 +21952,7 @@ auxiliary_facts = [ "net_surplus" ]
 
 [[rules]]
 id = "institution_supply_police_administrative"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_police"
 domain = "political"
@@ -21678,6 +21967,7 @@ auxiliary_facts = [ "bureaucracy" ]
 
 [[rules]]
 id = "institution_supply_police_capacity"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_police"
 domain = "political"
@@ -21718,6 +22008,7 @@ counterexample = "倍率和阈值是有界设计选择，不是引擎等价参�
 
 [[rules]]
 id = "institution_supply_home_need"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_home_affairs"
 domain = "political"
@@ -21731,6 +22022,7 @@ counterexample = "倍率和阈值是有界设计选择，不是引擎等价参�
 
 [[rules]]
 id = "institution_supply_home_funded"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_home_affairs"
 domain = "political"
@@ -21745,6 +22037,7 @@ auxiliary_facts = [ "net_surplus" ]
 
 [[rules]]
 id = "institution_supply_home_administrative"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_home_affairs"
 domain = "political"
@@ -21759,6 +22052,7 @@ auxiliary_facts = [ "bureaucracy" ]
 
 [[rules]]
 id = "institution_supply_home_capacity"
+semantic_role = "benefit"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_home_affairs"
 domain = "political"
@@ -22229,6 +22523,7 @@ operation = "add"
 value = -2
 priority = 72018
 contribution_group = "target_reconstruction_opportunity"
+semantic_role = "cost"
 conditions = [ { fact = "prospective_subject_population", op = ">", value = 0 }, { fact = "war_defeat", op = "=", value = true } ]
 why = "本国原版有期限败战记忆表明恢复中的机会成本，与同候选新外部承诺并存；不借协调层或战败未知制造健康/永久惩罚"
 counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/胜率换算；同原因档位取最强，独立原因联合，未知只撤回依赖分量，不当健康或零。每个具名候选与本国观测精确绑定，不以选中/排队当完成；保留玩家、关闭模块、原版资格/具体成本/执行、secret外层trigger、原版限幅与特殊主体终结零分。策略评分不等于建造、立法、援助、自由或战争必然实现"
@@ -23495,6 +23790,7 @@ auxiliary_facts = [ "iron_price" ]
 
 [[rules]]
 id = "target_strategy_subject_maintain_need"
+semantic_role = "benefit"
 source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
 field = "ai_strategy_subject_maintain_autonomy.weight"
 domain = "subjects"
@@ -23508,6 +23804,7 @@ counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/�
 
 [[rules]]
 id = "target_strategy_subject_cooperation_need"
+semantic_role = "benefit"
 source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
 field = "ai_strategy_subject_overlord_compliance.weight"
 domain = "subjects"
@@ -23521,6 +23818,7 @@ counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/�
 
 [[rules]]
 id = "target_strategy_subject_cooperation_relation"
+semantic_role = "benefit"
 source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
 field = "ai_strategy_subject_overlord_compliance.weight"
 domain = "subjects"
@@ -23535,6 +23833,7 @@ auxiliary_facts = [ "actual_overlord_relations" ]
 
 [[rules]]
 id = "target_strategy_subject_self_need"
+semantic_role = "benefit"
 source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
 field = "ai_strategy_subject_strengthen_self.weight"
 domain = "subjects"
@@ -23548,6 +23847,7 @@ counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/�
 
 [[rules]]
 id = "target_strategy_subject_self_strong"
+semantic_role = "benefit"
 source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
 field = "ai_strategy_subject_strengthen_self.weight"
 domain = "subjects"
@@ -23561,6 +23861,7 @@ counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/�
 
 [[rules]]
 id = "target_strategy_subject_self_repair"
+semantic_role = "benefit"
 source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
 field = "ai_strategy_subject_strengthen_self.weight"
 domain = "subjects"
@@ -23709,3 +24010,48 @@ engine = "scope:amenability"
 scope = "root"
 kind = "number"
 unit = "normalized_amenability_input"
+
+[readers.state_owner_copper_balance]
+engine = "market_goods_delta"
+scope = "root"
+unit = "sell_minus_buy_orders"
+kind = "number"
+path = ["owner", "market", "mg:copper"]
+
+[readers.state_owner_copper_price]
+engine = "market_goods_pricier"
+scope = "root"
+unit = "price_above_base_ratio"
+kind = "number"
+path = ["owner", "market", "mg:copper"]
+
+[[rules]]
+id = "building_copper_mine_supply_need"
+source = "common/buildings/03_mines.txt"
+field = "building_copper_mine.ai_value"
+domain = "market"
+priority = 20520
+contribution_group = "copper_supply_need"
+semantic_role = "benefit"
+operation = "multiply"
+value = 1.08
+conditions = [{ fact = "state_owner_copper_balance", op = "<", value = 0 }]
+why = "精确铜矿必选基础PMG全部方法共同正产铜；所有者市场真实缺口形成基本供给选项"
+counterexample = "不要求现有矿、coal、electricity或猜测采用PM；native成本、资源上限、科技、资格、尾部与玩家保留；不是付款人或必建证明"
+
+[[rules]]
+id = "building_copper_mine_supply_pressure"
+source = "common/buildings/03_mines.txt"
+field = "building_copper_mine.ai_value"
+domain = "market"
+priority = 20521
+contribution_group = "copper_supply_need"
+semantic_role = "benefit"
+operation = "multiply"
+value = 1.12
+conditions = [
+  { fact = "state_owner_copper_balance", op = "<", value = 0 },
+  { fact = "state_owner_copper_price", op = ">", value = 0.25 },
+]
+why = "铜缺口与高价是同一供给需要的更强档，替代1.08而不相加"
+counterexample = "未知价格保留已知基本缺口；需求退出即重算，native已计投入/利润/劳工/资格/基建/施工队列成本不重复扣除"

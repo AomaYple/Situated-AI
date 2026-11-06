@@ -97,14 +97,14 @@ raise_payments = {
 			# GROUP program_5c02763f04c97ac7_raise_payments_actor_income_need_positive
 			add = { value = 0
 				# native_action_raise_income_need [diplomacy]; 本国实际net_total_income赤字增加抽取收入的有限需求；同一合法目标自由欲望50至75区间对持续+0.10自由欲望形成独立可持续风险，65以上同因升档。目标违约及>=75已由原资格排除，25影响力配额不重复；不将10%抽取率当作已知税基或英镑收益。
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income < 0 } } add = 0.12 }
+				if = { limit = { exists = ROOT ROOT = { net_total_income < 0 } } add = 0.12 }
 			}
 			# GROUP program_5c02763f04c97ac7_raise_payments_target_instability_negative
 			add = { value = 0
 				# native_action_raise_liberty_high [diplomacy]; 本国实际net_total_income赤字增加抽取收入的有限需求；同一合法目标自由欲望50至75区间对持续+0.10自由欲望形成独立可持续风险，65以上同因升档。目标违约及>=75已由原资格排除，25影响力配额不重复；不将10%抽取率当作已知税基或英镑收益。
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { exists = scope:target_country scope:target_country = { liberty_desire >= 0 liberty_desire <= 100 } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = scope:target_country scope:target_country = { liberty_desire >= 0 liberty_desire <= 100 NOT = { liberty_desire >= 65 } } } } }  } else = { add = -0.18 } } } }
 				# native_action_raise_liberty_risk [diplomacy]; 本国实际net_total_income赤字增加抽取收入的有限需求；同一合法目标自由欲望50至75区间对持续+0.10自由欲望形成独立可持续风险，65以上同因升档。目标违约及>=75已由原资格排除，25影响力配额不重复；不将10%抽取率当作已知税基或英镑收益。
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_country scope:target_country = { liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 } } add = -0.1 } }
+				max = { value = 0 if = { limit = { exists = scope:target_country scope:target_country = { liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 } } add = -0.1 } }
 			}
 			min = 0.82
 			max = 1.12

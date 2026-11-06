@@ -89,7 +89,7 @@ exempt_from_service = {
 			# GROUP program_d8a2c30c5ba09f1d_exempt_service_existing_war_negative
 			add = { value = 0
 				# native_action_exempt_service_war [diplomacy]; 原版协议真实免除目标军役且强制至少12个月；本国已在战争时，放弃已有可征召关系具有有限机会成本，既有目标军力比较、自由欲望收益与cost0保留，不推算目标实际可派军队。
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = yes } } add = -0.1 }
 			}
 			min = 0.9
 			max = 1

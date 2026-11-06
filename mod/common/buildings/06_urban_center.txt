@@ -103,14 +103,14 @@ building_art_academy = {
 			# GROUP program_4907b0733b4b1b47_building_infrastructure_pressure_negative
 			add = { value = 0
 				# building_opportunity_building_art_academy_infrastructure_cost [market]; 候选州基础设施余额为负，增加建设承载压力；静态偏好代价不改变原版费用或资格
-				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 exists = owner owner = { is_ai = yes } } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 } } add = -0.1 }
 			}
 			# GROUP program_4907b0733b4b1b47_building_output_demand_positive
 			add = { value = 0
 				# building_opportunity_building_art_academy_fine_art_pressure [market]; 必选基础PMG全部方法共同正产出fine_art；所有者市场缺口为基础机会，高价只升档同一需求
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
 				# building_opportunity_building_art_academy_fine_art_demand [market]; 必选基础PMG全部方法共同正产出fine_art；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
 			min = 0.75
 			max = 1.12
@@ -208,15 +208,15 @@ building_power_plant = {
 			# GROUP program_87fefb772d9b55ab_building_local_goods_demand_positive
 			add = { value = 0
 				# building_local_building_power_plant_pm_oil_fired_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { exists = market market = { exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
 				# building_local_building_power_plant_pm_coal_fired_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
 				# building_local_building_power_plant_pm_early_power_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
 				# building_local_building_power_plant_pressure [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.5 } } } add = 0.15 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = sg:electricity sg:electricity = { state_goods_pricier > 0.5 } } } add = 0.15 }
 				# building_local_building_power_plant_demand [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.1 }
 			}
 			min = 0.5
 			max = 1.2

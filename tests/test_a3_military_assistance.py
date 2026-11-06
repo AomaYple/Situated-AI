@@ -509,4 +509,11 @@ def test_no_tariffs_program_and_suffix_are_unchanged(inputs):
     assert old.evaluate({**values, "in_default": None}, is_ai=True) == -12
     assert old.evaluate({**values, "root": "B", "input_goods_delta": -1}, is_ai=True) == 6
     assert accept.patch(inputs) == accept.patch(inputs, consumer_program=old)
-    assert len(accept.compile_programs()) == 2
+    assert {program.definition for program in accept.compile_programs()} == {
+        "no_tariffs",
+        "military_assistance",
+        "alliance",
+        "defensive_pact",
+        "guarantee_independence",
+        "support_independence",
+    }

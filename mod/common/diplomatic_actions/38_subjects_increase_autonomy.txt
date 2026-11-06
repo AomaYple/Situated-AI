@@ -389,12 +389,12 @@ da_increase_autonomy_of_self = {
 			# GROUP program_f42859af4d243ca5_autonomy_need_positive
 			add = { value = 0
 				# native_action_autonomy_need [diplomacy]; 本国高自主愿望提高和平自主交涉需求；近期败战恢复期对原版接受或拒绝均有的关系摩擦设置温和风险，独立联合，不视为战争
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 90 } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 90 } } add = 0.18 }
 			}
 			# GROUP program_f42859af4d243ca5_autonomy_recovery_negative
 			add = { value = 0
 				# native_action_autonomy_recovery [diplomacy]; 本国高自主愿望提高和平自主交涉需求；近期败战恢复期对原版接受或拒绝均有的关系摩擦设置温和风险，独立联合，不视为战争
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } } add = -0.05 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } } add = -0.05 }
 			}
 			min = 0.95
 			max = 1.18

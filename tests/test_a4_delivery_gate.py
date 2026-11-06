@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -14,7 +15,7 @@ from tools.ci import a4_delivery, a4_scope
 
 @pytest.fixture
 def gate(tmp_path, monkeypatch):
-    calls = []
+    calls: list[tuple[Any, ...]] = []
     root = tmp_path
     monkeypatch.setattr(config, "REPO", root)
     for path in a4_scope.GATE_INPUTS:

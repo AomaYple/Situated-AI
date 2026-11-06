@@ -444,7 +444,7 @@ def _rules(profile, parameters):
     company = profile["id"]
     rows: list[dict[str, Any]] = []
 
-    def add(suffix, cause, value, conditions, why):
+    def add(suffix, cause, value, conditions, why, *, semantic_role):
         rows.append(
             {
                 "id": f"company_sector_{company.replace('-', '_hyphen_')}_{suffix}",
@@ -454,6 +454,7 @@ def _rules(profile, parameters):
                 "operation": "multiply",
                 "value": value,
                 "contribution_group": cause,
+                "semantic_role": semantic_role,
                 "conditions": conditions,
                 "why": why,
                 "counterexample": "局部未知撤回相应贡献；保留原版资格、成本、随机、非正分拒绝与执行；潜在配方不是active PM",
@@ -471,6 +472,7 @@ def _rules(profile, parameters):
             parameters["demand_multiplier"],
             [need],
             f"主业基础配方可能产出{good}；国家市场已有买单缺口，形成筹建机会，不假定已启用PM",
+            semantic_role="benefit",
         )
         add(
             f"{good}_pressure",
@@ -478,6 +480,7 @@ def _rules(profile, parameters):
             parameters["pressure_multiplier"],
             [need, _predicate(price, ">", parameters["output_price_threshold"])],
             f"{good}缺口且相对基价高，升档同一主业需求，不能重复奖励",
+            semantic_role="benefit",
         )
     sectors = _special_sectors(profile)
     for building, low, high, description in (
@@ -518,6 +521,7 @@ def _rules(profile, parameters):
                 parameters[multiplier],
                 [_predicate(reader, "=", True)],
                 description,
+                semantic_role="benefit",
             )
     if company in {"company_panama_company", "company_suez_company"}:
         if not {"building_trade_center", "building_port"} <= sectors:
@@ -532,6 +536,7 @@ def _rules(profile, parameters):
                 value,
                 [_predicate(key, "=", True)],
                 "本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益",
+                semantic_role="cost",
             )
     if "building_port" in sectors:
         need = _predicate(
@@ -552,6 +557,7 @@ def _rules(profile, parameters):
                 parameters["demand_multiplier"],
                 [active, need],
                 "本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出",
+                semantic_role="benefit",
             )
             add(
                 f"port_{method}_pressure",
@@ -559,6 +565,7 @@ def _rules(profile, parameters):
                 parameters["pressure_multiplier"],
                 [active, need, price],
                 "同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励",
+                semantic_role="benefit",
             )
             for good in inputs:
                 add(
@@ -572,6 +579,7 @@ def _rules(profile, parameters):
                         ),
                     ],
                     f"已观察{method}港口active方式实际需要{good}，国家市场高价为该生产方式的独立机会成本",
+                    semantic_role="cost",
                 )
     # Profiles already deduplicate required goods across all primary recipe
     # groups. Share the same physical-good cause with active port recipes too:
@@ -583,6 +591,7 @@ def _rules(profile, parameters):
             parameters["input_multiplier"],
             [_predicate(f"country_goods_{good}_price", ">", parameters["input_price_threshold"])],
             f"主业某必选基础配方组所有方法共同需要{good}；高价为配方机会成本，不是当前实际账单",
+            semantic_role="cost",
         )
     if profile["employs_laborers"]:
         add(
@@ -591,6 +600,7 @@ def _rules(profile, parameters):
             parameters["workforce_multiplier"],
             [_predicate("industrial_workforce", ">=", parameters["laborers_share_threshold"])],
             "真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺",
+            semantic_role="benefit",
         )
     add(
         "default",
@@ -598,6 +608,7 @@ def _rules(profile, parameters):
         parameters["default_multiplier"],
         [_predicate("default", "=", True)],
         "已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款",
+        semantic_role="cost",
     )
     return rows
 

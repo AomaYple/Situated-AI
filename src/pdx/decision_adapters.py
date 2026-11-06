@@ -270,6 +270,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     cost_digest = None
     regional_programs: tuple[regional_resource_opportunities.RegionalResourceProgram, ...] = ()
     regional_digest = None
+    innovation_digest = None
     if source == SOURCE:
         if (
             not isinstance(data["sources"], dict)
@@ -278,6 +279,16 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             or not isinstance(data.get("initial_values", []), list)
         ):
             raise ValueError("公司部门消费者源集合类型无效")
+        from . import innovation_readers  # noqa: PLC0415
+
+        innovation_raw = innovation_readers.snapshot()
+        for name, expected in json.loads(innovation_raw)["normalized_source_hashes"].items():
+            if name in data["sources"] and data["sources"][name] != expected:
+                raise ValueError(f"创新读取器与消费者完整源冲突：{name}")
+            data["sources"][name] = expected
+        innovation_digest = hashlib.sha256(
+            innovation_raw + b"\0generator:" + Path(innovation_readers.__file__).read_bytes()
+        ).hexdigest()
         regional_programs = (regional_resource_opportunities.compile_program(),)
         for name, expected in regional_resource_opportunities.load()["sources"].items():
             if name in data["sources"] and data["sources"][name] != expected:
@@ -313,7 +324,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + Path(import_blockade_opportunities.__file__).read_bytes()
         ).hexdigest()
         acceptance_programs = treaty_acceptance_opportunities.compile_programs()
-        for name, expected in treaty_acceptance_opportunities.load()["sources"].items():
+        for name, expected in treaty_acceptance_opportunities.program_source_hashes().items():
             if name in data["sources"] and data["sources"][name] != expected:
                 raise ValueError(f"条约接受与消费者完整源冲突：{name}")
             data["sources"][name] = expected
@@ -323,6 +334,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + treaty_acceptance_opportunities.FROZEN.read_bytes()
             + b"\0generator:"
             + Path(treaty_acceptance_opportunities.__file__).read_bytes()
+            + treaty_acceptance_opportunities.membership_dependency_bytes()
         ).hexdigest()
         # One source of sector semantics: the frozen, structurally verified
         # derivation. Loading it is not a claim about the current installation.
@@ -489,6 +501,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + culture_opportunities.FROZEN.read_bytes()
             + b"\0generator:"
             + Path(culture_opportunities.__file__).read_bytes()
+            + culture_opportunities.proof_dependency_bytes()
         ).hexdigest()
         _merge_derivation(
             data, subject_dependence_opportunities.derive(data), "实际宗主经济联系连续性"
@@ -612,7 +625,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         raise ValueError("共享约束必须是映射")
     used_contexts: set[str] = set()
     digest = hashlib.sha256(
-        raw
+        (
+            b"innovation_readers:" + innovation_digest.encode("ascii") + b"\0"
+            if innovation_digest
+            else b""
+        )
+        + raw
         + (
             b"\0treaty_acceptance_opportunities:" + acceptance_digest.encode("ascii")
             if acceptance_digest
@@ -1324,6 +1342,18 @@ def reader_evidence(inputs: Mapping[str, str]) -> dict[str, dict[str, object]]:
         for token in tokenize(text):
             if token.kind == ATOM and token.value not in evidence:
                 evidence[token.value] = {"source": name, "line": token.line}
+    from . import innovation_readers  # noqa: PLC0415
+
+    # These exact numeric getters are independently proved native interfaces;
+    # a colon-prefixed getter need not occur as a literal script token.
+    innovation_sources = json.loads(innovation_readers.snapshot())["normalized_source_hashes"]
+    if set(innovation_sources) <= inputs.keys():
+        innovation_readers.verify_inputs(inputs)
+        for engine in innovation_readers.ENGINES:
+            evidence[engine] = {
+                "source": innovation_readers.MANIFEST_ID,
+                "proof": list(innovation_readers.proof(engine)),
+            }
     # A typed law reference can be absent from vanilla uses even though its
     # definition is present (notably the current internal-security variants).
     # Derive only registered identities from their complete pinned law source;
@@ -1427,6 +1457,14 @@ def build(
         regional_resource_opportunities.verify_inputs(
             {name: inputs[name] for name in regional_resource_opportunities.SOURCES}
         )
+    if any(
+        reader.engine in {"country_innovation", "modifier:country_weekly_innovation_max_add"}
+        for _, policy in adapters.policies
+        for reader in policy.readers
+    ):
+        from . import innovation_readers  # noqa: PLC0415
+
+        innovation_readers.verify_inputs(inputs)
     state_recovery_evidence: tuple[str, ...] = ()
     if any(
         reader.engine == "devastation"

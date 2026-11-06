@@ -65,10 +65,24 @@ def test_complete_native_effect_inventory_preserves_mechanism_units_and_variant_
     )
     assert (effect["value"], effect["unit"], effect["channel"]) == (-0.05, "flat", None)
     assert all(row["responsibility"] for law in laws.values() for row in law["effects"])
-    assert any(
-        row["responsibility"] == "actual_coup_exposure_not_registered"
-        for law in laws.values()
+    assert {
+        name
+        for name, law in laws.items()
         for row in law["effects"]
+        if row["responsibility"] == "observed_active_coup_base_law_transition_only"
+        and row["field"] == "country_coup_resistance_add"
+        and row["unit"] == "per_invested_level"
+        and row["channel"] is None
+    } == {
+        "law_national_guard",
+        "law_secret_police",
+        "law_guaranteed_liberties",
+        "law_extraordinary_commission",
+    }
+    assert all(
+        row["responsibility"] == "variant_parent_effect_merging_requires_independent_contract"
+        for name in ("law_shinsengumi", "law_third_section", "law_okhrana")
+        for row in laws[name]["effects"]
     )
     security.verify_inputs(native_inputs)
     with pytest.raises(ValueError, match="来源漂移"):
@@ -373,7 +387,7 @@ def test_source_derivation_has_only_existing_finite_consumers(native_inputs):
         for rule in derived["rules"]
     )
     assert all(
-        rule["semantic_role"] == "unspecified"
+        rule["semantic_role"] == "benefit"
         for rule in derived["rules"]
         if "_adopted_agenda_" in rule["id"]
     )

@@ -104,7 +104,7 @@ company_sumitomo = {
 			# GROUP program_bf4c35f76bec5f4e_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_sumitomo_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_bf4c35f76bec5f4e_company_mandatory_input_coal_negative
 			add = { value = 0
@@ -129,17 +129,17 @@ company_sumitomo = {
 			# GROUP program_bf4c35f76bec5f4e_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_sumitomo_steel_pressure [market]; steel缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_sumitomo_fertilizer_pressure [market]; fertilizer缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_sumitomo_copper_pressure [market]; copper缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_sumitomo_steel_need [market]; 主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_sumitomo_fertilizer_need [market]; 主业基础配方可能产出fertilizer；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_sumitomo_copper_need [market]; 主业基础配方可能产出copper；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_bf4c35f76bec5f4e_company_solvency_negative
 			add = { value = 0
@@ -265,7 +265,7 @@ company_yasuda = {
 			# GROUP program_e18c1d314a0b5d2b_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_yasuda_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_e18c1d314a0b5d2b_company_mandatory_input_clippers_negative
 			add = { value = 0
@@ -302,25 +302,25 @@ company_yasuda = {
 			# GROUP program_e18c1d314a0b5d2b_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_yasuda_port_modern_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_yasuda_port_industrial_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_yasuda_port_basic_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_yasuda_building_railway_pressure [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_yasuda_sulfur_pressure [market]; sulfur缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_yasuda_port_modern_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_yasuda_port_industrial_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_yasuda_port_basic_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_yasuda_building_railway_need [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
 				# company_sector_company_yasuda_sulfur_need [market]; 主业基础配方可能产出sulfur；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_e18c1d314a0b5d2b_company_solvency_negative
 			add = { value = 0
@@ -419,7 +419,7 @@ company_tokyo_electric_light_company = {
 			# GROUP program_892c72fbdaf74af0_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_tokyo_electric_light_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_892c72fbdaf74af0_company_mandatory_input_copper_negative
 			add = { value = 0
@@ -434,9 +434,9 @@ company_tokyo_electric_light_company = {
 			# GROUP program_892c72fbdaf74af0_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_tokyo_electric_light_company_building_power_plant_pressure [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
 				# company_sector_company_tokyo_electric_light_company_building_power_plant_need [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
 			}
 			# GROUP program_892c72fbdaf74af0_company_solvency_negative
 			add = { value = 0
@@ -543,18 +543,18 @@ company_guthrie = {
 			# GROUP program_c2029db8134852ce_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_guthrie_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_c2029db8134852ce_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_guthrie_tea_pressure [market]; tea缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tea mg:tea = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tea mg:tea = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_guthrie_coffee_pressure [market]; coffee缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_guthrie_tea_need [market]; 主业基础配方可能产出tea；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tea mg:tea = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tea mg:tea = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_guthrie_coffee_need [market]; 主业基础配方可能产出coffee；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_c2029db8134852ce_company_solvency_negative
 			add = { value = 0
@@ -651,7 +651,7 @@ company_societe_francaise_charbonnages_du_tonkin = {
 			# GROUP program_02b061468e0d7b2e_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_societe_francaise_charbonnages_du_tonkin_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_02b061468e0d7b2e_company_mandatory_input_tools_negative
 			add = { value = 0
@@ -661,13 +661,13 @@ company_societe_francaise_charbonnages_du_tonkin = {
 			# GROUP program_02b061468e0d7b2e_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_societe_francaise_charbonnages_du_tonkin_wood_pressure [market]; wood缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_societe_francaise_charbonnages_du_tonkin_coal_pressure [market]; coal缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_societe_francaise_charbonnages_du_tonkin_wood_need [market]; 主业基础配方可能产出wood；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_societe_francaise_charbonnages_du_tonkin_coal_need [market]; 主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_02b061468e0d7b2e_company_solvency_negative
 			add = { value = 0
@@ -773,7 +773,7 @@ company_broken_hill_proprietary_company = {
 			# GROUP program_3f3599e054747eac_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_broken_hill_proprietary_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_3f3599e054747eac_company_mandatory_input_tools_negative
 			add = { value = 0
@@ -783,13 +783,13 @@ company_broken_hill_proprietary_company = {
 			# GROUP program_3f3599e054747eac_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_broken_hill_proprietary_company_building_gold_mine_pressure [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
 				# company_sector_company_broken_hill_proprietary_company_copper_pressure [market]; copper缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_broken_hill_proprietary_company_building_gold_mine_need [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
 				# company_sector_company_broken_hill_proprietary_company_copper_need [market]; 主业基础配方可能产出copper；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_3f3599e054747eac_company_solvency_negative
 			add = { value = 0
@@ -900,7 +900,7 @@ company_ramirez = {
 			# GROUP program_7e9c20785c4427cc_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_ramirez_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_7e9c20785c4427cc_company_mandatory_input_grain_negative
 			add = { value = 0
@@ -910,13 +910,13 @@ company_ramirez = {
 			# GROUP program_7e9c20785c4427cc_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_ramirez_groceries_pressure [market]; groceries缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_ramirez_fish_pressure [market]; fish缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fish mg:fish = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:fish mg:fish = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_ramirez_groceries_need [market]; 主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_ramirez_fish_need [market]; 主业基础配方可能产出fish；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fish mg:fish = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:fish mg:fish = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_7e9c20785c4427cc_company_solvency_negative
 			add = { value = 0
@@ -1012,7 +1012,7 @@ company_oriental_consolidated_mining = {
 			# GROUP program_41ec3e08321c8a7e_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_oriental_consolidated_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_41ec3e08321c8a7e_company_mandatory_input_tools_negative
 			add = { value = 0
@@ -1022,13 +1022,13 @@ company_oriental_consolidated_mining = {
 			# GROUP program_41ec3e08321c8a7e_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_oriental_consolidated_mining_building_gold_mine_pressure [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
 				# company_sector_company_oriental_consolidated_mining_wood_pressure [market]; wood缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_oriental_consolidated_mining_building_gold_mine_need [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
 				# company_sector_company_oriental_consolidated_mining_wood_need [market]; 主业基础配方可能产出wood；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_41ec3e08321c8a7e_company_solvency_negative
 			add = { value = 0
@@ -1122,7 +1122,7 @@ company_siam_electrical_company_limited = {
 			# GROUP program_73f4217f188ffa99_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_siam_electrical_company_limited_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_73f4217f188ffa99_company_mandatory_input_copper_negative
 			add = { value = 0
@@ -1137,9 +1137,9 @@ company_siam_electrical_company_limited = {
 			# GROUP program_73f4217f188ffa99_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_siam_electrical_company_limited_building_power_plant_pressure [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
 				# company_sector_company_siam_electrical_company_limited_building_power_plant_need [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
 			}
 			# GROUP program_73f4217f188ffa99_company_solvency_negative
 			add = { value = 0
@@ -1233,7 +1233,7 @@ company_ferranti_ltd = {
 			# GROUP program_a789307c4877c748_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_ferranti_ltd_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_a789307c4877c748_company_mandatory_input_copper_negative
 			add = { value = 0
@@ -1263,13 +1263,13 @@ company_ferranti_ltd = {
 			# GROUP program_a789307c4877c748_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_ferranti_ltd_building_power_plant_pressure [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
 				# company_sector_company_ferranti_ltd_telephones_pressure [market]; telephones缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:telephones mg:telephones = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:telephones mg:telephones = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_ferranti_ltd_building_power_plant_need [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
 				# company_sector_company_ferranti_ltd_telephones_need [market]; 主业基础配方可能产出telephones；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:telephones mg:telephones = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:telephones mg:telephones = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_a789307c4877c748_company_solvency_negative
 			add = { value = 0
@@ -1368,7 +1368,7 @@ company_van_vlissingen_en_dudok_van_heel = {
 			# GROUP program_c7881622ec598723_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_c7881622ec598723_company_mandatory_input_steel_negative
 			add = { value = 0
@@ -1378,21 +1378,21 @@ company_van_vlissingen_en_dudok_van_heel = {
 			# GROUP program_c7881622ec598723_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_tools_pressure [market]; tools缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_steamers_pressure [market]; steamers缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_engines_pressure [market]; engines缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_clippers_pressure [market]; clippers缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_tools_need [market]; 主业基础配方可能产出tools；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_steamers_need [market]; 主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_engines_need [market]; 主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_van_vlissingen_en_dudok_van_heel_clippers_need [market]; 主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_c7881622ec598723_company_solvency_negative
 			add = { value = 0
@@ -1487,7 +1487,7 @@ company_maschinenfabrik_oerlikon = {
 			# GROUP program_c33021fc4ee58b5f_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_maschinenfabrik_oerlikon_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_c33021fc4ee58b5f_company_mandatory_input_steel_negative
 			add = { value = 0
@@ -1497,13 +1497,13 @@ company_maschinenfabrik_oerlikon = {
 			# GROUP program_c33021fc4ee58b5f_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_maschinenfabrik_oerlikon_tools_pressure [market]; tools缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_maschinenfabrik_oerlikon_engines_pressure [market]; engines缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_maschinenfabrik_oerlikon_tools_need [market]; 主业基础配方可能产出tools；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_maschinenfabrik_oerlikon_engines_need [market]; 主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_c33021fc4ee58b5f_company_solvency_negative
 			add = { value = 0
@@ -1603,7 +1603,7 @@ company_a_markwald_and_company = {
 			# GROUP program_710bf50906237178_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_a_markwald_and_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_710bf50906237178_company_mandatory_input_clippers_negative
 			add = { value = 0
@@ -1630,21 +1630,21 @@ company_a_markwald_and_company = {
 			# GROUP program_710bf50906237178_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_a_markwald_and_company_port_modern_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_a_markwald_and_company_port_industrial_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_a_markwald_and_company_port_basic_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_a_markwald_and_company_grain_pressure [market]; grain缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_a_markwald_and_company_port_modern_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_a_markwald_and_company_port_industrial_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_a_markwald_and_company_port_basic_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_a_markwald_and_company_grain_need [market]; 主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_710bf50906237178_company_solvency_negative
 			add = { value = 0
@@ -1770,22 +1770,22 @@ company_nhm = {
 			# GROUP program_b6229bcd6137c1e4_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_nhm_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_b6229bcd6137c1e4_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_nhm_sugar_pressure [market]; sugar缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_nhm_dye_pressure [market]; dye缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_nhm_coffee_pressure [market]; coffee缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_nhm_sugar_need [market]; 主业基础配方可能产出sugar；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_nhm_dye_need [market]; 主业基础配方可能产出dye；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_nhm_coffee_need [market]; 主业基础配方可能产出coffee；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:coffee mg:coffee = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_b6229bcd6137c1e4_company_solvency_negative
 			add = { value = 0
@@ -1900,17 +1900,17 @@ company_white_star_line = {
 			# GROUP program_dd88a0337a1c3674_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_white_star_line_port_modern_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_white_star_line_port_industrial_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_white_star_line_port_basic_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_white_star_line_port_modern_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_white_star_line_port_industrial_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_white_star_line_port_basic_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_dd88a0337a1c3674_company_solvency_negative
 			add = { value = 0
@@ -2003,7 +2003,7 @@ company_noda_shoyu = {
 			# GROUP program_bc81483a7bc18f00_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_noda_shoyu_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_bc81483a7bc18f00_company_mandatory_input_grain_negative
 			add = { value = 0
@@ -2013,9 +2013,9 @@ company_noda_shoyu = {
 			# GROUP program_bc81483a7bc18f00_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_noda_shoyu_groceries_pressure [market]; groceries缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_noda_shoyu_groceries_need [market]; 主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_bc81483a7bc18f00_company_solvency_negative
 			add = { value = 0

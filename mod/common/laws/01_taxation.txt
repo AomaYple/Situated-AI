@@ -54,9 +54,9 @@ law_consumption_based_taxation = {
 			# GROUP program_690281e69b0bb6f8_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_consumption_based_taxation_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_consumption_based_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_consumption_based_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_consumption_based_taxation_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_consumption_based_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_consumption_based_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_690281e69b0bb6f8_law_political_pressure_negative
 			add = { value = 0
@@ -66,7 +66,7 @@ law_consumption_based_taxation = {
 			# GROUP program_690281e69b0bb6f8_law_tax_administration_transition_positive
 			add = { value = 0
 				# law_context_law_consumption_based_taxation_administration_transition [fiscal]; 消费税法实际减少人口基础行政负担，行政短缺时形成有限节省机会；不宣称总税收增加
-				min = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_consumption_based_taxation } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } } }  } else = { add = 6 } } } }
+				if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_consumption_based_taxation } bureaucracy < 0 } } add = 6 }
 			}
 			min = -10
 			max = 16
@@ -127,9 +127,9 @@ law_land_based_taxation = {
 			# GROUP program_5d69cf42143b8f20_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_land_based_taxation_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_land_based_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_land_based_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_land_based_taxation_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_land_based_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_land_based_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_5d69cf42143b8f20_law_political_pressure_negative
 			add = { value = 0
@@ -241,9 +241,9 @@ law_per_capita_based_taxation = {
 			# GROUP program_483f4be17c03bf22_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_per_capita_based_taxation_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_per_capita_based_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_per_capita_based_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_per_capita_based_taxation_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_per_capita_based_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_per_capita_based_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_483f4be17c03bf22_law_political_pressure_negative
 			add = { value = 0
@@ -336,9 +336,9 @@ law_proportional_taxation = {
 			# GROUP program_457792b4ec39f044_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_proportional_taxation_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_proportional_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_proportional_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_proportional_taxation_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_proportional_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_proportional_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_457792b4ec39f044_law_political_pressure_negative
 			add = { value = 0
@@ -417,9 +417,9 @@ law_graduated_taxation = {
 			# GROUP program_17e14b94448e0530_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_graduated_taxation_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_graduated_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_graduated_taxation value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_graduated_taxation_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_graduated_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_graduated_taxation value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_17e14b94448e0530_law_political_pressure_negative
 			add = { value = 0

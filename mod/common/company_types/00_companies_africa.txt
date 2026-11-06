@@ -76,7 +76,7 @@ company_misr = {
 			# GROUP program_5a27f3d58b5d71de_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_misr_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_5a27f3d58b5d71de_company_mandatory_input_fabric_negative
 			add = { value = 0
@@ -86,13 +86,13 @@ company_misr = {
 			# GROUP program_5a27f3d58b5d71de_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_misr_fabric_pressure [market]; fabric缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_misr_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_misr_fabric_need [market]; 主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_misr_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_5a27f3d58b5d71de_company_solvency_negative
 			add = { value = 0
@@ -173,7 +173,7 @@ company_egyptian_rail = {
 			# GROUP program_3fefbf42f1db78fe_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_egyptian_rail_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_3fefbf42f1db78fe_company_mandatory_input_engines_negative
 			add = { value = 0
@@ -183,9 +183,9 @@ company_egyptian_rail = {
 			# GROUP program_3fefbf42f1db78fe_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_egyptian_rail_building_railway_pressure [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_egyptian_rail_building_railway_need [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
 			}
 			# GROUP program_3fefbf42f1db78fe_company_solvency_negative
 			add = { value = 0
@@ -323,21 +323,21 @@ company_suez_company = {
 			# GROUP program_685673e8146eeab1_company_output_demand_positive
 			add = { value = 0
 				# company_sector_company_suez_company_port_modern_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_suez_company_port_industrial_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_suez_company_port_basic_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_suez_company_building_trade_center_pressure [market]; 本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
 				# company_sector_company_suez_company_port_modern_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_suez_company_port_industrial_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_suez_company_port_basic_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_suez_company_building_trade_center_need [market]; 本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
 			}
 			# GROUP program_685673e8146eeab1_company_solvency_negative
 			add = { value = 0
@@ -347,9 +347,9 @@ company_suez_company = {
 			# GROUP program_685673e8146eeab1_company_trade_operating_pressure_negative
 			add = { value = 0
 				# company_sector_company_suez_company_trade_loss_low_cash [market]; 本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0 cash_reserves_ratio < 0.25 } } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0 cash_reserves_ratio < 0.25 } } } add = -0.1 }
 				# company_sector_company_suez_company_trade_loss [market]; 本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0 } } } add = -0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0 } } } add = -0.05 }
 			}
 			min = 0.5
 			max = 1.2

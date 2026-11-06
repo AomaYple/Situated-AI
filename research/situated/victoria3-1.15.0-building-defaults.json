@@ -1570,8 +1570,8 @@
     ],
     "expression_source": {
       "proof": "research/situated/victoria3-1.15.0-building-static-selector.json",
-      "sha256": "1d1cbd8bf048a08919df42ed4f07a14756207b02fe92462881f0c8657255d9a2",
-      "scope": "Only eleven existing exact normal named static initializers; invalid sentinel selects their own local numeric member; no copper or dynamic-object writer permission."
+      "sha256": "befd2bcee8cb7996928102f200835109b235f2602c88cf97ca7f317adfe7f24d",
+      "scope": "Exact twelve current normal named static initializers, including copper; no dynamic object writer permission."
     }
   },
   "initializers": [
@@ -1724,11 +1724,25 @@
       "government_funded": false,
       "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
       "value": 1000
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "id": "building_copper_mine",
+      "line": 199,
+      "parent_sha256": "ecc3c6c801127a13d06da4bf5b32551ce454c4d9fbad1bb225e9c8274fc12764",
+      "group_chain": [
+        "bg_mining",
+        "bg_extraction"
+      ],
+      "government_funded": false,
+      "field": "ai_value",
+      "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+      "value": 1000
     }
   ],
   "lineage": {
     "reviewed_candidate_sha256": "2db851ed61f4ddbb03290f164b827c543d922837dd3772048e94db8fbba24e39",
-    "scope": "only eleven historical missing-field initializers; no broader building expansion",
+    "scope": "Eleven historical initializers preserved, plus exact independently reviewed copper parent/group/static lifecycle admission.",
     "reviewed_static_selector_candidate_sha256": "72848291b6183759d96160f9ea8192317be7297394809016ce4f027002c75176"
   }
 }

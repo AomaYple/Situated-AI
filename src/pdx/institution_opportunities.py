@@ -208,7 +208,7 @@ def _derive(adapters: Mapping[str, Any], *, information: bool) -> dict[str, Any]
                         "priority": 76000 + len(rules),
                         "operation": "multiply",
                         "value": data["tuning"][f"{name}_{tier}"],
-                        "semantic_role": "unspecified",
+                        "semantic_role": "benefit",
                         "contribution_group": f"institution_{name}_invested_priority_withdrawal",
                         "conditions": [
                             c(present, "=", True),

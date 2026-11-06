@@ -60,6 +60,7 @@ class ContextBinding:
             "hokkaido_state_scope": ("state", {"auxiliary"}),
             "article": ("treaty_article_options", {"auxiliary"}),
             "source_country": ("country", {"auxiliary"}),
+            "actor": ("country", {"auxiliary"}),
             "first_country": ("country", {"auxiliary"}),
             "second_country": ("country", {"auxiliary"}),
             "article_input_market_goods": ("market_goods", {"auxiliary"}),
@@ -74,6 +75,8 @@ class ContextBinding:
         formation_binding = (self.name, self.kind, self.role) in {
             ("root", "military_formation", "auxiliary"),
             ("root", "state", "auxiliary"),
+            ("root", "state", "actor"),
+            ("owner", "country", "auxiliary"),
             ("owner", "country", "actor"),
         }
         if not formation_binding and (
@@ -316,6 +319,7 @@ class WriterDecisionIR:
             or self.legacy is not None
             or self.predicates
             or self.chain_refs
+            or self.port_contributions != program.predicate_ports().contributions(self)
         ):
             raise ValueError("区域资源writer身份、完整程序或上下文漂移")
         return program
@@ -363,6 +367,7 @@ class WriterDecisionIR:
             or self.legacy is not None
             or self.predicates
             or self.chain_refs
+            or self.port_contributions != program.predicate_ports().contributions(self)
         ):
             raise ValueError("条约接受writer与完整语义、身份或作用域不一致")
         return program

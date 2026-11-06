@@ -245,17 +245,17 @@ decree_emergency_relief = {
 			# GROUP program_214d68373e479422_decree_relief_authority_positive
 			add = { value = 0
 				# decree_relief_authority_cost_release [political]; 同一实际受创州的有限救济需要40，内含融资与authority压力各10的保守留存；明确非default或非负authority仅解除对应留存
-				if = { limit = { exists = ROOT ROOT = { devastation >= 0 devastation <= 1 devastation > 0.2 exists = owner owner = { is_ai = yes authority >= 0 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { devastation >= 0 devastation <= 1 devastation > 0.2 exists = owner owner = { authority >= 0 } } } add = 10 }
 			}
 			# GROUP program_214d68373e479422_decree_relief_disaster_positive
 			add = { value = 0
 				# decree_relief_actual_disaster_need [political]; 同一实际受创州的有限救济需要40，内含融资与authority压力各10的保守留存；明确非default或非负authority仅解除对应留存
-				if = { limit = { exists = ROOT ROOT = { devastation >= 0 devastation <= 1 devastation > 0.2 exists = owner owner = { is_ai = yes } } } add = 20 }
+				if = { limit = { exists = ROOT ROOT = { devastation >= 0 devastation <= 1 devastation > 0.2 } } add = 20 }
 			}
 			# GROUP program_214d68373e479422_decree_relief_financing_positive
 			add = { value = 0
 				# decree_relief_financing_cost_release [political]; 同一实际受创州的有限救济需要40，内含融资与authority压力各10的保守留存；明确非default或非负authority仅解除对应留存
-				if = { limit = { exists = ROOT ROOT = { devastation >= 0 devastation <= 1 devastation > 0.2 exists = owner owner = { is_ai = yes in_default = no } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { devastation >= 0 devastation <= 1 devastation > 0.2 exists = owner owner = { in_default = no } } } add = 10 }
 			}
 			min = 0
 			max = 40

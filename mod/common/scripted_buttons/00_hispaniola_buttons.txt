@@ -71,7 +71,7 @@ je_haitian_debt_payment_button = {
 				# native_button_haiti_very_thin_buffer [political]; 真实500000即时付款后的薄现金缓冲；只评价当下风险，不预测500每周回本。
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { gold_reserves >= 0 } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { gold_reserves >= 0 NOT = { gold_reserves < 600000 } } } } }  } else = { add = -0.15 } } } }
 				# native_button_haiti_thin_buffer [political]; 真实500000即时付款后的薄现金缓冲；只评价当下风险，不预测500每周回本。
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes gold_reserves >= 0 gold_reserves < 1000000 } } add = -0.05 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { gold_reserves >= 0 gold_reserves < 1000000 } } add = -0.05 } }
 			}
 			min = 0.85
 			max = 1

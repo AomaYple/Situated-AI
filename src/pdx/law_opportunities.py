@@ -179,6 +179,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
         conditions: list[dict[str, object]],
         why: str,
         *,
+        semantic_role: str,
         domain: str = "political",
     ) -> None:
         rules.append(
@@ -187,6 +188,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 "source": data["candidates"][law],
                 "field": f"{law}.ai_enact_weight_modifier",
                 "domain": domain,
+                "semantic_role": semantic_role,
                 "priority": 44000 + len(rules),
                 "operation": "add",
                 "value": value,
@@ -214,6 +216,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 tuning[f"agenda_{tier}"],
                 [_condition(fact, "=", True)],
                 "本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益",
+                semantic_role="benefit",
             )
             if (
                 law in LABOUR_EFFECTS
@@ -230,6 +233,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                     -tuning[f"agenda_{tier}"],
                     [_condition(fact, "=", True), _condition(current(law), "=", True)],
                     "候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求",
+                    semantic_role="benefit",
                 )
         # The newly expanded sources retain their existing named crisis
         # writers, including immutable published migration identities.
@@ -246,6 +250,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 _condition("radical_share", ">=", 0.25),
             ],
             "已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求",
+            semantic_role="cost",
         )
 
     for authority_effects in AUTHORITY_EFFECTS.values():
@@ -266,6 +271,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                         _condition("authority", "<", -delta if delta < 0 else 0),
                     ],
                     "比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、技术传播量或税收收益",
+                    semantic_role="cost" if delta < 0 else "benefit",
                 )
 
     for law, effects in POLICING_EFFECTS.items():
@@ -289,6 +295,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                             ),
                         ],
                         "从无警察建立真实新制度时，已知行政短缺与违约分别形成独立承载成本；既存同价制度转换不重复收取新制度成本",
+                        semantic_role="cost",
                     )
             for index, mechanism in enumerate(
                 ("turmoil_protection", "movement_radicalization", "mortality")
@@ -321,6 +328,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                         value,
                         [*transition, _condition("police_investment", ">=", investment), *exposure],
                         "现行与候选逐项比较实际制度修正：地方动乱损失保护、运动激进化及军警附带死亡风险分开；实际投资只升同因暴露档，不代表上限、未来投资或死亡人数",
+                        semantic_role="benefit" if improving else "cost",
                     )
 
     for law, (radicalization, union_strength) in LABOUR_EFFECTS.items():
@@ -342,6 +350,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                         _condition("radical_share", ">=", 0.25),
                     ],
                     "比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失",
+                    semantic_role="benefit" if radicalization < old_radicalization else "cost",
                 )
             if union_strength > old_union_strength:
                 for tier, cost in (("base", -6), ("government", -9)):
@@ -359,6 +368,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                         cost,
                         conditions,
                         "实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测",
+                        semantic_role="cost",
                     )
 
     # Moving away from consumption taxation loses its explicit population
@@ -389,6 +399,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             conditions,
             why,
             domain="fiscal",
+            semantic_role="benefit" if law == consumption else "cost",
         )
 
     # Imported goods are an option, not an already completed trade route.
@@ -413,6 +424,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                         conditions,
                         "当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门",
                         domain="market",
+                        semantic_role="benefit",
                     )
 
     for law in ("law_tenant_farmers", "law_homesteading", "law_peasant_proprietorship"):
@@ -432,6 +444,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                     _condition("peasant_share", ">=", 0.6),
                 ],
                 "当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生",
+                semantic_role="benefit",
             )
 
     intervention = "law_interventionism"
@@ -448,6 +461,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             ],
             "从传统主义转换实际移除投资效率和本地价格传导惩罚，响应具体生产瓶颈；不同商品是同一制度机会，不能无限叠加",
             domain="economy",
+            semantic_role="benefit",
         )
     add(
         intervention,
@@ -460,6 +474,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
         ],
         "从传统主义转换移除州税容量惩罚，响应同一已整合州真实税容不足；不是全国官僚余额的同义词",
         domain="fiscal",
+        semantic_role="benefit",
     )
     add(
         intervention,
@@ -472,6 +487,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
         ],
         "离开传统主义失去人口基础行政折扣，已有行政缺口独立计入，不能被生产需求奖励覆盖",
         domain="fiscal",
+        semantic_role="cost",
     )
 
     used = {condition["fact"] for rule in rules for condition in rule["conditions"]}

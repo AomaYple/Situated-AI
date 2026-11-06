@@ -1,0 +1,3961 @@
+schema = 1
+scope = "all_current_observed_ruleset_contexts"
+semantics = "exact_existing_predicate_guard_only; unspecified_remains_pending"
+sources = [
+  "common/ai_strategies/00_default_strategy.txt",
+  "common/ai_strategies/01_admin_strategies.txt",
+  "common/ai_strategies/02_subject_diplomatic_strategies.txt",
+  "common/buildings/01_industry.txt",
+  "common/buildings/02_agro.txt",
+  "common/buildings/03_mines.txt",
+  "common/buildings/04_plantations.txt",
+  "common/buildings/06_urban_center.txt",
+  "common/buildings/07_government.txt",
+  "common/buildings/09_misc_resource.txt",
+  "common/buildings/11_private_infrastructure.txt",
+  "common/company_types/00_companies_africa.txt",
+  "common/company_types/00_companies_americas.txt",
+  "common/company_types/00_companies_asia.txt",
+  "common/company_types/00_companies_austria_hungary.txt",
+  "common/company_types/00_companies_china.txt",
+  "common/company_types/00_companies_cots.txt",
+  "common/company_types/00_companies_ep2.txt",
+  "common/company_types/00_companies_europe.txt",
+  "common/company_types/00_companies_france.txt",
+  "common/company_types/00_companies_germany.txt",
+  "common/company_types/00_companies_great_britain.txt",
+  "common/company_types/00_companies_ip2.txt",
+  "common/company_types/00_companies_ip3.txt",
+  "common/company_types/00_companies_ip4.txt",
+  "common/company_types/00_companies_ip5.txt",
+  "common/company_types/00_companies_italy.txt",
+  "common/company_types/00_companies_japan.txt",
+  "common/company_types/00_companies_mp1.txt",
+  "common/company_types/00_companies_russia.txt",
+  "common/company_types/00_companies_soi.txt",
+  "common/company_types/00_companies_totally_normal.txt",
+  "common/company_types/00_companies_usa.txt",
+  "common/company_types/99_basic_companies.txt",
+  "common/decisions/00_decisions.txt",
+  "common/decisions/canal_decisions.txt",
+  "common/decrees/00_decree.txt",
+  "common/diplomatic_actions/03_violate_sovereignty.txt",
+  "common/diplomatic_actions/26_join_power_bloc.txt",
+  "common/diplomatic_actions/32_subjects_raise_payments.txt",
+  "common/diplomatic_actions/33_subjects_decrease_payments.txt",
+  "common/diplomatic_actions/34_subjects_exempt_from_service.txt",
+  "common/diplomatic_actions/38_subjects_increase_autonomy.txt",
+  "common/diplomatic_actions/40_subjects_knowledge_sharing.txt",
+  "common/laws/00_army_model.txt",
+  "common/laws/00_bureaucracy.txt",
+  "common/laws/00_caste_hegemony.txt",
+  "common/laws/00_church_and_state.txt",
+  "common/laws/00_citizenship.txt",
+  "common/laws/00_distribution_of_power.txt",
+  "common/laws/00_governance_principles.txt",
+  "common/laws/00_internal_security.txt",
+  "common/laws/00_navy_model.txt",
+  "common/laws/01_colonial_affairs.txt",
+  "common/laws/01_economic_system.txt",
+  "common/laws/01_education_system.txt",
+  "common/laws/01_health_system.txt",
+  "common/laws/01_land_reform.txt",
+  "common/laws/01_policing.txt",
+  "common/laws/01_taxation.txt",
+  "common/laws/01_trade_policy.txt",
+  "common/laws/02_childrens_rights.txt",
+  "common/laws/02_free_speech.txt",
+  "common/laws/02_labor_rights.txt",
+  "common/laws/02_labour_associations.txt",
+  "common/laws/02_migration.txt",
+  "common/laws/02_rights_of_women.txt",
+  "common/laws/02_slavery.txt",
+  "common/laws/02_welfare.txt",
+  "common/mobilization_options/00_mobilization_option.txt",
+  "common/scripted_buttons/00_hispaniola_buttons.txt",
+  "common/scripted_buttons/04_indian_famines_buttons.txt",
+  "common/scripted_buttons/07_japan_buttons.txt",
+  "common/scripted_buttons/southamerica_migration_button.txt",
+  "common/ship_modifications/00_ship_modifications.txt",
+  "common/ship_modifications/01_utility_modifications.txt",
+  "common/technology/technologies/10_production.txt",
+  "common/technology/technologies/20_military.txt",
+  "common/technology/technologies/30_society.txt",
+  "common/treaty_articles/00_alliance.txt",
+  "common/treaty_articles/01_defensive_pact.txt",
+  "common/treaty_articles/02_guarantee_independence.txt",
+  "common/treaty_articles/07_foreign_investment_rights.txt",
+  "common/treaty_articles/24_transit_rights.txt",
+  "common/treaty_articles/25_trade_privilege.txt",
+  "common/treaty_articles/31_toll_exemption.txt",
+  "common/treaty_articles/32_no_tolls.txt",
+  "common/treaty_articles/33_strait_access.txt",
+  "common/treaty_articles/34_no_strait_closure.txt",
+  "mod/decisions/information.toml",
+]
+
+[hard_cap]
+ports = 4737
+origins = 2290
+uses = 6152
+partitions = 965
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.ai_ship_category_weights.ai_ship_category_battle_line"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.ai_ship_category_weights.ai_ship_category_carriers"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.become_subject_value"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.conscript_battalion_ratio"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_colonial_affairs"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_home_affairs"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_police"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.institution_scores.institution_workplace_safety"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.interest_group_government_weight"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.min_law_chance_to_pass"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.nationalization_desire"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.negotiation_chance"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.secret_goal_scores.antagonize.score"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.secret_goal_scores.conquer.score"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.secret_goal_scores.dominate.score"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.secret_goal_scores.protect.score"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.secret_goal_scores.reconcile.score"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.ship_construction_output_multiplier"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.subject_value"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.target_marine_formation_size"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.treaty_port_value"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.unacceptable_infamy_level"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.undesirable_infamy_level"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wanted_marines"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wanted_num_supply_ships"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_maneuvers_fraction"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.annex_country"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.colonization_rights"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.conquer_state"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.increase_autonomy"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.independence"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.liberate_subject"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.make_subject"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.reduce_autonomy"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.regime_change"
+
+[[consumers]]
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.transfer_subject"
+
+[[consumers]]
+source = "common/ai_strategies/01_admin_strategies.txt"
+field = "ai_strategy_agricultural_expansion.weight"
+
+[[consumers]]
+source = "common/ai_strategies/01_admin_strategies.txt"
+field = "ai_strategy_industrial_expansion.weight"
+
+[[consumers]]
+source = "common/ai_strategies/01_admin_strategies.txt"
+field = "ai_strategy_resource_expansion.weight"
+
+[[consumers]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+field = "ai_strategy_subject_maintain_autonomy.weight"
+
+[[consumers]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+field = "ai_strategy_subject_overlord_compliance.weight"
+
+[[consumers]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+field = "ai_strategy_subject_strengthen_self.weight"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_arms_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_artillery_foundry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_automotive_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_chemical_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_electrics_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_explosives_factory.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_food_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_furniture_manufactory.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_glassworks.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_motor_industry.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_munition_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_paper_mill.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_shipyard.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_steel_mill.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_synthetics_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_textile_mill.ai_value"
+
+[[consumers]]
+source = "common/buildings/01_industry.txt"
+field = "building_tooling_workshop.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_livestock_ranch.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_maize_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_millet_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_rice_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_rye_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_vineyard.ai_value"
+
+[[consumers]]
+source = "common/buildings/02_agro.txt"
+field = "building_wheat_farm.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_coal_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_copper_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_gold_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_iron_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_lead_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/03_mines.txt"
+field = "building_sulfur_mine.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_banana_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_coffee_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_cotton_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_dye_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_opium_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_silk_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_sugar_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_tea_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/04_plantations.txt"
+field = "building_tobacco_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/06_urban_center.txt"
+field = "building_art_academy.ai_value"
+
+[[consumers]]
+source = "common/buildings/06_urban_center.txt"
+field = "building_power_plant.ai_value"
+
+[[consumers]]
+source = "common/buildings/07_government.txt"
+field = "building_government_administration.ai_value"
+
+[[consumers]]
+source = "common/buildings/07_government.txt"
+field = "building_university.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_fishing_wharf.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_logging_camp.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_oil_rig.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_rubber_plantation.ai_value"
+
+[[consumers]]
+source = "common/buildings/09_misc_resource.txt"
+field = "building_whaling_station.ai_value"
+
+[[consumers]]
+source = "common/buildings/11_private_infrastructure.txt"
+field = "building_railway.ai_value"
+
+[[consumers]]
+source = "common/company_types/00_companies_africa.txt"
+field = "company_egyptian_rail.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_africa.txt"
+field = "company_misr.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_africa.txt"
+field = "company_suez_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_bunge_born.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_caribbean_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_csfa.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_el_aguila.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_famae.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_fundidora_monterrey.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_hbc.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_kablin.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_la_rosada.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_panama_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_americas.txt"
+field = "company_peruvian_amazon.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_allatini_mills.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_b_grimm.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_east_india_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_great_indian_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_imperial_arsenal.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_imperial_tobacco.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_nam_dinh.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_orient_express.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_ottoman_tobacco_regie.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_san_miguel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_sunhwaguk.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_tata.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_asia.txt"
+field = "company_william_sandford.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_galician_carpathian_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_manfred_weiss.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_mav.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_oevg.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_austria_hungary.txt"
+field = "company_skoda.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_foochow_arsenal.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_hanyang_arsenal.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_jingdezhen.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_china.txt"
+field = "company_kaiping_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_argentinian_wine.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_cordoba_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_eea.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_electricidad_de_caracas.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_estaleiro_maua.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_estanifera_llallagua.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_fundicao_ipanema.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_pernambuco_textiles.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_rossi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_sao_paulo_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_cots.txt"
+field = "company_sudamericana_de_vapores.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_a_markwald_and_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_broken_hill_proprietary_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_ferranti_ltd.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_guthrie.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_maschinenfabrik_oerlikon.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_nhm.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_noda_shoyu.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_oriental_consolidated_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_ramirez.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_siam_electrical_company_limited.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_societe_francaise_charbonnages_du_tonkin.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_sumitomo.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_tokyo_electric_light_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_van_vlissingen_en_dudok_van_heel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_white_star_line.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ep2.txt"
+field = "company_yasuda.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_aker_mek.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_altos_hornos_de_vizcaya.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ap_moller.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_basileiades.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ccci.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_cfr.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_chr_hansens.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_duro_y_compania.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ericsson.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_espana_industrial.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_franco_belge.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_gotaverken.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_john_cockerill.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_kouppas.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_lilpop.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_lkab.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_mozambique_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_nederlandse_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_nokia.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_philips.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_romanian_star.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_trubia.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_ursus.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_europe.txt"
+field = "company_zastava.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_cgv.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_dmc.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_fcm.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_mines_anzin.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_saint_etienne.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_schneider_creusot.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_france.txt"
+field = "company_societe_mokta_el_hadid.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_basf.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_krupp.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_prussian_state_railways.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_rheinmetall.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_schichau.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_germany.txt"
+field = "company_siemens_and_halske.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_armstrong_whitworth.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_bolckow_vaughan.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_gwr.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_j_p_coats.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_great_britain.txt"
+field = "company_john_brown.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_assam_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_bengal_coal_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_bombay_burmah_trading_corporation.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_bombay_dyeing_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_calcutta_electric.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_david_sassoon.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_madura_mills.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_ralli_brothers.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_steel_brothers.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip2.txt"
+field = "company_wadia_shipbuilders.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_elso_budapesti_gozmalom.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_erste_brunner.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_getzner_mutter.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_jakub_klein.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_klanicko_drustvo.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_mate_gavrilovic.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_oesterreichisch_alpine_montangesellschaft.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_stabilimento_tecnico_di_fiume.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_united_tobacco_factories.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip3.txt"
+field = "company_witkowitzer_bergbau_und_huttengewerkschaft.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_bacardi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_douro_wine_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_gran_azucarera.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_hispano_suiza.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_office_cherifien_des_phosphates.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_pedro_domecq.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_rodriguez_arguelles_y_cia.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_secn.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_uniao_fabril.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip4.txt"
+field = "company_ynchausti_y_compania.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_dobrush_paper.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_fiskars.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_grodno_tobacco.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_kharitonenko_and_son.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_kreenholmi_manufaktuur.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_malaxa.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_maslosoyuz.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_poznanski_cotton_products.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_resita_works.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_ip5.txt"
+field = "company_russo-baltic_wagon_factory.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_ansaldo.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_fiat.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_ilva.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_ricordi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_italy.txt"
+field = "company_stt.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_japan.txt"
+field = "company_mantetsu.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_japan.txt"
+field = "company_mitsubishi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_japan.txt"
+field = "company_mitsui.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_anglo_sicilian_sulphur_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_colt_firearms.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_compania_sansinena_de_carnes_congeladas.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_de_beers.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_gebruder_thonet.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_imperial_ethiopian_railways.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_jiangnan_weaving_bureaus.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_john_holt.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_kinkozan_sobei.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_konigliche_porzellan_manufaktur_meissen.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_lanfang_kongsi.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_lee_wilson.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_ludwig_moser_and_sons.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_maison_worth.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_mantero_seta.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_maple_and_co.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_massey_harris.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_norsk_hydro.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_ong_lung_sheng_tea_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_paradox.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_mp1.txt"
+field = "company_russian_american_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_branobel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_izhevsk_arms_plant.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_john_hughes.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_putilov_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_savva_morozov.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_russia.txt"
+field = "company_vodka_monopoly.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_anglo_persian_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_da_afghan_nassaji_sherkat.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_guinness.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_hanseong_jeongi_hoesa.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_iranian_state_railway.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_kirgizian_mining_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_moscow_irrigation_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_national_iranian_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_nicolas_portalis.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_opium_export_monopoly.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_oriental_development_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_perskhlopok.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_persshelk.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_sherkat_shemali.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_sherkate_eslamiya.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_tashkent_railroad.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_turkish_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_soi.txt"
+field = "company_west_ural_petroleum.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_totally_normal.txt"
+field = "company_ingolstadt_electrical_company.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_ford_motor.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_general_electric.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_standard_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_united_fruit.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_us_steel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/00_companies_usa.txt"
+field = "company_william_cramp.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_agriculture_1.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_agriculture_2.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_chemicals.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_colonial_plantations_1.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_colonial_plantations_2.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_electrics.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_fabrics.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_fishing.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_food.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_forestry.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_gold_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_home_goods.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_metal_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_metalworks.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_mineral_mining.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_motors.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_munitions.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_oil.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_paper.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_shipyards.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_silk_and_dye.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_steel.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_textiles.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_weapons.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_basic_wine_and_fruit.ai_weight"
+
+[[consumers]]
+source = "common/company_types/99_basic_companies.txt"
+field = "company_construction_power_bloc.ai_weight"
+
+[[consumers]]
+source = "common/decisions/00_decisions.txt"
+field = "revive_olympic_games_decision.ai_chance"
+
+[[consumers]]
+source = "common/decisions/canal_decisions.txt"
+field = "panama_canal_purchase.ai_chance"
+
+[[consumers]]
+source = "common/decisions/canal_decisions.txt"
+field = "panama_survey_decision.ai_chance"
+
+[[consumers]]
+source = "common/decisions/canal_decisions.txt"
+field = "suez_canal_purchase.ai_chance"
+
+[[consumers]]
+source = "common/decisions/canal_decisions.txt"
+field = "suez_survey_decision.ai_chance"
+
+[[consumers]]
+source = "common/decrees/00_decree.txt"
+field = "decree_emergency_relief.ai_weight"
+
+[[consumers]]
+source = "common/diplomatic_actions/03_violate_sovereignty.txt"
+field = "violate_sovereignty.ai.propose_score"
+
+[[consumers]]
+source = "common/diplomatic_actions/26_join_power_bloc.txt"
+field = "join_power_bloc.ai.propose_score"
+
+[[consumers]]
+source = "common/diplomatic_actions/32_subjects_raise_payments.txt"
+field = "raise_payments.ai.propose_score"
+
+[[consumers]]
+source = "common/diplomatic_actions/33_subjects_decrease_payments.txt"
+field = "decrease_payments.ai.propose_score"
+
+[[consumers]]
+source = "common/diplomatic_actions/34_subjects_exempt_from_service.txt"
+field = "exempt_from_service.ai.propose_score"
+
+[[consumers]]
+source = "common/diplomatic_actions/38_subjects_increase_autonomy.txt"
+field = "da_increase_autonomy_of_self.ai.propose_score"
+
+[[consumers]]
+source = "common/diplomatic_actions/40_subjects_knowledge_sharing.txt"
+field = "da_knowledge_sharing.ai.propose_score"
+
+[[consumers]]
+source = "common/laws/00_army_model.txt"
+field = "law_mass_conscription.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_army_model.txt"
+field = "law_national_militia.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_army_model.txt"
+field = "law_peasant_levies.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_army_model.txt"
+field = "law_professional_army.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_army_model.txt"
+field = "law_warrior_caste.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_bureaucracy.txt"
+field = "law_crownland_diets.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_bureaucracy.txt"
+field = "law_hereditary_bureaucrats.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_caste_hegemony.txt"
+field = "law_affirmative_action.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_caste_hegemony.txt"
+field = "law_hindu_caste_codified.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_caste_hegemony.txt"
+field = "law_hindu_caste_enforced.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_caste_hegemony.txt"
+field = "law_hindu_caste_not_enforced.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_caste_hegemony.txt"
+field = "law_intermediate_edo_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_caste_hegemony.txt"
+field = "law_lax_edo_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_caste_hegemony.txt"
+field = "law_strict_edo_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_church_and_state.txt"
+field = "law_caesaropapism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_church_and_state.txt"
+field = "law_freedom_of_conscience.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_church_and_state.txt"
+field = "law_millet_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_church_and_state.txt"
+field = "law_people_of_the_book.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_church_and_state.txt"
+field = "law_state_atheism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_church_and_state.txt"
+field = "law_state_religion.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_church_and_state.txt"
+field = "law_total_separation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_citizenship.txt"
+field = "law_cultural_exclusion.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_citizenship.txt"
+field = "law_ethnostate.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_citizenship.txt"
+field = "law_multicultural.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_citizenship.txt"
+field = "law_national_supremacy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_citizenship.txt"
+field = "law_official_nationality.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_citizenship.txt"
+field = "law_racial_segregation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_anarchy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_autocracy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_bakufu.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_census_voting.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_elder_council.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_landed_voting.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_neo_absolutism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_oligarchy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_organic_regulation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_single_party_state.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_technocracy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_universal_suffrage.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_distribution_of_power.txt"
+field = "law_wealth_voting.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_chiefdom.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_corporate_state.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_council_republic.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_monarchy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_parliamentary_republic.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_presidential_republic.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_social_monarchy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_governance_principles.txt"
+field = "law_theocracy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_extraordinary_commission.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_guaranteed_liberties.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_national_guard.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_no_home_affairs.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_okhrana.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_secret_police.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_shinsengumi.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_internal_security.txt"
+field = "law_third_section.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_navy_model.txt"
+field = "law_diplomatic_navy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_navy_model.txt"
+field = "law_jeune_ecole.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_navy_model.txt"
+field = "law_merchant_navy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/00_navy_model.txt"
+field = "law_professional_navy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_colonial_affairs.txt"
+field = "law_colonial_exploitation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_colonial_affairs.txt"
+field = "law_colonial_resettlement.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_colonial_affairs.txt"
+field = "law_frontier_colonization.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_colonial_affairs.txt"
+field = "law_no_colonial_affairs.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_agrarianism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_command_economy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_cooperative_ownership.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_extraction_economy.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_industry_banned.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_interventionism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_laissez_faire.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_economic_system.txt"
+field = "law_traditionalism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_no_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_private_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_public_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_religious_schools.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_education_system.txt"
+field = "law_terakoya.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_health_system.txt"
+field = "law_charitable_health_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_health_system.txt"
+field = "law_no_health_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_health_system.txt"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_collectivized_agriculture.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_commercialized_agriculture.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_expanded_latifundias.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_homesteading.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_latifundias.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_manorialism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_peasant_proprietorship.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_serfdom.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_land_reform.txt"
+field = "law_tenant_farmers.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_policing.txt"
+field = "law_dedicated_police.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_policing.txt"
+field = "law_local_police.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_policing.txt"
+field = "law_militarized_police.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_policing.txt"
+field = "law_no_police.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_consumption_based_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_graduated_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_land_based_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_per_capita_based_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_taxation.txt"
+field = "law_proportional_taxation.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_trade_policy.txt"
+field = "law_canton_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_trade_policy.txt"
+field = "law_free_trade.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_trade_policy.txt"
+field = "law_isolationism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_trade_policy.txt"
+field = "law_mercantilism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_trade_policy.txt"
+field = "law_protectionism.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/01_trade_policy.txt"
+field = "law_sakoku.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_childrens_rights.txt"
+field = "law_child_labor_allowed.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_childrens_rights.txt"
+field = "law_compulsory_primary_school.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_childrens_rights.txt"
+field = "law_restricted_child_labor.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_free_speech.txt"
+field = "law_censorship.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_free_speech.txt"
+field = "law_outlawed_dissent.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_free_speech.txt"
+field = "law_protected_speech.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_free_speech.txt"
+field = "law_right_of_assembly.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labor_rights.txt"
+field = "law_no_workers_rights.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labor_rights.txt"
+field = "law_regulatory_bodies.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labor_rights.txt"
+field = "law_worker_protections.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labour_associations.txt"
+field = "law_anti_strike_laws.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labour_associations.txt"
+field = "law_combination_acts.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labour_associations.txt"
+field = "law_corporatized_unions.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labour_associations.txt"
+field = "law_factory_councils.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labour_associations.txt"
+field = "law_guild_system.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_labour_associations.txt"
+field = "law_right_to_associate.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_migration.txt"
+field = "law_closed_borders.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_migration.txt"
+field = "law_migration_controls.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_migration.txt"
+field = "law_no_migration_controls.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_rights_of_women.txt"
+field = "law_no_womens_rights.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_rights_of_women.txt"
+field = "law_women_in_the_fields.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_rights_of_women.txt"
+field = "law_women_in_the_workplace.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_rights_of_women.txt"
+field = "law_women_own_property.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_rights_of_women.txt"
+field = "law_womens_suffrage.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_slavery.txt"
+field = "law_colonial_slavery.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_slavery.txt"
+field = "law_debt_slavery.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_slavery.txt"
+field = "law_legacy_slavery.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_slavery.txt"
+field = "law_slave_trade.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_slavery.txt"
+field = "law_slavery_banned.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_welfare.txt"
+field = "law_chiefs_distribute_aid.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_welfare.txt"
+field = "law_no_social_security.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_welfare.txt"
+field = "law_old_age_pension.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_welfare.txt"
+field = "law_poor_laws.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/laws/02_welfare.txt"
+field = "law_wage_subsidies.ai_enact_weight_modifier"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_balloon_recon.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_chemical_weapons.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_chocolate.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_extra_supplies.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_field_hospitals.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_first_aid.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_flamethrowers.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_liquor.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_luxurious_supplies.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_machinegunners.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_motorized_recon.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_opium.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_rail_transport.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_tobacco.ai_weight"
+
+[[consumers]]
+source = "common/mobilization_options/00_mobilization_option.txt"
+field = "mobilization_option_truck_transport.ai_weight"
+
+[[consumers]]
+source = "common/scripted_buttons/00_hispaniola_buttons.txt"
+field = "je_haitian_debt_payment_button.ai_chance"
+
+[[consumers]]
+source = "common/scripted_buttons/04_indian_famines_buttons.txt"
+field = "je_indian_famines_button_epidemic_control.ai_chance"
+
+[[consumers]]
+source = "common/scripted_buttons/04_indian_famines_buttons.txt"
+field = "je_indian_famines_button_relief_kitchens.ai_chance"
+
+[[consumers]]
+source = "common/scripted_buttons/04_indian_famines_buttons.txt"
+field = "je_indian_famines_button_work_camps.ai_chance"
+
+[[consumers]]
+source = "common/scripted_buttons/07_japan_buttons.txt"
+field = "button_je_taming_the_north_agriculture_potentials.ai_chance"
+
+[[consumers]]
+source = "common/scripted_buttons/southamerica_migration_button.txt"
+field = "southamerica_migration_button.ai_chance"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_aircraft_carrier_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_armored_cruiser_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_coastal_defense_ship_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_destroyer_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_dreadnought_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_ironclad_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_early_troop_ship_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_frigate_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_iron_frigate_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_light_cruiser_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_modern_ironclad_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_monitor_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_pre_dreadnought_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_protected_cruiser_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_seaplane_tender_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_ship_of_the_line_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_submarine_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_super_dreadnought_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_destroyer_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_torpedo_boat_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_armor_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_armor_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_armor_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_guns_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_guns_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_guns_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_propulsion_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_propulsion_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_propulsion_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_range_high.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_range_light.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/00_ship_modifications.txt"
+field = "ship_mod_troop_ship_range_medium.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_advanced_explosives.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_camouflage.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_extended_sick_bay.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_fire_control_system.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_fire_suppression.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_landing_skiffs.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_large_carronades.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_patrol_boats.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_range_finder.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_searchlights.ai_weight"
+
+[[consumers]]
+source = "common/ship_modifications/01_utility_modifications.txt"
+field = "utility_mod_torpedo_nets.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "aniline.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "arc_welding.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "art_silk.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "atmospheric_engine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "automatic_bottle_blowers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "baking_powder.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "bessemer_process.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "canneries.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "chemical_bleaching.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "combustion_engine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "compression_ignition.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "conveyors.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "cotton_gin.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "crystal_glass.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "distillation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "dough_rollers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "dynamite.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electric_arc_process.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electric_railway.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electrical_capacitors.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "electrical_generation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "enclosure.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "flash_freezing.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "fractional_distillation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "improved_fertilizer.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "intensive_agriculture.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "lathe.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "manufacturies.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "mechanical_tools.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "mechanized_farming.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "mechanized_workshops.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "nitrogen_fixation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "nitroglycerin.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "oil_turbine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "open_hearth_process.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "pasteurization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "plastics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "pneumatic_tools.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "prospecting.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "pumpjacks.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "radio.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "railways.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "reinforced_concrete.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "rotary_valve_engine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "rubber_mastication.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "sericulture.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "shaft_mining.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "shift_work.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steam_donkey.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steam_turbine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steel_railway_cars.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "steelworking.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "telephone.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "threshing_machine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "vacuum_canning.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "vulcanization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/10_production.txt"
+field = "watertube_boiler.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "admiralty.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "army_reserves.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "artillery.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "automatic_machine_guns.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "battlefleet_tactics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "battleship_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "bolt_action_rifles.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "breech_loading_artillery.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "carrier_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "chemical_warfare.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "concrete_dockyards.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "concrete_fortifications.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "defense_in_depth.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "destroyer.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "dreadnought_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "drydocks.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "electric_telegraph.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "enlistment_offices.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "field_works.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "flamethrowers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "floating_harbor.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "gantry_cranes.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "general_staff.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "gunsmithing.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "handcranked_machine_gun.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "hydraulic_cranes.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "ironclad_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "jeune_ecole.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "landing_craft.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "line_infantry.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "logistics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "mandatory_service.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "military_aviation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "military_drill.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "military_statistics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "mobile_armor.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "modern_nursing.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "monitor_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "napoleonic_warfare.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "navigation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "nco_training.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "paddle_steamer.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "percussion_cap.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "power_of_the_purse.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "pre_dreadnought_tech.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "repeaters.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "rifling.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "screw_frigate.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "sea_lane_strategies.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "self_propelled_torpedoes.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "shell_gun.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "standing_army.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "stormtroopers.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "submarine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "trench_works.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "triage.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "war_propaganda.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/20_military.txt"
+field = "wargaming.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "academia.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "analytical_philosophy.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "anarchism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "antibiotics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "banking.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "behaviorism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "camera.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "central_archives.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "central_banking.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "central_planning.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "centralization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "civilizing_mission.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "colonization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_charters.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_management.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "corporatism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "currency_standards.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "democracy.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "dialectics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "egalitarianism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "elevator.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "empiricism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "feminism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "film.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "human_rights.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "identification_documents.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "international_exchange_standards.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "international_relations.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "international_trade.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "investment_banks.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "joint_stock_companies.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "labor_movement.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "law_enforcement.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "macroeconomics.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "malaria_prevention.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mass_communication.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mass_propaganda.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mass_surveillance.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "medical_degrees.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "modern_financial_instruments.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "modern_sewerage.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "multilateral_alliances.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "mutual_funds.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "nationalism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "organized_sports.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "pan-nationalism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "paved_roads.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "pharmaceuticals.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "philosophical_pragmatism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "political_agitation.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "postal_savings.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "psychiatry.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "psychoanalysis.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "quinine.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "rationalism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "realism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "romanticism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "socialism.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "steel_frame_buildings.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "stock_exchange.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "tech_bureaucracy.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "urban_planning.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "urbanization.ai_weight"
+
+[[consumers]]
+source = "common/technology/technologies/30_society.txt"
+field = "zeppelins.ai_weight"
+
+[[consumers]]
+source = "common/treaty_articles/00_alliance.txt"
+field = "alliance.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/01_defensive_pact.txt"
+field = "defensive_pact.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/02_guarantee_independence.txt"
+field = "guarantee_independence.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/07_foreign_investment_rights.txt"
+field = "foreign_investment_rights.ai.evaluation_chance"
+
+[[consumers]]
+source = "common/treaty_articles/24_transit_rights.txt"
+field = "transit_rights.ai.evaluation_chance"
+
+[[consumers]]
+source = "common/treaty_articles/25_trade_privilege.txt"
+field = "trade_privilege.ai.evaluation_chance"
+
+[[consumers]]
+source = "common/treaty_articles/31_toll_exemption.txt"
+field = "toll_exemption.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/32_no_tolls.txt"
+field = "no_tolls.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/33_strait_access.txt"
+field = "strait_access.ai.proposal_weight"
+
+[[consumers]]
+source = "common/treaty_articles/34_no_strait_closure.txt"
+field = "no_strait_closure.ai.proposal_weight"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "combat_unit_group_weights.combat_unit_group_artillery"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "institution_scores.institution_schools"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "institution_scores.institution_social_security"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "max_active_stances"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "max_ship_design_complexity"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "revolution_aversion"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "state_value"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "treaty_category_scores.economy"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "treaty_category_scores.military_defense"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "treaty_category_scores.trade"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "wanted_army_size"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "wanted_construction_output"
+
+[[consumers]]
+source = "mod/decisions/information.toml"
+field = "wanted_navy_size"

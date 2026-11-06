@@ -12,6 +12,10 @@ schema = 1
 "common/laws/00_citizenship.txt" = "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76"
 "events/cultural_homeland_events.txt" = "d866a5c3570d23e3a08eb26c5bdc3a44586d08f5a4b690a080909f7f43b17024"
 
+"common/discrimination_traits/03_religious_heritages.txt" = "c2df79b7fbecdd2c89a351ba1eb95fcc70d61ed9cac216f86157429426b52950"
+"common/discrimination_trait_groups/02_religious_heritage_groups.txt" = "a2d7afc654bb89bb261f09789d447e415773d686b9b544c958aba12f279f9708"
+
 [tuning]
+observed_state_protection_loss = 4
 observed_religious_need = 6
 observed_cultural_need = 6

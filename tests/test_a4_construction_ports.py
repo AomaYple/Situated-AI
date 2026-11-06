@@ -15,9 +15,9 @@ from test_a3_rule_relation_projection import production as production_fixture
 from test_remaining_joint_consumers import _block, _native_number, _overlay, _render
 from test_situated_joint_witnesses import _facts
 
-from pdx import decision_interfaces, decision_rules
+from pdx import decision_adapters, decision_interfaces, decision_rules
 from pdx.parser import parse_text
-from pdx.situated import pdx_eval, programs
+from pdx.situated import compiler, evidence, pdx_eval, ports, programs
 from tools.ci import a4_classify
 
 FIELD = "wanted_construction_output"
@@ -26,7 +26,9 @@ INFO = "mod/decisions/information.toml"
 
 @pytest.fixture(scope="module")
 def production():
-    return production_fixture.__wrapped__()
+    wrapped = getattr(production_fixture, "__wrapped__", None)
+    assert callable(wrapped)
+    return wrapped()
 
 
 def values(**changes):
@@ -225,9 +227,15 @@ def test_current_raw_identity_and_joint_writer_contribution_are_mechanical(produ
     # dataclass tuples must not invalidate an otherwise unchanged live candidate.
     assert json.loads(json.dumps(projected)) == projected
     budget = projected["static_budget"]
-    assert (budget["ports"], budget["uses"]) == (27, 13)
-    assert budget["max_expanded_leaves"] <= 4
-    assert budget["max_evaluation_cost"] <= 7
+    # The graph is now a combined explicit + consumer-partition projection.
+    # Keep whole-graph metrics truthful and check the historical construction
+    # slice through its exact writer-use closure separately.
+    assert (budget["ports"], budget["uses"]) == (4726, 6138)
+    assert budget["max_expanded_leaves"] == 14
+    assert budget["max_evaluation_cost"] == 15
+    assert (budget["construction_ports"], budget["construction_uses"]) == (27, 13)
+    assert budget["construction_max_expanded_leaves"] <= 4
+    assert budget["construction_max_evaluation_cost"] <= 7
     assert budget["construction_nodes"] <= 320
     assert budget["construction_depth"] <= 26
     assert budget["construction_branches"] <= 12
@@ -235,6 +243,47 @@ def test_current_raw_identity_and_joint_writer_contribution_are_mechanical(produ
     assert (
         budget["object_iterations"] == budget["world_scans"] == budget["mod_persistent_writes"] == 0
     )
+    graph = model.port_graph
+    assert graph is not None
+    original_facts = {
+        fact.id: fact
+        for fact in compiler._reader_facts(
+            evidence.load(compiler.FACTS),
+            information=decision_rules.load(),
+            adapters=decision_adapters.load(),
+        )
+    }
+    fact_origins: dict[str, set[str]] = {}
+    fact_ids = {fact.id for fact in model.facts}
+    for port in graph.ports:
+        origins = graph.origins(port.id)
+        for reader_key, reader, aliases in (
+            (port.reader_key, port.reader, port.reader_aliases),
+            (port.reference_key, port.reference_reader, port.reference_aliases),
+        ):
+            if reader_key is None or reader is None:
+                continue
+            signature = json.dumps(
+                ports.reader_signature(reader),
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            ids = {
+                origin.identity
+                for origin in origins
+                if origin.reader_source == reader_key[0] and origin.signature == signature
+            }
+            for _, alias in aliases or (reader_key,):
+                fact_origins.setdefault(alias, set()).update(ids)
+        if port.id in fact_ids and len(origins) == 1:
+            fact_origins.setdefault(port.id, set()).add(origins[0].identity)
+    # Concrete multi-observation counterexample: combining consumers must not
+    # promote the logical tools fact to one arbitrary consumer observation.
+    tools_fact = next(fact for fact in model.facts if fact.id == "tools_balance")
+    assert len(fact_origins["tools_balance"]) > 1
+    assert tools_fact.identity == "information:mod/decisions/information.toml:tools_balance"
+    assert tools_fact.identity not in fact_origins["tools_balance"]
     for binding in policy.port_bindings:
         if binding.definition not in {
             "remaining_industrial_construction_need",
@@ -261,10 +310,18 @@ def test_current_raw_identity_and_joint_writer_contribution_are_mechanical(produ
             assert origin.observation.source_sha256
             assert origin.observation.proof
             assert origin.observation.unknown == "preserve_unknown"
-            assert (
-                next(fact for fact in model.facts if fact.id == origin.reader_key).identity
-                == origin.identity
-            )
+            fact = next(fact for fact in model.facts if fact.id == origin.reader_key)
+            observation_ids = fact_origins[fact.id]
+            # EvidenceSpec.identity is a logical fact ID unless compiler
+            # proves one complete observation for that source/key/signature;
+            # then it is promoted to that observation SHA. Origin identity is
+            # always the complete Observation SHA.
+            assert origin.identity in observation_ids
+            if len(observation_ids) == 1:
+                assert fact.identity == origin.identity
+            else:
+                assert fact.identity == original_facts[fact.id].identity
+            assert origin.identity == origin.observation.identity
 
 
 @pytest.mark.parametrize("fault", ["unit", "actor", "target", "cause"])
@@ -365,6 +422,7 @@ def test_complete_native_construction_ast_keeps_cost_and_operations(production, 
 @pytest.mark.parametrize("bad", [True, "1", math.inf, math.nan])
 def test_complete_native_getters_reject_wrong_type_or_nonfinite(getter, bad):
     item = parse_text(f"value = {getter}").root.first("value")
+    assert item is not None
     with pytest.raises(pdx_eval.UnsupportedPdxError, match="有限数"):
         pdx_eval._numeric_value(item, {"ROOT": {getter: bad}})
     assert pdx_eval._numeric_value(item, {"ROOT": {}}) is None

@@ -12,7 +12,8 @@ import json
 import math
 import tomllib
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from . import config
@@ -392,11 +393,32 @@ class RegionalResourceProgram:
     def reader_bindings(self) -> tuple[tuple[str, str, str, str], ...]:
         return (("regional_resource_opportunity", "root", "country", "actor"),)
 
+    def predicate_ports(self):
+        from .decision_rules import Predicate  # noqa: PLC0415
+        from .situated import program_ports  # noqa: PLC0415
+
+        proof = tuple(f"{key}:sha256={value}" for key, value in sorted(load()["sources"].items()))
+        return program_ports.bind(
+            scalar=self.scalar,
+            source=self.source,
+            definition=self.definition,
+            context=self.evaluation_context(),
+            readers=self.readers(),
+            reader_bindings=self.reader_bindings(),
+            predicates={ACTION: (Predicate("regional_resource_opportunity", "=", True),)},
+            guard_roles={ACTION: "benefit"},
+            source_sha256=hashlib.sha256(
+                PARAMETERS.read_bytes() + b"\0generator:" + Path(__file__).read_bytes()
+            ).hexdigest(),
+            source_proofs=proof,
+            domain=DOMAIN,
+        )
+
     def writer_ir(self) -> WriterDecisionIR:
         from .situated.decision_ir import WriterDecisionIR  # noqa: PLC0415
 
         self.validate()
-        return WriterDecisionIR(
+        writer = WriterDecisionIR(
             writer_id=self.writer_id,
             kind="regional_resource_program",
             source=self.source,
@@ -413,6 +435,8 @@ class RegionalResourceProgram:
             reader_context_bindings=self.reader_bindings(),
         )
 
+        return replace(writer, port_contributions=self.predicate_ports().contributions(writer))
+
     def as_dict(self) -> dict[str, Any]:
         self.validate()
         return {
@@ -422,6 +446,7 @@ class RegionalResourceProgram:
             "scalar": asdict(self.scalar),
             "readers": [asdict(r) for r in self.readers()],
             "reader_context_bindings": [list(row) for row in self.reader_bindings()],
+            "predicate_ports": self.predicate_ports().as_dict(),
         }
 
     def evaluate(
@@ -439,7 +464,9 @@ class RegionalResourceProgram:
             return 0.0
         guard = values.get("regional_resource_opportunity")
         _boolean(guard)
-        return programs.evaluate_scalar(self.scalar, {ACTION: guard is True})
+        return programs.evaluate_scalar(
+            self.scalar, self.predicate_ports().evaluate({"regional_resource_opportunity": guard})
+        )
 
 
 def compile_program() -> RegionalResourceProgram:
@@ -472,7 +499,7 @@ def render(program: RegionalResourceProgram) -> str:
         f"# ACTION {ACTION} [{DOMAIN}]; candidate region resource potential\n"
         + programs.render_scalar(
             program.scalar,
-            {ACTION: render_query(RegionalResourceQuery())},
+            program.predicate_ports().render(),
             ai_guard="exists = ROOT ROOT = { is_ai = yes } exists = scope:target_region",
             style="cards",
             domain=DOMAIN,

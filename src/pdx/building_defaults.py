@@ -1,4 +1,4 @@
-"""Narrow current native proof for eleven existing missing-field initializers.
+"""Narrow current native proof for twelve exact missing-field initializers.
 
 The State frame does not expose the independent candidate Country or payer.
 An explicit expression, including an empty or conditional-only one, never uses
@@ -21,13 +21,13 @@ if TYPE_CHECKING:
 
 MANIFEST_ID = "research/situated/victoria3-1.15.0-building-defaults.json"
 MANIFEST = config.REPO / MANIFEST_ID
-MANIFEST_SHA256 = "e7372899def1925b93322aef001a3010c7e4378460980699771e47315812e068"
-_CONTRACT_SHA256 = "6aacad618d7ca1f2ad3e82f450be7cf6521e5ecdba6fd07ce37ee662e8cdf671"
-_INITIALIZERS_SHA256 = "b20c6dd9a27fe4c968bd852a44d7c55243284d331f83c6f9a035d3d3e9b2e07e"
+MANIFEST_SHA256 = "e0ff6b2a08bcaf7ec39a79f89babbec6ce5dc8d5384591b4b2fe3ff161289aa0"
+_CONTRACT_SHA256 = "34e70b7ef454871bf4281eff576a9cb7bba8bfeb9847c4ebf84551859b31df26"
+_INITIALIZERS_SHA256 = "78091ca6ec4dc2a319ef0ee0e28cc9639cf338a6ecddab2b57cbe5464b9edbbc"
 SELECTOR_ID = "research/situated/victoria3-1.15.0-building-static-selector.json"
 _SELECTOR = config.REPO / SELECTOR_ID
-_SELECTOR_SHA256 = "1d1cbd8bf048a08919df42ed4f07a14756207b02fe92462881f0c8657255d9a2"
-_SELECTOR_CONTENT_SHA256 = "ad39d90dc8abb62ca9df1d7cc050d875688df4bcff1bb54790b3774fb321d85e"
+_SELECTOR_SHA256 = "befd2bcee8cb7996928102f200835109b235f2602c88cf97ca7f317adfe7f24d"
+_SELECTOR_CONTENT_SHA256 = "9c607f59757c83858659d9e72ecc6fe307c8884f69296477b18972e0f11c5624"
 
 
 def _digest(value: Any) -> str:
@@ -90,6 +90,7 @@ def snapshot() -> bytes:
         or proof["sha256"] != _SELECTOR_SHA256
         or data["exe"] != selector["exe"]
         or len(types) != 12
+        or selector["contract"]["copper_initializer_permission"] is not True
         or set(selector["contract"]["initializer_ids"])
         != {row["id"] for row in data["initializers"]}
         or any(data["script_hashes"].get(s) != h for s, h in selector["script_hashes"].items())

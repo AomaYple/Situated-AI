@@ -25,10 +25,13 @@ _SCOPES = frozenset(
     {
         "ROOT",
         "owner",
+        "state_region",
         "market",
         "overlord",
         "scope:target_state",
         "scope:target_country",
+        "scope:actor",
+        "power_bloc",
         "scope:overlord",
         "scope:interest_group",
         "scope:anti_public_healthcare_ig",
@@ -42,15 +45,21 @@ _SCOPES = frozenset(
         "scope:mega_volcanic_state",
         "scope:country",
         "scope:enemy_country",
+        # Complete native textile ai_value enters this exact journal object.
+        # Do not accept arbitrary je:* names or turn its missing data into false.
+        "je:je_five_year_plan",
     }
 )
 _GOODS_SCOPE = re.compile(r"(?:mg|sg):[a-z][a-z0-9_]*\Z")
 _INTEREST_GROUP_SCOPE = re.compile(r"ig:ig_[a-z][a-z0-9_]*\Z")
-_REFERENCE = re.compile(r"(?:ROOT|scope:[a-z][a-z0-9_]*)(?:\.[a-z][a-z0-9_]*)+\Z")
+_REFERENCE = re.compile(
+    r"(?:ROOT|scope:[a-z][a-z0-9_]*)(?:\.[a-z][a-z0-9_]*)*(?:\.modifier:country_weekly_innovation_max_add|\.[a-z][a-z0-9_]*)\Z"
+)
 _NUMERIC_OPS = frozenset({"=", "<", "<=", ">", ">="})
 _PARAMETER_QUERIES = frozenset(
     {
         "has_diplomatic_pact",
+        "is_diplomatic_play_enemy_of",
         "has_law_or_variant",
         "has_potential_resource",
         "has_strategy",
@@ -62,6 +71,7 @@ _PARAMETER_QUERIES = frozenset(
         "has_modifier",
         "has_building",
         "is_homeland_of_country_cultures",
+        "is_homeland",
         "owner",
         "is_production_method_active",
         "is_subject_of",
@@ -71,6 +81,7 @@ _PARAMETER_QUERIES = frozenset(
         "radical_fraction",
         "has_institution",
         "has_journal_entry",
+        "has_principle",
         "is_involved_in_journal_entry",
         "sitai_defense_commitment",
         "sitai_neighbor_defense",
@@ -188,6 +199,8 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
         if assignment.key in _PARAMETER_QUERY_BLOCKS:
             raise UnsupportedPdxError(f"参数化查询 {assignment.key} 必须使用参数块")
         argument = assignment.value.unquoted
+        if assignment.key == "is_diplomatic_play_enemy_of" and argument != "overlord":
+            raise UnsupportedPdxError("宗属原生资格只登记实际overlord敌人查询")
         if argument in {"yes", "no"} or not re.fullmatch(r"[a-z][a-z0-9_:-]*", argument):
             raise UnsupportedPdxError(f"参数化查询 {assignment.key} 参数身份无效")
         parameters = {"argument": argument}
@@ -580,12 +593,12 @@ def _condition(
                 )
             )
             continue
-        if item.key in {"AND", "OR", "NOT"}:
+        if item.key in {"AND", "OR", "NOT", "NOR"}:
             if not isinstance(item.value, Block):
                 raise UnsupportedPdxError(f"{item.key} 条件必须是块")
-            nested_mode: Literal["all", "any"] = "any" if item.key == "OR" else "all"
+            nested_mode: Literal["all", "any"] = "any" if item.key in {"OR", "NOR"} else "all"
             nested = _condition(item.value, facts, mode=nested_mode, root=anchor)
-            if item.key == "NOT":
+            if item.key in {"NOT", "NOR"}:
                 values.append(truth_not(nested))
             else:
                 values.append(nested)
@@ -652,6 +665,25 @@ def _condition(
             actual = facts[item.key]
             scalar = _scalar(item, label=item.key)
             expected: object = _literal(scalar)
+            if item.key == "state_region":
+                # The native university field both compares this exact region
+                # object and enters it to query its homelands. Keep the identity
+                # on that same object, never on ROOT or a separate flat alias.
+                if isinstance(actual, Mapping):
+                    actual = actual.get("identity")
+                if actual is not None and (
+                    not isinstance(actual, str)
+                    or re.fullmatch(r"s:STATE_[A-Z0-9_]+", actual) is None
+                ):
+                    raise UnsupportedPdxError("州区域 identity 必须是原版区域身份或未知")
+                if (
+                    item.op != "="
+                    or not isinstance(expected, str)
+                    or re.fullmatch(r"s:STATE_[A-Z0-9_]+", expected) is None
+                ):
+                    raise UnsupportedPdxError("州区域身份只支持精确原版区域比较")
+                values.append(None if actual is None else actual == expected)
+                continue
             if (
                 item.key == "country_rank"
                 and isinstance(expected, str)
@@ -684,6 +716,7 @@ def _condition(
             elif not scalar.quoted and (item.key, item.op, expected) in {
                 ("tax_capacity", "<", "tax_capacity_usage"),
                 ("average_sol", "<", "average_expected_sol"),
+                ("country_innovation", "<", "max_innovation"),
             }:
                 # Exact same-state getter pairs proved by government-building
                 # and emergency-relief consumers. No generic identifier or
@@ -735,6 +768,7 @@ def _validate_condition(block: Block) -> None:
             "AND",
             "OR",
             "NOT",
+            "NOR",
             "any_political_movement",
             "any_interest_group",
             "any_scope_state",

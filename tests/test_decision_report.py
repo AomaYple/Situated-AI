@@ -14,6 +14,11 @@ def engineering_metadata() -> dict[str, Any]:
     return decision_report.source_metadata()
 
 
+def test_innovation_readers_are_classified_as_capacity() -> None:
+    assert decision_report.PROFILE_ROLES["country_innovation"] == "capacity"
+    assert decision_report.PROFILE_ROLES["modifier:country_weekly_innovation_max_add"] == "capacity"
+
+
 def test_decision_report_covers_all_declared_domains(engineering_metadata: dict[str, Any]) -> None:
     report = decision_report.build(engineering_metadata)
 

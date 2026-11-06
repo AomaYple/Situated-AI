@@ -49,11 +49,11 @@ revive_olympic_games_decision = {
 			# GROUP program_e793982a5be6162d_olympic_administration_exposure_negative
 			add = { value = 0
 				# olympic_output_exposure [political]; 原版赛事持续913天降低行政产出乘数0.1；薄净余额与薄余额且大产出暴露属于同一行政风险分档取强。阈值是有界设计假设，不是精确比例或执行后损失；大产出单独不降权。
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 500 produced_bureaucracy >= 0 produced_bureaucracy >= 5000 } } add = -0.2 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { bureaucracy < 500 produced_bureaucracy >= 0 produced_bureaucracy >= 5000 } } add = -0.2 } }
 				# olympic_very_thin_buffer [political]; 原版赛事持续913天降低行政产出乘数0.1；薄净余额与薄余额且大产出暴露属于同一行政风险分档取强。阈值是有界设计假设，不是精确比例或执行后损失；大产出单独不降权。
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { bureaucracy >= 0 NOT = { bureaucracy >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 100 } } } } }  } else = { add = -0.2 } } } }
 				# olympic_thin_buffer [political]; 原版赛事持续913天降低行政产出乘数0.1；薄净余额与薄余额且大产出暴露属于同一行政风险分档取强。阈值是有界设计假设，不是精确比例或执行后损失；大产出单独不降权。
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 500 } } add = -0.1 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { bureaucracy < 500 } } add = -0.1 } }
 			}
 			min = 0.8
 			max = 1

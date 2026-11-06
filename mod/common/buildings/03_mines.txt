@@ -80,29 +80,29 @@ building_coal_mine = {
 			# GROUP program_f5de4e0a753de0d1_building_infrastructure_pressure_negative
 			add = { value = 0
 				# building_opportunity_building_coal_mine_infrastructure_cost [market]; 候选州基础设施余额为负，增加建设承载压力；静态偏好代价不改变原版费用或资格
-				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 exists = owner owner = { is_ai = yes } } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 } } add = -0.1 }
 			}
 			# GROUP program_f5de4e0a753de0d1_building_output_demand_positive
 			add = { value = 0
 				# SITAI CHAIN LJ02/LJ02.coal_output_transport_foundation writer=rule_action_common_buildings_03_mines_txt_lj02_coal_output_transport_foundation
 				# lj02_coal_output_transport_foundation [economy]; 实际启用基础采煤方式且本州煤炭真实高价短缺、物流与财政可承受时，有限提高煤炭供给候选，为运输修复提供原版投入基础
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_picks_and_shovels_building_coal_mine } infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_picks_and_shovels_building_coal_mine } infrastructure_delta >= 0 exists = owner owner = { in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_coal_mine_building_coal_mine_pm_diesel_pump_building_coal_mine_coal [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_diesel_pump_building_coal_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_diesel_pump_building_coal_mine } exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_coal_mine_building_coal_mine_pm_condensing_engine_pump_building_coal_mine_coal [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_condensing_engine_pump_building_coal_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_condensing_engine_pump_building_coal_mine } exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_coal_mine_building_coal_mine_pm_atmospheric_engine_pump_building_coal_mine_coal [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_atmospheric_engine_pump_building_coal_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_atmospheric_engine_pump_building_coal_mine } exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_coal_mine_building_coal_mine_pm_picks_and_shovels_building_coal_mine_coal [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_picks_and_shovels_building_coal_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coal_mine production_method = pm_picks_and_shovels_building_coal_mine } exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# building_coal_mine_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
 				# building_opportunity_building_coal_mine_coal_pressure [market]; 必选基础PMG全部方法共同正产出coal；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
 				# building_opportunity_building_coal_mine_coal_demand [market]; 必选基础PMG全部方法共同正产出coal；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 				# borrowing_foundation_building_coal_mine [economy]; 正常借款且实际基础配方产出存在直接短缺时，保留有界的基础建设倾向；真实投入成本优先
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coal_mine production_method = pm_picks_and_shovels_building_coal_mine } exists = owner owner = { is_ai = yes in_default = no taking_loans = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } } } } } add = 0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coal_mine production_method = pm_picks_and_shovels_building_coal_mine } exists = owner owner = { in_default = no taking_loans = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } } } } } add = 0.05 }
 			}
 			min = 0.5
 			max = 1.2
@@ -203,29 +203,29 @@ building_iron_mine = {
 			# GROUP program_cd11548addd14a84_building_infrastructure_pressure_negative
 			add = { value = 0
 				# building_opportunity_building_iron_mine_infrastructure_cost [market]; 候选州基础设施余额为负，增加建设承载压力；静态偏好代价不改变原版费用或资格
-				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 exists = owner owner = { is_ai = yes } } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 } } add = -0.1 }
 			}
 			# GROUP program_cd11548addd14a84_building_output_demand_positive
 			add = { value = 0
 				# actual_output_building_iron_mine_building_iron_mine_pm_diesel_pump_building_iron_mine_iron [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_diesel_pump_building_iron_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_diesel_pump_building_iron_mine } exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_iron_mine_building_iron_mine_pm_condensing_engine_pump_building_iron_mine_iron [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_condensing_engine_pump_building_iron_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_condensing_engine_pump_building_iron_mine } exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_iron_mine_building_iron_mine_pm_atmospheric_engine_pump_building_iron_mine_iron [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_atmospheric_engine_pump_building_iron_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_atmospheric_engine_pump_building_iron_mine } exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_iron_mine_building_iron_mine_pm_picks_and_shovels_building_iron_mine_iron [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_picks_and_shovels_building_iron_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_picks_and_shovels_building_iron_mine } exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# building_iron_mine_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { in_default = no taking_loans = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
 				# building_opportunity_building_iron_mine_iron_pressure [market]; 必选基础PMG全部方法共同正产出iron；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
 				# building_opportunity_building_iron_mine_iron_demand [market]; 必选基础PMG全部方法共同正产出iron；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 				# SITAI CHAIN LJ01/LJ01.iron_tooling_input_repair writer=rule_action_common_buildings_03_mines_txt_lj01_iron_tooling_input_repair
 				# lj01_iron_tooling_input_repair [economy]; 本州铁矿与生铁工具配方已实际启用且铁和工具均短缺时，保留低强度上游修复；工具投入成本使此档弱于健康扩张
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_picks_and_shovels_building_iron_mine } is_production_method_active = { building_type = building_tooling_workshop production_method = pm_pig_iron } infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } exists = mg:wood mg:wood = { market_goods_pricier <= 0.25 } } } } } add = 0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_iron_mine production_method = pm_picks_and_shovels_building_iron_mine } is_production_method_active = { building_type = building_tooling_workshop production_method = pm_pig_iron } infrastructure_delta >= 0 exists = owner owner = { in_default = no taking_loans = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } exists = mg:wood mg:wood = { market_goods_pricier <= 0.25 } } } } } add = 0.05 }
 				# borrowing_foundation_building_iron_mine [economy]; 正常借款且实际基础配方产出存在直接短缺时，保留有界的基础建设倾向；真实投入成本优先
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_iron_mine production_method = pm_picks_and_shovels_building_iron_mine } exists = owner owner = { is_ai = yes in_default = no taking_loans = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } } } } } add = 0.05 }
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_iron_mine production_method = pm_picks_and_shovels_building_iron_mine } exists = owner owner = { in_default = no taking_loans = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } } } } } add = 0.05 }
 			}
 			min = 0.5
 			max = 1.2
@@ -325,24 +325,24 @@ building_lead_mine = {
 			# GROUP program_340754ffa8adaa19_building_infrastructure_pressure_negative
 			add = { value = 0
 				# building_opportunity_building_lead_mine_infrastructure_cost [market]; 候选州基础设施余额为负，增加建设承载压力；静态偏好代价不改变原版费用或资格
-				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 exists = owner owner = { is_ai = yes } } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 } } add = -0.1 }
 			}
 			# GROUP program_340754ffa8adaa19_building_output_demand_positive
 			add = { value = 0
 				# actual_output_building_lead_mine_building_lead_mine_pm_diesel_pump_building_lead_mine_lead [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_diesel_pump_building_lead_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_diesel_pump_building_lead_mine } exists = owner owner = { exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_lead_mine_building_lead_mine_pm_condensing_engine_pump_building_lead_mine_lead [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_condensing_engine_pump_building_lead_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_condensing_engine_pump_building_lead_mine } exists = owner owner = { exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_lead_mine_building_lead_mine_pm_atmospheric_engine_pump_building_lead_mine_lead [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_atmospheric_engine_pump_building_lead_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_atmospheric_engine_pump_building_lead_mine } exists = owner owner = { exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_lead_mine_building_lead_mine_pm_picks_and_shovels_building_lead_mine_lead [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_picks_and_shovels_building_lead_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_lead_mine production_method = pm_picks_and_shovels_building_lead_mine } exists = owner owner = { exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# building_lead_mine_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { in_default = no taking_loans = no exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
 				# building_opportunity_building_lead_mine_lead_pressure [market]; 必选基础PMG全部方法共同正产出lead；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
 				# building_opportunity_building_lead_mine_lead_demand [market]; 必选基础PMG全部方法共同正产出lead；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
 			min = 0.5
 			max = 1.2
@@ -442,24 +442,24 @@ building_sulfur_mine = {
 			# GROUP program_0f492e41909d98d3_building_infrastructure_pressure_negative
 			add = { value = 0
 				# building_opportunity_building_sulfur_mine_infrastructure_cost [market]; 候选州基础设施余额为负，增加建设承载压力；静态偏好代价不改变原版费用或资格
-				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 exists = owner owner = { is_ai = yes } } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 } } add = -0.1 }
 			}
 			# GROUP program_0f492e41909d98d3_building_output_demand_positive
 			add = { value = 0
 				# actual_output_building_sulfur_mine_building_sulfur_mine_pm_diesel_pump_building_sulfur_mine_sulfur [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_diesel_pump_building_sulfur_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_diesel_pump_building_sulfur_mine } exists = owner owner = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_sulfur_mine_building_sulfur_mine_pm_condensing_engine_pump_building_sulfur_mine_sulfur [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_condensing_engine_pump_building_sulfur_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_condensing_engine_pump_building_sulfur_mine } exists = owner owner = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_sulfur_mine_building_sulfur_mine_pm_atmospheric_engine_pump_building_sulfur_mine_sulfur [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_atmospheric_engine_pump_building_sulfur_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_atmospheric_engine_pump_building_sulfur_mine } exists = owner owner = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# actual_output_building_sulfur_mine_building_sulfur_mine_pm_picks_and_shovels_building_sulfur_mine_sulfur [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_picks_and_shovels_building_sulfur_mine } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sulfur_mine production_method = pm_picks_and_shovels_building_sulfur_mine } exists = owner owner = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
 				# building_sulfur_mine_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { in_default = no taking_loans = no exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.15 }
 				# building_opportunity_building_sulfur_mine_sulfur_pressure [market]; 必选基础PMG全部方法共同正产出sulfur；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
 				# building_opportunity_building_sulfur_mine_sulfur_demand [market]; 必选基础PMG全部方法共同正产出sulfur；所有者市场缺口为基础机会，高价只升档同一需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
 			min = 0.5
 			max = 1.2
@@ -489,7 +489,7 @@ building_gold_mine = {
 			# GROUP program_7fc78f91361b350d_negative
 			add = { value = 0
 				# coordinated_layered_building_building_gold_mine_recovery [economy]; 恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } } add = -0.1 }
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { sitai_context_layer_recovery = yes } } } add = -0.1 }
 			}
 			# GROUP program_7fc78f91361b350d_building_active_input_coal_negative
 			add = { value = 0
@@ -536,7 +536,7 @@ building_gold_mine = {
 			# GROUP program_7fc78f91361b350d_building_output_demand_positive
 			add = { value = 0
 				# coordinated_layered_building_building_gold_mine_expansion [economy]; 扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { sitai_context_layer_expansion = yes } } } add = 0.18 }
 			}
 			min = 0.5
 			max = 1.18
@@ -600,4 +600,24 @@ building_copper_mine = {
 	ownership_type = self
 
 	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_mining.dds"
+
+	# SITAI BEGIN initialized:building_copper_mine.ai_value
+	ai_value = { value = 1000
+		# SITAI BEGIN information:building_copper_mine.ai_value
+		# ACTION program_e505c1d3f2b02e4f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_e505c1d3f2b02e4f_copper_supply_need_positive
+			add = { value = 0
+				# building_copper_mine_supply_pressure [market]; 铜缺口与高价是同一供给需要的更强档，替代1.08而不相加
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } } add = 0.12 }
+				# building_copper_mine_supply_need [market]; 精确铜矿必选基础PMG全部方法共同正产铜；所有者市场真实缺口形成基本供给选项
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0 } } } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:building_copper_mine.ai_value
+	}
+	# SITAI END initialized:building_copper_mine.ai_value
 }

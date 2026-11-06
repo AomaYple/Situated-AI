@@ -226,7 +226,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 "priority": 75000 + len(rules),
                 "operation": "multiply",
                 "value": value,
-                "semantic_role": "benefit" if suffix == "need" else "unspecified",
+                "semantic_role": "benefit",
                 "contribution_group": group,
                 "conditions": [
                     {"fact": "has_colonial_affairs_institution", "op": "=", "value": True},

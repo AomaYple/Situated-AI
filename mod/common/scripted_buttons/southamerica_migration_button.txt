@@ -101,14 +101,14 @@ southamerica_migration_button = {
 				# native_button_migration_authority_short [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { authority >= 0 NOT = { authority >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { authority < 100 } } } } }  } else = { add = -0.15 } } } }
 				# native_button_migration_authority_thin [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 200 } } add = -0.05 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { authority < 200 } } add = -0.05 } }
 			}
 			# GROUP program_75780f86d505fd04_native_button_migration_influence_commitment_negative
 			add = { value = 0
 				# native_button_migration_influence_short [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { OR = { influence >= 0 NOT = { influence >= 0 } } } AND = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { influence < 0 } } } } }  } else = { add = -0.15 } } } }
 				# native_button_migration_influence_thin [political]; 五年权威固定100与影响力乘数-0.25是不同资源原因；余额只作有界压力，不算精确执行后余额。
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes influence < 200 } } add = -0.05 } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { influence < 200 } } add = -0.05 } }
 			}
 			min = 0.7
 			max = 1

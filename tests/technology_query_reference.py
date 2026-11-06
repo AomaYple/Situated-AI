@@ -266,7 +266,10 @@ def realize_query_world(reader):
             if not purpose.endswith("_ready")
             or all(
                 CATALOG["goods"][good]["market"]
-                or (purpose == "labor_ready" and CATALOG["goods"][good]["local"])
+                or (
+                    purpose in {"labor_ready", "productive_ready"}
+                    and CATALOG["goods"][good]["local"]
+                )
                 for good in candidate["inputs"]
             )
         )
@@ -344,7 +347,12 @@ def evaluate(reader, collections, root_facts=None):
     if tag != "technology_use":
         raise ValueError("Unregistered finite technology query")
     technology, purpose = parameters["technology"], parameters["purpose"]
-    states = purpose in {
+    local_productive = purpose == "productive_ready" and any(
+        amount > 0 and CATALOG["goods"][good]["local"]
+        for row in _members(technology, purpose)
+        for good, amount in (row["inputs"] | row.get("losses", {})).items()
+    )
+    states = local_productive or purpose in {
         "labor",
         "labor_ready",
         "infrastructure",
@@ -402,7 +410,9 @@ def evaluate(reader, collections, root_facts=None):
         if purpose.endswith("_ready") and any(
             amount > 0
             and not CATALOG["goods"][good]["market"]
-            and not (purpose == "labor_ready" and CATALOG["goods"][good]["local"])
+            and not (
+                purpose in {"labor_ready", "productive_ready"} and CATALOG["goods"][good]["local"]
+            )
             for good, amount in (row["inputs"] | row.get("losses", {})).items()
         ):
             continue
@@ -452,7 +462,7 @@ def evaluate(reader, collections, root_facts=None):
         candidates = []
         for state in collection:
             terms = list(common)
-            if purpose == "labor_ready":
+            if purpose in {"labor_ready", "productive_ready"}:
                 for good, amount in (row["inputs"] | row.get("losses", {})).items():
                     if amount > 0 and CATALOG["goods"][good]["local"]:
                         observation = state.get(f"sg:{good}")

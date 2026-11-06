@@ -26,7 +26,7 @@ law_no_workers_rights = {
 			# GROUP program_e090e9ba4f01864d_negative
 			add = { value = 0
 				# political_capacity_law_no_workers_rights [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 0
@@ -68,28 +68,28 @@ law_regulatory_bodies = {
 			# GROUP program_a76ea052384beaf9_labor_employer_floor_positive
 			add = { value = 0
 				# social_reform_regulatory_bodies_from_protections_employer_relief_3 [political]; 退出额外工资底线释放已投资雇主负担，不假定实际利润与就业增量
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 6 }
 				# social_reform_regulatory_bodies_from_protections_employer_relief_1 [political]; 退出额外工资底线释放已投资雇主负担，不假定实际利润与就业增量
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
 			}
 			# GROUP program_a76ea052384beaf9_labor_safety_positive
 			add = { value = 0
 				# social_reform_regulatory_bodies_new_safety_25 [political]; 从无工作权利进入真实工作安全制度，原版每级改善工作条件；laborer份额仅为暴露，不是工业全体员工或伤亡
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.25 } } } add = 16 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.25 } } } add = 16 }
 				# social_reform_regulatory_bodies_new_safety_15 [political]; 从无工作权利进入真实工作安全制度，原版每级改善工作条件；laborer份额仅为暴露，不是工业全体员工或伤亡
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 12 }
 			}
 			# GROUP program_a76ea052384beaf9_labor_wage_access_negative
 			add = { value = 0
 				# social_reform_regulatory_bodies_from_protections_wage_loss_3 [political]; 从工人保护退回监管失去已有最低工资，安全制度仍在，不能再当新安全收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } average_sol >= 0 average_sol < 12 } } add = -12 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } average_sol >= 0 average_sol < 12 } } add = -12 }
 				# social_reform_regulatory_bodies_from_protections_wage_loss_1 [political]; 从工人保护退回监管失去已有最低工资，安全制度仍在，不能再当新安全收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } average_sol >= 0 average_sol < 12 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_worker_protections institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } average_sol >= 0 average_sol < 12 } } add = -8 }
 			}
 			# GROUP program_a76ea052384beaf9_social_reform_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_regulatory_bodies [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -30
 			max = 22
@@ -134,32 +134,32 @@ law_worker_protections = {
 			# GROUP program_9109c1aba96e54ad_labor_employer_floor_negative
 			add = { value = 0
 				# social_reform_worker_protections_from_regulatory_employer_3 [political]; 原版新增工资底线增加雇主负担，与低SoL工资需要共同评估
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -6 }
 				# social_reform_worker_protections_from_regulatory_employer_1 [political]; 原版新增工资底线增加雇主负担，与低SoL工资需要共同评估
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 				# social_reform_worker_protections_new_employer_burden [political]; 新增最低工资是雇主负担而非已知国库支出；劳动者份额仅为暴露代理
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 			}
 			# GROUP program_9109c1aba96e54ad_labor_safety_positive
 			add = { value = 0
 				# social_reform_worker_protections_new_safety_25 [political]; 从无工作权利进入真实工作安全制度，原版每级改善工作条件；laborer份额仅为暴露，不是工业全体员工或伤亡
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.25 } } } add = 16 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.25 } } } add = 16 }
 				# social_reform_worker_protections_new_safety_15 [political]; 从无工作权利进入真实工作安全制度，原版每级改善工作条件；laborer份额仅为暴露，不是工业全体员工或伤亡
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 12 }
 			}
 			# GROUP program_9109c1aba96e54ad_labor_wage_access_positive
 			add = { value = 0
 				# social_reform_worker_protections_from_regulatory_wage_3 [political]; 已有安全监管转工人保护只新增工资底线，不重复奖励相同工作条件制度
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } average_sol >= 0 average_sol < 12 } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 3 } average_sol >= 0 average_sol < 12 } } add = 12 }
 				# social_reform_worker_protections_from_regulatory_wage_1 [political]; 已有安全监管转工人保护只新增工资底线，不重复奖励相同工作条件制度
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } average_sol >= 0 average_sol < 12 } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_regulatory_bodies institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } average_sol >= 0 average_sol < 12 } } add = 8 }
 				# social_reform_worker_protections_new_wage_access [political]; 新建工人保护同时增加最低工资，低SoL构成工资保障需要，独立于工作安全
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } average_sol >= 0 average_sol < 12 } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_no_workers_rights NOT = { has_institution = institution_workplace_safety } average_sol >= 0 average_sol < 12 } } add = 8 }
 			}
 			# GROUP program_9109c1aba96e54ad_social_reform_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_worker_protections [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -24
 			max = 28

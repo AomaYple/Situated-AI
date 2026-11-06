@@ -311,7 +311,7 @@ def test_文档里的修订哈希必须与声明来源一致() -> None:
     for path in sorted(verify.SNAPSHOT_DIR.glob("*.compact.json")):
         recorded = snapshot.Snapshot.load(path)
         historical[recorded.version_label] = set(recorded.version.values())
-    bad = []
+    bad: list[str] = []
     for md in _docs_and_indexes():
         if md.is_file():
             lines = md.read_text(encoding="utf-8").splitlines()

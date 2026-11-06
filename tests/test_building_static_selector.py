@@ -1,4 +1,4 @@
-"""Reviewed static-type lifecycle closes only the eleven existing initializers."""
+"""Reviewed static-type lifecycle closes twelve exact named initializers."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ EXISTING = (
     ("04_plantations", "building_coffee_plantation"),
     ("04_plantations", "building_sugar_plantation"),
     ("04_plantations", "building_banana_plantation"),
+    ("03_mines", "building_copper_mine"),
 )
 
 
@@ -68,14 +69,14 @@ def test_accepted_sentinel_slots_and_getter_select_local_or_reference_member():
         in observations["building-ai-getter"]
     )
     assert data["contract"]["dynamic_local_writer_permission"] is False
-    assert data["contract"]["copper_initializer_permission"] is False
+    assert data["contract"]["copper_initializer_permission"] is True
     assert set(data["contract"]["initializer_ids"]) == {identity for _, identity in EXISTING}
     assert data["contract"]["partial_leaf_prefixes"]["parser-preload-tail-thunk"] == [21, 20]
     assert len(data["contract"]["runtime_fragments"]) == 24
 
 
-@pytest.mark.parametrize("identity", ["building_copper_mine", "building_invented"])
-def test_scoped_static_evidence_does_not_authorize_copper_or_new_type(current_inputs, identity):
+@pytest.mark.parametrize("identity", ["building_invented", "building_iron_mine"])
+def test_scoped_static_evidence_does_not_authorize_new_type(current_inputs, identity):
     source = "common/buildings/03_mines.txt"
     parent = parse_text(current_inputs[source]).root.first("building_copper_mine")
     assert parent is not None

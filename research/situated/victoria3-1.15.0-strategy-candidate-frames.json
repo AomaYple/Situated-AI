@@ -1,0 +1,158 @@
+{
+  "schema": "situated-reviewed-strategy-candidate-frames/1",
+  "exe_sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+  "accepted_artifacts": [
+    {
+      "path": ".superpowers/sdd/A4-20261105/native-strategy-expansion/evidence-manifest.json",
+      "sha256": "95128ff24bbb3854950904fe02a5fdece2dba0486f4a934275c4419da20a450c"
+    },
+    {
+      "path": ".superpowers/sdd/A4-20261105/native-strategy-expansion/controller-byte-review.json",
+      "sha256": "1a6caefc3f8a3212aaf3017dccf34e10eeafa78bf32cb32dd1734de150b5b6be"
+    }
+  ],
+  "ship_category": {
+    "source": {
+      "path": "common/ai_strategies/00_default_strategy.txt",
+      "bytes": 245538,
+      "sha256": "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73",
+      "copy": "sources/common/ai_strategies/00_default_strategy.txt"
+    },
+    "fields": [
+      "ai_strategy_default.ai_ship_category_weights.ai_ship_category_battle_line",
+      "ai_strategy_default.ai_ship_category_weights.ai_ship_category_carriers"
+    ],
+    "frame": [
+      {
+        "name": "root",
+        "tag": 5,
+        "identity": "actor country+0x18"
+      }
+    ],
+    "definition_scope": "definition_only:CAIShipCategory;no_named_target",
+    "merge": "default_plus_collected_active;missing_or_invalid_zero;no_clamp",
+    "native_tail": "preserve_immediate_nonpositive_guards_definition_candidate_eligibility_and_execution",
+    "observations": [
+      {
+        "id": "ship_map_parser",
+        "va": "0x141821570",
+        "end_va": "0x1418216d8",
+        "file_offset": "0x1820970",
+        "disassembly_sha256": "9e20dd557b0f3ad96d71651031d10ed8b22129334cd77eed897b0572c5806e8a",
+        "raw_bytes_sha256": "6841222c5618bb6b2dd89b234946a8a4de7ea712d1f6aaa31eb9c9d4620d42f5",
+        "raw_bytes_length": 360
+      },
+      {
+        "id": "ship_entry_parser",
+        "va": "0x1418216e0",
+        "end_va": "0x141821b93",
+        "file_offset": "0x1820ae0",
+        "disassembly_sha256": "68f407982bdba51189836ed86377650bcd5b75e9422a9bad7b8e12c8333957f5",
+        "raw_bytes_sha256": "b2c5de3f441a1ba7d832c88c6b85a1de1268afeb44c697740524715b736b0d92",
+        "raw_bytes_length": 1203
+      },
+      {
+        "id": "ship_query",
+        "va": "0x141827020",
+        "end_va": "0x141827222",
+        "file_offset": "0x1826420",
+        "disassembly_sha256": "3f250bb73d29ef19c1c4cb0f78eb75f1ec85886cd68e18aa06b1bb20abbb8161",
+        "raw_bytes_sha256": "6dd8dd4ff411e5ea3f6422f9bcf3a01768b75c4f369f30e62ad8210bab565abe",
+        "raw_bytes_length": 514
+      },
+      {
+        "id": "ship_merge",
+        "va": "0x1416143d0",
+        "end_va": "0x1416144d0",
+        "file_offset": "0x16137d0",
+        "disassembly_sha256": "6896c3927f95295d25ed978a7b815d0f7561af2e2c035dbe04e3e8d15af2b6b4",
+        "raw_bytes_sha256": "a31655f3314155818db9276c3685d270670144424d4f846cfc4e3668b7b64c44",
+        "raw_bytes_length": 256
+      },
+      {
+        "id": "ship_positive_and_definition_eligibility",
+        "va": "0x1416148e0",
+        "end_va": "0x14161494a",
+        "file_offset": "0x1613ce0",
+        "disassembly_sha256": "7a60cca4ff17c5fa3da17e0d33a81cceba450d983e2faa5a1097a421f28074bd",
+        "raw_bytes_sha256": "c8092bd28eddad19ab48ad9b3c4389427e82fe9469ba777a715fed3622d2796f",
+        "raw_bytes_length": 106
+      },
+      {
+        "id": "ship_positive_candidate_gate",
+        "va": "0x14165cd98",
+        "end_va": "0x14165cdd0",
+        "file_offset": "0x165c198",
+        "disassembly_sha256": "bfd0bd6deb690841e4646f44c737e4d30cc5e64e88eb2151b4eb3948a2bd721c",
+        "raw_bytes_sha256": "84a62788bbb474d2b4aea4433f90bb8a7aba94ad9f02469b8a4515a440b10618",
+        "raw_bytes_length": 56
+      }
+    ]
+  },
+  "strategy_definitions": [
+    {
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "sha256": "dd95f5586a9fb105adddf890612aa5b4f3970314855ba8a8cee42247db7ed741",
+      "definition": "ai_strategy_agricultural_expansion",
+      "native_line": 1,
+      "text": "ai_strategy_agricultural_expansion = {\n\ticon = \"gfx/interface/icons/ai_strategy_icons/agricultural_expansion.dds\"\n\n\ttype = administrative\n\n\tbuilding_group_weights = {\n\t\tbg_agriculture = 2.0\n\t\tbg_ranching = 2.0\n\t\tbg_fishing = 1.5\n\t\tbg_plantations = 1.5\n\t\tbg_manufacturing = 0.5\n\t}\n\n\tgoods_stances = {\n\t\tgrain = { stance = wants_export }\n\t\tmeat = { stance = wants_export }\n\t\tfish = { stance = wants_export }\n\t\tfruit = { stance = wants_export }\n\t\tliquor = { stance = wants_export }\n\t\twine = { stance = wants_export }\n\t\tfabric = { stance = wants_export }\n\t\tfertilizer = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_technology_researched = intensive_agriculture\n\t\t\t}\n\t\t}\n\t\ttools = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_technology_researched = intensive_agriculture\n\t\t\t}\n\t\t}\n\t}\n\n\tpossible = {\n\t\talways = yes\n\t}\n\n\tweight = {\n\t\tvalue = 10\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tOR = {\n\t\t\t\t\tis_in_geographic_region = geographic_region_europe\n\t\t\t\t\tis_in_geographic_region = geographic_region_north_america\n\t\t\t\t\tis_in_geographic_region = geographic_region_east_asia\n\t\t\t\t\tis_in_geographic_region = geographic_region_middle_east\n\t\t\t\t\tis_in_geographic_region = geographic_region_central_asia_old\n\t\t\t\t\tcapital.region = sr:region_oceania\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 20\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\texists = c:FRA\n\t\t\t\tc:FRA = this\n\t\t\t\tOR = {\n\t\t\t\t\truler = {\n\t\t\t\t\t\thas_variable = legitimist_leader\n\t\t\t\t\t}\n\t\t\t\t\tdivided_monarchists_ai_legitimist = yes\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 20\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tis_princely_state = yes\n\t\t\t}\n\t\t\tadd = 10\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { literacy_rate < 0.25 }\n\t\t\tmultiply = 1.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { literacy_rate < 0.35 }\n\t\t\tmultiply = 1.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { literacy_rate >= 0.50 }\n\t\t\tmultiply = 0.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\texists = ig:ig_landowners\n\t\t\t\tig:ig_landowners ?= { is_powerful = yes }\n\t\t\t}\n\t\t\tmultiply = 1.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\texists = overlord\n\t\t\t\toverlord = {\n\t\t\t\t\tOR = {\n\t\t\t\t\t\tAND = {\n\t\t\t\t\t\t\tis_ai = no\n\t\t\t\t\t\t\tNOT = { has_law_or_variant = law_type:law_traditionalism }\n\t\t\t\t\t\t}\n\t\t\t\t\t\thas_strategy = ai_strategy_resource_expansion\n\t\t\t\t\t\thas_strategy = ai_strategy_industrial_expansion\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tmultiply = 0.5\n\t\t}\n\t}\n}\n\n"
+    },
+    {
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "sha256": "dd95f5586a9fb105adddf890612aa5b4f3970314855ba8a8cee42247db7ed741",
+      "definition": "ai_strategy_resource_expansion",
+      "native_line": 200,
+      "text": "ai_strategy_resource_expansion = {\n\ticon = \"gfx/interface/icons/ai_strategy_icons/resource_expansion.dds\"\n\n\ttype = administrative\n\n\tbuilding_group_weights = {\n\t\tbg_rubber = 1.5\n\t\tbg_oil_extraction = 1.5\n\t\tbg_mining = 1.5\n\t\tbg_logging = 1.5\n\t}\n\n\tsubsidies = {\n\t\tbuilding_tooling_workshop = nice_to_have\n\t\tbuilding_explosives_factory = nice_to_have\n\t}\n\n\tgoods_stances = {\n\t\texplosives = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_technology_researched = nitroglycerin\n\t\t\t}\n\t\t}\n\t\ttools = { stance = wants_high_supply }\n\t\tcoal = { stance = wants_export }\n\t\tiron = { stance = wants_export }\n\t\toil = { stance = wants_export }\n\t\tlead = { stance = wants_export }\n\t\twood = { stance = wants_export }\n\t\thardwood = { stance = wants_export }\n\t\tsulfur = { stance = wants_export }\n\t\tcopper = { stance = wants_export }\n\t\tsteel = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_unshakable_autocracy\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_heavy_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tengines = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_unshakable_autocracy\n\t\t\t\t\thas_journal_entry = je_tp_tsar_heir_of_alexander\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_heavy_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tammunition = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_great_reform\n\t\t\t\t\thas_journal_entry = je_tp_tsar_heir_of_alexander\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_military_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tsmall_arms = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_great_reform\n\t\t\t\t\thas_journal_entry = je_tp_tsar_heir_of_alexander\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_military_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tartillery = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_heir_of_alexander\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_military_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tclothes = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_light_industry\n\t\t\t}\n\t\t}\n\t\tpaper = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_light_industry\n\t\t\t}\n\t\t}\n\t}\n\n\n\tpossible = {\n\t\talways = yes\n\t}\n\n\tweight = {\n\t\tvalue = 10\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tOR = {\n\t\t\t\t\tis_in_geographic_region = geographic_region_europe\n\t\t\t\t\tis_in_geographic_region = geographic_region_north_america\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 20\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\thas_radical_leftist_government = yes\n\t\t\t\tNOT = {\n\t\t\t\t\tig:ig_rural_folk ?= {\n\t\t\t\t\t\tis_powerful = yes\n\t\t\t\t\t\tis_in_government = yes\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = {\n\t\t\t\tvalue = 25\n\t\t\t\tmultiply = {\n\t\t\t\t\tvalue = 1\n\t\t\t\t\tadd = modifier:country_other_country_socialist_government_hostility_impact_mult\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { is_country_type = unrecognized }\n\t\t\tmultiply = 0.5\n\t\t}\n\n\t\tif = { # Five-Year Plan transportation objective\n\t\t\tlimit = {\n\t\t\t\tje:je_five_year_plan ?= {\n\t\t\t\t\thas_variable = five_year_plan_transportation_var\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 50\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\texists = ig:ig_industrialists\n\t\t\t\tig:ig_industrialists ?= { is_powerful = yes }\n\t\t\t}\n\t\t\tmultiply = 1.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\thas_technology_researched = railways\n\t\t\t}\n\t\t\tmultiply = 2.0\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\texists = overlord\n\t\t\t\toverlord = {\n\t\t\t\t\tOR = {\n\t\t\t\t\t\tAND = {\n\t\t\t\t\t\t\tis_ai = no\n\t\t\t\t\t\t\tNOT = { has_law_or_variant = law_type:law_traditionalism }\n\t\t\t\t\t\t}\n\t\t\t\t\t\thas_strategy = ai_strategy_resource_expansion\n\t\t\t\t\t\thas_strategy = ai_strategy_industrial_expansion\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tmultiply = 2.0\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\thas_journal_entry = je_tp_tsar_heir_of_alexander\n\t\t\t}\n\t\t\tadd = 1000\n\t\t}\n\t}\n}\n\n"
+    },
+    {
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "sha256": "dd95f5586a9fb105adddf890612aa5b4f3970314855ba8a8cee42247db7ed741",
+      "definition": "ai_strategy_industrial_expansion",
+      "native_line": 404,
+      "text": "ai_strategy_industrial_expansion = {\n\ticon = \"gfx/interface/icons/ai_strategy_icons/industrial_expansion.dds\"\n\n\ttype = administrative\n\n\tsubsidies = {\n\t\tbuilding_coal_mine = nice_to_have\n\t\tbuilding_iron_mine = nice_to_have\n\t\tbuilding_lead_mine = nice_to_have\n\t\tbuilding_sulfur_mine = nice_to_have\n\t}\n\n\tgoods_stances = {\n\t\trubber = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_technology_researched = rubber_mastication\n\t\t\t}\n\t\t}\n\t\toil = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_technology_researched = pumpjacks\n\t\t\t}\n\t\t}\n\t\tdye = { stance = wants_high_supply }\n\t\tsilk = { stance = wants_high_supply }\n\t\ttools = { stance = wants_high_supply }\n\t\tcoal = { stance = wants_high_supply }\n\t\tiron = { stance = wants_high_supply }\n\t\tsteel = { stance = wants_high_supply }\n\t\tlead = { stance = wants_high_supply }\n\t\tsulfur = { stance = wants_high_supply }\n\t\twood = { stance = wants_high_supply }\n\t\tsugar = { stance = wants_high_supply }\n\t\texplosives = { stance = wants_export }\n\t\tfertilizer = { stance = wants_export }\n\t\tcopper = { stance = wants_high_supply }\n\t\tengines = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_unshakable_autocracy\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_heavy_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tammunition = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_great_reform\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_military_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tartillery = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_military_industry\n\t\t\t}\n\t\t}\n\t\tsmall_arms = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_great_reform\n\t\t\t\t\tAND = {\n\t\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_military_industry\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tclothes = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_light_industry\n\t\t\t}\n\t\t}\n\t\tpaper = {\n\t\t\tstance = wants_high_supply\n\t\t\ttrigger = {\n\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\tvar:tp_fav_industry_group ?= bg:bg_light_industry\n\t\t\t}\n\t\t}\n\t}\n\n\tbuilding_group_weights = {\n\t\tbg_manufacturing = 1.25\n\t\tbg_rubber = 1.25\n\t\tbg_oil_extraction = 1.25\n\t\tbg_mining = 1.25\n\t\tbg_logging = 1.25\n\t}\n\n\teconomic_vs_government_spending_balance = { # Refer to 00_default_strategy for how this works\n\t\tif = { # Slightly more inclined to spend on economic buildings when not at war\n\t\t\tlimit = {\n\t\t\t\tis_at_war = no\n\t\t\t}\n\t\t\tadd = 0.05\n\t\t}\n\t}\n\n\tweight = {\n\t\tvalue = 10\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tOR = {\n\t\t\t\t\tis_in_geographic_region = geographic_region_europe\n\t\t\t\t\tis_in_geographic_region = geographic_region_north_america\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 20\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_meiji_restoration\n\t\t\t\t\thas_journal_entry = je_meiji_main\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 1000\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tOR = {\n\t\t\t\t\thas_journal_entry = je_tp_tsar_great_reform\n\t\t\t\t\thas_journal_entry = je_tp_fav_industry\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 1000\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\texists = c:FRA\n\t\t\t\tc:FRA = this\n\t\t\t\tOR = {\n\t\t\t\t\truler = {\n\t\t\t\t\t\tOR = {\n\t\t\t\t\t\t\tvar:dynasty_var ?= flag:house_orleans\n\t\t\t\t\t\t\tvar:dynasty_var ?= flag:house_bonaparte\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tdivided_monarchists_ai_orleanist = yes\n\t\t\t\t\tdivided_monarchists_ai_bonapartist = yes\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 20\n\t\t}\n\n\t\tif = { # Grunderzeit\n\t\t\tlimit = {\n\t\t\t\thas_journal_entry = je_grunderzeit\n\t\t\t}\n\t\t\tadd = 100\n\t\t}\n\n\t\tif = { # Five-Year Plan industrial objectives\n\t\t\tlimit = {\n\t\t\t\tje:je_five_year_plan ?= {\n\t\t\t\t\tOR = {\n\t\t\t\t\t\thas_variable = five_year_plan_heavy_industry_var\n\t\t\t\t\t\thas_variable = five_year_plan_light_industry_var\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = 100\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\thas_radical_leftist_government = yes\n\t\t\t\tNOT = {\n\t\t\t\t\tig:ig_rural_folk ?= {\n\t\t\t\t\t\tis_powerful = yes\n\t\t\t\t\t\tis_in_government = yes\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tadd = {\n\t\t\t\tvalue = 50\n\t\t\t\tmultiply = {\n\t\t\t\t\tvalue = 1\n\t\t\t\t\tadd = modifier:country_other_country_socialist_government_hostility_impact_mult\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\t# Metternich agenda of 1844 - inclined to industrialise\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tc:AUS ?= this\n\t\t\t\thas_journal_entry = je_metternich\n\t\t\t}\n           add = 10\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\thas_law_or_variant = law_type:law_command_economy\n\t\t\t}\n\t\t\tmultiply = 2\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { is_country_type = unrecognized }\n\t\t\tmultiply = 0.25\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\texists = ig:ig_industrialists\n\t\t\t\tig:ig_industrialists ?= { is_powerful = yes }\n\t\t\t}\n\t\t\tmultiply = 2.0\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { literacy_rate < 0.20 }\n\t\t\tmultiply = 0.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { literacy_rate < 0.40 }\n\t\t\tmultiply = 0.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { literacy_rate >= 0.60 }\n\t\t\tmultiply = 1.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = { literacy_rate >= 0.80 }\n\t\t\tmultiply = 1.5\n\t\t}\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\thas_technology_researched = railways\n\t\t\t}\n\t\t\tmultiply = 1.5\n\t\t}\n\t}\n}\n\n"
+    },
+    {
+      "source": "common/ai_strategies/02_subject_diplomatic_strategies.txt",
+      "sha256": "ba259d0a320e3e27f7fa6a713e55adb18a715123d792217b080716d7d76299e7",
+      "definition": "ai_strategy_subject_strengthen_self",
+      "native_line": 191,
+      "text": "ai_strategy_subject_strengthen_self = {\n\ticon = \"gfx/interface/icons/ai_strategy_icons/subject_strengthen_self.dds\"\n\n\ttype = diplomatic\n\n\tundesirable_infamy_level = {\n\t\tvalue = 50\n\t}\n\n\tunacceptable_infamy_level = {\n\t\tvalue = 75\n\t}\n\n\tobligation_value = {\n\t\t# Rebellious AI wants to use obligations to break free\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tthis.overlord ?= scope:target_country\n\t\t\t}\n\t\t\tadd = 50\n\t\t}\n\t\telse = {\n\t\t\tadd = 20\n\t\t}\n\t}\n\n\tdiplomatic_play_boldness = {\n\t\tvalue = 25\n\t}\n\n\trecklessness = {\n\t\tvalue = 0.25\n\t}\n\n\taggression = {\n\t\tvalue = 1\n\n\t\t# Not very likely to directly attack overlord\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tadd = -0.75\n\t\t}\n\n\t\t# Opportunistic colonization is self-strengthening, right?\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tNOT = { is_country_type = unrecognized }\n\t\t\t\tscope:target_country = { is_country_type = unrecognized }\n\t\t\t}\n\t\t\tadd = 1\n\t\t}\n\t}\n\n\tbuilding_group_weights = {\n\t\tbg_army = 1.5\n\t\tbg_military_industry = 1.5\n\t}\n\n\twargoal_weights = {\n\t\tindependence = 0.0\n\t\tincrease_autonomy = 5.0\n\t\tconquer_state = 1.5\n\t\treturn_state = 1.5\n\t}\n\n\tsecret_goal_scores = {\n\t\tdefy = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = 10000\n\t\t\t}\n\t\t}\n\t\tantagonize = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tnone = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tcomply = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tbefriend = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tconquer = {\n\t\t\ttrigger = {\n\t\t\t\thas_strategic_adjacency = scope:target_country\n\t\t\t\tscope:target_country.country_rank <= root.country_rank\n\t\t\t\tcan_reach_target_country_to_conquer = { TARGET_COUNTRY = scope:target_country }\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tif = {\n\t\t\t\t\tlimit = {\n\t\t\t\t\t\tNOT = { is_country_type = unrecognized }\n\t\t\t\t\t\tscope:target_country = { NOT = { is_country_type = unrecognized } }\n\t\t\t\t\t}\n\t\t\t\t\tadd = 25\n\t\t\t\t}\n\t\t\t\telse_if = {\n\t\t\t\t\tlimit = {\n\t\t\t\t\t\tscope:target_country = { is_country_type = unrecognized }\n\t\t\t\t\t}\n\t\t\t\t\tadd = 50\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\n\tbecome_subject_value = {\n\t\tvalue = -50\n\t}\n\n\tdiplomatic_play_support = {\n\t\tvalue = 0\n\n\t\tif = { # More opportunistic\n\t\t\tlimit = {\n\t\t\t\tscope:enemy_country = { root.overlord ?= this }\n\t\t\t}\n\t\t\tadd = {\n\t\t\t\tvalue = 20\n\t\t\t\tdesc = \"AI_STRATEGY_SUPPORT_STRENGTHEN_SELF_OVERLORD_DISTRACTED\"\n\t\t\t}\n\t\t}\n\t}\n\n\ttreaty_category_scores = {\n\t\tmilitary_defense = {\n\t\t\tvalue = 4\n\t\t}\n\n\t\teconomy = {\n\t\t\tvalue = 3\n\t\t}\n\t}\n\n\tpossible = {\n\t\tis_subject = yes\n\t\tliberty_desire >= 25\n\t}\n\n\tweight = {\n\t\tvalue = liberty_desire\n\n\t\t# AI implications for Power Blocs: 'Increased Self-Reliance' strategy is more likely for Blocs with Militarized Industry\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tliberty_desire >= 50\n\t\t\t\tpower_bloc ?= {\n\t\t\t\t\thas_principle_group = principle_group:principle_group_military_industry\n\t\t\t\t}\n\t\t\t}\n\t\t\tmultiply = 1.5\n\t\t}\n\n\t\t# Subjects that would collapse if independent should be more loyal\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tOR = {\n\t\t\t\t\tc:DEI ?= this\n\t\t\t\t\thas_government_type = gov_chartered_company\n\t\t\t\t}\n\t\t\t}\n\t\t\tmultiply = 0.25\n\t\t}\n\t}\n}\n\n"
+    },
+    {
+      "source": "common/ai_strategies/02_subject_diplomatic_strategies.txt",
+      "sha256": "ba259d0a320e3e27f7fa6a713e55adb18a715123d792217b080716d7d76299e7",
+      "definition": "ai_strategy_subject_maintain_autonomy",
+      "native_line": 383,
+      "text": "ai_strategy_subject_maintain_autonomy = {\n\ticon = \"gfx/interface/icons/ai_strategy_icons/subject_maintain_autonomy.dds\"\n\n\ttype = diplomatic\n\n\tundesirable_infamy_level = {\n\t\tvalue = 25\n\t}\n\n\tunacceptable_infamy_level = {\n\t\tvalue = 50\n\t}\n\n\tdiplomatic_play_boldness = {\n\t\tvalue = -10\n\t}\n\n\trecklessness = {\n\t\tvalue = -0.25\n\t}\n\n\twargoal_weights = {\n\t\tindependence = 0.0\n\t\tincrease_autonomy = 0.5\n\t}\n\n\tsecret_goal_scores = {\n\t\tnone = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = 10000\n\t\t\t}\n\t\t}\n\t\tantagonize = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tdefy = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tcomply = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tbefriend = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tconquer = {\n\t\t\ttrigger = {\n\t\t\t\thas_strategic_adjacency = scope:target_country\n\t\t\t\tscope:target_country.country_rank <= root.country_rank\n\t\t\t\tcan_reach_target_country_to_conquer = { TARGET_COUNTRY = scope:target_country }\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tif = {\n\t\t\t\t\tlimit = {\n\t\t\t\t\t\tNOT = { is_country_type = unrecognized }\n\t\t\t\t\t\tscope:target_country = { NOT = { is_country_type = unrecognized } }\n\t\t\t\t\t}\n\t\t\t\t\tadd = 15\n\t\t\t\t}\n\t\t\t\telse_if = {\n\t\t\t\t\tlimit = {\n\t\t\t\t\t\tscope:target_country = { is_country_type = unrecognized }\n\t\t\t\t\t}\n\t\t\t\t\tadd = 25\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\n\tbecome_subject_value = {\n\t\tvalue = -25\n\t}\n\n\ttreaty_category_scores = {\n\t\tmilitary_defense = {\n\t\t\tvalue = 3\n\t\t}\n\n\t\texpansion = {\n\t\t\tvalue = -3\n\t\t}\n\t}\n\n\tpossible = {\n\t\tis_subject = yes\n\t}\n\n\tweight = {\n\t\tvalue = 100\n\t\tsubtract = liberty_desire\n\t}\n}\n\n"
+    },
+    {
+      "source": "common/ai_strategies/02_subject_diplomatic_strategies.txt",
+      "sha256": "ba259d0a320e3e27f7fa6a713e55adb18a715123d792217b080716d7d76299e7",
+      "definition": "ai_strategy_subject_overlord_compliance",
+      "native_line": 498,
+      "text": "ai_strategy_subject_overlord_compliance = {\n\ticon = \"gfx/interface/icons/ai_strategy_icons/subject_overlord_compliance.dds\"\n\n\ttype = diplomatic\n\n\tundesirable_infamy_level = {\n\t\tvalue = 10\n\t}\n\n\tunacceptable_infamy_level = {\n\t\tvalue = 25\n\t}\n\n\tdiplomatic_play_boldness = {\n\t\tvalue = -25\n\t}\n\n\trecklessness = {\n\t\tvalue = -0.5\n\t}\n\n\taggression = {\n\t\tvalue = 0.25\n\t}\n\n\twargoal_weights = {\n\t\tindependence = 0.0\n\t\tincrease_autonomy = 0.0\n\t}\n\n\tsecret_goal_scores = {\n\t\tcomply = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = 10000\n\t\t\t}\n\t\t}\n\t\tantagonize = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t\tnone = {\n\t\t\tscore = {\n\t\t\t\tif = {\n\t\t\t\t\tlimit = {\n\t\t\t\t\t\tis_subject_of = scope:target_country\n\t\t\t\t\t}\n\t\t\t\t\tvalue = -10000\n\t\t\t\t}\n\t\t\t\telse = {\n\t\t\t\t\tvalue = 200\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tdefy = {\n\t\t\ttrigger = {\n\t\t\t\tis_subject_of = scope:target_country\n\t\t\t}\n\t\t\tscore = {\n\t\t\t\tvalue = -10000\n\t\t\t}\n\t\t}\n\t}\n\n\tbecome_subject_value = {\n\t\tvalue = 50\n\t}\n\n\tdiplomatic_play_support = {\n\t\tvalue = 0\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tscope:country = { root.overlord ?= this }\n\t\t\t}\n\t\t\tadd = {\n\t\t\t\tvalue = 25\n\t\t\t\tdesc = \"AI_STRATEGY_SUPPORT_COMPLIANCE_FOLLOW_OVERLORD\"\n\t\t\t}\n\t\t}\n\t}\n\n\ttreaty_category_scores = {\n\t\tmilitary_defense = {\n\t\t\tvalue = 3\n\t\t}\n\n\t\tpower_bloc = {\n\t\t\tvalue = 2\n\t\t}\n\t}\n\n\tpossible = {\n\t\tis_subject = yes\n\t\tliberty_desire <= 50\n\t\tNOT = { is_diplomatic_play_enemy_of = overlord }\n\t}\n\n\tweight = {\n\t\tvalue = 50\n\t\tsubtract = liberty_desire\n\t\tmultiply = 2\n\n\t\tif = {\n\t\t\tlimit = {\n\t\t\t\tis_princely_state = yes\n\t\t\t}\n\t\t\tadd = 10\n\t\t}\n\t}\n}\n"
+    }
+  ],
+  "limits": [
+    "Static accepted evidence only; no game runtime acceptance.",
+    "Only exact listed source/definition fields are projected.",
+    "Category definition keys are not live targets or getter authorization.",
+    "Strategy weight native selector and ship native eligibility/cost/execution remain unchanged."
+  ],
+  "strategy_weight_frame": {
+    "actor_scope": "country",
+    "target_scope": "definition_only:ai_strategy",
+    "operation": "base_candidate_score",
+    "capability": "direct",
+    "unit": "candidate_score",
+    "consumer_va": "0x141656424",
+    "parser_va": "0x14182304a",
+    "member_offset": "0xb8"
+  },
+  "strategy_weight_evidence": {
+    "source": "research/situated/victoria3-1.15.0-strategy-scope.json",
+    "sha256": "de0d8bfa8e65ed08d13a57fa2cf2b7d400ffc9eee6932377aab53af4a8ebd9b4",
+    "definition_scope": "definition_only:ai_strategy;no_live_target",
+    "native_tail": "preserve_candidate_type_eligibility_selector_random_and_execution"
+  }
+}

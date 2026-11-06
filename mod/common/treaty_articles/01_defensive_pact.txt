@@ -245,12 +245,12 @@ defensive_pact = {
 			# GROUP program_183b64bc3aded8a7_treaty_existing_war_commitment_negative
 			add = { value = 0
 				# treaty_defensive_pact_war_commitment [diplomacy]; ROOT已有战争承诺，新增互惠军事约定有独立承诺机会成本；与防御需求共同计入，不以奖励优先屏蔽成本
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = -0.15 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = yes } } add = -0.15 }
 			}
 			# GROUP program_183b64bc3aded8a7_treaty_immediate_defensive_need_positive
 			add = { value = 0
 				# treaty_defensive_pact_defensive_need [diplomacy]; ROOT正被外交博弈指向，互惠防御合作有有限即时需求；不是已签署、已获援或能赶上当前冲突
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_target = yes } } add = 0.15 }
+				if = { limit = { exists = ROOT ROOT = { is_diplomatic_play_target = yes } } add = 0.15 }
 			}
 			# GROUP program_183b64bc3aded8a7_treaty_influence_pressure_negative
 			add = { value = 0
@@ -513,9 +513,9 @@ defensive_pact = {
 if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:article exists = scope:first_country exists = scope:second_country }
 	add = {
 		value = 0
-		if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } in_default = yes } add = { value = -6 } }
-		else_if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } net_total_income < 0 } add = { value = -3 } }
-		if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } has_variable = recently_lost_war } add = { value = -2 } }
+		if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } exists = ROOT ROOT = { NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } in_default = yes } } add = { value = -6 } }
+		else_if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } exists = ROOT ROOT = { NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } net_total_income < 0 } } add = { value = -3 } }
+		if = { limit = { OR = { scope:first_country ?= this scope:second_country ?= this } NOT = { scope:first_country ?= scope:second_country } exists = ROOT ROOT = { NOT = { exists = scope:is_treaty_active } NOT = { exists = scope:is_renegotiation } NOT = { OR = { AND = { scope:first_country ?= this any_scope_treaty = { binds = scope:second_country any_scope_article = { has_type = defensive_pact } } } AND = { scope:second_country ?= this any_scope_treaty = { binds = scope:first_country any_scope_article = { has_type = defensive_pact } } } } } has_variable = recently_lost_war } } add = { value = -2 } }
 		min = -8
 		max = 0
 	}

@@ -4,21 +4,21 @@ sitai_adapter_fleet_supply_weight = { value = 1.0 # SITAI wrapped-scalar:ai_stra
 		# ACTION program_a6ee0c4b315ddfe8 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_a6ee0c4b315ddfe8_positive
+			# GROUP program_a6ee0c4b315ddfe8_external_supply_mission_pressure_positive
 			add = { value = 0
 				# SITAI CHAIN LJ09/LJ09.structural_wartime_supply_escort writer=rule_action_common_ai_strategies_00_default_strategy_txt_structural_wartime_supply_escort
 				# structural_wartime_supply_escort [military]; 战时蒸汽船供给紧张且已有舰队时，在原版次要舰队已允许的护送任务内提高相对保护供给权重
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.25 }
-				# import_blockade_actual_owned_state_disruption [military]; 真实市场军需进口暴露或本国州封锁使既有次要舰队保护任务获得有限相对优先；同原因取强，不创建舰队或预算承诺
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 any_scope_state = { blockade_level > 0 } } } add = 0.18 }
-				# import_blockade_actual_arms_exposure [military]; 真实市场军需进口暴露或本国州封锁使既有次要舰队保护任务获得有限相对优先；同原因取强，不创建舰队或预算承诺
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 market = { mg:small_arms = { market_goods_imports >= 5 } } market = { market_imports_reliance = { goods = small_arms value > 0.25 } } } } add = 0.12 }
+				if = { limit = { exists = ROOT ROOT = { is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.25 }
+				# import_blockade_actual_owned_state_disruption [military]; 真实市场军需进口暴露或本国州封锁使既有次要舰队保护任务获得有限相对优先；对同一任务采用风险偏好饱和包络，不宣称三项物理原因相同，不创建舰队或预算承诺
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes navy_size >= 0 navy_size > 0 any_scope_state = { blockade_level > 0 } } } add = 0.18 }
+				# import_blockade_actual_arms_exposure [military]; 真实市场军需进口暴露或本国州封锁使既有次要舰队保护任务获得有限相对优先；对同一任务采用风险偏好饱和包络，不宣称三项物理原因相同，不创建舰队或预算承诺
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes navy_size >= 0 navy_size > 0 market = { mg:small_arms = { market_goods_imports >= 5 } } market = { market_imports_reliance = { goods = small_arms value > 0.25 } } } } add = 0.12 }
 				# SITAI CHAIN LJ09/LJ09.structural_wartime_supply_price_escort writer=rule_action_common_ai_strategies_00_default_strategy_txt_structural_wartime_supply_price_escort
 				# structural_wartime_supply_price_escort [military]; 战时已有舰队且蒸汽船价格压力已知时，在原版次要舰队已允许的护送任务内提供有限保护倾向
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 } } } } add = 0.1 }
 				# SITAI CHAIN LJ09/LJ09.structural_wartime_supply_balance_escort writer=rule_action_common_ai_strategies_00_default_strategy_txt_structural_wartime_supply_balance_escort
 				# structural_wartime_supply_balance_escort [military]; 战时已有舰队且蒸汽船订单余额压力已知时，在原版次要舰队已允许的护送任务内提供有限保护倾向
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0 } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0 } } } } add = 0.1 }
 			}
 			min = 1
 			max = 1.25

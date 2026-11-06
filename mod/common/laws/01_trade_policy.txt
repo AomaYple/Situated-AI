@@ -53,9 +53,9 @@ law_mercantilism = {
 			# GROUP program_1d37246e87a5041f_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_mercantilism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_mercantilism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_mercantilism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_mercantilism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_mercantilism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_mercantilism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_1d37246e87a5041f_law_political_pressure_negative
 			add = { value = 0
@@ -119,9 +119,9 @@ law_protectionism = {
 			# GROUP program_7aa7d66a4f871ad1_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_protectionism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_protectionism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_protectionism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_protectionism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_protectionism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_protectionism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_7aa7d66a4f871ad1_law_political_pressure_negative
 			add = { value = 0
@@ -131,21 +131,21 @@ law_protectionism = {
 			# GROUP program_7aa7d66a4f871ad1_law_trade_access_option_positive
 			add = { value = 0
 				# law_context_law_protectionism_law_mercantilism_tools_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_protectionism_law_mercantilism_grain_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_protectionism_law_isolationism_tools_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_protectionism_law_isolationism_grain_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_protectionism_law_mercantilism_tools_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_protectionism_law_mercantilism_grain_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_protectionism_law_isolationism_tools_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_protectionism_law_isolationism_grain_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
 			}
 			min = -10
 			max = 25
@@ -222,9 +222,9 @@ law_free_trade = {
 			# GROUP program_31f236d84eb9942a_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_free_trade_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_free_trade value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_free_trade value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_free_trade_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_free_trade value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_free_trade value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_31f236d84eb9942a_law_political_pressure_negative
 			add = { value = 0
@@ -234,29 +234,29 @@ law_free_trade = {
 			# GROUP program_31f236d84eb9942a_law_trade_access_option_positive
 			add = { value = 0
 				# law_context_law_free_trade_law_protectionism_tools_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_free_trade_law_protectionism_grain_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_free_trade_law_mercantilism_tools_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_free_trade_law_mercantilism_grain_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_free_trade_law_isolationism_tools_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_free_trade_law_isolationism_grain_strong [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 15 }
 				# law_context_law_free_trade_law_protectionism_tools_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_free_trade_law_protectionism_grain_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_protectionism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_free_trade_law_mercantilism_tools_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_free_trade_law_mercantilism_grain_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_mercantilism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_free_trade_law_isolationism_tools_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 8 }
 				# law_context_law_free_trade_law_isolationism_grain_base [market]; 当前贸易制度到该候选实际改善进口准入或进口优势，响应已观察商品缺口；高价只升级同因，不把战争、借款或低识字作开放总门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_isolationism exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0 } } } } add = 8 }
 			}
 			min = -10
 			max = 25
@@ -339,9 +339,9 @@ law_isolationism = {
 			# GROUP program_8971f981cf147337_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_isolationism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_isolationism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_isolationism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_isolationism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_isolationism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_isolationism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_8971f981cf147337_law_political_pressure_negative
 			add = { value = 0
@@ -421,9 +421,9 @@ law_canton_system = {
 			# GROUP program_72c0196e224aba88_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_canton_system_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_canton_system value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_canton_system value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_canton_system_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_canton_system value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_canton_system value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_72c0196e224aba88_law_political_pressure_negative
 			add = { value = 0
@@ -532,9 +532,9 @@ law_sakoku = {
 			# GROUP program_4a49feec400cf524_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_sakoku_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_sakoku value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_sakoku value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_sakoku_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_sakoku value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_sakoku value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_4a49feec400cf524_law_political_pressure_negative
 			add = { value = 0

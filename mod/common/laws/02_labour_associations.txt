@@ -71,25 +71,25 @@ law_guild_system = {
 			# GROUP program_0ca57c2a93b08ed6_law_movement_radicalization_loss_negative
 			add = { value = 0
 				# law_context_law_guild_system_law_right_to_associate_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 			}
 			# GROUP program_0ca57c2a93b08ed6_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_guild_system_law_anti_strike_laws_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_guild_system_law_combination_acts_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_guild_system_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_guild_system_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_0ca57c2a93b08ed6_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_guild_system_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_guild_system } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_guild_system } } add = -10 }
 				# law_context_law_guild_system_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_guild_system } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_guild_system value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_guild_system } } add = -6 }
 			}
 			# GROUP program_0ca57c2a93b08ed6_law_political_pressure_negative
 			add = { value = 0
@@ -99,13 +99,13 @@ law_guild_system = {
 			# GROUP program_0ca57c2a93b08ed6_law_union_transition_adjustment_negative
 			add = { value = 0
 				# law_context_law_guild_system_law_anti_strike_laws_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_guild_system_law_combination_acts_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_guild_system_law_anti_strike_laws_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_guild_system_law_combination_acts_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 			}
 			min = -35
 			max = 14
@@ -201,29 +201,29 @@ law_combination_acts = {
 			# GROUP program_1ead1388612c8442_law_movement_radicalization_loss_negative
 			add = { value = 0
 				# law_context_law_combination_acts_law_factory_councils_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_factory_councils any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_factory_councils any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 				# law_context_law_combination_acts_law_corporatized_unions_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_corporatized_unions any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_corporatized_unions any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 				# law_context_law_combination_acts_law_right_to_associate_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 				# law_context_law_combination_acts_law_anti_strike_laws_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 				# law_context_law_combination_acts_law_guild_system_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guild_system any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_guild_system any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 			}
 			# GROUP program_1ead1388612c8442_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_combination_acts_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_combination_acts_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_1ead1388612c8442_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_combination_acts_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_combination_acts } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_combination_acts } } add = -10 }
 				# law_context_law_combination_acts_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_combination_acts } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_combination_acts value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_combination_acts } } add = -6 }
 			}
 			# GROUP program_1ead1388612c8442_law_political_pressure_negative
 			add = { value = 0
@@ -327,29 +327,29 @@ law_anti_strike_laws = {
 			# GROUP program_b1c9f9b5124eff60_law_movement_radicalization_loss_negative
 			add = { value = 0
 				# law_context_law_anti_strike_laws_law_factory_councils_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_factory_councils any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_factory_councils any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 				# law_context_law_anti_strike_laws_law_corporatized_unions_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_corporatized_unions any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_corporatized_unions any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 				# law_context_law_anti_strike_laws_law_right_to_associate_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 				# law_context_law_anti_strike_laws_law_guild_system_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guild_system any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_guild_system any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 			}
 			# GROUP program_b1c9f9b5124eff60_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_anti_strike_laws_law_combination_acts_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_anti_strike_laws_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_anti_strike_laws_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_b1c9f9b5124eff60_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_anti_strike_laws_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_anti_strike_laws } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_anti_strike_laws } } add = -10 }
 				# law_context_law_anti_strike_laws_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_anti_strike_laws } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_anti_strike_laws value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_anti_strike_laws } } add = -6 }
 			}
 			# GROUP program_b1c9f9b5124eff60_law_political_pressure_negative
 			add = { value = 0
@@ -359,9 +359,9 @@ law_anti_strike_laws = {
 			# GROUP program_b1c9f9b5124eff60_law_union_transition_adjustment_negative
 			add = { value = 0
 				# law_context_law_anti_strike_laws_law_combination_acts_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_anti_strike_laws_law_combination_acts_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 			}
 			min = -35
 			max = 14
@@ -460,26 +460,26 @@ law_right_to_associate = {
 			# GROUP program_5c9fac5659705c3f_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_right_to_associate_law_factory_councils_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_factory_councils any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_factory_councils any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_right_to_associate_law_corporatized_unions_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_corporatized_unions any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_corporatized_unions any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_right_to_associate_law_anti_strike_laws_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_right_to_associate_law_combination_acts_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_right_to_associate_law_guild_system_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guild_system any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_guild_system any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_right_to_associate_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_right_to_associate_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_5c9fac5659705c3f_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_right_to_associate_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_right_to_associate } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_right_to_associate } } add = -10 }
 				# law_context_law_right_to_associate_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_right_to_associate } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_right_to_associate value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_right_to_associate } } add = -6 }
 			}
 			# GROUP program_5c9fac5659705c3f_law_political_pressure_negative
 			add = { value = 0
@@ -489,21 +489,21 @@ law_right_to_associate = {
 			# GROUP program_5c9fac5659705c3f_law_union_transition_adjustment_negative
 			add = { value = 0
 				# law_context_law_right_to_associate_law_corporatized_unions_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_right_to_associate_law_anti_strike_laws_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_right_to_associate_law_combination_acts_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_right_to_associate_law_guild_system_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_right_to_associate_law_corporatized_unions_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_right_to_associate_law_anti_strike_laws_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_right_to_associate_law_combination_acts_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_right_to_associate_law_guild_system_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 			}
 			min = -29
 			max = 14
@@ -603,25 +603,25 @@ law_corporatized_unions = {
 			# GROUP program_081035cefd15d268_law_movement_radicalization_loss_negative
 			add = { value = 0
 				# law_context_law_corporatized_unions_law_right_to_associate_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 			}
 			# GROUP program_081035cefd15d268_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_corporatized_unions_law_anti_strike_laws_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_corporatized_unions_law_combination_acts_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_corporatized_unions_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_corporatized_unions_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_081035cefd15d268_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_corporatized_unions_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_corporatized_unions } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_corporatized_unions } } add = -10 }
 				# law_context_law_corporatized_unions_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_corporatized_unions } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_corporatized_unions value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_corporatized_unions } } add = -6 }
 			}
 			# GROUP program_081035cefd15d268_law_political_pressure_negative
 			add = { value = 0
@@ -631,13 +631,13 @@ law_corporatized_unions = {
 			# GROUP program_081035cefd15d268_law_union_transition_adjustment_negative
 			add = { value = 0
 				# law_context_law_corporatized_unions_law_anti_strike_laws_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_corporatized_unions_law_combination_acts_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_corporatized_unions_law_anti_strike_laws_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_corporatized_unions_law_combination_acts_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 			}
 			min = -35
 			max = 14
@@ -734,25 +734,25 @@ law_factory_councils = {
 			# GROUP program_28a4940589b67ac1_law_movement_radicalization_loss_negative
 			add = { value = 0
 				# law_context_law_factory_councils_law_right_to_associate_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_to_associate any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -6 }
 			}
 			# GROUP program_28a4940589b67ac1_law_observed_agenda_positive
 			add = { value = 0
 				# law_context_law_factory_councils_law_anti_strike_laws_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_factory_councils_law_combination_acts_movement_radicalization [political]; 比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = 14 }
 				# law_context_law_factory_councils_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.25 } } } add = 10 }
 				# law_context_law_factory_councils_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } } } add = 6 }
 			}
 			# GROUP program_28a4940589b67ac1_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_factory_councils_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_factory_councils } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_factory_councils } } add = -10 }
 				# law_context_law_factory_councils_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_factory_councils } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { any_political_movement = { law_enactment_stance = { law = law_type:law_factory_councils value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_factory_councils } } add = -6 }
 			}
 			# GROUP program_28a4940589b67ac1_law_political_pressure_negative
 			add = { value = 0
@@ -762,25 +762,25 @@ law_factory_councils = {
 			# GROUP program_28a4940589b67ac1_law_union_transition_adjustment_negative
 			add = { value = 0
 				# law_context_law_factory_councils_law_corporatized_unions_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_factory_councils_law_right_to_associate_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_to_associate exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_to_associate exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_factory_councils_law_anti_strike_laws_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_factory_councils_law_combination_acts_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_factory_councils_law_guild_system_union_adjustment_government [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 is_in_government = yes } } } add = -9 }
 				# law_context_law_factory_councils_law_corporatized_unions_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_corporatized_unions exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_factory_councils_law_right_to_associate_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_right_to_associate exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_right_to_associate exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_factory_councils_law_anti_strike_laws_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_anti_strike_laws exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_factory_councils_law_combination_acts_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_combination_acts exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 				# law_context_law_factory_councils_law_guild_system_union_adjustment_base [political]; 实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_guild_system exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_approval < 0 ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.2 } } } add = -6 }
 			}
 			min = -35
 			max = 14

@@ -842,6 +842,7 @@ def query_from_reader(engine: str, parameters: Mapping[str, str]) -> TechnologyQ
                 "resource",
                 "infrastructure_direct",
             }
+            or _local_ready(TechnologyUseQuery(parameters["technology"], parameters["purpose"]))
             else "any_scope_building"
         )
     ):
@@ -1058,6 +1059,173 @@ def _law_and_technology_gates(row: Mapping[str, Any]) -> str:
     return " ".join(clauses)
 
 
+def _local_ready(query: TechnologyUseQuery) -> bool:
+    """Only prepared uses with actual local inputs require a same-state join."""
+    return query.purpose in {"labor_ready", "productive_ready"} and any(
+        _QUERY_CATALOG["goods"][good]["local"]
+        for row in query_members(query)
+        for good, amount in (row["inputs"] | row["losses"]).items()
+        if amount > 0
+    )
+
+
+def _factored_boolean(operator: str, expressions: list[str]) -> str:
+    """Join generated boolean terms without redundant same-operator layers.
+
+    Every expression is one complete assignment constructed below. Associative
+    AND/OR can flatten in this same scope, including Strong Kleene unknowns;
+    ROOT, object quantifiers and other scope assignments stay opaque.
+    """
+    expressions = [expression for expression in expressions if expression]
+    if len(expressions) == 1:
+        return expressions[0]
+    prefix = operator + " = { "
+    terms = [
+        expression[len(prefix) : -2]
+        if expression.startswith(prefix) and expression.endswith(" }")
+        else expression
+        for expression in expressions
+    ]
+    return prefix + " ".join(terms) + " }"
+
+
+def _factored_terms(alternatives: list[tuple[str, ...]]) -> str:
+    """Factor a finite positive DNF in the same object and observed scope.
+
+    Strong Kleene AND/OR is a distributive lattice, including unknowns.  No
+    NOT, numeric arithmetic, quantifier motion or new native getter is used.
+    """
+    rows = sorted({tuple(sorted(set(row))) for row in alternatives})
+    if not rows:
+        raise ValueError("科技因式分解缺少真实成员")
+    if any(not row for row in rows):
+        # An empty conjunction is true; callers only produce nonempty members.
+        raise ValueError("科技因式分解不能使用空成员")
+    shared = set(rows[0]).intersection(*(set(row) for row in rows[1:]))
+    if shared:
+        remainder = [tuple(term for term in row if term not in shared) for row in rows]
+        suffix = "" if any(not row for row in remainder) else _factored_terms(remainder)
+        return _factored_boolean("AND", [*sorted(shared), suffix])
+    if len(rows) == 1:
+        return _factored_boolean("AND", list(rows[0]))
+    frequencies = {term: sum(term in row for row in rows) for row in rows for term in row}
+    term, count = min(frequencies.items(), key=lambda item: (-item[1], item[0]))
+    if count > 1:
+        matching = [row for row in rows if term in row]
+        other = [row for row in rows if term not in row]
+        return _factored_boolean("OR", [_factored_terms(matching), _factored_terms(other)])
+    return _factored_boolean("OR", [_factored_boolean("AND", list(row)) for row in rows])
+
+
+def _render_factored_technology_use(query: TechnologyUseQuery) -> str:
+    """Exact finite factoring for the two consumers with omitted ready tiers."""
+    rows = query_members(query)
+    purpose = query.purpose
+    labor = purpose.startswith("labor")
+    if purpose in {"infrastructure", "local_supply"}:
+        # All four compression-ignition railway members retain one state and
+        # one of that same state's buildings. Only OR/existential commute.
+        groups: dict[tuple[str, ...], list[tuple[str, ...]]] = {}
+        for row in rows:
+            state = [
+                "infrastructure_delta < 0"
+                if purpose == "infrastructure"
+                else _or(
+                    [
+                        f"sg:{good} = {{ state_goods_pricier > 0.25 }}"
+                        for good in row["outputs"]
+                        if _QUERY_CATALOG["goods"][good]["local"]
+                    ]
+                )
+            ]
+            gates = _law_and_technology_gates(row)
+            if gates:
+                state.append(f"ROOT = {{ {gates} }}")
+            building_terms = (
+                f"is_building_type = {row['building']}",
+                f"has_active_production_method = {row['prior']}",
+                "level >= 1",
+            )
+            groups.setdefault(tuple(state), []).append(building_terms)
+        return _or(
+            [
+                "any_scope_state = { "
+                + " ".join(state)
+                + " any_scope_building = { "
+                + _factored_terms(buildings)
+                + " } }"
+                for state, buildings in groups.items()
+            ]
+        )
+    alternatives = []
+    for row in rows:
+        terms = [f"is_building_type = {row['building']}"]
+        if row["prior"]:
+            terms.append(f"has_active_production_method = {row['prior']}")
+        gates = _law_and_technology_gates(row)
+        if gates:
+            terms.append(f"ROOT = {{ {gates} }}")
+        if not labor:
+            terms.append(
+                "ROOT = { "
+                + _or(
+                    [
+                        f"market = {{ mg:{good} = {{ market_goods_delta < 0 }} }}"
+                        for good in row["outputs"]
+                        if _QUERY_CATALOG["goods"][good]["market"]
+                    ]
+                )
+                + " }"
+            )
+        if purpose.endswith("_ready"):
+            for good, amount in (row["inputs"] | row["losses"]).items():
+                if amount <= 0:
+                    continue
+                if not _QUERY_CATALOG["goods"][good]["market"]:
+                    raise ValueError("有限科技因式分解不能替代本地同州连接")
+                terms.append(
+                    f"ROOT = {{ market = {{ mg:{good} = {{ market_goods_delta >= 0 }} }} }}"
+                )
+        alternatives.append(tuple(terms))
+    if labor:
+        # Factor only identical building sets for identical remaining terms.
+        # Both groups are evaluated on the same building object.
+        by_rest: dict[tuple[str, ...], set[str]] = {}
+        for alternative in alternatives:
+            building_term = next(
+                term for term in alternative if term.startswith("is_building_type = ")
+            )
+            rest = tuple(term for term in alternative if term != building_term)
+            by_rest.setdefault(rest, set()).add(building_term)
+        rectangles: dict[tuple[str, ...], list[tuple[str, ...]]] = {}
+        for rest, buildings in by_rest.items():
+            rectangles.setdefault(tuple(sorted(buildings)), []).append(rest)
+        expression = _or(
+            [
+                "AND = { " + _or(list(buildings)) + " " + _factored_terms(rests) + " }"
+                for buildings, rests in rectangles.items()
+            ]
+        )
+    else:
+        expression = _factored_terms(alternatives)
+    building = (
+        "any_scope_building = { level >= 1 "
+        + ("occupancy >= 0.9 " if labor else "")
+        + expression
+        + " }"
+    )
+    return (
+        (
+            "any_scope_state = { state_unemployment_rate < 0.02 "
+            "pop_type_percent_state = { target = pop_type:peasants value < 0.02 } "
+            + building
+            + " }"
+        )
+        if labor
+        else building
+    )
+
+
 def render_query(query: TechnologyQuery) -> str:
     """Render fixed frozen templates without filesystem or game access."""
     if type(query) is TechnologyBuildingQuery:
@@ -1078,17 +1246,38 @@ def render_query(query: TechnologyQuery) -> str:
         raise ValueError("科技查询类型未登记")
     expressions = []
     purpose = query.purpose
-    if purpose == "labor_ready" and any(
-        _QUERY_CATALOG["goods"][good]["local"]
-        for row in query_members(query)
-        for good, amount in (row["inputs"] | row["losses"]).items()
-        if amount > 0
+    if (
+        query.technology == "compression_ignition"
+        and purpose
+        in {
+            "productive",
+            "productive_ready",
+            "labor",
+            "labor_ready",
+            "infrastructure",
+            "local_supply",
+        }
+    ) or (
+        query.technology == "mechanized_workshops" and purpose in {"productive", "productive_ready"}
     ):
+        return _render_factored_technology_use(query)
+    if _local_ready(query):
         # Group only identical local-input baskets. Each alternative still
         # binds its exact building, prior PM and all market inputs together.
         local_groups: dict[tuple[str, ...], list[str]] = {}
+        labor = purpose == "labor_ready"
         for row in query_members(query):
             country = [_law_and_technology_gates(row)]
+            if not labor:
+                country.append(
+                    _or(
+                        [
+                            f"market = {{ mg:{good} = {{ market_goods_delta < 0 }} }}"
+                            for good in row["outputs"]
+                            if _QUERY_CATALOG["goods"][good]["market"]
+                        ]
+                    )
+                )
             local = []
             for good, amount in (row["inputs"] | row["losses"]).items():
                 if amount <= 0:
@@ -1099,7 +1288,7 @@ def render_query(query: TechnologyQuery) -> str:
                 elif identity["local"]:
                     local.append(good)
                 else:
-                    raise ValueError("省工准备档输入既非市场商品也非已证明的本地商品")
+                    raise ValueError("准备档输入既非市场商品也非已证明的本地商品")
             conditions = " ".join(value for value in country if value)
             local_groups.setdefault(tuple(sorted(local)), []).append(
                 f"AND = {{ is_building_type = {row['building']} "
@@ -1108,13 +1297,19 @@ def render_query(query: TechnologyQuery) -> str:
         for goods, members in local_groups.items():
             prices = " ".join(f"sg:{good} = {{ state_goods_pricier <= 0.25 }}" for good in goods)
             expressions.append(
-                f"AND = {{ {prices} any_scope_building = {{ level >= 1 occupancy >= 0.9 "
+                f"AND = {{ {prices} any_scope_building = {{ level >= 1 "
+                + ("occupancy >= 0.9 " if labor else "")
                 + _or(members)
                 + " } }"
             )
         return (
-            "any_scope_state = { state_unemployment_rate < 0.02 "
-            "pop_type_percent_state = { target = pop_type:peasants value < 0.02 } "
+            "any_scope_state = { "
+            + (
+                "state_unemployment_rate < 0.02 "
+                "pop_type_percent_state = { target = pop_type:peasants value < 0.02 } "
+                if labor
+                else ""
+            )
             + _or(expressions)
             + " }"
         )
@@ -1281,7 +1476,7 @@ def reader_spec(query: TechnologyQuery) -> dict[str, Any]:
             "technology": query.technology,
             "purpose": query.purpose,
         }
-        state = query.purpose in {
+        state = _local_ready(query) or query.purpose in {
             "labor",
             "labor_ready",
             "infrastructure",
@@ -1321,7 +1516,7 @@ def required_query_sources(query: TechnologyQuery) -> tuple[str, ...]:
     )
     if isinstance(query, TechnologyUseQuery):
         sources.add(_QUERY_CATALOG["technologies"][query.technology]["source"])
-        state = query.purpose in {
+        state = _local_ready(query) or query.purpose in {
             "labor",
             "labor_ready",
             "infrastructure",
@@ -1477,6 +1672,10 @@ def _facts() -> dict[str, Any]:
             "boolean",
             parameters={"threshold": "0.9"},
         ),
+        "innovation": _simple("country_innovation", "weekly_innovation_points", minimum=0),
+        "innovation_cap": _simple(
+            "modifier:country_weekly_innovation_max_add", "weekly_innovation_points"
+        ),
         "bureaucracy": _simple("bureaucracy", "capacity_balance"),
         "war": _simple("is_at_war", "boolean", "boolean"),
         "own_army": _simple("army_size", "battalions", minimum=0),
@@ -1556,6 +1755,7 @@ def derive(
                     "value": value,
                     "priority": int(chosen["priority_base"]) + len(rules),
                     "contribution_group": group,
+                    "semantic_role": "benefit",
                     "conditions": conditions,
                     "why": why,
                     "counterexample": "未知仅退出本项，饱和退出；研究不支付未来采用费用，保留原版资格、研究点、前置、时代惩罚、随机与执行",
@@ -1704,14 +1904,6 @@ def derive(
             technology=technology,
             rule=rule,
         ):
-            # These auxiliary supply-ready tiers repeat large native member
-            # sets. Keep all basic mechanisms and actual uses while honoring
-            # the existing expanded per-consumer 160-predicate budget.
-            if (
-                technology == "compression_ignition"
-                and purpose in {"productive_ready", "labor_ready"}
-            ) or (technology == "mechanized_workshops" and purpose == "productive_ready"):
-                return
             query = TechnologyUseQuery(technology, purpose)
             if not query_members(query, frozen):
                 return
@@ -1747,13 +1939,13 @@ def derive(
             "knowledge",
             chosen["option_base"],
             "university_method_option",
-            [_condition("literacy", "<", chosen["literacy_threshold"])],
+            [_condition("innovation", "<", {"fact": "innovation_cap"})],
         )
         use(
             "knowledge_ready",
             chosen["option_pressure"],
             "university_method_option",
-            [_condition("literacy", "<", chosen["literacy_threshold"])],
+            [_condition("innovation", "<", {"fact": "innovation_cap"})],
         )
         use("infrastructure", chosen["option_pressure"], "local_infrastructure_need")
         use("local_supply", chosen["supply_pressure"], "local_goods_supply_need", domain="market")

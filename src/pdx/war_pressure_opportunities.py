@@ -33,7 +33,7 @@ SOURCES = frozenset({SOURCE, IDEOLOGIES, EFFECTS, REGIONS, TRIGGER_DOC})
 READER = "own_multiwar_low_support"
 RULE = "war_pressure_conquer_state"
 QUERY_PARAMETER = "war_pressure_query"
-GROUP = "target_reconstruction_opportunity"
+GROUP = "ongoing_multiwar_commitment_cost"
 
 
 def load() -> dict[str, Any]:
@@ -286,7 +286,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                     {"fact": "prospective_subject_population", "op": ">", "value": 0},
                     {"fact": READER, "op": "=", "value": True},
                 ],
-                "why": "本国至少两场现行战争各自对本国支持度低于50，对同一已知conquer_state新增领土敌对承诺形成有限机会成本；与近期败战恢复同组取强，不把当前战争和战败记忆重复扣分，融资按独立事实联合",
+                "why": "本国至少两场现行战争各自对本国支持度低于50，对同一已知conquer_state新增领土敌对承诺形成有限机会成本；现行多线承诺占用与近期败战后的有限恢复负担分别成立并分别退出，使用独立因果组联合；既有融资另按独立事实联合，不修改原版战争支持或实际成本",
                 "counterexample": "仅本国own-war列表且逐战争target=root，至少两场低支持而非两场战争中一场低支持；不借敌国支持、不预测败战、劳工或和平接受，不赋予全局禁止开战/防御门。未知集合或支持按三值计数，仅已知满足时扣本项；候选身份未知、玩家和关闭回原版，零/原版限幅/特殊主体终结零/资格和执行完整保留。正常低债借款不新增罚款，不推断集团固定军事义务。",
             }
         ],

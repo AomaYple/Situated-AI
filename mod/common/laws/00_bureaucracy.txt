@@ -56,7 +56,7 @@ law_hereditary_bureaucrats = {
 			# GROUP program_1e1a8deda1881ad1_negative
 			add = { value = 0
 				# political_capacity_law_hereditary_bureaucrats [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 0
@@ -124,7 +124,7 @@ law_crownland_diets = {
 			# GROUP program_7e79a7698b4a2dbb_negative
 			add = { value = 0
 				# political_capacity_law_crownland_diets [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 0
@@ -238,7 +238,7 @@ law_appointed_bureaucrats = {
 			# GROUP program_56a52eb44f76ad8e_negative
 			add = { value = 0
 				# political_capacity_law_appointed_bureaucrats [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_56a52eb44f76ad8e_bureaucracy_institution_cost_negative
 			add = { value = 0
@@ -260,7 +260,7 @@ law_appointed_bureaucrats = {
 			# GROUP program_56a52eb44f76ad8e_bureaucracy_tax_capacity_positive
 			add = { value = 0
 				# bureaucracy_reform_appointed_tax_collection [political]; 原版任命制增加州税容量25%；已拥有且已整合的同一州存在真实税容量缺口时，支持具体税收治理改革，不用全国行政负值代替税容缺口
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_appointed_bureaucrats } any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_appointed_bureaucrats } any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = 14 }
 			}
 			min = -18
 			max = 14
@@ -318,43 +318,43 @@ law_elected_bureaucrats = {
 			# GROUP program_643e3a7e3f935ee1_negative
 			add = { value = 0
 				# political_capacity_law_elected_bureaucrats [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_643e3a7e3f935ee1_bureaucracy_institution_cost_positive
 			add = { value = 0
 				# bureaucracy_reform_elected_institution_saving_workplace_safety_deficit [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } bureaucracy < 0 } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } bureaucracy < 0 } } add = 14 }
 				# bureaucracy_reform_elected_institution_saving_social_security_deficit [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } bureaucracy < 0 } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } bureaucracy < 0 } } add = 14 }
 				# bureaucracy_reform_elected_institution_saving_schools_deficit [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } bureaucracy < 0 } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } bureaucracy < 0 } } add = 14 }
 				# bureaucracy_reform_elected_institution_saving_health_deficit [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = 14 }
 				# bureaucracy_reform_elected_institution_saving_colonial_affairs_deficit [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } bureaucracy < 0 } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } bureaucracy < 0 } } add = 14 }
 				# bureaucracy_reform_elected_institution_saving_home_affairs_deficit [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } bureaucracy < 0 } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } bureaucracy < 0 } } add = 14 }
 				# bureaucracy_reform_elected_institution_saving_police_deficit [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } bureaucracy < 0 } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } bureaucracy < 0 } } add = 14 }
 				# bureaucracy_reform_elected_institution_saving_workplace_safety_existing [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_workplace_safety value >= 0 } institution_investment_level = { institution = institution_workplace_safety value >= 1 } } } add = 8 }
 				# bureaucracy_reform_elected_institution_saving_social_security_existing [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } } } add = 8 }
 				# bureaucracy_reform_elected_institution_saving_schools_existing [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } } } add = 8 }
 				# bureaucracy_reform_elected_institution_saving_health_existing [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = 8 }
 				# bureaucracy_reform_elected_institution_saving_colonial_affairs_existing [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = 8 }
 				# bureaucracy_reform_elected_institution_saving_home_affairs_existing [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } } } add = 8 }
 				# bureaucracy_reform_elected_institution_saving_police_existing [political]; 原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_elected_bureaucrats } institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } } } add = 8 }
 			}
 			# GROUP program_643e3a7e3f935ee1_bureaucracy_tax_capacity_negative
 			add = { value = 0
 				# bureaucracy_reform_elected_appointed_tax_loss [political]; 当前任命制已生效且已整合州税容量仍短缺；转民选制失去原版25%税容量效果，独立于制度行政节约共同权衡
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_appointed_bureaucrats any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_appointed_bureaucrats any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = -10 }
 			}
 			min = -20
 			max = 14

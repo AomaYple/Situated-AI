@@ -203,6 +203,8 @@ PROFILE_ROLES = {
             "army_size",
             "bureaucracy",
             "produced_bureaucracy",
+            "country_innovation",
+            "modifier:country_weekly_innovation_max_add",
             "modifier:country_tech_spread_mult",
             "fixed_income",
             "gdp",

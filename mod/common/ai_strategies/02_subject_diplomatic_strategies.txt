@@ -386,15 +386,15 @@ ai_strategy_subject_strengthen_self = {
 			add = { value = 0
 				# SITAI CHAIN LJ12/LJ12.self_strength_administrative_repair writer=rule_action_common_ai_strategies_02_subject_diplomatic_strategies_txt_target_strategy_subject_self_repair
 				# target_strategy_subject_self_repair [subjects]; 实际属国自身行政缺口形成修复治理能力的独立自强需求；财政未知不抹已证缺口，不等于已建成或已选择策略
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes bureaucracy < 0 } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_subject = yes bureaucracy < 0 } } add = 0.08 }
 			}
 			# GROUP program_b0ad0903270e2406_subject_self_autonomy_positive
 			add = { value = 0
 				# target_strategy_subject_self_strong [subjects]; 本国实际属国且自身高自主愿望形成自强方向；更高愿望同原因升档，不用非借贷或健康当欲求存在条件
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.18 }
 				# SITAI CHAIN LJ12/LJ12.actual_subject_autonomy_need writer=rule_action_common_ai_strategies_02_subject_diplomatic_strategies_txt_target_strategy_subject_self_need
 				# target_strategy_subject_self_need [subjects]; 本国实际属国且自身高自主愿望形成自强方向；更高愿望同原因升档，不用非借贷或健康当欲求存在条件
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 } } add = 0.1 }
 			}
 			min = 1
 			max = 1.26
@@ -523,7 +523,7 @@ ai_strategy_subject_maintain_autonomy = {
 			# GROUP program_2ef88f55f6b9e299_subject_autonomy_status_quo_positive
 			add = { value = 0
 				# target_strategy_subject_maintain_need [subjects]; 本国确为属国且自主愿望居中，形成维持现有自主安排的有限方向；高自由愿望不再伪作现状需求，原版100-liberty权重与possible完整保留
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 25 liberty_desire < 50 } } add = 0.1 }
+				if = { limit = { exists = ROOT ROOT = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 25 liberty_desire < 50 } } add = 0.1 }
 			}
 			min = 1
 			max = 1.1
@@ -655,14 +655,14 @@ ai_strategy_subject_overlord_compliance = {
 			# GROUP program_b307327ddc11f2cc_subject_cooperation_need_positive
 			add = { value = 0
 				# target_strategy_subject_cooperation_relation [subjects]; 同一低自主愿望上已观察本国与实际宗主友好关系加强合作档；未知关系保留基础方向而不猜援助
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 exists = overlord overlord = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } } add = 0.18 }
+				if = { limit = { exists = ROOT ROOT = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 exists = overlord overlord = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } } add = 0.18 }
 				# target_strategy_subject_cooperation_need [subjects]; 本国实际属国且低自由愿望形成有限合作方向；违约不能证明宗主援助或合作收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 } } add = 0.1 }
 			}
 			# GROUP program_b307327ddc11f2cc_subject_economic_relationship_continuity_positive
 			add = { value = 0
 				# subject_actual_economic_relationship_continuity [subjects]; 本国实际属国对当前直接宗主的经济依赖指数高于1，当前经济联系形成有限合作连续性收益；与自由愿望/关系需要独立联合，不把依赖一概判坏
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes AND = { is_subject = yes exists = overlord "ROOT.economic_dependence(overlord)" > 1 } } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_subject = yes AND = { is_subject = yes exists = overlord "ROOT.economic_dependence(overlord)" > 1 } } } add = 0.08 }
 			}
 			min = 1
 			max = 1.26

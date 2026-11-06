@@ -2,7 +2,7 @@
   "schema": 1,
   "evidence": "static_vanilla_examples_not_engine_execution",
   "baseline_sha256": "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431",
-  "snapshot_sections_sha256": "51cb4a22b4f86f4552a901cb828807e33e287bea501e39757d1a0204b9813269",
+  "snapshot_sections_sha256": "e84e05466bacb4492e0058af03e39247be53d41df8f89e3c57b33927353b14e8",
   "sources": {
     "common/achievements/base_achievements.txt": "276ed2057159ccc2c2b6ebe874e4e97a935300b9707d9b110e553f3c9c68602e",
     "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",

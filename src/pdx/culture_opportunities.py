@@ -13,9 +13,10 @@ import math
 import re
 import tomllib
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from . import config
+from . import config, religious_channels
 from .model import Block, Scalar
 from .parser import parse_text
 
@@ -33,7 +34,18 @@ VALUES = "common/script_values/event_values.txt"
 CITIZENSHIP = "common/laws/00_citizenship.txt"
 HOMELAND = "events/cultural_homeland_events.txt"
 SOURCES = frozenset(
-    {SOURCE, LOBBIES, ALGERIA, HIERARCHY, RELIGION_SOURCE, VALUES, CITIZENSHIP, HOMELAND}
+    {
+        SOURCE,
+        LOBBIES,
+        ALGERIA,
+        HIERARCHY,
+        RELIGION_SOURCE,
+        VALUES,
+        CITIZENSHIP,
+        HOMELAND,
+        religious_channels.HERITAGE,
+        religious_channels.GROUP,
+    }
 )
 RELIGIONS = (
     "catholic",
@@ -99,6 +111,17 @@ EFFECTS = {
 }
 
 
+def proof_dependency_bytes() -> bytes:
+    """Fingerprint the independent validator and its exact accepted proof bytes."""
+    religious_channels.snapshot()
+    return (
+        b"\0religious-channel-validator:"
+        + Path(religious_channels.__file__).read_bytes()
+        + b"\0religious-channel-manifest:"
+        + religious_channels.MANIFEST.read_bytes()
+    )
+
+
 def load() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
     if (
@@ -113,7 +136,11 @@ def load() -> dict[str, Any]:
     ):
         raise ValueError("宗教暴露必须锁定完整原版来源")
     tuning = data["tuning"]
-    if set(tuning) != {"observed_religious_need", "observed_cultural_need"} or any(
+    if set(tuning) != {
+        "observed_religious_need",
+        "observed_cultural_need",
+        "observed_state_protection_loss",
+    } or any(
         type(value) not in {int, float} or not math.isfinite(value) or not 0 < value <= 10
         for value in tuning.values()
     ):
@@ -187,7 +214,8 @@ def frozen_inputs() -> dict[str, str]:
 
 def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
     roots = _roots(inputs)
-    refs = []
+    religious_channels.verify_inputs(inputs)
+    refs = [religious_channels.MANIFEST_ID + ":sha256:" + religious_channels.MANIFEST_SHA256]
     religions = roots[RELIGION_SOURCE]
     if tuple(row.key for row in religions.assignments()) != RELIGIONS:
         raise ValueError("宗教暴露有限宗教字典分母漂移")
@@ -208,6 +236,8 @@ def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
             parents[law] = ORIGIN
     if set(parents) != set(VARIANTS):
         raise ValueError("宗教原法变体/继承分母漂移")
+    refs.extend(_verify_atheism_transition(laws))
+    refs.extend(_verify_conscience_separation(laws))
     # Only this transition is scored. All three non-state categories improve,
     # whereas the state category loses five points and must be excluded.
     if tuple(b - a for a, b in zip(EFFECTS[ORIGIN], EFFECTS[CANDIDATE], strict=True)) != (
@@ -299,9 +329,109 @@ def verify_inputs(inputs: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(refs)
 
 
+def _verify_atheism_transition(laws: Block) -> tuple[str, ...]:
+    """Prove the current identity guard and target invariant, not equal slots.
+
+    All parent definitions are complete-source hash locked by _roots. The
+    same-family native numeric consumer additionally proves the country guard;
+    neither activation effects nor an unrelated event grant consumer scope.
+    """
+    origin = _child(laws, "law_state_atheism")
+    target = _child(laws, "law_total_separation")
+    activation = _child(origin, "on_activate")
+    refs = [f"{SOURCE}:{_scalar(activation, 'set_state_religion', 'rel:atheist')}"]
+    if _shape(activation) != (
+        ("set_state_religion", "=", "rel:atheist"),
+        (
+            "add_modifier",
+            "=",
+            (("name", "=", "antireligious_policies"), ("days", "=", "long_modifier_time")),
+        ),
+        (
+            "custom_tooltip",
+            "=",
+            (
+                ("text", "=", "state_atheism_conversion_tt"),
+                (
+                    "every_scope_state",
+                    "=",
+                    (
+                        ("limit", "=", (("is_incorporated", "=", "yes"),)),
+                        (
+                            "convert_population",
+                            "=",
+                            (("target", "=", "rel:atheist"), ("value", "=", "0.1")),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        ("recalculate_pop_ig_support", "=", "yes"),
+    ):
+        raise ValueError("国家无神论原版完整激活父结构漂移")
+    target_activation = _child(target, "on_activate")
+    expected = (
+        (
+            "if",
+            "=",
+            (
+                ("limit", "=", (("country_has_state_religion", "=", "rel:atheist"),)),
+                ("set_state_religion", "=", "root.country_definition.religion"),
+            ),
+        ),
+        (
+            "if",
+            "=",
+            (
+                ("limit", "=", (("has_modifier", "=", "antireligious_policies"),)),
+                ("remove_modifier", "=", "antireligious_policies"),
+            ),
+        ),
+        ("recalculate_pop_ig_support", "=", "yes"),
+    )
+    if _shape(target_activation) != expected:
+        raise ValueError("无神论到完全分离原版完整激活父结构漂移")
+    numeric = _child(_child(laws, CANDIDATE), "ai_enact_weight_modifier")
+    proof = (
+        (
+            "limit",
+            "=",
+            (
+                ("has_journal_entry", "=", "je_shinbutsu_bunri"),
+                ("country_has_state_religion", "=", "rel:mahayana"),
+            ),
+        ),
+        ("add", "=", "1000"),
+    )
+    guards = [
+        row
+        for row in numeric.all("if")
+        if isinstance(row.value, Block) and _shape(row.value) == proof
+    ]
+    if len(guards) != 1:
+        raise ValueError("法律数值消费者国家国教读取完整父分支漂移")
+    refs.append(f"{SOURCE}:{guards[0].line}")
+    _, dictionary = religious_channels.snapshot()
+    if EFFECTS["law_state_atheism"] != (15, 0, -5, -10) or EFFECTS["law_total_separation"] != (
+        15,
+        15,
+        15,
+        15,
+    ):
+        raise ValueError("无神论到完全分离接受分量漂移")
+    if any(
+        dictionary.category("atheist", religion) != ("state" if religion == "atheist" else "other")
+        for religion in RELIGIONS
+    ):
+        raise ValueError("无神论独占heritage/group分类漂移")
+    return tuple(refs)
+
+
 @dataclass(frozen=True, slots=True)
 class ReligiousExposureQuery:
     """At least one observed, substantial non-state religion with low acceptance."""
+
+    mode: str = "nonstate_religious_exposure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -327,6 +457,17 @@ def query_from_reader(
 ) -> ReligiousExposureQuery | CulturalExposureQuery:
     if engine == "any_scope_state" and parameters == {QUERY_PARAMETER: "owned_cultural_exposure"}:
         return CulturalExposureQuery()
+    if engine == "OR" and parameters == {QUERY_PARAMETER: "state_religious_protection_exposure"}:
+        return ReligiousExposureQuery("state_religious_protection_exposure")
+    for mode in (
+        "channel_benefit_exposure",
+        "shared_group_protection_exposure",
+        "atheism_nonstate_exposure",
+        "separation_group_other_exposure",
+        "stable_nonatheist_identity",
+    ):
+        if engine == "OR" and parameters == {QUERY_PARAMETER: mode}:
+            return ReligiousExposureQuery(mode)
     if engine != "OR" or parameters != {QUERY_PARAMETER: "nonstate_religious_exposure"}:
         raise ValueError("宗教暴露只接受精确国家OR/固定宗教字典查询")
     return ReligiousExposureQuery()
@@ -342,6 +483,58 @@ def render_query(query: ReligiousExposureQuery | CulturalExposureQuery) -> str:
         )
     if type(query) is not ReligiousExposureQuery:
         raise ValueError("宗教暴露只接受精确类型查询")
+    if query.mode == "stable_nonatheist_identity":
+        return (
+            "OR = { "
+            + " ".join(
+                f"country_has_state_religion = rel:{religion}"
+                for religion in RELIGIONS
+                if religion != "atheist"
+            )
+            + " }"
+        )
+    if query.mode == "separation_group_other_exposure":
+        return religious_channels.exposure(("group", "other"), loss=False)
+    if query.mode == "atheism_nonstate_exposure":
+        # The current law alone cannot prove the current state religion.
+        # Target separation has 15 in every category even after restoration.
+        expression = (
+            "OR = { AND = { country_has_state_religion = rel:atheist "
+            + render_query(ReligiousExposureQuery())
+            + " } }"
+        )
+        from .situated.resources import pdx_metrics  # noqa: PLC0415
+
+        metrics = pdx_metrics(expression)
+        if (
+            religious_channels.MAX_PREDICATES < 52
+            or metrics["assignment_nodes"] > religious_channels.MAX_ASSIGNMENTS
+            or metrics["block_nodes"] > religious_channels.MAX_BLOCKS
+            or len(expression.encode()) > religious_channels.MAX_BYTES
+            or metrics["max_depth"] > religious_channels.MAX_DEPTH
+            or metrics["object_scan_sites"]
+            or metrics["persistent_write_sites"]
+        ):
+            raise ValueError("无神论封闭查询超出既有宗教预算")
+        return expression
+    if query.mode == "channel_benefit_exposure":
+        return religious_channels.exposure(("heritage", "other"), loss=False)
+    if query.mode == "shared_group_protection_exposure":
+        return religious_channels.exposure(("group",), loss=True)
+    if query.mode not in {
+        "nonstate_religious_exposure",
+        "state_religious_protection_exposure",
+    }:
+        raise ValueError("宗教暴露仅接受两个封闭国家聚合形状")
+    if query.mode == "state_religious_protection_exposure":
+        rows = [
+            "AND = { "
+            f"country_has_state_religion = rel:{religion} "
+            f"religion_percent_country = {{ target = rel:{religion} value >= 0.1 }} "
+            f"country_average_religious_acceptance = {{ target = rel:{religion} value > 0 }} }}"
+            for religion in RELIGIONS
+        ]
+        return "OR = { " + " ".join(rows) + " }"
     rows = [
         "AND = { "
         f"NOT = {{ country_has_state_religion = rel:{religion} }} "
@@ -370,12 +563,29 @@ def compile_query(
             local_collections=("owned_states", "state_cultures"),
             runtime_cost="owned-state/actual-state-culture existential short circuit; no world/Pop scan; engine timing unmeasured",
         )
+    runtime_cost = (
+        "17 fixed religion identities; at most 306 leaf predicates; bounded identity OR; "
+        "no Pop/state/world traversal; engine timing unmeasured"
+        if isinstance(query, ReligiousExposureQuery)
+        and query.mode
+        in {
+            "channel_benefit_exposure",
+            "shared_group_protection_exposure",
+            "separation_group_other_exposure",
+        }
+        else "17 fixed religion identities; at most 52 getter comparisons including atheist identity guard; no Pop/state/world traversal; engine timing unmeasured"
+        if isinstance(query, ReligiousExposureQuery) and query.mode == "atheism_nonstate_exposure"
+        else "17 fixed religion identities; at most 51 aggregate getter comparisons; no Pop/state/world traversal; engine timing unmeasured"
+    )
     return CompiledReligiousExposureQuery(
-        render_query(query), verify_inputs(inputs), tuple(sorted(load()["sources"].items()))
+        render_query(query),
+        verify_inputs(inputs),
+        tuple(sorted(load()["sources"].items())),
+        runtime_cost=runtime_cost,
     )
 
 
-def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
+def _base_derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
     del adapters  # Exact local readers need no inferred aliases or external facts.
     data = load()
     verify_inputs(frozen_inputs())
@@ -457,3 +667,293 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             {"id": CULTURAL_CANDIDATE, "source": CITIZENSHIP, "field": CULTURAL_FIELD},
         ],
     }
+
+
+def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
+    """Add proven exact transitions with separately observed benefit and loss.
+
+    The state category loses protection independently of authority. The common
+    ScalarProgram combines the existing movement, authority and crisis terms;
+    neither this derivative nor its local query computes a second score.
+    """
+    data = _base_derive(adapters)
+    tuning = load()["tuning"]
+    protection = "culture_state_religious_protection_exposure"
+    data["readers"][protection] = {
+        "engine": "OR",
+        "scope": "root",
+        "kind": "boolean",
+        "unit": "boolean",
+        "parameters": {QUERY_PARAMETER: "state_religious_protection_exposure"},
+    }
+    # Mixed/zero beneficiary categories require a distinct precise trait query.
+    # They deliberately do not inherit this all-three-categories admission.
+    transitions = (
+        (ORIGIN, CANDIDATE),
+        ("law_caesaropapism", CANDIDATE),
+        (ORIGIN, "law_total_separation"),
+        ("law_caesaropapism", "law_total_separation"),
+        ("law_millet_system", "law_total_separation"),
+        ("law_people_of_the_book", "law_total_separation"),
+    )
+    for index, (origin, candidate) in enumerate(transitions):
+        delta = tuple(b - a for a, b in zip(EFFECTS[origin], EFFECTS[candidate], strict=True))
+        if not (delta[0] < 0 and all(value > 0 for value in delta[1:])):
+            raise ValueError("宗教转换必须逐通道证明非国教严格改善与国教保护损失")
+        current = []
+        for law in (ORIGIN, *VARIANTS, candidate):
+            key = f"culture_current_{law}"
+            data["readers"][key] = {
+                "engine": "has_law_or_variant",
+                "scope": "root",
+                "kind": "boolean",
+                "unit": "boolean",
+                "argument": f"law_type:{law}",
+            }
+            current.append({"fact": key, "op": "=", "value": law in (origin, ORIGIN)})
+        field = f"{candidate}.ai_enact_weight_modifier"
+        if (origin, candidate) != (ORIGIN, CANDIDATE):
+            data["rules"].append(
+                {
+                    "id": f"culture_{origin}_to_{candidate}_observed_exposure",
+                    "source": SOURCE,
+                    "field": field,
+                    "domain": "political",
+                    "priority": 80100 + index,
+                    "operation": "add",
+                    "value": tuning["observed_religious_need"],
+                    "semantic_role": "benefit",
+                    "contribution_group": "law_observed_religious_exposure",
+                    "conditions": [*current, {"fact": READER, "op": "=", "value": True}],
+                    "why": "现行法精确识别；同一本国非国教人口至少10%且当前宗教接受低于0，候选三非国教通道均严格改善；有界需要不等于改革通过或未来收益",
+                    "counterexample": "混合或不变trait通道、国教、错宗教/外国拼接、接受改善、已改革、核心未知均不新增需要",
+                }
+            )
+        data["rules"].append(
+            {
+                "id": f"culture_{origin}_to_{candidate}_state_protection_loss",
+                "source": SOURCE,
+                "field": field,
+                "domain": "political",
+                "priority": 80200 + index,
+                "operation": "add",
+                "value": -tuning["observed_state_protection_loss"],
+                "semantic_role": "cost",
+                "contribution_group": "law_state_religious_protection_loss",
+                "conditions": [*current, {"fact": protection, "op": "=", "value": True}],
+                "conservative_unknown_facts": [protection],
+                "unknown_cost_basis": "已知精确转换确定降低国教接受分量；本国国教人口或正接受暴露未知时保留有限保护损失，只有完整已知无暴露才免除。与权威资源损失是独立机制。",
+                "why": "本国当前国教人口至少10%且当前宗教接受为正时，转换降低国教保护；有限设计参数不按接受点数、人口数或未来激进化折算",
+                "counterexample": "精确现法未知/已改革不扩展成本；已知无当前国教暴露免除本项；它退出不移除独立非国教需要、权威或危机成本",
+            }
+        )
+    if not any(row["id"] == "law_total_separation" for row in data["covered"]):
+        data["covered"].append(
+            {
+                "id": "law_total_separation",
+                "source": SOURCE,
+                "field": "law_total_separation.ai_enact_weight_modifier",
+            }
+        )
+    _mixed_transitions(data)
+    _atheism_to_separation(data)
+    _conscience_to_separation(data)
+    return data
+
+
+def _atheism_to_separation(data: dict[str, Any]) -> None:
+    """One closed transition; authority cost remains its existing sole author."""
+    reader = "culture_atheism_nonstate_exposure"
+    data["readers"][reader] = {
+        "engine": "OR",
+        "scope": "root",
+        "kind": "boolean",
+        "unit": "boolean",
+        "parameters": {QUERY_PARAMETER: "atheism_nonstate_exposure"},
+    }
+    current = []
+    # The locked group contains no child of state_atheism: the only parents
+    # are the three checked state_religion variants. Do not require unrelated
+    # law readers to be known just to establish this exact origin.
+    for law in ("law_state_atheism", "law_total_separation"):
+        key = f"culture_current_{law}"
+        data["readers"][key] = {
+            "engine": "has_law_or_variant",
+            "scope": "root",
+            "kind": "boolean",
+            "unit": "boolean",
+            "argument": f"law_type:{law}",
+        }
+        current.append({"fact": key, "op": "=", "value": law == "law_state_atheism"})
+    data["rules"].append(
+        {
+            "id": "culture_law_state_atheism_to_law_total_separation_observed_exposure",
+            "source": SOURCE,
+            "field": "law_total_separation.ai_enact_weight_modifier",
+            "domain": "political",
+            "priority": 80400,
+            "operation": "add",
+            "value": load()["tuning"]["observed_religious_need"],
+            "semantic_role": "benefit",
+            "contribution_group": "law_observed_religious_exposure",
+            "conditions": [*current, {"fact": reader, "op": "=", "value": True}],
+            "why": "精确现行国家无神论且国教明确为atheist；同一本国同一非国教宗教份额至少10%且当前宗教接受低于0；完整字典证明它当前为other(-10)，完全分离所有通道为15，即使恢复国家定义国教也严格改善；只赋予有限需要",
+            "counterexample": "其他国教、现法或国教未知、错宗教/外国拼接、低份额、接受非负、已采用不新增需要；atheist分量15到15不伪造国教损失；200权威损失复用既有独立成本，不再次扣除；不预测总接受、人口转换、政治通过或未来收益",
+        }
+    )
+
+
+def _mixed_transitions(data: dict[str, Any]) -> None:
+    """Two closed mixed/zero pairs, using accepted disjoint channel identity.
+
+    The shared group loss requires a positive observed protection exposure.
+    Missing group exposure withdraws only that item; it creates no global cost.
+    The existing explicit state-protection uncertainty policy stays local.
+    """
+    tuning = load()["tuning"]
+    benefit = "culture_channel_benefit_exposure"
+    group_loss = "culture_shared_group_protection_exposure"
+    state_loss = "culture_state_religious_protection_exposure"
+    for key, mode in (
+        (benefit, "channel_benefit_exposure"),
+        (group_loss, "shared_group_protection_exposure"),
+    ):
+        data["readers"][key] = {
+            "engine": "OR",
+            "scope": "root",
+            "kind": "boolean",
+            "unit": "boolean",
+            "parameters": {QUERY_PARAMETER: mode},
+        }
+    for index, (origin, expected) in enumerate(
+        (
+            ("law_millet_system", (-5, 5, -5, 25)),
+            ("law_people_of_the_book", (-5, 10, 0, 25)),
+        )
+    ):
+        delta = tuple(b - a for a, b in zip(EFFECTS[origin], EFFECTS[CANDIDATE], strict=True))
+        if delta != expected:
+            raise ValueError("宗教mixed/zero精确转换四通道漂移")
+        current = [
+            {"fact": f"culture_current_{law}", "op": "=", "value": law in (ORIGIN, origin)}
+            for law in (ORIGIN, *VARIANTS, CANDIDATE)
+        ]
+        mechanisms = [
+            (
+                "benefit",
+                benefit,
+                tuning["observed_religious_need"],
+                "law_observed_religious_exposure",
+                (),
+            ),
+            (
+                "state_loss",
+                state_loss,
+                -tuning["observed_state_protection_loss"],
+                "law_state_religious_protection_loss",
+                (state_loss,),
+            ),
+        ]
+        if origin == "law_millet_system":
+            mechanisms.append(
+                (
+                    "group_loss",
+                    group_loss,
+                    -tuning["observed_state_protection_loss"],
+                    "law_shared_group_religious_protection_loss",
+                    (),
+                )
+            )
+        for offset, (mechanism, reader, value, group, conservative) in enumerate(mechanisms):
+            rule = {
+                "id": f"culture_mixed_{origin}_to_{CANDIDATE}_{mechanism}",
+                "source": SOURCE,
+                "field": FIELD,
+                "domain": "political",
+                "priority": 80300 + index * 10 + offset,
+                "operation": "add",
+                "value": value,
+                "semantic_role": "benefit" if mechanism == "benefit" else "cost",
+                "contribution_group": group,
+                "conditions": [*current, {"fact": reader, "op": "=", "value": True}],
+                "why": "精确现法转换；同一本国同一宗教的份额至少10%与接受观察；heritage/other改善需要和state/group保护损失独立有界，不按人口或接受点数折算",
+                "counterexample": "group零变化不贡献；group恶化不充当收益；错宗教/外国拼接、候选已采用和核心未知不贡献；暴露退出只撤回对应项，不预测法律采用、未来激进化或总接受",
+            }
+            if conservative:
+                rule["conservative_unknown_facts"] = list(conservative)
+                rule["unknown_cost_basis"] = (
+                    "已知精确转换降低国教保护；仅本国国教暴露未知保留现有有限成本；现法核心未知不触发。group暴露未知不扩展本项。"
+                )
+            data["rules"].append(rule)
+
+
+def _verify_conscience_separation(laws: Block) -> tuple[str, ...]:
+    """Reuse the checked separation activation only with unchanged state identity."""
+    origin = _child(laws, "law_freedom_of_conscience")
+    candidate = _child(laws, "law_total_separation")
+    # _verify_atheism_transition independently pins this complete target AST.
+    # Equality proves origin has the same conditional restoration branch.
+    if _shape(_child(origin, "on_activate")) != _shape(_child(candidate, "on_activate")):
+        raise ValueError("信仰自由到完全分离完整激活父结构漂移")
+    if tuple(
+        b - a
+        for a, b in zip(
+            EFFECTS["law_freedom_of_conscience"], EFFECTS["law_total_separation"], strict=True
+        )
+    ) != (-5, 0, 10, 15):
+        raise ValueError("信仰自由到完全分离四通道方向漂移")
+    return (f"{SOURCE}:{origin.all('on_activate')[0].line}",)
+
+
+def _conscience_to_separation(data: dict[str, Any]) -> None:
+    """One identity-stable mixed/zero transition; no future conversion model."""
+    need = "culture_separation_group_other_exposure"
+    stable = "culture_stable_nonatheist_identity"
+    for key, mode in (
+        (need, "separation_group_other_exposure"),
+        (stable, "stable_nonatheist_identity"),
+    ):
+        data["readers"][key] = {
+            "engine": "OR",
+            "scope": "root",
+            "kind": "boolean",
+            "unit": "boolean",
+            "parameters": {QUERY_PARAMETER: mode},
+        }
+    core = [
+        {"fact": "culture_current_law_freedom_of_conscience", "op": "=", "value": True},
+        {"fact": "culture_current_law_total_separation", "op": "=", "value": False},
+        {"fact": stable, "op": "=", "value": True},
+    ]
+    tuning = load()["tuning"]
+    for offset, (mechanism, reader, value, group) in enumerate(
+        (
+            ("benefit", need, tuning["observed_religious_need"], "law_observed_religious_exposure"),
+            (
+                "state_loss",
+                "culture_state_religious_protection_exposure",
+                -tuning["observed_state_protection_loss"],
+                "law_state_religious_protection_loss",
+            ),
+        )
+    ):
+        rule = {
+            "id": f"culture_law_freedom_of_conscience_to_law_total_separation_{mechanism}",
+            "source": SOURCE,
+            "field": "law_total_separation.ai_enact_weight_modifier",
+            "domain": "political",
+            "priority": 80500 + offset,
+            "operation": "add",
+            "value": value,
+            "semantic_role": "benefit" if mechanism == "benefit" else "cost",
+            "contribution_group": group,
+            "conditions": [*core, {"fact": reader, "op": "=", "value": True}],
+            "why": "精确现行信仰自由且国家国教已知非atheist；两法激活父结构相同且只在atheist时恢复国教，本路径身份不变。group/other低接受需要与state正接受保护损失分别有界；heritage零变化不计收益，原有权威成本保持唯一作者",
+            "counterexample": "未知或atheist国教不比较同下标；未登记宗教、错宗教/外国拼接、低份额、heritage零变化、已采用或核心未知不贡献；不预测总接受、改宗、通过率或政治结果",
+        }
+        if mechanism == "state_loss":
+            rule["conservative_unknown_facts"] = [reader]
+            rule["unknown_cost_basis"] = (
+                "精确现法及非atheist身份已知时确定state分量下降；仅当前state人口/接受暴露未知沿用有限局部保护成本，核心身份未知不触发。"
+            )
+        data["rules"].append(rule)

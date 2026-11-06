@@ -247,8 +247,8 @@ no_tariffs = {
 if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:article exists = scope:source_country exists = scope:target_country }
 	add = {
 		value = 0
-		if = { limit = { scope:source_country ?= this NOT = { scope:target_country ?= this } exists = "scope:article.input_market_goods(root)" has_any_tariffs_on = scope:article.input_goods } add = { value = -12 if = { limit = { in_default = no net_total_income >= 0 } add = 12 } if = { limit = { in_default = no net_total_income < 0 } add = 4 } } }
-		if = { limit = { scope:target_country ?= this NOT = { scope:source_country ?= this } exists = "scope:article.input_market_goods(root)" "scope:article.input_market_goods(root)" = { market_goods_delta < 0 } } add = { value = 6 } }
+		if = { limit = { scope:source_country ?= this NOT = { scope:target_country ?= this } exists = ROOT ROOT = { exists = scope:article.input_market_goods(root) has_any_tariffs_on = scope:article.input_goods } } add = { value = -12 if = { limit = { exists = ROOT ROOT = { in_default = no net_total_income >= 0 } } add = 12 } if = { limit = { exists = ROOT ROOT = { in_default = no net_total_income < 0 } } add = 4 } } }
+		if = { limit = { scope:target_country ?= this NOT = { scope:source_country ?= this } AND = { exists = ROOT ROOT = { exists = scope:article.input_market_goods(root) } exists = "scope:article.input_market_goods(root)" "scope:article.input_market_goods(root)" = { market_goods_delta < 0 } } } add = { value = 6 } }
 		min = -12
 		max = 6
 	}

@@ -124,7 +124,7 @@ violate_sovereignty = {
 			# GROUP program_dad1272117702138_sovereignty_observed_defeat_recovery_negative
 			add = { value = 0
 				# native_action_sovereignty_recovery [diplomacy]; 原版侵犯主权接受造成15incident，拒绝也造成10并调用真实参战效果；已观察违约/净收入赤字表示增量升级的同因融资压力，原版败战记忆的恢复成本独立联合，不以已战争资格再惩罚同一战争需求。
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } } add = -0.05 }
+				if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } } add = -0.05 }
 			}
 			min = 0.8
 			max = 1

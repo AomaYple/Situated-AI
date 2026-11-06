@@ -31,7 +31,7 @@ law_no_social_security = {
 			# GROUP program_a536fd675cbf3764_negative
 			add = { value = 0
 				# political_capacity_law_no_social_security [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 0
@@ -89,7 +89,7 @@ law_chiefs_distribute_aid = { #law variant designed to help c:MON campaign, whic
 			# GROUP program_7bc52a4e1775ebb7_negative
 			add = { value = 0
 				# political_capacity_law_chiefs_distribute_aid [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			min = -10
 			max = 0
@@ -129,7 +129,7 @@ law_poor_laws = {
 			# GROUP program_edbadd96f5b385b9_social_reform_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_poor_laws [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_administration_negative
 			add = { value = 0
@@ -139,18 +139,18 @@ law_poor_laws = {
 			# GROUP program_edbadd96f5b385b9_welfare_employer_floor_positive
 			add = { value = 0
 				# social_reform_poor_laws_from_wage_employer_relief_3 [political]; 已投资工资底线退出释放雇主负担，与低SoL收入损失共同权衡，不宣称实际就业增加
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 5 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 5 }
 				# social_reform_poor_laws_from_pension_employer_relief [political]; 当前养老金与实际投资证明降低工资底线能释放部分雇主负担；不假定产出或就业必然增加
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
 				# social_reform_poor_laws_from_wage_employer_relief_1 [political]; 已投资工资底线退出释放雇主负担，与低SoL收入损失共同权衡，不宣称实际就业增加
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 3 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 3 }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_financing_positive
 			add = { value = 0
 				# social_reform_poor_laws_from_pension_financing_relief_3 [political]; 退出养老金减少已投资制度的额外福利支付责任；实际违约时形成独立融资缓解，不抹去生活与工资损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } in_default = yes } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } in_default = yes } } add = 10 }
 				# social_reform_poor_laws_from_pension_financing_relief_1 [political]; 退出养老金减少已投资制度的额外福利支付责任；实际违约时形成独立融资缓解，不抹去生活与工资损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } in_default = yes } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } in_default = yes } } add = 6 }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_financing_negative
 			add = { value = 0
@@ -160,28 +160,28 @@ law_poor_laws = {
 			# GROUP program_edbadd96f5b385b9_welfare_living_positive
 			add = { value = 0
 				# social_reform_poor_laws_new_security_access [political]; 明确无社会保障制度且低生活水平时，基本支付与食品保障构成需求；工资/养老金候选按原版额外效果区分，不先要求财政行政全满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } average_sol >= 0 average_sol < 12 } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { NOT = { has_institution = institution_social_security } average_sol >= 0 average_sol < 12 } } add = 12 }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_living_negative
 			add = { value = 0
 				# social_reform_poor_laws_from_pension_transfer_loss_3 [political]; 退出已投资养老金失去额外福利、食品保障和被扶养收入；低SoL是损失暴露代理，不推断领取人数
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = -16 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = -16 }
 				# social_reform_poor_laws_from_pension_transfer_loss_1 [political]; 退出已投资养老金失去额外福利、食品保障和被扶养收入；低SoL是损失暴露代理，不推断领取人数
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -12 }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_wage_access_negative
 			add = { value = 0
 				# social_reform_poor_laws_from_wage_income_loss_3 [political]; 已生效工资补贴转济贫法失去原版最低工资效果；低SoL时独立计入收入风险
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = -10 }
 				# social_reform_poor_laws_from_pension_wage_loss [political]; 退出养老金降低原版最低工资底线，与额外福利支付损失属于不同机制
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -8 }
 				# social_reform_poor_laws_from_wage_income_loss_1 [political]; 已生效工资补贴转济贫法失去原版最低工资效果；低SoL时独立计入收入风险
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -6 }
 			}
 			# GROUP program_edbadd96f5b385b9_welfare_workforce_supply_positive
 			add = { value = 0
 				# social_reform_poor_laws_from_pension_workforce_recovery [political]; 退出养老金恢复原版working adult ratio，记录劳动供给机会；不把它当新增人口或实际职位
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
 			}
 			min = -50
 			max = 31
@@ -221,7 +221,7 @@ law_wage_subsidies = {
 			# GROUP program_614c675c0f99c912_social_reform_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_wage_subsidies [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_614c675c0f99c912_welfare_administration_negative
 			add = { value = 0
@@ -231,23 +231,23 @@ law_wage_subsidies = {
 			# GROUP program_614c675c0f99c912_welfare_employer_floor_positive
 			add = { value = 0
 				# social_reform_wage_subsidies_from_pension_employer_relief [political]; 当前养老金与实际投资证明降低工资底线能释放部分雇主负担；不假定产出或就业必然增加
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 2 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 2 }
 			}
 			# GROUP program_614c675c0f99c912_welfare_employer_floor_negative
 			add = { value = 0
 				# social_reform_wage_subsidies_from_poor_laws_employer_floor_3 [political]; 当前法律和实际投资证明最低工资底线边际增加；雇主负担独立于低SoL需要，不换算实际利润或国库支出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -5 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -5 }
 				# social_reform_wage_subsidies_from_poor_laws_employer_floor_1 [political]; 当前法律和实际投资证明最低工资底线边际增加；雇主负担独立于低SoL需要，不换算实际利润或国库支出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -3 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -3 }
 				# social_reform_wage_subsidies_new_employer_floor [political]; 新增原版最低工资底线提高雇主负担；laborer份额仅是受影响职业暴露，不推断实际利润或失业
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -3 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_institution = institution_social_security } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -3 }
 			}
 			# GROUP program_614c675c0f99c912_welfare_financing_positive
 			add = { value = 0
 				# social_reform_wage_subsidies_from_pension_financing_relief_3 [political]; 退出养老金减少已投资制度的额外福利支付责任；实际违约时形成独立融资缓解，不抹去生活与工资损失
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } in_default = yes } } add = 10 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } in_default = yes } } add = 10 }
 				# social_reform_wage_subsidies_from_pension_financing_relief_1 [political]; 退出养老金减少已投资制度的额外福利支付责任；实际违约时形成独立融资缓解，不抹去生活与工资损失
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } in_default = yes } } add = 6 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } in_default = yes } } add = 6 }
 			}
 			# GROUP program_614c675c0f99c912_welfare_financing_negative
 			add = { value = 0
@@ -257,28 +257,28 @@ law_wage_subsidies = {
 			# GROUP program_614c675c0f99c912_welfare_living_positive
 			add = { value = 0
 				# social_reform_wage_subsidies_new_security_access [political]; 明确无社会保障制度且低生活水平时，基本支付与食品保障构成需求；工资/养老金候选按原版额外效果区分，不先要求财政行政全满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } average_sol >= 0 average_sol < 12 } } add = 16 }
+				if = { limit = { exists = ROOT ROOT = { NOT = { has_institution = institution_social_security } average_sol >= 0 average_sol < 12 } } add = 16 }
 				# social_reform_wage_subsidies_from_poor_laws_living_3 [political]; 当前福利法律与真实投资确认后，按最低工资或额外福利支付/食品/被扶养收入的原版边际增量响应低生活水平；不重复奖励已有基础制度
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = 12 }
 				# social_reform_wage_subsidies_from_poor_laws_living_1 [political]; 当前福利法律与真实投资确认后，按最低工资或额外福利支付/食品/被扶养收入的原版边际增量响应低生活水平；不重复奖励已有基础制度
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = 8 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = 8 }
 			}
 			# GROUP program_614c675c0f99c912_welfare_living_negative
 			add = { value = 0
 				# social_reform_wage_subsidies_from_pension_transfer_loss_3 [political]; 退出已投资养老金失去额外福利、食品保障和被扶养收入；低SoL是损失暴露代理，不推断领取人数
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = -16 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = -16 }
 				# social_reform_wage_subsidies_from_pension_transfer_loss_1 [political]; 退出已投资养老金失去额外福利、食品保障和被扶养收入；低SoL是损失暴露代理，不推断领取人数
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -12 }
 			}
 			# GROUP program_614c675c0f99c912_welfare_wage_access_negative
 			add = { value = 0
 				# social_reform_wage_subsidies_from_pension_wage_loss [political]; 退出养老金降低原版最低工资底线，与额外福利支付损失属于不同机制
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -4 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = -4 }
 			}
 			# GROUP program_614c675c0f99c912_welfare_workforce_supply_positive
 			add = { value = 0
 				# social_reform_wage_subsidies_from_pension_workforce_recovery [political]; 退出养老金恢复原版working adult ratio，记录劳动供给机会；不把它当新增人口或实际职位
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_old_age_pension institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 4 }
 			}
 			min = -49
 			max = 32
@@ -332,7 +332,7 @@ law_old_age_pension = {
 			# GROUP program_f94bd970835c0d68_social_reform_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_old_age_pension [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
 			# GROUP program_f94bd970835c0d68_welfare_administration_negative
 			add = { value = 0
@@ -342,15 +342,15 @@ law_old_age_pension = {
 			# GROUP program_f94bd970835c0d68_welfare_employer_floor_negative
 			add = { value = 0
 				# social_reform_old_age_pension_from_poor_laws_employer_floor_3 [political]; 当前法律和实际投资证明最低工资底线边际增加；雇主负担独立于低SoL需要，不换算实际利润或国库支出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 				# social_reform_old_age_pension_from_poor_laws_employer_floor_1 [political]; 当前法律和实际投资证明最低工资底线边际增加；雇主负担独立于低SoL需要，不换算实际利润或国库支出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 				# social_reform_old_age_pension_new_employer_floor [political]; 新增原版最低工资底线提高雇主负担；laborer份额仅是受影响职业暴露，不推断实际利润或失业
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_institution = institution_social_security } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 				# social_reform_old_age_pension_from_wage_subsidies_employer_floor_3 [political]; 当前法律和实际投资证明最低工资底线边际增加；雇主负担独立于低SoL需要，不换算实际利润或国库支出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -2 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -2 }
 				# social_reform_old_age_pension_from_wage_subsidies_employer_floor_1 [political]; 当前法律和实际投资证明最低工资底线边际增加；雇主负担独立于低SoL需要，不换算实际利润或国库支出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -2 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -2 }
 			}
 			# GROUP program_f94bd970835c0d68_welfare_financing_negative
 			add = { value = 0
@@ -368,24 +368,24 @@ law_old_age_pension = {
 			# GROUP program_f94bd970835c0d68_welfare_living_positive
 			add = { value = 0
 				# social_reform_old_age_pension_new_security_access [political]; 明确无社会保障制度且低生活水平时，基本支付与食品保障构成需求；工资/养老金候选按原版额外效果区分，不先要求财政行政全满足
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } average_sol >= 0 average_sol < 12 } } add = 18 }
+				if = { limit = { exists = ROOT ROOT = { NOT = { has_institution = institution_social_security } average_sol >= 0 average_sol < 12 } } add = 18 }
 				# social_reform_old_age_pension_from_poor_laws_living_3 [political]; 当前福利法律与真实投资确认后，按最低工资或额外福利支付/食品/被扶养收入的原版边际增量响应低生活水平；不重复奖励已有基础制度
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = 16 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = 16 }
 				# social_reform_old_age_pension_from_wage_subsidies_living_3 [political]; 当前福利法律与真实投资确认后，按最低工资或额外福利支付/食品/被扶养收入的原版边际增量响应低生活水平；不重复奖励已有基础制度
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = 14 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 3 } average_sol >= 0 average_sol < 12 } } add = 14 }
 				# social_reform_old_age_pension_from_poor_laws_living_1 [political]; 当前福利法律与真实投资确认后，按最低工资或额外福利支付/食品/被扶养收入的原版边际增量响应低生活水平；不重复奖励已有基础制度
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = 12 }
 				# social_reform_old_age_pension_from_wage_subsidies_living_1 [political]; 当前福利法律与真实投资确认后，按最低工资或额外福利支付/食品/被扶养收入的原版边际增量响应低生活水平；不重复奖励已有基础制度
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = 10 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } average_sol >= 0 average_sol < 12 } } add = 10 }
 			}
 			# GROUP program_f94bd970835c0d68_welfare_workforce_supply_negative
 			add = { value = 0
 				# social_reform_old_age_pension_from_wage_subsidies_workforce [political]; 进入养老金减少原版工作人口比例，记录供给机会成本；职业份额仅作暴露代理
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_wage_subsidies institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 				# social_reform_old_age_pension_from_poor_laws_workforce [political]; 进入养老金减少原版工作人口比例，记录供给机会成本；职业份额仅作暴露代理
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				else_if = { limit = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_poor_laws institution_investment_level = { institution = institution_social_security value >= 0 } institution_investment_level = { institution = institution_social_security value >= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 				# social_reform_old_age_pension_new_workforce_supply [political]; 养老金降低working adult ratio；有劳动者暴露时记录劳动力供给机会成本，不假定已观察劳动短缺
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes NOT = { has_institution = institution_social_security } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
+				else_if = { limit = { exists = ROOT ROOT = { NOT = { has_institution = institution_social_security } pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -4 }
 			}
 			min = -36
 			max = 18

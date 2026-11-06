@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import replace
+from typing import Any
 
 import pytest
 
@@ -70,7 +71,7 @@ def _case(tmp_path):
         "native_physical_ids": ["physical:unknown"],
         "semantics": {"predicates": [{"fact": "capacity", "op": "<", "value": 1}]},
     }
-    before = {
+    before: dict[str, Any] = {
         "observations": {"raw": {"original": True}},
         "migration_writers": {"writer:domain": writer},
         "migration_files": {PATH: {"generated_sha256": discovery.sha(NATIVE)}},
@@ -430,7 +431,7 @@ def test_successor_unproven_new_operand_cannot_replace_numeric_native_tail():
 
 
 def test_successor_actual_typed_projection_keeps_complete_parent_sibling_and_tail(tmp_path):
-    from dataclasses import asdict  # noqa: PLC0415
+    from dataclasses import asdict
 
     source = "common/ai_regional_objectives/fixture.txt"
     raw = b"candidate={unknown=1 weight={value=unregistered_native_operand} sibling={value=2}}"
@@ -494,7 +495,7 @@ def test_successor_actual_typed_projection_keeps_complete_parent_sibling_and_tai
         inventory, {source: raw}, {source: changed}, coverage=coverage, production_complete=True
     )
     assert proof["rows"][1]["interface"]["control_authorized"]
-    before = {"migration_files": {source: {"generated_sha256": discovery.sha(raw)}}}
+    before: dict[str, Any] = {"migration_files": {source: {"generated_sha256": discovery.sha(raw)}}}
     after = {"migration_files": {source: {"generated_sha256": discovery.sha(changed)}}}
     sources = Sources(
         tmp_path,
@@ -589,11 +590,11 @@ def test_successor_current_lifecycle_uses_independent_production_result(
 def test_successor_base_reads_only_immediate_accepted_current_root_and_original_witness_bytes(
     tmp_path, monkeypatch, fault
 ):
-    from tools.ci import (  # noqa: PLC0415
+    from tools.ci import (
         a4_history,
         a4_scope,
     )
-    from tools.ci.run_check import interpreter  # noqa: PLC0415
+    from tools.ci.run_check import interpreter
 
     historical_commit = "d" * 40
     raw = {
@@ -624,7 +625,7 @@ def test_successor_base_reads_only_immediate_accepted_current_root_and_original_
     )
     raw["mod/generation-lock.json"] = discovery.encoded({"sources": {}, "files": {}})
     frozen = Sources(tmp_path, raw)
-    receipt = {
+    receipt: dict[str, Any] = {
         "schema": 1,
         "id": "accepted-current",
         "command": [
@@ -657,7 +658,7 @@ def test_successor_base_reads_only_immediate_accepted_current_root_and_original_
     }
     raw["receipt.json"] = discovery.encoded(receipt)
     frozen = Sources(tmp_path, raw)
-    root = {
+    root: dict[str, Any] = {
         "classification_status": "current_witnessed",
         "historical_commit": historical_commit,
         "inputs": [
@@ -669,7 +670,10 @@ def test_successor_base_reads_only_immediate_accepted_current_root_and_original_
     }
     raw[classify.CURRENT_ROOT] = discovery.encoded(root)
     frozen = Sources(tmp_path, raw)
-    transition = {"base_commit": "a" * 40, "base_root": frozen.reference(classify.CURRENT_ROOT)}
+    transition: dict[str, Any] = {
+        "base_commit": "a" * 40,
+        "base_root": frozen.reference(classify.CURRENT_ROOT),
+    }
     sources = Sources(tmp_path, {classify.CURRENT_INTAKE: discovery.encoded({"schema": 2})})
     if fault == "stale_junit":
         raw["results.xml"] = raw["results.xml"].replace(b"test_domain_witness", b"other_witness")

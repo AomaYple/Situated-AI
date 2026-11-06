@@ -2615,6 +2615,9 @@ def _modgen_verify_sources() -> None:
     from . import building_defaults  # noqa: PLC0415
 
     building_defaults.verify_game(config.GAME)
+    from . import innovation_readers  # noqa: PLC0415
+
+    innovation_readers.verify_game(config.GAME)
     distribution.engine_scope.verify_company_defaults_game(config.GAME)
     company_sectors.verify_game(config.GAME)
     distribution.equipment_opportunities.verify_game(config.GAME)

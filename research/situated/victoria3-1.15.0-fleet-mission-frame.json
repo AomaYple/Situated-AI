@@ -1,0 +1,78 @@
+{
+  "schema": "situated-reviewed-fleet-mission-frame/1",
+  "exe_sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+  "accepted_artifacts": [
+    {
+      "path": ".superpowers/sdd/A4-20261105/native-fleet-unit-tail/evidence-manifest.json",
+      "sha256": "c2a141b47f2fb061518e54143ef5d9799fec68c2ee501f92e092cce22cac2b9d"
+    },
+    {
+      "path": ".superpowers/sdd/A4-20261105/native-fleet-unit-tail/candidate-projection.json",
+      "sha256": "47248453ebe1457c9ac5ff2354c4349e5ef49b6a03fd1d676cbeabba47148721"
+    },
+    {
+      "path": ".superpowers/sdd/A4-20261105/controller-fleet-byte-review.json",
+      "sha256": "efeef3d7702b11600a37655b5cc4c1a82018ea32efac91797f1ca4c669e87986"
+    }
+  ],
+  "observations": [
+    {
+      "id": "strategy_parser",
+      "va": "0x141822e00",
+      "end_va": "0x1418241a1",
+      "file_offset": "0x1822200",
+      "disassembly_sha256": "ea0a191fec45f1a366a8853beeb20fdf52f26455a1b1c99cf82a2d388fee4575",
+      "raw_bytes_sha256": "ab5e9f97d9ee1e5c1db37647b10cf6e82fd1a6c877591cbb1231c33625f9cdd6",
+      "raw_bytes_length": 5025
+    },
+    {
+      "id": "strategy_postread",
+      "va": "0x141824670",
+      "end_va": "0x141825952",
+      "file_offset": "0x1823a70",
+      "disassembly_sha256": "48b8c5e3ac9513cbce92a553dc8fd1f9d327673a956a8b5876e4dca291d585d5",
+      "raw_bytes_sha256": "784b2058649fd85a13058c4d1d33742e1f544885c1a34b924172e1594569b25c",
+      "raw_bytes_length": 4834
+    },
+    {
+      "id": "fleet_member_parser",
+      "va": "0x141821ba0",
+      "end_va": "0x141822003",
+      "file_offset": "0x1820fa0",
+      "disassembly_sha256": "27d866fb80e64ddaffcad12b5384da43399f9e8ba8724d827eef7c8a6c3a219a",
+      "raw_bytes_sha256": "7a4c7538e5867395ecafebb578bf5473a52cfd90da32050875bc737db83b8ea8",
+      "raw_bytes_length": 1123
+    },
+    {
+      "id": "mission_role_consumer",
+      "va": "0x1416763a0",
+      "end_va": "0x1416780f2",
+      "file_offset": "0x16757a0",
+      "disassembly_sha256": "8dbb24454b11013a113ce2f05047537977cee7fc7e41c87503210eca7977cc54",
+      "raw_bytes_sha256": "d7a92e0d5313637d39cf496d1d6dc07fa77c89fb0a7c93f34857df8ed3c1b9a9",
+      "raw_bytes_length": 7506
+    }
+  ],
+  "source": {
+    "path": "common/ai_strategies/00_default_strategy.txt",
+    "copy": "sources/common/ai_strategies/00_default_strategy.txt",
+    "sha256": "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73",
+    "bytes": 245538
+  },
+  "field": "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply",
+  "frame": [
+    {
+      "name": "root",
+      "tag": 5,
+      "identity": "actor country+0x18"
+    }
+  ],
+  "definition_scope": "no_live_fleet_or_category",
+  "evaluation": "nonempty_resolved_mission_vector_country_root_tag5",
+  "limits": [
+    "static current-build evidence only; no runtime replay, behavior/performance/product signing",
+    "complete installed source AST snapshots selected; arbitrary ScriptValue or trigger expressions not executed",
+    "definition identity/category key does not establish a live script scope or engine getter",
+    "fixed arithmetic uses signed integer scale100000 and overflow branches; formulas explain intent, not float-equivalent implementation"
+  ]
+}
