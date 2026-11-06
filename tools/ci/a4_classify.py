@@ -996,7 +996,9 @@ def current_evidence_ports(model: Any, target: str) -> dict[str, Any]:
     return cast("dict[str, Any]", discovery.strict_json(discovery.encoded(result)))
 
 
-def artifacts(sources: Any, *, current_package: str | None = None) -> dict[str, Any]:
+def artifacts(
+    sources: Any, *, current_package: str | None = None, successor: bool = False
+) -> dict[str, Any]:
     from pdx import building_defaults  # noqa: PLC0415
     from pdx.situated.compiler import load_model  # noqa: PLC0415
     from tools.ci.a4_scope import original_a3, plan_goals  # noqa: PLC0415
@@ -1033,6 +1035,25 @@ def artifacts(sources: Any, *, current_package: str | None = None) -> dict[str, 
             "scope": "Exact eleven existing normal named static initializers only; source/type/parent/lifecycle validated through the production building_defaults path",
         }
     }
+    if successor:
+        if sources.read(building_defaults.MANIFEST_ID) != building_defaults.snapshot():
+            raise ValueError("current initializer proof differs from normal production snapshot")
+        if selector != building_defaults._selector_data():
+            raise ValueError("current initializer selector differs from normal production proof")
+        # snapshot() above independently revalidates the pinned native default
+        # and selector proof; an intake initializer claim cannot replace it.
+        result["current_native_boundaries"] = {
+            "existing_building_initializers": {
+                "defaults": sources.reference(building_defaults.MANIFEST_ID),
+                "selector": sources.reference(building_defaults.SELECTOR_ID),
+                "initializer_ids": [row["id"] for row in defaults["initializers"]],
+                "reviewed_candidate_sha256": selector["lineage"]["reviewed_candidate_sha256"],
+                "effective_member": selector["contract"]["effective_expression_member"],
+                "raw_spans": len(selector["observations"]),
+                "dynamic_local_writer_permission": False,
+                "scope": "exact normal production snapshot; static named absent-field initializers only",
+            }
+        }
     getter_contracts: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for source, key, signature in model.observation_contracts:
         getter_contracts[key].append({"source": source, "signature": signature})
@@ -1279,6 +1300,13 @@ def migration_bindings(
     paths.update(
         path.relative_to(sources.root).as_posix() for path in (sources.root / "tests").glob("*.py")
     )
+    if package_path != PACKAGE and sources.json(CURRENT_INTAKE)["schema"] == 2:
+        from tools.ci import a4_successor  # noqa: PLC0415
+
+        intake = sources.json(CURRENT_INTAKE)
+        transition = a4_successor.contract(sources, intake)
+        paths.update({CURRENT_INTAKE, "tools/ci/a4_successor.py", intake["successor"]["path"]})
+        paths.update(ref["path"] for ref in a4_successor.references(transition)[1:])
     refs = [sources.reference(path) for path in sorted(paths)]
     for contract in sources.json(MIGRATION_PATH)["objectives"].values():
         for node in contract["witness_nodes"]:
@@ -1472,7 +1500,9 @@ def stage_assignments(
     return result
 
 
-def index_checkpoint(values: dict[str, Any], accepted: dict[str, Any]) -> dict[str, Any]:
+def index_checkpoint(
+    values: dict[str, Any], accepted: dict[str, Any], *, successor: bool = False
+) -> dict[str, Any]:
     """Compute the enabling contract independently of any product-row status."""
     if (
         len(values["observations"]) != 56196
@@ -1483,8 +1513,8 @@ def index_checkpoint(values: dict[str, Any], accepted: dict[str, Any]) -> dict[s
         or len(accepted) != 17
         or len(values["predecessors"]) != 96
         or len(values["targets"]) != 94
-        or len(values["migration_writers"]) != 6193
-        or len(values["migration_files"]) != 117
+        or (not successor and len(values["migration_writers"]) != 6193)
+        or (not successor and len(values["migration_files"]) != 117)
     ):
         raise ValueError("incomplete raw/classification/current writer/migration denominator")
     implemented = {
@@ -1498,7 +1528,7 @@ def index_checkpoint(values: dict[str, Any], accepted: dict[str, Any]) -> dict[s
         values["physical"], values["structures"], values["migration_writers"], values
     )
     boundary = values.get("current_native_boundaries", {}).get("existing_building_initializers", {})
-    if (
+    if not successor and (
         len(boundary.get("initializer_ids", [])) != 11
         or boundary.get("raw_spans") != 46
         or boundary.get("reviewed_candidate_sha256")
@@ -1535,7 +1565,7 @@ def index_checkpoint(values: dict[str, Any], accepted: dict[str, Any]) -> dict[s
         "evidence": "static_check",
         "raw_observations_preserved": True,
         "unknown_future_interfaces": "pending with exact physical question and owner; no writer permission",
-        "current_ir_writers": 6193,
+        "current_ir_writers": len(values["migration_writers"]),
         "old_implemented_migrations": 17,
         "product_completion": False,
     }
@@ -1779,10 +1809,14 @@ def current_intake(sources: Any) -> dict[str, Any]:
     from tools.ci.a4_schema import HASH, REFERENCE, TEXT, check_shape  # noqa: PLC0415
 
     value = sources.json(CURRENT_INTAKE)
+    successor = value.get("schema") == 2
+    basic = {key: item for key, item in value.items() if key != "successor"} if successor else value
+    if successor and set(value) != {*basic, "successor"}:
+        raise ValueError("successor intake fields drift")
     check_shape(
-        value,
+        basic,
         {
-            "schema": {1},
+            "schema": {2} if successor else {1},
             "historical_commit": TEXT,
             "package": REFERENCE,
             "status": {"pending", "verified"},
@@ -1831,6 +1865,10 @@ def current_intake(sources: Any) -> dict[str, Any]:
         raise ValueError(
             "current acceptance requires distinct current receipt; history cannot sign it"
         )
+    if successor:
+        from tools.ci import a4_successor  # noqa: PLC0415
+
+        a4_successor.contract(sources, value)
     return cast("dict[str, Any]", value)
 
 
@@ -1842,9 +1880,24 @@ def current_artifacts(
 
     intake = current_intake(sources)
     frozen, before = historical_checkpoint(sources, intake["historical_commit"])
-    values = artifacts(sources, current_package=intake["package"]["path"])
-    changed = current_differences(before, values, intake["changes"])
-    protect_current_native(sources, frozen, values)
+    successor = intake["schema"] == 2
+    base_paths = {name: f"{DIRECTORY}/{name}.json" for name in before}
+    if successor:
+        from tools.ci import a4_successor  # noqa: PLC0415
+
+        transition = a4_successor.contract(sources, intake)
+        frozen, before = a4_successor.base(sources, intake, transition)
+        base_paths = {
+            name: ref["path"] for name, ref in frozen.json(CURRENT_ROOT)["artifacts"].items()
+        }
+    values = artifacts(sources, current_package=intake["package"]["path"], successor=successor)
+    if successor:
+        changed, registry = a4_successor.admit(sources, before, values, transition, frozen=frozen)
+        a4_successor.native_protection(sources, frozen, before, values, transition)
+        values["successor_registry"] = registry
+    else:
+        changed = current_differences(before, values, intake["changes"])
+        protect_current_native(sources, frozen, values)
     # No permission, native inventory, predecessor mapping or DLC classification
     # can change as a side effect of this construction-only current refresh.
     evolving = {
@@ -1855,7 +1908,7 @@ def current_artifacts(
         "evidence_ports",
     }
     for name, value in values.items():
-        if name not in evolving and value != before[name]:
+        if not successor and name not in evolving and value != before[name]:
             raise ValueError(
                 f"current candidate changed native scope/role/DLC/product mapping: {name}"
             )
@@ -1870,8 +1923,8 @@ def current_artifacts(
     # All discovery IDs remain present while current acceptance is pending.
     paths = {
         name: (
-            f"{DIRECTORY}/{name}.json"
-            if value == before.get(name)
+            base_paths[name]
+            if name in base_paths and value == before.get(name)
             else f"{CURRENT_DIRECTORY}/{name}.json"
         )
         for name, value in values.items()
@@ -1888,7 +1941,7 @@ def current_artifacts(
     stages = stage_assignments(projected, values, directory=CURRENT_DIRECTORY, artifact_paths=paths)
     paths["stage_assignments"] = f"{CURRENT_DIRECTORY}/stage-assignments.json"
     values["stage_assignments"] = stages
-    checkpoint = index_checkpoint(values, accepted)
+    checkpoint = index_checkpoint(values, accepted, successor=successor)
     checkpoint.update(
         current_migration_status=intake["status"],
         changed_writer_ids=changed,
