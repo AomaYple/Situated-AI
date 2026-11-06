@@ -21,7 +21,7 @@ import zipfile
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path, PurePosixPath
-from typing import Any, Never, Protocol
+from typing import Any, Never
 
 from pdx import config, deployment, distribution
 from pdx.publishing_contract import (
@@ -72,26 +72,6 @@ REQUEST_KEYS = {
 
 class DeliveryError(ValueError):
     """A delivery identity or byte contract failed."""
-
-
-class JsonTransport(Protocol):
-    live: bool
-
-    def get(self, route: str) -> Any: ...
-
-
-class GitTransport(Protocol):
-    live: bool
-
-    def snapshot(self, commit: str) -> Mapping[str, str]: ...
-
-    def is_ancestor(self, ancestor: str, descendant: str) -> bool: ...
-
-
-class WorkshopTransport(Protocol):
-    live: bool
-
-    def inspect(self, languages: list[str]) -> Mapping[str, Any]: ...
 
 
 def _fail(message: str) -> Never:
