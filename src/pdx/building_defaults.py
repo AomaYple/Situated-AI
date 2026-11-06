@@ -21,9 +21,13 @@ if TYPE_CHECKING:
 
 MANIFEST_ID = "research/situated/victoria3-1.15.0-building-defaults.json"
 MANIFEST = config.REPO / MANIFEST_ID
-MANIFEST_SHA256 = "3b290448ee272faa2589fcd682a93942b63b330b1552a8ffafa5cee45126b6bf"
-_CONTRACT_SHA256 = "261de98871eb310140b2392add7c2ac2123adc314820f6005c45773f0615769e"
+MANIFEST_SHA256 = "e7372899def1925b93322aef001a3010c7e4378460980699771e47315812e068"
+_CONTRACT_SHA256 = "6aacad618d7ca1f2ad3e82f450be7cf6521e5ecdba6fd07ce37ee662e8cdf671"
 _INITIALIZERS_SHA256 = "b20c6dd9a27fe4c968bd852a44d7c55243284d331f83c6f9a035d3d3e9b2e07e"
+SELECTOR_ID = "research/situated/victoria3-1.15.0-building-static-selector.json"
+_SELECTOR = config.REPO / SELECTOR_ID
+_SELECTOR_SHA256 = "1d1cbd8bf048a08919df42ed4f07a14756207b02fe92462881f0c8657255d9a2"
+_SELECTOR_CONTENT_SHA256 = "ad39d90dc8abb62ca9df1d7cc050d875688df4bcff1bb54790b3774fb321d85e"
 
 
 def _digest(value: Any) -> str:
@@ -40,6 +44,17 @@ def _shape(value: Assignment | Block | Scalar | None) -> Any:
     if isinstance(value, Block):
         return [_shape(item) for item in value.items]
     return [value.text, value.quoted]
+
+
+def _selector_data() -> dict[str, Any]:
+    """Read the reviewed static lifecycle, never granting dynamic local writers."""
+    raw = _SELECTOR.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _SELECTOR_SHA256:
+        raise ValueError("建筑静态表达式源证据漂移")
+    data = engine_scope._manifest_data(raw)
+    if _digest(data) != _SELECTOR_CONTENT_SHA256:
+        raise ValueError("建筑静态表达式源精确合同漂移")
+    return data
 
 
 def snapshot() -> bytes:
@@ -67,6 +82,28 @@ def snapshot() -> bytes:
         or _digest(data["initializers"]) != _INITIALIZERS_SHA256
     ):
         raise ValueError("建筑缺省值精确原生合同漂移")
+    selector = _selector_data()
+    proof = data["contract"]["expression_source"]
+    types = {row["id"]: row for row in selector["exact_types"]}
+    if (
+        proof["proof"] != SELECTOR_ID
+        or proof["sha256"] != _SELECTOR_SHA256
+        or data["exe"] != selector["exe"]
+        or len(types) != 12
+        or set(selector["contract"]["initializer_ids"])
+        != {row["id"] for row in data["initializers"]}
+        or any(data["script_hashes"].get(s) != h for s, h in selector["script_hashes"].items())
+        or any(
+            row["id"] not in types
+            or any(types[row["id"]].get(key) != value for key, value in row.items())
+            or types[row["id"]]["source_kind"] != "static_named_definition"
+            or types[row["id"]]["source_operator"] != "="
+            or types[row["id"]]["source_prefix"] is not None
+            or types[row["id"]]["local_ai_value"] != "absent"
+            for row in data["initializers"]
+        )
+    ):
+        raise ValueError("建筑静态表达式源与唯一初始化器/完整源身份不一致")
     return raw
 
 
@@ -88,6 +125,10 @@ def validate_initializer(
         or define != ("NAI", "PRODUCTION_BUILDING_BASE_VALUE")
         or rows[0]["line"] != parent.line
         or rows[0]["parent_sha256"] != _digest(_shape(parent))
+        or parent.op != "="
+        or parent.prefix is not None
+        or not isinstance(parent.value, Block)
+        or parent.value.first("ai_value") is not None
     ):
         raise ValueError("建筑缺省值偏离已证明的唯一缺省父结构/类别")
 
@@ -118,6 +159,17 @@ def verify_game(game: Path) -> tuple[tuple[str, str], ...]:
     )
     if not verified:
         raise ValueError("当前建筑缺省值原版或EXE与锁定证据不一致")
+    selector = _selector_data()
+    _, selector_hashes, selector_verified = engine_scope._verified_manifest(
+        game,
+        {s: (game / s).read_bytes() for s in selector["script_hashes"]},
+        _SELECTOR,
+        SELECTOR_ID,
+        _SELECTOR_SHA256,
+        "建筑静态表达式源证据",
+    )
+    if not selector_verified:
+        raise ValueError("当前建筑静态表达式源或EXE与锁定证据不一致")
     roots = {s: parse_text((game / s).read_text(encoding="utf-8-sig")) for s in actual}
     if any(p.errors for p in roots.values()):
         raise ValueError("建筑缺省值原件无法解析")
@@ -141,4 +193,4 @@ def verify_game(game: Path) -> tuple[tuple[str, str], ...]:
             ("NAI", "PRODUCTION_BUILDING_BASE_VALUE"),
             parents[0][1],
         )
-    return hashes
+    return tuple(sorted({**dict(hashes), **dict(selector_hashes)}.items()))

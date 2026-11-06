@@ -1,0 +1,587 @@
+{
+  "evidence": "static_check",
+  "configured_root": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3",
+  "exe_before": {
+    "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\binaries\\victoria3.exe",
+    "bytes": 99988600,
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"
+  },
+  "sources": [
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\scripted_buttons\\05_austria_buttons.txt",
+      "bytes": 24167,
+      "sha256": "fee84214ff1674f4104c757fee2db48c5a508b705efb0120ffa60e88627c8ed4",
+      "snapshot": "sources/game/common/scripted_buttons/05_austria_buttons.txt"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\diplomatic_catalysts\\00_diplomatic_catalysts.txt",
+      "bytes": 59457,
+      "sha256": "6f4718f37f0987ab89c76e04cd3fd00e098bdaf2eece665bd3a36115110e1bd6",
+      "snapshot": "sources/game/common/diplomatic_catalysts/00_diplomatic_catalysts.txt"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\scripted_buttons\\scripted_buttons.md",
+      "bytes": 4318,
+      "sha256": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26",
+      "snapshot": "sources/game/common/scripted_buttons/scripted_buttons.md"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\diplomatic_catalysts\\diplomatic_catalysts.md",
+      "bytes": 2983,
+      "sha256": "e9464bb9fd2c35dec9f24454278083e0ceddced5cab59b0b142170f75f4c3d7d",
+      "snapshot": "sources/game/common/diplomatic_catalysts/diplomatic_catalysts.md"
+    }
+  ],
+  "physical_occurrences": [
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_czech_button",
+      "owner_line": 371,
+      "field": "ai_chance",
+      "field_line": 392,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_czech_button",
+        "field": "ai_chance",
+        "source_line": 392,
+        "declaration_id": "1a0848cedde433811906d57aee52b1aa5a4a1fc1d3079e2d73f50b2bf0f06d5d",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_czech_button",
+      "owner_line": 371,
+      "field": "ai_chance",
+      "field_line": 413,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_czech_button",
+        "field": "ai_chance",
+        "source_line": 413,
+        "declaration_id": "007bd7e80e4e85369320d8fc62eea80d11010e4c5642bd427849419d03c3bf98",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_polish_button",
+      "owner_line": 418,
+      "field": "ai_chance",
+      "field_line": 473,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_polish_button",
+        "field": "ai_chance",
+        "source_line": 473,
+        "declaration_id": "c2a593dc95284d8b3b455efebdbe223eebf4fc9b660ef1a68568d0a6131ade69",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_polish_button",
+      "owner_line": 418,
+      "field": "ai_chance",
+      "field_line": 554,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_polish_button",
+        "field": "ai_chance",
+        "source_line": 554,
+        "declaration_id": "39e1d3681c0c81a74e0ef1b22c75d3bdf8dec7bb8123408d7f39729809f437d5",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_slovak_button",
+      "owner_line": 559,
+      "field": "ai_chance",
+      "field_line": 580,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_slovak_button",
+        "field": "ai_chance",
+        "source_line": 580,
+        "declaration_id": "70003ab8ff42699dcd879bd07521a2e5b434557bb35ac4602afd78af6aa03cb2",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_slovak_button",
+      "owner_line": 559,
+      "field": "ai_chance",
+      "field_line": 601,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_slovak_button",
+        "field": "ai_chance",
+        "source_line": 601,
+        "declaration_id": "67701028dfca19e4d55697464f5b4356e20122a3dbfc07b578e195a335f02964",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_hungarian_button",
+      "owner_line": 606,
+      "field": "ai_chance",
+      "field_line": 627,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_hungarian_button",
+        "field": "ai_chance",
+        "source_line": 627,
+        "declaration_id": "c42fbffae4dd9d0b16e8935e634e03aacd719be60b44bd9b6325ea3ab098db30",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_hungarian_button",
+      "owner_line": 606,
+      "field": "ai_chance",
+      "field_line": 648,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_hungarian_button",
+        "field": "ai_chance",
+        "source_line": 648,
+        "declaration_id": "0456ae94b772287d406293a5ad4d10e737b1af2af0ff9d3ce6e84eeaa6199fd6",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_slovene_button",
+      "owner_line": 653,
+      "field": "ai_chance",
+      "field_line": 674,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_slovene_button",
+        "field": "ai_chance",
+        "source_line": 674,
+        "declaration_id": "eb36a976d1ddd447cd108a6bdbae84269103681a0f1bf06f8394ab66efcaa019",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_slovene_button",
+      "owner_line": 653,
+      "field": "ai_chance",
+      "field_line": 695,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_slovene_button",
+        "field": "ai_chance",
+        "source_line": 695,
+        "declaration_id": "9ee2342bb6f38b1459be06bea7392d42e2af4b67e877eb9d01111c8c945fb370",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_croat_button",
+      "owner_line": 700,
+      "field": "ai_chance",
+      "field_line": 721,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_croat_button",
+        "field": "ai_chance",
+        "source_line": 721,
+        "declaration_id": "3172dd0d14e14021796c7ac485f8328c7802519ff749ef9d7c1205709790cbd5",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_croat_button",
+      "owner_line": 700,
+      "field": "ai_chance",
+      "field_line": 742,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_croat_button",
+        "field": "ai_chance",
+        "source_line": 742,
+        "declaration_id": "9a9beec83232d73673b1829faf0f50649ad52b3d908187c9532be6efc9d1dc3b",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_romanian_button",
+      "owner_line": 747,
+      "field": "ai_chance",
+      "field_line": 768,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_romanian_button",
+        "field": "ai_chance",
+        "source_line": 768,
+        "declaration_id": "5aac9a34cbbf46fdc3cec9303d9d08d0ac10756b837a385f17fc82b863733e0c",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_romanian_button",
+      "owner_line": 747,
+      "field": "ai_chance",
+      "field_line": 789,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_romanian_button",
+        "field": "ai_chance",
+        "source_line": 789,
+        "declaration_id": "796ad71fa9f070ca8a7b7db675903b83d63f36562f4d65b593a15e65755bf9dc",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_north_italian_button",
+      "owner_line": 794,
+      "field": "ai_chance",
+      "field_line": 816,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_north_italian_button",
+        "field": "ai_chance",
+        "source_line": 816,
+        "declaration_id": "8c19df856d9ec40866e60f35d905063b65b9c244889ed936c0a77a9563a82461",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_north_italian_button",
+      "owner_line": 794,
+      "field": "ai_chance",
+      "field_line": 836,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_north_italian_button",
+        "field": "ai_chance",
+        "source_line": 836,
+        "declaration_id": "2d54eb1eec67b3f8a730cbe0259cd75ae1dc314e07e5ca95bee10b2b801e88a0",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_serb_button",
+      "owner_line": 841,
+      "field": "ai_chance",
+      "field_line": 863,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_serb_button",
+        "field": "ai_chance",
+        "source_line": 863,
+        "declaration_id": "01a2d727728c2f185bb484bfb7b9ddd9bfc1a4d3df6e5785b283f6b8ec5bfe80",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_serb_button",
+      "owner_line": 841,
+      "field": "ai_chance",
+      "field_line": 884,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_serb_button",
+        "field": "ai_chance",
+        "source_line": 884,
+        "declaration_id": "9e8ded0e01fe409993d0ce1e1519533d235bbf30e3ed3fe70707d13289276f7c",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_ukrainian_button",
+      "owner_line": 889,
+      "field": "ai_chance",
+      "field_line": 911,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_ukrainian_button",
+        "field": "ai_chance",
+        "source_line": 911,
+        "declaration_id": "fe57260492c467863a0a927d928f8ca5cfb8c3194b19ca30deecb264211ad55d",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_ukrainian_button",
+      "owner_line": 889,
+      "field": "ai_chance",
+      "field_line": 932,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_ukrainian_button",
+        "field": "ai_chance",
+        "source_line": 932,
+        "declaration_id": "083a092321c1e5b32fcbb45e038e79486911183e1eae83be3ada308fb96764ef",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_enact_the_federation",
+      "owner_line": 937,
+      "field": "ai_chance",
+      "field_line": 946,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_enact_the_federation",
+        "field": "ai_chance",
+        "source_line": 946,
+        "declaration_id": "062695fce5e690a2afae4a75fd2feedfdc441ac681743284499f08b4e34586cc",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_enact_the_federation",
+      "owner_line": 937,
+      "field": "ai_chance",
+      "field_line": 977,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_enact_the_federation",
+        "field": "ai_chance",
+        "source_line": 977,
+        "declaration_id": "10f2529bbe9de128b07725a4fd0bf3c235b18f06f499f41e3d414608cf9ede5f",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_observer_pledge_cooperation",
+      "owner_line": 982,
+      "field": "ai_chance",
+      "field_line": 992,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_observer_pledge_cooperation",
+        "field": "ai_chance",
+        "source_line": 992,
+        "declaration_id": "f45aef6e407c28e3cdd6f013afa1677cccfcdde6c2e8cb6fc75e78989c577f30",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_observer_pledge_cooperation",
+      "owner_line": 982,
+      "field": "ai_chance",
+      "field_line": 1046,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_observer_pledge_cooperation",
+        "field": "ai_chance",
+        "source_line": 1046,
+        "declaration_id": "4682dd84a27eedeb69ef848fc37f062f4005af6f98c0c63db2d49496981a102a",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_observer_reject_cooperation",
+      "owner_line": 1051,
+      "field": "ai_chance",
+      "field_line": 1061,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_observer_reject_cooperation",
+        "field": "ai_chance",
+        "source_line": 1061,
+        "declaration_id": "f1487107212cbb92d03b49d276ca24262e94459a9556c2c8d5a7d4b1b8de4345",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_observer_reject_cooperation",
+      "owner_line": 1051,
+      "field": "ai_chance",
+      "field_line": 1100,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_danubian_federation_observer_reject_cooperation",
+        "field": "ai_chance",
+        "source_line": 1100,
+        "declaration_id": "71516f1fa8ce8544a9597fce78f0091cb0fb9bd3fbfab3a54894679b321a94cc",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_standestaat_eliminate_parliament",
+      "owner_line": 1105,
+      "field": "ai_chance",
+      "field_line": 1115,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_standestaat_eliminate_parliament",
+        "field": "ai_chance",
+        "source_line": 1115,
+        "declaration_id": "f36f32b1c95c27c3afa7a4bec0b9645e531926497ccfbff7d7fc18824b51f8f2",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_standestaat_eliminate_parliament",
+      "owner_line": 1105,
+      "field": "ai_chance",
+      "field_line": 1189,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/scripted_buttons/05_austria_buttons.txt",
+        "definition": "je_standestaat_eliminate_parliament",
+        "field": "ai_chance",
+        "source_line": 1189,
+        "declaration_id": "6d9f74cb06cab620400992700fa70183e83149ebd23ab5b2d3d0adb67275d936",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_journal_entry",
+      "owner_line": 2193,
+      "field": "ai_country_goal_recalculation",
+      "field_line": 2196,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+        "definition": "catalyst_journal_entry",
+        "field": "ai_country_goal_recalculation",
+        "source_line": 2196,
+        "declaration_id": "958cc082a940b2d7d9fd41f1e7f909234da41d55e00db5a18128e0be85d1161d",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_journal_entry",
+      "owner_line": 2193,
+      "field": "ai_country_goal_recalculation",
+      "field_line": 2208,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+        "definition": "catalyst_journal_entry",
+        "field": "ai_country_goal_recalculation",
+        "source_line": 2208,
+        "declaration_id": "d2ad545b623841d7478445236e8f2fc6f3383625960d67505d94184c000ea740",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_socialist_government",
+      "owner_line": 3028,
+      "field": "ai_country_goal_recalculation",
+      "field_line": 3031,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+        "definition": "catalyst_socialist_government",
+        "field": "ai_country_goal_recalculation",
+        "source_line": 3031,
+        "declaration_id": "1580270b3b48a8f121d83eeaab581cb8f3844f78fd90a1841ca3f0839b40c4fe",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_socialist_government",
+      "owner_line": 3028,
+      "field": "ai_country_goal_recalculation",
+      "field_line": 3039,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+        "definition": "catalyst_socialist_government",
+        "field": "ai_country_goal_recalculation",
+        "source_line": 3039,
+        "declaration_id": "b3142202c5c9949f340b59ea72f5560b684b8986dc5651da53f9719f709722a6",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_socialist_economy",
+      "owner_line": 3148,
+      "field": "ai_country_goal_recalculation",
+      "field_line": 3151,
+      "physical_ordinal": 0,
+      "discovery": {
+        "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+        "definition": "catalyst_socialist_economy",
+        "field": "ai_country_goal_recalculation",
+        "source_line": 3151,
+        "declaration_id": "5fe397a4765105c5fe35efa729eb889030f7bae7898a96627a3815dee0d13f4c",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_socialist_economy",
+      "owner_line": 3148,
+      "field": "ai_country_goal_recalculation",
+      "field_line": 3162,
+      "physical_ordinal": 1,
+      "discovery": {
+        "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+        "definition": "catalyst_socialist_economy",
+        "field": "ai_country_goal_recalculation",
+        "source_line": 3162,
+        "declaration_id": "40d472f6eae30a8f67ce6c91136a673eca8fb417bc24f719067a2c683202c067",
+        "ambiguity": "duplicate_field_merge_semantics_unknown"
+      }
+    }
+  ],
+  "unchanged_classification_input": {
+    "path": "C:\\Users\\28905\\projects\\Situated AI\\.superpowers\\sdd\\A4-20261105\\discovery-classification-stats.json",
+    "bytes": 540230,
+    "sha256": "8221391ebeb46cb282df5109dde4c1556deb3d4685317663e8069d3f437c6aa9",
+    "capture_sha256": "51343911008b9b1dd62c53d31c1d118175d049b6346f18022acf515143e8537e"
+  }
+}

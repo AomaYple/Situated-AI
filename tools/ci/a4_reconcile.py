@@ -139,6 +139,15 @@ def reconcile(
     compact = {item["domain"]: item for item in gate.compact_pending(catalogs, discovered)}
     result["pending_rows"] = [compact[item["domain"]] for item in result["pending_rows"]]
     result["discoveries"] = discovered
+    old_by_id = {item["id"]: item for item in old}
+    for row in result["rows"]:
+        stages = {
+            gate.responsibility_stage(expected[identity], old_by_id)[0]
+            for identity in row["discovery_ids"]
+        }
+        if len(stages) != 1:
+            raise ValueError("reconcile requires a split for mixed strategic responsibilities")
+        row["stage"] = stages.pop()
     existing_changes = gate.unique(result["candidate_changes"], "id", "candidate")
     result["candidate_changes"] = []
     for item in delta:
@@ -153,6 +162,11 @@ def reconcile(
         )
     result["inventory"]["investigation_sources"] = refs
     gate.merge_inventory(result, reports)
+    if sources.jsons.get("a4:classification-checkpoint"):
+        result["inventory"].update(
+            status="verified",
+            reason="完整原始观察永久保留；当前物理分类/角色映射/6193生产IR与17迁移静态子合同独立核验通过。未来接口、B/R/U产品及DLC应用问题仍逐责任pending，不授予新writer权限。",
+        )
     result["inventory"]["crosscheck_receipts"] = sorted(
         {identity for report in reports for identity in report["crosscheck_receipt_ids"]}
     )

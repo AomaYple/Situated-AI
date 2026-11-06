@@ -164,7 +164,11 @@ def test_named_army_formula_requires_current_barracks_level_unit():
     not (config.GAME / "common").is_dir(), reason="requires pinned current installation"
 )
 def test_current_building_and_lj10_native_spans_sources_and_formula_parents():
-    assert len(building_defaults.verify_game(config.GAME)) == 21
+    hashes = dict(building_defaults.verify_game(config.GAME))
+    assert len(hashes) == 22
+    assert hashes[f"@evidence/{building_defaults.SELECTOR_ID}"] == (
+        "1d1cbd8bf048a08919df42ed4f07a14756207b02fe92462881f0c8657255d9a2"
+    )
     assert (
         dict(decision_interfaces.verify_lj10_game(config.GAME))["@engine/binaries/victoria3.exe"]
         == "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"

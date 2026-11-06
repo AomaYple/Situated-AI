@@ -1,0 +1,702 @@
+{
+  "capture_sha256": "51343911008b9b1dd62c53d31c1d118175d049b6346f18022acf515143e8537e",
+  "slots": [
+    {
+      "ambiguities": [],
+      "definition": "goldrush.1",
+      "option_index": 1,
+      "owner_declaration_id": "21d9709820147993dbfa1c53ade8388fc1b01b19e818e27f94881c16332bdc82",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "9084dd0184eaa18eb3f8eca9e2199e11aceb1efffed22ffb96e6f7c7d5d5fc27",
+      "source": "events/gold_rush.txt",
+      "source_line": 46,
+      "surface_declaration_ids": [
+        "1fab2b38c6f8c83cec8e93394c99a87a81d7b6b747ecf259e2811d36432542b0"
+      ],
+      "surface_ids": [
+        "79968cad1bb6fc2ae37b13d01e5c44841d30d9cfd8f2ec008e4c50a396746deb"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.1",
+      "option_index": 2,
+      "owner_declaration_id": "21d9709820147993dbfa1c53ade8388fc1b01b19e818e27f94881c16332bdc82",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "5c2f91eb275812cc3621fc7a4ee7830b94140e497fb4a6fe49216826b8f6872e",
+      "source": "events/gold_rush.txt",
+      "source_line": 55,
+      "surface_declaration_ids": [
+        "3f8ecc83da30d2f299ec6f01c439af1e35568399e1a2dc727e644c32211c4f8f"
+      ],
+      "surface_ids": [
+        "5a9b7d5e739e041c1926277b0d6ffd29613555d4d8782c76dc0c346d82dcfb5a"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.1",
+      "option_index": 3,
+      "owner_declaration_id": "21d9709820147993dbfa1c53ade8388fc1b01b19e818e27f94881c16332bdc82",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "96014e3b1bbbbd0737e4ba8307263bffbcaaffe60d8ae2959ff05ece01ed196e",
+      "source": "events/gold_rush.txt",
+      "source_line": 67,
+      "surface_declaration_ids": [
+        "0e620ce3669aecd8d47bb21491c5c08ec717f5e015d2cb609e7d8a89cc4a38eb"
+      ],
+      "surface_ids": [
+        "0569983aa001468626dc96614e753dad88b9a8dd49778d160b2d9b7192957a85"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.1",
+      "option_index": 4,
+      "owner_declaration_id": "21d9709820147993dbfa1c53ade8388fc1b01b19e818e27f94881c16332bdc82",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "39271ede0688a28dcd69c84cfd28c25be4cab90a7e786021b45e419305466ddc",
+      "source": "events/gold_rush.txt",
+      "source_line": 81,
+      "surface_declaration_ids": [
+        "d5c8be2b94577fd32b795af0fab885d7457064545299190d3f315b19a92524eb"
+      ],
+      "surface_ids": [
+        "a738dcc9281d093f9a132fa9589753a0b49d0a00a7ce8e5d77236e4a66ab72a1"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.2",
+      "option_index": 1,
+      "owner_declaration_id": "2693a4800abbccf0aab91305f44f80eed4597120181cf9a40a1cfbb0004f679c",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 2,
+      "slot_id": "be73ba0a3a259cec4e5277a22d18024950a074ba7149b6aa5d4978c8c168d6fa",
+      "source": "events/gold_rush.txt",
+      "source_line": 139,
+      "surface_declaration_ids": [
+        "565922d2a8d9ae7b899ead7d6fbc5a83c9b810e86db18f98c7ff351e9714e62b"
+      ],
+      "surface_ids": [
+        "fb4f755bbb62bee47fa260d9c67e87f7c0b01ec02b6ffc1f09892e17a7596d38"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.2",
+      "option_index": 2,
+      "owner_declaration_id": "2693a4800abbccf0aab91305f44f80eed4597120181cf9a40a1cfbb0004f679c",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 2,
+      "slot_id": "c217198ad4658ad88ababb767283a0afa660306d3d57eb4ad1cae1cab5cdf998",
+      "source": "events/gold_rush.txt",
+      "source_line": 154,
+      "surface_declaration_ids": [
+        "8ae82c260f6e279657a41ac383768c210a420e1d76a081c1dcdbfdb44603ae5a"
+      ],
+      "surface_ids": [
+        "00f05be49483fbf00e73e301ea1467b96ba9cff7fceecc2cf0ce78a1ca7f7945"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.2",
+      "option_index": 3,
+      "owner_declaration_id": "2693a4800abbccf0aab91305f44f80eed4597120181cf9a40a1cfbb0004f679c",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 2,
+      "slot_id": "0b6a01d0d0185311584ebe3ebc520f360af00f4ea0bdd5f2c21551ecef3dfe68",
+      "source": "events/gold_rush.txt",
+      "source_line": 168,
+      "surface_declaration_ids": [
+        "8659bd015243d92a6787d83dd7286872641bdb3a274579a4a2f420e9582bd82f"
+      ],
+      "surface_ids": [
+        "059a2279b7b129345b5a12e65be4bde67f52b81ed26c8216e4753f0e7f7d68e7"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.2",
+      "option_index": 4,
+      "owner_declaration_id": "2693a4800abbccf0aab91305f44f80eed4597120181cf9a40a1cfbb0004f679c",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 2,
+      "slot_id": "52d7e9aa48bb639adcce979c38bcf8a7c5f79c2173f69e30bd97f7fba90d544e",
+      "source": "events/gold_rush.txt",
+      "source_line": 188,
+      "surface_declaration_ids": [
+        "228a1a273d34841b7e9f3aa43d0630230c18ac68ec042bdb2d514eab1588b5c7"
+      ],
+      "surface_ids": [
+        "6aa238b3c24b8575ca0d69e6882859faafa74fd2a439a84afce6d587ae695bb9"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.3",
+      "option_index": 1,
+      "owner_declaration_id": "3fef8968c2692b1b08779ce062632566d9717e5dd6cc50a0ab680003ced97945",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 3,
+      "slot_id": "f8ec91b4a6be330b25058b9431c1acd50e6d2ac77fdf81a66d2d5f56d28d9d7a",
+      "source": "events/gold_rush.txt",
+      "source_line": 280,
+      "surface_declaration_ids": [
+        "1e266d4197d474fe3ccf3cc2cb4ece0d0b02517f4754e845cf977eda16623468"
+      ],
+      "surface_ids": [
+        "1ab0f842897bfce8cd559a57b8c7dadb257e2e62bc338713ed5548fd536955ab"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.3",
+      "option_index": 2,
+      "owner_declaration_id": "3fef8968c2692b1b08779ce062632566d9717e5dd6cc50a0ab680003ced97945",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 3,
+      "slot_id": "5edeb666e1df8faed9e6e249c01ae2072265bb4ecd3e56ccf8f198c183c12387",
+      "source": "events/gold_rush.txt",
+      "source_line": 291,
+      "surface_declaration_ids": [
+        "901dd07b4b331941e69365feb69bb15da796db71f975f0040f583d82f15064fb"
+      ],
+      "surface_ids": [
+        "7893794ddb0d7c9ede51b3750fa89e68aab0f7f70bf64a10c90d2dba69c32021"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.4",
+      "option_index": 1,
+      "owner_declaration_id": "c15179a55de1b61febf843a08335d3834815117f3129f33fc573edf1a1cc7912",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 4,
+      "slot_id": "15ce277241802de7cc4d226dc330a53dc50eed131a58d98dee5a702d25caa551",
+      "source": "events/gold_rush.txt",
+      "source_line": 358,
+      "surface_declaration_ids": [
+        "6b3e02761359fd29bcfe417791b838dd923ebad9607892c848a912cf8f2d3f6a"
+      ],
+      "surface_ids": [
+        "7867101af11d44a07aba53052fbbc9fa5b85296e5fedd91d09956a54cef849e5"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.4",
+      "option_index": 2,
+      "owner_declaration_id": "c15179a55de1b61febf843a08335d3834815117f3129f33fc573edf1a1cc7912",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 4,
+      "slot_id": "3f5c290f233a427b53beaf272f3cbd0b6425a41d187b52af2d336d711580d729",
+      "source": "events/gold_rush.txt",
+      "source_line": 375,
+      "surface_declaration_ids": [
+        "1b7c2cdbf0ddddce9741e4dd2c8a87128f525d57da1cd98f99aac4e3e7c0c722"
+      ],
+      "surface_ids": [
+        "dbdfb5792fe8b4a89062067b5547a171a99ac2e7f60489e63cec747db0f714e6"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.5",
+      "option_index": 1,
+      "owner_declaration_id": "fcacfba7fb769aef9a63488c173f0dc9326f7ec3866792d82e5f39f6b20ea0dc",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "93cea054b0a22659ed64ef6cdc8731694f93636159bc787e2a882467a4c9b220",
+      "source": "events/gold_rush.txt",
+      "source_line": 433,
+      "surface_declaration_ids": [
+        "82ea4086f5a3e3ed35d5daa4cdd5a277649d83557e1b361c413152c656082c01"
+      ],
+      "surface_ids": [
+        "0d99f5b5d9e575be9da43e263920b5c99be415b9d32de28ed0d825b7441d021d"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "goldrush.5",
+      "option_index": 2,
+      "owner_declaration_id": "fcacfba7fb769aef9a63488c173f0dc9326f7ec3866792d82e5f39f6b20ea0dc",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "8e1500ff5779746cd06567cd8d1bafb3d607cfcfc6b036e329b49718d3357872",
+      "source": "events/gold_rush.txt",
+      "source_line": 447,
+      "surface_declaration_ids": [
+        "3fec82e8185a90a8b1e5879fe538485dd807a42224d681098fc0e20d00067a54"
+      ],
+      "surface_ids": [
+        "73da059861c629961a6a46c73df49458f05383be1fcc9abe99cba9dc1f13ac96"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.1",
+      "option_index": 1,
+      "owner_declaration_id": "30d5b18df8899ec1c60ba4ebd85271b99d5fe7bbddc3b5b7ff90721a8e933381",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "ae495f47bdbeb353994dbe95c609c959d656ce52b2a841b198b1ea04dd67fd7d",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 51,
+      "surface_declaration_ids": [
+        "11104f173ed89fdaac1198b41babf169c6c99d7ceffa1ba736df96bb05ac44c1"
+      ],
+      "surface_ids": [
+        "f288356d1212431a5e8bc6828e20f0331a4817f13df72051f79b1a8c78a4401d"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.1",
+      "option_index": 2,
+      "owner_declaration_id": "30d5b18df8899ec1c60ba4ebd85271b99d5fe7bbddc3b5b7ff90721a8e933381",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "46fba4af4c7ef372ef5f6b8036b82a6b71c230c13800ee7d49cc37f2bb9a27dd",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 68,
+      "surface_declaration_ids": [
+        "e3c73429460f62a48d7a7fda1d1d6529756db9e0546b859ce59052df4cae15d8"
+      ],
+      "surface_ids": [
+        "5987d2c19c07ae0c40ba4ea8dfaf69c327c8a13ee1fd4a741df59f82a1f3333a"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.1",
+      "option_index": 3,
+      "owner_declaration_id": "30d5b18df8899ec1c60ba4ebd85271b99d5fe7bbddc3b5b7ff90721a8e933381",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "eb9f7d1012a7fd1dca0c9a554f3c2b8304866fb45aee6eec68d5e77b48aad517",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 86,
+      "surface_declaration_ids": [
+        "0e7133e733f912eb8ffc6b0b611e628cd1bace9b8cab797fa9ef87f3ce1eae6d"
+      ],
+      "surface_ids": [
+        "d0d636728ed834bdf3c560467fdfac6d3bff4e4bd4440de331d3e0c83bb3a24b"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.1",
+      "option_index": 4,
+      "owner_declaration_id": "30d5b18df8899ec1c60ba4ebd85271b99d5fe7bbddc3b5b7ff90721a8e933381",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "24a6709f6158a32fa3a5e2614c4fa92bb2b55c3a717e5bb78ec2eb50aa724542",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 109,
+      "surface_declaration_ids": [
+        "7bd1a3d9d0488d6a78a5f5949fcd7e3e94749571f8a5ae9997c1fe8bf731f6c7"
+      ],
+      "surface_ids": [
+        "84ade41cefffbee083b3b972b282d0500c8aa905451b9a0e4c3d18b2c229fc40"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.2",
+      "option_index": 1,
+      "owner_declaration_id": "b6322b4f5db8b528ac1921c24a21d1c155ef074329d25ebfa3d7c8a9dc914cf7",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 2,
+      "slot_id": "4c1cd12a1b8d2bc2048f2e99a71aced3e99d5f2aab832339d188ec3b4919e3be",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 174,
+      "surface_declaration_ids": [
+        "7da757f0c14306853f9f2fc2ab5fd5c8898d5e75077e44405ace0332166ad035"
+      ],
+      "surface_ids": [
+        "b2475ac2929dd0e19ca280cd4bb9fa37a91bf5c008bf6286c2615c51e2735b49"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.2",
+      "option_index": 2,
+      "owner_declaration_id": "b6322b4f5db8b528ac1921c24a21d1c155ef074329d25ebfa3d7c8a9dc914cf7",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 2,
+      "slot_id": "8f5db5e4a0012a9b13e57e37df4b23028dc9111b4c47e5b50d190fe4902f4043",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 188,
+      "surface_declaration_ids": [
+        "d7cc8a5e7b077d32cbd4dfead952d68c51a85aaf3714368701e0041b3acb5b65"
+      ],
+      "surface_ids": [
+        "85149f326c45e904f23b56dcd4cc685c43fb471929853b28148b9a0bce39f27d"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.3",
+      "option_index": 1,
+      "owner_declaration_id": "076322db753556b0c9b519fef6e5c101aba2d9a40c7caf2e522d2a4280bc4fcb",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 3,
+      "slot_id": "8af916c5a3645e571eec1e2962b5e52ce4885753ebc5fea8e11d808e12752bc8",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 257,
+      "surface_declaration_ids": [
+        "1dfe4389e992d52b413e27a58f5852792378354e9dc79b1e1f072368c1aee1e3"
+      ],
+      "surface_ids": [
+        "fb7d944cab804faae1034eabd01b264a8a1a0428ef121c1b894afb935396ef07"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.3",
+      "option_index": 2,
+      "owner_declaration_id": "076322db753556b0c9b519fef6e5c101aba2d9a40c7caf2e522d2a4280bc4fcb",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 3,
+      "slot_id": "e810d7966726c12b19264b8416d22a98fe1e0e47703f7d25d82f772f32bfa49c",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 281,
+      "surface_declaration_ids": [
+        "a13eb11600fa22176b82a3cb4acb605d469d703193086f20ebac97d9bd2fa668"
+      ],
+      "surface_ids": [
+        "d4fd7595dc94488a9f281f5aa1eafbe30f41fbac70d413db0f870e5a9f936be6"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.4",
+      "option_index": 1,
+      "owner_declaration_id": "4f857688b98d3931b55ea5d8261023a92704e4c4f47617d56f6fbbbd1f362bfb",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 4,
+      "slot_id": "4e671b99f84427d668796dba0d7e8f83a473d2fa2f47e08c5b8bfc3fceaef57c",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 350,
+      "surface_declaration_ids": [
+        "c739821037816386af2059fdd30d7703500735d5f3b37244b50826ef0698e000"
+      ],
+      "surface_ids": [
+        "109ce011dfd9029a0b8510063a3d0d8ef39c6938dcbc16ae7483db778ec88568"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.4",
+      "option_index": 2,
+      "owner_declaration_id": "4f857688b98d3931b55ea5d8261023a92704e4c4f47617d56f6fbbbd1f362bfb",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 4,
+      "slot_id": "6ebecbac5b16eca7aff5b3aa7abb21947eb89e6fb661a0fc6a05e38c6cc368fd",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 372,
+      "surface_declaration_ids": [
+        "bc4f1d499b5730ec2e9c4383ddadf94f75320b42b2dc44e2e7d835c6b6081644"
+      ],
+      "surface_ids": [
+        "48b76f40ee5e2f3065694f70cfe4a65d83709ecaf8fe1912f83baef96458e0a1"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.5",
+      "option_index": 1,
+      "owner_declaration_id": "79621204f7f6892099b2123f1f5b17c8e7dc4669dc35ee9cba17ab8a946fabcd",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "16434bee0fd8cdd9565375303aa5de32242703cbd45c6873e648980654052c0f",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 459,
+      "surface_declaration_ids": [
+        "f056a4065e334afed875cd05b05b5ffa87e4f60a32fd501d0eadac5db84467b2"
+      ],
+      "surface_ids": [
+        "8def65eb4c6868e9a12137b771e88ca7f35e30157b96e76bc8838fc2820ca99b"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.5",
+      "option_index": 2,
+      "owner_declaration_id": "79621204f7f6892099b2123f1f5b17c8e7dc4669dc35ee9cba17ab8a946fabcd",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "f7ba6e60ac453d04f30a86b933a3c7eafb791b4d85c6626a01bf1d43369ead52",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 477,
+      "surface_declaration_ids": [
+        "7574bbc943f8633e73cd0bf5a91c49c2e6348d5eb70b2816cb1b6abf13d0df11"
+      ],
+      "surface_ids": [
+        "04686820529ea4876a348662ee14e6ce02a0e38b72fa103b6f2be6fb725cc4ae"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.5",
+      "option_index": 3,
+      "owner_declaration_id": "79621204f7f6892099b2123f1f5b17c8e7dc4669dc35ee9cba17ab8a946fabcd",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "a1679ee354ded7e17dec0627def37211889115c4cbf364c4006de9620361989d",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 495,
+      "surface_declaration_ids": [
+        "d203728089e8c7a75668824a2b8095d26d41aed36514e11912abcbda2d8eb70f"
+      ],
+      "surface_ids": [
+        "3558e36f1b27f5fd7c5241f19687331641794ee5aacbcf844708a6854a416f85"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "oil_rush.5",
+      "option_index": 4,
+      "owner_declaration_id": "79621204f7f6892099b2123f1f5b17c8e7dc4669dc35ee9cba17ab8a946fabcd",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "556daccd015ec78eab822007e66e635d1963cb820a7d6814d836b7f9b61a7e98",
+      "source": "events/oil_rush_events.txt",
+      "source_line": 510,
+      "surface_declaration_ids": [
+        "9e1ddb1a38541a1bc0d04ffd3d68ba92a2cf006ed09431e9d9783c84d6a0fcee"
+      ],
+      "surface_ids": [
+        "952331e6b2b9d79316f75b4bb71259494d8b3b58fbec0234ef019abba0a5d5ea"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "paralegal_discrimination.1",
+      "option_index": 1,
+      "owner_declaration_id": "90b3d78ee642a6fec94fe9b180a39ca5ecd7eaa4e62552badd1952b058a1bf4b",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "6d7db8d9a57d73dbe4dc3968090b6aacaa26ad6503e1e53909d363258b7e6497",
+      "source": "events/paralegal_discrimination_events.txt",
+      "source_line": 85,
+      "surface_declaration_ids": [
+        "13b337f830c25be38a608c0cb3fa6ede1eb7b29e90db5aaf0d69f5691859cb7a"
+      ],
+      "surface_ids": [
+        "ac8db2483a21ad7c4fb427252be8832b7c39513cbb980a1c1d5c49f7109ca8ed"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "paralegal_discrimination.1",
+      "option_index": 2,
+      "owner_declaration_id": "90b3d78ee642a6fec94fe9b180a39ca5ecd7eaa4e62552badd1952b058a1bf4b",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "7791f2bd7c588f36aae729fe237a592e942f2e267a9b4b574f873244ecaf9649",
+      "source": "events/paralegal_discrimination_events.txt",
+      "source_line": 109,
+      "surface_declaration_ids": [
+        "2554d9553d9dee475b76cf7a0d85ebeb737826860dea6eaffb1615e42cdd3f34"
+      ],
+      "surface_ids": [
+        "65f7f129fe641adbfa4eedf853b3ab5c88c8c6a14a2374e2c19cb001174704cc"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "paralegal_discrimination.1",
+      "option_index": 3,
+      "owner_declaration_id": "90b3d78ee642a6fec94fe9b180a39ca5ecd7eaa4e62552badd1952b058a1bf4b",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "887fce25c4fab6a6dd0a3fdb79059ec9ada528b1c5596f828ce1618e756e2e06",
+      "source": "events/paralegal_discrimination_events.txt",
+      "source_line": 157,
+      "surface_declaration_ids": [
+        "73fa896049f216adac3baa0eda42d76ac5b91f4a5dce1b330b5545e5ce13bfa2"
+      ],
+      "surface_ids": [
+        "450c5798afb108fdc6748550c3d65d8bf9281dc06b874f02459cf4622af48c2e"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "production_tech_events.200",
+      "option_index": 1,
+      "owner_declaration_id": "c82d9b36076a7f5d9d03eb53682d65f7edb55871497c1354af90d525128c231e",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 4,
+      "slot_id": "20cba5658b424181262fec85a23aef51be211421895f7e9e3f5ce516c68f8bb9",
+      "source": "events/tech_events/production_tech_events.txt",
+      "source_line": 279,
+      "surface_declaration_ids": [
+        "a18c598ff45ddcf189b8d0527be0adc318721ce12ded67cbbec9f1e3f9cf5676"
+      ],
+      "surface_ids": [
+        "eca54f3cbea835ed8c6c7ec0caf4e154fbc0ebd75630db666961c363aac337d9"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "production_tech_events.200",
+      "option_index": 2,
+      "owner_declaration_id": "c82d9b36076a7f5d9d03eb53682d65f7edb55871497c1354af90d525128c231e",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 4,
+      "slot_id": "4cfb35ad802cdfefb2ae9519dbfabf882a0dabe89ed57449881c89090189cca2",
+      "source": "events/tech_events/production_tech_events.txt",
+      "source_line": 287,
+      "surface_declaration_ids": [
+        "25bfeb2a0730de72ef099c604f27fefbe67c20b887bb51d5d5b15b8ed8d91f2e"
+      ],
+      "surface_ids": [
+        "8fae35a482e1afe8819ca4643fe697585353f67c59602569a0e6463f24d8eacd"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "production_tech_events.210",
+      "option_index": 1,
+      "owner_declaration_id": "0b1b13535bab91bbff33679eeb1d3ae494842dd0426dd57582fccc7485517fa0",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "723530bfd3c1cee735ad3d1a88970b605af3aee680b8f53ee270bd8d41d97350",
+      "source": "events/tech_events/production_tech_events.txt",
+      "source_line": 367,
+      "surface_declaration_ids": [
+        "54faca22acd5bbba676721c9cfd058d7cba432aca87fee9363a40b4f9e1c3be4"
+      ],
+      "surface_ids": [
+        "88adf89373d4940d692ebd66dd650643839d90efebb164571c08f3c2ba0d2a7f"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "production_tech_events.210",
+      "option_index": 2,
+      "owner_declaration_id": "0b1b13535bab91bbff33679eeb1d3ae494842dd0426dd57582fccc7485517fa0",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 5,
+      "slot_id": "be9e6017cd34a97b1a2a2c89d535c7002c80a0483a6a034b8e4a149b2db13299",
+      "source": "events/tech_events/production_tech_events.txt",
+      "source_line": 376,
+      "surface_declaration_ids": [
+        "6ed5288bbdb20abc69b6629c0dc43f412553658a64765da6c6f3dc5175e0d5dd"
+      ],
+      "surface_ids": [
+        "ae1d1fba0fb8b31c2a643b66c4ad7c1b626907b6bccd17611f6402157135d879"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "rubber_events.1",
+      "option_index": 1,
+      "owner_declaration_id": "be611be5b1e91a2bb651fdb6b011ea73ac198c9bb70687edd2663c5d57af4e9d",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "ff550ff91a9cd1903d3f7251b684c0686c1e84c545aadc9feda72a3c6a8b15c2",
+      "source": "events/tech_events/rubber_events.txt",
+      "source_line": 65,
+      "surface_declaration_ids": [
+        "3a55f26f842bbc2c4560b17a73d5e22915b2f033be45a77b094a7e1596e87824"
+      ],
+      "surface_ids": [
+        "36ea136e0007fcbd60e2b78d44e4d92e8d65087f982916df455da13ef52237c4"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "rubber_events.1",
+      "option_index": 2,
+      "owner_declaration_id": "be611be5b1e91a2bb651fdb6b011ea73ac198c9bb70687edd2663c5d57af4e9d",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "cee20c071b9555c266d53e8c1c3e8328d701fb1bdb89022c9a1a37e18f978c4a",
+      "source": "events/tech_events/rubber_events.txt",
+      "source_line": 77,
+      "surface_declaration_ids": [
+        "46259d5c17cb7429a75dbf2a5a8d06b8329c0f71b73ab2bd6c792b91c1b8db4d"
+      ],
+      "surface_ids": [
+        "51195f62c8c1668de803fe690ab4a735b12b0ed77a0dd67927befa1c7db071c4"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "rubber_events.1",
+      "option_index": 3,
+      "owner_declaration_id": "be611be5b1e91a2bb651fdb6b011ea73ac198c9bb70687edd2663c5d57af4e9d",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "1139b9c85886911c8c1f613ee0c9679ff41d3de72731f6175ab5351c1c72bff5",
+      "source": "events/tech_events/rubber_events.txt",
+      "source_line": 100,
+      "surface_declaration_ids": [
+        "1c9e4b372571f1144479dc64e2ad6936b63c095327e128d8e13a208260b48a52"
+      ],
+      "surface_ids": [
+        "59ebf84bfb845b45bb298dd30721cd095f5e9616ebbda179ff48a26d8669e62a"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "rubber_events.1",
+      "option_index": 4,
+      "owner_declaration_id": "be611be5b1e91a2bb651fdb6b011ea73ac198c9bb70687edd2663c5d57af4e9d",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 1,
+      "slot_id": "f77abcae1bdaf2093c02d9932fd4ba1b9cb5900994fb57f7330d346f2996e705",
+      "source": "events/tech_events/rubber_events.txt",
+      "source_line": 125,
+      "surface_declaration_ids": [
+        "b9b2a3f04bf9046e094a04f38c8e0bf536e9244451c37df40c22870a94ad84c3"
+      ],
+      "surface_ids": [
+        "659d24e12b1a58e5971d3603aabc2be6f8b0f66384e123d4269a8f3e1fef8e78"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "dan_society_tech_events.1",
+      "option_index": 1,
+      "owner_declaration_id": "717203c9b11f9069864a4d77569779caae87689214faef03dec51d90a2d4ffdd",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 6,
+      "slot_id": "6703f830ae3cb2ea6dd1b84a22d0468b4929446e955f774dc069fa9a63fb24af",
+      "source": "events/tech_events/society_tech_events.txt",
+      "source_line": 317,
+      "surface_declaration_ids": [
+        "ef95c9636e6e6313c28dbedfe96f39095e85f5da5592a77354d8fa19df3b0714"
+      ],
+      "surface_ids": [
+        "bba03b9a7c819bb106e017e61b7d40a6c96ac77e11410de36fc7246445931365"
+      ]
+    },
+    {
+      "ambiguities": [],
+      "definition": "dan_society_tech_events.1",
+      "option_index": 2,
+      "owner_declaration_id": "717203c9b11f9069864a4d77569779caae87689214faef03dec51d90a2d4ffdd",
+      "owner_declaration_occurrence": 1,
+      "owner_definition_index": 6,
+      "slot_id": "64102203ea03ae8dfa238917b9715c5d81eac70fd9ee2a605c9d27d9b4a72383",
+      "source": "events/tech_events/society_tech_events.txt",
+      "source_line": 326,
+      "surface_declaration_ids": [
+        "a3f0f39087563ae4b97bac82b482c76edfa8fa936fdb0f69985a59e7a29c4899"
+      ],
+      "surface_ids": [
+        "e3482fbaa38d965e0a193378bb0532af50875873405c283c2b15d0ae3cee608e"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "exe_after": {
+    "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\binaries\\victoria3.exe",
+    "bytes": 99988600,
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"
+  },
+  "sources_after": [
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\scripted_buttons\\05_austria_buttons.txt",
+      "bytes": 24167,
+      "sha256": "fee84214ff1674f4104c757fee2db48c5a508b705efb0120ffa60e88627c8ed4"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\diplomatic_catalysts\\00_diplomatic_catalysts.txt",
+      "bytes": 59457,
+      "sha256": "6f4718f37f0987ab89c76e04cd3fd00e098bdaf2eece665bd3a36115110e1bd6"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\scripted_buttons\\scripted_buttons.md",
+      "bytes": 4318,
+      "sha256": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\diplomatic_catalysts\\diplomatic_catalysts.md",
+      "bytes": 2983,
+      "sha256": "e9464bb9fd2c35dec9f24454278083e0ceddced5cab59b0b142170f75f4c3d7d"
+    }
+  ],
+  "pe_fixed_version": {
+    "FileVersionMS": 65551,
+    "FileVersionLS": 0,
+    "ProductVersionMS": 65551,
+    "ProductVersionLS": 0
+  },
+  "classification_after": {
+    "path": "C:\\Users\\28905\\projects\\Situated AI\\.superpowers\\sdd\\A4-20261105\\discovery-classification-stats.json",
+    "bytes": 540230,
+    "sha256": "8221391ebeb46cb282df5109dde4c1556deb3d4685317663e8069d3f437c6aa9"
+  }
+}

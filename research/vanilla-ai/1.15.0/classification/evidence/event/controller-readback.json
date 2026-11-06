@@ -1,0 +1,16 @@
+{
+  "evidence": "static_check",
+  "files": 137,
+  "code_spans": 33,
+  "direct_edges": 740,
+  "virtual_edges": 4,
+  "freeze_sha256": "221471ab8ccc2e3fcfffaa95674ee779d6a35f52a9b15263a73182dd91431ab6",
+  "candidate_sha256": "95e5ee17183821c92bdc2bc485cfc35da37ba3b6345ddf604915e26eb2de24ea",
+  "read_only_verifier": "passed: 4281 instructions, 62 sites, 6 sources, 15 owners, 41 slots",
+  "semantic_readback": [
+    "weighted positive-only then first-eligible fallback",
+    "default last-eligible explicit default priority",
+    "invalid index skips option effect but preserves parent after"
+  ],
+  "limits": "Shared static atoms only; AI scheduling, omitted-type dispatch and state-country derivation remain unknown. No writer or stage authority."
+}

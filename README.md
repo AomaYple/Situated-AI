@@ -3,8 +3,8 @@
 当前实施状态见[工作清单](docs/design/当前工作清单.md)及[1.15迁移规划结果](docs/design/exec/1.15迁移规划-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
 当前战略见[架构主计划](docs/design/架构主计划.md)，领域与联动目标见[架构子计划](docs/design/架构子计划.md)，
-A4 深化目标与验收合同见[架构深化计划](docs/design/架构深化计划.md)。A4 1.15 迁移已启动，执行中；本轮先完成仓库前置核对，阶段仍未完成，实际证据见[A4实施结果](docs/design/exec/A4实施-结果.md)与工作清单；生产版本仍为3.2.0。
-X1扩展已完成并随3.2.0正式交付；工程与实际安装证据见[交付结果](docs/design/exec/3.2.0-交付结果.md)。旧计划只作历史参考，长期行为和平衡由用户验收。
+A4 深化目标与验收合同见[架构深化计划](docs/design/架构深化计划.md)。当前开发生成链已迁移到1.15.0，并产生尚未发布的4.0.0候选；迁移、分类和阶段签收事实见[A4迁移结果](docs/design/exec/A4-1迁移-结果.md)与工作清单。A4整体仍在执行，候选存在不表示全计划完成。
+已发布正式版本为3.2.0，其X1扩展、工程与安装证据见[交付结果](docs/design/exec/3.2.0-交付结果.md)。旧计划只作历史参考，长期行为和平衡由用户验收。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
@@ -13,7 +13,7 @@ Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基
 
 当前正式包底本为 Victoria 3 `1.14.5`；A4目标底本为 `1.15.0`，Mod ID 为 `situated-ai`。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。
 
-当前正式包仍以工程基线及3.2.0交付结果为准；A4先迁移到1.15.0再产生新包；[处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)仅作旧计划参考，旧设计与原始证据由[历史归档](docs/design/archive/README.md)导航，只解释对应历史快照。
+正式包以工程基线及版本交付索引为准，开发迁移包不替代已发布包；旧设计与原始证据由[历史归档](docs/design/archive/README.md)导航，只解释对应历史快照。
 长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 当前决策方式

@@ -1562,12 +1562,17 @@
       "all_factor_units_formula_equivalence_and_execution_frequency": "unresolved"
     },
     "open_obligations": [
-      "Referenced type field +0x158 redirect token semantics and inheritance precedence.",
+      "Alternative loading lifecycles, unreviewed selector stores and dynamic-object local expressions remain unknown; exact eleven normal static initializer expression sources are separately closed.",
       "Complete caller graph including indirect calls and final ranking/selection/negative rejection.",
       "Complete construction actor origin, investing/paying roles and any legal script investor access.",
       "Whole scoring formula including all fixed-point saturation, units, candidate mode enum and exact eligibility.",
       "Runtime reachability and branch frequency; this task does not launch the game."
-    ]
+    ],
+    "expression_source": {
+      "proof": "research/situated/victoria3-1.15.0-building-static-selector.json",
+      "sha256": "1d1cbd8bf048a08919df42ed4f07a14756207b02fe92462881f0c8657255d9a2",
+      "scope": "Only eleven existing exact normal named static initializers; invalid sentinel selects their own local numeric member; no copper or dynamic-object writer permission."
+    }
   },
   "initializers": [
     {
@@ -1723,6 +1728,7 @@
   ],
   "lineage": {
     "reviewed_candidate_sha256": "2db851ed61f4ddbb03290f164b827c543d922837dd3772048e94db8fbba24e39",
-    "scope": "only eleven historical missing-field initializers; no broader building expansion"
+    "scope": "only eleven historical missing-field initializers; no broader building expansion",
+    "reviewed_static_selector_candidate_sha256": "72848291b6183759d96160f9ea8192317be7297394809016ce4f027002c75176"
   }
 }

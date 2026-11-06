@@ -33,5 +33,7 @@ research/situated/a2-evidence/**/*.zip binary
 research/situated/a2-evidence/**/*.whl binary
 # 历史归档对象保留压缩前精确原始字节，不做文本规范化。
 docs/design/archive/objects/**/*.gz binary
+# 首轮失败 JUnit 是冻结原始证据；精确保留其 CRLF 与尾部空白。
+research/vanilla-ai/1.15.0/classification/evidence/migration/junit.xml -text -diff
 research/official-docs/** -diff linguist-vendored
 tests/test_golden/** linguist-generated

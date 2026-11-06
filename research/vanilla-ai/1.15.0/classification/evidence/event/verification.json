@@ -1,0 +1,157 @@
+{
+  "status": "passed",
+  "evidence_kind": "independent_static_check",
+  "engine_executed": false,
+  "code_spans": 33,
+  "instructions": 4281,
+  "code_bytes": 18048,
+  "direct_edges": 740,
+  "virtual_edges": 4,
+  "critical_sites": 62,
+  "complete_sources": 6,
+  "owners": 15,
+  "slots": 41,
+  "boundary_interpretations": [
+    {
+      "kind": "default",
+      "eligible": [],
+      "flags": [],
+      "result": -1
+    },
+    {
+      "kind": "default",
+      "eligible": [
+        false,
+        false
+      ],
+      "flags": [
+        false,
+        true
+      ],
+      "result": -1
+    },
+    {
+      "kind": "default",
+      "eligible": [
+        true,
+        true,
+        true
+      ],
+      "flags": [
+        false,
+        false,
+        false
+      ],
+      "result": 2
+    },
+    {
+      "kind": "default",
+      "eligible": [
+        true,
+        true,
+        true
+      ],
+      "flags": [
+        true,
+        false,
+        true
+      ],
+      "result": 2
+    },
+    {
+      "kind": "default",
+      "eligible": [
+        true,
+        false,
+        true
+      ],
+      "flags": [
+        true,
+        true,
+        false
+      ],
+      "result": 0
+    },
+    {
+      "kind": "weighted_fallback",
+      "eligible": [],
+      "weights": [],
+      "result": 0
+    },
+    {
+      "kind": "weighted_fallback",
+      "eligible": [
+        false
+      ],
+      "weights": [
+        0
+      ],
+      "result": 0
+    },
+    {
+      "kind": "weighted_fallback",
+      "eligible": [
+        true,
+        true
+      ],
+      "weights": [
+        0,
+        -1
+      ],
+      "result": 0
+    },
+    {
+      "kind": "weighted_fallback",
+      "eligible": [
+        false,
+        true
+      ],
+      "weights": [
+        0,
+        -100000
+      ],
+      "result": 1
+    },
+    {
+      "kind": "weighted_fallback",
+      "eligible": [
+        false,
+        false
+      ],
+      "weights": [
+        -1,
+        0
+      ],
+      "result": 0
+    }
+  ],
+  "manifest_sha256": "b53e775f9ece75638a39976ab8b00c2d5ea1c388f7501ba988b627a78efcee9f",
+  "candidate_sha256": "95e5ee17183821c92bdc2bc485cfc35da37ba3b6345ddf604915e26eb2de24ea",
+  "limitations": [
+    {
+      "id": "omitted_type_dispatch",
+      "status": "unknown",
+      "next_route": "Trace event enum5 registration/use from definition+0x1c8 through trigger_event/on_action dispatch to instance creation for production_tech_events.200/.210 and dan_society_tech_events.1. Do not map constructor enum5 to country enum0."
+    },
+    {
+      "id": "actor_scheduling",
+      "status": "unknown",
+      "next_route": "Close upstream scheduling/recipient gates into140bb98d0 and142952750 tag-specific country derivation, including tag0x4c. Frame preservation proves no coercion, not the set of reachable runtime actors."
+    },
+    {
+      "id": "all_option_trigger_semantics",
+      "status": "unknown",
+      "next_route": "Reuse current exact scalar/trigger manifests per expression; qualify unproven predicates and complete source closure. This capture binds the shared predicate call, not every condition in5158 slots."
+    },
+    {
+      "id": "weighted_distribution_extremes",
+      "status": "unknown",
+      "next_route": "If exact numeric probability at extreme magnitudes is required, close qword accumulation overflow and floating threshold rounding in143e13120 using bounded current primitive evidence."
+    },
+    {
+      "id": "full_ui_commands_and_effects",
+      "status": "unknown",
+      "next_route": "Close additional UI command dispatch and individual nested effects/reference closure only for claimed consumers. highlighted GUI field observation is not a new chooser or full UI behavior proof."
+    }
+  ]
+}

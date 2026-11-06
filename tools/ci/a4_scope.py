@@ -24,7 +24,7 @@ from typing import Any
 
 from pdx.config import ROOT as GAME_ROOT
 from pdx.config import game_version
-from tools.ci import a4_discovery, a4_history
+from tools.ci import a4_classify, a4_discovery, a4_history
 from tools.ci.a4_schema import (
     INVESTIGATION,
     RECEIPT,
@@ -32,6 +32,7 @@ from tools.ci.a4_schema import (
     SCHEMA,
     STRINGS,
     check_shape,
+    goal_stage,
     pending_row,
 )
 from tools.ci.run_check import interpreter
@@ -51,9 +52,12 @@ GATE_INPUTS: tuple[str, ...] = (
     "tools/ci/run_check.py",
     "tests/test_a4_scope.py",
     *a4_discovery.PROJECTOR_INPUTS,
+    "tools/ci/a4_classify.py",
+    "tests/test_a4_classify.py",
+    "tests/test_a4_witness_arguments.py",
 )
 GATE_INPUTS = tuple(dict.fromkeys(GATE_INPUTS))
-TERMINAL = {"verified", "retained", "unsupported"}
+TERMINAL = {"verified", "retained", "unsupported", "indexed"}
 
 
 def sha(data: bytes) -> str:
@@ -245,6 +249,81 @@ def discover(
     return found
 
 
+def responsibility_stage(discovery: dict[str, Any], old: dict[str, Any]) -> tuple[str, str]:
+    """Derive an intake's duty from its independent origin and original objective."""
+    origin, identity = discovery["origin"], discovery["identity"]
+
+    def original_stage(target: str) -> tuple[str, str]:
+        # A3 C5/C6/C9 have different titles from the current C pages. Preserve
+        # their frozen objectives instead of assigning by numeric suffix alone.
+        stages = {
+            "C1.1": "A4-1",
+            "C2.1": "A4-2",
+            "C3.1": "A4-2",
+            "C4.1": "A4-2",
+            "C5.1": "A4-2",
+            "C6.1": "A4-4",
+            "C7.1": "A4-5",
+            "C8.1": "A4-6",
+            "C9.1": "A4-6",
+        }
+        return stages.get(
+            target, goal_stage(target.split(".", 1)[0])
+        ), "index" if target == "C1.1" else "product"
+
+    if origin == "a3":
+        original = old[identity]
+        return (
+            ("A4-1", "current_migration")
+            if original["status"] == "implemented"
+            else original_stage(identity)
+        )
+    if origin == "goal":
+        return goal_stage(identity), "index" if identity in {
+            "G01",
+            "G02",
+            "G07",
+            "C1",
+        } else "product"
+    if origin == "classification_product_mapping":
+        family, target = identity.split(":", 1)
+        if family == "migration_acceptance":
+            return "A4-1", "current_migration"
+        if family == "predecessors":
+            return original_stage(target)
+        if family == "targets":
+            return (
+                ("A4-1", "index")
+                if target in {"G01", "G02", "G07"}
+                else (goal_stage(target), "product")
+            )
+        raise ValueError("unknown classification responsibility")
+    return "A4-1", "index"
+
+
+def validate_responsibility_stages(
+    rows: dict[str, Any],
+    discoveries: dict[str, Any],
+    old: dict[str, Any],
+    duties: dict[str, Any] | None = None,
+) -> None:
+    for row in rows.values():
+        required = {
+            responsibility_stage(discoveries[identity], old)[0] for identity in row["discovery_ids"]
+        }
+        if required != {row["stage"]}:
+            raise ValueError("wrong claimed responsibility stage; split mixed index/product duties")
+    if duties is not None and (
+        set(rows) != set(duties)
+        or any(
+            row["stage"] != duties[identity]["after"]
+            or set(row["discovery_ids"]) != set(duties[identity]["discovery_ids"])
+            for identity, row in rows.items()
+        )
+    ):
+        raise ValueError("source-bound stage/intake responsibility mapping mismatch")
+
+
 def installation_identity(game_root: Path) -> dict[str, Any]:
     version = game_version(game_root)
     if not version or "caligula_branch" not in version:
@@ -316,6 +395,11 @@ def bootstrap(
     rows = [
         pending_row(item, target) for item in discoveries if item["origin"] != "native_projection"
     ]
+    old_by_id = {item["id"]: item for item in old}
+    for row, item in zip(
+        rows, [d for d in discoveries if d["origin"] != "native_projection"], strict=True
+    ):
+        row["stage"] = responsibility_stage(item, old_by_id)[0]
     compact = compact_pending(catalogs, discoveries)
     original_hash = sha(gzip.decompress(sources.read(original["path"])))
     row_hashes = original_row_hashes(sources, original)
@@ -441,6 +525,8 @@ def load_investigations(
             sources.verify(ref)
         if reference["path"] == a4_discovery.REPORT_PATH:
             catalogs.append(a4_discovery.validate_projection(sources, report))
+        elif reference["path"] == a4_classify.REPORT_PATH:
+            a4_classify.validate_classification(sources, report)
         elif any(item["origin"] == "native_projection" for item in report["discoveries"]):
             raise ValueError("native projection report identity mismatch")
         reports.append(report)
@@ -635,6 +721,15 @@ def run_tests(
         *nodes,
         f"--junitxml={junit}",
     ]
+    if len(subprocess.list2cmdline(command)) > 24000:
+        # Pytest expands one argument per line. A single Windows command is
+        # limited to 32767 characters, independently of the number of cases.
+        if any("\n" in node or "\r" in node for node in nodes):
+            raise ValueError("witness node contains an argument-file newline")
+        arguments = output / "selection.args"
+        arguments.write_text("\n".join(nodes) + "\n", encoding="utf8", newline="\n")
+        bindings = [*bindings, sources.reference(arguments.relative_to(root).as_posix())]
+        command = [*command[:11], f"@{arguments}", command[-1]]
     env = {
         **os.environ,
         "PYTHONDONTWRITEBYTECODE": "1",
@@ -689,6 +784,49 @@ def junit_results(path: Path) -> tuple[list[str], list[str]]:
     return passed, failed
 
 
+def witness_command_refs(sources: Sources, receipt: dict[str, Any]) -> list[dict[str, str]]:
+    """Accept only the exact canonical pytest argv or its hash-bound argument file."""
+    fixed_prefix = [
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+    ]
+    command, selection = receipt["command"], receipt["selection"]
+    if (
+        not command
+        or Path(command[0]).resolve() != interpreter(sources.root).resolve()
+        or not command[-1].startswith("--junitxml=")
+        or any("\n" in node or "\r" in node for node in selection)
+    ):
+        raise ValueError("receipt command / selection mismatch")
+    arguments = command[1:-1]
+    if arguments == [*fixed_prefix, *selection]:
+        return []
+    if (
+        arguments[: len(fixed_prefix)] != fixed_prefix
+        or len(arguments) != len(fixed_prefix) + 1
+        or not arguments[-1].startswith("@")
+    ):
+        raise ValueError("receipt command / selection mismatch")
+    path = Path(arguments[-1][1:]).resolve()
+    if not path.is_relative_to(sources.root.resolve()):
+        raise ValueError("receipt argument file escapes repository")
+    relative = path.relative_to(sources.root).as_posix()
+    reference = sources.reference(relative)
+    if reference not in receipt["bindings"] or sources.read(relative) != (
+        "\n".join(selection) + "\n"
+    ).encode("utf8"):
+        raise ValueError("receipt argument file / selection hash mismatch")
+    return [reference]
+
+
 def verify_receipt(
     sources: Sources, stub: dict[str, str], needed: list[dict[str, str]], nodes: list[str]
 ) -> None:
@@ -730,22 +868,7 @@ def verify_receipt(
         if json.dumps(witness, sort_keys=True) not in actual:
             raise ValueError("receipt omits selected witness hash")
     # Stored passed/JUnit can be edited. Replay the exact live selection on every gate.
-    fixed_prefix = [
-        "-B",
-        "-X",
-        "utf8",
-        "-m",
-        "pytest",
-        "-o",
-        "addopts=",
-        "-q",
-        "-p",
-        "no:cacheprovider",
-    ]
-    if receipt["command"][1:-1] != [*fixed_prefix, *selection] or not receipt["command"][
-        -1
-    ].startswith("--junitxml="):
-        raise ValueError("receipt command / selection mismatch")
+    witness_command_refs(sources, receipt)
     key = sha(json.dumps([selection, sorted(actual)], sort_keys=True).encode())
     if key not in sources.replayed:
         (sources.root / "tools/out").mkdir(parents=True, exist_ok=True)
@@ -901,10 +1024,6 @@ def validate(
     check_shape(data, SCHEMA)
     if stage not in {"all", *(f"A4-{number}" for number in range(9))}:
         raise ValueError("unknown A4 stage")
-    if stage != "A4-0" and data["inventory"]["status"] != "verified":
-        raise ValueError(
-            "nonterminal inventory: A4-1 independent full inventory is pending or unresolved"
-        )
     sources = Sources(root, source_overrides)
     a4_history.verify_history(sources, git, CANDIDATE, PRODUCTION_BASE)
     freeze = data["freeze"]
@@ -944,6 +1063,11 @@ def validate(
     _, investigations, catalogs = load_investigations(
         sources, freeze["target_version"], data["inventory"]["investigation_sources"]
     )
+    checkpoint = sources.jsons.get("a4:classification-checkpoint")
+    if stage != "A4-0" and not checkpoint and data["inventory"]["status"] != "verified":
+        raise ValueError(
+            "nonterminal inventory: A4-1 independent full inventory is pending or unresolved"
+        )
     expected_discoveries.extend(item for report in investigations for item in report["discoveries"])
     actual = unique(data["discoveries"], "id", "discovery")
     expected = unique(expected_discoveries, "id", "discovery")
@@ -978,6 +1102,9 @@ def validate(
         if any(candidate[item["id"]][key] != value for key, value in item.items()):
             raise ValueError("candidate change identity hash drift")
     rows = unique(expanded_rows(data), "id", "row")
+    duties = sources.jsons.get("a4:stage-assignments", {})
+    old_by_id = {item["id"]: item for item in old}
+    validate_responsibility_stages(rows, expected, old_by_id, duties if checkpoint else None)
     validate_unresolved(rows, catalogs)
     inventory_mappings(rows, investigations, "A4-0")
     mapped = {identity for row in rows.values() for identity in row["discovery_ids"]}
@@ -1032,6 +1159,10 @@ def validate(
             raise ValueError("dangling predecessor ID")
         conclusions[identity] = conclusion(row)
         terminal_evidence(row, sources, receipts, data["inventory"]["dlc_ids"])
+        if checkpoint and duties[identity]["responsibility"] in {"index", "current_migration"}:
+            # Computed enabling acceptance never mutates a product ROW or grants
+            # a producer permission. Future product rows remain independently pending.
+            conclusions[identity] = "indexed"
     visited, active = set(), set()
 
     def visit(identity: str) -> None:
@@ -1057,26 +1188,33 @@ def validate(
     for identity in sorted(selected):
         if conclusions[identity] not in TERMINAL:
             raise ValueError(f"nonterminal obligation blocks {stage}: {identity}")
-    if stage != "A4-0" and (
-        data["inventory"]["status"] != "verified"
-        or data["inventory"]["parse_failures"]
-        or data["inventory"]["unrecognized"]
-        or data["inventory"]["duplicates"]
-        or not data["inventory"]["crosscheck_receipts"]
+    if (
+        stage != "A4-0"
+        and not checkpoint
+        and (
+            data["inventory"]["status"] != "verified"
+            or data["inventory"]["parse_failures"]
+            or data["inventory"]["unrecognized"]
+            or data["inventory"]["duplicates"]
+            or not data["inventory"]["crosscheck_receipts"]
+        )
     ):
         raise ValueError("A4-1 independent full inventory is pending or unresolved")
-    validate_crosschecks(sources, data, investigations, stage)
+    validate_crosschecks(sources, data, investigations, "A4-0" if checkpoint else stage)
     if stage != "A4-0":
-        if not investigations or any(
-            report["parse_failures"] or report["unrecognized"] or report["duplicates"]
-            for report in investigations
+        if not investigations or (
+            not checkpoint
+            and any(
+                report["parse_failures"] or report["unrecognized"] or report["duplicates"]
+                for report in investigations
+            )
         ):
             raise ValueError("independent full inventory source gaps")
         if set(data["inventory"]["dlc_ids"]) != {
             dlc for report in investigations for dlc in report["dlc_ids"]
         }:
             raise ValueError("independent DLC coverage mismatch")
-        inventory_mappings(rows, investigations, stage)
+        inventory_mappings(rows, investigations, "A4-0" if checkpoint else stage)
     delivery_gate(stage)
     return {
         "plan": "A4",
@@ -1094,6 +1232,7 @@ def validate(
         "delivery": "pending",
         "future_pending": sum(conclusions[key] == "nonterminal" for key in set(rows) - selected),
         "inventory": data["inventory"]["status"],
+        "index_checkpoint": checkpoint or {"status": "pending"},
     }
 
 

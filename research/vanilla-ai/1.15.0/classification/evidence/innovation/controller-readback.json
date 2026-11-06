@@ -1,0 +1,13 @@
+{
+  "evidence": "static_check",
+  "candidate_sha256": "f7725e07fd318d1e1c54aa86543bf3f2a19b9cb829d3383d43abc4b200e27e66",
+  "freeze_sha256": "6817b381b910ca294b2b02ce264e8f895a05ef813dc87b80aa9f050ed6594ff9",
+  "files": 51,
+  "raw_windows": 33,
+  "direct_edges": 11,
+  "virtual_slots": 6,
+  "complete_current_sources": 19,
+  "reused_inputs": 8,
+  "previous_frozen_files_unchanged": 71,
+  "limits": "Byte identities, PE mapping, pointers and source readback; semantic review separate. No product or runtime acceptance."
+}

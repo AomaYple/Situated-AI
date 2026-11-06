@@ -1,6 +1,6 @@
 # 工具目录
 
-当前实施状态见[工作清单](../docs/design/当前工作清单.md)和[拓展结果](../docs/design/exec/广度深度拓展-结果.md)；本轮实际交付见[3.2.0交付结果](../docs/design/exec/3.2.0-交付结果.md)，版本身份统一见[版本交付索引](../docs/design/exec/版本交付-结果.md)。
+当前实施状态见[工作清单](../docs/design/当前工作清单.md)和[A4迁移结果](../docs/design/exec/A4-1迁移-结果.md)；开发生成链已迁移到1.15.0，4.0.0仍为未发布候选。已发布版本的事实见[3.2.0交付结果](../docs/design/exec/3.2.0-交付结果.md)，版本身份统一见[版本交付索引](../docs/design/exec/版本交付-结果.md)。
 
 当前架构与计划归档入口见[架构主计划](../docs/design/架构主计划.md)与[架构子计划](../docs/design/架构子计划.md)。
 生产已接入具体观测与行动、同因分档取强、独立收益成本联合和消费者末端一次限幅；国家协调按需读取当前事实，全国排他路线已退役。当前财政消费者直接重读事实，不再部署无消费者的财政迟滞更新器；原版战败记忆单独保留。
@@ -21,6 +21,7 @@
 | `tools/ci/situated_closeout.py` | 汇总生成锁、标准包禁带项、生产编码、ConsumerIR owner 和卫生；`--require-engineering` 核对 A2/S0–S5 的功能、依赖、来源、真实见证与独立原版范围，`--require-plan` 继续核对 S6 实际发布与部署 |
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |
+| `tools/ci/a4_scope.py`、`a4_classify.py`、`a4_reconcile.py` | 当前A4逐项台账、原版分类与生产映射、保进度更新及阶段门；合同和命令见[A4台账指南](../docs/design/A4台账指南.md) |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
 | `src/pdx/` | CLI、全量静态分析、快照、Mod 生成、字段门禁和 ZIP 交付实现 |
 | `tools/save_archive.py` | 后台按游戏日期归档稳定的 Victoria 3 自动存档；只读，不控制游戏 |

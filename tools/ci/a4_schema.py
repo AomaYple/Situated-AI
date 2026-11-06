@@ -288,6 +288,8 @@ def pending_row(discovery: dict[str, Any], version: str) -> dict[str, Any]:
 
 
 def goal_stage(goal: str) -> str:
+    if goal in {"G01", "G02", "G07", "C1"}:
+        return "A4-1"
     if goal.startswith("B"):
         return "A4-3"
     if goal.startswith("R"):
@@ -296,4 +298,12 @@ def goal_stage(goal: str) -> str:
         return "A4-5"
     if goal in {"G08", "C8"}:
         return "A4-6"
+    if goal in {"G06", "C7"}:
+        return "A4-5"
+    if goal == "C5":
+        return "A4-4"
+    if goal == "C6":
+        return "A4-3"
+    if goal in {"C9", "C10"}:
+        return "A4-7"
     return "A4-2"

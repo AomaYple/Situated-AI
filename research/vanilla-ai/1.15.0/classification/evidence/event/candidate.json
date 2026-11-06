@@ -1,0 +1,169 @@
+{
+  "schema": "a4-native-event-selection-candidate-v1",
+  "status": "partial_shared_atoms_static_proven",
+  "evidence_kind": "current_exe_static_native_plus_complete_source",
+  "manifest_sha256": "b53e775f9ece75638a39976ab8b00c2d5ea1c388f7501ba988b627a78efcee9f",
+  "proven_atoms": [
+    {
+      "id": "type_parser_root",
+      "claim": "country_event token0x294b writes enum0/tag5; state_event token0x3135 writes enum2/tag0x4c. Option constructor receives definition+0x34 and stores it in option+8 and chance+0x38.",
+      "evidence": [
+        "event_parser",
+        "option_ctor"
+      ]
+    },
+    {
+      "id": "omitted_type_constructor_only",
+      "claim": "CEventType factory uses constructor: enum5 and root tag5. This is not registration of enum5 as country_event and does not close omitted-type dispatch.",
+      "evidence": [
+        "event_factory",
+        "event_ctor",
+        "event_base_ctor"
+      ]
+    },
+    {
+      "id": "actor_carrier",
+      "claim": "Instance separately stores derived country handle at +0x20 and copies incoming tagged frame at +0x28. Both selectors and evaluators receive +0x28, not the country handle.",
+      "evidence": [
+        "instance_ctor",
+        "frame_ctor_copy",
+        "frame_copy",
+        "weighted_choice",
+        "default_choice",
+        "chance_context"
+      ]
+    },
+    {
+      "id": "omitted_empty_weight",
+      "claim": "Embedded CAIMTTHChance at option+0x28 initializes base and factor to100000, i.e.1 at scale100000. Omitted block has no property writes; empty structured block performs no member dispatch and invokes an empty post. Evaluator begins from stored base and multiplies by stored factor.",
+      "evidence": [
+        "option_ctor",
+        "chance_reader",
+        "generic_reader",
+        "chance_property",
+        "chance_eval",
+        "option_weight",
+        "empty_post_ret"
+      ]
+    },
+    {
+      "id": "explicit_zero_write",
+      "claim": "base token0x574 routes to chance+0x18, option+0x40, via scalar_reader. A successfully parsed base0 writes raw0; no implicit restore to1 in this path. Numeric parsing primitives reused only from bound current scalar evidence. This is not a hard event veto.",
+      "evidence": [
+        "chance_property",
+        "scalar_reader",
+        "chance_eval",
+        "option_weight"
+      ]
+    },
+    {
+      "id": "option_trigger_filter",
+      "claim": "trigger token0x51f binds option+0x70. Both selectors with >1 options in weighted path call14356ec00 on this object with instance+0x28; original_recipient_only bytes +0x1a1/+0x1a0 provide an additional filter; exclusive is separately retained. test_gui token0x61f binds separate option+0xe0.",
+      "evidence": [
+        "base_option_parser",
+        "default_choice",
+        "weighted_choice",
+        "gui_options"
+      ]
+    },
+    {
+      "id": "weighted_tail",
+      "claim": "For count>1, eligible options evaluated into zero-initialized signed qword vector; first eligible saved. Helper sums/draws only >0 signed qwords. Helper fallback -1 becomes first eligible if present; if none, command index stays0. Count<=1 bypasses filtering/evaluation and produces0. Overflow/rounding distribution outside this exact boundary remains unknown.",
+      "evidence": [
+        "weighted_choice",
+        "positive_weight_draw"
+      ]
+    },
+    {
+      "id": "default_tail",
+      "claim": "Empty options return-1. Otherwise last eligible explicit default wins, else last eligible; no eligible returns-1. No ai_chance or highlighted_option read in full selector.",
+      "evidence": [
+        "default_choice"
+      ]
+    },
+    {
+      "id": "highlighted_gui",
+      "claim": "highlighted_option token0x55a6 writes option+0x1a9; captured GUI reads it into display byte. The default/weighted selectors do not read it. Broader GUI actions are not closed.",
+      "evidence": [
+        "option_parser",
+        "gui_options",
+        "default_choice",
+        "weighted_choice"
+      ]
+    },
+    {
+      "id": "timeout_default",
+      "claim": "Deadline compare instance+0x160 and eligibility allow timeout caller to invoke default_execute with DL0; it calls default_choice, then selected effect executor. DL nonzero leaves index-1; it is not the weighted chooser.",
+      "evidence": [
+        "timeout_start",
+        "timeout_body",
+        "timeout_tail",
+        "default_execute"
+      ]
+    },
+    {
+      "id": "parent_effects",
+      "claim": "Creation calls immediate(def+0x1a0) on frame. Selected executor checks index bounds, executes option+0x150 when valid and then parent after(def+0x198), including invalid-index -1 path. Selected command callback validates instance then copies same frame and calls executor. These are ordering/dispatch facts, not proof of all nested script effects.",
+      "evidence": [
+        "create_and_immediate",
+        "immediate",
+        "selected_effect_and_after",
+        "selected_command_execute"
+      ]
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "omitted_type_dispatch",
+      "status": "unknown",
+      "next_route": "Trace event enum5 registration/use from definition+0x1c8 through trigger_event/on_action dispatch to instance creation for production_tech_events.200/.210 and dan_society_tech_events.1. Do not map constructor enum5 to country enum0."
+    },
+    {
+      "id": "actor_scheduling",
+      "status": "unknown",
+      "next_route": "Close upstream scheduling/recipient gates into140bb98d0 and142952750 tag-specific country derivation, including tag0x4c. Frame preservation proves no coercion, not the set of reachable runtime actors."
+    },
+    {
+      "id": "all_option_trigger_semantics",
+      "status": "unknown",
+      "next_route": "Reuse current exact scalar/trigger manifests per expression; qualify unproven predicates and complete source closure. This capture binds the shared predicate call, not every condition in5158 slots."
+    },
+    {
+      "id": "weighted_distribution_extremes",
+      "status": "unknown",
+      "next_route": "If exact numeric probability at extreme magnitudes is required, close qword accumulation overflow and floating threshold rounding in143e13120 using bounded current primitive evidence."
+    },
+    {
+      "id": "full_ui_commands_and_effects",
+      "status": "unknown",
+      "next_route": "Close additional UI command dispatch and individual nested effects/reference closure only for claimed consumers. highlighted GUI field observation is not a new chooser or full UI behavior proof."
+    }
+  ],
+  "source_anchors": {
+    "files": 6,
+    "owners": 15,
+    "physical_slots": 41,
+    "state_slots": 25,
+    "country_slots": 10,
+    "omitted_type_slots": 6,
+    "omitted_type_owners": [
+      "production_tech_events.200",
+      "production_tech_events.210",
+      "dan_society_tech_events.1"
+    ]
+  },
+  "protected": [
+    "event type and tagged actor frame",
+    "option trigger/test_gui/original-recipient/exclusive eligibility",
+    "parent immediate/after and all option effects",
+    "complete parent source and reference closure",
+    "unknown or unavailable actor gates"
+  ],
+  "authorization": {
+    "writer_permission": false,
+    "generic_event_family_permission": false,
+    "engine_acceptance": false,
+    "a4_1_completion": false,
+    "production_modified": false
+  }
+}

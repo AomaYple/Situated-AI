@@ -30,7 +30,8 @@ def bounded_discovery():
     import json
     import tempfile
 
-    from tests.test_a4_discovery import captured_fixture
+    from test_a4_discovery import captured_fixture
+
     from tools.ci import a4_discovery as discovery
     from tools.ci import a4_scope
 
@@ -499,6 +500,45 @@ def test_terminal_validates_real_run_not_just_passed_claim(terminal, initial) ->
         data["receipts"] = [stub]
         with pytest.raises(ValueError, match="unclosed dependency"):
             a4_scope.validate(data, ROOT, stage="A4-0")
+
+
+def test_computed_index_acceptance_never_signs_future_product_stages(initial, monkeypatch) -> None:
+    """Isolate stage selection after the separate enabling contract has passed."""
+    from tools.ci import a4_scope
+
+    rows = a4_scope.expanded_rows(initial)
+    discoveries = {item["id"]: item for item in initial["discoveries"]}
+    _, originals = a4_scope.original_a3(a4_scope.Sources(ROOT))
+    old = {item["id"]: item for item in originals}
+    duties = {
+        row["id"]: {
+            "after": row["stage"],
+            "discovery_ids": row["discovery_ids"],
+            "responsibility": a4_scope.responsibility_stage(
+                discoveries[row["discovery_ids"][0]], old
+            )[1],
+        }
+        for row in rows
+    }
+    original_loader = a4_scope.load_investigations
+
+    def checked_index(sources, *args, **kwargs):
+        result = original_loader(sources, *args, **kwargs)
+        # This fixture deliberately isolates the computed enabling result. Real
+        # gates obtain it only after classifier/source/6193/17/receipt checking.
+        sources.jsons["a4:classification-checkpoint"] = {
+            "status": "verified",
+            "product_completion": False,
+        }
+        sources.jsons["a4:stage-assignments"] = duties
+        return result
+
+    monkeypatch.setattr(a4_scope, "load_investigations", checked_index)
+    a4_scope.validate(initial, ROOT, stage="A4-1")
+    assert all(a4_scope.conclusion(row) == "nonterminal" for row in rows)
+    for stage in ("A4-2", "A4-7", "all"):
+        with pytest.raises(ValueError, match="nonterminal obligation"):
+            a4_scope.validate(initial, ROOT, stage=stage)
 
 
 def test_receipt_live_replay_rejects_forged_green(tmp_path) -> None:

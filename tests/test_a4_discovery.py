@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from typing import Any
 
 import pytest
 
@@ -33,7 +34,7 @@ def captured_fixture() -> dict:
         }
 
     def retain(source, tree):
-        stack = [(tree, ())]
+        stack: list[tuple[dict[str, Any], tuple[int, ...]]] = [(tree, ())]
         count = 0
         while stack:
             node, position = stack.pop()

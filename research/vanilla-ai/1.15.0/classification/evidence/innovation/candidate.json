@@ -1,0 +1,66 @@
+{
+  "schema": "A4-native-innovation-flags-candidate-1",
+  "status": "static_numeric_atom_review_candidate",
+  "evidence_category": "static_check",
+  "exact_atom": "current locked vanilla country_weekly_innovation_max_add definition flags mask 0x04 is clear on the established modifier value link path",
+  "numeric_flag_atom_established": true,
+  "numeric_output_for_locked_vanilla": true,
+  "production_use_authorized": false,
+  "B04_2_complete": false,
+  "exe": {
+    "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\binaries\\victoria3.exe",
+    "bytes": 99988600,
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+    "image_base": "0x140000000"
+  },
+  "reused_reader_candidate_sha256": "8b0d0a804ae0e60aad10fadc467de29d4813be9f84f2bcbc1715a599361959d6",
+  "definition": {
+    "source": "common/modifier_type_definitions/00_modifier_types.txt",
+    "line": 1435,
+    "owner": "country_weekly_innovation_max_add",
+    "complete_source_sha256": "764aeaa461b09ba87bc57cb764300fb34f2a7945439fc2fe8317badedec7f40d",
+    "matching_top_level_definitions_in_current_directory": 1,
+    "fields": [
+      "decimals=1",
+      "color=good",
+      "game_data.ai_value=0"
+    ]
+  },
+  "proof": {
+    "default_initialization": "141544a95 xor eax,eax; 141544ae1 writes source flag=0; 141544c1b OR 0x40; 141544cf0 source=rbp+e0; 141544cf7 calls established copy",
+    "source_flag_member": "source+0x240 == rbp+0x320",
+    "copied_low_byte": "0x40",
+    "mask": "0x04",
+    "masked_value": 0,
+    "loader_order": "1406af4d5 initializes defaults before 1406af4ea enters DB descriptor registration; 1406b5d04 stores exact modifier database factory 14074b310 in descriptor; DB has immutable common/modifier_type_definitions path and definition allocator slot38=1406bdf00 calling established ctor142af8f00",
+    "early_PE_state": "145c2edb0 is virtual-only .data zero fill; both early0 and concrete initialized0x40 have mask0x04 clear; positive proof uses actual overwrite0x40 rather than absence of later overwrite",
+    "parser_preservation": "boolean atom500 alone selects mask04 handler in established prefix; color56 writes adjacent byte+91; decimalsd01 jump table index5 writes adjacent byte+92; game_data1fc dispatches a separately allocated object, ai_value53c8 writes child+8; exact complete cap source has only these fields",
+    "return_type": "established getter test at142963b77 therefore selects numeric tag1 for valid exact definition and valid country; tag2 remains for other boolean definitions",
+    "source_and_runtime_scope": "locked current vanilla original database source and identified native constructor/parser paths; third-party or changed overrides require revalidation"
+  },
+  "read_results": {
+    "valid_exact_country_definition": "signed fixed-point numeric tag1, scale100000, aggregate weekly innovation cap value C",
+    "valid_missing_aggregate_entry": "genuine numeric0",
+    "invalid_country_or_definition": "tag0/diagnostic or typed resolver sentinel; never a healthy numeric0",
+    "boolean_definition": "tag2 boolean; numeric parser does not accept tag2 as a healthy cap"
+  },
+  "derived_input": {
+    "script": "country_innovation < modifier:country_weekly_innovation_max_add",
+    "kind": "below_actual_positive_cap boolean static input candidate",
+    "meaning": "A<C equivalent to C>0 and raw<C under valid typed context",
+    "raw_minus_cap_reader_established": false,
+    "university_context": "reuse Task6/current engine_scope state->owner; no investor identity inference"
+  },
+  "remaining_product_gates": [
+    "controller independent semantic review of this atom",
+    "typed country/definition validity and local vanilla fallback",
+    "production information/IR-to-PDX university owner integration",
+    "independent consumer positive/negative zero/nonpositive-cap/unknown witnesses and reference-to-generated-PDX equivalence"
+  ],
+  "limits": [
+    "No game or functions execution, runtime memory observations or product acceptance.",
+    "No dedicated raw innovation-minus-cap access follows.",
+    "RIP references enumerate a bounded direct addressing route; no universal indexed alias or self-modifying-code proof.",
+    "Previous frozen reader tree is unchanged; its partial status remains historical and this candidate is additive."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "capture_identity": {
+    "path": "tools\\out\\a4-implementation-20261105\\inventory-discovery\\fix-round1\\inventory-unverified.json",
+    "bytes": 260915576,
+    "sha256": "51343911008b9b1dd62c53d31c1d118175d049b6346f18022acf515143e8537e"
+  },
+  "source_hashes": {
+    "common/diplomatic_catalysts/00_diplomatic_catalysts.txt": "6f4718f37f0987ab89c76e04cd3fd00e098bdaf2eece665bd3a36115110e1bd6",
+    "common/scripted_buttons/05_austria_buttons.txt": "fee84214ff1674f4104c757fee2db48c5a508b705efb0120ffa60e88627c8ed4"
+  },
+  "baseline_id": "victoria3-1.15.0:4cff0a676b76f1a86c2f1cf7b2f4735d17288893e945e76aebdcea3b5381a453",
+  "ambiguity_records": "34 original rows copied verbatim to source-identities/source-applicability; no original capture or classification record changed."
+}

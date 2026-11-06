@@ -1,0 +1,29 @@
+{
+  "evidence": "static_check",
+  "status": "passed",
+  "exe": {
+    "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\binaries\\victoria3.exe",
+    "bytes": 99988600,
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"
+  },
+  "native_spans": 84,
+  "critical_instruction_checks": 40,
+  "direct_edge_checks": 20,
+  "atom_checks": 9,
+  "named_carrier_registration_checks": 4,
+  "complete_source_files": 4,
+  "physical_owners": 17,
+  "button_fields": 28,
+  "catalyst_fields": 6,
+  "before_after_and_frozen_source_bytes_equal": true,
+  "original_ambiguity_records_unchanged": true,
+  "not_proven": [
+    "runtime execution",
+    "behavior equivalence",
+    "payer",
+    "cadence",
+    "product writer permission",
+    "stage acceptance"
+  ],
+  "verifier_sha256": "9effe50e8f17619e3763588ee1d73ebc7364096fd272528d5c2a76ff6704c8d4"
+}

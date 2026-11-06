@@ -1,0 +1,17 @@
+{
+  "evidence": "static_check",
+  "files": 112,
+  "candidate_sha256": "2602ec7f89c00753b4e461d9157203a6f9a9f53e1405d1b8e23b929ae3fcc99a",
+  "freeze_sha256": "8ea90b2fb33d4428e94b2c8aae8f7b1e1041f3c2575907bcde583ab3bb857b13",
+  "raw_spans": 84,
+  "direct_edges": 20,
+  "complete_sources": 4,
+  "owners": 17,
+  "fields": 34,
+  "additional_read_only_verifier": "passed: 40 critical instructions, 9 atoms, 4 named carriers, source/AST occurrence closure",
+  "semantic_readback": [
+    "same button member replacement, then inclusive threshold",
+    "catalyst append, ordered loop, independent trigger/chance, strict-positive threshold"
+  ],
+  "limits": "Exact physical applicability; no runtime, payer, cadence, arbitrary mixed fields, full goal scoring or writer authority."
+}

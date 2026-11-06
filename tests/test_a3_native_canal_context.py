@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections import Counter
 from dataclasses import replace
 
 import pytest
@@ -63,8 +64,21 @@ def production():
 
 def test_real_production_context_ir_readers_and_roles(production):
     _, model, policies, instances, _, _ = production
-    assert len(instances) == 17
-    assert len({(item.source, item.consumer_field) for item in instances}) == 8
+    assert len(instances) == 24
+    assert len({(item.source, item.consumer_field) for item in instances}) == 11
+    assert Counter(item.consumer_field for item in instances) == {
+        "panama_survey_decision.ai_chance": 2,
+        "panama_canal_purchase.ai_chance": 2,
+        "suez_survey_decision.ai_chance": 2,
+        "suez_canal_purchase.ai_chance": 2,
+        "violate_sovereignty.ai.propose_score": 3,
+        "join_power_bloc.ai.propose_score": 3,
+        "raise_payments.ai.propose_score": 3,
+        "decrease_payments.ai.propose_score": 2,
+        "exempt_from_service.ai.propose_score": 1,
+        "da_increase_autonomy_of_self.ai.propose_score": 2,
+        "da_knowledge_sharing.ai.propose_score": 2,
+    }
     assert model.consumer_ir is not None
     for instance in instances:
         policy = policies[instance.source]
@@ -79,7 +93,12 @@ def test_real_production_context_ir_readers_and_roles(production):
             "country",
             "actor",
         )
-        assert not context.targets
+        if instance.source == native.CANDIDATES["raise_payments"]:
+            assert context.targets == (
+                ContextBinding("target_country", "country", "target", instance.source, 95),
+            )
+        else:
+            assert not context.targets
         assert not context.auxiliary_scopes
         assert instance.target_scope == "none"
         role = decision_interfaces.consumer(
@@ -104,10 +123,12 @@ def test_real_production_context_ir_readers_and_roles(production):
         )
         assert writer.evaluation_context == context
         assert writer.reader_context_bindings
-        assert all(
-            binding[1:] == ("root", "country", "actor")
-            for binding in writer.reader_context_bindings
-        )
+        for key, scope, kind, role_name in writer.reader_context_bindings:
+            assert (scope, kind, role_name) == (
+                ("target_country", "country", "target")
+                if key in {"raise_target_liberty", "raise_target_population"}
+                else ("root", "country", "actor")
+            )
 
 
 def test_independent_inventory_closes_exact_registered_consumers_only(production):
@@ -116,9 +137,9 @@ def test_independent_inventory_closes_exact_registered_consumers_only(production
         inventory, instances, native_sources=inputs, production_policies=policies
     )
     assert report["binding_issue_count"] == 0
-    assert report["counts"]["actual_covered"] == 8
-    assert report["denominator"] == 8
-    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 17
+    assert report["counts"]["actual_covered"] == 11
+    assert report["denominator"] == 11
+    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 24
 
 
 def test_actual_adapter_generation_preserves_complete_source_and_joint_numbers(production):
@@ -137,7 +158,7 @@ def test_actual_adapter_generation_preserves_complete_source_and_joint_numbers(p
     )
     consumers = metadata["consumers"]
     assert isinstance(consumers, list)
-    assert len(consumers) == 5
+    assert len(consumers) == 8
     for source, policy in policies:
         stripped = re.sub(
             r"(?m)^\s*# SITAI BEGIN information:[^\n]+\n.*?^\s*# SITAI END information:[^\n]+\n",
@@ -162,8 +183,15 @@ def test_actual_adapter_generation_preserves_complete_source_and_joint_numbers(p
                 base, expected = 10, 8.5
             elif source == native.CANDIDATES["join_power_bloc"]:
                 base, expected = 20, 17
-            elif source == native.CANDIDATES["da_knowledge_sharing"]:
+            elif source in {
+                native.CANDIDATES["da_knowledge_sharing"],
+                native.CANDIDATES["exempt_from_service"],
+            }:
                 base, expected = 10, 10
+            elif source == native.CANDIDATES["violate_sovereignty"]:
+                base, expected = 100, 80
+            elif source == native.CANDIDATES["raise_payments"]:
+                base, expected = 10, 11.2
             else:
                 base, expected = 100, 113
             assert _native_number(base, _overlay(generated[source], name), facts) == pytest.approx(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import re
 import tomllib
 from dataclasses import replace
@@ -271,12 +272,30 @@ def test_exact_getter_does_not_authorize_other_consumers(production, field):
         ("value = scope:target_country.country_rank", "value = country_rank"),
     ],
 )
-def test_resigning_a_source_cannot_hide_role_cost_or_native_score_drift(monkeypatch, old, new):
-    inputs = copy.deepcopy(actions.load_baseline()["texts"])
+def test_resigning_a_source_cannot_hide_role_cost_or_native_score_drift(
+    tmp_path, monkeypatch, old, new
+):
+    baseline = copy.deepcopy(actions.load_baseline())
+    inputs = baseline["texts"]
+    actions.verify_inputs(inputs)
     assert old in inputs[SOURCE]
     inputs[SOURCE] = inputs[SOURCE].replace(old, new, 1)
     parameters = copy.deepcopy(actions.load())
     parameters["sources"][SOURCE] = hashlib.sha256(inputs[SOURCE].encode()).hexdigest()
+    # Re-sign a coherent complete-source fixture, including its parent AST. This
+    # gets past the snapshot/schema guards and tests the named semantic atom.
+    baseline["sources"] = copy.deepcopy(parameters["sources"])
+    baseline["raw_sources"][SOURCE] = parameters["sources"][SOURCE]
+    parsed = parse_text(inputs[SOURCE])
+    assert not parsed.errors
+    baseline["contracts"][f"{SOURCE}#da_knowledge_sharing"] = actions._shape(
+        actions._block(parsed.root, "da_knowledge_sharing")
+    )
+    frozen = tmp_path / "resigned-complete-source.json"
+    frozen.write_text(json.dumps(baseline), encoding="utf-8", newline="\n")
     monkeypatch.setattr(actions, "load", lambda: parameters)
-    with pytest.raises(ValueError, match="漂移"):
+    monkeypatch.setattr(actions, "FROZEN", frozen)
+    monkeypatch.setattr(actions, "FROZEN_SHA256", hashlib.sha256(frozen.read_bytes()).hexdigest())
+    assert actions._snapshot() == baseline
+    with pytest.raises(ValueError, match=re.escape(f"效果或资格漂移：{old.split()[0]}")):
         actions.verify_inputs(inputs)

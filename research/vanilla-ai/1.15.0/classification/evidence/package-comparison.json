@@ -1,0 +1,53 @@
+{
+  "evidence": "static_check",
+  "task6_sha256": "f0820cad970ab6eb78c5827e9dda8421bb2e3520b78f0ceae1694b78889e3d2b",
+  "current_sha256": "afba2c1212a239ba4f95f4312e13ab7357a46d884010766a3e50c2998cf879f6",
+  "current_bytes": 1392670,
+  "entries": 119,
+  "changed_members": [
+    "DISTRIBUTION-MANIFEST.json"
+  ],
+  "manifest_changes": [
+    {
+      "path": "/contract/situated_source_fingerprints/building_defaults_generator",
+      "task6": "7290bd001bce25b49b6d62ecf9593820e524dbf5a9422379e1808f03c5ca6a0e",
+      "current": "0a6021424a51b5946cfb4ae969b3a2186721e2b95479abc92f0d738a05cb7466"
+    },
+    {
+      "path": "/contract/situated_source_fingerprints/building_defaults_snapshot",
+      "task6": "3b290448ee272faa2589fcd682a93942b63b330b1552a8ffafa5cee45126b6bf",
+      "current": "e7372899def1925b93322aef001a3010c7e4378460980699771e47315812e068"
+    },
+    {
+      "path": "/contract/source_fingerprint/situated_building_defaults_generator_source_sha256",
+      "task6": "7290bd001bce25b49b6d62ecf9593820e524dbf5a9422379e1808f03c5ca6a0e",
+      "current": "0a6021424a51b5946cfb4ae969b3a2186721e2b95479abc92f0d738a05cb7466"
+    },
+    {
+      "path": "/contract/source_fingerprint/situated_building_defaults_snapshot_source_sha256",
+      "task6": "3b290448ee272faa2589fcd682a93942b63b330b1552a8ffafa5cee45126b6bf",
+      "current": "e7372899def1925b93322aef001a3010c7e4378460980699771e47315812e068"
+    },
+    {
+      "path": "/generation/product_contract/situated_source_fingerprints/building_defaults_generator",
+      "task6": "7290bd001bce25b49b6d62ecf9593820e524dbf5a9422379e1808f03c5ca6a0e",
+      "current": "0a6021424a51b5946cfb4ae969b3a2186721e2b95479abc92f0d738a05cb7466"
+    },
+    {
+      "path": "/generation/product_contract/situated_source_fingerprints/building_defaults_snapshot",
+      "task6": "3b290448ee272faa2589fcd682a93942b63b330b1552a8ffafa5cee45126b6bf",
+      "current": "e7372899def1925b93322aef001a3010c7e4378460980699771e47315812e068"
+    },
+    {
+      "path": "/generation/product_contract/source_fingerprint/situated_building_defaults_generator_source_sha256",
+      "task6": "7290bd001bce25b49b6d62ecf9593820e524dbf5a9422379e1808f03c5ca6a0e",
+      "current": "0a6021424a51b5946cfb4ae969b3a2186721e2b95479abc92f0d738a05cb7466"
+    },
+    {
+      "path": "/generation/product_contract/source_fingerprint/situated_building_defaults_snapshot_source_sha256",
+      "task6": "3b290448ee272faa2589fcd682a93942b63b330b1552a8ffafa5cee45126b6bf",
+      "current": "e7372899def1925b93322aef001a3010c7e4378460980699771e47315812e068"
+    }
+  ],
+  "payloads_identical": true
+}

@@ -1,0 +1,686 @@
+{
+  "schema": "a4-bounded-native-freeze-v1",
+  "frozen": true,
+  "boundary": "Only this new native-repeated-ai-fields subtree. No writes after freeze; check/read-only verification allowed.",
+  "evidence": "static_check",
+  "product_authorization": "none",
+  "physical_owners": 17,
+  "button_fields": 28,
+  "catalyst_fields": 6,
+  "formal_native_spans": 84,
+  "files_excluding_manifest": 112,
+  "files": [
+    {
+      "path": "after-identities.json",
+      "bytes": 1674,
+      "sha256": "73c9a11a5a269ebf466a9ed1869765c099305b0a19063a3adcc7335dc7fa1e2c",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "bool-dispatch.asm",
+      "bytes": 1347,
+      "sha256": "457f08fe7f18ca8e4aa60a059e960e861fe133b94e0561648335ca6f465b1a3d",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "bool-dispatch.json",
+      "bytes": 1946,
+      "sha256": "895334a773cbe51bd3dea0f88407240e4ad6ab6987dcb405e276940808c09c43",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-accessors.asm",
+      "bytes": 19479,
+      "sha256": "50a6ab70b4612332f93e01093e9243e8171fec7a08fb62a367eda607bde166ab",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-accessors.json",
+      "bytes": 24590,
+      "sha256": "17f2bd43fb519825b79a9e6d1937984bdd4c2602ac310db8d1704c5657d4b0bc",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-caller-aligned.asm",
+      "bytes": 61218,
+      "sha256": "eb6f399121cb87b044e291fa65fca858cfe1e61faa85873a86b86fa6fed5cc55",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-caller-aligned.json",
+      "bytes": 78168,
+      "sha256": "d413c78bed08948cbb4247f5213cafcf9324ec54a5e9e7cf50b08a0f34dc1b72",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-consumer.asm",
+      "bytes": 18839,
+      "sha256": "ca7b4053a875765823bde4b2028b0692c8a761417baefd4350497c71c29f99a1",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-consumer.json",
+      "bytes": 24054,
+      "sha256": "e31f60db385ded242a80451c015ed0b8865d76a97a9696c9b51dabccce1b6a74",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-direct-call-1.asm",
+      "bytes": 55,
+      "sha256": "113eccbb8be24f408e0e8dd908ffe256cbafcc79412f94556aa3531b0b49d2fc",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-direct-call-1.json",
+      "bytes": 310,
+      "sha256": "8f53aaace36f62cf6cf746f728c1ed844db8385bc1638d2adb9f5724e9d2755d",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-direct-call-2.asm",
+      "bytes": 55,
+      "sha256": "e1537b7d8c0b3f562602d3500b069f889d9f93cf0b1618408881dfcddfec48d6",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-ai-direct-call-2.json",
+      "bytes": 310,
+      "sha256": "784f7c6f5ef456291e00e98332cdc1957ac7e057344b906905249e7ab6be8056",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-auto-accessor.asm",
+      "bytes": 642,
+      "sha256": "f067c486805b2a6a585a00aeabee2df3cc3efc57cfe4e8fb4ff4d7d42368cb37",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-auto-accessor.json",
+      "bytes": 1045,
+      "sha256": "517a57a27b50d46ca8bc68c074ed8ae46dc9be3dfbf1abd18eaf47cd95320c1a",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-autocomplete-loop.asm",
+      "bytes": 11732,
+      "sha256": "63831186c37c6f8d880f166ebddd3fef05b871ed3519d4d71be8e704aa56bc81",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-autocomplete-loop.json",
+      "bytes": 14893,
+      "sha256": "57d0d6f4531fe01f21f3fa1cf402e16055e2f74db507337340e59c7e7aa7580c",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-chance-eval.asm",
+      "bytes": 6439,
+      "sha256": "0e58e8d107b680db96b8c2717cc256287ef46221c0fa1dcd1f7f9771fd9d8f58",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-chance-eval.json",
+      "bytes": 8231,
+      "sha256": "5fe89d8e545b5d542296de94ebd80250d163a925a6f9fe1e9ee8a1417ca5b759",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-click-eligibility.asm",
+      "bytes": 3165,
+      "sha256": "1c558ba722b8be0007e03f65b36969343e3f443a6d7349b80cfa2b38752cf074",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-click-eligibility.json",
+      "bytes": 4225,
+      "sha256": "18b8a6ed2f0b77682489a450c0bd6dc56a374e7b8fa90029b103b870f49d0137",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-constructor.asm",
+      "bytes": 10896,
+      "sha256": "cc47649b4e7fe31a787f760aab035ebd7ded5046b70b8486a1169a12841f53f0",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-constructor.json",
+      "bytes": 14116,
+      "sha256": "dfdc505588d303e2dcdbbf2c742aeedb301ace48bea5932816fd349c5bdd8c7c",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-effect-evaluator.asm",
+      "bytes": 13635,
+      "sha256": "f9b2f5493560a6bec573e1009b546304a40c19e55ce86277f4aa0adb3e16c2d3",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-effect-evaluator.json",
+      "bytes": 17422,
+      "sha256": "e8ddd20cb4e57c53756a1a7c32dc8c295615c8b535ab55dcbdf3eda77670d353",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-effect-wrapper.asm",
+      "bytes": 5936,
+      "sha256": "8724612da5c56b001581e8660a4a0ae3e7ad7b2404ddc191c0b20f55b624b3b4",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-effect-wrapper.json",
+      "bytes": 7620,
+      "sha256": "1b2f6752a84aa0dd565c15e6622ad088615f585223f6299859d0afd8bab41f34",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-eval-bridge.asm",
+      "bytes": 3051,
+      "sha256": "69be694209694ff551fbce6e3ba48e5e5eea6f0b83adbc44e030a894a6b925b3",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-eval-bridge.json",
+      "bytes": 4048,
+      "sha256": "e3ed141f6a8679182e7f273687ab9a185791131ee46beb5cadf42974beac3e66",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-field-neighbors.asm",
+      "bytes": 37362,
+      "sha256": "98d09ac1beb4799ecf7ac305aba5b5c4e539d47480fbd0c7a32db6335893600c",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-field-neighbors.json",
+      "bytes": 47204,
+      "sha256": "332ff5b49c17f8a307b35e6deb00fa5dac6118ee840191237fe8b2d4f3037211",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-field-thunk.asm",
+      "bytes": 420,
+      "sha256": "b154aede3d51971b41f03400e354960f9a2c42658c3514691d26f7eab59aa481",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-field-thunk.json",
+      "bytes": 699,
+      "sha256": "12e3f80d2e1be49bb1a9f2843a531242425dc7484ed63449aa54e8c9424aa096",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-instance-update.asm",
+      "bytes": 20810,
+      "sha256": "637b9537dc0b8b305670be48fbd9321f25d95ffc85911b13ac335952b771e7f4",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-instance-update.json",
+      "bytes": 26440,
+      "sha256": "69d12334184a744851ed4654a6e0a2e1d967590c84aaa4ee4f064b1f65d499f9",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-parser-thunk.asm",
+      "bytes": 342,
+      "sha256": "eeb1fa9bb9aebaf5e1f17bb8dac7c912e5fbbe319da5dad6bac44831bbe3a481",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-parser-thunk.json",
+      "bytes": 607,
+      "sha256": "59b26ac0b92ef9bff363cb4bc97ff2daf37591b20ca9a6f472ed2b51978a557c",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-parser.asm",
+      "bytes": 17595,
+      "sha256": "1b6e1ec01a6032148f48305786bc20b244ef39967f5ed0b1034362816ba1f72c",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-parser.json",
+      "bytes": 22424,
+      "sha256": "5bd7d88e8de50206522268c7bd7b246fa57d4014e58e18b6a5209b71a06452e1",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-update-caller.asm",
+      "bytes": 3325,
+      "sha256": "2963bfb6ed730a422f1fad6e17af05d3fa7b2da57fdd11f521a0f1af6c9e6702",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "button-update-caller.json",
+      "bytes": 4386,
+      "sha256": "019cbffe6c3685833f030a701b30826af13afc6889b5d18cd2e49eefc41472e4",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "candidate.json",
+      "bytes": 47961,
+      "sha256": "2602ec7f89c00753b4e461d9157203a6f9a9f53e1405d1b8e23b929ae3fcc99a",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "capture_final.py",
+      "bytes": 10060,
+      "sha256": "8c8157c8c264a24abfda297ae9ef39f031bdf9393fa30fc58227ae69a268c7cf",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "capture_sources.py",
+      "bytes": 2677,
+      "sha256": "5fb494a0ad48ddfc5ff913ef71374f33b7add3e367e3f536ab562c4fef74e05c",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "catalyst-constructor.asm",
+      "bytes": 6776,
+      "sha256": "e3aeaea5b6ea562c6d3082dd6e7a7a02c2ae2d0ecedbad1d834e9d88cdf2de4d",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-constructor.json",
+      "bytes": 8753,
+      "sha256": "34665d2066ed561555fe639dcdcd2c7887f16a935cb343219ebcf9689756f4ea",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-consumer.asm",
+      "bytes": 14892,
+      "sha256": "c56bc8f1c6c147b559b73dea892c7f8d498bcb4144deba3c55e40219da93b371",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-consumer.json",
+      "bytes": 18887,
+      "sha256": "fa30304c5aba35877ce9e929acf2c02aab6a38f7088289ac11019b2db05ff44e",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-field-thunk.asm",
+      "bytes": 420,
+      "sha256": "8b8ee96d29857dfd219104328ca4bdecd2da6527e048e2e5c1665c140382d6e0",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-field-thunk.json",
+      "bytes": 701,
+      "sha256": "180272dbb486b9b6e87c9cd5f20c0d5aeb1aee0600bb4a34a8d9d604e6298f8d",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-goal-type-consumer.asm",
+      "bytes": 17988,
+      "sha256": "574a8d5ed9b7ba722ba31a11e38f714afec321c45d5fd40d41cc68e97ba9d28a",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-goal-type-consumer.json",
+      "bytes": 22833,
+      "sha256": "1face13e32fea1136140441601ab096de13c6e85aefb4bb329475a57b57973e1",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-parser-thunk.asm",
+      "bytes": 342,
+      "sha256": "556e0dc33ad74d91b3a04ac9900548993fa2a148c4546739f70740de752f66f9",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-parser-thunk.json",
+      "bytes": 609,
+      "sha256": "37390cfc78af68383d3c8093fdd1fddc3bcdd3cbf435b559c387d60a26b40762",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-parser.asm",
+      "bytes": 15386,
+      "sha256": "47cb8b2bd3eebdcc1b7ad9663e183b22f1f9784fd0f33ad574f1cba0f196fdf6",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-parser.json",
+      "bytes": 19625,
+      "sha256": "81b277774c2ea2b4e86a14e1c9be9f5fe13c8ccf8798abf0ad5673e97fa0dcf3",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-recalculation-field-parser.asm",
+      "bytes": 8317,
+      "sha256": "c6315d63cf2305bbceccca1daacb613068d9edb0a062b5a2bc4c8ae246770ba5",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-recalculation-field-parser.json",
+      "bytes": 10792,
+      "sha256": "b442139a87cc5bf907d3b084e8f698554c73925f69c0355d26bdd59ea442d35d",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-record-constructor.asm",
+      "bytes": 1527,
+      "sha256": "b46d717bc895d77536bc6eecbb4b945b3f44726a916c244dc9c5b80cdb38f3a3",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-record-constructor.json",
+      "bytes": 2207,
+      "sha256": "24b8206b3a10c3c5f3d7adf18dc63e91a164be499c4962c5baae23e59dada9dd",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-record-consumer.asm",
+      "bytes": 34580,
+      "sha256": "f2ed890ffca214670586675ecaf7e3844350b89c80528246ae3ef187832c12c1",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-record-consumer.json",
+      "bytes": 44113,
+      "sha256": "9947dd827cd2dff830f0ee039cde2237b709b9a6fb88b19882401f15fcb89956",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-vector-move.asm",
+      "bytes": 2833,
+      "sha256": "a954b8d221c2e60e1f10d8f4b5d77b71154b2cca2b5934623483f924c1bc9e8e",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "catalyst-vector-move.json",
+      "bytes": 3831,
+      "sha256": "b992437185b75d4890842511499d9477c153623f56c73de498af2e34d876d41c",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "discovery-binding.json",
+      "bytes": 787,
+      "sha256": "68b43ff2a66c1a9e9a49c85267239f320f3912f153e658e0b43f503dc02136fb",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "exploratory-anchors.json",
+      "bytes": 361,
+      "sha256": "b4eee359217f0078108159798bea817adadfce1aa00d4db100fcf1ef7d7fcfc4",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "exploratory-button-eval-candidates.json",
+      "bytes": 117,
+      "sha256": "3d7ae597b8072c9e2d00c8ac39f5228f78bc992cdd954c70175b2b11a5e0784e",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "exploratory-button-member-references.json",
+      "bytes": 7025,
+      "sha256": "6469dcf76bf14e9ecc76a16b13c934f7d495dece0bdc6844826be61c68eaa200",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "exploratory-button-member238-lea.json",
+      "bytes": 36534,
+      "sha256": "48c7166d87880e07fb85063371ba485fb349454153bed305d5ca361f4dd73663",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "exploratory-calls-0x140ecdf70.json",
+      "bytes": 243,
+      "sha256": "ceec90c2a4718a15a2e9938ba72c447e024d0d888d525033285585da3c3991ca",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "exploratory-calls-0x1415e6420.json",
+      "bytes": 243,
+      "sha256": "6d5b843a058864d370f02ad923ea3e8ae337427087d4c2f6bf5f5474e3b080bc",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "exploratory-catalyst-consumer-candidates.json",
+      "bytes": 615,
+      "sha256": "515fe0bb3bf7329d4216024ef4b93291a5e27bb3ae86920148c87f577a7004db",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "exploratory-catalyst-stride-candidates.json",
+      "bytes": 1392,
+      "sha256": "25e745d4f25ca5c345be8f5dcf5cf1d47c8d5a1106b010c4ddcddfc515d16998",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "fixed-point-scalar-parser.asm",
+      "bytes": 6806,
+      "sha256": "029c91d8a5f8e310c1911474a3a90ea2f610b375bede7e9644317124cdeab5ce",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "fixed-point-scalar-parser.json",
+      "bytes": 8821,
+      "sha256": "76e0993c96cee35188812802577837c3935d468441555da9853afdbcf42db89b",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "freeze.py",
+      "bytes": 2695,
+      "sha256": "72fbb94764d6589e378f1b79bc1dbb051a96c8ff5e415ab3ae4f10d0748878d9",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "load-fields-loop.asm",
+      "bytes": 1656,
+      "sha256": "3d0931fb2bdd71aef82b098d77ac68f08b7445196f8c2649fca3610ef3f518ba",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "load-fields-loop.json",
+      "bytes": 2305,
+      "sha256": "0f044597a29f140f68462ae3ef43f0be6a4867eaa29f5fe9a300efe7fa975b92",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-block-evaluator.asm",
+      "bytes": 6795,
+      "sha256": "96a2373caee4bf64c95974ae41ed811beae25c23e8412d7d2856e35cf8b30a90",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-block-evaluator.json",
+      "bytes": 8675,
+      "sha256": "a8db3baa1a83bed282aa5d807865b3699151f59e6427cd85ffd6991cb9750eeb",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-block-parser.asm",
+      "bytes": 4147,
+      "sha256": "018daf714bb8f445181d99a3d0f267f21f384102e36c11abe167c240bbd796fa",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-block-parser.json",
+      "bytes": 5397,
+      "sha256": "a4fec58b7883d7fbdf766dfe9e73df6669c696298d1fb63800d1eb140e86dab7",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-operation-evaluator.asm",
+      "bytes": 1161,
+      "sha256": "c614062e1ccc1138a1dd073b5d6b9592b87c235973fd21f04a8d76dfd020f178",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-operation-evaluator.json",
+      "bytes": 1698,
+      "sha256": "2e86527dc56af88e4f94bf7b119a2f8032b207b659f521665f092f2a3f043323",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-operation-parser.asm",
+      "bytes": 627,
+      "sha256": "8a39e21c10dac7aa6b57d6ddf662b48e2613d13a9907a36c6797bfc0a12ad295",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "math-operation-parser.json",
+      "bytes": 972,
+      "sha256": "21349c7067c45fa6a206ed9a4967037843baa8012ae91cc6bf8fa2ea3d02a6b4",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "new-relation-name-registration.asm",
+      "bytes": 1085,
+      "sha256": "e18915a988c44a4ce026f4f3f15951e44f74738be95767a957e192bb5548718e",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "new-relation-name-registration.json",
+      "bytes": 1634,
+      "sha256": "4ae74979f04cf2d55eff0119a17d831036dfa4ecd5f0a7b0f638b247e5ef0a53",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "observations.json",
+      "bytes": 522322,
+      "sha256": "09839cfce3580a5bbd4c07d6e7f0aa0269fdd56887210d4ccf1bcded3a2ab752",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "parser-field-loop.asm",
+      "bytes": 4002,
+      "sha256": "c6b539a26c21245a3d70d725d3e0baa1d835162fa3e5e2a1fce912a7559d04b3",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "parser-field-loop.json",
+      "bytes": 5222,
+      "sha256": "ed677b798f37ef54bb29a561de743e3d01031a44b8a0f40effd92a808114f9b5",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "parser-sequential.asm",
+      "bytes": 2567,
+      "sha256": "6518d223c193a988d342f696575918c233c9e414ef933e86fdc635a3f12a4b88",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "parser-sequential.json",
+      "bytes": 3427,
+      "sha256": "fec21c4db9067853c60ff7ee1ab2b201a48a82317be24b64046891761340fce0",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "probe.py",
+      "bytes": 2482,
+      "sha256": "286b6479ef33c2e3e6550863d06ee734553c4afee723d6134eeca440e3f2cf0b",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "report.md",
+      "bytes": 13595,
+      "sha256": "3310ca54e26c8678ab077b0027d6f387e91169ee78fb8a326ff0d2afb8deeb4e",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "source-applicability.json",
+      "bytes": 39750,
+      "sha256": "6596f0bfeffa30f68808df167327c8d078778642253bb367d51bff681ff80850",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "source-identities.json",
+      "bytes": 23464,
+      "sha256": "c71947a581443c8da828580481e394670b2476ec0da8bfa2880966fdf6b56fdc",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "sources/game/common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "bytes": 59457,
+      "sha256": "6f4718f37f0987ab89c76e04cd3fd00e098bdaf2eece665bd3a36115110e1bd6",
+      "role": "complete-original-source"
+    },
+    {
+      "path": "sources/game/common/diplomatic_catalysts/diplomatic_catalysts.md",
+      "bytes": 2983,
+      "sha256": "e9464bb9fd2c35dec9f24454278083e0ceddced5cab59b0b142170f75f4c3d7d",
+      "role": "complete-original-source"
+    },
+    {
+      "path": "sources/game/common/scripted_buttons/05_austria_buttons.txt",
+      "bytes": 24167,
+      "sha256": "fee84214ff1674f4104c757fee2db48c5a508b705efb0120ffa60e88627c8ed4",
+      "role": "complete-original-source"
+    },
+    {
+      "path": "sources/game/common/scripted_buttons/scripted_buttons.md",
+      "bytes": 4318,
+      "sha256": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26",
+      "role": "complete-original-source"
+    },
+    {
+      "path": "target-country-name-registration.asm",
+      "bytes": 1084,
+      "sha256": "3953ae1391fe091bdb1dfb7e6f057fbb51395bb9ff5624dbaab6f49a3c91d541",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "target-country-name-registration.json",
+      "bytes": 1635,
+      "sha256": "bf80f059603f2d04a20b386d43748a190dd2b10d84b49446018463a449d5ecb9",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "trigger-frame.asm",
+      "bytes": 3372,
+      "sha256": "3d4b82f988a3a551f2eb665f70d23f8fabe5cffdac416c469422ccb0597c4ae4",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "trigger-frame.json",
+      "bytes": 4474,
+      "sha256": "7e5aac8f240b935ead5131acf0264d299362da2a7ec62a45822e6641d7492cce",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "value-after-name-registration.asm",
+      "bytes": 1084,
+      "sha256": "018c8068e81d3bc14e4d0fe06081a94e8b0f01fd2c932e28cc4cbec13b4c22e0",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "value-after-name-registration.json",
+      "bytes": 1632,
+      "sha256": "87a7dce41d7d781073b2cfaeb2a1dab105a90680588821f6c92730122b1ccc08",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "value-before-name-registration.asm",
+      "bytes": 1084,
+      "sha256": "9fd6885713024529854ae001aa9520c1a1833d12feb64565e3019b0dc4232f49",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "value-before-name-registration.json",
+      "bytes": 1633,
+      "sha256": "88d04a182ff4d472a0041d0645f329f1f63b57a913b11fa00d40fc3fff08654a",
+      "role": "frozen-exploratory-or-readable-window"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 879,
+      "sha256": "076cbd1ed9eb095a92c0f8757e563d3926884f4035c750fc740d3c1f9dd60fdf",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "verify.py",
+      "bytes": 10852,
+      "sha256": "9effe50e8f17619e3763588ee1d73ebc7364096fd272528d5c2a76ff6704c8d4",
+      "role": "candidate-delivery-or-reproducer"
+    },
+    {
+      "path": "write_deliverables.py",
+      "bytes": 18157,
+      "sha256": "b342589b7e23fe7671bcd4aa3962258924363a0c41fb4845a0dfc52634ed8055",
+      "role": "candidate-delivery-or-reproducer"
+    }
+  ]
+}

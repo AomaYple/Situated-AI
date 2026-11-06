@@ -1,0 +1,1065 @@
+{
+  "evidence": "static_check",
+  "owners": [
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_czech_button",
+      "owner_ast_assignment_index": 5,
+      "owner_span": {
+        "byte_start": 7536,
+        "byte_end_exclusive": 8416,
+        "sha256": "bb601bb59462381b39486f6306c048e0ca5597f7c5fc69e523866fa3f40d994f",
+        "start_line": 371,
+        "end_line": 416
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 7942,
+            "byte_end_exclusive": 7971,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 392,
+            "end_line": 394
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_czech_button",
+            "field": "ai_chance",
+            "source_line": 392,
+            "declaration_id": "1a0848cedde433811906d57aee52b1aa5a4a1fc1d3079e2d73f50b2bf0f06d5d",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 8384,
+            "byte_end_exclusive": 8414,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 413,
+            "end_line": 415
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_czech_button",
+            "field": "ai_chance",
+            "source_line": 413,
+            "declaration_id": "007bd7e80e4e85369320d8fc62eea80d11010e4c5642bd427849419d03c3bf98",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_polish_button",
+      "owner_ast_assignment_index": 6,
+      "owner_span": {
+        "byte_start": 8418,
+        "byte_end_exclusive": 11082,
+        "sha256": "5ce5b7545a27993f66aae768f2527fb673e234568d712b7485b290da169e06f7",
+        "start_line": 418,
+        "end_line": 557
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 9417,
+            "byte_end_exclusive": 9446,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 473,
+            "end_line": 475
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_polish_button",
+            "field": "ai_chance",
+            "source_line": 473,
+            "declaration_id": "c2a593dc95284d8b3b455efebdbe223eebf4fc9b660ef1a68568d0a6131ade69",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 11050,
+            "byte_end_exclusive": 11080,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 554,
+            "end_line": 556
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_polish_button",
+            "field": "ai_chance",
+            "source_line": 554,
+            "declaration_id": "39e1d3681c0c81a74e0ef1b22c75d3bdf8dec7bb8123408d7f39729809f437d5",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_slovak_button",
+      "owner_ast_assignment_index": 7,
+      "owner_span": {
+        "byte_start": 11084,
+        "byte_end_exclusive": 11974,
+        "sha256": "f73b439a459c2a93d3c1c8212e468b3b7381b07e97d3633e04c9e72316c73ce2",
+        "start_line": 559,
+        "end_line": 604
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 11496,
+            "byte_end_exclusive": 11525,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 580,
+            "end_line": 582
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_slovak_button",
+            "field": "ai_chance",
+            "source_line": 580,
+            "declaration_id": "70003ab8ff42699dcd879bd07521a2e5b434557bb35ac4602afd78af6aa03cb2",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 11942,
+            "byte_end_exclusive": 11972,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 601,
+            "end_line": 603
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_slovak_button",
+            "field": "ai_chance",
+            "source_line": 601,
+            "declaration_id": "67701028dfca19e4d55697464f5b4356e20122a3dbfc07b578e195a335f02964",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_hungarian_button",
+      "owner_ast_assignment_index": 8,
+      "owner_span": {
+        "byte_start": 11976,
+        "byte_end_exclusive": 12896,
+        "sha256": "d59283e1c727821cd6b4dd09efef4bcc8ba3f730f15f7386511175611b47bc68",
+        "start_line": 606,
+        "end_line": 651
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 12406,
+            "byte_end_exclusive": 12435,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 627,
+            "end_line": 629
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_hungarian_button",
+            "field": "ai_chance",
+            "source_line": 627,
+            "declaration_id": "c42fbffae4dd9d0b16e8935e634e03aacd719be60b44bd9b6325ea3ab098db30",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 12864,
+            "byte_end_exclusive": 12894,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 648,
+            "end_line": 650
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_hungarian_button",
+            "field": "ai_chance",
+            "source_line": 648,
+            "declaration_id": "0456ae94b772287d406293a5ad4d10e737b1af2af0ff9d3ce6e84eeaa6199fd6",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_slovene_button",
+      "owner_ast_assignment_index": 9,
+      "owner_span": {
+        "byte_start": 12898,
+        "byte_end_exclusive": 13798,
+        "sha256": "3b8a6b3099aebbfea2310f82cc45ca21d8060390709e38094c1d804cd148f342",
+        "start_line": 653,
+        "end_line": 698
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 13316,
+            "byte_end_exclusive": 13345,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 674,
+            "end_line": 676
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_slovene_button",
+            "field": "ai_chance",
+            "source_line": 674,
+            "declaration_id": "eb36a976d1ddd447cd108a6bdbae84269103681a0f1bf06f8394ab66efcaa019",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 13766,
+            "byte_end_exclusive": 13796,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 695,
+            "end_line": 697
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_slovene_button",
+            "field": "ai_chance",
+            "source_line": 695,
+            "declaration_id": "9ee2342bb6f38b1459be06bea7392d42e2af4b67e877eb9d01111c8c945fb370",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_croat_button",
+      "owner_ast_assignment_index": 10,
+      "owner_span": {
+        "byte_start": 13800,
+        "byte_end_exclusive": 14680,
+        "sha256": "eb952d37c95c1166928834ba0bbf201867001fd599988674b14765f749f1e07b",
+        "start_line": 700,
+        "end_line": 745
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 14206,
+            "byte_end_exclusive": 14235,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 721,
+            "end_line": 723
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_croat_button",
+            "field": "ai_chance",
+            "source_line": 721,
+            "declaration_id": "3172dd0d14e14021796c7ac485f8328c7802519ff749ef9d7c1205709790cbd5",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 14648,
+            "byte_end_exclusive": 14678,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 742,
+            "end_line": 744
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_croat_button",
+            "field": "ai_chance",
+            "source_line": 742,
+            "declaration_id": "9a9beec83232d73673b1829faf0f50649ad52b3d908187c9532be6efc9d1dc3b",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_romanian_button",
+      "owner_ast_assignment_index": 11,
+      "owner_span": {
+        "byte_start": 14682,
+        "byte_end_exclusive": 15592,
+        "sha256": "15a1bde2bd1ee39d6496845952217f2639f68beb20ee15bab8004152b044b6b7",
+        "start_line": 747,
+        "end_line": 792
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 15106,
+            "byte_end_exclusive": 15135,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 768,
+            "end_line": 770
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_romanian_button",
+            "field": "ai_chance",
+            "source_line": 768,
+            "declaration_id": "5aac9a34cbbf46fdc3cec9303d9d08d0ac10756b837a385f17fc82b863733e0c",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 15560,
+            "byte_end_exclusive": 15590,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 789,
+            "end_line": 791
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_romanian_button",
+            "field": "ai_chance",
+            "source_line": 789,
+            "declaration_id": "796ad71fa9f070ca8a7b7db675903b83d63f36562f4d65b593a15e65755bf9dc",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_north_italian_button",
+      "owner_ast_assignment_index": 12,
+      "owner_span": {
+        "byte_start": 15594,
+        "byte_end_exclusive": 16524,
+        "sha256": "5e0741f9b5817e5620e8ff8f8939ef9101085dd9f57de9378ca60887863d42fa",
+        "start_line": 794,
+        "end_line": 839
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 16094,
+            "byte_end_exclusive": 16123,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 816,
+            "end_line": 818
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_north_italian_button",
+            "field": "ai_chance",
+            "source_line": 816,
+            "declaration_id": "8c19df856d9ec40866e60f35d905063b65b9c244889ed936c0a77a9563a82461",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 16492,
+            "byte_end_exclusive": 16522,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 836,
+            "end_line": 838
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_north_italian_button",
+            "field": "ai_chance",
+            "source_line": 836,
+            "declaration_id": "2d54eb1eec67b3f8a730cbe0259cd75ae1dc314e07e5ca95bee10b2b801e88a0",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_serb_button",
+      "owner_ast_assignment_index": 13,
+      "owner_span": {
+        "byte_start": 16526,
+        "byte_end_exclusive": 17443,
+        "sha256": "d7fdc046d71bda8b377d096b9db5a3710647498aa7639c39b8f6d0a8ce609c51",
+        "start_line": 841,
+        "end_line": 887
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 16972,
+            "byte_end_exclusive": 17001,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 863,
+            "end_line": 865
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_serb_button",
+            "field": "ai_chance",
+            "source_line": 863,
+            "declaration_id": "01a2d727728c2f185bb484bfb7b9ddd9bfc1a4d3df6e5785b283f6b8ec5bfe80",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 17411,
+            "byte_end_exclusive": 17441,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 884,
+            "end_line": 886
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_serb_button",
+            "field": "ai_chance",
+            "source_line": 884,
+            "declaration_id": "9e8ded0e01fe409993d0ce1e1519533d235bbf30e3ed3fe70707d13289276f7c",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_ukrainian_button",
+      "owner_ast_assignment_index": 14,
+      "owner_span": {
+        "byte_start": 17445,
+        "byte_end_exclusive": 18412,
+        "sha256": "7e185ef9bc4646fd2c3d664a3958c883c51700d5cac3c7d95de5bb078a8a9786",
+        "start_line": 889,
+        "end_line": 935
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 4,
+          "span": {
+            "byte_start": 17921,
+            "byte_end_exclusive": 17950,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 911,
+            "end_line": 913
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_ukrainian_button",
+            "field": "ai_chance",
+            "source_line": 911,
+            "declaration_id": "fe57260492c467863a0a927d928f8ca5cfb8c3194b19ca30deecb264211ad55d",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 18380,
+            "byte_end_exclusive": 18410,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 932,
+            "end_line": 934
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_ukrainian_button",
+            "field": "ai_chance",
+            "source_line": 932,
+            "declaration_id": "083a092321c1e5b32fcbb45e038e79486911183e1eae83be3ada308fb96764ef",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_enact_the_federation",
+      "owner_ast_assignment_index": 15,
+      "owner_span": {
+        "byte_start": 18414,
+        "byte_end_exclusive": 19220,
+        "sha256": "11dab303a83383cdf9b3d6e5fc5e805e9de9c59b752ba42a7d8f8597d70b4d79",
+        "start_line": 937,
+        "end_line": 980
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 3,
+          "span": {
+            "byte_start": 18626,
+            "byte_end_exclusive": 18655,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 946,
+            "end_line": 948
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_enact_the_federation",
+            "field": "ai_chance",
+            "source_line": 946,
+            "declaration_id": "062695fce5e690a2afae4a75fd2feedfdc441ac681743284499f08b4e34586cc",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 19188,
+            "byte_end_exclusive": 19218,
+            "sha256": "0d927bd5563d6e0148fafd280d3b63059d8a080a25a7ecb54b3e5179bc576547",
+            "start_line": 977,
+            "end_line": 979
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_enact_the_federation",
+            "field": "ai_chance",
+            "source_line": 977,
+            "declaration_id": "10f2529bbe9de128b07725a4fd0bf3c235b18f06f499f41e3d414608cf9ede5f",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "100"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_observer_pledge_cooperation",
+      "owner_ast_assignment_index": 16,
+      "owner_span": {
+        "byte_start": 19222,
+        "byte_end_exclusive": 20593,
+        "sha256": "47f65d459eaa99f800e25367ff3407c74e7b1be061afcda028e27206eb077176",
+        "start_line": 982,
+        "end_line": 1049
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 3,
+          "span": {
+            "byte_start": 19507,
+            "byte_end_exclusive": 19536,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 992,
+            "end_line": 994
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_observer_pledge_cooperation",
+            "field": "ai_chance",
+            "source_line": 992,
+            "declaration_id": "f45aef6e407c28e3cdd6f013afa1677cccfcdde6c2e8cb6fc75e78989c577f30",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 20563,
+            "byte_end_exclusive": 20591,
+            "sha256": "d3fc32219f5c693d2d85ab1edf52e3cf496dc3ee32c6321fc1d177b7b178722c",
+            "start_line": 1046,
+            "end_line": 1048
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_observer_pledge_cooperation",
+            "field": "ai_chance",
+            "source_line": 1046,
+            "declaration_id": "4682dd84a27eedeb69ef848fc37f062f4005af6f98c0c63db2d49496981a102a",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "5"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_danubian_federation_observer_reject_cooperation",
+      "owner_ast_assignment_index": 17,
+      "owner_span": {
+        "byte_start": 20595,
+        "byte_end_exclusive": 21648,
+        "sha256": "7c1812c57012ec450d26ec7bb308964868e47082bc85e867ee927ec4635023a2",
+        "start_line": 1051,
+        "end_line": 1103
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 3,
+          "span": {
+            "byte_start": 20878,
+            "byte_end_exclusive": 20907,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 1061,
+            "end_line": 1063
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_observer_reject_cooperation",
+            "field": "ai_chance",
+            "source_line": 1061,
+            "declaration_id": "f1487107212cbb92d03b49d276ca24262e94459a9556c2c8d5a7d4b1b8de4345",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 21618,
+            "byte_end_exclusive": 21646,
+            "sha256": "d3fc32219f5c693d2d85ab1edf52e3cf496dc3ee32c6321fc1d177b7b178722c",
+            "start_line": 1100,
+            "end_line": 1102
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_danubian_federation_observer_reject_cooperation",
+            "field": "ai_chance",
+            "source_line": 1100,
+            "declaration_id": "71516f1fa8ce8544a9597fce78f0091cb0fb9bd3fbfab3a54894679b321a94cc",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "5"
+        }
+      ]
+    },
+    {
+      "source": "common/scripted_buttons/05_austria_buttons.txt",
+      "owner": "je_standestaat_eliminate_parliament",
+      "owner_ast_assignment_index": 18,
+      "owner_span": {
+        "byte_start": 21650,
+        "byte_end_exclusive": 23433,
+        "sha256": "64ddf43877ba217e1c2425a1fe808d4d8659d268af92383062160e178126ef0f",
+        "start_line": 1105,
+        "end_line": 1192
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_chance",
+          "ordinal": 0,
+          "ast_item_index": 3,
+          "span": {
+            "byte_start": 21859,
+            "byte_end_exclusive": 21888,
+            "sha256": "002ad301f0a356fb09d4b1472a83442c998ef8807f6a358ffa05c408e2c4ea45",
+            "start_line": 1115,
+            "end_line": 1117
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_standestaat_eliminate_parliament",
+            "field": "ai_chance",
+            "source_line": 1115,
+            "declaration_id": "f36f32b1c95c27c3afa7a4bec0b9645e531926497ccfbff7d7fc18824b51f8f2",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "10"
+        },
+        {
+          "field": "ai_chance",
+          "ordinal": 1,
+          "ast_item_index": 7,
+          "span": {
+            "byte_start": 23403,
+            "byte_end_exclusive": 23431,
+            "sha256": "d3fc32219f5c693d2d85ab1edf52e3cf496dc3ee32c6321fc1d177b7b178722c",
+            "start_line": 1189,
+            "end_line": 1191
+          },
+          "original_ambiguity": {
+            "source": "common/scripted_buttons/05_austria_buttons.txt",
+            "definition": "je_standestaat_eliminate_parliament",
+            "field": "ai_chance",
+            "source_line": 1189,
+            "declaration_id": "6d9f74cb06cab620400992700fa70183e83149ebd23ab5b2d3d0adb67275d936",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "literal_value": "5"
+        }
+      ]
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_journal_entry",
+      "owner_ast_assignment_index": 41,
+      "owner_span": {
+        "byte_start": 39556,
+        "byte_end_exclusive": 40112,
+        "sha256": "ee59224976a89b4eeca59441a479e43e740229e8c81d814aeb3c2107b12ab2c3",
+        "start_line": 2193,
+        "end_line": 2219
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_country_goal_recalculation",
+          "ordinal": 0,
+          "ast_item_index": 1,
+          "span": {
+            "byte_start": 39614,
+            "byte_end_exclusive": 39862,
+            "sha256": "65e88193638d2a64be9c6e7e973c2c553ddc92d7996557cba184021891edb624",
+            "start_line": 2196,
+            "end_line": 2206
+          },
+          "original_ambiguity": {
+            "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+            "definition": "catalyst_journal_entry",
+            "field": "ai_country_goal_recalculation",
+            "source_line": 2196,
+            "declaration_id": "958cc082a940b2d7d9fd41f1e7f909234da41d55e00db5a18128e0be85d1161d",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "type": "only_hostile",
+          "chance_literal_value": "1.0",
+          "chance_span": {
+            "byte_start": 39835,
+            "byte_end_exclusive": 39859,
+            "sha256": "c575f2428e8ff84074e5e2711b1f59cab35f9d4c78f8a71c45f78a755875a8d6",
+            "start_line": 2205,
+            "end_line": 2205
+          },
+          "trigger_span": {
+            "byte_start": 39650,
+            "byte_end_exclusive": 39809,
+            "sha256": "b4c77c0c65419978e27381def8ef225fd7ff7bc4a77bfabda893dfbb765250e0",
+            "start_line": 2197,
+            "end_line": 2202
+          }
+        },
+        {
+          "field": "ai_country_goal_recalculation",
+          "ordinal": 1,
+          "ast_item_index": 2,
+          "span": {
+            "byte_start": 39865,
+            "byte_end_exclusive": 40110,
+            "sha256": "7c8a3254705dd2ee0efe37722e4b031b688ee00f4c4a9c3a44543e726b936f50",
+            "start_line": 2208,
+            "end_line": 2218
+          },
+          "original_ambiguity": {
+            "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+            "definition": "catalyst_journal_entry",
+            "field": "ai_country_goal_recalculation",
+            "source_line": 2208,
+            "declaration_id": "d2ad545b623841d7478445236e8f2fc6f3383625960d67505d94184c000ea740",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "type": "only_friendly",
+          "chance_literal_value": "1.0",
+          "chance_span": {
+            "byte_start": 40083,
+            "byte_end_exclusive": 40107,
+            "sha256": "c575f2428e8ff84074e5e2711b1f59cab35f9d4c78f8a71c45f78a755875a8d6",
+            "start_line": 2217,
+            "end_line": 2217
+          },
+          "trigger_span": {
+            "byte_start": 39901,
+            "byte_end_exclusive": 40056,
+            "sha256": "5a3801695e1eac986f85218460c7d7a5a820e7d2b45b274111dc46bce7c091dc",
+            "start_line": 2209,
+            "end_line": 2214
+          }
+        }
+      ]
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_socialist_government",
+      "owner_ast_assignment_index": 64,
+      "owner_span": {
+        "byte_start": 55413,
+        "byte_end_exclusive": 57262,
+        "sha256": "42138e36709c511b608ba821c64c7e0808fdfd9bea8039bfd2731b1ad3fe794f",
+        "start_line": 3028,
+        "end_line": 3145
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_country_goal_recalculation",
+          "ordinal": 0,
+          "ast_item_index": 1,
+          "span": {
+            "byte_start": 55475,
+            "byte_end_exclusive": 55619,
+            "sha256": "51701d57362a918c509a557cc8dba3f01afcce055fbc9296b47eb997199d3970",
+            "start_line": 3031,
+            "end_line": 3037
+          },
+          "original_ambiguity": {
+            "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+            "definition": "catalyst_socialist_government",
+            "field": "ai_country_goal_recalculation",
+            "source_line": 3031,
+            "declaration_id": "1580270b3b48a8f121d83eeaab581cb8f3844f78fd90a1841ca3f0839b40c4fe",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "type": "more_friendly",
+          "chance_literal_value": "1.0",
+          "chance_span": {
+            "byte_start": 55592,
+            "byte_end_exclusive": 55616,
+            "sha256": "c575f2428e8ff84074e5e2711b1f59cab35f9d4c78f8a71c45f78a755875a8d6",
+            "start_line": 3036,
+            "end_line": 3036
+          },
+          "trigger_span": {
+            "byte_start": 55511,
+            "byte_end_exclusive": 55566,
+            "sha256": "7c2fca3f59a09229db89356e9185e9a1f229f1634ec05e792f0a5c0778d3cb6e",
+            "start_line": 3032,
+            "end_line": 3034
+          }
+        },
+        {
+          "field": "ai_country_goal_recalculation",
+          "ordinal": 1,
+          "ast_item_index": 2,
+          "span": {
+            "byte_start": 55622,
+            "byte_end_exclusive": 55764,
+            "sha256": "83ceb94846c859e15778f9b0d2ab0cc993cdb771373fdbf6d011efcd2c48dcf4",
+            "start_line": 3039,
+            "end_line": 3045
+          },
+          "original_ambiguity": {
+            "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+            "definition": "catalyst_socialist_government",
+            "field": "ai_country_goal_recalculation",
+            "source_line": 3039,
+            "declaration_id": "b3142202c5c9949f340b59ea72f5560b684b8986dc5651da53f9719f709722a6",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "type": "only_hostile",
+          "chance_literal_value": "1.0",
+          "chance_span": {
+            "byte_start": 55737,
+            "byte_end_exclusive": 55761,
+            "sha256": "c575f2428e8ff84074e5e2711b1f59cab35f9d4c78f8a71c45f78a755875a8d6",
+            "start_line": 3044,
+            "end_line": 3044
+          },
+          "trigger_span": {
+            "byte_start": 55658,
+            "byte_end_exclusive": 55712,
+            "sha256": "048e5d77caea7d1db28fccd0fa434fbd44626c07a09dcdc234b7b49f8a674d40",
+            "start_line": 3040,
+            "end_line": 3042
+          }
+        }
+      ]
+    },
+    {
+      "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+      "owner": "catalyst_socialist_economy",
+      "owner_ast_assignment_index": 65,
+      "owner_span": {
+        "byte_start": 57324,
+        "byte_end_exclusive": 59456,
+        "sha256": "0d76722bcb79700040fb26cc9c599ebd89a3fd8f5eb5443bad8887e8813c2cea",
+        "start_line": 3148,
+        "end_line": 3277
+      },
+      "protected_complete_parent": true,
+      "fields": [
+        {
+          "field": "ai_country_goal_recalculation",
+          "ordinal": 0,
+          "ast_item_index": 1,
+          "span": {
+            "byte_start": 57383,
+            "byte_end_exclusive": 57581,
+            "sha256": "a2b558480b0d7c6acacc102cbf716d8c9742a35ea12d5052017f3a52ccf1e9d8",
+            "start_line": 3151,
+            "end_line": 3160
+          },
+          "original_ambiguity": {
+            "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+            "definition": "catalyst_socialist_economy",
+            "field": "ai_country_goal_recalculation",
+            "source_line": 3151,
+            "declaration_id": "5fe397a4765105c5fe35efa729eb889030f7bae7898a96627a3815dee0d13f4c",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "type": "more_friendly",
+          "chance_literal_value": "1.0",
+          "chance_span": {
+            "byte_start": 57554,
+            "byte_end_exclusive": 57578,
+            "sha256": "c575f2428e8ff84074e5e2711b1f59cab35f9d4c78f8a71c45f78a755875a8d6",
+            "start_line": 3159,
+            "end_line": 3159
+          },
+          "trigger_span": {
+            "byte_start": 57419,
+            "byte_end_exclusive": 57528,
+            "sha256": "2d895dc462ee11554ce7f682ca1b1c5b24196cd699fa21a1dd541e39ec3ef8c1",
+            "start_line": 3152,
+            "end_line": 3157
+          }
+        },
+        {
+          "field": "ai_country_goal_recalculation",
+          "ordinal": 1,
+          "ast_item_index": 2,
+          "span": {
+            "byte_start": 57584,
+            "byte_end_exclusive": 57762,
+            "sha256": "f2e8965501c0976b41eb4af8922aa0ef2b89d1ffa5f0c8941ce9220156abc34b",
+            "start_line": 3162,
+            "end_line": 3169
+          },
+          "original_ambiguity": {
+            "source": "common/diplomatic_catalysts/00_diplomatic_catalysts.txt",
+            "definition": "catalyst_socialist_economy",
+            "field": "ai_country_goal_recalculation",
+            "source_line": 3162,
+            "declaration_id": "40d472f6eae30a8f67ce6c91136a673eca8fb417bc24f719067a2c683202c067",
+            "ambiguity": "duplicate_field_merge_semantics_unknown"
+          },
+          "type": "only_hostile",
+          "chance_literal_value": "1.0",
+          "chance_span": {
+            "byte_start": 57735,
+            "byte_end_exclusive": 57759,
+            "sha256": "c575f2428e8ff84074e5e2711b1f59cab35f9d4c78f8a71c45f78a755875a8d6",
+            "start_line": 3168,
+            "end_line": 3168
+          },
+          "trigger_span": {
+            "byte_start": 57620,
+            "byte_end_exclusive": 57710,
+            "sha256": "92b6c9ba60f9566477adbd4ffd19eeb41fddb2cec91abb4628c236c026764050",
+            "start_line": 3163,
+            "end_line": 3166
+          }
+        }
+      ]
+    }
+  ],
+  "byte_convention": "UTF-8 original raw file, BOM included; ranges start at key and end after closing brace. Complete files preserve comments and all parent/qualification/effect bytes."
+}

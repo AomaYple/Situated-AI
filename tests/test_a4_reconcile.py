@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from typing import Any
 
 import pytest
 
@@ -55,7 +56,7 @@ def test_a4_zero_requires_consumer_and_writer_mappings(tmp_path) -> None:
 def test_crosscheck_does_not_trust_receipt_declared_bindings(tmp_path) -> None:
     sources = gate.Sources(tmp_path)
     report = {"crosscheck_receipt_ids": ["run"], "source_inputs": []}
-    data = {
+    data: dict[str, Any] = {
         "receipts": [],
         "inventory": {"crosscheck_receipts": ["run"], "investigation_sources": [{}]},
     }
@@ -264,8 +265,13 @@ def test_source_hash_cache_is_session_local_and_does_not_cache_identity(
 ) -> None:
     (tmp_path / "catalog.json").write_bytes(b'{"first":1,"second":2}')
     original_sha = gate.sha
-    calls = []
-    monkeypatch.setattr(gate, "sha", lambda raw: (calls.append(len(raw)), original_sha(raw))[1])
+    calls: list[int] = []
+
+    def counted_sha(raw: bytes) -> str:
+        calls.append(len(raw))
+        return original_sha(raw)
+
+    monkeypatch.setattr(gate, "sha", counted_sha)
     source = gate.Sources(tmp_path)
     first = source.reference("catalog.json", "first", "json")
     for _ in range(100):

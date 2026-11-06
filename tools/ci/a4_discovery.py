@@ -441,7 +441,11 @@ def import_capture(
     }
 
 
-def validate_projection(sources: Any, report: dict[str, Any]) -> dict[str, Any]:
+def load_capture(sources: Any) -> dict[str, Any]:
+    """Read the fixed lossless capture; shared by registration and classification."""
+    cache_key = "a4:accepted-capture-payload"
+    if cache_key in sources.jsons:
+        return sources.jsons[cache_key]
     manifest = sources.json(ROOT_PATH)
     required = {
         "schema",
@@ -506,6 +510,13 @@ def validate_projection(sources: Any, report: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("capture root relation drift")
     if payload["target_version"] != manifest["source_version"]:
         raise ValueError("mixed capture version")
+    sources.jsons[cache_key] = payload
+    return payload
+
+
+def validate_projection(sources: Any, report: dict[str, Any]) -> dict[str, Any]:
+    payload = load_capture(sources)
+    manifest = sources.json(ROOT_PATH)
     catalog = project(payload)
     del payload
     if catalog != sources.json(CATALOG_PATH):

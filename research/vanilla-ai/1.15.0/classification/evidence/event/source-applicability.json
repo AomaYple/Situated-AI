@@ -1,0 +1,694 @@
+[
+  {
+    "source": "events/gold_rush.txt",
+    "owner": "goldrush.1",
+    "owner_line": 3,
+    "type_declarations": [
+      {
+        "line": 4,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      34
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 46,
+        "slot_id": "9084dd0184eaa18eb3f8eca9e2199e11aceb1efffed22ffb96e6f7c7d5d5fc27",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          48
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 55,
+        "slot_id": "5c2f91eb275812cc3621fc7a4ee7830b94140e497fb4a6fe49216826b8f6872e",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 3,
+        "line": 67,
+        "slot_id": "96014e3b1bbbbd0737e4ba8307263bffbcaaffe60d8ae2959ff05ece01ed196e",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 4,
+        "line": 81,
+        "slot_id": "39271ede0688a28dcd69c84cfd28c25be4cab90a7e786021b45e419305466ddc",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/gold_rush.txt",
+    "owner": "goldrush.2",
+    "owner_line": 100,
+    "type_declarations": [
+      {
+        "line": 101,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      131
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 139,
+        "slot_id": "be73ba0a3a259cec4e5277a22d18024950a074ba7149b6aa5d4978c8c168d6fa",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          141
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 154,
+        "slot_id": "c217198ad4658ad88ababb767283a0afa660306d3d57eb4ad1cae1cab5cdf998",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 3,
+        "line": 168,
+        "slot_id": "0b6a01d0d0185311584ebe3ebc520f360af00f4ea0bdd5f2c21551ecef3dfe68",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 4,
+        "line": 188,
+        "slot_id": "52d7e9aa48bb639adcce979c38bcf8a7c5f79c2173f69e30bd97f7fba90d544e",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/gold_rush.txt",
+    "owner": "goldrush.3",
+    "owner_line": 209,
+    "type_declarations": [
+      {
+        "line": 210,
+        "value": "country_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      246
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 280,
+        "slot_id": "f8ec91b4a6be330b25058b9431c1acd50e6d2ac77fdf81a66d2d5f56d28d9d7a",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          282
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 291,
+        "slot_id": "5edeb666e1df8faed9e6e249c01ae2072265bb4ecd3e56ccf8f198c183c12387",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/gold_rush.txt",
+    "owner": "goldrush.4",
+    "owner_line": 303,
+    "type_declarations": [
+      {
+        "line": 304,
+        "value": "country_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      340
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 358,
+        "slot_id": "15ce277241802de7cc4d226dc330a53dc50eed131a58d98dee5a702d25caa551",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          360
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 375,
+        "slot_id": "3f5c290f233a427b53beaf272f3cbd0b6425a41d187b52af2d336d711580d729",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/gold_rush.txt",
+    "owner": "goldrush.5",
+    "owner_line": 393,
+    "type_declarations": [
+      {
+        "line": 394,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      422
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 433,
+        "slot_id": "93cea054b0a22659ed64ef6cdc8731694f93636159bc787e2a882467a4c9b220",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          435
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 447,
+        "slot_id": "8e1500ff5779746cd06567cd8d1bafb3d607cfcfc6b036e329b49718d3357872",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/oil_rush_events.txt",
+    "owner": "oil_rush.1",
+    "owner_line": 4,
+    "type_declarations": [
+      {
+        "line": 5,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      15
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 51,
+        "slot_id": "ae495f47bdbeb353994dbe95c609c959d656ce52b2a841b198b1ea04dd67fd7d",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 68,
+        "slot_id": "46fba4af4c7ef372ef5f6b8036b82a6b71c230c13800ee7d49cc37f2bb9a27dd",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          70
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 3,
+        "line": 86,
+        "slot_id": "eb9f7d1012a7fd1dca0c9a554f3c2b8304866fb45aee6eec68d5e77b48aad517",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 4,
+        "line": 109,
+        "slot_id": "24a6709f6158a32fa3a5e2614c4fa92bb2b55c3a717e5bb78ec2eb50aa724542",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/oil_rush_events.txt",
+    "owner": "oil_rush.2",
+    "owner_line": 140,
+    "type_declarations": [
+      {
+        "line": 141,
+        "value": "country_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      157
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 174,
+        "slot_id": "4c1cd12a1b8d2bc2048f2e99a71aced3e99d5f2aab832339d188ec3b4919e3be",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 188,
+        "slot_id": "8f5db5e4a0012a9b13e57e37df4b23028dc9111b4c47e5b50d190fe4902f4043",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          190
+        ],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/oil_rush_events.txt",
+    "owner": "oil_rush.3",
+    "owner_line": 208,
+    "type_declarations": [
+      {
+        "line": 209,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      227
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 257,
+        "slot_id": "8af916c5a3645e571eec1e2962b5e52ce4885753ebc5fea8e11d808e12752bc8",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          259
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 281,
+        "slot_id": "e810d7966726c12b19264b8416d22a98fe1e0e47703f7d25d82f772f32bfa49c",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/oil_rush_events.txt",
+    "owner": "oil_rush.4",
+    "owner_line": 306,
+    "type_declarations": [
+      {
+        "line": 307,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      341
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 350,
+        "slot_id": "4e671b99f84427d668796dba0d7e8f83a473d2fa2f47e08c5b8bfc3fceaef57c",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 372,
+        "slot_id": "6ebecbac5b16eca7aff5b3aa7abb21947eb89e6fb661a0fc6a05e38c6cc368fd",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          374
+        ],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/oil_rush_events.txt",
+    "owner": "oil_rush.5",
+    "owner_line": 388,
+    "type_declarations": [
+      {
+        "line": 389,
+        "value": "country_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      431
+    ],
+    "after_lines": [
+      525
+    ],
+    "options": [
+      {
+        "index": 1,
+        "line": 459,
+        "slot_id": "16434bee0fd8cdd9565375303aa5de32242703cbd45c6873e648980654052c0f",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 477,
+        "slot_id": "f7ba6e60ac453d04f30a86b933a3c7eafb791b4d85c6626a01bf1d43369ead52",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 3,
+        "line": 495,
+        "slot_id": "a1679ee354ded7e17dec0627def37211889115c4cbf364c4006de9620361989d",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 4,
+        "line": 510,
+        "slot_id": "556daccd015ec78eab822007e66e635d1963cb820a7d6814d836b7f9b61a7e98",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          512
+        ],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/paralegal_discrimination_events.txt",
+    "owner": "paralegal_discrimination.1",
+    "owner_line": 3,
+    "type_declarations": [
+      {
+        "line": 4,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      47
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 85,
+        "slot_id": "6d7db8d9a57d73dbe4dc3968090b6aacaa26ad6503e1e53909d363258b7e6497",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          87
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 109,
+        "slot_id": "7791f2bd7c588f36aae729fe237a592e942f2e267a9b4b574f873244ecaf9649",
+        "ai_chance": [
+          {
+            "line": 111,
+            "form": "block",
+            "base": [
+              {
+                "line": 112,
+                "value": "1"
+              }
+            ],
+            "scalar": null
+          }
+        ],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 3,
+        "line": 157,
+        "slot_id": "887fce25c4fab6a6dd0a3fdb79059ec9ada528b1c5596f828ce1618e756e2e06",
+        "ai_chance": [
+          {
+            "line": 159,
+            "form": "block",
+            "base": [
+              {
+                "line": 160,
+                "value": "1"
+              }
+            ],
+            "scalar": null
+          }
+        ],
+        "trigger_lines": [],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/tech_events/production_tech_events.txt",
+    "owner": "production_tech_events.200",
+    "owner_line": 220,
+    "type_declarations": [],
+    "omitted_type": true,
+    "immediate_lines": [
+      257
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 279,
+        "slot_id": "20cba5658b424181262fec85a23aef51be211421895f7e9e3f5ce516c68f8bb9",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          281
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 287,
+        "slot_id": "4cfb35ad802cdfefb2ae9519dbfabf882a0dabe89ed57449881c89090189cca2",
+        "ai_chance": [],
+        "trigger_lines": [
+          289
+        ],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/tech_events/production_tech_events.txt",
+    "owner": "production_tech_events.210",
+    "owner_line": 311,
+    "type_declarations": [],
+    "omitted_type": true,
+    "immediate_lines": [
+      346
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 367,
+        "slot_id": "723530bfd3c1cee735ad3d1a88970b605af3aee680b8f53ee270bd8d41d97350",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          369
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 376,
+        "slot_id": "be9e6017cd34a97b1a2a2c89d535c7002c80a0483a6a034b8e4a149b2db13299",
+        "ai_chance": [],
+        "trigger_lines": [
+          378
+        ],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/tech_events/rubber_events.txt",
+    "owner": "rubber_events.1",
+    "owner_line": 4,
+    "type_declarations": [
+      {
+        "line": 5,
+        "value": "state_event"
+      }
+    ],
+    "omitted_type": false,
+    "immediate_lines": [
+      44
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 65,
+        "slot_id": "ff550ff91a9cd1903d3f7251b684c0686c1e84c545aadc9feda72a3c6a8b15c2",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          67
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 77,
+        "slot_id": "cee20c071b9555c266d53e8c1c3e8328d701fb1bdb89022c9a1a37e18f978c4a",
+        "ai_chance": [],
+        "trigger_lines": [
+          79
+        ],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 3,
+        "line": 100,
+        "slot_id": "1139b9c85886911c8c1f613ee0c9679ff41d3de72731f6175ab5351c1c72bff5",
+        "ai_chance": [],
+        "trigger_lines": [
+          102
+        ],
+        "default_lines": [],
+        "highlighted_lines": []
+      },
+      {
+        "index": 4,
+        "line": 125,
+        "slot_id": "f77abcae1bdaf2093c02d9932fd4ba1b9cb5900994fb57f7330d346f2996e705",
+        "ai_chance": [],
+        "trigger_lines": [
+          127
+        ],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  },
+  {
+    "source": "events/tech_events/society_tech_events.txt",
+    "owner": "dan_society_tech_events.1",
+    "owner_line": 267,
+    "type_declarations": [],
+    "omitted_type": true,
+    "immediate_lines": [
+      304
+    ],
+    "after_lines": [],
+    "options": [
+      {
+        "index": 1,
+        "line": 317,
+        "slot_id": "6703f830ae3cb2ea6dd1b84a22d0468b4929446e955f774dc069fa9a63fb24af",
+        "ai_chance": [],
+        "trigger_lines": [],
+        "default_lines": [
+          319
+        ],
+        "highlighted_lines": []
+      },
+      {
+        "index": 2,
+        "line": 326,
+        "slot_id": "64102203ea03ae8dfa238917b9715c5d81eac70fd9ee2a605c9d27d9b4a72383",
+        "ai_chance": [],
+        "trigger_lines": [
+          328
+        ],
+        "default_lines": [],
+        "highlighted_lines": []
+      }
+    ]
+  }
+]

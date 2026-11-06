@@ -18,7 +18,7 @@ from pdx.textio import normalized_text
 
 SOURCE = "common/buildings/06_urban_center.txt"
 FIELD = ("building_art_academy", "ai_value")
-PINNED = "c41ed5adb63e8f626e6394ce4f2f619bc8f229cafa3d8994271e2a66d1c2b0c5"
+PINNED = "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9"
 
 
 @pytest.fixture(scope="module")
@@ -236,10 +236,23 @@ def test_native_full_definition_order_romanticism_metternich_and_other_buildings
     assert _shape(art.all("unlocking_technologies")[0].value) == ("romanticism",)
     score = art.all("ai_value")[0].value
     assert isinstance(score, Block)
-    assert [row.key for row in score.assignments()] == ["value", "if"]
+    assert [row.key for row in score.assignments()] == ["value", "if", "if", "if"]
     assert _shape(score.all("value")[0].value) == "1000"
     assert "has_journal_entry = je_metternich" in native
     assert "add = 500" in native
+    branches = score.all("if")
+    for row, expected in zip(branches, ("500", "1000", "1000"), strict=True):
+        assert isinstance(row.value, Block)
+        addition = row.value.first("add")
+        assert addition is not None
+        assert str(addition.value) == expected
+    assert "ai_ukraine_renaissance_accelerate" in native
+    assert "is_homeland = cu:ukrainian" in native
+    assert "ai_belarus_renaissance_accelerate" in native
+    assert "is_homeland = cu:byelorussian" in native
+    assert "has_journal_entry = je_tp_tsar_crown_of_perfection" in native
+    assert "NOT = { has_variable = je_tp_tsar_crown_of_perfection_button_1_complete }" in native
+    assert "is_capital = yes" in native
     assert text.count("# SITAI BEGIN") == 1
 
 

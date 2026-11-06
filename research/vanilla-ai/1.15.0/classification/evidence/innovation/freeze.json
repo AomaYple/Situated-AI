@@ -1,0 +1,303 @@
+{
+  "schema": "A4-native-innovation-flags-freeze-1",
+  "status": "frozen_static_numeric_atom_candidate",
+  "evidence_category": "static_check",
+  "created_at_utc": "2026-11-05T22:16:40.327069+00:00",
+  "numeric_flag_atom_established": true,
+  "numeric_output_for_locked_vanilla": true,
+  "production_use_authorized": false,
+  "B04_2_complete": false,
+  "candidate_sha256": "f7725e07fd318d1e1c54aa86543bf3f2a19b9cb829d3383d43abc4b200e27e66",
+  "report_sha256": "76a3f4152b9f0ec38393743b97ea8c6abfdd9994c85f9b247fa067d58f2710fb",
+  "verification_sha256": "c3c5c2cbfa0b44b19339ec6eb713d75805d4b2a22c70f8c7d68b2e773e9d94b8",
+  "exe_sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+  "old_freeze_sha256": "90c38c2ee8a66673565c3b1a41f49d2b8a0b05164d81b63c533a19f72430088f",
+  "counts": {
+    "files_excluding_this_manifest": 51,
+    "new_windows": 33,
+    "direct_edges": 11,
+    "virtual_slots": 6,
+    "critical_instructions": 12,
+    "source_files": 19,
+    "txt_files": 18,
+    "reused_inputs": 8,
+    "old_files_unchanged": 71
+  },
+  "formal_evidence": [
+    "report.md",
+    "candidate.json",
+    "observations.json",
+    "source-identities.json",
+    "source-definition.json",
+    "identity-before-after.json",
+    "reused-inputs.json",
+    "verification.json",
+    "curated/"
+  ],
+  "exploratory_evidence": "All exploratory-*.asm and exploratory-*.json are retained as nonformal investigation traces.",
+  "verifier_entry": ".venv/Scripts/python.exe -B -X utf8 .superpowers/sdd/A4-20261105/native-innovation-flags/verify.py",
+  "limits": [
+    "Independent focused static PE/bytes/edges/source ownership and dataflow assertions, no runtime game execution.",
+    "Source duplicate closure is only the immutable current original modifier definition directory; changed or third-party overrides require revalidation.",
+    "Flags atom only; raw-minus-cap access, production lowering/guards/witnesses and B04.2 completion are not signed.",
+    "No repeat full getter scan, raw asset capture, broad modifier semantics reconstruction or performance measurement."
+  ],
+  "files": [
+    {
+      "path": "candidate.json",
+      "bytes": 4333,
+      "sha256": "f7725e07fd318d1e1c54aa86543bf3f2a19b9cb829d3383d43abc4b200e27e66"
+    },
+    {
+      "path": "capture.py",
+      "bytes": 11344,
+      "sha256": "7562d85c8d7ee32e9783514e32b4465c1434a780b0a829e8010e329afc9d6831"
+    },
+    {
+      "path": "curated/source-01.txt",
+      "bytes": 345,
+      "sha256": "0b9981dbeb65ccffa8c44b1877465f12eae0d5c834d7cd2895208d2f555b97c1"
+    },
+    {
+      "path": "curated/source-02.txt",
+      "bytes": 36983,
+      "sha256": "3bbbbfb2d4ab77cbc04f817f470509babe6345a734df264b2e82d01f7be325e6"
+    },
+    {
+      "path": "curated/source-03.txt",
+      "bytes": 5314,
+      "sha256": "11c5346d00ce3e0ab19f8fc68cf0a14ecbd22f4e205528f095461ea099392c29"
+    },
+    {
+      "path": "curated/source-04.txt",
+      "bytes": 11329,
+      "sha256": "f41709dc315ee0b53a5834a8b1a4b463d5b3dca74915a9bebd23dbab89398252"
+    },
+    {
+      "path": "curated/source-05.txt",
+      "bytes": 2923,
+      "sha256": "3c2f1bc65a71d736d95d6e0a666864499e8e0e03aaf0a0822779bf109252eeba"
+    },
+    {
+      "path": "curated/source-06.txt",
+      "bytes": 4902,
+      "sha256": "f880a8f8dc57bb5eb35085f8032c97bff4a89104b3769163a3a2238d0498f2d8"
+    },
+    {
+      "path": "curated/source-07.txt",
+      "bytes": 14108,
+      "sha256": "68b341da1ab5e6e5c2c6344046d9acbe36bcfd7431a5b67856216fd34ae1ba34"
+    },
+    {
+      "path": "curated/source-08.txt",
+      "bytes": 581,
+      "sha256": "289849d0c839b894d912d97935bf42a4978636f8e4db5aa6421392256d17a138"
+    },
+    {
+      "path": "curated/source-09.txt",
+      "bytes": 7512,
+      "sha256": "a1b9e3384835d48ff52f612bb186c855eeb4f7744b9eae172ce17c413cf1e11d"
+    },
+    {
+      "path": "curated/source-10.txt",
+      "bytes": 11609,
+      "sha256": "1f79d5a49a233263fdc2314033eb3e4ba8b15fcceb023ff9250b4e04e6be4cd3"
+    },
+    {
+      "path": "curated/source-11.txt",
+      "bytes": 31591,
+      "sha256": "bd129d8cdd3649746ee7af61a2f9bed20f5321dc42cbae739142c9cdb511ef6d"
+    },
+    {
+      "path": "curated/source-12.txt",
+      "bytes": 29657,
+      "sha256": "17cae95ac3db7fed2a5b380b446f9d492f503e5601cfca27e6e6e5708a03592f"
+    },
+    {
+      "path": "curated/source-13.txt",
+      "bytes": 1414,
+      "sha256": "3413510aba1cbfc63c194734906be208e63474d27d73772ca4b49c854c02ca33"
+    },
+    {
+      "path": "curated/source-14.txt",
+      "bytes": 391,
+      "sha256": "fa8f8b512dda0c8330cadcce278d8591f36cf90184055b2c855269d4c343fc7b"
+    },
+    {
+      "path": "curated/source-15.txt",
+      "bytes": 998,
+      "sha256": "f01aa8cf0aa81756184d1454f68d5300cd64ee561df5f1e0d62945cd9faa1a17"
+    },
+    {
+      "path": "curated/source-16.txt",
+      "bytes": 744,
+      "sha256": "c34724f7935d88705255c115b3d9cdc353cf8eee4b2806d2b10eaa37069467b9"
+    },
+    {
+      "path": "curated/source-17.txt",
+      "bytes": 47959,
+      "sha256": "05103c97f7b34df961ca4dd8adb3c2eeccae26e961157fad55b019768cd7d46a"
+    },
+    {
+      "path": "exploratory-copy-caller.asm",
+      "bytes": 8488,
+      "sha256": "8c85947d9f966a95743237f2dba68808b63819ba48d95cf0614a313c5178600e"
+    },
+    {
+      "path": "exploratory-definition-allocator.asm",
+      "bytes": 5167,
+      "sha256": "9f2ecfdc0f349a669a4692e531ecc0896e4cd2c8da4147cac163eb4f168c056b"
+    },
+    {
+      "path": "exploratory-definition-factory.asm",
+      "bytes": 7898,
+      "sha256": "af2177761514604ff9ab00b4ceb4f00bad34d70b32043f6e3b94c8ad967e0677"
+    },
+    {
+      "path": "exploratory-definition-parser.asm",
+      "bytes": 35255,
+      "sha256": "dde5826e0bf1abbadcfb7568854bbdf53f731feab2e892d4567ace25c7c90857"
+    },
+    {
+      "path": "exploratory-definition-postload.asm",
+      "bytes": 9072,
+      "sha256": "06baf334e1bf2bcaacad6b17722615b17e29022e368f927583fac1c315f997c6"
+    },
+    {
+      "path": "exploratory-functor-output-copy.asm",
+      "bytes": 5753,
+      "sha256": "558a263f440415ff7a738e737b7da34598421a5117154d7f39b1c9db72665bc5"
+    },
+    {
+      "path": "exploratory-game-data-default-clone.asm",
+      "bytes": 3165,
+      "sha256": "a2d4ac0874dfa912121695b1832c1c9f85bb92478a722b85cf5e1aa43c316cf0"
+    },
+    {
+      "path": "exploratory-game-data-token-handler.asm",
+      "bytes": 11009,
+      "sha256": "640f3c18820c28ed8fb5facbefb426c6d0ac74c79dcbef9813c0b08f5dd7b675"
+    },
+    {
+      "path": "exploratory-init-references.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "exploratory-loader-atom-refs.json",
+      "bytes": 6155,
+      "sha256": "b1027da73327f892a3280e74193c53c02a334521b83a056f59b8229f6025120a"
+    },
+    {
+      "path": "exploratory-loader-first.asm",
+      "bytes": 43819,
+      "sha256": "995e17905bd3c7c3ccc7d25ae4b80ca29f47583e67869474a8e8b580c3b9bee3"
+    },
+    {
+      "path": "exploratory-loader-pointers.json",
+      "bytes": 92,
+      "sha256": "8a1a663ba9cb61a2f867443d5ad8c063523a6d5f20ebb83efc36754bdc4f2e63"
+    },
+    {
+      "path": "exploratory-loader-second.asm",
+      "bytes": 134793,
+      "sha256": "ebe002501a1bf9a6a241b53848ae19471528e415b44e5f06f7ad5aa5505e86ba"
+    },
+    {
+      "path": "exploratory-modifier-database-0x1407d5072.asm",
+      "bytes": 11106,
+      "sha256": "f5d7919edbcba4db336f9d488772f0762c79cbb34b3a898cf2d659d74ff71efa"
+    },
+    {
+      "path": "exploratory-modifier-database-0x1407d527f.asm",
+      "bytes": 11106,
+      "sha256": "f5d7919edbcba4db336f9d488772f0762c79cbb34b3a898cf2d659d74ff71efa"
+    },
+    {
+      "path": "exploratory-modifier-db-singleton.asm",
+      "bytes": 5996,
+      "sha256": "f1e1701ab144a10780d11be14ced10947f6db28f8cbf5e650e41e7b473f00324"
+    },
+    {
+      "path": "exploratory-route.json",
+      "bytes": 316,
+      "sha256": "909e76b931d7b99715a4d1aace7a7b218aad56d0330d550563a7ed9baf0b1194"
+    },
+    {
+      "path": "exploratory-startup-caller.asm",
+      "bytes": 5028,
+      "sha256": "631cf53345d16aac35c385f698cdba9700f2e1c8c629d99a5cfd96fc4e2216c3"
+    },
+    {
+      "path": "exploratory-string-pointers.json",
+      "bytes": 432,
+      "sha256": "09edcdfb17674bdae36a8f217bec9a0dbeefdbf689617a90786de55728f06c24"
+    },
+    {
+      "path": "exploratory-template-direct-rip-refs.json",
+      "bytes": 20140,
+      "sha256": "0ccb209cf80ba5d192bedca5e37ae9184065d3f6dbfeb613f6a386877f9b1bd7"
+    },
+    {
+      "path": "exploratory-template-dtor.asm",
+      "bytes": 6833,
+      "sha256": "a2405439e626b12cb13add2d13fdf4043e60dc5ca728d773305f80bfaafa94e1"
+    },
+    {
+      "path": "freeze.py",
+      "bytes": 4065,
+      "sha256": "b69412231180505ec7c168115174c949ccd9b96ef1f81caf1ead8d4720f89454"
+    },
+    {
+      "path": "identity-before-after.json",
+      "bytes": 5882,
+      "sha256": "6f7a03c09ce210c0e0958761c983b08d97448a5498d1cca0257c9c936b0e2875"
+    },
+    {
+      "path": "observations.json",
+      "bytes": 164838,
+      "sha256": "9134296cd97527d6a93b41729a66f05ce11981833d15ef0046c2c734865e03af"
+    },
+    {
+      "path": "probe.py",
+      "bytes": 3019,
+      "sha256": "dd1d4fe7668b199786072fa70f7aad6c5deb52b5dc47b67238a43a7d37dceedb"
+    },
+    {
+      "path": "report.md",
+      "bytes": 10258,
+      "sha256": "76a3f4152b9f0ec38393743b97ea8c6abfdd9994c85f9b247fa067d58f2710fb"
+    },
+    {
+      "path": "reused-inputs.json",
+      "bytes": 1387,
+      "sha256": "b3bf5e3738aba10269871c3424a061b73280e2b3a1573f15aa77aa34c0bbaf65"
+    },
+    {
+      "path": "route_scan.py",
+      "bytes": 1711,
+      "sha256": "3b33044f74ac353f70898abbadbdbfb1b1cdf94c273f8ae80477516fab5153fa"
+    },
+    {
+      "path": "source-definition.json",
+      "bytes": 1695,
+      "sha256": "62f9195569c2e1aae824bfbdff4939ffcb28742cc9bc78df6aed479618a0d87c"
+    },
+    {
+      "path": "source-identities.json",
+      "bytes": 4877,
+      "sha256": "7fa56a5a9af5b2f5ffdd6ad4bf59eb13b1e25c2ba809b0bf536731ce06ecec9f"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 3140,
+      "sha256": "c3c5c2cbfa0b44b19339ec6eb713d75805d4b2a22c70f8c7d68b2e773e9d94b8"
+    },
+    {
+      "path": "verify.py",
+      "bytes": 9959,
+      "sha256": "4253833bfe7b352db168131d3331b707fe88c49a08428d974ad9432314d6d869"
+    }
+  ],
+  "freeze_contract": "No further writes. Manifest excludes itself to avoid self-reference; original predecessor tree remains byte-identical."
+}
