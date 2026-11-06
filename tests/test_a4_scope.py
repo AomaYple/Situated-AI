@@ -662,10 +662,10 @@ def test_inventory_maps_future_expansion_without_signing_it(initial) -> None:
 
 
 @pytest.mark.parametrize("stage", ["A4-8", "all"])
-def test_external_delivery_cannot_pass_without_implemented_verifier(stage: str) -> None:
+def test_external_delivery_cannot_pass_without_explicit_request(stage: str) -> None:
     from tools.ci import a4_scope
 
-    with pytest.raises(ValueError, match="external delivery verification is not implemented"):
+    with pytest.raises(ValueError, match="explicit --delivery-request"):
         a4_scope.delivery_gate(stage)
     a4_scope.delivery_gate("A4-7")
 

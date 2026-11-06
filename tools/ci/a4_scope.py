@@ -51,6 +51,9 @@ GATE_INPUTS: tuple[str, ...] = (
     "tools/ci/a4_schema.py",
     "tools/ci/run_check.py",
     "tests/test_a4_scope.py",
+    "tools/ci/a4_delivery.py",
+    "tests/test_a4_delivery.py",
+    "tests/test_a4_delivery_gate.py",
     *a4_discovery.PROJECTOR_INPUTS,
     "tools/ci/a4_classify.py",
     "tests/test_a4_classify.py",
@@ -631,12 +634,136 @@ def validate_crosschecks(
             verify_receipt(sources, receipts[identity], needed, nodes)
 
 
-def delivery_gate(stage: str) -> None:
-    """Fail closed until actual external Git/CI/release/deployment verification exists."""
-    if stage in {"A4-8", "all"}:
+def _delivery_file(root: Path, raw: str, limit: int) -> bytes:
+    """Read a bounded regular file without allowing aliases or linked ancestors."""
+    from pdx import deployment  # noqa: PLC0415
+    from tools.ci import a4_delivery  # noqa: PLC0415
+
+    a4_delivery._safe_rel(raw, "delivery input path")
+    deployment.reject_links(root / raw)
+    path = safe_path(root, raw)
+    if path.stat().st_size > limit:
+        raise ValueError(f"oversized delivery input: {raw}")
+    with path.open("rb") as stream:
+        value = stream.read(limit + 1)
+    if len(value) > limit:
+        raise ValueError(f"oversized delivery input: {raw}")
+    return value
+
+
+def _merge_delivery_identities(expected: dict[str, str], incoming: dict[str, str]) -> None:
+    """An input shared by multiple proof sets must retain one identical hash."""
+    for path, digest in incoming.items():
+        if path in expected and expected[path] != digest:
+            raise ValueError(f"delivery input identity conflict: {path}")
+        expected[path] = digest
+
+
+def delivery_gate(
+    stage: str,
+    root: Path = ROOT,
+    *,
+    request_path: str | None = None,
+    output_path: str | None = None,
+    authorized_userdir: Path | None = None,
+    sources: Sources | None = None,
+) -> dict[str, Any]:
+    """Run actual read-only delivery verification only after the product gates."""
+    if stage not in {"A4-8", "all"}:
+        return {"status": "pending", "evidence": "not_requested", "delivery_complete": False}
+    if request_path is None:
+        raise ValueError("A4-8 requires an explicit --delivery-request")
+
+    from pdx import config, deployment  # noqa: PLC0415
+    from pdx.publishing_contract import publication_config  # noqa: PLC0415
+    from tools.ci import a4_delivery  # noqa: PLC0415
+
+    if not request_path.startswith(("tools/out/", "docs/design/exec/A4-delivery/")):
         raise ValueError(
-            "A4-8 external delivery verification is not implemented; Git/CI/tag/Release/deployment evidence pending"
+            "delivery request must be below tools/out or the A4-delivery receipt directory"
         )
+    raw = _delivery_file(root, request_path, a4_delivery.MAX_JSON_BYTES)
+    request = a4_delivery.validate_request(a4_delivery.strict_json(raw))
+    if request["mode"] != "live":
+        raise ValueError("A4-8 requires live delivery; offline fixtures cannot sign completion")
+    if root.resolve() != config.REPO.resolve():
+        raise ValueError("live delivery requires the configured repository root")
+    if output_path is None:
+        raise ValueError("A4-8 requires an explicit --delivery-output directory")
+    a4_delivery._safe_rel(output_path, "delivery output path")
+    output = root / output_path
+    deployment.reject_links(output)
+    if (
+        not output_path.startswith("tools/out/")
+        or not output.is_dir()
+        or any(output.iterdir())
+        or not output.resolve().is_relative_to((root / "tools/out").resolve())
+    ):
+        raise ValueError("delivery output must be a precreated empty directory below tools/out")
+    run = (root / request["run_dir"]).resolve()
+    if (
+        output.resolve() == run
+        or output.resolve().is_relative_to(run)
+        or run.is_relative_to(output.resolve())
+    ):
+        raise ValueError("delivery output must be separate from the immutable publish run")
+    # Sources holds the actual product/inventory/witness bytes already checked by
+    # validate. Re-read from disk, never its cache, before and after external I/O.
+    checked = sources if sources is not None else Sources(root)
+    expected: dict[str, str] = {}
+    _merge_delivery_identities(
+        expected, {path: sha(value) for path, value in checked.bytes.items()}
+    )
+    _merge_delivery_identities(
+        expected,
+        {
+            path: sha(_delivery_file(root, path, a4_discovery.MAX_FILE_BYTES))
+            for path in GATE_INPUTS
+        },
+    )
+    # The verifier independently checks the exact Git production closure. Carry
+    # its entire declared closure through the last readback as well, including
+    # publication materials, generated Mod files and build dependencies.
+    _merge_delivery_identities(expected, request["production_snapshot"])
+    _merge_delivery_identities(expected, {request_path: sha(raw)})
+
+    def unchanged() -> None:
+        for path, digest in expected.items():
+            limit = (
+                a4_delivery.MAX_JSON_BYTES if path == request_path else a4_discovery.MAX_FILE_BYTES
+            )
+            if sha(_delivery_file(root, path, limit)) != digest:
+                raise ValueError(f"delivery input changed during verification: {path}")
+
+    unchanged()
+    git_reader = a4_delivery.GitReader(root)
+    github_reader = a4_delivery.GitHubReader.from_git(root)
+    workshop = a4_delivery.WorkshopReader(
+        publication_config(root / "docs/publishing")["published_file_id"], output
+    )
+    # Selection comes from the controller/config, never from the sidecar's claim.
+    result = a4_delivery.verify_delivery(
+        root,
+        request,
+        github=github_reader,
+        git=git_reader,
+        workshop=workshop,
+        authorized_userdir=authorized_userdir,
+    )
+    unchanged()
+    if (
+        result.get("mode") != "live"
+        or result.get("status") != "verified"
+        or result.get("evidence") != "live"
+        or result.get("delivery_complete") is not True
+    ):
+        raise ValueError("A4-8 requires verified actual live delivery completion")
+    return {
+        **result,
+        "request": {"path": request_path, "sha256": sha(raw)},
+        "checked_input_count": len(expected),
+        "readback_directory": output.relative_to(root).as_posix(),
+    }
 
 
 def inventory_mappings(
@@ -1028,6 +1155,9 @@ def validate(
     stage: str = "all",
     check_installation: bool = False,
     source_overrides: dict[str, bytes] | None = None,
+    delivery_request: str | None = None,
+    delivery_output: str | None = None,
+    authorized_userdir: Path | None = None,
 ) -> dict[str, Any]:
     check_shape(data, SCHEMA)
     if stage not in {"all", *(f"A4-{number}" for number in range(9))}:
@@ -1229,7 +1359,16 @@ def validate(
         }:
             raise ValueError("independent DLC coverage mismatch")
         inventory_mappings(rows, investigations, "A4-0" if checkpoint else stage)
-    delivery_gate(stage)
+    if stage in {"A4-8", "all"} and source_overrides:
+        raise ValueError("live delivery cannot accept source overrides")
+    delivery = delivery_gate(
+        stage,
+        root,
+        request_path=delivery_request,
+        output_path=delivery_output,
+        authorized_userdir=authorized_userdir,
+        sources=sources,
+    )
     return {
         "plan": "A4",
         "gate": stage,
@@ -1243,7 +1382,8 @@ def validate(
         "retained": list(conclusions.values()).count("retained"),
         "unsupported": list(conclusions.values()).count("unsupported"),
         "witness_receipts": len(receipts),
-        "delivery": "pending",
+        "delivery": delivery["status"],
+        "delivery_evidence": delivery,
         "future_pending": sum(conclusions[key] == "nonterminal" for key in set(rows) - selected),
         "inventory": data["inventory"]["status"],
         "index_checkpoint": checkpoint or {"status": "pending"},
@@ -1259,11 +1399,21 @@ def main() -> int:
     parser.add_argument("--ledger", default=LEDGER)
     parser.add_argument("--stage", default="all")
     parser.add_argument(
+        "--delivery-request", help="Repository-relative strict live delivery JSON sidecar"
+    )
+    parser.add_argument(
+        "--delivery-output", help="Precreated empty readback directory below tools/out"
+    )
+    parser.add_argument(
         "--request", help="JSON containing selection and bindings for witness execution"
     )
     parser.add_argument("--output", default="tools/out/a4-witness")
     args = parser.parse_args()
     try:
+        if (
+            args.delivery_request is not None or args.delivery_output is not None
+        ) and args.action != "validate":
+            raise ValueError("delivery options are only supported by validate")
         if args.action == "bootstrap":
             if (
                 Path(args.ledger).is_absolute()
@@ -1317,13 +1467,22 @@ def main() -> int:
             )
             return 0 if receipt["exit_code"] == 0 and not receipt["failed"] else 1
         else:
-            data = json.loads(safe_path(ROOT, args.ledger).read_bytes())
-            print(
-                json.dumps(
-                    validate(data, ROOT, stage=args.stage, check_installation=True),
-                    ensure_ascii=False,
-                )
+            ledger_raw = _delivery_file(ROOT, args.ledger, a4_discovery.MAX_FILE_BYTES)
+            data = a4_discovery.strict_json(ledger_raw)
+            result = validate(
+                data,
+                ROOT,
+                stage=args.stage,
+                check_installation=True,
+                delivery_request=args.delivery_request,
+                delivery_output=args.delivery_output,
             )
+            if (
+                args.stage in {"A4-8", "all"}
+                and _delivery_file(ROOT, args.ledger, a4_discovery.MAX_FILE_BYTES) != ledger_raw
+            ):
+                raise ValueError("ledger changed during delivery verification")
+            print(json.dumps(result, ensure_ascii=False))
     except (ValueError, OSError, KeyError, TypeError, ET.ParseError) as error:
         print(f"A4 gate failed: {error}", file=sys.stderr)
         return 1
