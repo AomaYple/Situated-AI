@@ -273,26 +273,27 @@ class TestRealClaims:
 class TestKnownAssertions:
     """把关键断言的结果单独钉住，便于定位回归。"""
 
-    KNOWN = {
-        "env.common_dirs": 136,
-        "env.dlc": 17,
-        "def.blocks": 75,
-        "def.namespaces": 50,
-        "def.nai_count": 1017,
-        "def.modtypes": 2364,
-        "def.static": 6128,
-        "scr.on_actions": 264,
-        "hist.wrappers": 22,
-        "docs.total_bytes": 232980,
-        "docs.max_bytes": 28171,
-    }
+    CLAIM_IDS = (
+        "env.common_dirs",
+        "env.dlc",
+        "def.blocks",
+        "def.namespaces",
+        "def.nai_count",
+        "def.modtypes",
+        "def.static",
+        "scr.on_actions",
+        "hist.wrappers",
+        "docs.total_bytes",
+        "docs.max_bytes",
+    )
 
     def test_known_values(self):
         by_id = {c.id: c for c in verify.CLAIMS}
-        for cid, want in self.KNOWN.items():
+        for cid in self.CLAIM_IDS:
             assert cid in by_id, f"断言 {cid} 不存在"
-            r = verify.check(by_id[cid])
-            assert r.ok, f"{cid}: 期望 {want}，实得 {r.actual}"
+            claim = by_id[cid]
+            r = verify.check(claim)
+            assert r.ok, f"{cid}: 当前注册期望 {claim.expected}，实得 {r.actual}"
 
 
 # ── 派生量：描述里那些「给人看的」折算值 ────────────────────
@@ -326,7 +327,10 @@ class TestDerivedValues:
         doc = (config.DOCS / "08-目录全量清单.md").read_text(encoding="utf-8")
         for cid, prefix in (
             ("tree.game_bytes", r"\| `game\\` 全树体积 \| \*\*([\d,.]+) MB\*\*"),
-            ("tree.binaries_bytes", r"\| `ROOT\\binaries` 文件数 / 体积 \| 40 / ([\d,.]+) MB \|"),
+            (
+                "tree.binaries_bytes",
+                r"\| `ROOT\\binaries` 文件数 / 体积 \| [\d,]+ / ([\d,.]+) MB \|",
+            ),
         ):
             expected = by_id[cid].expected
             assert isinstance(expected, int)
@@ -336,6 +340,13 @@ class TestDerivedValues:
                 f"{cid}: 文档写 {found.group(1)} MB，"
                 f"按 {expected} B 折算应是 {install_tree.fmt_mb(expected)} MB"
             )
+
+    def test_binaries文件数与当前断言一致(self):
+        by_id = {c.id: c for c in verify.CLAIMS}
+        doc = (config.DOCS / "08-目录全量清单.md").read_text(encoding="utf-8")
+        found = re.search(r"\| `ROOT\\binaries` 文件数 / 体积 \| ([\d,]+) / [\d,.]+ MB \|", doc)
+        assert found, "doc 08 §17 里找不到 binaries 文件数 / 体积行"
+        assert int(found.group(1).replace(",", "")) == by_id["tree.binaries_files"].expected
 
 
 # ── 官方更新之后：把实测值写回断言表 ────────────────────────

@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import pytest
 
-from pdx import verify
+from pdx import docs_mirror, snapshot, verify
 
 pytestmark = pytest.mark.unit
 
@@ -98,3 +98,71 @@ def test_完整快照不算数(tmp_path, monkeypatch) -> None:
     (tmp_path / "release-1.14.3.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     assert verify.latest_compact_snapshot() is None
+
+
+@pytest.mark.parametrize("manifest_version", [{"caligula_branch": "release/old"}, None, {}])
+def test_计数相同也拒绝快照清单身份混搭(monkeypatch, manifest_version) -> None:
+    version = {c.target: str(c.expected) for c in verify.CLAIMS if c.kind == "game_version_field"}
+    snap = snapshot.Snapshot(version=version, sections={}, compact=True)
+    manifest = {"版本": manifest_version, "文档": {"example.md": {"字节": 123}}}
+    monkeypatch.setattr(docs_mirror, "load_manifest", lambda: manifest)
+    claim = verify.Claim("docs.test", "test.md", "test", "md_total_bytes", "", 123)
+    result = verify.verify_from_snapshot(snap, [claim])
+    assert len(result) == 1
+    assert not result[0].ok
+    assert "身份" in result[0].error
+
+
+def test_同身份的快照清单仍核对真实计数(monkeypatch) -> None:
+    version = {c.target: str(c.expected) for c in verify.CLAIMS if c.kind == "game_version_field"}
+    snap = snapshot.Snapshot(version=version, sections={}, compact=True)
+    manifest = {"版本": version, "文档": {"example.md": {"字节": 123}}}
+    monkeypatch.setattr(docs_mirror, "load_manifest", lambda: manifest)
+    claims = [
+        verify.Claim("docs.good", "test.md", "test", "md_total_bytes", "", 123),
+        verify.Claim("docs.bad", "test.md", "test", "md_total_bytes", "", 124),
+    ]
+    results = verify.verify_from_snapshot(snap, claims)
+    assert [result.ok for result in results] == [True, False]
+
+
+def test_只筛计数也拒绝旧快照(monkeypatch) -> None:
+    version = {c.target: str(c.expected) for c in verify.CLAIMS if c.kind == "game_version_field"}
+    version["caligula_branch"] = "release/old"
+    snap = snapshot.Snapshot(version=version, sections={"dlc": {"one": []}}, compact=True)
+    claim = verify.Claim("env.count", "test.md", "test", "dlc_count", "", 1)
+    results = verify.verify_from_snapshot(snap, [claim])
+    assert len(results) == 1
+    assert not results[0].ok
+    assert "身份不同" in results[0].error
+
+
+@pytest.mark.parametrize("branch", [None, "", "caligula/release/wrong"])
+def test_只筛整数也拒绝缺失或错误的第四身份字段(branch) -> None:
+    version = {c.target: str(c.expected) for c in verify.CLAIMS if c.kind == "game_version_field"}
+    assert set(version) == {
+        "caligula_branch",
+        "caligula_rev",
+        "clausewitz_branch",
+        "clausewitz_rev",
+    }
+    if branch is None:
+        del version["clausewitz_branch"]
+    else:
+        version["clausewitz_branch"] = branch
+    snap = snapshot.Snapshot(version=version, sections={"dlc": {"one": []}}, compact=True)
+    claim = verify.Claim("env.count", "test.md", "test", "dlc_count", "", 1)
+    results = verify.verify_from_snapshot(snap, [claim])
+    assert len(results) == 1
+    assert not results[0].ok
+    assert "clausewitz_branch" in results[0].error
+
+
+def test_完整四字段身份仍核验整数实值() -> None:
+    version = {c.target: str(c.expected) for c in verify.CLAIMS if c.kind == "game_version_field"}
+    snap = snapshot.Snapshot(version=version, sections={"dlc": {"one": []}}, compact=True)
+    claims = [
+        verify.Claim("env.good", "test.md", "test", "dlc_count", "", 1),
+        verify.Claim("env.bad", "test.md", "test", "dlc_count", "", 2),
+    ]
+    assert [r.ok for r in verify.verify_from_snapshot(snap, claims)] == [True, False]

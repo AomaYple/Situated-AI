@@ -286,3 +286,59 @@ def test_measure_rejects_nondeterminism_in_any_timed_round():
     values = iter(["stable", "different", "stable", "stable"])
     with pytest.raises(ValueError, match="不确定"):
         performance.measure(lambda: next(values), rounds=3)
+
+
+_FROZEN_MIGRATION_JUNIT = "research/vanilla-ai/1.15.0/classification/evidence/migration/junit.xml"
+
+
+def _frozen_migration_copy(tmp_path, monkeypatch):
+    relative = _FROZEN_MIGRATION_JUNIT
+    original = (repo_audit.REPO / relative).read_bytes()
+    target = tmp_path / relative
+    target.parent.mkdir(parents=True)
+    target.write_bytes(original)
+    monkeypatch.setattr(repo_audit, "git_paths", lambda *_args: {relative})
+    return target, original
+
+
+def test_frozen_migration_raw_cr_is_preserved_by_exact_identity(tmp_path, monkeypatch):
+    target, original = _frozen_migration_copy(tmp_path, monkeypatch)
+    assert b"\r" in original
+    assert (
+        hashlib.sha256(original).hexdigest()
+        == repo_audit.FROZEN_CR_EVIDENCE[_FROZEN_MIGRATION_JUNIT][0]
+    )
+    assert repo_audit.source_issues(tmp_path) == []
+    assert target.read_bytes() == original
+
+
+@pytest.mark.parametrize("normalized", [False, True])
+def test_frozen_migration_same_path_changed_bytes_fail(tmp_path, monkeypatch, normalized):
+    target, original = _frozen_migration_copy(tmp_path, monkeypatch)
+    changed = original.replace(b"\r\n", b"\n") if normalized else original + b"<!-- changed -->"
+    assert changed != original
+    target.write_bytes(changed)
+    issues = repo_audit.source_issues(tmp_path)
+    assert len(issues) == 1
+    assert "冻结证据 SHA-256 漂移" in issues[0]
+    assert target.read_bytes() == changed
+
+
+def test_frozen_migration_wrong_registered_sha_fails(tmp_path, monkeypatch):
+    _target, original = _frozen_migration_copy(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        repo_audit,
+        "FROZEN_CR_EVIDENCE",
+        {_FROZEN_MIGRATION_JUNIT: ("0" * 64, "wrong registration")},
+    )
+    assert hashlib.sha256(original).hexdigest() != "0" * 64
+    assert "冻结证据 SHA-256 漂移" in repo_audit.source_issues(tmp_path)[0]
+
+
+@pytest.mark.parametrize("relative", ["research/unregistered.xml", "ordinary.xml"])
+def test_unregistered_cr_xml_is_still_rejected(tmp_path, monkeypatch, relative):
+    target = tmp_path / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"<testsuite/>\r\n")
+    monkeypatch.setattr(repo_audit, "git_paths", lambda *_args: {relative})
+    assert repo_audit.source_issues(tmp_path) == [f"{relative}: cr"]

@@ -1308,6 +1308,33 @@ STATE_DEVASTATION_SOURCE = "common/ideologies/01_character_ideologies.txt"
 STATE_DEVASTATION_SHA256 = "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4"
 
 
+STATE_DEVASTATION_SOURCES = {
+    STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
+    "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
+}
+
+
+def war_memory_contract() -> dict[str, object]:
+    """The existing original observation's source and finite lifetime contract.
+
+    Current native preflight still calls the full AST/source validator below.
+    This export neither adds a reader nor grants any persistent write.
+    """
+    source = "common/on_actions/00_code_on_actions.txt"
+    return {
+        "source": source,
+        "source_sha256": STATE_DEVASTATION_SOURCES[source],
+        "getter": "has_variable",
+        "argument": "recently_lost_war",
+        "scope": "root",
+        "unit": "boolean",
+        "created_by": "on_lost_war; exists=scope:victim_of_wargoal",
+        "days": 1825,
+        "timing": "consumer; reread existing original variable until expiry",
+        "mod_persistent_writes": 0,
+    }
+
+
 def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
     """Pin the native state ratio AST and victim-limited five-year memory.
 
@@ -1316,10 +1343,7 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
     """
     from .textio import normalized_text  # noqa: PLC0415
 
-    sources = {
-        STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
-        "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
-    }
+    sources = STATE_DEVASTATION_SOURCES
     parsed = {}
     for source, expected in sources.items():
         text = texts.get(source)

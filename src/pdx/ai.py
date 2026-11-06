@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING
 
 from . import config, defines
 from .cache import parse_cached
-from .doc_tables import KeyedTableSpec
+from .doc_tables import KeyedTableSpec, TableSpec
 from .model import Block, Scalar
 from .usage import ai_script_values_key_stats, ai_script_values_referenced
 
@@ -226,9 +226,105 @@ def doc09_field_rows() -> list[tuple[str, dict[int, str]]]:
     ]
 
 
-def doc_table_specs() -> list[KeyedTableSpec]:
+def file_map_rows() -> list[tuple[str, dict[int, str]]]:
+    """doc03 文件地图的当前文件数；组合路径保持每个组成部分的独立计数。"""
+    groups = (
+        ("common\\ai_strategies\\", ("common/ai_strategies",)),
+        ("common\\defines\\00_ai.txt", ("common/defines/00_ai.txt",)),
+        (
+            "common\\script_values\\ai_script_values.txt",
+            ("common/script_values/ai_script_values.txt",),
+        ),
+        (
+            "common\\ai_strategic_region_stance_types\\",
+            ("common/ai_strategic_region_stance_types",),
+        ),
+        (
+            "common\\objectives\\` + `objective_subgoals\\` + `objective_subgoal_categories\\",
+            (
+                "common/objectives",
+                "common/objective_subgoals",
+                "common/objective_subgoal_categories",
+            ),
+        ),
+        (
+            "common\\script_values\\objective_values.txt",
+            ("common/script_values/objective_values.txt",),
+        ),
+        ("common\\on_actions\\", ("common/on_actions",)),
+    )
+    result = []
+    for key, paths in groups:
+        sizes = []
+        for rel in paths:
+            path = config.GAME / rel
+            sizes.append(
+                str(
+                    int(path.is_file())
+                    if not path.is_dir()
+                    else sum(p.is_file() for p in path.rglob("*"))
+                )
+            )
+        result.append((key, {1: "+".join(sizes)}))
+    return result
+
+
+def strategy_file_rows() -> list[tuple[str, dict[int, str]]]:
+    """当前策略文件的字节数与非变量顶层块数；type 说明列保留作者判读。"""
+    return [
+        (
+            p.name,
+            {
+                1: f"{p.stat().st_size:,}",
+                2: str(
+                    sum(
+                        not a.is_variable and isinstance(a.value, Block)
+                        for a in parse_cached(p).top_assignments
+                    )
+                ),
+            },
+        )
+        for p in sorted((config.GAME / "common/ai_strategies").glob("*.txt"))
+    ]
+
+
+def strategy_list_rows() -> list[str]:
+    """完整当前策略键与其直接 type；不推断中文语义或默认行为。"""
+    rows = []
+    for p in sorted((config.GAME / "common/ai_strategies").glob("*.txt")):
+        for a in parse_cached(p).top_assignments:
+            if a.is_variable or not isinstance(a.value, Block):
+                continue
+            types = [
+                t.value.unquoted
+                for t in a.value.assignments()
+                if t.key == "type" and isinstance(t.value, Scalar)
+            ]
+            rows.append(
+                f"| `{p.name}` | `{a.key}` | "
+                + (" / ".join(f"`{t}`" for t in types) if types else "未声明")
+                + " |"
+            )
+    return rows
+
+
+def doc_table_specs() -> list[KeyedTableSpec | TableSpec]:
     """doc 03 一张 + doc 09 一张 + doc 10 两张（名字前缀区分归属，由 docgen 分发）。"""
     return [
+        KeyedTableSpec(
+            name="doc03 文件地图",
+            header="| 位置 | 文件数 | 作用 |",
+            cells=file_map_rows,
+            append_new=False,
+        ),
+        KeyedTableSpec(
+            name="doc03 策略文件", header="| 文件 | 字节 | 策略块数 |", cells=strategy_file_rows
+        ),
+        TableSpec(
+            name="doc03 当前完整策略名单",
+            header="| 来源文件 | 策略键 | 直接 `type` |",
+            rows=strategy_list_rows,
+        ),
         KeyedTableSpec(
             name="doc03 NAI 参数前缀 Top25",
             header="| 前缀 | 数量 | 领域 |",

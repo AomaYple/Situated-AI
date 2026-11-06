@@ -85,8 +85,8 @@ def _values(**changes):
         ({"literacy": 0.5}, 1.125),
         ({"literacy": None}, 1.10),
         ({"literacy": -0.1}, 1.10),
-        ({"industrial_route": False}, 1),
-        ({"industrial_route": None}, 1),
+        ({"industrial_route": False}, 1.125),
+        ({"industrial_route": None}, 1.125),
         ({"tools_balance": 0}, 1),
         ({"tools_balance": None}, 1),
         ({"default": True}, 0.875),  # Need and relation survive independent -.25 cost.

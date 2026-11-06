@@ -827,16 +827,21 @@ def evaluate_ir(
         selected = rules.enabled_domains if enabled_domains is None else enabled_domains
         if selected - {rule.domain for rule in rules.rules}:
             raise ValueError("领域开关含未登记的名称")
-        overrides = {}
+        overrides, cost_overrides = {}, {}
         for binding in rules.port_bindings:
             rule = next(item for item in rules.rules if item.id == binding.definition)
-            binding.graph.assert_predicates(
-                binding.port, rule.conditions, {r.key: r for r in rules.readers}
-            )
+            binding.validate(rule, {r.key: r for r in rules.readers})
+            if binding.role == "cost":
+                cost_overrides[binding.definition] = binding.cost_values(
+                    values, {r.key: r for r in rules.readers}
+                )
+                continue
             overrides[binding.definition] = binding.evaluate(
                 values, {r.key: r for r in rules.readers}
             )
-        return programs.evaluate(rules, values, selected, guard_overrides=overrides)
+        return programs.evaluate(
+            rules, values, selected, guard_overrides=overrides, cost_overrides=cost_overrides
+        )
     readers = {reader.key: reader for reader in rules.readers}
     for field, candidates in rules.groups(enabled_domains).items():
         for rule in candidates:
@@ -1415,19 +1420,22 @@ def patch(
                     None,
                 )
                 if port_binding is not None:
-                    port_binding.graph.assert_predicates(
-                        port_binding.port, rule.conditions, readers
-                    )
-                    guards[rule.id] = port_binding.graph.guard(
+                    port_binding.validate(rule, readers)
+                    port_guard = port_binding.graph.guard(
                         port_binding.source, rule.id, port_binding.port
-                    ).when_true
-                    if rule.required_known_facts:
+                    )
+                    if port_binding.role != "cost":
+                        guards[rule.id] = port_guard.when_true
+                    if rule.required_known_facts and port_binding.role != "cost":
                         _, _, _, known = guard_parts(replace(rule, conditions=()))
                         guards[rule.id] = (
                             "AND = { " + guards[rule.id] + " " + " ".join(known) + " }"
                         )
                 if rule.conservative_unknown_facts:
                     cost_guards[rule.id] = cost_guard_parts(rule)
+                    if port_binding is not None and port_binding.role == "cost":
+                        core, _ = cost_guards[rule.id]
+                        cost_guards[rule.id] = (core, port_guard.when_false)
                 if (description := description_key(rule)) is not None:
                     descriptions[rule.id] = description
                 writer = bundle_writers.get((str(consumer_source), rule.id))

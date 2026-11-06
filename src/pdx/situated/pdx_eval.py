@@ -54,6 +54,7 @@ _PARAMETER_QUERIES = frozenset(
         "has_law_or_variant",
         "has_potential_resource",
         "has_strategy",
+        "has_game_rule",
         "has_technology_researched",
         "has_treaty_alliance_with",
         "has_truce_with",
@@ -651,7 +652,34 @@ def _condition(
             actual = facts[item.key]
             scalar = _scalar(item, label=item.key)
             expected: object = _literal(scalar)
-            if isinstance(expected, str) and _REFERENCE.fullmatch(expected):
+            if (
+                item.key == "country_rank"
+                and isinstance(expected, str)
+                and expected.startswith("rank_value:")
+            ):
+                # Native symbolic thresholds are fixture observations, not
+                # hard-coded engine ordering. Only the construction consumer's
+                # actual symbols are supported, and absent values stay unknown.
+                if expected not in {
+                    "rank_value:great_power",
+                    "rank_value:major_power",
+                    "rank_value:unrecognized_major_power",
+                }:
+                    raise UnsupportedPdxError("未登记的原版国家等级符号")
+                symbols = facts.get("rank_values")
+                if symbols is not None and not isinstance(symbols, Mapping):
+                    raise UnsupportedPdxError("国家等级符号观测必须是映射")
+                expected = symbols.get(expected) if isinstance(symbols, Mapping) else None
+                if any(
+                    value is not None
+                    and (
+                        type(value) not in (int, float)
+                        or not math.isfinite(cast("int | float", value))
+                    )
+                    for value in (actual, expected)
+                ):
+                    raise UnsupportedPdxError("国家等级和符号观测必须是有限数或未知")
+            elif isinstance(expected, str) and _REFERENCE.fullmatch(expected):
                 expected = _resolve_reference(expected, anchor)
             elif not scalar.quoted and (item.key, item.op, expected) in {
                 ("tax_capacity", "<", "tax_capacity_usage"),
@@ -841,6 +869,28 @@ def _numeric_scalar(
             return None
         if type(value) not in (int, float) or not 0 <= value <= 5 or not math.isfinite(value):
             raise UnsupportedPdxError("economic_dependence必须是0到5的有限数值或未知")
+        return float(value)
+    # These unquoted getters occur in the complete locked native construction
+    # field. This finite static interpreter does not discover arbitrary names.
+    if scalar.text in {
+        "gdp",
+        "investment_pool_income",
+        "fixed_income",
+        "total_population",
+        "diplomatic_pact_expense_ratio",
+    }:
+        if facts is None:
+            return None
+        actor = facts.get("ROOT", facts)
+        if actor is None:
+            return None
+        if not isinstance(actor, Mapping):
+            raise UnsupportedPdxError("原版国家数值getter的ROOT必须是国家映射")
+        value = actor.get(scalar.text)
+        if value is None:
+            return None
+        if type(value) not in (int, float) or not math.isfinite(value):
+            raise UnsupportedPdxError("原版国家数值getter必须是有限数或未知，不能是bool")
         return float(value)
     return _number(assignment)
 

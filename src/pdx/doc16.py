@@ -46,6 +46,7 @@ from typing import TYPE_CHECKING
 from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, TableSpec, norm_key
+from .install_tree import _spec_excerpt
 from .model import Block
 from .usage import (
     all_field_occurrences,
@@ -698,6 +699,11 @@ def file_appendix_rows() -> list[str]:
 def doc_table_specs() -> list[TableSpec | KeyedTableSpec]:
     """doc 16 剩下的八张表（10 条 spec：两张两栏并排的左右各一条）。"""
     return [
+        _spec_excerpt(
+            "doc16 战略区域文件字节",
+            "| 文件 | 字节 | 说明 |",
+            config.GAME / "common/strategic_regions",
+        ),
         KeyedTableSpec(
             name="doc16 目录总览",
             header="| # | 目录 |",

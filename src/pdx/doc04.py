@@ -410,8 +410,8 @@ def overview_rows() -> list[tuple[str, dict[int, str]]]:
 def param_summary_rows(dir_rel: str) -> list[tuple[str, dict[int, str]]]:
     """``| 目录 | 使用该语法的文件数 | 出现次数 |`` 的单行汇总。
 
-    第一列写的是 ``7 / 40``（用到的文件数 / 该目录 ``.txt`` 总数）——
-    生成器只换**分子**，分母留给文档（``_merge_cell`` 的「N / M」规则）。
+    第一列写的是 ``7 / 40``（用到的文件数 / 该目录 ``.txt`` 总数）；
+    分子和分母都归生成器，由规格的 replace_columns 整格更新。
     """
     base = config.GAME / dir_rel
     per = param_counts(dir_rel)
@@ -451,6 +451,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             cells=lambda: param_summary_rows("common/scripted_effects"),
             occurrence=0,
             append_new=False,
+            replace_columns=frozenset({1}),
         ),
         KeyedTableSpec(
             name="doc04 scripted_triggers 参数汇总",
@@ -458,6 +459,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             cells=lambda: param_summary_rows("common/scripted_triggers"),
             occurrence=1,
             append_new=False,
+            replace_columns=frozenset({1}),
         ),
         KeyedTableSpec(
             name="doc04 scripted_effects 参数分布",

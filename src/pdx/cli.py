@@ -734,8 +734,8 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 
 > 数据版本：Victoria 3 `{config.game_version().get("caligula_branch", "?")}`
 > （`caligula_rev = {config.game_version().get("caligula_rev", "?")[:12]}…`）。
-> 本文**每次运行 `v3 index` 都会整体重新生成**，因此其中的数字始终对应当前安装，
-> 不存在「文档数字过期」的问题 —— 这也是它与其他主题文档的区别。
+> 本文记录最后一次 `v3 index` 运行时的安装身份与数字；安装升级后必须重新生成，
+> 并核对以上来源指纹。命令存在或曾运行过，不证明此文件仍与当前安装一致。
 
 ## 提取口径
 
@@ -755,7 +755,9 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 所以「本索引 {total_files:,} 个文件」与「`common` 全树 {all_txt:,} 个 `.txt`」
 差的就是这 {len(loose_files)} 个 —— 两者都对，只是口径不同，**不要为了对齐而互相改**。
 
-## 勘误记录
+## 历史勘误记录（1.14 系列）
+
+以下固定数字说明旧提取器的失效方式，不是上方当前来源的统计。
 
 ### 勘误 1：早期版本漏计含连字符的键
 
@@ -771,7 +773,7 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 
 ### 勘误 2：早期版本漏计文件首键（BOM）与缩进的顶层键
 
-`common` 下 {all_txt:,} 个 `.txt` 中 **3,002 个带 UTF-8 BOM**，且部分文件的顶层键**带前导空格**。
+旧 1.14 系列盘点记录中，`common` 下 **3,002 个 `.txt` 带 UTF-8 BOM**，且部分文件的顶层键**带前导空格**。
 用「行首无缩进」判定顶层的做法会漏掉它们。实测 `static_modifiers` 因此少算 7 个：
 
 | 目录 | 修正前 | 修正后 |

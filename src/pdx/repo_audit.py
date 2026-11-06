@@ -14,6 +14,14 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 CHUNK_SIZE = 64 * 1024
+# 原始失败证据保留原始字节；只有这一精确来源身份允许 CR。
+# 不按 research 目录或 XML 后缀放行，也不从可修改的收据反向授予豁免。
+FROZEN_CR_EVIDENCE: dict[str, tuple[str, str]] = {
+    "research/vanilla-ai/1.15.0/classification/evidence/migration/junit.xml": (
+        "80f2e53b384497ef8fdd39c0de2c177af87a6daa4f904929a44b51f9ca86aa8a",
+        "A4 Task8 首轮迁移回归原始 JUnit：308 通过、10 失败；保留失败原件，不规范化或重签",
+    ),
+}
 BINARY_SUFFIXES = frozenset(
     [
         ".png",
@@ -154,7 +162,14 @@ def source_issues(root: Path) -> list[str]:
         if path.suffix.lower() in BINARY_SUFFIXES:
             continue
         result = inspect_bytes(path)
-        bad = [key for key in ("bom", "cr", "nul") if result[key]]
+        frozen = FROZEN_CR_EVIDENCE.get(rel)
+        if frozen is not None and result["sha256"] != frozen[0]:
+            issues.append(
+                f"{rel}: 冻结证据 SHA-256 漂移（期望 {frozen[0]}，实际 {result['sha256']}）；"
+                f"{frozen[1]}"
+            )
+            continue
+        bad = [key for key in ("bom", "cr", "nul") if result[key] and not (key == "cr" and frozen)]
         if not result["utf8"]:
             bad.append("non_utf8")
         if bad:

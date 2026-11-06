@@ -8,7 +8,6 @@ cost fallback belongs to the common scalar program, not an unknown detector.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import operator
@@ -18,6 +17,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from .evidence import Observation
 from .expressions import Truth, truth_all, truth_any, truth_not
 from .relations import RuleRelationProjection, validate_execution
 
@@ -35,7 +35,7 @@ _ID = re.compile(r"[a-z][a-z0-9_]*\Z")
 _META = {"domain", "entity", "entity_kind", "unit", "direction", "refresh", "unknown", "cost"}
 _LEAF = {"reader_source", "reader_key", "reader", "op", "value"}
 _OPS = {"=": operator.eq, "<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge}
-_DIRECTIONS = {"need", "capacity", "opportunity", "risk", "cost", "commitment"}
+_DIRECTIONS = {"need", "capacity", "opportunity", "risk", "cost", "commitment", "recovery"}
 _MAXIMUM_BUDGET = {"nodes": 256, "depth": 32, "expanded_leaves": 4096, "evaluation_cost": 16384}
 DEFAULT_SOURCE = Path(__file__).resolve().parents[3] / "mod/decisions/domain_ports.toml"
 
@@ -67,6 +67,7 @@ class Origin:
     signature: str
     entity: str
     entity_kind: str
+    observation: Observation
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +85,8 @@ class Port:
     reader: Reader | None = None
     op: str = "="
     expected: bool | float = True
+    unit: str = "flag"
+    refresh: str = "consumer"
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,18 +102,125 @@ class PortUse:
 
 
 @dataclass(frozen=True, slots=True)
+class PortContribution:
+    writer_id: str
+    consumer_id: str
+    field: str
+    actor: str
+    target: str
+    operation: str
+    output_unit: str
+    semantic_direction: str
+    causal_id: str
+    origins: tuple[str, ...]
+    unknown: str
+    native_cost: str
+
+
+def contribution(writer: WriterDecisionIR, use: PortUse, graph: PortGraph) -> PortContribution:
+    if (writer.source, writer.definition) != (use.source, use.definition):
+        raise ValueError("端口贡献缺少精确生产writer")
+    node = next(port for port in graph.ports if port.id == use.port)
+    context = writer.evaluation_context
+    if context is None or context.status != "observed":
+        raise ValueError("端口贡献缺少实际observed求值上下文")
+    bindings = (context.actor_scope, *context.targets, *context.auxiliary_scopes)
+    for origin in graph.origins(use.port):
+        if not any(
+            binding is not None
+            and (binding.name, binding.kind, (binding.role,))
+            == (origin.entity, origin.entity_kind, origin.observation.roles)
+            for binding in bindings
+        ):
+            raise ValueError("端口贡献原始观测对象/角色不能映射到实际writer")
+    cause = use.relation_cause or (
+        writer.legacy.contribution_group
+        if writer.legacy is not None
+        else writer.action.cause_group
+        if writer.action is not None
+        else ""
+    )
+    return PortContribution(
+        writer.writer_id,
+        writer.consumer_id,
+        writer.field,
+        writer.actor,
+        writer.target,
+        writer.operation,
+        "multiplier_delta" if writer.operation == "multiply" else "additive_delta",
+        use.role,
+        cause,
+        tuple(origin.identity for origin in graph.origins(use.port)),
+        node.unknown,
+        "retain_native_cost; supplemental_new_commitment_pressure"
+        if use.role == "cost"
+        else "retain_native_cost",
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class PortBinding:
     source: str
     definition: str
     port: str
     graph: PortGraph
     required_known: tuple[str, ...] = ()
+    role: str = "need"
+    contribution: PortContribution | None = None
+    writer: WriterDecisionIR | None = None
+
+    def validate(self, rule: Rule, readers: Mapping[str, Reader]) -> None:
+        self.graph.assert_predicates(self.port, rule.conditions, readers)
+        if self.required_known != rule.required_known_facts:
+            raise ValueError("端口核心已知输入与实际规则不一致")
+        if self.contribution is not None and (
+            self.contribution.field != ".".join(rule.field)
+            or self.contribution.operation != rule.operation
+            or self.contribution.causal_id != rule.contribution_group
+            or self.contribution.semantic_direction != self.role
+            or self.contribution.origins
+            != tuple(origin.identity for origin in self.graph.origins(self.port))
+        ):
+            raise ValueError(
+                "端口贡献consumer/单位/方向/因果身份与执行规则不一致，不能重复借用另一原因"
+            )
+        if self.writer is not None:
+            uses = [
+                use
+                for use in self.graph.uses
+                if (use.source, use.definition, use.port, use.role)
+                == (self.source, self.definition, self.port, self.role)
+            ]
+            if len(uses) != 1 or self.contribution != contribution(
+                self.writer, uses[0], self.graph
+            ):
+                raise ValueError("端口贡献与实际唯一writer的consumer/对象/角色/单位合同漂移")
+        if self.role == "cost":
+            if (
+                rule.semantic_role != "cost"
+                or set(rule.conservative_unknown_facts) != {p.fact for p in rule.conditions}
+                or rule.unknown_cost_required_known_facts
+                or self.graph.guard(self.source, self.definition, self.port).unknown_policy
+                != "conservative"
+            ):
+                raise ValueError("成本端口必须绑定原有core/proven-cheap/else-conservative合同")
+        elif rule.semantic_role == "cost":
+            raise ValueError("成本不能使用普通need/recovery守卫")
 
     def evaluate(self, values: Mapping[str, object], readers: Mapping[str, Reader]) -> bool:
         self.graph.guard(self.source, self.definition, self.port)
         return self.graph.evaluate(
             self.port, {(self.source, key): value for key, value in values.items()}
         ) is True and all(readers[key].accepts(values.get(key)) for key in self.required_known)
+
+    def cost_values(
+        self, values: Mapping[str, object], readers: Mapping[str, Reader]
+    ) -> tuple[bool, bool]:
+        if self.role != "cost":
+            raise ValueError("非成本端口不能替换成本核心与免除守卫")
+        raw = {(self.source, key): value for key, value in values.items()}
+        core = all(readers[key].accepts(values.get(key)) for key in self.required_known)
+        return core, self.graph.evaluate(self.port, raw) is False
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +325,27 @@ class PortGraph:
     expansions: tuple[tuple[str, int], ...]
     costs: tuple[tuple[str, int], ...]
 
+    def validate_origins(self, port_id: str) -> None:
+        for leaf in self.leaves(port_id):
+            if leaf.reader is None:
+                raise ValueError("端口原始叶缺少Reader")
+            expected = _canonical(reader_signature(leaf.reader))
+            for origin in self.origins(leaf.id):
+                observation = origin.observation
+                if (
+                    leaf.unit != "flag"
+                    or leaf.refresh != "consumer"
+                    or origin.identity != observation.identity
+                    or origin.signature != expected
+                    or observation.getter != expected
+                    or observation.original_unit != leaf.reader.unit
+                    or observation.source != origin.reader_source
+                    or observation.timing != leaf.refresh
+                    or (observation.entity, observation.entity_kind)
+                    != (leaf.entity, leaf.entity_kind)
+                ):
+                    raise ValueError("端口原始观测完整身份/单位/对象/时机漂移")
+
     def leaves(self, port_id: str) -> tuple[Port, ...]:
         by_id = {port.id: port for port in self.ports}
         node = by_id[port_id]
@@ -258,6 +389,7 @@ class PortGraph:
         predicate_values: Mapping[str, object] | None = None,
     ) -> Truth:
         """Accept original (source,key) values only, never caller aliases."""
+        self.validate_origins(port_id)
         evaluated: dict[str, Truth] = {}
         by_id = {port.id: port for port in self.ports}
         for key in self.topological:
@@ -283,6 +415,7 @@ class PortGraph:
 
     def guard(self, source: str, definition: str, port_id: str) -> PortGuard:
         """Lower only a declared actual writer use, retaining scoped readers."""
+        self.validate_origins(port_id)
         if not any(
             (use.source, use.definition, use.port) == (source, definition, port_id)
             for use in self.uses
@@ -307,8 +440,17 @@ class PortGraph:
                 positive, negative = rendered[port.dependencies[0]]
                 rendered[key] = negative, positive
             else:
-                positive = " ".join(rendered[dep][0] for dep in port.dependencies)
-                negative = " ".join(rendered[dep][1] for dep in port.dependencies)
+                # A scoped leaf is two adjacent conditions (exists + scope).
+                # Preserve that conjunction when it becomes an OR operand;
+                # otherwise existence alone can waive a real financing cost.
+                positive = " ".join(
+                    f"AND = {{ {rendered[dep][0]} }}" if port.mode == "any" else rendered[dep][0]
+                    for dep in port.dependencies
+                )
+                negative = " ".join(
+                    f"AND = {{ {rendered[dep][1]} }}" if port.mode == "all" else rendered[dep][1]
+                    for dep in port.dependencies
+                )
                 rendered[key] = (
                     f"{'AND' if port.mode == 'all' else 'OR'} = {{ {positive} }}",
                     f"{'OR' if port.mode == 'all' else 'AND'} = {{ {negative} }}",
@@ -481,6 +623,8 @@ def from_data(
     *,
     readers: Mapping[ReaderKey, Reader],
     writers: Mapping[WriterKey, EvaluationContext],
+    source_hashes: Mapping[str, str],
+    source_proofs: Mapping[str | ReaderKey, tuple[str, ...]],
 ) -> PortGraph:
     """Validate against actual caller-supplied policy readers and writer contexts."""
     if set(data) != {"schema", "limits", "ports", "uses"} or data["schema"] != 1:
@@ -515,11 +659,65 @@ def from_data(
         node = by_id[key]
         if node.reader is not None and node.reader_key is not None:
             signature = _canonical(reader_signature(node.reader))
-            identity = hashlib.sha256(
-                _canonical((signature, node.entity, node.entity_kind)).encode()
-            ).hexdigest()
+            roles: set[str] = set()
+            proof = set(
+                source_proofs.get(node.reader_key, source_proofs.get(node.reader_key[0], ()))
+            )
+            for raw_use in data["uses"]:
+                stack, reached = [raw_use["port"]], set()
+                while stack:
+                    member = stack.pop()
+                    if member in reached or member not in by_id:
+                        continue
+                    reached.add(member)
+                    stack.extend(by_id[member].dependencies)
+                aliases = {
+                    candidate.id
+                    for candidate in nodes
+                    if candidate.reader is not None
+                    and candidate.reader_key is not None
+                    and candidate.reader_key[0] == node.reader_key[0]
+                    and reader_signature(candidate.reader) == reader_signature(node.reader)
+                    and (candidate.entity, candidate.entity_kind) == (node.entity, node.entity_kind)
+                }
+                if not aliases & reached:
+                    continue
+                context = writers.get((raw_use["source"], raw_use["definition"]))
+                if context is None or context.status != "observed":
+                    raise ValueError("原始观测缺少实际writer可证上下文")
+                bindings = (context.actor_scope, *context.targets, *context.auxiliary_scopes)
+                matching = [
+                    binding
+                    for binding in bindings
+                    if binding is not None
+                    and (binding.name, binding.kind) == (node.entity, node.entity_kind)
+                ]
+                if len(matching) != 1:
+                    raise ValueError("原始观测实体/角色与writer上下文不匹配")
+                roles.add(matching[0].role)
+                proof.update(context.evidence)
+            observation = Observation(
+                node.reader_key[0],
+                source_hashes.get(node.reader_key[0], ""),
+                signature,
+                node.entity,
+                node.entity_kind,
+                tuple(sorted(roles)),
+                tuple(sorted(proof)),
+                node.reader.unit,
+                node.refresh,
+                "preserve_unknown",
+                node.cost,
+            )
             origins[key] = (
-                Origin(identity, *node.reader_key, signature, node.entity, node.entity_kind),
+                Origin(
+                    observation.identity,
+                    *node.reader_key,
+                    signature,
+                    node.entity,
+                    node.entity_kind,
+                    observation,
+                ),
             )
             depth[key], expanded[key], costs[key] = 1, 1, node.cost
         else:
@@ -544,7 +742,9 @@ def from_data(
         visiting.remove(key)
         order.append(key)
 
-    for key in by_id:
+    # Diagnose malformed declared edges before unrelated unused leaves need a
+    # legal consumer context. Every node still must be reached below.
+    for key in dict.fromkeys([*(use["port"] for use in data["uses"]), *by_id]):
         visit(key)
     uses = []
     used: set[str] = set()
@@ -615,7 +815,13 @@ def load(
     *,
     readers: Mapping[ReaderKey, Reader],
     writers: Mapping[WriterKey, EvaluationContext],
+    source_hashes: Mapping[str, str],
+    source_proofs: Mapping[str | ReaderKey, tuple[str, ...]],
 ) -> PortGraph:
     return from_data(
-        tomllib.loads(path.read_text(encoding="utf-8")), readers=readers, writers=writers
+        tomllib.loads(path.read_text(encoding="utf-8")),
+        readers=readers,
+        writers=writers,
+        source_hashes=source_hashes,
+        source_proofs=source_proofs,
     )

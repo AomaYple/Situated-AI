@@ -161,6 +161,16 @@ def entries(data: dict[str, object] | None = None) -> dict[str, dict[str, object
     return raw if isinstance(raw, dict) else {}
 
 
+def catalogue_rows(common: bool) -> list[tuple[str, dict[int, str]]]:
+    """当前清单完整路径与 B/L；作者分类、功能域和摘要列不作机械推断。"""
+    docs = sorted(entries().items())
+    return [
+        (key, {0: str(i), 2: str(meta["字节"]), 3: str(meta["行数"])})
+        for i, (key, meta) in enumerate(docs, 1)
+        if key.startswith("game/common/") == common
+    ]
+
+
 def doc_table_specs() -> list[KeyedTableSpec]:
     """doc 07 §0 那张「统计总览」——**全部由入库清单现算**（不需要游戏）。
 
@@ -174,7 +184,21 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             name="doc07 官方文档统计",
             header=OVERVIEW_HEADER,
             cells=overview_rows,
-        )
+        ),
+        KeyedTableSpec(
+            name="doc07 common 完整目录",
+            header="| # | 路径（相对 `official-docs\\`） |",
+            cells=lambda: catalogue_rows(True),
+            key_column=1,
+            allow_drop=True,
+        ),
+        KeyedTableSpec(
+            name="doc07 其他完整目录",
+            header="| # | 路径 | B | L | 类别 | 功能域 | 主题 |",
+            cells=lambda: catalogue_rows(False),
+            key_column=1,
+            allow_drop=True,
+        ),
     ]
 
 

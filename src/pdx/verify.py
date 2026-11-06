@@ -1092,81 +1092,81 @@ CLAIMS: list[Claim] = [
         r"game\ 全树文件数",
         "tree_files",
         "game",
-        27732,
+        29182,
         "与 doc 08 的 tree.game 同源，只是那一句写在 doc 01",
     ),
     Claim(
         "ai.nai_params_doc03",
         "03-AI系统.md",
-        "NAI 参数 1025",
+        "NAI 参数 1017",
         "defines_params",
         "00_ai.txt:NAI",
-        1025,
+        1017,
     ),
-    Claim("ai.strategies_doc03", "03-AI系统.md", "共 35 个策略", "dir_blocks", "ai_strategies", 35),
+    Claim("ai.strategies_doc03", "03-AI系统.md", "共 37 个策略", "dir_blocks", "ai_strategies", 37),
     Claim(
         "script.je_doc04",
         "04-脚本系统.md",
-        "共 419 个 Journal Entry",
+        "共 449 个 Journal Entry",
         "dir_blocks",
         "journal_entries",
-        419,
+        449,
     ),
     Claim(
         "script.buttons_doc04",
         "04-脚本系统.md",
-        "共 218 个按钮",
+        "共 269 个按钮",
         "dir_blocks",
         "scripted_buttons",
-        218,
+        269,
     ),
     Claim(
         "script.bars_doc04",
         "04-脚本系统.md",
-        "共 42 个进度条",
+        "共 61 个进度条",
         "dir_blocks",
         "scripted_progress_bars",
-        42,
+        61,
     ),
     Claim(
-        "script.sgui_doc04", "04-脚本系统.md", "共 23 个 SGUI", "dir_blocks", "scripted_guis", 23
+        "script.sgui_doc04", "04-脚本系统.md", "共 36 个 SGUI", "dir_blocks", "scripted_guis", 36
     ),
     Claim(
         "script.decisions_doc04",
         "04-脚本系统.md",
-        "共 60 个 decision",
+        "共 61 个 decision",
         "dir_blocks",
         "decisions",
-        60,
+        61,
     ),
-    Claim("script.lists_doc04", "04-脚本系统.md", "5 个列表", "dir_blocks", "scripted_lists", 5),
+    Claim("script.lists_doc04", "04-脚本系统.md", "6 个列表", "dir_blocks", "scripted_lists", 6),
     Claim(
         "script.rules_doc04", "04-脚本系统.md", "共 18 个规则", "dir_blocks", "scripted_rules", 18
     ),
     Claim(
         "script.events_md_doc04",
         "04-脚本系统.md",
-        "GAME 下共有 93 个官方 .md",
+        "GAME 下共有 98 个官方 .md",
         "dir_md_files",
         "",
-        93,
+        98,
     ),
     Claim(
         "script.events_subdirs_doc04",
         "04-脚本系统.md",
-        "events 12 个子目录",
+        "events 13 个子目录",
         "tree_subdirs",
         "game/events",
-        12,
+        13,
     ),
     Claim(
-        "defines.suffix_add", "05-defines与修饰符.md", "_add 1636", "modifier_suffix", "add", 1636
+        "defines.suffix_add", "05-defines与修饰符.md", "_add 1665", "modifier_suffix", "add", 1665
     ),
     Claim(
-        "defines.suffix_mult", "05-defines与修饰符.md", "_mult 629", "modifier_suffix", "mult", 629
+        "defines.suffix_mult", "05-defines与修饰符.md", "_mult 699", "modifier_suffix", "mult", 699
     ),
     Claim(
-        "defines.suffix_bool", "05-defines与修饰符.md", "_bool 92", "modifier_suffix", "bool", 92
+        "defines.suffix_bool", "05-defines与修饰符.md", "_bool 96", "modifier_suffix", "bool", 96
     ),
     Claim(
         "defines.script_values_blocks",
@@ -1174,23 +1174,23 @@ CLAIMS: list[Claim] = [
         "script_values 顶层块",
         "dir_blocks",
         "script_values",
-        275,
+        495,
     ),
     Claim(
         "defines.00_defines_namespaces",
         "05-defines与修饰符.md",
-        "00_defines.txt 有 18 个不同命名空间",
+        "00_defines.txt 有 19 个不同命名空间",
         "file_namespaces",
         "00_defines.txt",
-        18,
+        19,
     ),
     Claim(
         "loc.yml_total_doc06",
         "06-本地化与界面资源.md",
-        "1878 个 .yml",
+        "2009 个 .yml",
         "game_all_files",
         "localization",
-        1878,
+        2009,
     ),
     Claim(
         "loc.lang_dirs_doc06",
@@ -1211,29 +1211,29 @@ CLAIMS: list[Claim] = [
     Claim(
         "loc.gui_files_doc06",
         "06-本地化与界面资源.md",
-        "gui 约 207 个文件",
+        "gui 约 210 个文件",
         "game_all_files",
         "gui",
-        207,
+        210,
     ),
     Claim(
-        "dlc.txt_doc08", "08-目录全量清单.md", "dlc 中 .txt 共 83 个", "game_txt_files", "dlc", 83
+        "dlc.txt_doc08", "08-目录全量清单.md", "dlc 中 .txt 共 95 个", "game_txt_files", "dlc", 95
     ),
     Claim(
         "ai.nai_params_doc09",
         "09-AI-mod实战技法.md",
-        "全库 NAI 有 1025 个参数",
+        "全库 NAI 有 1017 个参数",
         "defines_params",
         "00_ai.txt:NAI",
-        1025,
+        1017,
     ),
     Claim(
         "hist.files_doc11",
         "11-历史初始状态与AI策略分配.md",
-        "history 共 1153 个文件",
+        "history 共 1165 个文件",
         "game_all_files",
         "common/history",
-        1153,
+        1165,
     ),
     # 用 `tree_subdirs` 而不是 `dir_subdirs`：后者的**离线真值**（快照的
     # `common_entries`）只记到 common 的子目录一层，带 target 时答不出来 ——
@@ -1258,10 +1258,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "pol.movements_doc15",
         "15-政治人口与社会.md",
-        "共 39 个运动",
+        "共 41 个运动",
         "dir_blocks",
         "political_movements",
-        39,
+        41,
     ),
     Claim(
         "pol.cultures_file_doc15",
@@ -1274,26 +1274,26 @@ CLAIMS: list[Claim] = [
     Claim(
         "script.effect_loc_doc04",
         "04-脚本系统.md",
-        "effect_localization 共 297 条",
+        "effect_localization 共 307 条",
         "dir_blocks",
         "effect_localization",
-        297,
+        307,
     ),
     Claim(
         "script.event_defs_doc04",
         "04-脚本系统.md",
-        "共 2264 个事件定义",
+        "共 2400 个事件定义",
         "event_definitions",
         "",
-        2264,
+        2400,
     ),
     Claim(
         "script.event_fields_doc04",
         "04-脚本系统.md",
-        "共 26 个不同键",
+        "共 27 个不同键",
         "dir_field_count",
         "game/events",
-        26,
+        27,
     ),
     Claim(
         "defines.interfaces_ns_doc05",
@@ -1306,20 +1306,20 @@ CLAIMS: list[Claim] = [
     Claim(
         "loc.je_widgets_doc06",
         "06-本地化与界面资源.md",
-        "journal_entry_widgets 有 2 个文件",
+        "journal_entry_widgets 有 5 个文件",
         "tree_files",
         "game/gui/journal_entry_widgets",
-        2,
+        5,
     ),
     Claim(
         "docs.common_md_doc07",
         "07-官方文档索引.md",
-        "common 下共 77 个 .md",
+        "common 下共 80 个 .md",
         "dir_md_files",
         "common",
-        77,
+        80,
     ),
-    Claim("ai.fields_doc03", "03-AI系统.md", "共 60 个字段", "ai_strategy_count", "fields", 60),
+    Claim("ai.fields_doc03", "03-AI系统.md", "共 61 个字段", "ai_strategy_count", "fields", 61),
     Claim(
         "ai.scalars_doc10",
         "10-AI策略字段参考.md",
@@ -1339,10 +1339,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "pol.ethnicity_blocks_doc15",
         "15-政治人口与社会.md",
-        "ethnicities 共 36 个块",
+        "ethnicities 共 37 个块",
         "dir_blocks",
         "ethnicities",
-        36,
+        37,
     ),
     Claim(
         "pol.ig_trait_fields_doc15",
@@ -1371,18 +1371,18 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.ethnicity_blocks_doc17",
         "17-角色科技与呈现.md",
-        "ethnicities 36（与 13 号文档的 37 差 1）",
+        "ethnicities 顶层块（与全量索引口径分开）",
         "dir_blocks",
         "ethnicities",
-        36,
+        37,
     ),
     Claim(
         "script.placement_values_doc04",
         "04-脚本系统.md",
-        "placement 取值共 340 个不同值",
+        "placement 不同取值数",
         "field_distinct_values",
         "events/placement",
-        341,
+        359,
         "实测 341；文档写的 340 是 1.14.2 的值",
     ),
     Claim(
@@ -1396,10 +1396,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "pol.movement_ideo_file_doc15",
         "15-政治人口与社会.md",
-        "03_ig_ideologies_movement.txt 有 45 个",
+        "03_ig_ideologies_movement.txt 有 50 个",
         "file_top_keys",
         "common/ideologies/03_ig_ideologies_movement.txt",
-        45,
+        50,
     ),
     Claim(
         "pol.graphics_values_doc15",
@@ -1420,50 +1420,50 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.atlas_blocks_doc17",
         "17-角色科技与呈现.md",
-        "atlases.txt 共 9 个 atlas 块",
+        "atlases.txt 共 10 个 atlas 块",
         "file_top_keys",
         "common/coat_of_arms/options/atlases.txt",
-        9,
+        10,
     ),
     Claim(
         "chr.roles_doc17",
         "17-角色科技与呈现.md",
-        "共 10 个角色定义",
+        "共 12 个角色定义",
         "dir_blocks",
         "character_roles",
-        10,
+        12,
     ),
     Claim(
         "dip.regions_doc16",
         "16-外交军事与地图.md",
-        "共 165 个地理区域",
+        "共 198 个地理区域",
         "dir_blocks",
         "geographic_regions",
-        165,
+        198,
     ),
     Claim(
         "chr.dna_doc17",
         "17-角色科技与呈现.md",
-        "dna_data 共 583 个定义",
+        "dna_data 共 642 个定义",
         "dir_blocks",
         "dna_data",
-        583,
+        642,
     ),
     Claim(
         "chr.flag_defs_doc17",
         "17-角色科技与呈现.md",
-        "flag_definitions 顶层列表 433",
+        "flag_definitions 顶层列表 440",
         "dir_blocks",
         "flag_definitions",
-        433,
+        440,
     ),
     Claim(
         "chr.concepts_doc17",
         "17-角色科技与呈现.md",
-        "concept_* 共 2195 个",
+        "concept_* 共 2233 个",
         "loc_concept_keys",
         "",
-        2195,
+        2233,
     ),
     Claim(
         "eng.jomini_subdirs_doc20",
@@ -1475,43 +1475,43 @@ CLAIMS: list[Claim] = [
     ),
     # ── 环境 ────────────────────────────────────────────
     Claim(
-        "env.common_dirs", "08-目录全量清单.md", "common 有 138 个子目录", "dir_subdirs", "", 138
+        "env.common_dirs", "08-目录全量清单.md", "common 有 140 个子目录", "dir_subdirs", "", 140
     ),
     Claim(
         "env.dlc",
         "01-环境与版本.md",
-        "game/dlc 下有 17 个 DLC",
+        "game/dlc 下有 18 个 DLC",
         "dlc_count",
         "",
-        17,
+        18,
         "编号 001–018，缺 dlc005。doc 01 与 doc 19 早期误写为 18",
     ),
     Claim(
         "env.common_txt",
         "08-目录全量清单.md",
-        "common 有 3030 个 .txt",
+        "common 有 3191 个 .txt",
         "dir_txt_files",
         "",
-        3030,
+        3191,
         "1.14.2 时为 3024，1.14.3 新增 2 个。注意 3101 是含 .md 的全部文件数",
     ),
     Claim(
         "env.common_all",
         "08-目录全量清单.md",
-        "common 共 3107 个文件",
+        "common 共 3271 个文件",
         "dir_all_files",
         "",
-        3107,
+        3271,
         "1.14.2 时为 3099",
     ),
-    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 94 篇官方 .md", "md_files", "", 94),
+    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 99 篇官方 .md", "md_files", "", 99),
     Claim(
         "docs.total_bytes",
         "07-官方文档索引.md",
-        "94 篇官方 .md 总字节数",
+        "当前官方 .md 总字节数",
         "md_total_bytes",
         "",
-        236926,
+        258571,
         "1.14.2 时为 230,173（doc 07 曾长期写着这个镜像值）",
     ),
     Claim(
@@ -1520,7 +1520,7 @@ CLAIMS: list[Claim] = [
         "最大官方 .md treaty_articles.md 的字节数",
         "md_max_bytes",
         "",
-        28171,
+        29963,
         "镜像曾停在 1.14.2 的 25,364 B / 604 行；本体 1.14.3 为 28,171 B / 648 行。"
         "内容一致性由 test_docs_mirror.py 用 sha256 逐篇比对本体看守",
     ),
@@ -1528,47 +1528,47 @@ CLAIMS: list[Claim] = [
     Claim(
         "eco.buildings",
         "14-经济与生产系统.md",
-        "buildings 有 115 个",
+        "buildings 有 122 个",
         "dir_entries",
         "buildings",
-        115,
+        122,
     ),
     Claim(
         "eco.pm",
         "14-经济与生产系统.md",
-        "production_methods 有 436 个",
+        "production_methods 有 450 个",
         "dir_entries",
         "production_methods",
-        436,
+        450,
         "早期缩进法误得 433，漏掉 3 个含连字符的键",
     ),
     Claim(
         "eco.pmg",
         "14-经济与生产系统.md",
-        "production_method_groups 有 197 个",
+        "production_method_groups 有 203 个",
         "dir_entries",
         "production_method_groups",
-        197,
+        203,
     ),
     Claim(
         "eco.bg",
         "14-经济与生产系统.md",
-        "building_groups 有 69 个",
+        "building_groups 有 70 个",
         "dir_entries",
         "building_groups",
-        69,
+        70,
     ),
-    Claim("eco.goods", "14-经济与生产系统.md", "goods 有 53 个", "dir_entries", "goods", 53),
+    Claim("eco.goods", "14-经济与生产系统.md", "goods 有 54 个", "dir_entries", "goods", 54),
     Claim(
         "eco.companies",
         "14-经济与生产系统.md",
-        "company_types 有 221 个",
+        "company_types 有 231 个",
         "dir_entries",
         "company_types",
-        221,
+        231,
     ),
     # ── 政治人口（doc 15）──────────────────────────────
-    Claim("pol.laws", "15-政治人口与社会.md", "laws 有 138 个", "dir_entries", "laws", 138),
+    Claim("pol.laws", "15-政治人口与社会.md", "laws 有 148 个", "dir_entries", "laws", 148),
     Claim(
         "pol.ig",
         "15-政治人口与社会.md",
@@ -1588,50 +1588,50 @@ CLAIMS: list[Claim] = [
     Claim(
         "pol.ideologies",
         "15-政治人口与社会.md",
-        "ideologies 有 172 个",
+        "ideologies 有 190 个",
         "dir_entries",
         "ideologies",
-        172,
+        190,
     ),
     Claim(
         "pol.gov",
         "15-政治人口与社会.md",
-        "government_types 有 444 个",
+        "government_types 有 449 个",
         "dir_entries",
         "government_types",
-        444,
+        449,
     ),
     Claim(
-        "pol.cultures", "15-政治人口与社会.md", "cultures 有 317 个", "dir_entries", "cultures", 317
+        "pol.cultures", "15-政治人口与社会.md", "cultures 有 322 个", "dir_entries", "cultures", 322
     ),
     Claim(
         "pol.disc",
         "15-政治人口与社会.md",
-        "discrimination_traits 有 324 个",
+        "discrimination_traits 有 327 个",
         "dir_entries",
         "discrimination_traits",
-        324,
+        327,
     ),
     Claim(
-        "pol.amend", "15-政治人口与社会.md", "amendments 有 67 个", "dir_entries", "amendments", 67
+        "pol.amend", "15-政治人口与社会.md", "amendments 有 71 个", "dir_entries", "amendments", 71
     ),
     # ── 角色科技（doc 17）──────────────────────────────
     Claim(
         "chr.templates",
         "17-角色科技与呈现.md",
-        "character_templates 有 2011 个",
+        "character_templates 有 2072 个",
         "dir_entries",
         "character_templates",
-        2011,
+        2072,
         "早期缩进法误得 1983，漏掉 27 个含连字符的键",
     ),
     Claim(
         "chr.traits",
         "17-角色科技与呈现.md",
-        "character_traits 有 121 个",
+        "character_traits 有 127 个",
         "dir_entries",
         "character_traits",
-        121,
+        127,
     ),
     Claim(
         "chr.tech", "17-角色科技与呈现.md", "technology 有 184 个", "dir_entries", "technology", 184
@@ -1639,19 +1639,19 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.concepts",
         "17-角色科技与呈现.md",
-        "game_concepts 有 613 个",
+        "game_concepts 有 619 个",
         "dir_entries",
         "game_concepts",
-        613,
+        619,
     ),
     # ── 外交军事（doc 16）──────────────────────────────
     Claim(
         "dip.actions",
         "16-外交军事与地图.md",
-        "diplomatic_actions 有 55 个",
+        "diplomatic_actions 有 57 个",
         "dir_entries",
         "diplomatic_actions",
-        55,
+        57,
     ),
     Claim(
         "dip.treaty",
@@ -1672,10 +1672,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "dip.state_traits",
         "16-外交军事与地图.md",
-        "state_traits 有 239 个",
+        "state_traits 有 243 个",
         "dir_entries",
         "state_traits",
-        239,
+        243,
     ),
     Claim(
         "dip.strategic",
@@ -1697,72 +1697,72 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.nai_count",
         "05-defines与修饰符.md",
-        "NAI 有 1025 个参数",
+        "NAI 有 1017 个参数",
         "defines_params",
         "00_ai.txt:NAI",
-        1025,
+        1017,
         "1.14.2 时为 1013，1.14.3 增至 1017（+4）；文件 1307 行 → 1311 行",
     ),
     Claim(
         "def.blocks",
         "05-defines与修饰符.md",
-        "defines 共 75 个顶层命名空间块",
+        "defines 共 77 个顶层命名空间块",
         "defines_blocks",
         "",
-        75,
+        77,
     ),
     Claim(
         "def.namespaces",
         "05-defines与修饰符.md",
-        "defines 共 50 个去重命名空间",
+        "defines 共 52 个去重命名空间",
         "defines_namespaces",
         "",
-        50,
+        52,
     ),
     Claim(
         "def.param_total",
         "05-defines与修饰符.md",
-        "defines 共 3515 个参数条目",
+        "defines 共 3589 个参数条目",
         "defines_param_total",
         "",
-        3515,
+        3589,
         "标量 3313 + 内联列表 175 + 嵌套块 0。1.14.2 时为 3434；"
         "1.14.3 给 NMilitary +1、NDiplomacy +39，§2.1/§2.2 两张表已按 1.14.3 重算",
     ),
     Claim(
         "def.param_names",
         "05-defines与修饰符.md",
-        "defines 共 3508 个去重参数名",
+        "defines 共 3582 个去重参数名",
         "defines_param_names",
         "",
-        3508,
+        3582,
         "1.14.2 时为 3427；跨块重复出现 7 次",
     ),
     Claim(
         "def.modtypes",
         "05-defines与修饰符.md",
-        "modifier_type_definitions 有 2371 个",
+        "modifier_type_definitions 有 2474 个",
         "dir_entries",
         "modifier_type_definitions",
-        2371,
+        2474,
     ),
     Claim(
         "def.static",
         "05-defines与修饰符.md",
-        "static_modifiers 有 6128 个",
+        "static_modifiers 有 6479 个",
         "dir_entries",
         "static_modifiers",
-        6128,
+        6479,
         "早期缩进法误得 6121；实测 68/68 文件带 BOM 且存在缩进的顶层键",
     ),
     # ── 脚本系统（doc 04）──────────────────────────────
     Claim(
         "scr.on_actions",
         "04-脚本系统.md",
-        "on_actions 有 268 个键",
+        "on_actions 有 287 个键",
         "dir_entries",
         "on_actions",
-        268,
+        287,
         "doc 04 早期记 263（其中 00_code_on_actions.txt 记 218，实为 219）。"
         "漏掉的是 on_diplo_play_overlord_protects_subject，位于该文件第 4321 行、缩进 0",
     ),
@@ -1789,10 +1789,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.file_defines",
         "05-defines与修饰符.md",
-        "00_defines.txt 有 41 个顶层键",
+        "00_defines.txt 有 42 个顶层键",
         "file_top_keys",
         "common/defines/00_defines.txt",
-        41,
+        42,
         "= 19 个命名空间块 + 22 个 `@变量`。本断言数的是**文件顶层键**（含 @变量），"
         "doc 05 §2.1 那一列写的是「顶层块数 19」；两个数都对，口径不同。"
         "命名空间块总数见 def.blocks（75）",
@@ -1800,10 +1800,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.file_graphics",
         "05-defines与修饰符.md",
-        "00_graphics.txt 有 19 个顶层块",
+        "00_graphics.txt 有 20 个顶层块",
         "file_top_keys",
         "common/defines/00_graphics.txt",
-        19,
+        20,
     ),
     Claim(
         "def.file_interfaces",
@@ -1827,10 +1827,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "env.common_dirs_direct",
         "08-目录全量清单.md",
-        "直接枚举 common 得到 138 个子目录",
+        "直接枚举 common 得到 140 个子目录",
         "common_dir_count",
         "",
-        138,
+        140,
         "与 env.common_dirs 是**两条独立实现**：那条走 extract_dir 的扫描口径，"
         "这条直接 iterdir。两者必须给出同一个数，否则说明扫描把某个目录吞了",
     ),
@@ -1898,18 +1898,18 @@ CLAIMS: list[Claim] = [
     Claim(
         "mod.total",
         "12-真实mod解剖与改造面地图.md",
-        "订阅了 23 个 Workshop mod",
+        "订阅了 3 个 Workshop mod",
         "mods_total",
         "",
-        23,
+        3,
     ),
     Claim(
         "mod.files",
         "12-真实mod解剖与改造面地图.md",
-        "23 个 Workshop mod 共 4814 个内容文件",
+        "当前 Workshop mod 内容文件数",
         "mods_files",
         "",
-        4814,
+        1277,
         "不含各 mod 的 metadata.json（每 mod 1 个，共 23 个）；"
         "去重后的相对路径数量随当前订阅集变化，由本机快照复算。旧快照作为历史测量保留。"
         "⚠️ 4,828 那一版是把**我们自己部署的 mod** 也数了进去（B83），已修正",
@@ -1929,10 +1929,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "pfx.mods_total",
         "02-Mod结构与加载.md",
-        "全部 mod 共使用 2764 次功能前缀",
+        "全部 mod 共使用 429 次功能前缀",
         "mods_prefix_total",
         "",
-        2764,
+        429,
         "六个前缀之和见下面 6 条分项断言；分项由当前订阅快照复算，避免手抄数字漂移",
     ),
     # ── 六个前缀的**分项** ────────────────────────────────
@@ -1943,51 +1943,51 @@ CLAIMS: list[Claim] = [
     Claim(
         "pfx.replace_or_create",
         "02-Mod结构与加载.md",
-        "REPLACE_OR_CREATE 前缀在 mod 中使用 1143 次",
+        "REPLACE_OR_CREATE 前缀在 mod 中使用 429 次",
         "prefix_in_mods",
         "REPLACE_OR_CREATE",
-        1143,
+        429,
     ),
     Claim(
         "pfx.inject",
         "02-Mod结构与加载.md",
-        "INJECT 前缀在 mod 中使用 740 次",
+        "INJECT 前缀在 mod 中使用 0 次",
         "prefix_in_mods",
         "INJECT",
-        740,
+        0,
         "注意 `INJECT:` 与 `INJECT_OR_CREATE:` 是两个不同前缀，别用子串匹配",
     ),
     Claim(
         "pfx.try_inject",
         "02-Mod结构与加载.md",
-        "TRY_INJECT 前缀在 mod 中使用 440 次",
+        "TRY_INJECT 前缀在 mod 中使用 0 次",
         "prefix_in_mods",
         "TRY_INJECT",
-        440,
+        0,
     ),
     Claim(
         "pfx.try_replace",
         "02-Mod结构与加载.md",
-        "TRY_REPLACE 前缀在 mod 中使用 221 次",
+        "TRY_REPLACE 前缀在 mod 中使用 0 次",
         "prefix_in_mods",
         "TRY_REPLACE",
-        221,
+        0,
     ),
     Claim(
         "pfx.replace",
         "02-Mod结构与加载.md",
-        "REPLACE 前缀在 mod 中使用 174 次",
+        "REPLACE 前缀在 mod 中使用 0 次",
         "prefix_in_mods",
         "REPLACE",
-        174,
+        0,
     ),
     Claim(
         "pfx.inject_or_create",
         "02-Mod结构与加载.md",
-        "INJECT_OR_CREATE 前缀在 mod 中使用 46 次",
+        "INJECT_OR_CREATE 前缀在 mod 中使用 0 次",
         "prefix_in_mods",
         "INJECT_OR_CREATE",
-        46,
+        0,
     ),
     # ── doc 08 的安装树规模 ────────────────────────────────
     # 这些数在 doc 08 里出现在**章节标题**与 §17 汇总表里 —— 两处都是散文，
@@ -2001,16 +2001,16 @@ CLAIMS: list[Claim] = [
         "game 全树递归文件数（不含安装根下的松散文件）",
         "tree_files",
         "game",
-        27732,
+        29182,
     ),
-    Claim("tree.game_dirs", "08-目录全量清单.md", "game 全树子目录数", "tree_dirs", "game", 1988),
+    Claim("tree.game_dirs", "08-目录全量清单.md", "game 全树子目录数", "tree_dirs", "game", 2081),
     Claim(
         "tree.game_bytes",
         "08-目录全量清单.md",
-        "game 全树的字节总数（等价 17,056.00 MB）",
+        "game 全树的字节总数（等价 18,218.96 MB）",
         "tree_bytes",
         "game",
-        17884507154,
+        19103962623,
     ),
     Claim(
         "tree.binaries_files",
@@ -2023,10 +2023,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "tree.binaries_bytes",
         "08-目录全量清单.md",
-        "binaries 目录字节总数（等价 261.41 MB）",
+        "binaries 目录字节总数（等价 263.53 MB）",
         "tree_bytes",
         "binaries",
-        274111757,
+        276326157,
     ),
     Claim(
         "tree.clausewitz_files",
@@ -2061,15 +2061,15 @@ CLAIMS: list[Claim] = [
         "game/gfx 目录文件数",
         "tree_files",
         "game/gfx",
-        19163,
+        19789,
     ),
     Claim(
         "tree.gfx_bytes",
         "08-目录全量清单.md",
-        "game/gfx 目录字节总数（等价 9,690.15 MB）",
+        "game/gfx 目录字节总数（等价 9,875.40 MB）",
         "tree_bytes",
         "game/gfx",
-        10160855193,
+        10355108099,
     ),
     Claim(
         "tree.events_files",
@@ -2077,7 +2077,7 @@ CLAIMS: list[Claim] = [
         "game/events 目录文件数",
         "tree_files",
         "game/events",
-        328,
+        347,
     ),
     Claim(
         "tree.localization_files",
@@ -2085,10 +2085,10 @@ CLAIMS: list[Claim] = [
         "game/localization 目录文件数",
         "tree_files",
         "game/localization",
-        1878,
+        2009,
     ),
     Claim(
-        "tree.gui_files", "08-目录全量清单.md", "game/gui 目录文件数", "tree_files", "game/gui", 207
+        "tree.gui_files", "08-目录全量清单.md", "game/gui 目录文件数", "tree_files", "game/gui", 210
     ),
     Claim(
         "tree.map_data_files",
@@ -2104,7 +2104,7 @@ CLAIMS: list[Claim] = [
         "game/dlc 目录文件数",
         "tree_files",
         "game/dlc",
-        2747,
+        3254,
     ),
     Claim(
         "tree.game_level1",
@@ -2136,15 +2136,15 @@ CLAIMS: list[Claim] = [
         "events 根目录直接放着的 .txt 数",
         "tree_level1_txt",
         "game/events",
-        130,
+        133,
     ),
     Claim(
         "script.events_subdir_files",
         "04-脚本系统.md",
-        "events 的 12 个子目录里的文件数（不含根目录自己那 130 个）",
+        "events 子目录文件数（不含根目录文件）",
         "tree_subdir_files",
         "game/events",
-        198,
+        214,
     ),
     Claim(
         "dip.plays_file_doc16",
@@ -2214,7 +2214,7 @@ CLAIMS: list[Claim] = [
         "原版修饰符键里完全没写 decimals 的个数",
         "field_missing",
         "modifier_type_definitions:decimals",
-        31,
+        33,
     ),
     Claim(
         "def.modtypes_missing_percent",
@@ -2222,7 +2222,7 @@ CLAIMS: list[Claim] = [
         "原版修饰符键里完全没写 percent 的个数",
         "field_missing",
         "modifier_type_definitions:percent",
-        1482,
+        1509,
     ),
     Claim(
         "loc.font_languages_doc06",
@@ -2230,7 +2230,7 @@ CLAIMS: list[Claim] = [
         "fonts.font 里 languages 块的个数（藏在 fontfiles 里，不是顶层键）",
         "file_nested_key_count",
         "fonts/fonts.font:languages",
-        53,
+        57,
     ),
     Claim(
         "loc.texticon_doc06",
@@ -2238,17 +2238,17 @@ CLAIMS: list[Claim] = [
         "两个 .gui 里 ^texticon = { 的行数（文档 §1.3 自己写明的判据）",
         "texticon_definitions",
         "",
-        432,
+        441,
         note="同一份数据还有 436（任意缩进）与 437（解析器顶层块）两个口径，"
         "doc 06 §x 用的就是 436 —— 那处已在 KNOWN_METRIC_MIXUPS 登记",
     ),
     Claim(
         "loc.yml_unique_names_doc06",
         "06-本地化与界面资源.md",
-        "localization 下 .yml 按文件名去重后的个数（1,877 个文件、22 个重名）",
+        "localization 下 .yml 按文件名去重后的个数",
         "loc_yml_unique_names",
         "",
-        1856,
+        1987,
     ),
     Claim(
         "tree.common_loose_bytes",
@@ -2256,7 +2256,7 @@ CLAIMS: list[Claim] = [
         "common 根目录那个直接文件 achievement_groups.txt 的字节数",
         "file_bytes",
         "game/common/achievement_groups.txt",
-        4277,
+        4678,
     ),
     # ── doc 16 的散文数字（2026-09 那一轮补的看守）──────────────────────
     Claim(
@@ -2275,7 +2275,7 @@ CLAIMS: list[Claim] = [
         "GAME 下这 33 个目录的全部文件数",
         "doc16_group_files",
         "files",
-        205,
+        207,
     ),
     Claim(
         "dip.group_txt",
@@ -2283,7 +2283,7 @@ CLAIMS: list[Claim] = [
         "那 33 个目录的 .txt 数",
         "doc16_group_files",
         "txt",
-        182,
+        184,
     ),
     Claim(
         "dip.group_md",
@@ -2307,7 +2307,7 @@ CLAIMS: list[Claim] = [
         "diplomatic_actions 目录下的脚本文件数（另有 1 个官方 .md）",
         "dir_txt_files",
         "diplomatic_actions",
-        48,
+        50,
     ),
     Claim(
         "dip.action_subject_files",
@@ -2356,7 +2356,7 @@ CLAIMS: list[Claim] = [
         "map_data/state_regions 里 traits 这个词（带词界）的出现次数",
         "state_region_words",
         "state_regions:traits",
-        517,
+        518,
         note="是**出现次数**口径（按块数是 514：STATE_ZANZIBAR / STATE_TOMSK / STATE_TUVA "
         "各写了两个 traits 块）",
     ),
@@ -2385,7 +2385,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的行数（1.14.2 时是 682）",
         "doc03_ai_script_values",
         "lines",
-        757,
+        807,
     ),
     Claim(
         "ai.script_values_top_keys",
@@ -2393,7 +2393,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的顶层键数（1.14.2 时是 18）",
         "doc03_ai_script_values",
         "top_keys",
-        43,
+        51,
     ),
     Claim(
         "ai.script_values_ast_keys",
@@ -2401,7 +2401,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 里按结构解析去重的键名数（行中间 / 比较符 / 带冒号的键都算）",
         "doc03_ai_script_values",
         "ast_keys",
-        85,
+        96,
     ),
     Claim(
         "ai.script_values_line_keys",
@@ -2409,7 +2409,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 里行正则去重的键名数（1.14.2 时是 49）",
         "doc03_ai_script_values",
         "line_regex_keys",
-        74,
+        85,
         note="文档那句「任意缩进的键共 N 个」用的就是这个口径 —— 1.14.3 重测为 64，"
         "与 AST 口径的 75 差 11 个，差额成因写在文档里",
     ),
@@ -2428,23 +2428,23 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的行数（doc 04 §4.6 与 doc 03 §4 描述的是同一个文件）",
         "doc03_ai_script_values",
         "lines",
-        757,
+        807,
     ),
     Claim(
         "script.ai_script_values_keys_doc04",
         "04-脚本系统.md",
-        "ai_script_values 的顶层键数（§4.6 那张表只列了其中 18 个重点键）",
+        "ai_script_values 的顶层键数（不等于重点键摘录数）",
         "doc03_ai_script_values",
         "top_keys",
-        43,
+        51,
     ),
     Claim(
         "eco.pm_hyphen_dirs",
         "14-经济与生产系统.md",
-        "全 common 里含连字符的顶层键总数（character_templates 27 + PM 3 + 2 个各 1）",
+        "全 common 里含连字符的顶层键总数",
         "doc14_hyphen_keys",
         "",
-        32,
+        34,
         note="doc 14 只说了 PM 里的 3 个；另外 27 个在人名目录 character_templates 里 ——"
         "这正是 doc 17 曾「多算 1983 / 漏 27」的那个坑",
     ),
@@ -2541,10 +2541,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "hist.country_effects_doc18",
         "18-history初始状态系统.md",
-        "common/history/countries 里写了 add_* / set_* 效果的文件数（444 个里的 217 个）",
+        "common/history/countries 里写了 add_* / set_* 效果的文件数",
         "doc18_country_effects",
         "",
-        217,
+        222,
         note="必须任意深度：add_amendment 一类写在嵌套块里，只数深度 1 会得 0",
     ),
     Claim(
@@ -2571,7 +2571,7 @@ CLAIMS: list[Claim] = [
         "§0 那 29 个目录的 .txt 数（1.14.2 时是 954）",
         "doc17_overview",
         "txt",
-        955,
+        1036,
     ),
     Claim(
         "chr.overview_keys_doc17",
@@ -2579,7 +2579,7 @@ CLAIMS: list[Claim] = [
         "§0 那 29 个目录的顶层定义键合计（1.14.2 时是 11,673）",
         "doc17_overview",
         "keys",
-        11750,
+        12168,
     ),
     Claim(
         "chr.loc_concept_x",
@@ -2587,15 +2587,15 @@ CLAIMS: list[Claim] = [
         "概念本地化里裸 concept_x 键的个数（§14.4 那张表的头一行）",
         "doc17_loc_suffix",
         "concept_x",
-        1038,
+        1057,
     ),
     Claim(
         "chr.loc_concept_x_desc",
         "17-角色科技与呈现.md",
-        "概念本地化里 concept_x_desc 键的个数（比概念数多 2）",
+        "概念本地化里 concept_x_desc 键的个数",
         "doc17_loc_suffix",
         "concept_x_desc",
-        616,
+        625,
     ),
     Claim(
         "chr.gene_block_names",
@@ -2625,44 +2625,44 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.morph_genes",
         "17-角色科技与呈现.md",
-        "morph_genes 里的 gene_* 键数（全集 97）",
+        "morph_genes 里的 gene_* 键数（全集 98）",
         "doc17_block_prefix",
         "common/genes/01_genes_morph.txt|morph_genes|gene_",
-        97,
+        98,
     ),
     Claim(
         "chr.culture_ethnicity_blocks",
         "17-角色科技与呈现.md",
-        "00_cultures.txt 里 ethnicities 块的出现次数（317 个块）",
+        "00_cultures.txt 里 ethnicities 块的出现次数（322 个块）",
         "doc17_block_items",
         "common/cultures/00_cultures.txt|ethnicities|blocks",
-        317,
+        322,
         note="docs 17 早期写的「这个块共 1,346 个 token」没有任何自然口径 ——"
         "改成可复算的「317 个块 / 343 条条目」",
     ),
     Claim(
         "chr.culture_ethnicity_items",
         "17-角色科技与呈现.md",
-        "00_cultures 的 ethnicities 块里的赋值条数（343 条 权重 = 族群）",
+        "00_cultures 的 ethnicities 块里的赋值条数（351 条 权重 = 族群）",
         "doc17_block_items",
         "common/cultures/00_cultures.txt|ethnicities|items",
-        343,
+        351,
     ),
     Claim(
         "chr.flag_definition_items",
         "17-角色科技与呈现.md",
-        "flag_definitions 里 flag_definition 条目的个数（每个 TA 列表 432 + 1 个列表）",
+        "flag_definitions 里 flag_definition 条目的个数",
         "doc17_field_occurrence",
         "common/flag_definitions:flag_definition",
-        1407,
+        1443,
     ),
     Claim(
         "chr.flag_definition_includes",
         "17-角色科技与呈现.md",
-        "flag_definitions 里 includes 赋值的处数（2 处）",
+        "flag_definitions 里 includes 赋值的处数（3 处）",
         "doc17_field_occurrence",
         "common/flag_definitions:includes",
-        2,
+        3,
     ),
     Claim(
         "chr.dna_files_without_defs",
@@ -2707,10 +2707,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.named_colors_blocks",
         "17-角色科技与呈现.md",
-        "named_colors 的顶层块处数（4 个文件各 1 个 colors = {）",
+        "named_colors 的顶层块处数",
         "dir_blocks",
         "named_colors",
-        4,
+        7,
     ),
     Claim(
         "chr.tech_definitions",
@@ -2754,7 +2754,7 @@ CLAIMS: list[Claim] = [
         "00_ai.txt 的行数（唯一一个顶层命名空间的 defines 文件）",
         "file_line_count",
         "game/common/defines/00_ai.txt",
-        1319,
+        1316,
     ),
     Claim(
         "def.inline_list_total",
@@ -2762,7 +2762,7 @@ CLAIMS: list[Claim] = [
         "defines 全库的内联列表参数合计（同一行闭合的 KEY = { a b c }）",
         "defines_kind_total",
         "内联列表",
-        175,
+        188,
         note="文档原写 168（1.14.2 的值），而 §0.3 的合计行一直写着 175 —— 正文与表格各漂各的",
     ),
     Claim(
@@ -2820,7 +2820,7 @@ CLAIMS: list[Claim] = [
         "gui 下以 spriteType = 开头的行数（文档原写 553）",
         "gui_sprite_lines",
         "",
-        552,
+        558,
         note="口径必须是「行首」：spriteType 作为子串出现 640 次，多出来的写在行中间或注释里",
     ),
     Claim(
@@ -2845,7 +2845,7 @@ CLAIMS: list[Claim] = [
         "官方 .md 的篇数（game + jomini + clausewitz 三个内容根）",
         "md_files",
         "",
-        94,
+        99,
     ),
     Claim(
         "pol.stance_total",
@@ -2853,7 +2853,7 @@ CLAIMS: list[Claim] = [
         "ideologies 五档态度的总出现次数（1.14.2 时是 3,745）",
         "stance_total",
         "",
-        3753,
+        4470,
     ),
     Claim(
         "dip.combat_unit_types_file",
@@ -2887,7 +2887,7 @@ CLAIMS: list[Claim] = [
         "customizable_localization 里 fallback = yes 的处数（全目录）",
         "fallback_yes",
         "",
-        16,
+        18,
         note="文档原先把 16 挂在两个文件名后面；那两个文件里各只有 1 处，16 是全目录的数",
     ),
     Claim(
@@ -2896,7 +2896,7 @@ CLAIMS: list[Claim] = [
         "原版 .yml 里 GetCustom('键') 的调用次数（文档原写 442，口径未定义）",
         "getcustom_stats",
         "calls",
-        14071,
+        15535,
         note="口径 = game 内容根下全部 .yml；另外两种口径是 567（只算 english/）与 0（.txt）",
     ),
     Claim(
@@ -2905,7 +2905,7 @@ CLAIMS: list[Claim] = [
         "这些 GetCustom 调用用到的不同键数",
         "getcustom_stats",
         "keys",
-        356,
+        391,
     ),
     Claim(
         "chr.getcustom_files",
@@ -2913,7 +2913,7 @@ CLAIMS: list[Claim] = [
         "出现 GetCustom 调用的 .yml 文件数",
         "getcustom_stats",
         "files",
-        602,
+        680,
     ),
     Claim(
         "ai.script_values_doc09",
@@ -2921,7 +2921,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的顶层键数（doc 09 §4 那张表最后一行）",
         "doc03_ai_script_values",
         "top_keys",
-        43,
+        51,
     ),
     Claim(
         "ai.strategy_refs_doc09",
@@ -2943,7 +2943,7 @@ CLAIMS: list[Claim] = [
         "caligula_rev 修订指纹（判断游戏精确版本最可靠的依据）",
         "game_version_field",
         "caligula_rev",
-        "9f8281a37e85639359b3b0c2c5df0196e975ca4b",
+        "6338547985dbc271523e149f362a6fd93dc62975",
         note="CI 上由入库快照的「版本」域核验 —— 与本地同一条断言",
     ),
     Claim(
@@ -2952,7 +2952,7 @@ CLAIMS: list[Claim] = [
         "caligula_branch 分支名",
         "game_version_field",
         "caligula_branch",
-        "release/1.14.5",
+        "release/1.15.0",
     ),
     Claim(
         "env.clausewitz_rev",
@@ -2960,7 +2960,15 @@ CLAIMS: list[Claim] = [
         "clausewitz_rev 修订指纹",
         "game_version_field",
         "clausewitz_rev",
-        "fd5e1dbd038c3c4a3f48a36abf60ebb42dd0ceef",
+        "a65fc88f3e604839357cb5b2aaf3b123e9d7434e",
+    ),
+    Claim(
+        "env.clausewitz_branch",
+        "01-环境与版本.md",
+        "clausewitz_branch 分支名",
+        "game_version_field",
+        "clausewitz_branch",
+        "caligula/release/1.15.0",
     ),
 ]
 
@@ -3758,6 +3766,26 @@ def latest_compact_snapshot() -> Snapshot | None:
         return None
 
 
+def _offline_identity_error(version: object) -> str:
+    """离线计数也必须绑定当前环境 Claim；--only 不能绕过身份漂移。"""
+    expected = {
+        claim.target: claim.expected for claim in CLAIMS if claim.kind == "game_version_field"
+    }
+    fields = {"caligula_branch", "caligula_rev", "clausewitz_branch", "clausewitz_rev"}
+    if (
+        not isinstance(version, dict)
+        or set(expected) != fields
+        or any(not isinstance(value, str) or not value for value in expected.values())
+    ):
+        return "离线来源缺少版本身份或当前环境 Claim"
+    mismatches = [
+        f"{field}: {version.get(field)!r} != {value!r}"
+        for field, value in expected.items()
+        if version.get(field) != value
+    ]
+    return "离线来源与当前环境 Claim 身份不同：" + "; ".join(mismatches) if mismatches else ""
+
+
 def verify_from_snapshot(
     snap: Snapshot | None = None, claims: list[Claim] | None = None
 ) -> list[CheckResult]:
@@ -3781,11 +3809,31 @@ def verify_from_snapshot(
             if getter is not None:
                 if snap is None:
                     continue
+                identity_error = _offline_identity_error(snap.version)
+                if identity_error:
+                    out.append(CheckResult(claim, None, False, identity_error))
+                    continue
                 actual: object = getter(snap, claim.target)
                 missing = "快照里没有对应域或条目"
             else:
                 man_getter = _MANIFEST_GETTERS.get(claim.kind)
                 if man_getter is None:
+                    continue
+                manifest_version = docs_mirror.load_manifest().get("版本")
+                identity_error = _offline_identity_error(manifest_version)
+                if identity_error:
+                    out.append(CheckResult(claim, None, False, identity_error))
+                    continue
+                if snap is not None and manifest_version != snap.version:
+                    out.append(
+                        CheckResult(
+                            claim,
+                            None,
+                            False,
+                            "官方文档清单与结构快照版本身份不同，拒绝混用离线真值；"
+                            "从同一锁定安装重建 mirror write 与 snapshot create --compact",
+                        )
+                    )
                     continue
                 actual = man_getter(claim.target)
                 missing = "官方文档清单不存在或为空（跑 `v3 mirror write`）"

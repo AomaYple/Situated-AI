@@ -65,7 +65,7 @@ def test_production_school_port_manual_reference_and_pdx(
     end = patched.index("# SITAI END information:institution_scores.institution_schools", begin)
     scalar = "\n".join(patched[begin:end].splitlines()[1:])
     assert pdx_eval.select(scalar, _facts(policy, values)).delta == pytest.approx(expected)
-    assert len(contract["domain_ports"]) == 4
+    assert len(contract["domain_ports"]) == 8
     assert decision_rules.evaluate_ir(policy, values, is_ai=False) == {}
 
 
@@ -102,7 +102,7 @@ def test_card_numeric_fact_overrides_alias_and_conflict_fails(production):
 def test_full_contract_tracks_port_source_and_canonical_relation_origins(production):
     model, _, _, _ = production
     assert "domain_ports" in model.source_sha256
-    assert len(model.contract()["domain_ports"]["uses"]) == 9
+    assert len(model.contract()["domain_ports"]["uses"]) == 13
     for relation in model.relations:
         expected = {
             origin.identity

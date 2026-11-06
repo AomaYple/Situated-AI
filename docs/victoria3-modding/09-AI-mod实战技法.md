@@ -1,5 +1,10 @@
 # 09 · AI mod 实战技法
 
+> **当前检查底本（A4）**：Victoria 3 **1.15.0**，分支 `release/1.15.0`。精确指纹见
+> [环境与版本](01-环境与版本.md)；当前断言以 `src/pdx/verify.py` 为唯一来源，生成表与索引须按
+> [贡献指南](../../CONTRIBUTING.md)从同一锁定安装重生成并核对。此处不继承旧版本的通过成绩。
+> 明确标注的旧版采集、零使用结论和本机订阅样本保留其原身份，不据此保证当前引擎行为或兼容性。
+
 > 本文从真实 AI mod（`Kuromi's AI`，steamId `3227982912`，本机已安装）的作者自述中提炼**可复用的技法**，并与本知识库中的结构分析相互印证。
 > 技法本身是通用的；具体数值是该作者的选择，不应照搬。
 > ⚠️ **版本跨度（精确清单）**：本文数字分两类，来源与时效各不相同 ——
@@ -201,12 +206,12 @@
 | 外交 | `max_active_stances` / `strategic_region_scores` / `undesirable_infamy_level` / `wargoal_scores` / `treaty_category_scores` | strategy |
 | 军事 | `wanted_army_size` / `wanted_navy_size` / `wanted_marines` / `ship_group_weights` / `combat_unit_group_weights` | strategy |
 | 机构 | `institution_scores` | strategy |
-| PM 评分 / 外交阈值 / 各类机制 | 1,025 个 `NAI` 参数 | `common\defines\00_ai.txt` |
-| AI 中间值 | 43 个脚本值（其中 28 个被 `00_default_strategy.txt` 引用） | `common\script_values\ai_script_values.txt` |
+| PM 评分 / 外交阈值 / 各类机制 | 1,017 个 `NAI` 参数 | `common\defines\00_ai.txt` |
+| AI 中间值 | 51 个脚本值（其中 28 个被 `00_default_strategy.txt` 引用） | `common\script_values\ai_script_values.txt` |
 
 ## 5. 真实 AI mod 覆盖了哪些 `NAI` 参数
 
-**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,025<!--claim:ai.nai_params_doc09--> 个）。
+**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,017<!--claim:ai.nai_params_doc09--> 个）。
 
 > **这本身就是重要信息**：一个成熟的 AI mod 并没有大改参数，而是**精准打击少数关键项**。
 

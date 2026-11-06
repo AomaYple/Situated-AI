@@ -320,6 +320,14 @@ def test_parent_only_product_closure_requires_concrete_B_responsibility():
 @pytest.fixture(scope="module")
 def actual_projection():
     sources = gate.Sources(Path(__file__).resolve().parents[1])
+    if (sources.root / classify.CURRENT_INTAKE).is_file():
+        intake = sources.json(classify.CURRENT_INTAKE)
+        frozen, values = classify.historical_checkpoint(sources, intake["historical_commit"])
+        return frozen, {
+            name: value
+            for name, value in values.items()
+            if name not in {"migration_acceptance", "stage_assignments"}
+        }
     values = classify.artifacts(sources)
     return sources, values
 
@@ -469,7 +477,7 @@ def test_actual_migration_indexes_writers_readers_ast_and_fixed_task6_package(ac
         assert manifest
         for path in values["migration_files"]:
             data = archive.read(path)
-            generated = (sources.root / "mod" / path).read_bytes()
+            generated = sources.read("mod/" + path)
             assert data == (
                 b"\xef\xbb\xbf" + generated if path.endswith((".txt", ".yml")) else generated
             )

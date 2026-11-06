@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .action_instances import ActionInstance
     from .bindings import Binding
     from .ir import ActionIR
+    from .ports import PortContribution
     from .schema import ActionCard, ConsumerContract, CostPredicate, RankTerm, Relation
     from .supply_program import SupplyProgram
     from .support_program import SupportProgram
@@ -269,6 +270,7 @@ class WriterDecisionIR:
     event_program: EventProgram | None = None
     acceptance_program: AcceptanceProgram | None = None
     regional_resource_program: RegionalResourceProgram | None = None
+    port_contributions: tuple[PortContribution, ...] = ()
 
     def validate_regional_resource_program(self) -> RegionalResourceProgram:
         from pdx.regional_resource_opportunities import RegionalResourceProgram  # noqa: PLC0415
@@ -629,6 +631,19 @@ class ConsumerIRBundle:
                         list(binding) for binding in item.reader_context_bindings
                     ],
                     "chain_refs": [list(reference) for reference in item.chain_refs],
+                    **(
+                        {
+                            "port_contributions": [
+                                {
+                                    field: getattr(contribution, field)
+                                    for field in contribution.__dataclass_fields__
+                                }
+                                for contribution in item.port_contributions
+                            ]
+                        }
+                        if item.port_contributions
+                        else {}
+                    ),
                     "predicates": [predicate_dict(predicate) for predicate in item.predicates],
                     "action_id": item.action.action_id if item.action is not None else None,
                     **({"program": item.program.as_dict()} if item.program is not None else {}),

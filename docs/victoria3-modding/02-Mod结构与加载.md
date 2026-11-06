@@ -1,8 +1,13 @@
 # 02 · Mod 结构与加载机制
 
+> **当前检查底本（A4）**：Victoria 3 **1.15.0**，分支 `release/1.15.0`。精确指纹见
+> [环境与版本](01-环境与版本.md)；当前断言以 `src/pdx/verify.py` 为唯一来源，生成表与索引须按
+> [贡献指南](../../CONTRIBUTING.md)从同一锁定安装重生成并核对。此处不继承旧版本的通过成绩。
+> 明确标注的旧版采集、零使用结论和本机订阅样本保留其原身份，不据此保证当前引擎行为或兼容性。
+
 > 本文区分三类信息：**【实测】**= 从本机文件直接读到；**【官方】**= 游戏自带 `.md`/注释原文；**【推断】**= 由证据推导，尚未直接验证。请以标注为准。
 
-> **版本提示（精确清单）**：本机游戏是 **1.14.5 (Ice Tea)**，`binaries\victoria3.exe` = **97,774,200 B**。本文没有 1.14.2 的遗留值 ——
+> **历史复核记录（1.14.5）**：该次复核的游戏是 **1.14.5 (Ice Tea)**，`binaries\victoria3.exe` = **97,774,200 B**。本文没有 1.14.2 的遗留值 ——
 > - **已是 1.14.5**：六个前缀的原版**零使用**断言 `pfx.vanilla_*` **7 条**（含总和 `pfx.vanilla_zero`）每次 `v3 verify` 都重扫全树，本次 **7/7 通过**；本机 mod 的前缀用量（总计 **2,764** 次、逐前缀 `REPLACE_OR_CREATE` 1143 / `INJECT` 740 / `TRY_INJECT` 440 / `TRY_REPLACE` 221 / `REPLACE` 174 / `INJECT_OR_CREATE` 46）由 `pfx.mods_total` 等 6 条断言钉住，本次全绿。
 > - **本轮现场复算**：§5.1.1 的目录分布 = `v3 prefixes -n 60`，输出 **43 行**；它与 §5.1.1 表的唯一差异是 `technology/technologies`(58) 与 `technology/eras`(3) 在该表里被合并成 `technology` 一行，故正文写 **42** 个目录。
 > - **唯一已知漂移（已消解）**：`v3 verify` 的 `tree.game` 曾报 **27,725**（比本文的 27,723 多 2），根因是游戏目录里被外部程序丢进两个**非游戏文件**（看图工具的 `.XnViewSort` 索引与一个 `.dmp` 缓存，2026-09-20 09:02 生成）。把它们移出游戏目录后断言恢复到 **27,723**。这类文件现在由 `tests/test_install_hygiene.py` 自动点名。
@@ -28,7 +33,7 @@
 | `supported_game_version` | 找到 |
 | `multiplayer_synchronized` | 找到 |
 
-**【实测】** 全部 23 个 Workshop mod 中，`.mod` 与 `descriptor.mod` 文件数量为 **0**<!--claim:pfx.vanilla_replace--><!--claim:pfx.vanilla_replace_or_create--><!--claim:pfx.vanilla_try_replace--><!--claim:pfx.vanilla_try_inject--><!--claim:pfx.vanilla_inject_or_create--><!--claim:pfx.vanilla_zero-->。
+**【实测】** 全部 23 个 Workshop mod 中，`.mod` 与 `descriptor.mod` 文件数量为 **0**。
 
 > **结论**：Victoria 3 使用 Paradox Launcher v2 的 `.metadata/metadata.json` 格式。网上仍流传的旧式 `descriptor.mod` + `<mod名>.mod` 写法已不被游戏本体引用。
 
@@ -458,3 +463,16 @@ C:\Users\28905\Documents\Paradox Interactive\Victoria 3\mod\<你的mod名>\
 - [x] 追加 on_action 要用官方转调手法，不可重复写 `effect` 块
 - [x] 调试启动加 `-debug_mode`
 - [x] 出错先看 `error.log` + `database_conflicts.log`
+
+## 当前机械核验量
+
+下列量各自绑定其真实目标；它们不改写上文历史代码示例、行号、章节号或列表编号。
+
+| Claim | 来源与口径 | 当前值 |
+|---|---|---|
+| `pfx.vanilla_replace` | `prefix_in_vanilla` / `REPLACE` | 0<!--claim:pfx.vanilla_replace--> |
+| `pfx.vanilla_replace_or_create` | `prefix_in_vanilla` / `REPLACE_OR_CREATE` | 0<!--claim:pfx.vanilla_replace_or_create--> |
+| `pfx.vanilla_try_replace` | `prefix_in_vanilla` / `TRY_REPLACE` | 0<!--claim:pfx.vanilla_try_replace--> |
+| `pfx.vanilla_try_inject` | `prefix_in_vanilla` / `TRY_INJECT` | 0<!--claim:pfx.vanilla_try_inject--> |
+| `pfx.vanilla_inject_or_create` | `prefix_in_vanilla` / `INJECT_OR_CREATE` | 0<!--claim:pfx.vanilla_inject_or_create--> |
+| `pfx.vanilla_zero` | `vanilla_prefix_total` / `` | 0<!--claim:pfx.vanilla_zero--> |

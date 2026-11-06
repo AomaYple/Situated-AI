@@ -163,9 +163,15 @@ def reconcile(
     result["inventory"]["investigation_sources"] = refs
     gate.merge_inventory(result, reports)
     if sources.jsons.get("a4:classification-checkpoint"):
+        migration_status = sources.jsons["a4:classification-checkpoint"].get(
+            "current_migration_status", "verified"
+        )
         result["inventory"].update(
             status="verified",
-            reason="完整原始观察永久保留；当前物理分类/角色映射/6193生产IR与17迁移静态子合同独立核验通过。未来接口、B/R/U产品及DLC应用问题仍逐责任pending，不授予新writer权限。",
+            reason=(
+                "完整原始观察与历史证据保留；当前物理分类/角色映射独立核验。"
+                f"当前迁移状态：{migration_status}；未来接口、B/R/U产品及DLC应用问题逐责任pending，不授予新writer权限。"
+            ),
         )
     result["inventory"]["crosscheck_receipts"] = sorted(
         {identity for report in reports for identity in report["crosscheck_receipt_ids"]}

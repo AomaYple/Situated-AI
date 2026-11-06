@@ -285,6 +285,8 @@ def responsibility_stage(discovery: dict[str, Any], old: dict[str, Any]) -> tupl
             "G07",
             "C1",
         } else "product"
+    if origin == "current_product_slice":
+        return "A4-2", "product"
     if origin == "classification_product_mapping":
         family, target = identity.split(":", 1)
         if family == "migration_acceptance":
@@ -508,7 +510,11 @@ def load_investigations(
     refs = investigation_references(
         sources, index["investigations"] if references is None else references
     )
-    if a4_discovery.REPORT_PATH not in {ref["path"] for ref in refs}:
+    classifier_paths = {a4_classify.REPORT_PATH, a4_classify.CURRENT_REPORT}
+    if len(classifier_paths & {ref["path"] for ref in refs}) > 1:
+        raise ValueError("current and historical classifiers cannot both contribute discovery IDs")
+    native_paths = {a4_discovery.REPORT_PATH, a4_classify.CURRENT_NATIVE_REPORT}
+    if len(native_paths & {ref["path"] for ref in refs}) != 1:
         raise ValueError("independent native projection report coverage missing")
     reports, catalogs = [], []
     for reference in refs:
@@ -523,10 +529,12 @@ def load_investigations(
             if ref["path"] in {reference["path"], DISCOVERY_INDEX, LEDGER}:
                 raise ValueError("self-referential investigation hash cycle")
             sources.verify(ref)
-        if reference["path"] == a4_discovery.REPORT_PATH:
+        if reference["path"] in native_paths:
             catalogs.append(a4_discovery.validate_projection(sources, report))
         elif reference["path"] == a4_classify.REPORT_PATH:
             a4_classify.validate_classification(sources, report)
+        elif reference["path"] == a4_classify.CURRENT_REPORT:
+            a4_classify.validate_current_classification(sources, report)
         elif any(item["origin"] == "native_projection" for item in report["discoveries"]):
             raise ValueError("native projection report identity mismatch")
         reports.append(report)
@@ -1159,7 +1167,13 @@ def validate(
             raise ValueError("dangling predecessor ID")
         conclusions[identity] = conclusion(row)
         terminal_evidence(row, sources, receipts, data["inventory"]["dlc_ids"])
-        if checkpoint and duties[identity]["responsibility"] in {"index", "current_migration"}:
+        if checkpoint and (
+            duties[identity]["responsibility"] == "index"
+            or (
+                duties[identity]["responsibility"] == "current_migration"
+                and checkpoint.get("current_migration_status", "verified") == "verified"
+            )
+        ):
             # Computed enabling acceptance never mutates a product ROW or grants
             # a producer permission. Future product rows remain independently pending.
             conclusions[identity] = "indexed"

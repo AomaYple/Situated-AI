@@ -33,7 +33,7 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from pdx import config, verify
+from pdx import config, snapshot, verify
 
 pytestmark = pytest.mark.docs
 
@@ -41,6 +41,27 @@ pytestmark = pytest.mark.docs
 #: 本地别名只为让下面的用例读起来短一些。
 _KNOWN_METRIC_MIXUPS = verify.KNOWN_METRIC_MIXUPS
 _key = verify.drift_key
+
+
+def test_当前入口与计数说明不扩大历史来源() -> None:
+    def read(name: str) -> str:
+        return (config.DOCS / name).read_text(encoding="utf-8")
+
+    navigation = read("README.md")
+    assert "23 个（全部已解剖" not in navigation
+    assert "94 篇官方 `.md` 的完整清单" not in navigation
+    assert "历史人工分类 **94 / 94**" in navigation
+    assert "当前新增篇目的语义尚未人工复核" in navigation
+    directories = read("08-目录全量清单.md")
+    assert "含根散装文件桶" not in directories
+    assert "根散装文件另列，不计入目录数" in directories
+    politics = read("15-政治人口与社会.md")
+    context = politics.split("<!--claim:pol.md_total_doc15-->")[0].splitlines()[-1]
+    assert all(root in context for root in ("game", "jomini", "clausewitz"))
+    concepts = read("17-角色科技与呈现.md")
+    assert "历史 1.14.5 勘误的正确值是 1,038" in concepts
+    current = next(c.expected for c in verify.CLAIMS if c.id == "chr.loc_concept_x")
+    assert f"当前 `concept_x` 标题/简称数为 {current:,}<!--claim:chr.loc_concept_x-->" in concepts
 
 
 def test_没有新增的文档数字漂移() -> None:
@@ -255,37 +276,60 @@ def _docs_and_indexes() -> list[Path]:
     ]
 
 
+_EVIDENCE_VERSION = re.compile(r"<!-- evidence-version:(release/[^\s]+) -->")
+
+
+def _revision_errors(
+    lines: list[str], current: set[str], historical: dict[str, set[str]]
+) -> list[str]:
+    """当前行只认当前身份；显式历史行逐项对固定快照，不按版本字样免检。"""
+    bad: list[str] = []
+    for n, line in enumerate(lines, start=1):
+        markers = _EVIDENCE_VERSION.findall(line)
+        if "evidence-version:" in line and len(markers) != 1:
+            bad.append(f"{n}: 历史来源标记无效或不唯一")
+            continue
+        known = current
+        if markers:
+            known = historical.get(markers[0], set())
+            if not known:
+                bad.append(f"{n}: 没有固定历史快照 {markers[0]}")
+                continue
+        bad.extend(
+            f"{n}: 来源里没有修订号 {value}" for value in _HEX40.findall(line) if value not in known
+        )
+    return bad
+
+
 @pytest.mark.integration
-def test_文档里的修订哈希必须与本体一致() -> None:
-    """**补上数字漂移扫描的盲区。**
-
-    这条是被真实事故逼出来的：doc 08 的两处修订哈希停在 1.14.3 之前的
-    ``6c9b008f…`` / ``f57eec9a…``，而本体早已是 ``bf52e8ef…`` / ``1ce8c96b…``。
-    漂移扫描对它**完全无感** —— ``_STANDALONE_NUM_RE`` 要求数字两侧不是
-    字母数字，而哈希是**一整个**字母数字串，永远匹配不到；它又没有回归到
-    任何一条断言上，于是两个错值在那里躺了一整个游戏版本，
-    而那一节还自称「判断当前装的是哪个版本的**最权威依据**」。
-
-    做法很直白：文档里出现的每一个 40 位十六进制串，都必须等于本机
-    ``caligula_rev.txt`` / ``clausewitz_rev.txt`` 里的值之一。
-    写了哈希却对不上，只能是抄错了或者抄旧了。
-    """
+def test_文档里的修订哈希必须与声明来源一致() -> None:
     if not (config.ROOT / "caligula_rev.txt").is_file():
         pytest.skip("游戏目录不可用")
     known = {v for v in config.game_version().values() if v}
     assert len(known) >= 2, f"读到的版本指纹不完整：{known}"
-
-    bad: list[str] = []
+    historical = {}
+    for path in sorted(verify.SNAPSHOT_DIR.glob("*.compact.json")):
+        recorded = snapshot.Snapshot.load(path)
+        historical[recorded.version_label] = set(recorded.version.values())
+    bad = []
     for md in _docs_and_indexes():
-        if not md.is_file():
-            continue
-        for n, line in enumerate(md.read_text(encoding="utf-8").splitlines(), start=1):
-            bad.extend(
-                f"{md.name}:{n} 写着 {h} —— 本体里没有这个修订号\n    {line.strip()[:100]}"
-                for h in _HEX40.findall(line)
-                if h not in known
-            )
-    assert not bad, "文档里有对不上本体的修订哈希：\n  " + "\n  ".join(bad)
+        if md.is_file():
+            lines = md.read_text(encoding="utf-8").splitlines()
+            bad.extend(f"{md.name}:{error}" for error in _revision_errors(lines, known, historical))
+    assert not bad, "文档修订号与其当前/固定历史来源不一致：\n" + "\n".join(bad)
+
+
+def test_当前旧hash拒绝_历史hash精确绑定且不改原文() -> None:
+    old, new = "a" * 40, "b" * 40
+    historical = {"release/old": {old}}
+    assert _revision_errors([old], {new}, historical)
+    lines = [old + " <!-- evidence-version:release/old -->"]
+    before = "\n".join(lines).encode("utf-8")
+    assert not _revision_errors(lines, {new}, historical)
+    assert "\n".join(lines).encode("utf-8") == before
+    assert _revision_errors([new + " <!-- evidence-version:release/old -->"], {new}, historical)
+    assert _revision_errors([old + " <!-- evidence-version:release/missing -->"], {new}, historical)
+    assert _revision_errors([old + " <!-- evidence-version:broken -->"], {new}, historical)
 
 
 def test_哈希扫描本身有效() -> None:

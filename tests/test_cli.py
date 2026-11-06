@@ -844,7 +844,13 @@ def test_from_snapshot_快照缺域时大声失败(tmp_path, monkeypatch) -> Non
     """
     from pdx import snapshot as _snap
 
-    empty = _snap.Snapshot(version={"caligula_branch": "test"}, sections={}, compact=True)
+    empty = _snap.Snapshot(
+        version={
+            c.target: str(c.expected) for c in verify.CLAIMS if c.kind == "game_version_field"
+        },
+        sections={},
+        compact=True,
+    )
     empty.write(tmp_path / "x.compact.json")
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     r = _invoke("verify", "--from-snapshot")
@@ -863,18 +869,18 @@ def test_from_snapshot_筛出的断言都不被快照覆盖时报错() -> None:
 # ── index 真正写盘的那条路 ──────────────────────────────────
 @_needs_game
 @pytest.mark.slow
-def test_index_写盘后内容自洽() -> None:
-    """--dry-run 已测过；这条走真实写盘路径，并确认产物首行与统计对得上。"""
-    target = config.DOCS / "13-common全量键名索引.md"
-    before = target.read_bytes()
-    try:
-        r = _invoke("index")
-        assert r.exit_code == 0, r.output
-        text = target.read_text(encoding="utf-8")
-        assert text.startswith("# 13 · common 全量键名索引")
-        assert "数据版本" in text, "生成的索引必须带版本溯源"
-    finally:
-        target.write_bytes(before)
+def test_index_写盘后内容自洽(tmp_path, monkeypatch) -> None:
+    """真实 CLI 写盘只落临时目录，不能让其他 worker 读到共享文档的中间状态。"""
+    target = tmp_path / "13-common全量键名索引.md"
+    monkeypatch.setattr(cli, "OUT_INDEX_DOC", target)
+    r = _invoke("index")
+    assert r.exit_code == 0, r.output
+    text = target.read_text(encoding="utf-8")
+    assert text.startswith("# 13 · common 全量键名索引")
+    assert "数据版本" in text, "生成的索引必须带版本溯源"
+    assert config.game_version()["caligula_branch"] in text
+    assert "始终对应当前安装" not in text
+    assert "历史勘误记录（1.14 系列）" in text
 
 
 # ── analyze（慢，只跑最省的一种组合）────────────────────────

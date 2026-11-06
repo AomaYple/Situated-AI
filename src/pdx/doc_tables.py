@@ -101,6 +101,8 @@ class KeyedTableSpec:
     occurrence: int = 0
     append_new: bool = True
     allow_drop: bool = False
+    # Columns whose full text belongs to the generator, including both N / M values.
+    replace_columns: frozenset[int] = frozenset()
 
 
 def split_row(line: str) -> list[str]:
@@ -320,7 +322,12 @@ def merge_rows(
         merged = (
             dict(cells)
             if grouped
-            else {i: _merge_cell(row[i] if i < len(row) else "", text) for i, text in cells.items()}
+            else {
+                i: text
+                if i in spec.replace_columns
+                else _merge_cell(row[i] if i < len(row) else "", text)
+                for i, text in cells.items()
+            }
         )
         if raw is not None and _same_cells(row, merged):
             out.append(raw[len(out)])  # 值没变 → 整行原样（含空格与加粗）

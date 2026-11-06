@@ -24,7 +24,7 @@
 
 清单过期时怎么办
 ----------------
-``v3 mirror write`` 重新生成清单（要游戏）；``v3 mirror --sync`` 顺便把
+``v3 mirror write`` 重新生成清单（要游戏）；``v3 mirror write --sync`` 顺便把
 本地镜像从游戏重拷一份。清单里的字节与行数要同步进
 ``docs/victoria3-modding/07-官方文档索引.md`` —— 那两个数字由 ``v3 verify``
 的 ``docs.total_bytes`` / ``docs.max_bytes`` 看守。
@@ -39,23 +39,44 @@ from typing import TYPE_CHECKING
 import pytest
 import typer
 
-from pdx import config, docs_mirror
+from pdx import config, docs_mirror, verify
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 pytestmark = pytest.mark.unit
 
-#: 官方 .md 的篇数。1.14.3 实测 92（game 91 + jomini 1）；1.14.4 实测 94（game 93 + jomini 1）。
-EXPECTED_DOCS = 94
-
 
 def test_清单存在且可读() -> None:
     data = docs_mirror.load_manifest()
     assert data, f"读不到 {docs_mirror.MANIFEST_NAME} —— 跑 `v3 mirror write` 生成"
     got = docs_mirror.entries(data)
-    assert len(got) == EXPECTED_DOCS, f"清单里有 {len(got)} 篇，预期 {EXPECTED_DOCS}"
+    expected = next(c.expected for c in verify.CLAIMS if c.id == "env.md_total")
+    assert len(got) == expected, f"清单里有 {len(got)} 篇，当前 Claim 预期 {expected}"
+    expected_version = {
+        c.target: c.expected for c in verify.CLAIMS if c.kind == "game_version_field"
+    }
+    assert set(expected_version) == {
+        "caligula_branch",
+        "caligula_rev",
+        "clausewitz_branch",
+        "clausewitz_rev",
+    }
+    assert data["版本"] == expected_version, "清单身份必须与当前四字段 Claim 相同"
+    compact = verify.latest_compact_snapshot()
+    assert compact is not None
+    assert compact.version == expected_version, "清单与当前冻结 compact 必须同身份"
     assert data.get("版本"), "清单必须记录生成时的游戏版本，否则不知道它属于哪一版"
+
+
+def test_无游戏仍核对冻结清单完整身份(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(config, "ROOT", tmp_path / "missing-installation")
+    assert not any(config.game_version().values())
+    data = docs_mirror.load_manifest()
+    expected_version = {
+        c.target: c.expected for c in verify.CLAIMS if c.kind == "game_version_field"
+    }
+    assert data["版本"] == expected_version
 
 
 def test_清单每条都带指纹() -> None:
@@ -125,6 +146,7 @@ def test_清单与本机游戏一致() -> None:
     失败通常意味着游戏升级后 Paradox 改了官方文档 —— 那就重新生成清单
     （``v3 mirror write``），并同步 ``07-官方文档索引.md`` 里的字节/行数。
     """
+    assert docs_mirror.load_manifest()["版本"] == config.game_version()
     diff = docs_mirror.diff_against_game()
     assert not diff, "清单与本机游戏不一致：\n  " + "\n  ".join(diff[:10])
 
@@ -422,3 +444,18 @@ def test_可选内容根缺失不阻止有效游戏清单(tmp_path, monkeypatch)
     )
     path = docs_mirror.write_manifest()
     assert json.loads(path.read_text(encoding="utf-8"))["篇数"] == 1
+
+
+def test_目录生成保留完整路径且两组精确覆盖清单(monkeypatch):
+    docs = {
+        "game/common/a/readme.md": {"字节": 100, "行数": 3},
+        "game/gui/a/readme.md": {"字节": 200, "行数": 4},
+        "jomini/common/a/readme.md": {"字节": 300, "行数": 5},
+    }
+    monkeypatch.setattr(docs_mirror, "entries", lambda: docs)
+    common = docs_mirror.catalogue_rows(True)
+    others = docs_mirror.catalogue_rows(False)
+    assert common == [("game/common/a/readme.md", {0: "1", 2: "100", 3: "3"})]
+    assert {key for key, _ in common + others} == set(docs)
+    assert not ({key for key, _ in common} & {key for key, _ in others})
+    assert [cells[0] for _, cells in common + others] == ["1", "2", "3"]

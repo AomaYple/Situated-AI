@@ -49,6 +49,7 @@ from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, norm_key
 from .extract import extract_dir
+from .install_tree import _spec_excerpt
 from .model import Block
 from .usage import (
     _iter_keyed_blocks,
@@ -773,6 +774,67 @@ def tech_counts() -> dict[str, int]:
 # ────────────────────────── 登记 ──────────────────────────
 
 
+def _file_size_specs() -> list[KeyedTableSpec]:
+    """当前文件统计列，不改作者摘要；节选名单不会随生成而扩大。"""
+    specs = [
+        _spec_excerpt(
+            "doc17 特质文件字节", "| 文件 | 字节 | 内容 |", config.GAME / "common/character_traits"
+        ),
+        _spec_excerpt(
+            "doc17 角色文件字节",
+            "| 文件 | 字节 | 定义的角色 |",
+            config.GAME / "common/character_roles",
+        ),
+        _spec_excerpt(
+            "doc17 自定义本地化文件字节",
+            "| 文件 | 字节 | 说明 |",
+            config.GAME / "common/customizable_localization",
+        ),
+    ]
+    for occurrence, directory in enumerate(("trigger_localization", "modifier_type_definitions")):
+        specs.append(
+            KeyedTableSpec(
+                name=f"doc17 {directory} 文件统计",
+                header="| 文件 | 定义数 | 字节 | 内容 |",
+                cells=_file_stats(directory),
+                occurrence=occurrence,
+                append_new=False,
+            )
+        )
+    for key_column, size_column in ((0, 1), (3, 4)):
+        specs.append(
+            KeyedTableSpec(
+                name=f"doc17 效果本地化文件字节{key_column}",
+                header="| 文件 | 字节 | | 文件 | 字节 |",
+                cells=lambda col=size_column: [
+                    (p.name, {col: f"{p.stat().st_size:,}"})
+                    for p in sorted((config.GAME / "common/effect_localization").glob("*.txt"))
+                ],
+                key_column=key_column,
+                append_new=False,
+            )
+        )
+    return specs
+
+
+def _file_stats(directory: str) -> Callable[[], list[tuple[str, dict[int, str]]]]:
+    def rows() -> list[tuple[str, dict[int, str]]]:
+        counts = file_definition_counts(f"common/{directory}")
+        return [
+            (
+                p.name,
+                {
+                    **({1: f"{counts[p.name]:,}"} if p.name in counts else {}),
+                    2: f"{p.stat().st_size:,}",
+                },
+            )
+            for p in sorted((config.GAME / "common" / directory).iterdir())
+            if p.is_file()
+        ]
+
+    return rows
+
+
 def doc_table_specs() -> list[KeyedTableSpec]:
     """doc 17 的全部生成表（24 张，30 条 spec）。
 
@@ -783,6 +845,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
     每条只碰自己那几行 —— 其余行原样保留。
     """
     return [
+        *_file_size_specs(),
         *_doc17_field_specs(),
         # `flag_definitions` 表的最后一行：`includes` 在 **TAG 顶层块**里（表里写着「列表级」），
         # 按块内字段数会得 0 —— 于是这一行永远显示「未使用」，而它其实有 2 处。

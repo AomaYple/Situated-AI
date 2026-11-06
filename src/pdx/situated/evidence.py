@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import tomllib
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING
 
 from ..model import Assignment, Block, Scalar  # noqa: TID252
@@ -19,6 +22,52 @@ _TRIGGER = re.compile(
 )
 _REFRESH = {"consumer", "monthly", "shock"}
 _UNKNOWN = {"vanilla", "conservative", "lower_tier"}
+
+
+@dataclass(frozen=True, slots=True)
+class Observation:
+    """One original getter, bound to current source and documented legal roles.
+
+    Predicate thresholds and consumer fallback do not change the raw observation.
+    Its value remains unknown until the original reader accepts a supplied value.
+    """
+
+    source: str
+    source_sha256: str
+    getter: str
+    entity: str
+    entity_kind: str
+    roles: tuple[str, ...]
+    proof: tuple[str, ...]
+    original_unit: str
+    timing: str
+    unknown: str
+    evaluation_cost: int
+
+    def __post_init__(self) -> None:
+        if (
+            not self.source
+            or not re.fullmatch(r"[0-9a-f]{64}", self.source_sha256)
+            or not self.getter
+            or not self.entity
+            or not self.entity_kind
+            or len(self.roles) != 1
+            or not set(self.roles) <= {"actor", "target", "candidate", "auxiliary"}
+            or not self.proof
+            or not all(self.proof)
+            or not self.original_unit
+            or self.timing != "consumer"
+            or self.unknown != "preserve_unknown"
+            or type(self.evaluation_cost) is not int
+            or not 1 <= self.evaluation_cost <= 16384
+        ):
+            raise ValueError("原始观测缺少当前来源、getter、合法对象/角色、单位、时机或有限成本")
+
+    @property
+    def identity(self) -> str:
+        return hashlib.sha256(
+            json.dumps(asdict(self), sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
 
 
 def scalar_predicate_engine(trigger: str) -> str | None:

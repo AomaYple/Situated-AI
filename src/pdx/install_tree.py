@@ -647,6 +647,9 @@ def doc_misc_specs() -> list[KeyedTableSpec]:
       与文档单元格一致。
     """
     return [
+        _spec_excerpt(
+            "doc11 AI history 文件字节", "| 文件 | 字节 | 作用 |", config.GAME / "common/history/ai"
+        ),
         KeyedTableSpec(
             name="doc11 history 子目录",
             header="| 子目录 | 文件数 | 作用 |",

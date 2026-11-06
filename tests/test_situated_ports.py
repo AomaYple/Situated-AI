@@ -67,7 +67,13 @@ def _fixture():
 def _load(data=None, readers=None, writers=None):
     if data is None:
         data, readers, writers = _fixture()
-    return _ports().from_data(data, readers=readers, writers=writers)
+    return _ports().from_data(
+        data,
+        readers=readers,
+        writers=writers,
+        source_hashes={source: "1" * 64 for source, _ in readers},
+        source_proofs={source: ("fixture/native.txt:sha256=" + "2" * 64,) for source, _ in readers},
+    )
 
 
 @pytest.mark.parametrize(
@@ -87,6 +93,62 @@ def test_port_threshold_matches_manual_and_generated_pdx(raw, expected) -> None:
 def test_caller_cannot_forge_derived_alias_or_source_value() -> None:
     graph = _load()
     assert graph.evaluate("low", {"low": True, "literacy": 0.2}) is None
+
+
+def test_original_identity_binds_source_proof_getter_unit_and_preserves_raw_unknown():
+    data, readers, writers = _fixture()
+    baseline = _load(data, readers, writers).origins("low")[0]
+    for source_sha, proof in (("3" * 64, "2" * 64), ("1" * 64, "4" * 64)):
+        graph = _ports().from_data(
+            data,
+            readers=readers,
+            writers=writers,
+            source_hashes={INFO: source_sha},
+            source_proofs={INFO: ("fixture/native.txt:sha256=" + proof,)},
+        )
+        assert graph.origins("low")[0].identity != baseline.identity
+        assert graph.evaluate("low", {}) is None
+    assert baseline.observation.original_unit == "ratio"
+    assert baseline.observation.roles == ("actor",)
+    assert baseline.observation.timing == "consumer"
+    assert baseline.observation.unknown == "preserve_unknown"
+    # A consumer threshold is derived; it cannot manufacture another raw fact.
+    data["ports"]["low"]["value"] = 0.4
+    assert _load(data, readers, writers).origins("low")[0].identity == baseline.identity
+
+
+@pytest.mark.parametrize("mode", ["all", "any"])
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        (0.2, 0.2),
+        (0.2, 0.8),
+        (0.8, 0.8),
+        (None, 0.2),
+    ],
+)
+def test_scoped_or_operands_keep_existence_and_predicate_together(mode, left, right):
+    data, readers, writers = _fixture()
+    other = replace(readers[(INFO, "literacy")], key="other", engine="other_rate")
+    readers[(INFO, "other")] = other
+    data["ports"]["other"] = copy.deepcopy(data["ports"]["low"])
+    data["ports"]["other"].update(reader_key="other", reader=_ports().reader_signature(other))
+    data["ports"]["joint"] = {
+        key: value
+        for key, value in data["ports"]["low"].items()
+        if key
+        in {"domain", "entity", "entity_kind", "unit", "direction", "refresh", "unknown", "cost"}
+    }
+    data["ports"]["joint"][mode] = ["low", "other"]
+    data["uses"][0]["port"] = "joint"
+    graph = _load(data, readers, writers)
+    actual = graph.evaluate("joint", {(INFO, "literacy"): left, (INFO, "other"): right})
+    guard = graph.guard(INFO, "school", "joint")
+    facts = {"ROOT": {"literacy_rate": left, "other_rate": right}}
+    assert pdx_eval.condition(parse_text(guard.when_true).root, facts) is actual
+    assert pdx_eval.condition(parse_text(guard.when_false).root, facts) is (
+        None if actual is None else not actual
+    )
 
 
 def test_aliases_keep_same_raw_origin_and_diamond_is_bounded() -> None:

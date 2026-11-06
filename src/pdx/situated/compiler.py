@@ -2267,10 +2267,51 @@ def load_model(
             for reader in policy.readers
         },
         writers=instance_contexts,
+        source_hashes={
+            source: policy.source_sha256
+            for source, policy in (
+                ("mod/decisions/information.toml", information),
+                *adapters.policies,
+            )
+        },
+        source_proofs={
+            **{
+                source: (
+                    f"{source}:baseline_sha256={policy.baseline_sha256}",
+                    f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
+                )
+                for source, policy in adapters.policies
+            },
+            "mod/decisions/information.toml": (
+                f"research/vanilla-ai/1.15.0/00_default_strategy.txt:sha256={hashlib.sha256(baseline_text.encode()).hexdigest()}",
+                f"decision_interfaces.scripted_trigger_snapshot:sha256={hashlib.sha256(decision_interfaces.scripted_trigger_snapshot()).hexdigest()}",
+                f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
+            ),
+            ("mod/decisions/information.toml", "war_defeat"): (
+                json.dumps(
+                    decision_interfaces.war_memory_contract(), sort_keys=True, separators=(",", ":")
+                ),
+                f"src/pdx/decision_interfaces.py:sha256={hashlib.sha256(Path(decision_interfaces.__file__).read_bytes()).hexdigest()}",
+            ),
+        },
     )
     origin_map = {
         port.id: tuple(origin.identity for origin in graph.origins(port.id)) for port in graph.ports
     }
+    # Facts, ports and the writer's executable contribution refer to one raw
+    # identity. Predicate fact IDs/triggers remain stable and retain thresholds.
+    fact_origins: dict[str, set[str]] = {}
+    for port in graph.ports:
+        if port.reader_key is not None:
+            fact_origins.setdefault(port.reader_key[1], set()).update(origin_map[port.id])
+        if port.id in {fact.id for fact in facts} and len(origin_map[port.id]) == 1:
+            fact_origins.setdefault(port.id, set()).update(origin_map[port.id])
+    facts = tuple(
+        replace(fact, identity=next(iter(fact_origins[fact.id])))
+        if len(fact_origins.get(fact.id, ())) == 1
+        else fact
+        for fact in facts
+    )
     relation_list = relations.bind_origins(relation_list, origin_map)
     actions = _bind_action_origins(actions, graph, facts)
     decision_rows = decision_ir.compile_decisions(actions, consumers, relation_list)
@@ -2309,6 +2350,11 @@ def load_model(
             replace(
                 writer,
                 reader_context_bindings=context_readers.get((writer.source, writer.definition), ()),
+                port_contributions=tuple(
+                    ports.contribution(writer, use, graph)
+                    for use in graph.uses
+                    if (use.source, use.definition) == (writer.source, writer.definition)
+                ),
             )
             for writer in consumer_bundle.writers
         ),
@@ -3233,21 +3279,30 @@ def compile_policy(
         )
         port_bindings = []
         for use in model.port_graph.uses:
-            if use.source != exact_source or use.role not in {"need", "capacity"}:
+            if use.source != exact_source or use.role not in {
+                "need",
+                "capacity",
+                "recovery",
+                "cost",
+            }:
                 continue
             port_rule = next((rule for rule in compiled.rules if rule.id == use.definition), None)
             if port_rule is None:
                 raise ValueError(f"端口缺少具体规则term: {use.definition}")
-            model.port_graph.assert_predicates(use.port, port_rule.conditions, readers)
-            port_bindings.append(
-                ports.PortBinding(
-                    use.source,
-                    use.definition,
-                    use.port,
-                    model.port_graph,
-                    port_rule.required_known_facts,
-                )
+            port_binding = ports.PortBinding(
+                use.source,
+                use.definition,
+                use.port,
+                model.port_graph,
+                port_rule.required_known_facts,
+                use.role,
+                ports.contribution(
+                    writer_by_key[(use.source, use.definition)], use, model.port_graph
+                ),
+                writer_by_key[(use.source, use.definition)],
             )
+            port_binding.validate(port_rule, readers)
+            port_bindings.append(port_binding)
         compiled = replace(compiled, port_bindings=tuple(port_bindings))
     compiled = programs.enable(compiled, source=exact_source or "empty")
     compiled_contract = {

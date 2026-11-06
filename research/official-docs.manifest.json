@@ -8,18 +8,18 @@
    "镜像字节": 3957
   },
   "game/common/ai_regional_objectives/ai_regional_objectives.md": {
-   "sha256": "34ea9795898c438de984223ddd11a6e3eb2e9199873bbfbaf2f743290a01b209",
-   "字节": 1161,
-   "行数": 15,
-   "镜像sha256": "5b48e95ee6293ead6f3bc05eb6cf98a702e27375e1de9c327c5d5f25f5c3c60c",
-   "镜像字节": 1158
+   "sha256": "6fc750d13ec8da8c1ae1149733d55de394a5ca1e3c097618eeccf380c4699db8",
+   "字节": 1984,
+   "行数": 24,
+   "镜像sha256": "05d947753b9e5f0a063b5af1178e60aa2e6a2cbea4dc6ab6ab9a51fbe6cfaf92",
+   "镜像字节": 1981
   },
   "game/common/ai_ship_categories/ai_ship_categories.md": {
-   "sha256": "cf933bd215f5bbaa0252b2d7adfb0c390eacbe1683df0cdde68ee2ffe84c4592",
-   "字节": 668,
-   "行数": 12,
-   "镜像sha256": "4b628e068118b85cfe13d2ecd4a7432ca6580c1a593e8e679904caf0cad5dce3",
-   "镜像字节": 665
+   "sha256": "3d6d8be09c35317be8c63343bf948ca18ae24e8ba4a2c6e541301ed804d51d12",
+   "字节": 897,
+   "行数": 15,
+   "镜像sha256": "68c08324f44a23cf38f68c55d40293cc5e71f3eef33abd16b612dd8ba0354b6f",
+   "镜像字节": 894
   },
   "game/common/ai_strategic_region_stance_types/ai_strategic_region_stance_types.md": {
    "sha256": "fda74acba8a7f0f06ad356475654bac48adbb570ada9f8429d2d0ac093f9db7a",
@@ -50,11 +50,11 @@
    "镜像字节": 6967
   },
   "game/common/character_roles/character_roles.md": {
-   "sha256": "f36a7ee6e02e455ca386e95b190627d8b288566b831fc839e4e62ecbb67fe354",
-   "字节": 3134,
-   "行数": 41,
-   "镜像sha256": "f36a7ee6e02e455ca386e95b190627d8b288566b831fc839e4e62ecbb67fe354",
-   "镜像字节": 3134
+   "sha256": "c33f56dd502b609b968ff579686257897224dc497d1849050332077db9c03745",
+   "字节": 3992,
+   "行数": 56,
+   "镜像sha256": "c33f56dd502b609b968ff579686257897224dc497d1849050332077db9c03745",
+   "镜像字节": 3992
   },
   "game/common/character_traits/character_traits.md": {
    "sha256": "b69e6e4370ff0e0f206b31d3a3733bed7f20292f7170492026ce191c0eba1cbc",
@@ -84,6 +84,13 @@
    "镜像sha256": "6cc7f40745eaf2eaa1fc9f2d75267ee20002a221fb092bfbbed9f08fce99338f",
    "镜像字节": 2670
   },
+  "game/common/country_definitions/country_definitions.md": {
+   "sha256": "d210a0a92753c7ca7eee18952f9f0d1ecfa6cf29636f123a76194f1c9731f088",
+   "字节": 1639,
+   "行数": 37,
+   "镜像sha256": "d210a0a92753c7ca7eee18952f9f0d1ecfa6cf29636f123a76194f1c9731f088",
+   "镜像字节": 1639
+  },
   "game/common/diplomatic_actions/diplomatic_action.md": {
    "sha256": "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
    "字节": 10779,
@@ -99,11 +106,11 @@
    "镜像字节": 700
   },
   "game/common/diplomatic_catalysts/diplomatic_catalysts.md": {
-   "sha256": "27ef0897acc5a5b201b0c3260df32fb40c31e1e1edd52ffd77bf71c0be5b7476",
-   "字节": 2963,
+   "sha256": "e9464bb9fd2c35dec9f24454278083e0ceddced5cab59b0b142170f75f4c3d7d",
+   "字节": 2983,
    "行数": 51,
-   "镜像sha256": "37ebc65feb0af0fa5da84cb5e11b2c38302ca09f1d4b8048f5cd6d7a2bd357bd",
-   "镜像字节": 2960
+   "镜像sha256": "78205c91b7a481befb0bcadfe016819863656f61b4237e1a8e64308123ebe5ad",
+   "镜像字节": 2980
   },
   "game/common/diplomatic_plays/diplomatic_plays.md": {
    "sha256": "0c534621315b5490404993cdf5932a2d29901d53d01b63af11bf7a7fea1ec336",
@@ -127,11 +134,11 @@
    "镜像字节": 642
   },
   "game/common/dna_data/dna_data.md": {
-   "sha256": "2d4890af65bdf266ae0d912156bb9ea3e3ac3802156eb2d961d19bab212c2a8e",
-   "字节": 351,
-   "行数": 11,
-   "镜像sha256": "1ed093d62cb20e04639c7977382cf3f28919537b92e02eddaca722f0fcd9b7e4",
-   "镜像字节": 348
+   "sha256": "7be21cee6de99287f6df62b7642e0fca6892525369fcb4d6c08f404eede19967",
+   "字节": 404,
+   "行数": 12,
+   "镜像sha256": "d9f435ff7e92aaba0c1abb37b9f5d1a5015d167394f7a9a9dec7d18bbb13b756",
+   "镜像字节": 401
   },
   "game/common/dynamic_country_names/dynamic_country_names.md": {
    "sha256": "73f8ba749623388a9092edbfaed1e2a8a996d5f323e076c26c72f43753892a29",
@@ -168,6 +175,13 @@
    "镜像sha256": "d80e5a7f3a156bb54197f80c3481510a68be0777fb79039a66abec141e6bdff2",
    "镜像字节": 544
   },
+  "game/common/glossary/glossary.md": {
+   "sha256": "b1918788648cce928ddf75a528a8936f627a0c38f6eec28b83d30d681c501a7c",
+   "字节": 415,
+   "行数": 6,
+   "镜像sha256": "b1918788648cce928ddf75a528a8936f627a0c38f6eec28b83d30d681c501a7c",
+   "镜像字节": 415
+  },
   "game/common/goods/goods.md": {
    "sha256": "08e04c52b4d6bf3b10dd5cae087a28fe6a24066ced4289d42c4fcb5c77ad847d",
    "字节": 2053,
@@ -176,11 +190,11 @@
    "镜像字节": 2050
   },
   "game/common/harvest_condition_types/harvest_condition_types.md": {
-   "sha256": "122d64aecbb70d29aa86c27efff9fab0d549e1d0ab559c91c65b9506a977e8fe",
-   "字节": 1559,
-   "行数": 58,
-   "镜像sha256": "c2d8078a236bad218e1760716bf069840ff91fc12dd29bd7d11cf841b9f84845",
-   "镜像字节": 1556
+   "sha256": "1089ed4f019426c267ccd017d3a18d5b15115ea2cc4e353daf20ffc7ffb1a445",
+   "字节": 1783,
+   "行数": 61,
+   "镜像sha256": "36d0d864863f71d0a9ec240a293ad7a86e5da1c81e8f6cd9dc66aa7677e489e6",
+   "镜像字节": 1780
   },
   "game/common/history/military_formations/military_formations.md": {
    "sha256": "3bcaf77a663842ce7acdd2e826b32b7bd6b92650b2d7999e8ef9642c0c0e5c35",
@@ -190,11 +204,11 @@
    "镜像字节": 477
   },
   "game/common/institutions/institutions.md": {
-   "sha256": "46af14929737c90f3003f613c1427ae7c861189ae1c866208dceba7a44e2a12b",
-   "字节": 406,
-   "行数": 5,
-   "镜像sha256": "46af14929737c90f3003f613c1427ae7c861189ae1c866208dceba7a44e2a12b",
-   "镜像字节": 406
+   "sha256": "d82c51d8425e6809bbbb4a6a3596b5a6f354841e188a83858aef8ba9b523a881",
+   "字节": 966,
+   "行数": 18,
+   "镜像sha256": "d82c51d8425e6809bbbb4a6a3596b5a6f354841e188a83858aef8ba9b523a881",
+   "镜像字节": 966
   },
   "game/common/interest_tier_types/interest_tier_types.md": {
    "sha256": "0708011d8c65c949ba2acb1d26a3cd7c7c3d0b4a929bffb927fd759f4916d558",
@@ -204,11 +218,11 @@
    "镜像字节": 3133
   },
   "game/common/journal_entries/journal_entries.md": {
-   "sha256": "1032c0dac08d502d49380e05929912fa94ba3a3a6f2a6279b480d58ea7272323",
-   "字节": 17123,
-   "行数": 444,
-   "镜像sha256": "8af044b1223866f3ddc59f837ccb9c370d5fda08f74e371274549288aaa3e380",
-   "镜像字节": 17120
+   "sha256": "a28e3f4cd37b381b40e787deb3342aa2518be87fa89176e213d235a6ed0eeff1",
+   "字节": 19729,
+   "行数": 415,
+   "镜像sha256": "a28e3f4cd37b381b40e787deb3342aa2518be87fa89176e213d235a6ed0eeff1",
+   "镜像字节": 19729
   },
   "game/common/laws/readme.md": {
    "sha256": "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c",
@@ -225,11 +239,11 @@
    "镜像字节": 160
   },
   "game/common/mobilization_option_groups/mobilization_option_groups.md": {
-   "sha256": "cd6d259efd4e019c8b87a9a21afb066b7174217ed307538c8bd4ef372d33bc86",
-   "字节": 215,
+   "sha256": "e7f6be5a9ba48e864d0c72672e128cf00ed98f06f1de94aea3fbf157905b00e1",
+   "字节": 233,
    "行数": 7,
-   "镜像sha256": "cd6d259efd4e019c8b87a9a21afb066b7174217ed307538c8bd4ef372d33bc86",
-   "镜像字节": 215
+   "镜像sha256": "82cb5d753db5bec5aa5a86b1d53909037c7dabd7befd3efcdb9b2d938a6ac625",
+   "镜像字节": 230
   },
   "game/common/mobilization_options/mobilization_options.md": {
    "sha256": "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
@@ -239,11 +253,11 @@
    "镜像字节": 2706
   },
   "game/common/modifier_type_definitions/modifier_types.md": {
-   "sha256": "debebe9643218d5204f9315f696f141c8aae0acd5e8182bccdbab38db0fcc873",
-   "字节": 2216,
-   "行数": 27,
-   "镜像sha256": "7d5ab6ccb97d1a72e570598cb9788129eef9f9c5e9351674ebb619f30b6f23be",
-   "镜像字节": 2213
+   "sha256": "5e6682ca74536097047ee640b40ce6d8e1fb5f6f057a5edd71da8470851b388c",
+   "字节": 2439,
+   "行数": 28,
+   "镜像sha256": "5dcc44e6ee3071d387e82985a9c14efb9db0f4381646d8f35573725bb136adb5",
+   "镜像字节": 2436
   },
   "game/common/naval_battle_conditions/naval_battle_conditions.md": {
    "sha256": "baea32e9776737ffae4252ce540cc350fe4eaf08307b0d010b01590493d7b450",
@@ -267,18 +281,18 @@
    "镜像字节": 263
   },
   "game/common/objective_subgoals/subgoals.md": {
-   "sha256": "6844a30e2e1144e012c3ff017006de0a0fd272bd44d044e9091fda8b7233e1ee",
-   "字节": 1341,
+   "sha256": "7c121da340cd9ccbbb7ecf93057c9df5a6f9e5e479abda97d6f7a0748c6be94d",
+   "字节": 1366,
    "行数": 17,
-   "镜像sha256": "6844a30e2e1144e012c3ff017006de0a0fd272bd44d044e9091fda8b7233e1ee",
-   "镜像字节": 1341
+   "镜像sha256": "7c121da340cd9ccbbb7ecf93057c9df5a6f9e5e479abda97d6f7a0748c6be94d",
+   "镜像字节": 1366
   },
   "game/common/objectives/objectives.md": {
-   "sha256": "8cd9974ca6db72b095eed56e0232809a739160446fca1b9f2e25a3fe5a473d47",
-   "字节": 329,
-   "行数": 9,
-   "镜像sha256": "8cd9974ca6db72b095eed56e0232809a739160446fca1b9f2e25a3fe5a473d47",
-   "镜像字节": 329
+   "sha256": "50013b20f461897c1950e607474628d087c38a061f08d5c832989436ba0b1cd5",
+   "字节": 556,
+   "行数": 13,
+   "镜像sha256": "50013b20f461897c1950e607474628d087c38a061f08d5c832989436ba0b1cd5",
+   "镜像字节": 556
   },
   "game/common/on_actions/_on_actions.md": {
    "sha256": "c50e80fc29d126f3ec83733b3f0ece4a645265cc478098df68f3681a9b0730bc",
@@ -323,11 +337,11 @@
    "镜像字节": 231
   },
   "game/common/political_movements/political_movements.md": {
-   "sha256": "4842b165656f0741cc0baad97b2d82836f9097f64ce5b43ca4559c9d733e22c6",
-   "字节": 5981,
+   "sha256": "dcfc13f1e6b975bef583dad4d76d0f55b4dccb09485e759e3c79a15d23cabac5",
+   "字节": 6018,
    "行数": 140,
-   "镜像sha256": "f7b3b93323906a59bea8f35e996eb0094e6195dbfe0ca2a5910754026936b098",
-   "镜像字节": 5978
+   "镜像sha256": "89c238efd6e2a5fee422fe92fb544dcb59a1015c4c86e53ffe8f7df5f9a21cec",
+   "镜像字节": 6015
   },
   "game/common/pop_types/pop_types.md": {
    "sha256": "973fc65ff8886bf4e96f0f4a3a302b50b930d5b7ddd2dbf4f475a1426d624608",
@@ -385,6 +399,13 @@
    "镜像sha256": "7f1d3f42a7b62efa846ece45a9c58c408d7614219500d2a2d952c77e1ce5d892",
    "镜像字节": 2815
   },
+  "game/common/regional_exile_pools/regional_exile_pools.md": {
+   "sha256": "e1b26235804f7d72a097725259ae8c03025b10d8e2e5b070a875c58c07d8a0f4",
+   "字节": 868,
+   "行数": 9,
+   "镜像sha256": "c1eafbcfb606ec167aef1cb7d6a469a1027f40b2330c795c97edd4563f1ffb83",
+   "镜像字节": 865
+  },
   "game/common/script_values/script_values.md": {
    "sha256": "66431f8e32c467a4b224b87a939189ee26c75ff1c6837f4966c6046cc67725a6",
    "字节": 4007,
@@ -393,11 +414,11 @@
    "镜像字节": 4007
   },
   "game/common/scripted_buttons/scripted_buttons.md": {
-   "sha256": "bb1028f7b843e43dc42473968307ad340e2960099cc50e6907f3cff9a47c2d4d",
-   "字节": 1059,
-   "行数": 37,
-   "镜像sha256": "bb1028f7b843e43dc42473968307ad340e2960099cc50e6907f3cff9a47c2d4d",
-   "镜像字节": 1059
+   "sha256": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26",
+   "字节": 4318,
+   "行数": 99,
+   "镜像sha256": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26",
+   "镜像字节": 4318
   },
   "game/common/scripted_guis/scripted_guis.md": {
    "sha256": "60aa0ad8ce00bea13d85b6e7624a8d9beeb17db300b439bcf22deefc368b691c",
@@ -414,11 +435,11 @@
    "镜像字节": 192
   },
   "game/common/scripted_progress_bars/scripted_progress_bars.md": {
-   "sha256": "9f0fbb5b5c3dafd72c19dd967dad2801544c730b3cbe2950bd3214dd49933bff",
-   "字节": 1305,
-   "行数": 40,
-   "镜像sha256": "9f0fbb5b5c3dafd72c19dd967dad2801544c730b3cbe2950bd3214dd49933bff",
-   "镜像字节": 1305
+   "sha256": "9a31e037ff350fb0af22229afd80b80d5f1be633751b98710f32354aca3024bf",
+   "字节": 4988,
+   "行数": 95,
+   "镜像sha256": "6be6b866179e359f5eac6acce28b742b5d111ee92f8f84fc76bbf4f61c773a39",
+   "镜像字节": 4985
   },
   "game/common/ship_groups/ship_groups.md": {
    "sha256": "1c6c4cc6f9e773ecc35a538990de1c1d96ab88f8ccbfde552e21a91ac06d33c8",
@@ -505,11 +526,11 @@
    "镜像字节": 1766
   },
   "game/common/treaty_articles/treaty_articles.md": {
-   "sha256": "7ba225c3de5ec9d31c1efd0a8c615b36ad6c9b86cf15c3fbb7aa16e9186f80bf",
-   "字节": 28171,
-   "行数": 648,
-   "镜像sha256": "8aa3024c68f12761eec43461dcfd9a0e747f74513d1d3f0d6bd3a369e3aef613",
-   "镜像字节": 28168
+   "sha256": "ea1f5dc6519ca69debb8c902ae5db13e209c7297a7a0eef6c2adccb25b5f1c78",
+   "字节": 29963,
+   "行数": 675,
+   "镜像sha256": "0db1a61cedd888ff29685838fd5338c6802f0f5f4e2dcb3940de8cb086fe38c9",
+   "镜像字节": 29960
   },
   "game/common/trigger_localization/trigger_localization.md": {
    "sha256": "8dcbd6b27d9eaa2428e8fb60bfe24fbf260e85b50e2236813f662f0e9295b9f1",
@@ -526,11 +547,11 @@
    "镜像字节": 800
   },
   "game/common/tutorial_lessons/tutorial_lesson.md": {
-   "sha256": "7463427295e6d780c7105eaa586bc73d5412a0cc4d46c6703c62d7e0a201fcae",
-   "字节": 5290,
+   "sha256": "9797abee1396ba6f121b98c41e6c6845e9759c13b3d0c09f03fc2cd0cfc06601",
+   "字节": 5312,
    "行数": 72,
-   "镜像sha256": "7463427295e6d780c7105eaa586bc73d5412a0cc4d46c6703c62d7e0a201fcae",
-   "镜像字节": 5290
+   "镜像sha256": "9797abee1396ba6f121b98c41e6c6845e9759c13b3d0c09f03fc2cd0cfc06601",
+   "镜像字节": 5312
   },
   "game/common/war_goal_types/war_goal_types.md": {
    "sha256": "8ec8cd24ca77b6e6176fb57139d2b6f5c4e8a22635149c9c7c6ac38ec9168ef5",
@@ -546,12 +567,26 @@
    "镜像sha256": "5e12dff7c70353226911213aa1fa480d05636c8139d769fb322323fb7891fe6b",
    "镜像字节": 1158
   },
+  "game/gfx/loadingscreens/loadingscreen_settings.md": {
+   "sha256": "66f84b461a5af47b6656128a9c9d222db3ba2380cfce90eb8088fcdee22de5b9",
+   "字节": 1114,
+   "行数": 20,
+   "镜像sha256": "a0703da677ecb01c8651a3e8102c38d02be0fefb834620b59f7f12e19f99728d",
+   "镜像字节": 1111
+  },
   "game/gfx/map/city_data/city_centerpiece/city_centerpiece.md": {
    "sha256": "2502a07472464930f7076d580ab2bfef3618b0c2647eed9cbceda790ad0d41fa",
    "字节": 4127,
    "行数": 86,
    "镜像sha256": "7dfda45d7c417fc46a1e09302af3dfe54a6309622da47bd328c39b9a433121cf",
    "镜像字节": 4124
+  },
+  "game/gfx/map/environment/season_vfx/season_vfx.md": {
+   "sha256": "0f43cf9973e51dffac68f79c3ea516780f9eede15ccd71a9f780f5a0e43b0d8a",
+   "字节": 262,
+   "行数": 4,
+   "镜像sha256": "0f43cf9973e51dffac68f79c3ea516780f9eede15ccd71a9f780f5a0e43b0d8a",
+   "镜像字节": 262
   },
   "game/gfx/map/fleet_dioramas/fleet_diorama.md": {
    "sha256": "047c540520b46c7076f2f928f500feed60ae621ad63dd2d72d3ed8e013514079",
@@ -624,18 +659,18 @@
    "镜像字节": 5832
   },
   "game/map_data/state_regions/state_regions.md": {
-   "sha256": "118b7f87213c2d28c6b3de13b1e277720065a50ac271dd0d9574cfbed4de73ed",
-   "字节": 3420,
-   "行数": 64,
-   "镜像sha256": "118b7f87213c2d28c6b3de13b1e277720065a50ac271dd0d9574cfbed4de73ed",
-   "镜像字节": 3420
+   "sha256": "264ed562bad65af0138fd94734f50fee1659eb28d084bb4c5b27ee2db8c084c9",
+   "字节": 3774,
+   "行数": 69,
+   "镜像sha256": "264ed562bad65af0138fd94734f50fee1659eb28d084bb4c5b27ee2db8c084c9",
+   "镜像字节": 3774
   },
   "game/music/music.md": {
-   "sha256": "d857965653ba1724e83f56cfc2095d161ab134200499c647af1974ea39c6a105",
-   "字节": 1995,
-   "行数": 43,
-   "镜像sha256": "d857965653ba1724e83f56cfc2095d161ab134200499c647af1974ea39c6a105",
-   "镜像字节": 1995
+   "sha256": "c59f26587c51c9ab4dc5f15f7dee66448ef431931ac4d3067d64a65dc3ad3307",
+   "字节": 4329,
+   "行数": 84,
+   "镜像sha256": "c59f26587c51c9ab4dc5f15f7dee66448ef431931ac4d3067d64a65dc3ad3307",
+   "镜像字节": 4329
   },
   "game/sound/audio_settings.md": {
    "sha256": "e0cb9096b3360816a2d9b29ec0278399433fe395eff9ce779d2dd59a917265f2",
@@ -661,11 +696,11 @@
  },
  "来源": "game=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game jomini=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\jomini clausewitz=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\clausewitz",
  "版本": {
-  "caligula_branch": "release/1.14.5",
-  "caligula_rev": "9f8281a37e85639359b3b0c2c5df0196e975ca4b",
-  "clausewitz_branch": "caligula/release/1.14.x",
-  "clausewitz_rev": "fd5e1dbd038c3c4a3f48a36abf60ebb42dd0ceef"
+  "caligula_branch": "release/1.15.0",
+  "caligula_rev": "6338547985dbc271523e149f362a6fd93dc62975",
+  "clausewitz_branch": "caligula/release/1.15.0",
+  "clausewitz_rev": "a65fc88f3e604839357cb5b2aaf3b123e9d7434e"
  },
- "篇数": 94,
+ "篇数": 99,
  "说明": "游戏自带官方 .md 的清单与指纹。原文不入库，见 tools/README.md 的「官方文档清单」。"
 }

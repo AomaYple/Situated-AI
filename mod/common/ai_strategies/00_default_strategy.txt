@@ -6317,29 +6317,32 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			add = { value = 0
 				# SITAI CHAIN LJ05/LJ05.fiscal_construction_guard writer=rule_action_mod_decisions_information_toml_fiscal_construction_guard
 				# fiscal_construction_guard [fiscal]; 已观察违约独立降低新增建设承诺，战争不抹去融资机会成本；不取消已有施工
-				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 OR = { total_population >= 0 NOT = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } } }  } else = { add = -0.25 } } } }
+				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 OR = { total_population >= 0 NOT = { total_population >= 0 } } } } add = { value = 0 if = { limit = { exists = ROOT ROOT = { NOT = { in_default = yes } } }  } else = { add = -0.25 } } } }
 				# SITAI CHAIN LJ05/LJ05.liquidity_construction_guard writer=rule_action_mod_decisions_information_toml_liquidity_construction_guard
 				# liquidity_construction_guard [fiscal]; 未违约但正借贷、高债务且26周内破产的实际联合压力降低新建设目标；正常低债贷款不惩罚
 				max = { value = 0 if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 OR = { total_population >= 0 NOT = { total_population >= 0 } } } } add = { value = 0 if = { limit = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } } }  } else = { add = -0.15 } } } }
 			}
-			# GROUP program_b427caf53e358817_construction_need_positive
+			# GROUP program_b427caf53e358817_construction_recovery_need_positive
 			add = { value = 0
-				# remaining_industrial_construction_need_funded [economy]; 原版工业路线与实际工具订单缺口共同证明有限建设机会，不凭健康重复奖励工业路线；已证非违约与正净流量只升资金档，未知保留基础需求
-				if = { limit = { AND = { AND = { exists = ROOT ROOT = { has_strategy = ai_strategy_industrial_expansion } exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } AND = { exists = ROOT ROOT = { in_default = no } exists = ROOT ROOT = { net_total_income > 0 } } } } add = 0.25 }
 				# remaining_reconstruction_need_funded [economy]; 原版限时战败记忆证明有限重建关注，不声称实际建筑损毁；已证非违约与正净流量只升资金档，未知保留基础需求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war in_default = no net_total_income > 0 } } add = 0.2 }
+				if = { limit = { AND = { exists = ROOT ROOT = { has_variable = recently_lost_war } AND = { exists = ROOT ROOT = { in_default = no } exists = ROOT ROOT = { net_total_income > 0 } } } } add = 0.2 }
 				# SITAI CHAIN LJ11/LJ11.remaining_reconstruction_need writer=rule_action_mod_decisions_information_toml_remaining_reconstruction_need
 				# remaining_reconstruction_need [economy]; 原版限时战败记忆证明有限重建关注，不声称实际建筑损毁
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } } add = 0.12 }
-				# remaining_industrial_construction_need [economy]; 原版工业路线与实际工具订单缺口共同证明有限建设机会，不凭健康重复奖励工业路线
-				else_if = { limit = { AND = { exists = ROOT ROOT = { has_strategy = ai_strategy_industrial_expansion } exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } } add = 0.1 }
+				else_if = { limit = { exists = ROOT ROOT = { has_variable = recently_lost_war } } add = 0.12 }
+			}
+			# GROUP program_b427caf53e358817_construction_supply_need_positive
+			add = { value = 0
+				# remaining_industrial_construction_need_funded [economy]; 原版工业路线与实际工具订单缺口共同证明有限建设机会，不凭健康重复奖励工业路线；已证非违约与正净流量只升资金档，未知保留基础需求
+				if = { limit = { AND = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } exists = ROOT ROOT = { has_strategy = ai_strategy_industrial_expansion } AND = { exists = ROOT ROOT = { in_default = no } exists = ROOT ROOT = { net_total_income > 0 } } } } add = 0.25 }
+				# remaining_industrial_construction_need [economy]; 实际工具订单缺口独立证明有限本地建设需要；工业策略只影响增强档，不充当基础需要门槛
+				else_if = { limit = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } } add = 0.1 }
 			}
 			# GROUP program_b427caf53e358817__relation_school_knowledge_foundation
 			add = { value = 0
-				min = { value = 0 if = { limit = { AND = { AND = { exists = ROOT ROOT = { has_strategy = ai_strategy_industrial_expansion } exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } AND = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools } exists = ROOT ROOT = { has_institution = institution_schools } exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } } } add = 0.025 } }
+				min = { value = 0 if = { limit = { AND = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } AND = { exists = ROOT ROOT = { has_law_or_variant = law_type:law_public_schools } exists = ROOT ROOT = { has_institution = institution_schools } exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } } } add = 0.025 } }
 			}
 			min = 0.75
-			max = 1.275
+			max = 1.475
 		} }
 		# SITAI END information:wanted_construction_output
 	}

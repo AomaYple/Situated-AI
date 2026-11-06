@@ -810,7 +810,7 @@ counterexample = "违约未知只退出该成本；不将战争当免费承诺�
 id = "remaining_reconstruction_need"
 domain = "economy"
 field = "wanted_construction_output"
-contribution_group = "construction_need"
+contribution_group = "construction_recovery_need"
 priority = 1001
 value = 1.12
 conditions = [ { fact = "war_defeat", op = "=", value = true } ]
@@ -821,7 +821,7 @@ counterexample = "核心或本原因未知只退出本原因，不假定健康�
 id = "remaining_reconstruction_need_funded"
 domain = "economy"
 field = "wanted_construction_output"
-contribution_group = "construction_need"
+contribution_group = "construction_recovery_need"
 priority = 1002
 value = 1.2
 conditions = [ { fact = "war_defeat", op = "=", value = true }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 } ]
@@ -833,18 +833,18 @@ auxiliary_facts = [ "net_surplus" ]
 id = "remaining_industrial_construction_need"
 domain = "economy"
 field = "wanted_construction_output"
-contribution_group = "construction_need"
+contribution_group = "construction_supply_need"
 priority = 1003
 value = 1.1
-conditions = [ { fact = "industrial_route", op = "=", value = true }, { fact = "tools_balance", op = "<", value = 0 } ]
-why = "原版工业路线与实际工具订单缺口共同证明有限建设机会，不凭健康重复奖励工业路线"
+conditions = [ { fact = "tools_balance", op = "<", value = 0 } ]
+why = "实际工具订单缺口独立证明有限本地建设需要；工业策略只影响增强档，不充当基础需要门槛"
 counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
 
 [[rules]]
 id = "remaining_industrial_construction_need_funded"
 domain = "economy"
 field = "wanted_construction_output"
-contribution_group = "construction_need"
+contribution_group = "construction_supply_need"
 priority = 1004
 value = 1.25
 conditions = [ { fact = "industrial_route", op = "=", value = true }, { fact = "tools_balance", op = "<", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 } ]

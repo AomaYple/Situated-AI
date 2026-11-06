@@ -1,16 +1,21 @@
 # 18 · history 初始状态系统全解
 
+> **当前检查底本（A4）**：Victoria 3 **1.15.0**，分支 `release/1.15.0`。精确指纹见
+> [环境与版本](01-环境与版本.md)；当前断言以 `src/pdx/verify.py` 为唯一来源，生成表与索引须按
+> [贡献指南](../../CONTRIBUTING.md)从同一锁定安装重生成并核对。此处不继承旧版本的通过成绩。
+> 明确标注的旧版采集、零使用结论和本机订阅样本保留其原身份，不据此保证当前引擎行为或兼容性。
+
 > `common\history\` 定义**1836 年开局时世界的样子**：谁拥有哪些州、有哪些人物、
 > 人口构成、建筑、政府、外交关系、军队编制、已生效的条约……
 > 这是**所有 mod 都要碰的核心系统**，也是 `11-历史初始状态与AI策略分配.md` 的完整展开。
 > 全部内容 **【实测】**。
 
-> **版本提示（精确清单）**：本机游戏是 **1.14.5 (Ice Tea)**（版本指纹 `env.caligula_rev` = `9f8281a37e85639359b3b0c2c5df0196e975ca4b`、`env.caligula_branch` = `release/1.14.5`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
+> **历史复核记录（1.14.5）**：该次复核的游戏是 **1.14.5 (Ice Tea)**（版本指纹 `env.caligula_rev` = `9f8281a37e85639359b3b0c2c5df0196e975ca4b`、`env.caligula_branch` = `release/1.14.5`，两条断言该次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开： <!-- evidence-version:release/1.14.5 -->
 > - **已是 1.14.5 —— 表格已重算**：本篇 **2 张**表（`doc18 history 子目录`、`doc18 效果文件数`）由 `v3 tables` 生成；本次 `v3 tables` 核对「全部 172 张生成表都与文档一致」。
 > - **已是 1.14.5 —— 断言已核验**：本篇 **2 条** `hist.*` 断言（`hist.wrappers`、`hist.country_effects_doc18`）随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）。
 > - **已复测的「未采样 / 未整理」类结论**（1.14.3 实测值，逐条见 §5）：六个单文件目录的深度 1/2 键**已全部采样**（含 `government_setup` **深度 1 键 = 0 个**这一反直觉结果）；`effect_starting_*` 完整清单 = **22 个键 / 22 处**、分布在 `common\scripted_effects\` 的 **4 个文件**里。
 > - **未复测（明确列出）**：§3.1–§3.14 各节的**行数与逐文件字节数**（1.14.2 采集，如 §3.1 的 476 KB、§3.3 的 262 文件）；§4.2 / §4.3 示例里引用的 PM 名与修正符名（未逐个回查原版定义）。
-> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.5）；文档与断言表的一致性由 `tests/test_docs_consistency.py` 持续看守。
+> 上述通过成绩只记录 1.14.5 历史复核；当前结果须由同一底本上的 `v3 verify` / `v3 tables` 重新取得。
 
 ## 1. 全貌
 
@@ -19,9 +24,9 @@
 
 | 子目录 | 文件数 | **顶层包装块** | 主要效果 |
 |---|---|---|---|
-| `countries` | 444 | `COUNTRIES` | `add_amendment`、`set_ruling_interest_groups`、`set_institution_investment_level`、`set_export_tariff_level`、`set_import_tariff_level`、`add_journal_entry`、`add_modifier`、`set_global_variable`、`set_variable`、`create_diplomatic_pact` |
+| `countries` | 450 | `COUNTRIES` | `add_amendment`、`set_ruling_interest_groups`、`set_institution_investment_level`、`set_export_tariff_level`、`set_import_tariff_level`、`add_journal_entry`、`add_modifier`、`set_global_variable`、`set_variable`、`create_diplomatic_pact` |
 | `population` | 373 | `POPULATION` | `effect_starting_pop_wealth_*`、`effect_starting_pop_literacy_*`（与 `countries` 同一套预置效果）【实测】 |
-| `characters` | 262 | `CHARACTERS` | `create_character`、`set_career_length`、`add_career_length`、`add_journal_entry`、`add_modifier`、`set_variable` |
+| `characters` | 268 | `CHARACTERS` | `create_character`、`set_career_length`、`add_career_length`、`add_journal_entry`、`add_modifier`、`set_variable` |
 | `pops` | 17 | `POPS` | `create_pop` |
 | `buildings` | 16 | `BUILDINGS` | `create_building`、`add_ownership` |
 | `military_formations` | 10 | `MILITARY_FORMATIONS` | `create_military_formation`、`create_ship`、`create_character`、`set_variable` |
@@ -129,7 +134,7 @@ COUNTRIES = {
 
 > **注意**：这里用的是 `effect_starting_*` 系列**预置效果**（引擎内置的成套初始化），
 > 不必逐项写法律/科技。这大幅简化了国家定义 —— **但它并不排斥逐项效果**：
-> 444 个国家文件里有 **217<!--claim:hist.country_effects_doc18--> 个（49%）**在预置效果之外还逐项写了
+> 444 个国家文件里有 **222<!--claim:hist.country_effects_doc18--> 个**在预置效果之外还逐项写了
 > `add_amendment`(26)、`set_institution_investment_level`(60)、
 > `set_import_tariff_level`(66)、`set_export_tariff_level`(6)、
 > `set_ruling_interest_groups`(2)、`create_diplomatic_pact`(1)。【实测】
@@ -157,24 +162,24 @@ COUNTRIES = {
 
 | 效果 | 出现的国家文件数 |
 |---|---|
-| `add_ruling_interest_group` | 151 |
-| `add_technology_researched` | 81 |
-| `add_journal_entry` | 46 |
+| `add_ruling_interest_group` | 156 |
+| `add_technology_researched` | 82 |
 | `set_institution_investment_level` | 46 |
+| `add_journal_entry` | 43 |
 | `add_taxed_goods` | 33 |
 | `set_import_tariff_level` | 30 |
-| `set_tax_level` | 27 |
-| `set_variable` | 23 |
+| `set_tax_level` | 28 |
+| `set_variable` | 25 |
+| `add_modifier` | 22 |
 | `add_amendment` | 21 |
-| `add_modifier` | 21 |
 | `set_interest_group_name` | 17 |
 | `set_next_election_date` | 17 |
 | `add_company` | 6 |
 | `set_company_establishment_date` | 6 |
 | `set_company_state_region` | 6 |
-| `set_export_tariff_level` | 5 |
+| `set_export_tariff_level` | 6 |
+| `add_primary_culture` | 5 |
 | `add_ideology` | 4 |
-| `add_primary_culture` | 4 |
 | `set_market_capital` | 3 |
 | `add_owned_country` | 2 |
 | `set_capital` | 2 |

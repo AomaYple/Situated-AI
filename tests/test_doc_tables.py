@@ -53,6 +53,29 @@ HEAD3 = HEAD3_LINE + "\n|---|---:|---|\n"
 
 
 @_unit
+@pytest.mark.parametrize(("old", "new"), [("14 / 40", "14 / 51"), ("7 / 40", "14 / 51")])
+def test_generator_owned_ratio_replaces_both_values_without_changing_author_columns(
+    tmp_path: Path, old: str, new: str
+) -> None:
+    from pdx import doc04
+
+    specs = [s for s in doc04.doc_table_specs() if "参数汇总" in s.name]
+    assert len(specs) == 2
+    for spec in specs:
+        assert spec.replace_columns == frozenset({1})
+    spec = doc_tables.KeyedTableSpec(
+        name="ratio",
+        header=HEAD3_LINE,
+        cells=lambda: [("a", {1: new})],
+        replace_columns=specs[0].replace_columns,
+    )
+    doc = _doc(tmp_path, HEAD3 + f"| a | {old} | 作者说明 |\n")
+    doc_tables.patch_doc(doc, [spec], write=True)
+    assert f"| a | {new} | 作者说明 |" in doc.read_text(encoding="utf-8")
+    assert not doc_tables.check_doc(doc, [spec])
+
+
+@_unit
 @pytest.mark.parametrize("occurrence", [0, 1])
 def test_header_translation_preserves_snapshot_identity(tmp_path: Path, occurrence: int) -> None:
     """表头翻译只改变定位文字；快照身份、数据行和同名表序号仍可复用。"""
@@ -564,3 +587,24 @@ def test_整格文本仍然整格替换(tmp_path: Path) -> None:
 
 if __name__ == "__main__":  # pragma: no cover
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+@_unit
+def test_策略清单只取非变量顶层块与直接type(tmp_path, monkeypatch):
+    from pdx import ai, config
+
+    base = tmp_path / "common/ai_strategies"
+    base.mkdir(parents=True)
+    source = base / "strategies.txt"
+    source.write_text(
+        "@macro = { type = ignored }\na = { nested = { type = wrong } }\nb = { type = administrative }\nc = 3\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config, "GAME", tmp_path)
+    assert ai.strategy_list_rows() == [
+        "| `strategies.txt` | `a` | 未声明 |",
+        "| `strategies.txt` | `b` | `administrative` |",
+    ]
+    assert ai.strategy_file_rows() == [
+        ("strategies.txt", {1: f"{source.stat().st_size:,}", 2: "2"})
+    ]

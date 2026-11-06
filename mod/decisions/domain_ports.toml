@@ -245,7 +245,7 @@ direction = "need"
 refresh = "consumer"
 unknown = "vanilla"
 cost = 1
-all = ["industrial_route", "tools_short"]
+all = ["tools_short"]
 
 [ports.construction_funded]
 domain = "economy"
@@ -256,7 +256,7 @@ direction = "need"
 refresh = "consumer"
 unknown = "lower_tier"
 cost = 1
-all = ["industrial_need", "financing_ready"]
+all = ["industrial_need", "industrial_route", "financing_ready"]
 
 [ports.financing_pressure]
 domain = "fiscal"
@@ -358,6 +358,143 @@ unknown = "vanilla"
 cost = 1
 all = ["current_public_schools", "schools_present", "literacy_low"]
 
+
+[ports.construction_recovery]
+domain = "economy"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "recovery"
+refresh = "consumer"
+unknown = "vanilla"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "war_defeat"
+op = "="
+value = true
+[ports.construction_recovery.reader]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "recently_lost_war"
+path = []
+parameters = []
+
+
+[ports.construction_default_pressure]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "default"
+op = "="
+value = true
+[ports.construction_default_pressure.reader]
+engine = "in_default"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+path = []
+parameters = []
+
+
+[ports.construction_loans]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "loans"
+op = "="
+value = true
+[ports.construction_loans.reader]
+engine = "taking_loans"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+path = []
+parameters = []
+
+
+[ports.construction_debt_high]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "debt_ratio"
+op = ">="
+value = 0.4
+[ports.construction_debt_high.reader]
+engine = "scaled_debt"
+scope = "root"
+unit = "debt_to_credit_ratio"
+kind = "number"
+minimum = 0
+path = []
+parameters = []
+
+
+[ports.construction_near_bankruptcy]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+reader_source = "mod/decisions/information.toml"
+reader_key = "bankruptcy_horizon"
+op = "<"
+value = 26
+[ports.construction_near_bankruptcy.reader]
+engine = "weeks_until_bankruptcy"
+scope = "root"
+unit = "weeks"
+kind = "number"
+minimum = 0
+path = []
+parameters = []
+
+
+[ports.construction_recovery_funded]
+domain = "economy"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "recovery"
+refresh = "consumer"
+unknown = "lower_tier"
+cost = 1
+all = ["construction_recovery", "financing_ready"]
+
+
+[ports.construction_liquidity_pressure]
+domain = "fiscal"
+entity = "root"
+entity_kind = "country"
+unit = "flag"
+direction = "cost"
+refresh = "consumer"
+unknown = "conservative"
+cost = 1
+all = ["no_default", "construction_loans", "construction_debt_high", "construction_near_bankruptcy"]
+
 [[uses]]
 source = "mod/decisions/information.toml"
 definition = "remaining_school_catchup_need"
@@ -427,3 +564,31 @@ selector = ["current_public_schools", "schools_present", "literacy_ready"]
 relation_cause = "school_knowledge_foundation"
 output_unit = "multiplier_delta"
 dependency_domain = "political"
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "remaining_reconstruction_need"
+port = "construction_recovery"
+role = "recovery"
+selector = []
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "remaining_reconstruction_need_funded"
+port = "construction_recovery_funded"
+role = "recovery"
+selector = []
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "fiscal_construction_guard"
+port = "construction_default_pressure"
+role = "cost"
+selector = []
+
+[[uses]]
+source = "mod/decisions/information.toml"
+definition = "liquidity_construction_guard"
+port = "construction_liquidity_pressure"
+role = "cost"
+selector = []

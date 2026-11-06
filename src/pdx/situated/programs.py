@@ -859,6 +859,7 @@ def evaluate(
     selected: frozenset[str],
     *,
     guard_overrides: Mapping[str, bool] | None = None,
+    cost_overrides: Mapping[str, tuple[bool, bool]] | None = None,
 ) -> dict[str, tuple[str, float]]:
     validate(policy)
     semantic = {item.action_id: item for item in policy.semantic_ir}
@@ -872,6 +873,19 @@ def evaluate(
         ):
             raise ValueError("端口守卫替换必须绑定已知非成本规则和明确布尔值")
     readers = {reader.key: reader for reader in policy.readers}
+    for identity, states in (cost_overrides or {}).items():
+        if (
+            identity not in semantic
+            or not _conservative(semantic[identity])
+            or not isinstance(states, tuple)
+            or len(states) != 2
+            or any(type(state) is not bool for state in states)
+            or not any(
+                binding.definition == identity and binding.role == "cost"
+                for binding in policy.port_bindings
+            )
+        ):
+            raise ValueError("成本守卫替换必须绑定实际core/cheap端口与明确布尔状态")
     result = {}
     for program in policy.consumer_programs:
         guards = {
@@ -885,7 +899,9 @@ def evaluate(
         }
         for item in program.variants:
             if _conservative(item):
-                core, cheap = _cost_guard_values(item, values, readers)
+                core, cheap = (cost_overrides or {}).get(
+                    item.action_id, _cost_guard_values(item, values, readers)
+                )
                 guards[item.action_id] = item.domain in selected and core
                 guards[f"{item.action_id}__cheap"] = cheap
         for binding in policy.rule_relation_bindings:

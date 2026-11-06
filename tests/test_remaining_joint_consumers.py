@@ -453,7 +453,9 @@ def test_same_need_does_not_stack_and_actual_cost_envelopes_remain_bounded(produ
         (
             CONSTRUCTION,
             {"war_defeat": True, "industrial_route": True, "tools_balance": -1, "net_surplus": 1},
-            1.25,
+            # Supply tiers deduplicate internally; observed recovery is an
+            # independent cause: 1 + .25 funded supply + .20 funded recovery.
+            1.45,
         ),
         (
             TRADE,

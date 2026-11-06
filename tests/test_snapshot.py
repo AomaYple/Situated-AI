@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pdx import config, snapshot
+from pdx import config, snapshot, verify
 from pdx.input_profile import InputAction, ProfileCheck
 
 
@@ -140,17 +140,28 @@ class TestScriptableSnapshot(unittest.TestCase):
 
 class TestSnapshotShape(unittest.TestCase):
     snap: snapshot.Snapshot
+    baseline: snapshot.Snapshot
 
     @classmethod
     def setUpClass(cls):
         if not (config.GAME / "common").is_dir():
             raise unittest.SkipTest("游戏目录不可用")
 
+        baseline = verify.latest_compact_snapshot()
+        if baseline is None:
+            raise AssertionError("缺少当前离线快照，不能验证完整安装覆盖")
+        current_version = config.game_version()
+        if baseline.version != current_version:
+            raise AssertionError(
+                f"离线快照与当前安装身份不同：{baseline.version} != {current_version}"
+            )
+        cls.baseline = baseline
         cls.snap = snapshot.build()
 
     @classmethod
     def tearDownClass(cls):
         del cls.snap
+        del cls.baseline
 
     def test_has_all_sections(self):
         for sec in ("common_entries", "fields", "defines", "localization", "dlc", "config"):
@@ -176,8 +187,11 @@ class TestSnapshotShape(unittest.TestCase):
         self.assertTrue(self.snap.version.get("caligula_rev"))
 
     def test_common_entries_covers_all_dirs(self):
-        """必须覆盖全部数据目录（1.14.4 是 138 个）—— 曾经因路径口径错误变成 0。"""
-        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
+        """固定同一版本的完整目录集合；漏目录或偷换快照身份都不能通过。"""
+        self.assertEqual(
+            set(self.snap.sections["common_entries"]),
+            set(self.baseline.sections["common_entries"]),
+        )
 
     def test_common_entries_not_empty(self):
         total = sum(len(v) for v in self.snap.sections["common_entries"].values())
@@ -187,16 +201,17 @@ class TestSnapshotShape(unittest.TestCase):
         self.assertGreater(len(self.snap.sections["fields"]), 10000)
 
     def test_defines_merges_repeated_namespaces(self):
-        """NGUI 在 24 个块里出现，必须合并成一个键而非坍缩。
-        实测唯一命名空间 50（game）+ 17（jomini）= 67。
-        """
-        self.assertEqual(len(self.snap.sections["defines"]), 67)
+        """逐命名空间比较参数并集，避免只数命名空间而漏掉重复块参数。"""
+        self.assertEqual(self.snap.sections["defines"], self.baseline.sections["defines"])
 
-    def test_localization_has_11_languages(self):
-        self.assertEqual(len(self.snap.sections["localization"]), 11)
+    def test_localization_covers_recorded_languages(self):
+        self.assertEqual(
+            set(self.snap.sections["localization"]),
+            set(self.baseline.sections["localization_digest"]),
+        )
 
-    def test_dlc_count_is_17(self):
-        self.assertEqual(len(self.snap.sections["dlc"]), 17)
+    def test_dlc_covers_recorded_directories_and_files(self):
+        self.assertEqual(self.snap.sections["dlc"], self.baseline.sections["dlc"])
 
 
 class TestDeterminism(unittest.TestCase):
@@ -427,7 +442,9 @@ class TestCompactSnapshot(unittest.TestCase):
             for suffix in ("entries", "fields"):
                 with self.subTest(section=f"{top}_{suffix}"):
                     self.assertIn(f"{top}_{suffix}", self.snap.sections)
-        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
+        self.assertEqual(
+            set(self.snap.sections["common_entries"]), set(self.full.sections["common_entries"])
+        )
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 
     def test_与完整快照的结构域一致(self):
