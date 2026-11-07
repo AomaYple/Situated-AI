@@ -1,6 +1,6 @@
 ---
 name: sonnet-high
-description: 范围在单个模块内、现象清楚但原因要多步推导的问题，如单个失败测试的定位（Sonnet 5.5 high）
+description: 范围在单个模块内、现象清楚但原因要多步推导的问题，如单个失败测试的定位（Sonnet high）
 model: sonnet
 effort: high
 ---

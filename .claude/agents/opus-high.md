@@ -1,6 +1,6 @@
 ---
 name: opus-high
-description: 历史合同迁移、冻结与失效传播；生成深度超限、作用域错误、哈希或指纹漂移的排错；大或高风险差异的独立复核（Opus 5.5 high）
+description: 历史合同迁移、冻结与失效传播；生成深度超限、作用域错误、哈希或指纹漂移的排错；大或高风险差异的独立复核（Opus high）
 model: opus
 effort: high
 ---

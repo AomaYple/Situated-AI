@@ -1,6 +1,6 @@
 ---
 name: review-high
-description: 只读独立复核：大或高风险差异，涉及哈希、台账、历史合同、资源门，或阶段签收与冻结前（Opus 5.5 high，仅 Read/Glob/Grep）
+description: 只读独立复核：大或高风险差异，涉及哈希、台账、历史合同、资源门，或阶段签收与冻结前（Opus high，仅 Read/Glob/Grep）
 model: opus
 effort: high
 tools: Read, Glob, Grep

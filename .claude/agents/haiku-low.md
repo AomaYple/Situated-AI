@@ -1,6 +1,6 @@
 ---
 name: haiku-low
-description: 读台账、查文件、列清单，不需要判断（Haiku 5.5 low）
+description: 读台账、查文件、列清单，不需要判断（Haiku low）
 model: haiku
 effort: low
 ---

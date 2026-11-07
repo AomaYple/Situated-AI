@@ -1,6 +1,6 @@
 ---
 name: haiku-medium
-description: 按清单逐项核对、比对差异并指出不一致（Haiku 5.5 medium）
+description: 按清单逐项核对、比对差异并指出不一致（Haiku medium）
 model: haiku
 effort: medium
 ---

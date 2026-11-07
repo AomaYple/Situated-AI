@@ -1,6 +1,6 @@
 ---
 name: review-medium
-description: 只读独立复核：小差异、有现成模式可对照的改动（Opus 5.5 medium，仅 Read/Glob/Grep）
+description: 只读独立复核：小差异、有现成模式可对照的改动（Opus medium，仅 Read/Glob/Grep）
 model: opus
 effort: medium
 tools: Read, Glob, Grep

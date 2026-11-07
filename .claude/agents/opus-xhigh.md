@@ -1,6 +1,6 @@
 ---
 name: opus-xhigh
-description: 仅用于 opus-high 同一问题连续失败两次后（Opus 5.5 xhigh）
+description: 仅用于 opus-high 同一问题连续失败两次后（Opus xhigh）
 model: opus
 effort: xhigh
 ---

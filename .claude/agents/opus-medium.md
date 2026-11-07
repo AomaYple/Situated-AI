@@ -1,6 +1,6 @@
 ---
 name: opus-medium
-description: 规格已清楚的整合初稿；小差异的独立复核（Opus 5.5 medium）
+description: 规格已清楚的整合初稿；小差异的独立复核（Opus medium）
 model: opus
 effort: medium
 ---

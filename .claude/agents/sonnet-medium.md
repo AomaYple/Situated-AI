@@ -1,6 +1,6 @@
 ---
 name: sonnet-medium
-description: 常规实现：按已定接口写代码与定向测试、跑生成/打包后读结果、有明确验证命令的机械批量改动（Sonnet 5.5 medium）
+description: 常规实现：按已定接口写代码与定向测试、跑生成/打包后读结果、有明确验证命令的机械批量改动（Sonnet medium）
 model: sonnet
 effort: medium
 ---
