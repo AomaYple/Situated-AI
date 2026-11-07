@@ -154,11 +154,11 @@ def source_issues(root: Path) -> list[str]:
     issues = []
     for rel in sorted(git_paths(root, "--cached", "--others", "--exclude-standard")):
         path = root / rel
-        if not path.exists():
-            continue  # 已删除但尚未提交的文件不在工作区文本集合内。
         if path.is_symlink():
             issues.append(f"{rel}: 符号链接需要单独审查")
             continue
+        if not path.exists():
+            continue  # 已删除但尚未提交的文件不在工作区文本集合内。
         if path.suffix.lower() in BINARY_SUFFIXES:
             continue
         result = inspect_bytes(path)

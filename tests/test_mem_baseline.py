@@ -45,6 +45,33 @@ def mem(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> ModuleType:
     return module
 
 
+def test_quiet_machine_still_enforces_available_memory(mem, monkeypatch) -> None:
+    monkeypatch.setattr(mem, "foreign_heavy", lambda *_a, **_k: [])
+    monkeypatch.setattr(mem, "sys_mem", lambda: {"avail_mb": 100.0})
+    monkeypatch.setattr(mem, "wait_for_quiet", lambda *_a, **_k: ([], 100.0))
+    with pytest.raises(SystemExit, match=r"100\.0"):
+        mem.ensure_quiet(quiet_mb=200, min_avail_mb=4096, wait_s=0, allow=False)
+
+
+def test_quiet_machine_with_memory_does_not_wait(mem, monkeypatch) -> None:
+    monkeypatch.setattr(mem, "foreign_heavy", lambda *_a, **_k: [])
+    monkeypatch.setattr(mem, "sys_mem", lambda: {"avail_mb": 8192.0})
+    wait = Mock(side_effect=AssertionError("unexpected wait"))
+    monkeypatch.setattr(mem, "wait_for_quiet", wait)
+    mem.ensure_quiet(quiet_mb=200, min_avail_mb=4096, wait_s=0, allow=False)
+    wait.assert_not_called()
+
+
+def test_explicit_concurrency_records_low_memory_without_wait(mem, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(mem, "foreign_heavy", lambda *_a, **_k: [])
+    monkeypatch.setattr(mem, "sys_mem", lambda: {"avail_mb": 100.0})
+    wait = Mock(side_effect=AssertionError("unexpected wait"))
+    monkeypatch.setattr(mem, "wait_for_quiet", wait)
+    mem.ensure_quiet(quiet_mb=200, min_avail_mb=4096, wait_s=0, allow=True)
+    wait.assert_not_called()
+    assert "100.0" in capsys.readouterr().out
+
+
 def test_采样线程可以启动停止且不覆盖Thread内部方法(mem, monkeypatch) -> None:
     """真实启动并 join；Python 3.11/3.12 的 join 会调用 Thread._stop。"""
     sampler = mem.TreeSampler(os.getpid(), interval_s=0.001)

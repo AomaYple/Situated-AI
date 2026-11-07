@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import stat
 import sys
 from pathlib import Path
 
@@ -82,6 +83,8 @@ def find_violations(root: Path = REPO) -> list[dict[str, str]]:
     """
 
     root = root.resolve()
+    if not root.is_dir():
+        raise NotADirectoryError(f"卫生检查根目录不存在或不是目录：{root}")
     violations: list[dict[str, str]] = []
 
     def walk(base: Path) -> None:
@@ -92,7 +95,22 @@ def find_violations(root: Path = REPO) -> list[dict[str, str]]:
             violations.append({"path": base_relative, "kind": "read_error", "detail": str(exc)})
             return
         for path in entries:
-            if path.is_symlink():
+            # Windows junctions are reparse points, but not symbolic links.
+            # lstat is available on all supported Python versions (including 3.11).
+            try:
+                info = path.lstat()
+            except OSError as exc:
+                violations.append(
+                    {
+                        "path": path.relative_to(root).as_posix(),
+                        "kind": "read_error",
+                        "detail": str(exc),
+                    }
+                )
+                continue
+            if stat.S_ISLNK(info.st_mode) or (
+                getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+            ):
                 continue
             relative = path.relative_to(root)
             if _excluded(relative):

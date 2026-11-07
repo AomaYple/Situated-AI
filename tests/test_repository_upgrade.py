@@ -291,6 +291,16 @@ def test_measure_rejects_nondeterminism_in_any_timed_round():
 _FROZEN_MIGRATION_JUNIT = "research/vanilla-ai/1.15.0/classification/evidence/migration/junit.xml"
 
 
+def test_broken_source_symlink_is_not_silently_treated_as_deleted(tmp_path, monkeypatch):
+    target = tmp_path / "broken.py"
+    try:
+        target.symlink_to(tmp_path / "missing.py")
+    except OSError:
+        pytest.skip("系统未授予符号链接权限")
+    monkeypatch.setattr(repo_audit, "git_paths", lambda *_args: {"broken.py"})
+    assert repo_audit.source_issues(tmp_path) == ["broken.py: 符号链接需要单独审查"]
+
+
 def _frozen_migration_copy(tmp_path, monkeypatch):
     relative = _FROZEN_MIGRATION_JUNIT
     original = (repo_audit.REPO / relative).read_bytes()

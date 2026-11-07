@@ -734,11 +734,13 @@ def ensure_quiet(
     看起来像卡死。允许就是允许，等是把闸又装回去了。
     """
     before = foreign_heavy(quiet_mb, ignore={os.getpid()})
-    if not before:
+    available = sys_mem()["avail_mb"]
+    if not before and (available is None or available >= min_avail_mb):
         return
     if allow:
         print(
-            f"[mem] {_mark('⚠️', '[!]')} --allow-concurrent：不等，直接开工；并发快照照记（{before[:3]}）",
+            f"[mem] {_mark('⚠️', '[!]')} --allow-concurrent：不等，直接开工；"
+            f"并发快照照记（{before[:3]}），可用物理 {available}MB",
             flush=True,
         )
         return

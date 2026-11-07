@@ -36,7 +36,7 @@ mod/                    生产源、策略生成物、脚本和本地化
 src/pdx/                Python 解析、全量分析、快照、生成、审计和 ZIP 交付
 tests/                  单元、属性、离线合同、生成和跨平台工具测试
 tools/ci/               工程质量门；tools/benchmarks/ 为串行 Python 基准
-tools/out/              可再生分析、报告和本机证据（忽略）
+tools/out/              可再生分析、报告和本机证据；少量冻结快照按 .gitignore 入库
 docs/                   当前规则、设计、计划、结果、审计和知识库
 research/               原版资料清单与锁定接口证据
 dist/                   可再生发布 ZIP（忽略）
@@ -57,7 +57,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 
 ## 标准包
 
-包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明，不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。`package` 按生产源中的版本打包，不代表该版本已经发布。已发布基线与目标版本的标签、包哈希和 GitHub Release 状态只在[版本交付索引](docs/design/exec/版本交付-结果.md)维护。固定包部署、Steam 工坊上传与全部语言正文同步可使用 `v3 publish`；参数和平台范围见[发布指南](docs/publishing/README.md)。
+包包含标准 metadata、生成的 `common/`、`events/`、11 种本体语言、封面、manifest 和安装说明，不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。`package` 按生产源中的版本打包，不代表该版本已经发布。已发布基线与目标版本的标签、包哈希和 GitHub Release 状态只在[版本交付索引](docs/design/exec/版本交付-结果.md)维护。固定包部署、Steam 工坊上传与全部语言正文同步可使用 `v3 publish`；参数和平台范围见[发布指南](docs/publishing/README.md)。
 
 安装时将 ZIP 解压到 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset；不要覆盖游戏本体。游戏文本只在打包边界使用 UTF-8 BOM，仓库源统一 UTF-8 无 BOM、LF。
 
