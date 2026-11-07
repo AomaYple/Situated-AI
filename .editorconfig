@@ -1,34 +1,18 @@
-# ─────────────────────────────────────────────────────────────
-# 编辑器口径（与 `.gitattributes` 配套，两者管的事不同）
-#
-#   * `.gitattributes` 管 **git 入库 / 检出**：把 CRLF 挡在索引外；
-#   * `.editorconfig` 管 **编辑器写盘**：文件还没进 git 的时候。
-#
-# 缺了后者是什么后果，本仓有过实例：`Path.write_text` 在 Windows 上默认把
-# `\n` 翻成 `\r\n`，而 `core.autocrlf` 又会在 `git status` / `git ls-files`
-# 里把差异抹平 —— 于是盘上是 CRLF、git 看着干净。机器判据在
-# `tests/test_repo_hygiene.py` 与 `pdx.repo_audit`（UTF-8 无 BOM + LF）。
-# ─────────────────────────────────────────────────────────────
+# 编辑器写盘约定；Git 入库与检出约定见 .gitattributes。
 root = true
 
 [*]
-# 全仓默认：UTF-8 **不带 BOM** + LF。
 charset = utf-8
 end_of_line = lf
-# 下面这两条刻意关掉，避免编辑器改变生成物契约或文档语义：
-#   * insert_final_newline：部分 `mod/**` 的生成物末尾没有换行，而
-#     `v3 modgen --check` 是逐字节比对 —— 编辑器自动补一个换行就打红；
-#   * trim_trailing_whitespace：Markdown 行尾双空格是硬换行，V3 脚本里也有刻意留白。
+# 保留生成物末尾与 Markdown 硬换行语义，避免编辑器自动改写。
 insert_final_newline = false
 trim_trailing_whitespace = false
 
 [*.py]
-# ruff format 钉着 Python：4 空格缩进 + 文件末尾必须有换行（W292）。
 indent_style = space
 indent_size = 4
 insert_final_newline = true
 
 [*.txt]
-# V3 脚本（`mod/**` 的 `.txt`）惯用 TAB 缩进，行尾闸门明确
-# 「TAB 不判」（见 `tests/test_repo_hygiene.py`）—— 编辑器别擅自换成空格。
+# 游戏脚本保留 TAB 缩进；生成物仍由生成器维护。
 indent_style = tab

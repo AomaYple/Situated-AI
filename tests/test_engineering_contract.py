@@ -59,9 +59,11 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
-    for current in (plan_entry, subplan_entry, checklist):
+    # These paths remain frozen A4 machine inputs; their live status belongs
+    # to the checklist and archive manifest, not the compatibility documents.
+    for current in (plan_entry, subplan_entry):
         assert "A4" in current
-        assert "已制定" in current
+        assert "执行中" in current
         assert "(架构深化计划.md)" in current
     assert (root / "docs/design/架构深化计划.md").is_file()
     assert "archive/A3-manifest.json" in plan_entry
@@ -128,20 +130,54 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     assert "由用户验收" in plan
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
-    assert "A4" in checklist
+    assert "A4 已归档、未完成" in checklist
+    assert "新计划尚未制定" in checklist
+    assert "archive/A4/README.md" in checklist
     assert "长期行为" in checklist
     assert distribution.RELEASE_VERSION in checklist
     assert "发布" in checklist
     assert "部署" in checklist
     assert "Release" in checklist
     assert "ZIP/SHA" in checklist
-    assert "A2" in checklist
+    assert "工程欠账仍由开发负责" in checklist
     assert "不签发A4完成" in checklist
     assert "11 种语言" in previous
 
 
+def test_a4_archive_preserves_inputs_and_unfinished_status() -> None:
+    root = Path(__file__).resolve().parents[1]
+    archive = root / "docs/design/archive"
+    manifest = json.loads((archive / "A4-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["status"] == "archived_reference_only"
+    assert manifest["completion"] == "incomplete"
+    assert re.fullmatch(r"[0-9a-f]{40}", manifest["base_commit"])
+    assert {row["path"] for row in manifest["originals"]} == {
+        "docs/design/架构主计划.md",
+        "docs/design/架构子计划.md",
+        "docs/design/架构深化计划.md",
+        "docs/design/当前工作清单.md",
+    }
+    for row in manifest["originals"]:
+        raw = gzip.decompress((archive / row["object"]).read_bytes())
+        assert len(raw) == row["bytes"]
+        assert hashlib.sha256(raw).hexdigest() == row["sha256"]
+        assert (archive / row["readable"]).read_bytes() == raw
+    assert {row["path"] for row in manifest["retained_inputs"]} == {
+        "docs/design/A4实施台账.json",
+        "docs/design/A4发现源.json",
+    }
+    for row in manifest["retained_inputs"]:
+        path = root / row["path"]
+        assert path.stat().st_size == row["bytes"]
+        with path.open("rb") as stream:
+            assert hashlib.file_digest(stream, "sha256").hexdigest() == row["sha256"]
+    entry = (archive / "A4/README.md").read_text(encoding="utf-8")
+    assert "已归档、未完成" in entry
+    assert "原路径和全文哈希" in entry
+
+
 def test_current_document_indexes_are_complete() -> None:
-    """导航统一指向当前计划和收据，旧方案只保留历史上下文。"""
+    """当前状态与历史计划分开导航，并核对本地入口存在。"""
     root = Path(__file__).resolve().parents[1]
     tools = (root / "tools/README.md").read_text(encoding="utf-8")
     execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
@@ -163,12 +199,8 @@ def test_current_document_indexes_are_complete() -> None:
     for path, prefix in indexes.items():
         content = (root / path).read_text(encoding="utf-8")
         design_prefix = prefix.removesuffix("exec/") if prefix else "../"
-        assert f"[架构主计划]({design_prefix}架构主计划.md)" in content, path
-        assert f"[架构子计划]({design_prefix}架构子计划.md)" in content, path
-        assert (
-            f"[处境行动决策内核实施计划]({prefix}mod重设计-实施计划.md)" in content
-            or f"[分层联动实施计划]({prefix}mod重设计-实施计划.md)" in content
-        ), path
+        assert f"[计划归档]({design_prefix}archive/README.md)" in content, path
+        assert f"{design_prefix}当前工作清单.md" in content, path
         assert "终极方案 4.0 实施计划" not in content, path
         version_links = re.findall(r"\[[^\]]*版本交付索引[^\]]*\]\(([^)]+)\)", content)
         assert version_links, path

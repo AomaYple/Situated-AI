@@ -23,7 +23,8 @@ def gate(tmp_path, monkeypatch):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(b"controlled source\n")
     (root / "tools/out").mkdir(parents=True)
-    request_path = "tools/out/delivery.json"
+    request_file = root / "tools/out/delivery.json"
+    request_path = request_file.relative_to(root).as_posix()
     production_files = {
         "docs/publishing/workshop.toml": b"current workshop configuration\n",
         "mod/common/ai_strategies/00_default_strategy.txt": b"current generated Mod file\n",
@@ -38,7 +39,7 @@ def gate(tmp_path, monkeypatch):
         "production_snapshot": {path: a4_scope.sha(raw) for path, raw in production_files.items()},
     }
     (root / "tools/out/readback").mkdir()
-    (root / request_path).write_text(json.dumps(request), encoding="utf8")
+    request_file.write_text(json.dumps(request), encoding="utf8")
     # Shape/semantic validation belongs to the real verifier's 113 tests. This
     # boundary isolates routing and does not claim this tiny input is a sidecar.
     monkeypatch.setattr(a4_delivery, "validate_request", lambda value: value)
@@ -142,15 +143,17 @@ def test_delivery_request_size_is_bounded_before_external_calls(gate, monkeypatc
 @pytest.mark.parametrize(
     "output", [None, "tools/out/missing", "docs/output", "tools/out/publish-run"]
 )
-def test_delivery_output_requires_explicit_empty_separate_precreated_directory(gate, output):
-    (gate.root / "tools/out/publish-run").mkdir()
+def test_delivery_output_requires_explicit_empty_separate_precreated_directory(
+    gate, output, tmp_path
+):
+    (tmp_path / "tools/out/publish-run").mkdir()
     with pytest.raises(ValueError, match=r"delivery-output|precreated empty|separate"):
         a4_scope.delivery_gate("all", gate.root, request_path=gate.path, output_path=output)
     assert gate.calls == []
 
 
-def test_delivery_output_refuses_existing_diagnostics(gate):
-    (gate.root / "tools/out/readback/old-response.json").write_text("{}", encoding="utf8")
+def test_delivery_output_refuses_existing_diagnostics(gate, tmp_path):
+    (tmp_path / "tools/out/readback/old-response.json").write_text("{}", encoding="utf8")
     with pytest.raises(ValueError, match="precreated empty"):
         a4_scope.delivery_gate(
             "all", gate.root, request_path=gate.path, output_path="tools/out/readback"

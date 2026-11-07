@@ -66,7 +66,8 @@ def bounded_discovery():
     raw["baseline_id"] = "victoria3-1.15.0:" + discovery.digest(raw["source_hashes"])
     output = ROOT / "tools/out/a4-scope-fixtures"
     output.mkdir(parents=True, exist_ok=True)
-    directory = Path(tempfile.mkdtemp(prefix="bounded-", dir=output))
+    temporary = tempfile.TemporaryDirectory(prefix="bounded-", dir=output)
+    directory = Path(temporary.name)
     relative = directory.relative_to(ROOT).as_posix()
     capture = directory / "input.json"
     capture.write_bytes(discovery.encoded(raw))
@@ -101,6 +102,7 @@ def bounded_discovery():
         yield
     finally:
         patch.undo()
+        temporary.cleanup()
 
 
 def synthetic_installation() -> dict:
@@ -544,6 +546,7 @@ def test_computed_index_acceptance_never_signs_future_product_stages(initial, mo
 def test_receipt_live_replay_rejects_forged_green(tmp_path) -> None:
     import json
     import tempfile
+    import uuid
 
     from tools.ci import a4_scope
 
@@ -565,13 +568,13 @@ def test_receipt_live_replay_rejects_forged_green(tmp_path) -> None:
         assert fallback["exit_code"] == 1
         assert fallback["failed"] == ["tests/test_fail.py::test_fails"]
         # Real failure in the project interpreter, preserved in the receipt.
-        fixture = ROOT / "tests/test_a4_failure_fixture.py"
+        fixture = ROOT / "tests" / f"test_a4_failure_{uuid.uuid4().hex}.py"
         assert not fixture.exists()
         try:
             fixture.write_text(
                 "def test_fails():\n    assert False\n", encoding="utf8", newline="\n"
             )
-            node = "tests/test_a4_failure_fixture.py::test_fails"
+            node = fixture.relative_to(ROOT).as_posix() + "::test_fails"
             refs = [a4_scope.witness_reference(a4_scope.Sources(ROOT), node)]
             receipt = a4_scope.run_tests(ROOT, [node], refs, output)
             assert receipt["exit_code"] == 1
@@ -579,7 +582,7 @@ def test_receipt_live_replay_rejects_forged_green(tmp_path) -> None:
             receipt.update(exit_code=0, passed=[node], failed=[])
             junit = output / "junit.xml"
             junit.write_text(
-                '<testsuites><testsuite><testcase classname="tests.test_a4_failure_fixture" name="test_fails"/></testsuite></testsuites>',
+                f'<testsuites><testsuite><testcase classname="tests.{fixture.stem}" name="test_fails"/></testsuite></testsuites>',
                 encoding="utf8",
             )
             receipt["junit"]["sha256"] = a4_scope.sha(junit.read_bytes())

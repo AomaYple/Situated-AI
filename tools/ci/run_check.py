@@ -60,11 +60,13 @@ def main() -> int:
     # A shared editable installation can point at another checkout. Every child
     # must inspect this worktree, including nested pytest and resource processes.
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(ROOT), env.get("PYTHONPATH", "")])
+    # -B applies to this child; the environment also covers nested Python tools.
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     if sys.argv[1] == "baseline":
         for label, command in BASELINE_COMMANDS:
             print(f"[baseline] {label}", flush=True)
             result = subprocess.run(
-                [str(python), "-X", "utf8", "-m", *command],
+                [str(python), "-B", "-X", "utf8", "-m", *command],
                 cwd=ROOT,
                 check=False,
                 env=env,
@@ -74,9 +76,8 @@ def main() -> int:
                 return result.returncode
         return 0
     command = COMMANDS[sys.argv[1]]
-    bytecode_flag = ["-B"] if sys.argv[1] == "hygiene" else []
     return subprocess.run(
-        [str(python), *bytecode_flag, "-X", "utf8", "-m", *command, *sys.argv[2:]],
+        [str(python), "-B", "-X", "utf8", "-m", *command, *sys.argv[2:]],
         cwd=ROOT,
         check=False,
         env=env,

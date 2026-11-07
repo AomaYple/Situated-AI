@@ -23,6 +23,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import subprocess
 from typing import TYPE_CHECKING
@@ -163,8 +165,19 @@ def test_每条断言的检查类型都已实现() -> None:
 
 def test_所有相对_markdown_链接都指向仓库文件() -> None:
     """导航页改名或清理文件时，不能留下静默失效的相对链接。"""
-    raw = subprocess.check_output(["git", "ls-files", "-z", "--", "*.md"])
-    paths = [p.decode("utf-8") for p in raw.split(b"\x00") if p]
+    raw = subprocess.check_output(
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md"],
+        cwd=config.REPO,
+    )
+    paths = sorted({p.decode("utf-8") for p in raw.split(b"\x00") if p})
+    archive = config.REPO / "docs/design/archive"
+    manifest = json.loads((archive / "A4-manifest.json").read_bytes())
+    original_bases = {}
+    for row in manifest["originals"]:
+        if row["readable_kind"] == "exact_original":
+            original = (archive / row["readable"]).resolve()
+            assert hashlib.sha256(original.read_bytes()).hexdigest() == row["sha256"]
+            original_bases[original] = (config.REPO / row["path"]).parent
     pattern = re.compile(r"\[[^]]*\]\(([^)]+)\)")
     missing: list[str] = []
     for name in paths:
@@ -177,7 +190,8 @@ def test_所有相对_markdown_链接都指向仓库文件() -> None:
             if target.startswith(("#", "http://", "https://", "mailto:", "data:")):
                 continue
             relative = unquote(target.split("#", 1)[0])
-            if relative and not (doc.parent / relative).resolve().exists():
+            base = original_bases.get(doc.resolve(), doc.parent)
+            if relative and not (base / relative).resolve().exists():
                 missing.append(f"{name}: {target}")
     assert not missing, "Markdown 存在失效相对链接：\n" + "\n".join(missing)
 

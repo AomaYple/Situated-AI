@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "plan": "A4",
+  "status": "archived_reference_only",
+  "completion": "incomplete",
+  "reason": "用户要求停止旧计划并整理仓库，为后续新计划准备；不继承或补签未完成项。",
+  "base_commit": "cc042b8f83122b6285058ba2f4b9fbbe02d3d43c",
+  "capture": "2026-11-07; committed working-tree bytes before repository cleanup",
+  "originals": [
+    {
+      "path": "docs/design/架构主计划.md",
+      "sha256": "6de462bfc34792f62679616549303561f2c87cb0543bd4f1857a8a9f64dbec65",
+      "bytes": 20397,
+      "object": "objects/cc042b8f83122b6285058ba2f4b9fbbe02d3d43c/6de462bfc34792f62679616549303561f2c87cb0543bd4f1857a8a9f64dbec65.gz",
+      "readable": "../架构主计划.md",
+      "readable_kind": "retained_machine_input",
+      "provenance": "committed_at_base"
+    },
+    {
+      "path": "docs/design/架构子计划.md",
+      "sha256": "df8e5fd59cc7615545597d8232213414125e5ddd10c52c5ca2a260e6d9974d8f",
+      "bytes": 28935,
+      "object": "objects/cc042b8f83122b6285058ba2f4b9fbbe02d3d43c/df8e5fd59cc7615545597d8232213414125e5ddd10c52c5ca2a260e6d9974d8f.gz",
+      "readable": "../架构子计划.md",
+      "readable_kind": "retained_machine_input",
+      "provenance": "committed_at_base"
+    },
+    {
+      "path": "docs/design/架构深化计划.md",
+      "sha256": "d8dd1957c33bd8ee762685b9639750339a1c36c4e71fad2d05a3401a4cd04193",
+      "bytes": 20581,
+      "object": "objects/cc042b8f83122b6285058ba2f4b9fbbe02d3d43c/d8dd1957c33bd8ee762685b9639750339a1c36c4e71fad2d05a3401a4cd04193.gz",
+      "readable": "../架构深化计划.md",
+      "readable_kind": "retained_machine_input",
+      "provenance": "committed_at_base"
+    },
+    {
+      "path": "docs/design/当前工作清单.md",
+      "sha256": "4b2468973772a49dc1e57da9313fa20b6dbd6c5aae1a332e632942ebce2fe669",
+      "bytes": 13963,
+      "object": "objects/cc042b8f83122b6285058ba2f4b9fbbe02d3d43c/4b2468973772a49dc1e57da9313fa20b6dbd6c5aae1a332e632942ebce2fe669.gz",
+      "readable": "A4/当前工作清单.md",
+      "readable_kind": "exact_original",
+      "provenance": "committed_at_base"
+    }
+  ],
+  "retained_inputs": [
+    {
+      "path": "docs/design/A4实施台账.json",
+      "sha256": "9b1ed701a68ea5830de067bdbfa167e793022907781643a6db1f011324a77d42",
+      "bytes": 60728885,
+      "storage": "retained_at_original_path"
+    },
+    {
+      "path": "docs/design/A4发现源.json",
+      "sha256": "ee863ea33178c3518f2ab2b96cdec301debac978810d20527c40970002b50f3f",
+      "bytes": 439,
+      "storage": "retained_at_original_path"
+    }
+  ]
+}

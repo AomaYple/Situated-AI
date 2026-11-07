@@ -1,17 +1,14 @@
 # Situated AI
 
-当前实施状态见[工作清单](docs/design/当前工作清单.md)及[1.15迁移规划结果](docs/design/exec/1.15迁移规划-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
-
-当前战略见[架构主计划](docs/design/架构主计划.md)，领域与联动目标见[架构子计划](docs/design/架构子计划.md)，
-A4 深化目标与验收合同见[架构深化计划](docs/design/架构深化计划.md)。当前开发生成链已迁移到1.15.0，并产生尚未发布的4.0.0候选；迁移、分类和阶段签收事实见[A4迁移结果](docs/design/exec/A4-1迁移-结果.md)与工作清单。A4整体仍在执行，候选存在不表示全计划完成。
-已发布正式版本为3.2.0，其X1扩展、工程与安装证据见[交付结果](docs/design/exec/3.2.0-交付结果.md)。旧计划只作历史参考，长期行为和平衡由用户验收。
+当前事实见[工作清单](docs/design/当前工作清单.md)，版本与实际交付身份见[版本交付索引](docs/design/exec/版本交付-结果.md)。
+旧 A4 已归档且未完成，新计划尚未制定；历史目标、检查点和工程欠账见[计划归档](docs/design/archive/README.md)。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-当前正式包底本为 Victoria 3 `1.14.5`；A4目标底本为 `1.15.0`，Mod ID 为 `situated-ai`。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。
+当前正式包底本为 Victoria 3 `1.14.5`；开发候选目标底本为 `1.15.0`，Mod ID 为 `situated-ai`。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。
 
 正式包以工程基线及版本交付索引为准，开发迁移包不替代已发布包；旧设计与原始证据由[历史归档](docs/design/archive/README.md)导航，只解释对应历史快照。
 长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
@@ -29,7 +26,7 @@ Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [架构主计划](docs/design/架构主计划.md)、[架构子计划](docs/design/架构子计划.md)、[架构深化计划](docs/design/架构深化计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+4. [当前工作清单](docs/design/当前工作清单.md)与[计划归档](docs/design/archive/README.md)：当前状态和历史交接。
 5. [3.2.0交付结果](docs/design/exec/3.2.0-交付结果.md)：当前交付的功能、最终回归、发布、部署与验收边界；旧上下文见[历史归档](docs/design/archive/README.md)。
 
 ## 目录

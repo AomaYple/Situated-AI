@@ -19,6 +19,7 @@ from __future__ import annotations
 import ast
 import functools
 import gzip
+import hashlib
 import importlib
 import mmap
 import subprocess
@@ -31,6 +32,7 @@ import pytest
 
 from pdx import config
 from pdx.repo_audit import BINARY_SUFFIXES as _BINARY_SUFFIXES
+from pdx.repo_audit import FROZEN_CR_EVIDENCE
 
 #: 一条判据：读到的字节（可能是分块流）→ 违规说明（``None`` = 合规）。
 _判据 = Callable[[Path, "_Source"], "str | None"]
@@ -46,16 +48,15 @@ _GAME_SIDE_PREFIXES = ("mod/",)
 
 # ── 读文件的两种方式 ────────────────────────────────────────────
 # 大于这个字节数的受控文件改成「映射 + 分块扫描」，不在内存里放整份。
-# 现场 366 个受控文本里只有**两个**超过它（``tools/out/snapshots/*.compact.json``，
-# 各 6.36 MiB）—— 实测：整份读时每次 worker 的峰值常驻 12.6 MiB，分块扫之后降到 1.3 MiB。
+# 分块读取避免每个 pytest worker 都为大型证据文件保留一份完整字节副本。
 _READ_WHOLE_MAX = 1 << 20
 #: 分块扫描的块大小。8 KiB 与 `mmap` 的页大小同量级，切分代价可忽略。
 _CHUNK = 8192
 # 二进制声明与生产编码审计共用；gzip、标准包和原始字节证据不转码。
 # 文本后缀仍须通过下方独立的 NUL、BOM、CRLF 和孤立 CR 反例。
 
-#: 扫描范围的下限（元测试用）。当前精简仓库有 299 个受控文件；
-#: 取略低的值，目录改名或口径写错时仍会当场红，而正常小幅增删文件不会误报。
+#: 扫描范围的保守下限（元测试用），不是当前文件数。
+#: 防止目录改名或清单读取失效后空扫通过，同时容许正常的小幅增删。
 _MIN_TRACKED = 250
 _MIN_TEXT = 250
 _MIN_GAME_SIDE = 50
@@ -65,7 +66,7 @@ _MIN_GAME_SIDE = 50
 _仓库侧侧 = "仓库侧带了 UTF-8 BOM（`.py` 会让 `ast.parse` 失败、`.json` 会让读取方解析失败）"
 _引擎侧侧 = (
     f"引擎侧（{'、'.join(_GAME_SIDE_PREFIXES)} 下的 {_GAME_SIDE_SUFFIXES}）"
-    "少了 UTF-8 BOM —— 在游戏里会「像没生效」"
+    "带了 UTF-8 BOM —— 仓库源码禁止 BOM，仅在安装或打包边界添加"
 )
 
 
@@ -118,9 +119,8 @@ def _是二进制(data: bytes) -> bool:
 class _Source:
     """一个文件的原始字节：要么整份在内存里，要么是「映射 + 分块」的流。
 
-    为什么要有这层：``-n auto`` 下 16 个 worker 各自扫全树，而全树 17.7 MiB 里
-    12.14 MiB 是两份入库快照。整份读进来 = 每个 worker 多 12 MiB 常驻；
-    分块扫 = 每个 worker 只多一个块（8 KiB），判定结果逐字节相同。
+    各 pytest worker 独立扫描；大文件按块读取，避免重复常驻完整字节副本。
+    分块和整份读取使用相同的字节判据，包含跨块边界的控制字符。
     """
 
     path: Path
@@ -267,6 +267,14 @@ def _CRLF违规(path: Path, source: _Source) -> str | None:
 
     BOM 只看头部，换行必须扫全 —— 于是按块扫、只在命中时才为了**数总量**多跑一遍。
     """
+    frozen = FROZEN_CR_EVIDENCE.get(_相对路径(path))
+    if frozen is not None:
+        digest = hashlib.sha256()
+        for _, chunk in source.分块():
+            digest.update(chunk)
+        if digest.hexdigest() != frozen[0]:
+            return f"{_相对路径(path)} 冻结证据 SHA-256 漂移；{frozen[1]}"
+        return None
     at = _第一处(source, b"\r\n")
     if at is None:
         return None
@@ -334,7 +342,7 @@ def _分组() -> tuple[tuple[Path, ...], tuple[Path, ...], tuple[Path, ...]]:
     """把受控文件分成（引擎侧, 仓库侧文本, 二进制）——与 ``test_全部受控文件`` 同一口径。
 
     产出的三个元组只装路径、**不装文件内容**，且整棵树只扫一次（``lru_cache``）：
-    ``-n auto`` 下 16 个 worker 各持一份，常驻内存要留在 KB 级。
+    各 pytest worker 独立持有路径清单，文件内容按需读取。
     """
     engine: list[Path] = []
     repo_side: list[Path] = []
@@ -355,10 +363,9 @@ def _分组() -> tuple[tuple[Path, ...], tuple[Path, ...], tuple[Path, ...]]:
 
 
 def test_全部受控文件_两侧BOM口径() -> None:
-    """扫描范围 = ``git ls-files`` 的全部受控文件（当前精简基线约 299 条）。
+    """扫描 Git 跟踪文件及未忽略的新文件。
 
-    两条规则：**仓库侧必不带 BOM**（``.py`` 会让 ``ast.parse`` 失败、``.json`` 会让
-    读取方解析失败），**引擎侧必带**（``.txt`` / ``.yml`` 缺了在游戏里「像没生效」）。
+    仓库内的普通文本与游戏脚本源码均禁止 BOM；游戏副本的 BOM 由交付边界添加。
     """
     engine, repo_side, _ = _分组()
     assert len(_受控文件()) >= _MIN_TRACKED, (
@@ -374,12 +381,26 @@ def test_全部受控文件_两侧BOM口径() -> None:
 
 
 def test_全部受控文件_没有文件带CRLF() -> None:
-    """两侧共用的换行判据：任何受控文本文件都不许有 ``0D 0A``。"""
+    """自有文本禁止 CRLF；冻结原件必须保持注册的精确 SHA-256。"""
     engine, repo_side, _ = _分组()
     bad = _违规明细(engine + repo_side, _CRLF违规)
     assert not bad, (
         "以下文件带 CRLF —— 多半是 `write_text` 漏了 `newline='\\n'`：\n  " + "\n  ".join(bad[:10])
     )
+
+
+def test_冻结CR证据仅允许精确原件(tmp_path, monkeypatch) -> None:
+    path = tmp_path / "frozen.xml"
+    original = b"<failure>raw\r\ntrace</failure>\n"
+    path.write_bytes(original)
+    monkeypatch.setitem(
+        FROZEN_CR_EVIDENCE, _相对路径(path), (hashlib.sha256(original).hexdigest(), "raw failure")
+    )
+    assert _CRLF违规(path, _Source(path, whole=original)) is None
+    for mutated in (original + b"changed", original.replace(b"\r\n", b"\n")):
+        problem = _CRLF违规(path, _Source(path, whole=mutated))
+        assert problem is not None
+        assert "SHA-256 漂移" in problem
 
 
 def test_全部受控文件_没有孤立CR与NUL() -> None:
@@ -736,8 +757,8 @@ _共享来源: frozenset[tuple[str, str]] = frozenset(
 
 #: 白名单：**文件相对路径 → 为什么允许它留在盘上**。现读为空。
 #:
-#: 两种用法：① 这条扫查看不穿的间接写法（历史条目，必须写明理由）；② 故意放进去当
-#: 反证样本的文件（例如将来某个用来测解析器的"坏语法"样本）。**条目一旦不再命中就必须删掉**
+#: 只豁免能被扫描器识别、且有明确保留理由的命中；间接写法不能靠白名单放行。
+#: **条目一旦不再命中就必须删掉**
 #: （见 :func:`test_没有用例往共享产物目录写固定名文件` 末尾的自清断言）——
 #: 留着它就会变成"永久豁免"的暗门。
 _共享写者白名单: dict[str, str] = {}
@@ -961,6 +982,76 @@ def _调用返回共享路径(
     return False
 
 
+def _作用域节点(tree: ast.AST) -> Iterable[ast.AST]:
+    """保持函数、类的局部绑定独立；闭包由调用方传入外层共享名字。"""
+    yield tree
+    for child in ast.iter_child_nodes(tree):
+        if not isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            yield from _作用域节点(child)
+
+
+def _临时路径(node: ast.AST, names: set[str]) -> bool:
+    """只承认可证明不逃逸的临时路径；未知片段、绝对片段和父目录均不豁免。"""
+    if isinstance(node, ast.Name):
+        return node.id in names
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        segment = node.right
+        return (
+            _临时路径(node.left, names)
+            and isinstance(segment, ast.Constant)
+            and isinstance(segment.value, str)
+            and not segment.value.startswith(("/", "\\"))
+            and ":" not in segment.value
+            and ".." not in segment.value.replace("\\", "/").split("/")
+        )
+    if isinstance(node, ast.Call):
+        if _点号名(node.func) in {"tempfile.mkdtemp", "tempfile.TemporaryDirectory"}:
+            return True
+        if _点号名(node.func) in _路径构造器 and len(node.args) == 1:
+            return _临时路径(node.args[0], names)
+    return False
+
+
+def _临时名字(scope: ast.AST, nodes: list[ast.AST]) -> set[str]:
+    assignments: dict[str, list[ast.AST]] = {}
+    for node in nodes:
+        pairs: list[tuple[ast.AST, ast.AST]] = []
+        if isinstance(node, ast.Assign):
+            pairs.extend((target, node.value) for target in node.targets)
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            pairs.append((node.target, node.value))
+        elif isinstance(node, (ast.AugAssign, ast.NamedExpr, ast.For, ast.AsyncFor)):
+            pairs.append((node.target, node))
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            pairs.extend(
+                (item.optional_vars, item.context_expr)
+                for item in node.items
+                if item.optional_vars is not None
+            )
+        for target, value in pairs:
+            if isinstance(target, ast.Name):
+                assignments.setdefault(target.id, []).append(value)
+    names = set()
+    if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        names = {
+            arg.arg
+            for arg in [*scope.args.posonlyargs, *scope.args.args, *scope.args.kwonlyargs]
+            if arg.arg == "tmp_path"
+        }
+    # A reassignment must also be safe; one unsafe branch invalidates the exemption.
+    for _ in range(len(assignments) + 1):
+        updated = {
+            name
+            for name, values in assignments.items()
+            if all(_临时路径(value, names) for value in values)
+        }
+        updated |= names - assignments.keys()
+        if updated == names:
+            break
+        names = updated
+    return names
+
+
 def _扫共享写入(root: Path) -> list[_SharedWrite]:
     """扫 `root` 下每个 `.py`，报出**往共享 `tools/out/**` 写固定名产物**的地方（静态、不执行）。
 
@@ -984,106 +1075,152 @@ def _扫共享写入(root: Path) -> list[_SharedWrite]:
             continue
         lines = path.read_text(encoding="utf-8").splitlines()
         ctx = _读上下文(tree)
-        共享名字: set[str] = set()
+        scopes: list[tuple[ast.AST, ast.AST | None]] = [(tree, None)]
+        scope_names: dict[int, set[str]] = {}
+        for scope, parent in scopes:
+            for outer in _作用域节点(scope):
+                scopes.extend(
+                    (child, scope)
+                    for child in ast.iter_child_nodes(outer)
+                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                )
+            nodes = list(_作用域节点(scope))
+            local_names = {
+                node.id
+                for node in nodes
+                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+            }
+            if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                local_names.update(
+                    arg.arg
+                    for arg in [*scope.args.posonlyargs, *scope.args.args, *scope.args.kwonlyargs]
+                )
+            共享名字 = scope_names.get(id(parent), set()) - local_names
+            scope_names[id(scope)] = 共享名字
+            temporary_names = _临时名字(scope, nodes)
 
-        def 算共享(node: ast.AST, _names: set[str] = 共享名字, _ctx: _FileContext = ctx) -> bool:
-            # `_names` / `_ctx` 用默认参数绑住**同一个对象**（B023：闭包对循环里定义的名字晚绑定）；
-            # 传播阶段往集合里 `add` 的改动仍然看得见 —— 绑的是对象，不是快照。
-            if isinstance(node, ast.Name):
-                return node.id in _names or _是共享路径(node, _ctx)
-            if _是共享路径(node, _ctx, 算共享):
-                # 含 `config.REPO / "tools" / "out" …` 这类**字面量拼出来**的路径：它的叶子
-                # 是 `config.REPO`（本身不共享），共享性在整条链的尾巴上 ⇒ 必须先整体判一次。
-                return True
-            if isinstance(node, ast.BinOp):
-                return 算共享(node.left) or 算共享(node.right)
-            if isinstance(node, ast.Call):
-                # `paths = (共享目录).glob(...)` 再 `for p in paths:` ⇒ 名字也要算共享
-                return _调用返回共享路径(node, _ctx, 算共享)
-            return False
+            def 算共享(
+                node: ast.AST,
+                _names: set[str] = 共享名字,
+                _ctx: _FileContext = ctx,
+                _temporary: set[str] = temporary_names,
+            ) -> bool:
+                # `_names` / `_ctx` 用默认参数绑住**同一个对象**（B023：闭包对循环里定义的名字晚绑定）；
+                # 传播阶段往集合里 `add` 的改动仍然看得见 —— 绑的是对象，不是快照。
+                if _临时路径(node, _temporary):
+                    return False
+                if isinstance(node, ast.Name):
+                    return node.id in _names or _是共享路径(node, _ctx)
+                if _是共享路径(node, _ctx, 算共享):
+                    # 含 `config.REPO / "tools" / "out" …` 这类**字面量拼出来**的路径：它的叶子
+                    # 是 `config.REPO`（本身不共享），共享性在整条链的尾巴上 ⇒ 必须先整体判一次。
+                    return True
+                if isinstance(node, ast.BinOp):
+                    return 算共享(node.left) or 算共享(node.right)
+                if isinstance(node, ast.Call):
+                    # `paths = (共享目录).glob(...)` 再 `for p in paths:` ⇒ 名字也要算共享
+                    return _调用返回共享路径(node, _ctx, 算共享)
+                return False
 
-        def 待绑定(tree: ast.AST) -> list[tuple[list[ast.AST], ast.AST]]:
-            """把「谁会被绑成共享名字」的候选找齐（赋值 / 循环 / **推导式** / **`map`/`filter` 的 lambda 形参**）。"""
-            候选: list[tuple[list[ast.AST], ast.AST]] = []
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Assign):
-                    候选.append((list(node.targets), node.value))
-                elif isinstance(node, ast.AnnAssign) and node.value is not None:
-                    候选.append(([node.target], node.value))
-                elif isinstance(node, (ast.For, ast.AsyncFor)):
-                    候选.append(([node.target], node.iter))
-                elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-                    # F4 的第一种变体：`[p.unlink() for p in snapshot.list_snapshots()]`
-                    候选.extend(([comp.target], comp.iter) for comp in node.generators)
-                elif (
-                    isinstance(node, ast.Call)
-                    and isinstance(node.func, ast.Name)
-                    and node.func.id in {"map", "filter"}
-                ):
-                    # F4 的第二种变体：`map(lambda q: q.unlink(), snapshot.list_snapshots())`
-                    for arg in node.args:
-                        if not isinstance(arg, ast.Lambda):
-                            continue
-                        共享实参 = [
-                            other for other in node.args if other is not arg and 算共享(other)
-                        ]
-                        if 共享实参:
-                            候选.append((list(arg.args.args), 共享实参[0]))
-            return 候选
+            def 待绑定(_nodes: list[ast.AST] = nodes) -> list[tuple[list[ast.AST], ast.AST]]:
+                """把「谁会被绑成共享名字」的候选找齐（赋值 / 循环 / **推导式** / **`map`/`filter` 的 lambda 形参**）。"""
+                候选: list[tuple[list[ast.AST], ast.AST]] = []
+                for node in _nodes:
+                    if isinstance(node, ast.Assign):
+                        候选.append((list(node.targets), node.value))
+                    elif isinstance(node, ast.AnnAssign) and node.value is not None:
+                        候选.append(([node.target], node.value))
+                    elif isinstance(node, (ast.For, ast.AsyncFor)):
+                        候选.append(([node.target], node.iter))
+                    elif isinstance(
+                        node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+                    ):
+                        # F4 的第一种变体：`[p.unlink() for p in snapshot.list_snapshots()]`
+                        候选.extend(([comp.target], comp.iter) for comp in node.generators)
+                    elif (
+                        isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Name)
+                        and node.func.id in {"map", "filter"}
+                    ):
+                        # F4 的第二种变体：`map(lambda q: q.unlink(), snapshot.list_snapshots())`
+                        for arg in node.args:
+                            if not isinstance(arg, ast.Lambda):
+                                continue
+                            共享实参 = [
+                                other for other in node.args if other is not arg and 算共享(other)
+                            ]
+                            if 共享实参:
+                                候选.append((list(arg.args.args), 共享实参[0]))
+                return 候选
 
-        # 传播到不动点：`paths = snapshot.list_snapshots()` → `for p in paths:` → `p.unlink(...)`
-        for _ in range(8):
-            增长 = False
-            for targets, value in 待绑定(tree):
-                if not 算共享(value):
+            # 传播到不动点：`paths = snapshot.list_snapshots()` → `for p in paths:` → `p.unlink(...)`
+            for _ in range(8):
+                增长 = False
+                for targets, value in 待绑定():
+                    if not 算共享(value):
+                        continue
+                    for target in targets:
+                        # 名字有两种形状：赋值 / 循环 / 推导式里是 `ast.Name`，**lambda 形参是 `ast.arg`**
+                        # （F4b 就卡在这里：只认 `Name` 的话 `map(lambda q: …)` 的 `q` 永远绑不上）。
+                        名字 = target.id if isinstance(target, ast.Name) else None
+                        if 名字 is None and isinstance(target, ast.arg):
+                            名字 = target.arg
+                        if 名字 is not None and 名字 not in 共享名字:
+                            共享名字.add(名字)
+                            增长 = True
+                if not 增长:
+                    break
+
+            for node in nodes:
+                if not isinstance(node, ast.Call):
                     continue
-                for target in targets:
-                    # 名字有两种形状：赋值 / 循环 / 推导式里是 `ast.Name`，**lambda 形参是 `ast.arg`**
-                    # （F4b 就卡在这里：只认 `Name` 的话 `map(lambda q: …)` 的 `q` 永远绑不上）。
-                    名字 = target.id if isinstance(target, ast.Name) else None
-                    if 名字 is None and isinstance(target, ast.arg):
-                        名字 = target.arg
-                    if 名字 is not None and 名字 not in 共享名字:
-                        共享名字.add(名字)
-                        增长 = True
-            if not 增长:
-                break
-
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            动作 = func.attr if isinstance(func, ast.Attribute) else ""
-            # ① 方法形式的写/删：接收者**或任意一个实参**是共享的就算（F5：`shutil.move(src, dst)`
-            #    的共享路径在**第 2 个**参数上）。检查全部实参与了 F5 与"源在共享、目标在别处"
-            #    的保守取向：后者其实只是**从**共享读，但宁多报不放过（必要时写白名单）。
-            if 动作 in _写动作:
-                receiver = func.value if isinstance(func, ast.Attribute) else None
-                实参 = [*([receiver] if receiver is not None else []), *node.args]
-                实参 += [kw.value for kw in node.keywords]
-                if any(算共享(item) for item in 实参):
-                    命中.append(_SharedWrite(rel, node.lineno, lines[node.lineno - 1].strip()))
-                    continue
-            # ② 写模式的 open：内建 `open(path, "w")` 与 `Path.open("w")`
-            if 动作 == "open" and node.args:
-                mode = node.args[0]
-                if (
-                    isinstance(mode, ast.Constant)
-                    and isinstance(mode.value, str)
-                    and any(c in mode.value for c in _写模式)
-                ):
+                func = node.func
+                动作 = func.attr if isinstance(func, ast.Attribute) else ""
+                # ① 方法形式的写/删：接收者**或任意一个实参**是共享的就算（F5：`shutil.move(src, dst)`
+                #    的共享路径在**第 2 个**参数上）。检查全部实参与了 F5 与"源在共享、目标在别处"
+                #    的保守取向：后者其实只是**从**共享读，但宁多报不放过（必要时写白名单）。
+                if 动作 in _写动作:
+                    # Idempotent parent creation has no fixed file payload.
+                    # Ordinary mkdir and every file write stay checked.
+                    flags = {kw.arg: kw.value for kw in node.keywords}
+                    if (
+                        动作 == "mkdir"
+                        and not node.args
+                        and set(flags) == {"parents", "exist_ok"}
+                        and all(
+                            isinstance(value, ast.Constant) and value.value is True
+                            for value in flags.values()
+                        )
+                    ):
+                        continue
                     receiver = func.value if isinstance(func, ast.Attribute) else None
-                    if receiver is not None and 算共享(receiver):
+                    实参 = [*([receiver] if receiver is not None else []), *node.args]
+                    实参 += [kw.value for kw in node.keywords]
+                    if any(算共享(item) for item in 实参):
                         命中.append(_SharedWrite(rel, node.lineno, lines[node.lineno - 1].strip()))
-            elif isinstance(func, ast.Name) and func.id == "open" and len(node.args) > 1:
-                mode = node.args[1]
-                if (
-                    isinstance(mode, ast.Constant)
-                    and isinstance(mode.value, str)
-                    and any(c in mode.value for c in _写模式)
-                    and 算共享(node.args[0])
-                ):
-                    命中.append(_SharedWrite(rel, node.lineno, lines[node.lineno - 1].strip()))
+                        continue
+                # ② 写模式的 open：内建 `open(path, "w")` 与 `Path.open("w")`
+                if 动作 == "open" and node.args:
+                    mode = node.args[0]
+                    if (
+                        isinstance(mode, ast.Constant)
+                        and isinstance(mode.value, str)
+                        and any(c in mode.value for c in _写模式)
+                    ):
+                        receiver = func.value if isinstance(func, ast.Attribute) else None
+                        if receiver is not None and 算共享(receiver):
+                            命中.append(
+                                _SharedWrite(rel, node.lineno, lines[node.lineno - 1].strip())
+                            )
+                elif isinstance(func, ast.Name) and func.id == "open" and len(node.args) > 1:
+                    mode = node.args[1]
+                    if (
+                        isinstance(mode, ast.Constant)
+                        and isinstance(mode.value, str)
+                        and any(c in mode.value for c in _写模式)
+                        and 算共享(node.args[0])
+                    ):
+                        命中.append(_SharedWrite(rel, node.lineno, lines[node.lineno - 1].strip()))
     return 命中
 
 
@@ -1408,6 +1545,59 @@ def _跑合成样本(tmp_path: Path, 样本: str) -> list[_SharedWrite]:
     """把一段合成用例写进 `tmp_path` 再跑扫查（**不碰盘上任何既有用例**）。"""
     (tmp_path / "test_合成.py").write_text(样本, encoding="utf-8", newline="\n")
     return _扫共享写入(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "sample",
+    [
+        'def test_one(tmp_path):\n    root = tmp_path\n    path = root / "tools/out/x"\n    path.mkdir()\n',
+        'def test_one(tmp_path):\n    (tmp_path / "tools" / "out" / "x").mkdir()\n',
+        'import tempfile\nfrom pathlib import Path\ndef test_one():\n    with tempfile.TemporaryDirectory(dir="tools/out") as directory:\n        (Path(directory) / "x").write_text("x")\n',
+        'import tempfile\nfrom pathlib import Path\ndef test_one():\n    directory = Path(tempfile.mkdtemp(dir="tools/out"))\n    (directory / "x").write_text("x")\n',
+        'from pathlib import Path\ndef helper():\n    path = Path("tools/out")\n    return path\ndef test_one(tmp_path):\n    path = tmp_path / "x"\n    path.mkdir()\n',
+    ],
+)
+def test_共享路径检查识别独立临时根(tmp_path, sample) -> None:
+    assert _跑合成样本(tmp_path, sample) == []
+
+
+@pytest.mark.parametrize(
+    "sample",
+    [
+        'def test_one(tmp_path):\n    (tmp_path / "/tools/out/x").mkdir()\n',
+        'def test_one(tmp_path):\n    (tmp_path / ".." / "tools/out/x").mkdir()\n',
+        'from pdx import config\ndef test_one(tmp_path):\n    path = tmp_path\n    path = config.OUT / "x"\n    path.mkdir()\n',
+    ],
+)
+def test_临时根不豁免逃逸或重新赋值(tmp_path, sample) -> None:
+    assert _跑合成样本(tmp_path, sample)
+
+
+@pytest.mark.parametrize(
+    ("flags", "expected"),
+    [
+        ("parents=True, exist_ok=True", False),
+        ("exist_ok=True, parents=True", False),
+        ("", True),
+        ("parents=True", True),
+        ("parents=True, exist_ok=False", True),
+        ("parents=True, exist_ok=True, mode=0o777", True),
+    ],
+)
+def test_共享父目录仅豁免幂等创建(tmp_path, flags, expected) -> None:
+    sample = f'from pathlib import Path\nPath("tools/out").mkdir({flags})\n'
+    assert bool(_跑合成样本(tmp_path, sample)) is expected
+
+
+def test_共享父目录创建不豁免随后文件写入(tmp_path) -> None:
+    sample = (
+        'from pathlib import Path\nroot = Path("tools/out")\n'
+        "root.mkdir(parents=True, exist_ok=True)\n"
+        '(root / "fixed.json").write_text("x")\n'
+    )
+    matches = _跑合成样本(tmp_path, sample)
+    assert len(matches) == 1
+    assert matches[0].line == 4
 
 
 def _标记行(样本: str, 标记: str) -> list[int]:

@@ -16,9 +16,7 @@
 | 工程持续约束 | [工程原则](docs/principles/工程原则.md) |
 | Mod 目标、设计和验收边界 | [Mod 开发原则](docs/principles/Mod开发原则.md) |
 | 生成、包结构、证据和恢复合同 | [工程交付基线](docs/design/exec/工程基线-1.0.md) |
-| 当前架构、战略计划与历史入口 | [架构主计划](docs/design/架构主计划.md) |
-| 领域与联动子计划 | [架构子计划](docs/design/架构子计划.md) |
-| 当前深化目标与逐项验收合同 | [架构深化计划](docs/design/架构深化计划.md) |
+| 历史架构、战略与逐项合同 | [计划归档](docs/design/archive/README.md)；旧计划不自动恢复 |
 | 当前事实与下一动作 | [当前工作清单](docs/design/当前工作清单.md) |
 | 阶段事实和交付收据 | `docs/design/exec/*-结果.md` |
 | 安全问题报告 | [SECURITY.md](SECURITY.md) |
@@ -31,7 +29,7 @@
 开始非只读任务前：
 
 1. 按贡献指南完成工作树检查，辨认并保留已有改动；按任务需要检查相关进程、部署指针和锁文件。
-2. 阅读本文件及适用的原则；Mod 工作同时阅读当前工作清单和主计划，涉及生成/快照/交付时阅读工程基线。
+2. 阅读本文件及适用的原则；Mod 工作先读当前工作清单。涉及生成/快照/交付时阅读工程基线；仅按任务需要查阅归档计划。
 3. 只有需要历史事实、失败因果或原始字节时，才深入读取旧结果、审计、报告和 `research` 材料。
 
 ## 修改路由
@@ -44,7 +42,7 @@
 | 文档和机械表格 | 对应 CLI、`pdx.doc_tables`、`pdx.docgen` | 修改唯一来源后重新生成；不手改指纹、统计和 manifest |
 | 标准包 | `src/pdx/distribution.py`、`v3 package` | 依据工程基线；不得将探针、日志、缓存或历史实验放入生产包 |
 | 本地部署与工坊发布 | `src/pdx/publishing.py`、`deployment.py`、`steam_workshop.py`、`v3 publish` | 固定标准包；默认预览，执行和恢复见[发布指南](docs/publishing/README.md)；不创建常驻任务 |
-| 历史实验 | Git 历史；可再生输出在 `tools/out/` | 不进入当前工作树、计划、默认 CLI 路径或发布包 |
+| 历史计划与实验 | `docs/design/archive/`、历史收据和 Git 历史；本机证据在 `tools/out/` | 保留受控证据与机器兼容路径；不进入生产包，不自动恢复执行 |
 
 具体命令、检查范围和 Git 操作统一按 [CONTRIBUTING.md](CONTRIBUTING.md) 执行。当前阶段和版本不在本文件维护，避免
 入口规则随阶段推进而过期。
