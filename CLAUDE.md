@@ -52,17 +52,26 @@
 
 实测（2026-11-07，经第三方中转站，服务端行为可能与官方不同）：
 
-- frontmatter 的 `model` 与 `effort` 生效：同为 Opus 5.5，effort low、xhigh 与不写 effort 的子代理，系统提示里的 reasoning_effort 标记分别为 5、40、10。标记只证明配置传到了，不等于实际思考量。
+- frontmatter 的 `model` 与 `effort` 生效。系统提示里的 reasoning_effort 标记：Opus 的 low 5、medium 10、high 15、xhigh 40；Sonnet 的 medium 5、high 10；Haiku 没有该标记，无法用它验证。标记只证明配置传到了，不等于实际思考量；Opus 标记 5/10/15/40 与档位名的对应是推断。
+- `review-*` 的 `tools` 白名单生效：实测只有 Read、Glob、Grep，没有 Bash 和 Write。
+- 调用 `Agent` 时传 `model` 会覆盖代理的 frontmatter `model`（实测：`haiku-low` 传 `opus` 后跑在 Opus 5.5 上），frontmatter 的 effort 仍保留。所以调用时不要传 `model`。
 - 本会话的 `Agent` 工具没有 `effort` 参数，档位靠代理定义固定。
 - `start_session` 不能升档：请求 Opus 时新会话仍为 Sonnet 5.5，`effort` 也只能不高于主会话。仅在用户本人要求时用它派 Sonnet/Haiku 的独立长任务。
-- 新增代理文件后，可用代理列表在会话中途就会更新；`review-*` 的 `tools` 白名单是否真的限制住了，尚未验证。
+- 新建的代理文件在同一轮对话里不可用（实测：写入后立刻调用报“找不到”），下一轮才出现在可用列表。
+- 会话中途改已有代理文件，生效有延迟且时间不定（实测：改后几分钟内多次调用，读到的仍是旧值或更早的值，改回原值后甚至一直读到中间态）。不要在同一会话里靠改文件反复试验；改完代理定义后新开会话再验证。
+- 超过模型上限的 effort 看起来被压到上限，不会报错（推断，证据较弱）：Opus 请求 `max` 读到 40，与 xhigh 相同；Sonnet 请求 `xhigh` 读到 10，与 high 相同。这与“上限只是天花板”一致，但读数受上一条的延迟干扰，不要依赖。
+- 同一配置下标记读数会变（`sonnet-medium` 读到过 5 和 10，`opus-medium` 读到过 10、5、40），多数波动能用上一条的延迟解释，但没有完全排除标记本身不稳定。所以标记只能当粗略佐证，不能当实际强度的证据。
+- 未测：本机 Claude Code 版本（`claude` 不在 shell 的 PATH 上）；用户终端的启动环境变量（Windows 用户级、机器级、进程级的相关变量均为空）。
 
 官方文档（[Subagents](https://code.claude.com/docs/en/sub-agents.md)，未在本环境验证）：
 
-- model 解析顺序：调用参数、frontmatter、`CLAUDE_CODE_SUBAGENT_MODEL`、主会话模型。调用时不要再传 `model`，传了会盖掉代理里的分档。
+- model 解析顺序：调用参数、frontmatter、`CLAUDE_CODE_SUBAGENT_MODEL`、主会话模型（调用参数优先已实测，其余未测）。
 - 环境变量 `CLAUDE_CODE_EFFORT_LEVEL` 优先级最高，设了它所有分档失效；2026-11-07 检查时未设置。
 - 没写 effort 的代理换模型后不继承会话档位，所以每个代理都必须显式写 `effort`。
-- v2.1.292+ 的调用可传 `effort`，与上面本会话的工具定义不一致。
+- v2.1.292+ 的调用可传 `effort`，与上面本会话的工具定义不一致。本机装有 2.1.286 到 2.1.317 多个版本，运行中的进程路径是 2.1.288（未确认就是本会话），低于 2.1.292，可解释工具里没有该参数。
+- 不支持的 effort 档位降到不高于请求值的最近支持档，不报错（[model-config](https://code.claude.com/docs/en/model-config.md)）。该页表格称 Opus/Sonnet/Haiku 5.5 都支持到 xhigh 和 max，所以下面“上限”是用户在 Desktop 设的限额，不是模型限制；限额是否同样按降档处理，文档没写，只有上面的读数间接支持。
+- `.claude/agents/` 被监视，新增或修改后几秒内生效，下一次委派用新定义；会话启动时不存在的 agents 目录首次创建、`--add-dir` 目录里的文件需重启（[sub-agents](https://code.claude.com/docs/en/sub-agents.md)）。这与上面实测的延迟不符，可能是版本较旧（2.1.288）或经中转站所致，以实测为准。
+- 版本相关：2.1.316 新增 `CLAUDE_CODE_SUBAGENT_EFFORT`；2.1.317 起，不同模型的子代理用该模型保存的 effort 或默认值，不再沿用会话 effort（[changelog](https://code.claude.com/docs/en/changelog.md)，2.1.288–2.1.308 的条目未取到）。升级后需复测。
 
 约束：
 
