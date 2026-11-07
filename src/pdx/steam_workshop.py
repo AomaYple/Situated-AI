@@ -93,6 +93,11 @@ class ItemDetails(ctypes.Structure):
 class NativeSteam:
     """仅在隔离 worker 中实例化；测试可替换 CDLL 外部边界。"""
 
+    # The constructor deliberately fails on non-Windows platforms. Declare
+    # instance types independently so cross-platform checks can inspect methods.
+    item_id: int
+    library: Path
+
     def __init__(self, library: Path, item_id: int) -> None:
         if sys.platform != "win32" or ctypes.sizeof(ctypes.c_void_p) != 8:
             raise WorkshopError("工坊原生上传目前仅验证 Windows x64；本地部署和离线检查不受限")

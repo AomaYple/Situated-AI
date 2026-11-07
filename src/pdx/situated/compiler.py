@@ -3108,10 +3108,9 @@ def _bound_card_ports(model, program):
             if len(matches) != 1:
                 raise ValueError("端口使用无法唯一定位具体card term")
             result[matches[0]] = use
-        elif use.definition in owners.values():
+        elif use.definition in owners.values() and use.role != "relation":
             # A disabled relation may intentionally remove its term.
-            if use.role != "relation":
-                raise ValueError("端口缺少实际card cost term")
+            raise ValueError("端口缺少实际card cost term")
     return result
 
 
