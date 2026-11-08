@@ -269,6 +269,21 @@ def test_inproc_fixture_wrapper_preserves_setup_error(mem, monkeypatch):
     assert not mem._INPROC["fixtures"]
 
 
+def test_inproc_fixture_wrapper_preserves_unittest_skip_without_sampler_error(mem, monkeypatch):
+    from types import SimpleNamespace
+    from unittest import SkipTest
+
+    monkeypatch.setattr(mem, "_INPROC_ACTIVE", True)
+    hook = mem.pytest_fixture_setup(SimpleNamespace(argname="unavailable", scope="class"), None)
+    next(hook)
+    skipped = SkipTest("game directory unavailable")
+    with pytest.raises(SkipTest) as result:
+        hook.throw(skipped)
+    assert result.value is skipped
+    assert not mem._INPROC["errors"]
+    assert not mem._INPROC["fixtures"]
+
+
 def module_artifact_stem(mem: ModuleType, tag: str, group: str) -> str:
     """被测脚本的命名函数（单测只经这一个入口取前缀，免得两处各写一遍）。"""
     stem: str = mem.artifact_stem(tag, group)
