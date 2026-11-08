@@ -14,20 +14,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from typer.testing import CliRunner
+from _helpers import run_cli as _run
+from conftest import NEEDS_GAME
 
 from pdx import config
-from pdx.cli import app
 
 pytestmark = pytest.mark.unit
-
-runner = CliRunner()
-
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
-
-
-def _run(*args: str):
-    return runner.invoke(app, list(args))
 
 
 def test_unverified列出清单() -> None:
@@ -122,7 +114,7 @@ def test_cov缺少数据时给出指引(tmp_path, monkeypatch) -> None:
     assert "先跑一次" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_evidence查一个真实键() -> None:
     result = _run("evidence", "after", "--no-samples")
     assert result.exit_code == 0, result.output
@@ -131,34 +123,34 @@ def test_evidence查一个真实键() -> None:
     assert "exe 字面量" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_evidence的exe_grep查一族名字() -> None:
     result = _run("evidence", "--exe-grep", "scripted_gui")
     assert result.exit_code == 0
     assert "jomini_scripted_guis" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_evidence不给键名时报用法错() -> None:
     result = _run("evidence")
     assert result.exit_code == 2
 
 
-@_needs_game
+@NEEDS_GAME
 def test_prefixes列出目录用量() -> None:
     result = _run("prefixes", "-n", "5")
     assert result.exit_code == 0, result.output
     assert "功能前缀" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_prefixes可以只看一个目录() -> None:
     result = _run("prefixes", "common/scripted_triggers")
     assert result.exit_code == 0
     assert "REPLACE" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_prefixes空目录会提示() -> None:
     result = _run("prefixes", "common/绝对没有这个目录")
     assert result.exit_code == 0

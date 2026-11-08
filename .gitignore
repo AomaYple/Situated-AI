@@ -5,7 +5,7 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
-.pytest_cache/
+/.pytest_cache/
 /.mypy_cache/
 /.ruff_cache/
 /.ruff-cache-*/
@@ -40,7 +40,8 @@ __pycache__/
 /tools/out/evidence/v0.1-g1-20261013/*
 !/tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json
 
-# 官方原文镜像只保留 manifest，原始文件按版权和体积不入库
+# 官方原文本地镜像（research/official-docs/）是被忽略的本机副本，原始文件按版权和体积不入库；
+# 入库的只有 research/official-docs.manifest.json
 /research/official-docs/
 
 # 临时盘点、补丁和日志
@@ -65,9 +66,7 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
-.project
 
 # 协作工具运行态
 .agent-teams/
-.settings/
 /.superpowers/

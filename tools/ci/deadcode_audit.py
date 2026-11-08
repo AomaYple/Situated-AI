@@ -117,25 +117,8 @@ class Definition:
         }
 
 
-def _tracked_paths() -> list[str]:
-    result = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-    )
-    paths = result.stdout.decode("utf-8", "surrogateescape").split("\x00")
-    return [
-        path
-        for path in sorted(set(paths))
-        if path.endswith(".py")
-        and path.startswith(SOURCE_PREFIXES)
-        and not any(part in EXCLUDED_PARTS for part in Path(path).parts)
-    ]
-
-
-def _reference_paths() -> list[str]:
-    """返回受控及尚未入库的新Python文本；忽略产物不能掩盖新代码漏审。"""
+def _listed_python_paths() -> list[str]:
+    """git 列出的已跟踪与未跟踪（未被忽略）的 Python 路径，已排除 EXCLUDED_PARTS。"""
 
     result = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
@@ -149,6 +132,18 @@ def _reference_paths() -> list[str]:
         for path in sorted(set(paths))
         if path.endswith(".py") and not any(part in EXCLUDED_PARTS for part in Path(path).parts)
     ]
+
+
+def _tracked_paths() -> list[str]:
+    """受审计的源码路径（含尚未入库的新文件，限 SOURCE_PREFIXES 之内）。"""
+
+    return [path for path in _listed_python_paths() if path.startswith(SOURCE_PREFIXES)]
+
+
+def _reference_paths() -> list[str]:
+    """返回受控及尚未入库的新Python文本；忽略产物不能掩盖新代码漏审。"""
+
+    return _listed_python_paths()
 
 
 def _read_surface(paths: Iterable[str]) -> dict[str, str]:

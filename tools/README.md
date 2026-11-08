@@ -4,7 +4,7 @@
 
 当前架构与计划归档入口见[架构主计划](../docs/design/架构主计划.md)与[架构子计划](../docs/design/架构子计划.md)。
 生产已接入具体观测与行动、同因分档取强、独立收益成本联合和消费者末端一次限幅；国家协调按需读取当前事实，全国排他路线已退役，独立财政迟滞保留。
-历史收口工具核验 A2 的 S0–S6 机器收据；已完成的 X1 以逐项生产差异、独立见证、定向与集中检查和交付事实验收。旧收据不重签新源码，不能凭工具存在或默认静态通过声称扩展完成。
+历史收口工具核验 A2 的 S0–S6 机器收据；已完成的 X1 以逐项生产差异、独立见证、定向与集中检查和交付事实验收。旧收据不重签新源码，不能凭工具存在或默认静态通过声称拓展完成。
 旧合同见[处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)；
 历史证据见[分层联动执行结果](../docs/design/exec/分层联动-执行结果.md)。
 
@@ -16,13 +16,19 @@
 
 | 路径/命令 | 用途 |
 |---|---|
-| `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、baseline、deadcode |
+| `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、full-acceptance、offline、decision-audit、baseline、deadcode |
 | `tools/ci/repo_hygiene.py` | 检查根目录可再生缓存、字节码和运行态目录 |
 | `tools/ci/python_package.py` | 在临时源码副本中构建 wheel，核对源码模块集合、字节、ZIP 重复条目与完整性 |
 | `tools/ci/situated_closeout.py` | 汇总生成锁、标准包禁带项、生产编码、ConsumerIR owner 和卫生；`--require-engineering` 核对 A2/S0–S5 的功能、依赖、来源、真实见证与独立原版范围，`--require-plan` 继续核对 S6 实际发布与部署 |
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |
+| `tools/ci/test_summary.py` | 汇总 pytest JUnit XML 并给 skipped 测试分配工程类别；未知或空的跳过原因返回退出码 2 |
+| `tools/ci/bench_summary.py` | 把 pytest-benchmark JSON 汇总成 Markdown 表（CI job summary 用，不作门禁） |
+| `tools/ci/mem_baseline.py` | 并行测试内存基线：整套峰值、每 worker 峰值和总耗时，输出写入忽略的 `tools/out/mem/` |
+| `tools/ci/architecture_witness_capture.py` | 显式启用的串行 pytest 插件，采集独立 PDX 见证并写出结果与草稿行，不写阶段完成 |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
+| `tools/benchmarks/profile_suite.py` | pytest cProfile 插件：每个 worker 独立落盘，按模块汇总函数自身耗时；分析有额外开销，不能代替墙钟/RSS 基线 |
+| `tools/prof/prof_e2e.py` | 全量分析端到端性能剖析（`full`、`stages`、`walkaudit`、`prefixaudit`），会重跑分析流水线 |
 | `src/pdx/` | CLI、全量静态分析、快照、Mod 生成、字段门禁和 ZIP 交付实现 |
 | `tools/save_archive.py` | 后台按游戏日期归档稳定的 Victoria 3 自动存档；只读，不控制游戏 |
 
@@ -98,6 +104,6 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 工具能够回答的问题包括：锁定游戏文件中的静态字段、脚本值读取器、路径、AI 消费者、语言目录和文件级结构；
 还可以核对项目生成源是否只使用快照或当前本机原版中存在的接口。
 
-静态分析不能回答引擎内部未暴露状态、脚本运行期语义、国家长期行为、平衡、游戏内性能或玩家体验。这些由用户
-在标准生产包上验收。当前 CLI 已交付 `observe` 命令；观察报告仍只能作为带证据分类的辅助材料。
+静态分析不能回答引擎内部未暴露状态、脚本运行期语义、国家长期行为、平衡、游戏内性能或玩家体验。
+当前 CLI 已交付 `observe` 命令；观察报告仍只能作为带证据分类的辅助材料。
 历史阶段收据、冻结快照和必要的原始证据按各自契约保留；它们不改变当前规则、计划或生产包。

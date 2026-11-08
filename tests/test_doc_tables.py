@@ -19,8 +19,9 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from conftest import NEEDS_GAME
 
-from pdx import config, doc_tables, docgen, game_root
+from pdx import doc_tables, docgen, game_root
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,7 +33,6 @@ _unit = pytest.mark.unit
 
 #: 要读游戏本体的用例：打 ``integration``（conftest 在无游戏时自动跳过）
 #: 并附 ``skipif``（本机跳过时给出原因，而不是静默）。
-_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 
 # ── 1. 通用机制（合成文档，不需要游戏）──────────────────────
@@ -228,7 +228,7 @@ def test_登记表非空() -> None:
 
 # ── 3. 生成结果非空（要读游戏，故需游戏）────────────────────
 @pytest.mark.integration
-@_game
+@NEEDS_GAME
 def test_生成结果非空() -> None:
     for target in docgen.targets():
         for spec in target.specs:
@@ -238,7 +238,7 @@ def test_生成结果非空() -> None:
 
 # ── 4. 与真实游戏比对（需要游戏）────────────────────────────
 @pytest.mark.integration
-@_game
+@NEEDS_GAME
 def test_全部生成表都与文档一致() -> None:
     """**核心**：文档现值必须等于重新生成的结果。
 
@@ -253,7 +253,7 @@ def test_全部生成表都与文档一致() -> None:
 
 
 @pytest.mark.integration
-@_game
+@NEEDS_GAME
 def test_生成是幂等的(tmp_path: Path) -> None:
     """同一份文档跑两次 `patch_doc(write=True)`，结果必须逐字节相同。
 
@@ -273,7 +273,7 @@ def test_生成是幂等的(tmp_path: Path) -> None:
 
 
 @pytest.mark.integration
-@_game
+@NEEDS_GAME
 def test_paths_settings_分组覆盖全部映射() -> None:
     """doc 19 三张分组表的键加起来必须**恰好**是 `paths.settings` 的全部映射。
 

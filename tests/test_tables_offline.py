@@ -116,8 +116,7 @@ def test_真实仓库的快照里记着全部生成表() -> None:
     因此 CI 上也能跑 —— 它守的是「加了表却忘了重建快照」。
     """
     recorded = tables_offline.load_tables()
-    if not recorded:
-        pytest.skip("仓库里没有精简快照")
+    assert recorded, "入库的精简快照（tools/out/snapshots/*.compact.json）缺失或没有生成表记录"
     _diffs, missing, orphans = tables_offline.compare(recorded)
     assert not missing, f"这些登记在案的表不在快照里（本机跑 v3 refresh 后重建快照）：{missing}"
     assert not orphans, f"快照里有这些表已不在登记表里（规格被删或改名）：{orphans}"

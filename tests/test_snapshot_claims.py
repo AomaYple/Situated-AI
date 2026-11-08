@@ -38,8 +38,7 @@ MIN_COVERED = 25
 @pytest.fixture(scope="module")
 def 快照():
     snap = verify.latest_compact_snapshot()
-    if snap is None:
-        pytest.skip("仓库里没有精简快照（tools/out/snapshots/*.compact.json）")
+    assert snap is not None, "仓库里没有精简快照（tools/out/snapshots/*.compact.json 是入库文件）"
     return snap
 
 

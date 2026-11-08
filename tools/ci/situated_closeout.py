@@ -15,14 +15,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-REPO = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[2]
 
 # 该文件既可作为 ``python -m tools.ci.situated_closeout`` 运行，也应能被
 # 贡献流程直接调用。直接执行脚本时，Python 默认只把 ``tools/ci`` 放入
 # sys.path；先把仓库根加入路径，保证两种入口使用同一份源码，而不是
 # 因调用方式不同产生导入失败。
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from pdx import decisions, distribution  # noqa: E402
 from pdx.situated import architecture_receipts, vanilla_inventory  # noqa: E402
@@ -160,7 +160,7 @@ def consumer_ir_owner_report() -> dict[str, Any]:
     }
 
 
-def plan_gate(root: Path = REPO) -> dict[str, Any]:
+def plan_gate(root: Path = ROOT) -> dict[str, Any]:
     """核对当前 A2/S 出口、来源及 fresh 原版范围；pending 不冒充不支持。"""
     try:
         inventory = vanilla_inventory.discover()
@@ -230,7 +230,7 @@ def plan_gate(root: Path = REPO) -> dict[str, Any]:
     }
 
 
-def report(*, root: Path = REPO, production: Path = PRODUCTION) -> dict[str, Any]:
+def report(*, root: Path = ROOT, production: Path = PRODUCTION) -> dict[str, Any]:
     """返回静态收口及独立的工程、最终交付状态；status 保持静态含义。"""
 
     lock_issues: list[str] = []
@@ -276,7 +276,7 @@ def report(*, root: Path = REPO, production: Path = PRODUCTION) -> dict[str, Any
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=REPO)
+    parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--production", type=Path, default=PRODUCTION)
     parser.add_argument("--output", type=Path)
     parser.add_argument(

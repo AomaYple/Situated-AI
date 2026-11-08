@@ -111,7 +111,7 @@ clausewitz\fonts\
 > 自带字体 mod（如本机的「萝莉体」）属于**替换外观**而非**补齐字形**。
 
 `fonts\fonts.font`（game 层）与 `clausewitz\fonts\cw_fonts.font` 是两个不同的注册表 ——
-前者定义游戏字体组，后者定义引擎字体。完整 `fonts.font` 语法见 `12-真实mod解剖与改造面地图.md` §5.1。
+前者定义游戏字体组，后者定义引擎字体。完整 `fonts.font` 语法见 [`12-真实mod解剖与改造面地图.md`](12-真实mod解剖与改造面地图.md) §5.1。
 
 ## 4. `jomini\localization\` —— 231 个文件的本地化覆盖
 
@@ -137,7 +137,7 @@ clausewitz\fonts\
 | `coat_of_arms\template_lists\readme.txt` | 1,153 |
 
 > 这三份是纹章系统的官方说明。结合 `game\common\coat_of_arms\`（23 文件）
-> 与 `12-真实mod解剖与改造面地图.md` §3.5（真实 mod 逐文件替换 44 个 pattern），
+> 与 [`12-真实mod解剖与改造面地图.md`](12-真实mod解剖与改造面地图.md) §3.5（真实 mod 逐文件替换 44 个 pattern），
 > 构成完整的纹章改造知识。
 
 ## 6. mod 能否覆盖 jomini / clausewitz？
@@ -150,7 +150,7 @@ clausewitz\fonts\
 
 ## 7. 未确认项
 
-> 证据口径与四条实测配方见 `04-脚本系统.md` §13.1（A 脚本化测试 / B 调试日志 / C 最小 MOD / D 双 MOD 冲突）。
+> 证据口径与四条实测配方见 [`04-脚本系统.md`](04-脚本系统.md) §13.1（A 脚本化测试 / B 调试日志 / C 最小 MOD / D 双 MOD 冲突）。
 
 | # | 未确认内容 | 本地证据（可复算） | 状态 |
 |---|---|---|---|
@@ -158,5 +158,5 @@ clausewitz\fonts\
 | 2 | 【未确认】mod 覆盖 `NJomini*` 命名空间 defines 是否生效 | ① `jomini\common\defines\jomini\settings.txt:1` 逐字 `NJominiSettings = {`（该文件是 §2.1 那 18 个 defines 文件之一，命名空间定义在 **Jomini 层**、不在 `game\`）；④ exe 有 `NJominiSettings`、`NJominiPortraits` 两个字面量，邻居是 `JOMINI_SETTINGS_RECOMMENDED`、`CPortraitDecalDatabase` 一族（复算：`v3 evidence NJominiSettings NJominiPortraits`）；③ 本机 23 个 mod 在 `common/defines/` 下 **0 个** `NJomini*` 键（本机快照） | 待实测 → 配方 C |
 | 3 | `jomini\jomini\gui\encyclopedia\jomini_encyclopedia.gui`（4,731 B） | **已答**：教科书窗口的 GUI 定义（`window = { name = "jomini_encyclopedia" using = editor_window … }`，色板用 Ubuntu 终端配色）——**与 mod 开发基本无关**，原表结论不变 | 已答 |
 | 4 | `clausewitz\tools\pdx_node_editor.settings`（8,670 B） | **已答**：节点编辑器的窗口布局设置——**与 mod 开发无关**，原表结论不变 | 已答 |
-| 5 | 三份 coat_of_arms readme 的具体内容 | **已答（本轮读全）**：`coat_of_arms\coat_of_arms\read_me.txt` **1 行**，逐字 `# Here you will put prescripted coat of arms and coat of arms templates`；`coat_of_arms\options\readme.txt` **9 行**，规定 atlas 只允许两种尺寸（`tile_size = { 512 512 }` + `nr_of_tiles = 4`；`tile_size = { 256 256 }` + `nr_of_tiles = 16`）；`coat_of_arms\template_lists\readme.txt` **68 行、全部是注释**，给出 5 类 list 的语法示例（`coat_of_arms_template_lists`、`textured_emblem_texture_lists`、`colored_emblem_texture_lists`、`pattern_texture_lists`、`color_lists`）——⚠️ 示例**全部被注释**，不构成实际用法（口径同 `04-脚本系统.md` §13.1） | 已答 |
+| 5 | 三份 coat_of_arms readme 的具体内容 | **已答（本轮读全）**：`coat_of_arms\coat_of_arms\read_me.txt` **1 行**，逐字 `# Here you will put prescripted coat of arms and coat of arms templates`；`coat_of_arms\options\readme.txt` **9 行**，规定 atlas 只允许两种尺寸（`tile_size = { 512 512 }` + `nr_of_tiles = 4`；`tile_size = { 256 256 }` + `nr_of_tiles = 16`）；`coat_of_arms\template_lists\readme.txt` **68 行、全部是注释**，给出 5 类 list 的语法示例（`coat_of_arms_template_lists`、`textured_emblem_texture_lists`、`colored_emblem_texture_lists`、`pattern_texture_lists`、`color_lists`）——⚠️ 示例**全部被注释**，不构成实际用法（口径同 [`04-脚本系统.md`](04-脚本系统.md) §13.1） | 已答 |
 | 6 | `jomini\common\script_values\_script_values.info` | **已答（本轮读全）**：**113 行**官方说明，两节 `== Static values ==`（`:5`）与 `== Formulas ==`（`:12`），另分 `=== Execution order ===`（`:61`）、`=== Inlining ===`（`:72`）、`=== Chaining ===`（`:84`）、`== Ranges ==`（`:94`）、`== Lists ==`（`:100`）、`== Scoping ==`（`:105`）；公式算子逐字列出：`add` / `subtract` / `multiply` / `divide` / `modulo` / `value` / `max` / `min` / `round` / `ceiling` / `floor` / `if` / `else_if` / `else` / `fixed_range` / `integer_range` | 已答 |

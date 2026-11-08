@@ -15,25 +15,18 @@ from __future__ import annotations
 import json
 
 import pytest
-from typer.testing import CliRunner
+from _helpers import run_cli as _run
+from conftest import NEEDS_GAME
 
 from pdx import config
-from pdx.cli import app
 
 pytestmark = pytest.mark.unit
-
-runner = CliRunner()
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
-
-
-def _run(*args: str):
-    return runner.invoke(app, list(args))
 
 
 # ────────────────────────── assets / csv ──────────────────────────
 
 
-@_needs_game
+@NEEDS_GAME
 def test_assets_普查能跑并给出关键数字(tmp_path) -> None:
     out = tmp_path / "dds.json"
     result = _run("assets", "--no-examples", "--json", str(out))
@@ -45,7 +38,7 @@ def test_assets_普查能跑并给出关键数字(tmp_path) -> None:
     assert payload["非2幂"] + payload["可解析"] - payload["非2幂"] == payload["可解析"]
 
 
-@_needs_game
+@NEEDS_GAME
 def test_csv_逐列分布() -> None:
     result = _run("csv", "map_data/adjacencies.csv")
     assert result.exit_code == 0, result.output
@@ -53,7 +46,7 @@ def test_csv_逐列分布() -> None:
     assert "Type" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_csv_单列取值() -> None:
     result = _run("csv", "map_data/adjacencies.csv", "-c", "Through", "-n", "3")
     assert result.exit_code == 0
@@ -61,7 +54,7 @@ def test_csv_单列取值() -> None:
     assert "-1" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_csv_列名不存在时报用法错误() -> None:
     result = _run("csv", "map_data/adjacencies.csv", "-c", "NO_SUCH_COLUMN")
     assert result.exit_code == 2
@@ -73,7 +66,7 @@ def test_csv_文件不存在时报用法错误() -> None:
     assert result.exit_code == 2
 
 
-@_needs_game
+@NEEDS_GAME
 def test_strings_按族聚类() -> None:
     result = _run("strings", "--families", "--min", "50", "-n", "5", "--no-list")
     assert result.exit_code == 0, result.output
@@ -81,7 +74,7 @@ def test_strings_按族聚类() -> None:
     assert "command" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_strings_前缀族() -> None:
     result = _run("strings", "--families", "--by", "prefix", "--min", "50", "-n", "3", "--no-list")
     assert result.exit_code == 0
@@ -91,14 +84,14 @@ def test_strings_前缀族() -> None:
 # ────────────────────────── 维护入口（只读分支）──────────────────────────
 
 
-@_needs_game
+@NEEDS_GAME
 def test_mirror_check_一致() -> None:
     result = _run("mirror", "check")
     assert result.exit_code == 0, result.output
     assert "一致" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_refresh_dry_run_只报告() -> None:
     result = _run("refresh", "--dry-run")
     assert result.exit_code == 0, result.output
@@ -115,7 +108,7 @@ def test_verify_fix_在一致时早退() -> None:
     assert "无需改动" in result.output or "已改写" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_verify_漂移分支不会因富文本崩掉(monkeypatch) -> None:
     """回归：漂移分支里有个**悬空的 ``[/]``**，一旦真有漂移，rich 直接抛 MarkupError。
 
@@ -201,7 +194,7 @@ def test_verify_fix_claims_只跑一条时不碰真断言表() -> None:
         assert result.exit_code == 2, result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_snapshot_diff_自己与自己无差异() -> None:
     """snapshot diff 收的是**快照名**（不含 .json），不是路径。
 
@@ -209,15 +202,14 @@ def test_snapshot_diff_自己与自己无差异() -> None:
     「拿两个版本比结构」在别的机器上只可能拿到它。
     """
     snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
-    if not snaps:
-        pytest.skip("没有精简快照")
+    assert snaps, "入库的精简快照（tools/out/snapshots/*.compact.json）缺失"
     label = snaps[-1].name.removesuffix(".compact.json")
     result = _run("snapshot", "diff", label, label)
     assert result.exit_code == 0, result.output
     assert "无差异" in result.output or "完全一致" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_snapshot_diff_域集合不同时会点明() -> None:
     """两份快照的域集合不同时，差异里混着**格式变化** —— 必须点明，不能静默。
 
@@ -237,13 +229,13 @@ def test_snapshot_diff_域集合不同时会点明() -> None:
     assert "域集合不同" in result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_snapshot_verify_自检() -> None:
     result = _run("snapshot", "verify")
     assert result.exit_code == 0, result.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_snapshot_list_可读() -> None:
     result = _run("snapshot", "list")
     assert result.exit_code == 0
