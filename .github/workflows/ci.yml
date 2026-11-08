@@ -24,6 +24,8 @@ jobs:
           python-version: "3.14"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: 仓库卫生 —— 拒绝提交缓存、字节码与临时产物
+        run: python tools/ci/run_check.py hygiene
       - name: 从项目唯一依赖声明安装检查工具
         run: python -m pip install ".[dev]"
       - name: ruff —— 代码检查
