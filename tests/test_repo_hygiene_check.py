@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import json
+import stat
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
+
+import pytest
 
 from tools.ci.repo_hygiene import find_violations, main, report
 
@@ -19,6 +23,32 @@ def test_clean_tree_has_no_violations(tmp_path: Path) -> None:
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "module.py").write_text("value = 1\n", encoding="utf-8")
 
+    assert find_violations(tmp_path) == []
+
+
+def test_nonexistent_root_is_an_error_not_a_clean_tree(tmp_path: Path, capsys) -> None:
+    root = tmp_path / "missing"
+    with pytest.raises(NotADirectoryError):
+        find_violations(root)
+    assert main(["--root", str(root)]) == 2
+    assert "检查失败" in capsys.readouterr().err
+
+
+def test_reparse_directory_is_not_traversed(tmp_path: Path, monkeypatch) -> None:
+    linked = tmp_path / "junction"
+    (linked / "__pycache__").mkdir(parents=True)
+    path_type = type(linked)
+    original = path_type.lstat
+
+    def lstat(path, *args, **kwargs):
+        info = original(path, *args, **kwargs)
+        if path == linked:
+            return SimpleNamespace(
+                st_mode=info.st_mode, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT
+            )
+        return info
+
+    monkeypatch.setattr(path_type, "lstat", lstat)
     assert find_violations(tmp_path) == []
 
 

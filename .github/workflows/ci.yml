@@ -24,8 +24,8 @@ jobs:
           python-version: "3.14"
           cache: pip
           cache-dependency-path: pyproject.toml
-      - name: 安装 Ruff
-        run: python -m pip install "ruff>=0.16"
+      - name: 从项目唯一依赖声明安装检查工具
+        run: python -m pip install ".[dev]"
       - name: ruff —— 代码检查
         run: python -m ruff check .
       - name: ruff —— 格式检查

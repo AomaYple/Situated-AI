@@ -18,6 +18,7 @@
 |---|---|
 | `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、baseline、deadcode |
 | `tools/ci/repo_hygiene.py` | 检查根目录可再生缓存、字节码和运行态目录 |
+| `tools/ci/python_package.py` | 在临时源码副本中构建 wheel，核对源码模块集合、字节、ZIP 重复条目与完整性 |
 | `tools/ci/situated_closeout.py` | 汇总生成锁、标准包禁带项、生产编码、ConsumerIR owner 和卫生；`--require-engineering` 核对 A2/S0–S5 的功能、依赖、来源、真实见证与独立原版范围，`--require-plan` 继续核对 S6 实际发布与部署 |
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |

@@ -62,7 +62,7 @@ dev = [
     "pyinstrument>=5.1",        # 采样式剖析器，输出调用树
 
     # ── 静态检查 ──────────────────────────────────────────
-    "ruff>=0.16",               # 代码检查 + 格式化（取代 flake8/isort/black）
+    "ruff==0.16.7",             # 与锁文件统一；升级需独立复核规则与格式变化
     "mypy>=1.14",               # 类型检查
 
     # ── 开发流程 ──────────────────────────────────────────
@@ -99,24 +99,9 @@ addopts = [
     "--tb=short",
     "--timeout=300",
     "--timeout-method=thread",
-    # ── 并行（pytest-xdist）────────────────────────────────
-    # pytest 默认**串行**；装上 xdist 只是提供能力，必须显式传 -n 才并行。
-    #
-    # ``loadscope`` 按模块或测试类分组，便于复用同一 worker 内的重型 fixture。
-    # session fixture 和进程内解析缓存不会跨 worker 共享。
-    # 完整测试的调度、速度与峰值内存复核见：
-    # 性能读数按日期和输入追加到结果收据。
-    # 测试集合、覆盖率、worker 数和缓存状态不同的运行不能直接计算整体提速。
-    #
-    # ``-n auto`` 由 tests/conftest.py 的 hook 综合 CPU 与内存预算：
-    # 默认给系统留 2048 MiB、按每 worker 1536 MiB 计算上限，存在或缺少游戏树
-    # 都应用护栏。``SITAI_XDIST_WORKERS`` 或 xdist 官方环境变量可显式覆盖。
-    # 需要串行（例如要读完整的失败上下文）时传 ``-n0`` 覆盖。
-    #
-    # 基准串行运行并清除普通 addopts；并发时 pytest-benchmark 会禁用计时。
-    # 用例通过不能替代有效的基准表和采样结果。命令示例：
-    #     python -m pytest tests/test_benchmarks.py -o addopts="" --benchmark-only
-    # 基准口径见 CONTRIBUTING.md 的验证矩阵。
+    # loadscope 只在单个 worker 内复用 fixture；进程间缓存不共享。
+    # auto 的资源预算和显式覆盖由 tests/conftest.py 及 pdx.parallel 维护。
+    # 串行用 -n 0；基准清除普通 addopts。验证与测量口径见 CONTRIBUTING.md。
     "-n",
     "auto",
     "--dist",
@@ -221,7 +206,7 @@ ignore = [
     "PLR0913",  # 参数过多：dataclass 与 CLI 函数情有可原
     "PLR0917",  # 位置参数过多：同 PLR0913 —— typer 命令的每个形参就是一个
                 # 命令行选项，拆成 dataclass 反而让 --help 失去参数说明
-    "PLR2004",  # 魔法数字：本项目的「魔法数字」都是游戏实测值，有注释
+    "PLR2004",  # 阈值与固定结构常量按语义审查；游戏数值仍须有来源，不能推断均为实测
     "PLR0912",  # 分支过多
     "PLR0915",  # 语句过多
     "PLR0911",  # return 过多

@@ -38,7 +38,7 @@ mod/                    生产源、策略生成物、脚本和本地化
 src/pdx/                Python 解析、全量分析、快照、生成、审计和 ZIP 交付
 tests/                  单元、属性、离线合同、生成和跨平台工具测试
 tools/ci/               工程质量门；tools/benchmarks/ 为串行 Python 基准
-tools/out/              可再生分析、报告和本机证据（忽略）
+tools/out/              可再生分析、报告和本机证据（通常忽略，少量登记快照与原始证据受控保留）
 docs/                   当前规则、设计、计划、结果、审计和知识库
 research/               原版资料清单与锁定接口证据
 dist/                   可再生发布 ZIP（忽略）
