@@ -18,7 +18,7 @@ import stat
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[2]
 
 # 根目录中测试、静态检查和一次性工具留下的可再生目录。
 ROOT_CACHE_NAMES = frozenset(
@@ -75,7 +75,7 @@ def _is_root_cache(relative: Path) -> bool:
     )
 
 
-def find_violations(root: Path = REPO) -> list[dict[str, str]]:
+def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
     """返回按路径排序的可再生运行态违规项。
 
     目录只报告一次；发现缓存目录后不再报告其子项。符号链接不跟随，避免
@@ -149,7 +149,7 @@ def find_violations(root: Path = REPO) -> list[dict[str, str]]:
     return sorted(violations, key=lambda row: (row["path"], row["kind"]))
 
 
-def report(root: Path = REPO) -> dict[str, object]:
+def report(root: Path = ROOT) -> dict[str, object]:
     """生成稳定、可机器读取的卫生报告。"""
 
     violations = find_violations(root)
@@ -173,7 +173,7 @@ def _write_report(path: Path, data: dict[str, object]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=REPO)
+    parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, help="写入 JSON 报告")
     args = parser.parse_args(argv)
     try:

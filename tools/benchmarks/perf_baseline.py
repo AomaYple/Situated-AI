@@ -74,9 +74,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from types import ModuleType
 
-REPO = Path(__file__).resolve().parents[2]
-MEM_SCRIPT = REPO / "tools" / "ci" / "mem_baseline.py"
-BENCH_DIR = REPO / "tools" / "benchmarks"
+ROOT = Path(__file__).resolve().parents[2]
+MEM_SCRIPT = ROOT / "tools" / "ci" / "mem_baseline.py"
+BENCH_DIR = ROOT / "tools" / "benchmarks"
 BASELINE_JSON = BENCH_DIR / "repo-audit-baseline.json"
 MODULES_JSON = BENCH_DIR / "repo-audit-modules.json"
 
@@ -373,7 +373,7 @@ def shard_test_files(files: Sequence[str], shard_count: int = SHARD_COUNT) -> li
 
 def shard_cases() -> list[dict[str, Any]]:
     """把 tests 的测试文件按名字四分，每片一条用例（读数=片内墙钟与峰值）。"""
-    files = [p.name for p in (REPO / "tests").glob("test_*.py")]
+    files = [p.name for p in (ROOT / "tests").glob("test_*.py")]
     shards = shard_test_files(files)
     return [
         {
@@ -619,7 +619,7 @@ def case_summary(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
 def _git_state() -> dict[str, Any]:
     def _run(*args: str) -> str:
         out = subprocess.run(
-            ["git", *args], cwd=str(REPO), capture_output=True, text=True, check=False
+            ["git", *args], cwd=str(ROOT), capture_output=True, text=True, check=False
         )
         return out.stdout.strip()
 
@@ -837,7 +837,7 @@ def _module_import_cost(dotted: str, out_dir: Path) -> dict[str, Any]:
 
 def _junit_by_file() -> dict[str, dict[str, Any]]:
     """从全量套件的 junit xml 里按测试文件聚合耗时（全量套件跑过才有）。"""
-    path = REPO / "tools/out/repository-audit/tests-final.xml"
+    path = ROOT / "tools/out/repository-audit/tests-final.xml"
     if not path.exists():
         path = RAW_DIR / "junit-full.xml"
     if not path.exists():
@@ -863,7 +863,7 @@ def _junit_by_file() -> dict[str, dict[str, Any]]:
 
 def instrument_layer() -> dict[str, Any]:
     """仪器层（tools/out/**/*.py）：不在覆盖率/性能分母内，单独报。"""
-    root = REPO / "tools" / "out"
+    root = ROOT / "tools" / "out"
     files = [p for p in root.rglob("*.py") if "__pycache__" not in p.parts]
     lines = 0
     size = 0
@@ -883,7 +883,7 @@ def instrument_layer() -> dict[str, Any]:
         "它们是「每次调查时的现场脚本」，逐件性能读数没有意义（多数只跑一次就退役）。",
         "抽样读数": [
             {
-                "path": str(path.relative_to(REPO)).replace("\\", "/"),
+                "path": str(path.relative_to(ROOT)).replace("\\", "/"),
                 "bytes": path.stat().st_size,
                 "parse_ms": _parse_cost(path),
             }
@@ -898,7 +898,7 @@ def cmd_modules(args: argparse.Namespace) -> int:  # noqa: ARG001 - 统一签名
     junit = _junit_by_file()
     rows: list[dict[str, Any]] = []
     for directory, family, rule in FAMILIES:
-        for path in sorted((REPO / directory).glob("*.py")):
+        for path in sorted((ROOT / directory).glob("*.py")):
             record: dict[str, Any] = {
                 "path": f"{directory}/{path.name}",
                 "family": family,

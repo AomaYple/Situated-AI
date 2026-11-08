@@ -126,8 +126,8 @@ import psutil
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
-REPO = Path(__file__).resolve().parents[2]
-OUT_DIR = REPO / "tools" / "out" / "mem"
+ROOT = Path(__file__).resolve().parents[2]
+OUT_DIR = ROOT / "tools" / "out" / "mem"
 TESTS = "tests"
 
 #: 采样间隔。250 ms × 8 分钟 ≈ 1900 条，采样线程本身的代价可忽略；
@@ -147,7 +147,8 @@ LAUNCHER_MAX_MB = 24.0
 #: 而测试自己起的子进程只占几个百分点；取 30% 留足余量。
 ALIVE_RATIO = 0.3
 
-#: 预算：每 worker 峰值上限（MiB）。定义与 why 见 docs/design/exec/并行测试内存基线.md §4。
+#: 预算：每 worker 峰值上限（MiB）。定义与 why 见本模块 docstring；原 docs/design/exec/并行测试内存基线.md
+#: 已退役（提交 268cc6f 删除）。
 # 运行预算与 pdx.parallel.DEFAULT_WORKER_MIB 保持同一口径。旧版 512 MiB
 # 仍作为 one biggest 的单文件瞬时回归阈值；完整分析 worker 还会同时持有
 # ga/ma 结果和有界解析缓存。词法器去掉长字符串回溯后，完整 worker 的
@@ -297,9 +298,9 @@ def machine_info() -> dict[str, Any]:
         "total_ram_mb": mem["total_mb"],
         "avail_ram_mb_at_start": mem["avail_mb"],
         "peak_source": MemReader().peak_source,
-        "probe": str(Path(__file__).resolve().relative_to(REPO)),
+        "probe": str(Path(__file__).resolve().relative_to(ROOT)),
         # 工具自身的指纹：口径会随脚本修订而变，所以「这份数是谁跑出来的」
-        # 必须可核对（详见 docs/design/exec/并行测试内存基线.md §3.3）。
+        # 必须可核对（原 docs/design/exec/并行测试内存基线.md §3.3 已在提交 268cc6f 退役，口径见本模块 docstring）。
         "probe_sha256": _self_sha256(),
     }
 
@@ -648,7 +649,7 @@ def spawn(argv: Sequence[str], env: dict[str, str], log_path: Path) -> tuple[Any
     creationflags = 0x00000200 if _IS_WIN else 0  # CREATE_NEW_PROCESS_GROUP
     pipe = subprocess.Popen(
         list(argv),
-        cwd=str(REPO),
+        cwd=str(ROOT),
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -866,7 +867,7 @@ def human_command(group: str, *, stem: str | None = None, inproc: bool, target: 
 
 def _short(path: Path) -> str:
     try:
-        return str(path.relative_to(REPO)).replace("/", os.sep)
+        return str(path.relative_to(ROOT)).replace("/", os.sep)
     except ValueError:
         return str(path)
 
@@ -1122,7 +1123,7 @@ def run_group(
         "required": GROUPS[group]["required"],
         "command": command,
         "argv": argv,
-        "cwd": str(REPO),
+        "cwd": str(ROOT),
         "env_overrides": overrides,
         "workers_arg": GROUPS[group]["n"],
         "workers_expected": int(GROUPS[group]["n"]) if str(GROUPS[group]["n"]).isdigit() else None,
@@ -1592,7 +1593,7 @@ def deep_size(obj: object) -> float:
 
 
 def _add_pdx_path() -> None:
-    source = str(REPO / "src")
+    source = str(ROOT / "src")
     if source not in sys.path:
         sys.path.insert(0, source)
 
@@ -2223,7 +2224,7 @@ def _step_analysis(which: str) -> int:
     if which == "full_snapshot":
         paths = sorted(
             x
-            for x in (REPO / "tools" / "out" / "snapshots").glob("*.json")
+            for x in (ROOT / "tools" / "out" / "snapshots").glob("*.json")
             if "compact" not in x.name
         )
         if not paths:
@@ -2269,7 +2270,7 @@ def _step_analysis(which: str) -> int:
         step("compact_snapshot", note=f"命中={snap is not None}", size_of=snap)
         paths = sorted(
             x
-            for x in (REPO / "tools" / "out" / "snapshots").glob("*.json")
+            for x in (ROOT / "tools" / "out" / "snapshots").glob("*.json")
             if "compact" not in x.name
         )
         full = snapshot.Snapshot.load(paths[0]) if paths else None
@@ -2714,7 +2715,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     index_path.parent.mkdir(parents=True, exist_ok=True)
     index = {
         "generated_at": _now_iso(),
-        "note": "并行测试内存基线（口径见模块 docstring 与 docs/design/exec/并行测试内存基线.md）",
+        "note": "并行测试内存基线（口径见模块 docstring；原 docs/design/exec/并行测试内存基线.md 已在提交 268cc6f 退役）",
         # 这份索引**覆盖了哪些组**要写在里面：它是「这份索引能不能当完整基线用」的判据，
         # 也让 t13 那种「只剩一组」的截断在文件里看得见（不必靠比对大小去猜）。
         "covers_groups": [str(s.get("group") or s.get("tag")) for s in summaries],

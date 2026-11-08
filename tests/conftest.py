@@ -149,6 +149,9 @@ class LazyCorpusTexts(Sequence[tuple[str, str]]):
 #: 游戏内容层是否可用（mod 相关文件都在 game/ 下）
 GAME_OK = (pdx_config.GAME / "common").is_dir()
 
+#: 依赖游戏内容层的测试共用的跳过标记（条件与 ``GAME_OK`` 相同）
+NEEDS_GAME = pytest.mark.skipif(not GAME_OK, reason="游戏目录不可用")
+
 
 @pytest.hookimpl(tryfirst=True, optionalhook=True)
 def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:

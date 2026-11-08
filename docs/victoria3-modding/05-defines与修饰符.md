@@ -1,4 +1,4 @@
-# Victoria 3 Mod 开发知识库 · 05 defines 与修饰符
+# 05 · defines 与修饰符
 
 > ⚠️ **版本提示（精确清单）**：本机游戏是 **1.14.5 (Ice Tea)**（版本指纹见下一段三条）。原先那句「数量统计与零使用类结论采集于 1.14.2」现在按类拆开：
 > - **已是 1.14.5 —— 表格已重算**：§2.1 / §2.2 / §2.5 / §2.6 / §1.6 共 **5 张表**由 `v3 tables --write` 重算回写（§0.3 的口径补记），§0.4 的 **9 / 75 / 50 / 3515 / 3508** 与之同源；参数总数 3515 由 `def.param_total`、`def.param_names` 两条断言钉住（1.14.4 的海军战力重做删掉 24 个、加了 18 个参数，净 −6）。
@@ -2150,7 +2150,7 @@ has_game_rule = high_ai_aggression
 >   所以**只能写标量**；块形式是本条【未确认】的答案，不是「没人试过」。
 > * MOD 自己新增的设置也可以被查到：探针里新增规则 `zzprobe_rule`（设置 `zzprobe_on`，
 >   带 `flag = zzprobe_on`）后 `has_game_rule = zzprobe_on` **加载期零报错**。
-> * 复算：`v3 experiment launch --risky` 的 `[P1]`（探针 `zz_probe_p1_t1/t2/t3.txt`）。
+> * 历史取证（已退役）：`v3 experiment launch --risky` 的 `[P1]`（探针 `zz_probe_p1_t1/t2/t3.txt`），当前工作树不再提供该子命令。
 
 ### 4.10 做 game rule mod 的注意点
 
@@ -5033,7 +5033,7 @@ add_modifier = { # academics polstr
 
 下面每一条都**查过了**：表格的「本地证据」列写明查到什么（含 `文件:行号` 与复算命令），
 「状态」列说明它是否还开着（`【未确认】` + 缺口 / 取证配方，配方定义见
-`04-脚本系统.md` §13.1）。**已答的条目不再带标记**，但仍留在表里 ——
+[`04-脚本系统.md`](04-脚本系统.md) §13.1）。**已答的条目不再带标记**，但仍留在表里 ——
 清单的价值是「问题有没有答案」，不是「还剩几行字」。
 本机 mod 侧的数字一律是**本机快照**（`v3 prefixes` / `pdx.mods.analyse_all()` 复算），不是版本属性。
 
@@ -5048,7 +5048,7 @@ add_modifier = { # academics polstr
 | 7 | **`apply_modifier` 在 game_rules 中是否仍有效** | **1.14.3 复测**：`v3 evidence apply_modifier` → 原版键 **0 处**；官方 md **1 处赋值**，`common/game_rules/game_rules.md:5` 逐字：`apply_modifier = category:modifier_key	# Apply a modifier to characters matching a specific category. Valid are player, ai, and all. E.G., player:very_easy`；exe 有字面量。**2026-09-20 探针实测**：按 md 形状写进 `common/game_rules/`，**语法被接受**（无 token/PostValidate 报错），但引擎报 `Failed to cache an item for Static Modifiers! Key: very_easy` → **`very_easy` 不是真实静态修正键**，md 的示例值在本版本无效 | **已答**：语法 ✅、值必须是 `common/static_modifiers/` 里存在的键（md 示例值 ❌） |
 | 8 | **`game_data.type_set` 的合法取值** | **1.14.3 复测**：`v3 evidence type_set --values` → 原版键 **0 处**；官方 md **1 处赋值**，`common/modifier_type_definitions/modifier_types.md:25` 逐字 `type_set = { cultural_acceptance }`（上方 `:24` 的注释：`# the modifier typesets this type belongs to, used in code to perform bespoke operations (such as updating cultural community acceptance deltas when a country enacts a law with a modifier entry of this type)`）；exe 有字面量 | 【未确认】本地无证据（原版 0 实例，取值全集无从枚举）→ 配方 A |
 | 9 | **`decimals` / `percent` / `color` 缺省值** | 数量侧已由断言钉住（1.14.3）：`modifier_type_definitions` 共 **2364** 个键，`decimals` **2333** 处 → **31** 个没写（`def.modtypes_missing_decimals`）、`percent` **885** 处 → **1479** 个没写（`def.modtypes_missing_percent`）、`color` **2364** 处 → 0 个没写。取值分布：`decimals` {1×1349, 0×966, 2×18}、`percent` {yes×824, no×61}、`color` {good×1776, neutral×306, bad×282}（`v3 evidence … --values`） | 【未确认】本地无证据（**缺省值**本身无声明；只能证明「有默认值」）→ 配方 A |
-| 10 | **`scripted_modifiers` 是否仍被引擎解析** | **1.14.3 复测**：`v3 evidence scripted_modifier` → 原版键 **0 处**、官方 md **0 处**、exe **无该字面量**（`v3 evidence --exe-grep scripted_modifier` → 0 个）；同族里存在的是 Jomini 模板数据库 —— `v3 evidence --exe-grep scripted` → `CJominiScriptedModifierTemplateDatabase`。**2026-09-20 探针实测**：`common/scripted_modifiers/` 里的**定义会被解析**（照 md 的模板体写 → 无报错），**调用形态**见 `04-脚本系统.md` §7.3：把模板名当键会被引擎识别（引擎会去解析该模板），`scripted_modifier = 名字` / `modifier = { 名字 = yes }` / `modifier = { scripted_modifier = 名字 }` 三种写法全被拒 | **部分已答**：定义 ✅、调用点 = 模板名当键（模板体形状仍【未确认】） |
+| 10 | **`scripted_modifiers` 是否仍被引擎解析** | **1.14.3 复测**：`v3 evidence scripted_modifier` → 原版键 **0 处**、官方 md **0 处**、exe **无该字面量**（`v3 evidence --exe-grep scripted_modifier` → 0 个）；同族里存在的是 Jomini 模板数据库 —— `v3 evidence --exe-grep scripted` → `CJominiScriptedModifierTemplateDatabase`。**2026-09-20 探针实测**：`common/scripted_modifiers/` 里的**定义会被解析**（照 md 的模板体写 → 无报错），**调用形态**见 [`04-脚本系统.md`](04-脚本系统.md) §7.3：把模板名当键会被引擎识别（引擎会去解析该模板），`scripted_modifier = 名字` / `modifier = { 名字 = yes }` / `modifier = { scripted_modifier = 名字 }` 三种写法全被拒 | **部分已答**：定义 ✅、调用点 = 模板名当键（模板体形状仍【未确认】） |
 | 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本机指纹已更新：`env.caligula_branch` = `release/1.14.5`、`env.caligula_rev` = `9f8281a…`（本次 `v3 verify` 已核验），另有头部「版本依据」三条；§1.7 证据 4 已把该 Wiki 页标注为 verified for 1.13，并给出实测反例：`INCORPORATION_TIME_NO_MATCH` 实测 **25**（`00_defines.txt`），Wiki 示例注释写 "Base game 20 years" | 已答（版本差异已量化，见 §0.1 的【Wiki】行与 §1.7 证据 4） |
 | 12 | **mod 中新增 define 键是否完全无效** | define **键名确实编译进二进制**：`v3 evidence --exe-grep INCORPORATION_TIME_NO_MATCH` → exe 里存在该标识符（1 个）；§0.4 的 **3488** 个参数全部来自原版 9 个文件。**没有**「新增键被读取」的本地实例 | 【未确认】本地无证据 → 配方 C |
 

@@ -29,6 +29,7 @@ from __future__ import annotations
 # 所以这里按**平级模块名**导入共享夹具，与 conftest 的用法一致。
 import gametimer_fixtures as fixtures
 import pytest
+from conftest import NEEDS_GAME
 
 from pdx import config
 from pdx.lexer import tokenize
@@ -36,7 +37,6 @@ from pdx.parser import parse_text
 
 pytestmark = [pytest.mark.benchmark, pytest.mark.slow]
 
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 #: 代表中小型 PDX 文件规模
 SMALL = (
@@ -89,7 +89,7 @@ class TestParserBenchmarks:
         benchmark(parse_text, TRICKY)
 
 
-@_needs_game
+@NEEDS_GAME
 class TestRealFileBenchmarks:
     """真实游戏文件 —— 比合成数据更能反映实际负载。"""
 
@@ -124,7 +124,7 @@ class TestRealFileBenchmarks:
         benchmark(lambda: [parse_text(t) for _, t in samples])
 
 
-@_needs_game
+@NEEDS_GAME
 class TestPipelineBenchmarks:
     """端到端：解析整个 static_modifiers 目录。"""
 

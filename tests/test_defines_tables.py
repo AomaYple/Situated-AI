@@ -33,8 +33,7 @@ DOC = config.DOCS / "05-defines与修饰符.md"
 @pytest.fixture
 def 文档副本(tmp_path: Path) -> Path:
     """把 doc 05 复制到临时目录，避免测试真的改动入库文档。"""
-    if not DOC.is_file():
-        pytest.skip("doc 05 不存在")
+    assert DOC.is_file(), "doc 05 是入库的受控文档，不应缺失"
     if not (config.GAME / "common" / "defines").is_dir():
         pytest.skip("游戏目录不可用")
     target = tmp_path / DOC.name

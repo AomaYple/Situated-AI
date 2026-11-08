@@ -29,13 +29,13 @@
 from __future__ import annotations
 
 import pytest
+from conftest import NEEDS_GAME
 
 from pdx import config
 from pdx.scan import walk_files
 
 pytestmark = [pytest.mark.unit, pytest.mark.contract]
 
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 #: 会被 PDX 解析器处理的扩展名。**这是判断「是否脚本」的唯一依据** ——
 #: 不按目录名判断，因为同一个目录里可能既有脚本也有二进制。
@@ -86,7 +86,7 @@ def _classify(rel, suffix: str, name: str) -> str:
     return "❌ 未归类"
 
 
-@_needs_game
+@NEEDS_GAME
 def test_每个脚本类文件都落在四类之内() -> None:
     """核心断言：不存在「既没解析、也没被有据排除」的脚本文件。
 
@@ -115,7 +115,7 @@ def test_每个脚本类文件都落在四类之内() -> None:
     )
 
 
-@_needs_game
+@NEEDS_GAME
 def test_声明的后缀都真的能生效() -> None:
     """``SCRIPTABLE_SUFFIXES`` 里的每一项都必须至少匹配到一个真实文件。
 
@@ -139,7 +139,7 @@ def test_声明的后缀都真的能生效() -> None:
     )
 
 
-@_needs_game
+@NEEDS_GAME
 def test_有据排除的子树确实存在且确实被排除() -> None:
     """排除项不能是空头支票 —— 目录要真实存在，且里面的文件真的没被解析。"""
     for prefix in config.EXCLUDED_SUBTREES:
@@ -154,7 +154,7 @@ def test_有据排除的子树确实存在且确实被排除() -> None:
             )
 
 
-@_needs_game
+@NEEDS_GAME
 def test_覆盖规模没有缩水() -> None:
     """把当前规模钉住。数字掉下来就说明有目录被移出了范围。
 
@@ -175,7 +175,7 @@ def test_覆盖规模没有缩水() -> None:
     )
 
 
-@_needs_game
+@NEEDS_GAME
 def test_本地化由专用提取器覆盖() -> None:
     """本地化的 2,176 个文件不走 PDX 解析器，但必须有别的路走。
 

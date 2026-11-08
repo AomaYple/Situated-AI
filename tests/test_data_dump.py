@@ -18,14 +18,13 @@ from __future__ import annotations
 import json
 
 import pytest
+from conftest import NEEDS_GAME
 
 from pdx import config
 from pdx.analyze import dump_node, to_data_dict
 from pdx.parser import parse_text
 
 pytestmark = pytest.mark.unit
-
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 
 def _value_of(text: str, key: str):
@@ -105,7 +104,7 @@ def test_列表里嵌套块() -> None:
 
 
 # ── 产物 ────────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
 def test_产物含值而不只是字段名() -> None:
@@ -124,7 +123,7 @@ def test_产物含值而不只是字段名() -> None:
     assert rec["production_method_groups"] == ["pmg_base_building_angkor_wat"]
 
 
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
 def test_产物覆盖全部三个内容根与全部脚本目录() -> None:
@@ -135,7 +134,7 @@ def test_产物覆盖全部三个内容根与全部脚本目录() -> None:
         assert must in tops, f"{must} 没有出现在结构化产物里"
 
 
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
 def test_产物规模与条目数相称() -> None:
@@ -147,7 +146,7 @@ def test_产物规模与条目数相称() -> None:
     assert entries > 30_000, f"只收录 {entries} 个顶层条目"
 
 
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
 def test_文件层级的重复键也不被压掉() -> None:
@@ -214,7 +213,7 @@ def test_字符串里的井号不算注释() -> None:
     assert comments == []
 
 
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
 def test_真实语料里能取到条目注释() -> None:
@@ -228,7 +227,7 @@ def test_真实语料里能取到条目注释() -> None:
         assert v["注释"], "注释不能是空列表"
 
 
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
 def test_表格数据被解析() -> None:
@@ -255,7 +254,7 @@ def test_表格数据被解析() -> None:
     assert len(cols["From"]) == t.row_count
 
 
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
 def test_产物可被JSON往返() -> None:

@@ -14,12 +14,11 @@ import re
 from pathlib import Path
 
 import pytest
+from conftest import NEEDS_GAME
 
 from pdx import config, install_tree, verify
 
 pytestmark = pytest.mark.integration
-
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 
 # ── 单元层：不依赖真实数据 ──────────────────────────────────
@@ -231,12 +230,12 @@ def fast_results():
     """快速模式结果（跳过全库扫描），整轮只跑一次。
 
     fixture 上不能加 marker，因此这里不做 skipif；
-    用到它的测试类本身带 ``@_needs_game``。
+    用到它的测试类本身带 ``@NEEDS_GAME``。
     """
     return verify.run_claims(include_slow=False)
 
 
-@_needs_game
+@NEEDS_GAME
 class TestRealClaims:
     def test_官方文档的三条字节断言可核对(self):
         """官方 ``.md`` 的篇数 / 总字节 / 最大单篇必须能实测出来。
@@ -269,7 +268,7 @@ class TestRealClaims:
         assert s["通过"] == s["总数"]
 
 
-@_needs_game
+@NEEDS_GAME
 class TestKnownAssertions:
     """把关键断言的结果单独钉住，便于定位回归。"""
 

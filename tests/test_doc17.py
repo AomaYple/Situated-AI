@@ -44,8 +44,7 @@ _NEEDS = (
 
 
 def _skip_if_no_game() -> None:
-    if not DOC.is_file():
-        pytest.skip("doc 17 不存在")
+    assert DOC.is_file(), "doc 17 是入库的受控文档，不应缺失"
     if not all(p.exists() for p in _NEEDS):
         pytest.skip("游戏目录不可用")
 

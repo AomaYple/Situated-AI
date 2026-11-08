@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import typer
+from conftest import NEEDS_GAME
 
 from pdx import config, docs_mirror
 
@@ -111,14 +112,13 @@ def test_镜像目录不在版本控制里() -> None:
 
 
 # ── 以下两条要读游戏本体或本地镜像，本机没有时自动跳过 ──────
-_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 _mirror = pytest.mark.skipif(
     not config.OFFICIAL_DOCS_MIRROR.is_dir(), reason="本地镜像不存在（它已不入库）"
 )
 
 
 @pytest.mark.integration
-@_game
+@NEEDS_GAME
 def test_清单与本机游戏一致() -> None:
     """**核心**：清单必须能描述本机的官方文档。
 
