@@ -13,7 +13,7 @@
 普通问题通过仓库 Issues 提交，并尽量提供游戏版本、Mod 版本与包 SHA-256、启用的 Mod 集、存档或新局条件、
 复现步骤和脱敏日志。安全问题使用 [SECURITY.md](SECURITY.md) 中的私密报告方式，不在公开 Issue 附利用细节或敏感数据。
 
-依赖配置集中在 `pyproject.toml`；`requirements.lock` 是 Windows Python 3.14 的安装闭包。调整依赖后运行
+依赖配置集中在 `pyproject.toml`；`requirements.lock` 是安装闭包（适用范围见“环境准备”）。调整依赖后运行
 `pip check` 和 `v3 lock --write`，再复核锁文件差异。更新 GitHub Actions 时沿用工作流中的完整提交 SHA 固定方式，
 所有依赖和自动化更新均通过审查与 CI。
 
@@ -82,8 +82,10 @@ python tools/ci/run_check.py lint .
 python tools/ci/run_check.py format --check .
 python tools/ci/run_check.py types
 python tools/ci/run_check.py baseline
-python tools/ci/run_check.py deadcode
 ```
+
+`baseline` 已包含依赖一致性、离线断言、离线表格、`modguard --offline`、`decision-audit --offline`、`ai-surface --check`
+和死代码审计，无需另行重复运行。
 
 涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目；构建不应在工作树留下 `build/` 或 egg-info：
 
@@ -130,13 +132,13 @@ pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录�
 
 ## 分支、提交与合并
 
-`main` 是唯一长期主线。普通任务使用短期 `codex/<topic>` 分支，已发布版本的修复使用 `hotfix/<topic>`；不设置
+`main` 是唯一长期主线。普通任务使用短期 `<执行者>/<topic>` 分支，执行者前缀取决于实际操作者（如 `codex`、`claude` 或开发者本人的名字），不作统一规定；已发布版本的修复使用 `hotfix/<topic>`；不设置
 常驻 `develop`。提交围绕一个完整目的，相关源码、测试、规则、文档和生成合同一起交付。提交标题、正文和 PR 使用
 中文，命令、路径和代码标识符保留原文。
 
 提交和合并步骤：
 
-1. 检查工作树、暂存差异、`git diff --check`、编码和所需验证结果；排除凭据、`.venv`、缓存、日志、`tools/out/` 和临时产物。
+1. 检查工作树、暂存差异、`git diff --check`、编码和所需验证结果；排除凭据、`.venv`、缓存、日志和临时产物，以及 `tools/out/` 中未登记的内容（受控快照与登记证据除外）。
 2. 推送主题分支并创建中文 PR，说明问题、方案、实际检查、跳过或失败项及验收边界。
 3. CI 通过并完成审查后合并至 `main`，核对本地和远端主线及工作树状态，再清理短期分支。
 4. 禁止强制推送 `main`，不移动已发布标签。版本标签指向交付合并提交；标准包从该提交的源和生成器构建并校验。
