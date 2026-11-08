@@ -301,7 +301,7 @@ checksum = "3a59f318633b40ff609df0719da2b2fc"
 | `pops_id` | Paradox 账号系统的 ID |
 | **`mp_synced`** | **是否参与联机同步**（与 §2 的校验和机制相关） |
 | `affects_save_compatibility` | 是否影响存档兼容性 |
-| `localizable_name` | 本地化键（与 `dlc_metadata\` 对应，见 `01-环境与版本.md` §4） |
+| `localizable_name` | 本地化键（与 `dlc_metadata\` 对应，见 [`01-环境与版本.md`](01-环境与版本.md) §4） |
 | `checksum` | DLC 内容校验和 |
 
 ### 6.2 `script.py` —— DLC 转换脚本
@@ -354,7 +354,7 @@ checksum = "3a59f318633b40ff609df0719da2b2fc"
 
 ## 9. 未确认项
 
-> 证据口径与四条实测配方见 `04-脚本系统.md` §13.1（A 脚本化测试 / B 调试日志 / C 最小 MOD / D 双 MOD 冲突）。
+> 证据口径与四条实测配方见 [`04-脚本系统.md`](04-脚本系统.md) §13.1（A 脚本化测试 / B 调试日志 / C 最小 MOD / D 双 MOD 冲突）。
 
 | # | 未确认内容 | 本地证据（可复算） | 状态 |
 |---|---|---|---|

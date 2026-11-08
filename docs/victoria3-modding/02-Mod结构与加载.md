@@ -115,7 +115,7 @@ game\common\ai_strategies\00_default_strategy.txt
 > 4. 引擎自己的枚举日志写得明白：`virtualfilesystem.cpp:420: Starting pre-enumerating
 >    'common/scripted_lists'(.txt, , 0)` —— 末位参数是 `0`（不递归）。
 >
-> 复算：`v3 experiment plan` 的 `[P25]`；再次实测用
+> 历史取证（已退役）：`v3 experiment plan` 的 `[P25]`（该子命令已不在当前工作树）；当时再次实测用
 > `zz_probe_risky/common/scripted_effects/zz_probe_subdir_probe/never_loaded.txt`
 > 那个反证文件（自检效果会调用它，日志报 `Unknown effect` = 子目录确实没被枚举）。
 > ⚠️ 注意：这条只针对**数据文件**；`gfx\`、`gui\` 里的资源按路径引用，不受影响。
@@ -243,7 +243,7 @@ INJECT_OR_CREATE  →  REPLACE_OR_CREATE  →  TRY_INJECT
 
 ### 5.2 传统机制：同键名覆盖 / 整文件替换
 
-> **2026-09-20 实测补两条**（探针 mod + 一次真实游戏会话，`v3 experiment`）：
+> **2026-09-20 实测补两条**（探针 mod + 一次真实游戏会话，历史取证，`v3 experiment` 已退役）：
 > 1. **裸同名键（不带前缀）＝ 先到先得**：在新增文件里重定义原版键，引擎逐字报
 >    Duplicated key debug_success will not be created from file: …/zz_probe_effects.txt:4
 >    —— 后写的那份**不会被创建**，不合并、不报错；国库只涨了原版的 50,000。

@@ -13,8 +13,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from pdx import config, markers, verify
 
 #: 标记覆盖率的下限（只许涨，不许跌）。
@@ -109,8 +107,7 @@ def test_fix_是幂等的且只改标记处的数字() -> None:
     这是整个机制的安全底线 —— 如果 ``--fix`` 会碰没有标记的数字，
     那它就从「按归属改」退化成了「猜着改文本」，比不做更危险。
     """
-    if not config.DOCS.is_dir():  # pragma: no cover - 文档目录缺失时无意义
-        pytest.skip("文档目录不可用")
+    assert config.DOCS.is_dir(), "文档目录（docs/victoria3-modding）是入库目录，不应缺失"
     before = {p.name: p.read_text(encoding="utf-8") for p in config.DOCS.glob("*.md")}
     assert not verify.fix_markers(write=False), "当前状态下不该有需要改的标记"
     assert not verify.fix_markers(write=True), "写盘路径与实际改动不一致"

@@ -127,7 +127,6 @@ markers = [
 # 口径：只统计**装进包里**的代码（pdx），不含 tools/ 与 tests。
 source = ["pdx"]
 branch = true
-omit = ["*/tests/*"]
 
 [tool.coverage.report]
 # 覆盖率门禁 —— 防止回退，不是拿来好看的。

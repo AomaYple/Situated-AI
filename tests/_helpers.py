@@ -82,3 +82,15 @@ def first_assignment(pf: ParsedFile, key: str | None = None) -> Assignment:
         if key is None or a.key == key:
             return a
     raise AssertionError(f"没有找到顶层赋值 {key!r}")
+
+
+def run_cli(*args: str):
+    """进程内调用 ``v3`` 命令行（CliRunner，不起子进程）。
+
+    ``pdx.cli`` 与 ``typer`` 在函数内导入：其他只用上面指纹函数的测试不必为此付出导入成本。
+    """
+    from typer.testing import CliRunner
+
+    from pdx.cli import app
+
+    return CliRunner().invoke(app, list(args))

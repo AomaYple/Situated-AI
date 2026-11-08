@@ -21,16 +21,15 @@ from __future__ import annotations
 import json
 
 import pytest
+from conftest import NEEDS_GAME
 
-from pdx import analyze, config
+from pdx import analyze
 
 pytestmark = pytest.mark.integration
 
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
-
 
 # ── 游戏本体 ────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 class TestGameAnalysis:
     def test_version_recorded(self, ga):
         assert ga.version["caligula_branch"]
@@ -113,7 +112,7 @@ class TestGameAnalysis:
 
 
 # ── 辅助视图 ────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 class TestGameViews:
     def test_all_keys_sorted(self, ga):
         for _name, keys in list(ga.all_keys().items())[:20]:
@@ -132,7 +131,7 @@ class TestGameViews:
 
 
 # ── mod ─────────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 class TestModsAnalysis:
     def test_mods_found(self, ma):
         assert len(ma.mods) >= 20
@@ -175,7 +174,7 @@ class TestModsAnalysis:
 
 
 # ── 交叉 ────────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 class TestCrossAnalysis:
     def test_dir_touched_populated(self, ca):
         assert len(ca.dir_touched_by) > 0
@@ -191,7 +190,7 @@ class TestCrossAnalysis:
 
 
 # ── 序列化与渲染 ────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 class TestSerialization:
     def test_game_dict_is_jsonable(self, ga):
         d = analyze.to_game_dict(ga)

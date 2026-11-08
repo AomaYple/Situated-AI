@@ -40,6 +40,7 @@ import sysconfig
 from pathlib import Path
 
 import pytest
+from conftest import NEEDS_GAME
 from typer.testing import CliRunner
 
 from pdx import cli, config, verify
@@ -47,8 +48,6 @@ from pdx import cli, config, verify
 pytestmark = pytest.mark.cli
 
 runner = CliRunner()
-
-_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 
 def _invoke(*args: str):
@@ -122,27 +121,27 @@ def test_未给子命令时不算崩溃() -> None:
 
 
 # ── verify ──────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 def test_verify_fast_全部通过() -> None:
     r = _invoke("verify", "--fast")
     assert r.exit_code == 0, r.output
     assert "失败 0" in r.output or "通过" in r.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_verify_only_单条断言() -> None:
     r = _invoke("verify", "--fast", "--only", "env.common_dirs")
     assert r.exit_code == 0, r.output
     assert "env.common_dirs" in r.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_verify_only_不存在的id() -> None:
     r = _invoke("verify", "--fast", "--only", "no.such.claim")
     assert r.exit_code == 2, "找不到指定断言属于前置条件缺失，应为 2"
 
 
-@_needs_game
+@NEEDS_GAME
 def test_verify_json_落盘(tmp_path) -> None:
     out = tmp_path / "verify.json"
     r = _invoke("verify", "--fast", "--json", str(out))
@@ -591,7 +590,7 @@ def test_check_outputs_缺产物时返回2(tmp_path, monkeypatch) -> None:
     assert "缺少产物" in r.output or "analyze" in r.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_check_outputs_有产物时通过() -> None:
     if not (config.OUT_GAME / "游戏本体.json").is_file():
         pytest.skip("尚无产物，先跑 v3 analyze")
@@ -615,7 +614,7 @@ def test_ai_surface_没有游戏时返回2(tmp_path, monkeypatch) -> None:
 
 
 # ── show ────────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 def test_show_能转储产物结构() -> None:
     if not (config.OUT_GAME / "游戏本体.json").is_file():
         pytest.skip("尚无产物，先跑 v3 analyze")
@@ -625,20 +624,20 @@ def test_show_能转储产物结构() -> None:
 
 
 # ── defines ─────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 def test_defines_指定命名空间() -> None:
     r = _invoke("defines", "--ns", "NAI")
     assert r.exit_code == 0, r.output
     assert "NAI" in r.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_defines_不存在的命名空间返回2() -> None:
     r = _invoke("defines", "--ns", "NO_SUCH_NAMESPACE_XYZ")
     assert r.exit_code == 2, "找不到命名空间属于前置条件缺失，应为 2"
 
 
-@_needs_game
+@NEEDS_GAME
 def test_defines_json_落盘(tmp_path) -> None:
     out = tmp_path / "defines.json"
     r = _invoke("defines", "--ns", "NAI", "--json", str(out))
@@ -648,7 +647,7 @@ def test_defines_json_落盘(tmp_path) -> None:
 
 
 # ── index ───────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 def test_index_dry_run_不写文件() -> None:
     target = config.DOCS / "13-common全量键名索引.md"
     before = target.read_bytes() if target.is_file() else b""
@@ -659,7 +658,7 @@ def test_index_dry_run_不写文件() -> None:
 
 
 # ── snapshot ────────────────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 def test_snapshot_list_列出快照() -> None:
     r = _invoke("snapshot", "list")
     assert r.exit_code == 0, r.output
@@ -677,14 +676,14 @@ def test_snapshot_create_输出口径不互相覆盖(tmp_path, monkeypatch: pyte
     assert full != compact
 
 
-@_needs_game
+@NEEDS_GAME
 def test_snapshot_diff_缺快照时返回2() -> None:
     r = _invoke("snapshot", "diff", "no_such_snapshot_a", "no_such_snapshot_b")
     assert r.exit_code == 2, "快照不存在属于前置条件缺失，应为 2"
 
 
 # ── snapshot（cli.py 里最大的未覆盖区）──────────────────────
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.slow
 def test_snapshot_创建_自检_差分_全链路(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """一条链路覆盖三个子命令：create -> verify -> diff。
@@ -732,14 +731,14 @@ def test_snapshot_创建_自检_差分_全链路(tmp_path: Path, monkeypatch: py
     )
 
 
-@_needs_game
+@NEEDS_GAME
 def test_snapshot_list_输出快照表() -> None:
     r = _invoke("snapshot", "list")
     assert r.exit_code == 0, r.output
 
 
 # ── defines 的其余分支 ──────────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 def test_defines_overlay_预览覆盖范围(tmp_path) -> None:
     """--overlay 是「写 mod 前先看清会覆盖什么」的入口，此前零覆盖。"""
     mod = tmp_path / "mymod.txt"
@@ -749,14 +748,14 @@ def test_defines_overlay_预览覆盖范围(tmp_path) -> None:
     assert "NAI" in r.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_defines_默认摘要() -> None:
     r = _invoke("defines")
     assert r.exit_code == 0, r.output
 
 
 # ── verify 的三个分支（漂移扫描 / 未登记扫描 / 关掉漂移）────
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.slow
 def test_verify_默认包含漂移扫描() -> None:
     """``v3 verify`` 必须真的跑文档漂移扫描。
@@ -770,7 +769,7 @@ def test_verify_默认包含漂移扫描() -> None:
     assert "文档正文" in r.output, "verify 的输出里必须体现漂移扫描的结果"
 
 
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.slow
 def test_verify_no_drift_跳过漂移扫描() -> None:
     r = _invoke("verify", "--fast", "--no-drift")
@@ -778,14 +777,14 @@ def test_verify_no_drift_跳过漂移扫描() -> None:
     assert "文档正文" not in r.output, "--no-drift 时不应再输出漂移结论"
 
 
-@_needs_game
+@NEEDS_GAME
 def test_verify_unregistered_列出未登记断言() -> None:
     """``--unregistered`` 是排查工具，退出码必须是 0（不是门禁）。"""
     r = _invoke("verify", "--unregistered")
     assert r.exit_code == 0, r.output
 
 
-@_needs_game
+@NEEDS_GAME
 def test_verify_不存在的_only_返回失败() -> None:
     """``--only`` 拼错时不能静默「全部通过」退出 0。"""
     r = _invoke("verify", "--only", "no-such-claim-id")
@@ -796,7 +795,7 @@ def test_verify_不存在的_only_返回失败() -> None:
 def test_from_snapshot_不读游戏也能核验() -> None:
     """这条**不需要游戏** —— 它就是精简快照入库的理由。
 
-    注意这里刻意不加 ``@_needs_game``：CI 上没有游戏，而这条必须能跑。
+    注意这里刻意不加 ``@NEEDS_GAME``：CI 上没有游戏，而这条必须能跑。
 
     ⚠️ 断言的 id **必须能在 80 列的表格里完整显示**：离线覆盖的断言从 39 条涨到 43 条
     之后，rich 为了塞下更长的「断言」列把 ID 列省略成了 ``docs.total_b…``，
@@ -861,7 +860,7 @@ def test_from_snapshot_筛出的断言都不被快照覆盖时报错() -> None:
 
 
 # ── index 真正写盘的那条路 ──────────────────────────────────
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.slow
 def test_index_写盘后内容自洽() -> None:
     """--dry-run 已测过；这条走真实写盘路径，并确认产物首行与统计对得上。"""
@@ -878,7 +877,7 @@ def test_index_写盘后内容自洽() -> None:
 
 
 # ── analyze（慢，只跑最省的一种组合）────────────────────────
-@_needs_game
+@NEEDS_GAME
 @pytest.mark.slow
 def test_analyze_不写盘不跑mod() -> None:
     r = _invoke("analyze", "--no-mods", "--no-write", "--quiet")
@@ -916,7 +915,7 @@ class TestSubprocess:
         p = self._run("no-such-command")
         assert p.returncode == 2, p.stderr
 
-    @_needs_game
+    @NEEDS_GAME
     def test_gbk_控制台下不因编码崩溃(self) -> None:
         """GBK 是中文 Windows 的默认控制台编码，``✅`` 这类字符会直接抛异常。
 
