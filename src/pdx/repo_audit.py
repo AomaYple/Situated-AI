@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import subprocess
+import tomllib
 from collections import Counter
 from pathlib import Path
 
@@ -68,6 +69,89 @@ BINARY_SUFFIXES |= frozenset(
 CACHE_DIRS = frozenset(
     {"__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache", ".hypothesis", ".benchmarks"}
 )
+NATIVE_EVIDENCE_ROOT = "research/vanilla-ai/1.15.0/native/"
+NATIVE_EVIDENCE_PATHS = frozenset(
+    {
+        "launcher/launcher-settings.json",
+        "caligula_branch.txt",
+        "caligula_rev.txt",
+        "clausewitz_branch.txt",
+        "clausewitz_rev.txt",
+        "binaries/checksum.txt",
+        "game/common/decrees/00_decree.txt",
+        "game/common/ai_strategies/00_default_strategy.txt",
+        "game/common/ai_strategies/03_political_strategies.txt",
+        "game/common/diplomatic_actions/00_relations_actions.txt",
+    }
+)
+
+
+def is_native_evidence_path(rel: str) -> bool:
+    """Only the ten declared upstream files have an original-byte exception."""
+    return (
+        rel.startswith(NATIVE_EVIDENCE_ROOT)
+        and rel.removeprefix(NATIVE_EVIDENCE_ROOT) in NATIVE_EVIDENCE_PATHS
+    )
+
+
+def native_evidence_contract(root: Path) -> dict[str, str]:
+    """Bind the exact raw-byte set to its production declaration and manifest."""
+    native = root / NATIVE_EVIDENCE_ROOT
+    declaration = root / "mod/decisions/architecture_115.toml"
+    if not native.exists() and not native.is_symlink() and not declaration.exists():
+        return {}
+    manifest = native / "baseline-manifest.json"
+
+    def fail(message: str) -> ValueError:
+        return ValueError(f"{NATIVE_EVIDENCE_ROOT}: {message}")
+
+    if native.is_symlink() or native.resolve() != native.absolute() or not native.is_dir():
+        raise fail("原版证据目录必须是仓库内的真实目录")
+    if manifest.is_symlink() or not manifest.is_file():
+        raise fail("baseline-manifest 必须是真实文件")
+    try:
+        data = tomllib.loads(declaration.read_text(encoding="utf-8"))
+        rows = data["identity"] + data["input"]
+        hashes: dict[str, str] = {}
+        for row in rows:
+            name, digest = row["path"], row["sha256"]
+            if (
+                name not in NATIVE_EVIDENCE_PATHS
+                or name in hashes
+                or not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+            ):
+                raise fail("原版声明含非法、重复路径或 SHA-256")
+            hashes[name] = digest
+        if set(hashes) != NATIVE_EVIDENCE_PATHS:
+            raise fail("原版声明必须恰好包含十个锁定路径")
+        contents = json.loads(manifest.read_text(encoding="utf-8"))
+        expected = [{"path": name, "sha256": digest} for name, digest in hashes.items()]
+        if (
+            not isinstance(contents, dict)
+            or contents.get("schema") != 1
+            or contents.get("profile") != data.get("profile")
+            or contents.get("game_version") != data.get("game_version")
+            or contents.get("files") != expected
+        ):
+            raise fail("baseline-manifest 与生产声明不一致")
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError) as error:
+        raise fail(f"无法验证原版声明与 manifest: {error}") from error
+    actual = {
+        path.relative_to(native).as_posix()
+        for path in native.rglob("*")
+        if path.is_file() or path.is_symlink()
+    }
+    if actual != NATIVE_EVIDENCE_PATHS | {"baseline-manifest.json"}:
+        raise fail("原版证据含未声明文件或缺少锁定文件")
+    for name, digest in hashes.items():
+        path = native / name
+        if path.is_symlink() or path.resolve() != path.absolute() or not path.is_file():
+            raise fail(f"{name}: 缺少真实文件或检测到链接")
+        if inspect_bytes(path)["sha256"] != digest:
+            raise fail(f"{name}: 原始字节 SHA-256 漂移")
+    return {NATIVE_EVIDENCE_ROOT + name: digest for name, digest in hashes.items()}
 
 
 def category(rel: str) -> str:
@@ -83,6 +167,11 @@ def category(rel: str) -> str:
     if rel.startswith((".agent-teams/", ".agents/", ".codex/")):
         return "local_runtime"
     if rel.startswith("tools/out/") and not rel.endswith(".compact.json"):
+        return "raw_evidence"
+    # Frozen native baselines preserve upstream bytes verbatim, including the
+    # engine's BOM/CR conventions.  They remain inventoried and hash-checked,
+    # but are evidence rather than repository-authored source.
+    if is_native_evidence_path(rel):
         return "raw_evidence"
     if path.suffix.lower() in BINARY_SUFFIXES or path.name.startswith(".coverage"):
         return "binary_asset"
@@ -144,12 +233,19 @@ def git_paths(root: Path, *args: str) -> set[str]:
 def source_issues(root: Path) -> list[str]:
     """提交门禁包括已跟踪和未忽略的新文件，严格检查所有自有文本。"""
     issues = []
+    try:
+        native_files = native_evidence_contract(root)
+    except ValueError as error:
+        issues.append(str(error))
+        native_files = {}
     for rel in sorted(git_paths(root, "--cached", "--others", "--exclude-standard")):
         path = root / rel
         if not path.exists():
             continue  # 已删除但尚未提交的文件不在工作区文本集合内。
         if path.is_symlink():
             issues.append(f"{rel}: 符号链接需要单独审查")
+            continue
+        if rel in native_files:
             continue
         if path.suffix.lower() in BINARY_SUFFIXES:
             continue

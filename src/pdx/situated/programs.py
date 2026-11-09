@@ -15,12 +15,152 @@ from dataclasses import asdict, dataclass, replace
 from decimal import Decimal
 from typing import TYPE_CHECKING, cast
 
+from . import core_contracts as contracts
 from .ir import ActionIR, from_rule
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from pdx.decision_rules import Reader, RuleSet
+
+    from .semantic_core import ActionAssessment
+
+
+@dataclass(frozen=True, slots=True)
+class RelativeComparison:
+    """消费者内的偏序证据；不模拟原版随机、选中或执行。"""
+
+    witness: contracts.SelectionWitness
+    non_dominated: tuple[contracts.EntityKey, ...]
+    dominated: tuple[contracts.EntityKey, ...]
+    deferred: tuple[contracts.EntityKey, ...]
+    rule: str = "pareto_on_identical_dimensions_preserve_native_ties"
+
+
+def _comparison_vector(item: ActionAssessment) -> dict[tuple[str, ...], float] | None:
+    vector: dict[tuple[str, ...], float] = {}
+    complete = True
+    seen: set[tuple[str, ...]] = set()
+    for term in (*item.benefits, *item.costs):
+        dimension = (term.id, term.kind, term.unit, term.scope, term.horizon, term.baseline)
+        if dimension in seen:
+            raise ValueError(f"{item.candidate_id}: 重复比较项 {term.id}")
+        seen.add(dimension)
+        # Source facts are part of the semantic identity of a dimension.  Two
+        # equal numbers with different evidence must remain incomparable; sort
+        # the IDs because declaration order does not change their meaning.
+        key = (
+            *dimension,
+            "sources",
+            *sorted(term.source_ids),
+        )
+        if term.status != "known":
+            complete = False
+            continue
+        if type(term.value) not in (int, float) or not math.isfinite(
+            cast("int | float", term.value)
+        ):
+            raise ValueError(f"{item.candidate_id}: 比较项必须为有限数值")
+        # 各维度保留单位、期限及现状基准，只反转成本方向，不跨维相加。
+        vector[key] = cast("float", term.value) * (1 if term.kind == "benefit" else -1)
+    return vector if complete and vector else None
+
+
+def compare_candidates(
+    consumer: contracts.ConsumerSpec,
+    candidates: tuple[contracts.EntityKey, ...],
+    assessments: Mapping[contracts.EntityKey, ActionAssessment],
+) -> RelativeComparison:
+    """为已观察候选建立 SelectionWitness，并比较同维度的完整已知评估。
+
+    缺评估、资格未知或收益/成本未知保留为 deferred。无已证明成本上界时，
+    conservative/lower_tier 也不能把未知成本填零；退回原版比较。已知低档
+    应在现有程序中选择后再传入。返回的 frontier 不改变原版资格或随机尾部。
+    """
+    contracts.unique(candidates, "compare_candidates.candidates")
+    if set(assessments) - set(candidates):
+        raise ValueError("compare_candidates: 评估引入候选集合外的对象")
+    actors = {item.actor for item in assessments.values()}
+    if len(actors) > 1:
+        raise ValueError("compare_candidates: 禁止跨国家比较")
+    identities = {
+        (identity[0], identity[2], identity[3])
+        for item in assessments.values()
+        if (identity := item.snapshot_identity) is not None
+    }
+    if len(identities) > 1 or any(item.snapshot_identity is None for item in assessments.values()):
+        raise ValueError("compare_candidates: 评估快照身份不一致")
+    objective_ids: set[str] = set()
+    eligible: list[contracts.EntityKey] = []
+    deferred: list[contracts.EntityKey] = []
+    vectors: dict[contracts.EntityKey, dict[tuple[str, ...], float]] = {}
+    for candidate in candidates:
+        item = assessments.get(candidate)
+        if item is None:
+            deferred.append(candidate)
+            continue
+        if item.consumer_id != consumer.id:
+            raise ValueError("compare_candidates: 禁止跨消费者比较")
+        if (
+            item.snapshot_identity is None
+            or item.snapshot_identity[:3] != (item.actor, item.target, item.consumer_id)
+            or item.actor.kind != "country"
+        ):
+            raise ValueError("compare_candidates: 评估快照对象串接")
+        if (item.target is not None and item.target != candidate) or (
+            item.target is None and item.candidate_id != candidate.id
+        ):
+            raise ValueError("compare_candidates: 候选与评估对象串接")
+        objective_ids.update(item.objective_ids)
+        if any(
+            term.baseline and term.baseline not in item.objective_ids
+            for term in (*item.benefits, *item.costs)
+        ):
+            raise ValueError("compare_candidates: 比较项未接入国家利益基准")
+        if item.qualification != "known" or item.eligible is None:
+            deferred.append(candidate)
+            continue
+        if item.eligible is not True:
+            continue
+        eligible.append(candidate)
+        vector = _comparison_vector(item)
+        if vector is None or item.unknowns:
+            deferred.append(candidate)
+        else:
+            vectors[candidate] = vector
+    dominated: set[contracts.EntityKey] = set()
+    for candidate, vector in vectors.items():
+        for other, other_vector in vectors.items():
+            if candidate == other or vector.keys() != other_vector.keys():
+                continue
+            differences = tuple(other_vector[key] - value for key, value in vector.items())
+            if all(value >= 0 for value in differences) and any(value > 0 for value in differences):
+                dominated.add(candidate)
+                break
+    witness = contracts.SelectionWitness(
+        consumer.id,
+        candidates,
+        tuple(eligible),
+        consumer.comparator,
+        tuple(sorted(objective_ids)),
+        consumer.unknown_policy,
+        consumer.neutral,
+        consumer.tie_break,
+        consumer.random,
+        consumer.all_zero,
+        consumer.baseline,
+    )
+    witness.validate(consumer)
+    return RelativeComparison(
+        witness,
+        tuple(
+            candidate
+            for candidate in eligible
+            if candidate not in dominated and candidate not in deferred
+        ),
+        tuple(candidate for candidate in candidates if candidate in dominated),
+        tuple(deferred),
+    )
 
 
 @dataclass(frozen=True, slots=True)

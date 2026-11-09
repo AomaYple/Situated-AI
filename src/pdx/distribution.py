@@ -25,8 +25,9 @@ from pdx import (
     mobilization_opportunities,
     treaty_opportunities,
 )
+from pdx.generation_transaction import GenerationTransaction
 from pdx.localization import parse_loc_entries
-from pdx.situated import engine_scope
+from pdx.situated import engine_scope, production_profile
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
@@ -496,8 +497,18 @@ def write_zip(
     return destination
 
 
-def production_configuration() -> tuple[decisions.Policy, decisions.Extensions]:
+def production_configuration(
+    *, profile: production_profile.ProductionProfile | None = None
+) -> tuple[decisions.Policy, decisions.Extensions]:
     """读取唯一发布 profile；读取配置不需要本机原版。"""
+    if profile is not None:
+        # The native profile is verified before any generated file is touched.
+        # Policy lowering is intentionally fail-closed until the A4 rule source
+        # has been reviewed and attached to the same ConsumerIR bundle.
+        production_profile.verify_baseline()
+        raise ValueError(
+            "1.15.0 profile 已锁定原版写点，但政策 RuleSet 尚未完成统一 IR 接线；拒绝生成"
+        )
     policy, extensions = decisions.load(), decisions.load_extensions(profile="release")
     policy = replace(
         policy,
@@ -566,10 +577,12 @@ def check_generation_lock() -> None:
 
 
 def package_inputs(
-    *, include_engineering_metadata: bool = False
+    *,
+    include_engineering_metadata: bool = False,
+    profile: production_profile.ProductionProfile | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
-    policy, extensions = production_configuration()
+    policy, extensions = production_configuration(profile=profile)
     try:
         engine_scope.verify_strategy_game(config.GAME)
         decision_interfaces.verify_scripted_trigger_game(config.GAME)
@@ -669,9 +682,15 @@ def _release_generation(
     }
 
 
-def package(destination: Path) -> Path:
+def package(
+    destination: Path,
+    *,
+    profile: production_profile.ProductionProfile | None = None,
+) -> Path:
     """核对仓库生成物后，生成唯一正式包。"""
-    policy, extensions, internal_files = package_inputs(include_engineering_metadata=True)
+    policy, extensions, internal_files = package_inputs(
+        include_engineering_metadata=True, profile=profile
+    )
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
     production_files = {name: text for name, text in files.items() if name != "README.md"}
@@ -683,6 +702,214 @@ def package(destination: Path) -> Path:
         destination,
         generation=_release_generation(policy, extensions, metadata),
         release=True,
+    )
+
+
+def profile_outputs(
+    profile: production_profile.ProductionProfile,
+    *,
+    policy: str = "policy",
+) -> dict[str, str | bytes]:
+    """Build the isolated 1.15 profile from the frozen native baseline.
+
+    The production profile is policy-bearing by default.  ``policy="neutral"``
+    remains an explicit diagnostic mode for proving reversibility of the native
+    write points; it is never selected by the CLI's production path.
+    """
+    files: dict[str, str | bytes]
+    if policy == "policy":
+        files = dict(
+            production_profile.build_policy_115(
+                profile,
+                core_enabled=True,
+            )
+        )
+    elif policy == "neutral":
+        files = dict(production_profile.build_neutral(profile))
+    else:
+        raise ValueError(f"未知 1.15 profile policy：{policy}")
+    policy_label = "policy" if policy == "policy" else "neutral"
+    metadata = {
+        "name": "Situated AI",
+        "id": MOD_ID,
+        "version": f"1.15.0-{policy_label}",
+        "supported_game_version": profile.game_version,
+        "short_description": (
+            "Situated AI 1.15 situated consumer policy profile"
+            if policy == "policy"
+            else "Situated AI 1.15 mechanically neutral consumer overlay"
+        ),
+        # This isolated profile has no image asset.  An empty launcher picture
+        # is explicit and avoids claiming a missing thumbnail.png.
+        "picture": "",
+        "tags": ["AI"],
+        "relationships": [],
+        "game_custom_data": {
+            "profile": "situated-ai/production/1.15",
+            "policy": policy_label,
+        },
+    }
+    files[METADATA_NAME] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+    files["README.md"] = f"Situated AI 1.15.0 {policy_label} profile\n" + (
+        "The three declared native consumers receive reviewed observed contributions; "
+        "pending facts retain vanilla behavior.\n"
+        if policy == "policy"
+        else "The three declared native consumers receive an additive zero; vanilla tails are retained.\n"
+    )
+    return files
+
+
+def profile_generation_lock(
+    profile: production_profile.ProductionProfile,
+    files: Mapping[str, str | bytes] | None = None,
+) -> str:
+    """Deterministic lock for the isolated 1.15 profile chain."""
+    root = decisions.PRODUCT.parent
+    if files is None:
+        files = profile_outputs(profile)
+    native = production_profile.verify_baseline()
+    source_paths = [
+        *sorted((root / "src/pdx").rglob("*.py")),
+        *sorted((root / "mod/decisions").rglob("*.toml")),
+        production_profile.BASELINE_MANIFEST,
+    ]
+    source_hashes = {
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in source_paths
+        if path.is_file()
+    }
+    return (
+        json.dumps(
+            {
+                "schema": 1,
+                "profile": "situated-ai/production/1.15",
+                "game_version": profile.game_version,
+                "build_id": profile.build_id,
+                "baseline": native["files"],
+                "sources": source_hashes,
+                "files": {
+                    name: hashlib.sha256(
+                        raw if isinstance(raw, bytes) else raw.encode("utf-8")
+                    ).hexdigest()
+                    for name, raw in sorted(files.items())
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
+    )
+
+
+def profile_output_root() -> Path:
+    return config.OUT / "production" / "1.15.0"
+
+
+def _profile_directory_files(root: Path) -> dict[str, Path]:
+    if any(path.is_symlink() for path in (root, *root.parents)):
+        raise ValueError(f"1.15.0 隔离产物路径不能包含符号链接：{root}")
+    if root.exists() and not root.is_dir():
+        raise ValueError(f"1.15.0 隔离产物路径必须是目录：{root}")
+    paths = tuple(root.rglob("*"))
+    if any(path.is_symlink() for path in paths):
+        raise ValueError("1.15.0 隔离产物不能包含符号链接")
+    return {path.relative_to(root).as_posix(): path for path in paths if path.is_file()}
+
+
+def write_profile_outputs(
+    profile: production_profile.ProductionProfile,
+    *,
+    root: Path | None = None,
+) -> dict[str, str | bytes]:
+    """Stage the full isolated candidate and restore originals on any exception.
+
+    Unexpected existing files require an explicit cleanup decision; generation
+    never silently deletes them. Source drift during replacement fails inside
+    the transaction, before original backups are discarded.
+    """
+    files: dict[str, str | bytes] = dict(profile_outputs(profile))
+    _validate_paths(list(files))
+    lock = profile_generation_lock(profile, files)
+    expected = {
+        name: raw if isinstance(raw, bytes) else raw.encode("utf-8") for name, raw in files.items()
+    }
+    expected["generation-lock.json"] = lock.encode("utf-8")
+    target = profile_output_root() if root is None else Path(root)
+    actual = _profile_directory_files(target)
+    extras = sorted(set(actual) - set(expected))
+    if extras:
+        raise ValueError("1.15.0 隔离产物包含额外文件，拒绝覆盖：" + ", ".join(extras))
+    with GenerationTransaction() as transaction:
+        transaction.replace({target / name: raw for name, raw in expected.items()})
+        if profile_generation_lock(profile, files) != lock:
+            raise ValueError("1.15.0 生成期间源码发生漂移，已拒绝提交产物")
+        for name, raw in expected.items():
+            if (target / name).read_bytes() != raw:
+                raise ValueError(f"1.15.0 生成期间产物发生漂移：{name}")
+    return files
+
+
+def check_profile_outputs(
+    profile: production_profile.ProductionProfile,
+    *,
+    root: Path | None = None,
+) -> dict[str, bytes]:
+    """Verify an already generated profile directory and return its bytes.
+
+    Building an expected candidate is deliberately separate from reading the
+    directory.  Packaging and guard commands therefore cannot silently rebuild
+    around a tampered or stale generated output.
+    """
+    expected = profile_outputs(profile)
+    expected_bytes = {
+        name: raw if isinstance(raw, bytes) else raw.encode("utf-8")
+        for name, raw in expected.items()
+    }
+    target = profile_output_root() if root is None else Path(root)
+    actual_paths = _profile_directory_files(target)
+    if not target.is_dir():
+        raise ValueError(f"1.15.0 隔离产物目录不存在：{target}")
+    lock = profile_generation_lock(profile, expected)
+    expected_bytes["generation-lock.json"] = lock.encode("utf-8")
+    expected_names = set(expected_bytes)
+    extras = sorted(set(actual_paths) - expected_names)
+    if extras:
+        raise ValueError("1.15.0 隔离产物包含额外文件：" + ", ".join(extras))
+    missing = sorted(expected_names - set(actual_paths))
+    if missing:
+        raise ValueError("1.15.0 隔离产物缺失：" + ", ".join(missing))
+    actual = {name: path.read_bytes() for name, path in actual_paths.items()}
+    for name, raw in expected_bytes.items():
+        if actual[name] != raw:
+            raise ValueError(f"1.15.0 隔离产物缺失或漂移：{actual_paths[name]}")
+    return {name: actual[name] for name in sorted(expected_names - {"generation-lock.json"})}
+
+
+def profile_package(destination: Path, profile: production_profile.ProductionProfile) -> Path:
+    """Package only an already verified isolated profile."""
+    files = check_profile_outputs(profile)
+    lock = profile_generation_lock(profile, files)
+    if (profile_output_root() / "generation-lock.json").read_bytes() != lock.encode("utf-8"):
+        raise ValueError("1.15.0 打包期间 generation-lock.json 发生漂移")
+    # The isolated directory stores repository bytes.  Convert checked game
+    # text through the shared deployment boundary to add exactly one BOM/LF;
+    # byte payloads otherwise intentionally bypass that conversion in write_zip.
+    package_files = {
+        name: raw.decode("utf-8-sig")
+        if PurePosixPath(name).suffix.lower() in GAME_SUFFIXES
+        else raw
+        for name, raw in files.items()
+    }
+    return write_zip(
+        package_files,
+        destination,
+        generation={
+            "profile": "situated-ai/production/1.15",
+            "game_version": profile.game_version,
+            "build_id": profile.build_id,
+            "lock": json.loads(lock),
+        },
+        release=False,
     )
 
 

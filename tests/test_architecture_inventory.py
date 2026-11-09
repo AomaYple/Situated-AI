@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from typing import Any
 
 import pytest
 
@@ -119,6 +120,74 @@ def test_measure_keeps_failure_output_and_command_tree_rss():
     assert result["rss_measurement"] == "sampled_lower_bound; observer_excluded"
 
 
+def test_measure_uses_selected_game_root_even_with_inherited_environment(monkeypatch, tmp_path):
+    monkeypatch.setenv("V3_ROOT", str(tmp_path / "wrong-game"))
+    game = tmp_path / "selected-game"
+    result = inventory.measure(
+        [sys.executable, "-B", "-c", "import os; print(os.environ['V3_ROOT'])"], game=game
+    )
+    assert result["exit_code"] == 0
+    assert result["V3_ROOT"] == str(game.resolve())
+    assert result["output"].strip() == str(game.resolve())
+
+
+def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, tmp_path):
+    output = tmp_path / "output"
+    source = tmp_path / "inventory.json"
+    source.write_bytes(b"{}")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "architecture_inventory",
+            "--game-root",
+            str(tmp_path / "game"),
+            "--inventory",
+            str(source),
+            "--output",
+            str(output),
+            "--measure",
+        ],
+    )
+    monkeypatch.setattr(inventory, "validate_inventory", lambda *_: None)
+    monkeypatch.setattr(inventory, "migration_inventory", lambda: {"counts": {}})
+    monkeypatch.setattr(
+        inventory, "observation_inventory", lambda *_: {"actor_count": 0, "rows": []}
+    )
+    monkeypatch.setattr(inventory, "static_samples", lambda *_: {"samples": []})
+    monkeypatch.setattr(inventory, "configuration_inventory", lambda *_: {})
+    monkeypatch.setattr(inventory, "objectives", lambda *_: {})
+    monkeypatch.setattr(
+        inventory, "measure", lambda *_, **__: {"output": "measured", "exit_code": 0}
+    )
+    assert inventory.main() == 0
+    cost = json.loads((output / "cost-baseline.json").read_text(encoding="utf-8"))
+    assert cost["input_inventory_sha256"] == inventory.digest(b"{}")
+    for measurement in cost["measurements"]:
+        assert (output / measurement["log"]).read_text(encoding="utf-8") == "measured"
+
+
+def test_configuration_output_cannot_overwrite_input(monkeypatch, tmp_path):
+    source = tmp_path / "configuration-baseline.json"
+    source.write_bytes(b"{}")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "architecture_inventory",
+            "--game-root",
+            str(tmp_path / "game"),
+            "--inventory",
+            str(source),
+            "--output",
+            str(tmp_path),
+        ],
+    )
+    with pytest.raises(ValueError, match="overwrite input inventory"):
+        inventory.main()
+    assert source.read_bytes() == b"{}"
+
+
 def test_json_and_scan_identity_reject_untrusted_or_drifted_inputs(tmp_path):
     with pytest.raises(ValueError, match="duplicate JSON key"):
         inventory.read_inventory(b'{"schema": 1, "schema": 2}')
@@ -135,7 +204,7 @@ def test_json_and_scan_identity_reject_untrusted_or_drifted_inputs(tmp_path):
         files.append(
             {"path": name, "sha256": inventory.digest(path.read_bytes()), "parse_status": "parsed"}
         )
-    source = {
+    source: dict[str, Any] = {
         "schema": "situated-ai.native-inventory/1",
         "expected_version": "1.15.0",
         "files": files,
@@ -164,6 +233,24 @@ def test_json_and_scan_identity_reject_untrusted_or_drifted_inputs(tmp_path):
 
     seal()
     inventory.validate_inventory(source, tmp_path)
+    source["version_identity"]["version_match"] = False
+    seal()
+    with pytest.raises(ValueError, match="version identity"):
+        inventory.validate_inventory(source, tmp_path)
+    source["version_identity"]["version_match"] = True
+    source["expected_version"] = "1.14.5"
+    seal()
+    with pytest.raises(ValueError, match="schema/version"):
+        inventory.validate_inventory(source, tmp_path)
+    source["expected_version"] = "1.15.0"
+    scanner_source = source["scanner"]["sources"][0]
+    expected_hash = scanner_source["sha256"]
+    scanner_source["sha256"] = "0" * 64
+    seal()
+    with pytest.raises(ValueError, match="scanner source drift"):
+        inventory.validate_inventory(source, tmp_path)
+    scanner_source["sha256"] = expected_hash
+    seal()
     source["expected_version"] = "1.14.5"
     with pytest.raises(ValueError, match="fingerprint"):
         inventory.validate_inventory(source, tmp_path)

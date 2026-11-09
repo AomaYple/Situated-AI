@@ -1,0 +1,112 @@
+# Identity and preservation contract only; policy bounds stay neutral until A4 wiring.
+schema = 1
+profile = "situated-ai/production/1.15"
+game_version = "1.15.0"
+
+[[identity]]
+path = "launcher/launcher-settings.json"
+sha256 = "4b7032eeb5fc7f0f64b60690d5d2b1bbc4b7ca5119b44bb76eb2f7788a9fd91c"
+raw_version = "1.15.0"
+[[identity]]
+path = "caligula_branch.txt"
+sha256 = "d63c818d818af02cdb1d59d338ca1b68420421ccdcf1b131193f58e191eb6ca8"
+value = "release/1.15.0"
+[[identity]]
+path = "caligula_rev.txt"
+sha256 = "41646ad1bb09180c7ce218ed46af8d9143c54dc3b69dfc0fba6254db65ad299d"
+value = "6338547985dbc271523e149f362a6fd93dc62975"
+[[identity]]
+path = "clausewitz_branch.txt"
+sha256 = "673cffa83790df7106aa75435d0a8bee40d68c6cf5cfe6d47cd89df223ff2294"
+value = "caligula/release/1.15.0"
+[[identity]]
+path = "clausewitz_rev.txt"
+sha256 = "1085952c68b4ffa4ebab5d7ebd017e7a6492e22511494e0b371120a8f56a8107"
+value = "a65fc88f3e604839357cb5b2aaf3b123e9d7434e"
+
+[[identity]]
+path = "binaries/checksum.txt"
+sha256 = "7d1e8421e8f37c4cd71d3d6fa016e1f5730aef669c9eee786b1cfbce83a0a8d6"
+value = "21b1145142878b5d9cb69139ba8bfc93"
+
+[[input]]
+path = "game/common/decrees/00_decree.txt"
+sha256 = "3d2427216709844f4233649208efad0056b8a09608eb078249aeb6ff855c2445"
+[[input]]
+path = "game/common/ai_strategies/00_default_strategy.txt"
+sha256 = "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73"
+[[input]]
+path = "game/common/ai_strategies/03_political_strategies.txt"
+sha256 = "2b0b83d06cc4ef8fb1bc58902ca4f90cf0723838afef6d81854e301f5f7c62f4"
+[[input]]
+path = "game/common/diplomatic_actions/00_relations_actions.txt"
+sha256 = "6cd5d572ae976a2e1f4f4af5c81fb577ed4804bace442e6fa31bace09881749b"
+
+[[consumer]]
+id = "a0-econ-road"
+domain = "economy"
+source = "game/common/decrees/00_decree.txt"
+definition = "decree_road_maintenance"
+field = ["ai_weight"]
+actor = "country"
+target = "root"
+actor_line = 84
+target_line = 22
+operation = "add"
+neutral = 0.0
+bounds = [0.0, 0.0]
+vanilla_tail = ["qualification", "cost", "random", "execution", "ordered_tail", "zero_protection"]
+comparator = "vanilla consumer comparator (runtime unknown)"
+candidate_set = "the selected decree candidate"
+eligibility = "retain native country_trigger and state_trigger"
+tie_break = "vanilla (runtime unknown)"
+random = "vanilla (runtime unknown)"
+all_zero = "vanilla (runtime unknown)"
+unknown_policy = "vanilla"
+baseline_line = 22
+
+[[consumer]]
+id = "a0-pol-schools"
+domain = "politics"
+source = "game/common/ai_strategies/00_default_strategy.txt"
+definition = "ai_strategy_default"
+field = ["institution_scores", "institution_schools"]
+actor = "root"
+target = "institution_schools"
+actor_line = 1598
+target_line = 1598
+operation = "add"
+neutral = 0.0
+bounds = [0.0, 0.0]
+vanilla_tail = ["default_component", "additive_other_strategies", "qualification", "execution", "zero_protection"]
+comparator = "vanilla strategy comparator (runtime unknown)"
+candidate_set = "default strategy institution_schools component"
+eligibility = "retain native strategy eligibility"
+tie_break = "vanilla (runtime unknown)"
+random = "vanilla (runtime unknown)"
+all_zero = "vanilla (runtime unknown)"
+unknown_policy = "vanilla"
+baseline_line = 1598
+
+[[consumer]]
+id = "a0-dip-relations"
+domain = "diplomacy"
+source = "game/common/diplomatic_actions/00_relations_actions.txt"
+definition = "increase_relations"
+field = ["ai", "propose_score"]
+actor = "root"
+target = "target_country"
+actor_line = 92
+target_line = 98
+operation = "add"
+neutral = 0.0
+bounds = [0.0, 0.0]
+vanilla_tail = ["qualification", "cost", "random", "execution", "ordered_tail", "zero_protection"]
+comparator = "vanilla proposal comparator (runtime unknown)"
+candidate_set = "the selected target_country"
+eligibility = "retain native selectable/potential/possible"
+tie_break = "vanilla (runtime unknown)"
+random = "vanilla evaluation_chance (runtime unknown)"
+all_zero = "vanilla (runtime unknown)"
+unknown_policy = "vanilla"
+baseline_line = 92

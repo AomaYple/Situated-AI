@@ -315,6 +315,8 @@ class FactSpec(StrictContract):
             or consumer_id not in self.consumer_ids
         ):
             raise ValueError(f"FactSpec.{self.id}: 单位、对象、消费者或时间串接")
+        if not set(observation.sources).issubset(self.sources):
+            raise ValueError(f"FactSpec.{self.id}: 观测证据不属于声明来源")
         value = observation.value
         if value is None:
             return

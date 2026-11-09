@@ -11,6 +11,8 @@ from .schema import ActionCard, Relation, RelationKind, UnknownPolicy
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
+    from .core_contracts import EvaluationSchedule, FactSpec, SituationSnapshot
+
 
 def relations(
     actions: tuple[ActionCard, ...],
@@ -77,7 +79,74 @@ def relations(
                         Relation(action.id, target, cast("RelationKind", kind), 1.0),
                     )
                 )
+    orphaned = set(metadata) - {(item.source, item.target, item.kind) for item in result}
+    if orphaned:
+        raise ValueError(f"行动关系元数据未绑定行动卡：{sorted(orphaned)}")
     return tuple(result)
+
+
+def condition_state(relation: Relation, values: Mapping[str, object]) -> bool | None:
+    """读取关系自身的世界事实，缺失或非布尔值保持 unknown。"""
+
+    if not relation.condition_facts:
+        return True
+    states = tuple(
+        values.get(name) if type(values.get(name)) is bool else None
+        for name in relation.condition_facts
+    )
+    if any(item is False for item in states):
+        return False
+    return None if any(item is None for item in states) else True
+
+
+def observed_condition(
+    relation: Relation,
+    snapshot: SituationSnapshot,
+    facts: tuple[FactSpec, ...],
+    schedule: EvaluationSchedule,
+) -> bool | None:
+    """在合法对象和当前时点读取条件；不把候选资格当作完成证据。
+
+    这是观察入口，不是第二份关系数值政策；未知时不假造低档强度或免费成本。
+    当前 Relation 没有跨时点寿命字段，因此只允许当前快照，存档后重新观察。
+    """
+    if (
+        relation.kind not in {"complements", "substitutes", "conflicts", "enables"}
+        or relation.scope not in {"root", "target_state", "target_country"}
+        or type(relation.strength) not in (int, float)
+        or not math.isfinite(relation.strength)
+        or relation.strength <= 0
+        or relation.unknown_policy not in {"vanilla", "conservative", "lower_tier"}
+        or len(set(relation.condition_facts)) != len(relation.condition_facts)
+    ):
+        raise ValueError("关系观察合同无效或缺少合法对象映射")
+    snapshot.validate(facts, schedule)
+    declared = {item.id: item for item in facts}
+    for name in relation.condition_facts:
+        spec = declared.get(name)
+        if spec is None or spec.kind != "boolean" or snapshot.consumer_id not in spec.consumer_ids:
+            raise ValueError(f"关系条件缺少已接线布尔事实：{name}")
+        if relation.scope == "root" and spec.binding != "actor":
+            raise ValueError(f"关系条件对象映射不一致：{name}")
+        if relation.scope == "target_state" and (
+            spec.binding != "target" or spec.entity_kind != "state"
+        ):
+            raise ValueError(f"关系条件对象映射不一致：{name}")
+        if relation.scope == "target_country" and (
+            spec.binding != "target" or spec.entity_kind != "country"
+        ):
+            raise ValueError(f"关系条件对象映射不一致：{name}")
+        if relation.scope not in {"root", "target_state", "target_country"}:
+            raise ValueError("关系 owner 映射缺少合法转换证明")
+    if not relation.condition_facts:
+        return None
+    return condition_state(
+        relation,
+        {
+            item.spec_id: item.value if item.usable_at(snapshot.time) else None
+            for item in snapshot.observations
+        },
+    )
 
 
 def validate(

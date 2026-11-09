@@ -54,6 +54,12 @@ class ContextBinding:
         formation_binding = (self.name, self.kind, self.role) in {
             ("root", "military_formation", "auxiliary"),
             ("owner", "country", "actor"),
+            # A0/A1 road decree observes the current root state while the
+            # country scope is the actual actor.  Keep this explicit pair
+            # narrow: it must not turn ``root`` into an arbitrary object.
+            ("country", "country", "actor"),
+            ("root", "state", "target"),
+            ("institution_schools", "institution", "candidate"),
         }
         if not formation_binding and (
             expected is None or self.kind != expected[0] or self.role not in expected[1]

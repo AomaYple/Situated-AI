@@ -134,8 +134,8 @@ def test_symbol_calls_chaining_cycles_unknown_and_duplicate_definitions(tmp_path
             "game/common/ai_strategies/native.txt": (
                 "strategy = { ai_weight = { value = root.first_value "
                 "if = { limit = { can_act = yes } apply_action = yes } "
-                "add = scripted_value:missing_value quoted = \"can_act\" "
-                "value = \"missing_quoted\" } }"
+                'add = scripted_value:missing_value quoted = "can_act" '
+                'value = "missing_quoted" } }'
             ),
             "game/common/script_values/native.txt": (
                 "first_value = { value = second_value }\n"
@@ -143,9 +143,7 @@ def test_symbol_calls_chaining_cycles_unknown_and_duplicate_definitions(tmp_path
                 "duplicate_value = 1 duplicate_value = 2\n"
             ),
             "game/common/scripted_triggers/native.txt": "can_act = { always = yes }",
-            "game/common/scripted_effects/native.txt": (
-                "apply_action = { add = duplicate_value }"
-            ),
+            "game/common/scripted_effects/native.txt": ("apply_action = { add = duplicate_value }"),
         },
     )
     catalog = build_native_catalog(tmp_path, inventory)
@@ -159,8 +157,7 @@ def test_symbol_calls_chaining_cycles_unknown_and_duplicate_definitions(tmp_path
         for row in references
     )
     assert any(
-        row["symbol"] == "missing_value" and row["status"] == "unresolved"
-        for row in references
+        row["symbol"] == "missing_value" and row["status"] == "unresolved" for row in references
     )
     assert any(
         row["symbol"] == "can_act"
@@ -175,11 +172,15 @@ def test_symbol_calls_chaining_cycles_unknown_and_duplicate_definitions(tmp_path
         for row in references
     )
     assert any(
-        row["symbol"] == "duplicate_value" and row["status"] == "ambiguous"
-        for row in references
+        row["symbol"] == "duplicate_value" and row["status"] == "ambiguous" for row in references
     )
     assert len(catalog["dependency_cycles"]) == 1
     assert catalog["dependency_cycles"][0]["symbols"] == ["first_value", "second_value"]
+    assert catalog["dependency_cycles"][0]["status"] == "cyclic_static_dependency"
+    assert (
+        catalog["dependency_cycles"][0]["evidence_completeness"]
+        == "complete_within_declared_sources"
+    )
     strategy = next(row for row in catalog["consumers"] if row["field"] == "ai_weight")
     assert strategy["dependencies"]["status"] == "unresolved_or_cyclic"
     assert len(strategy["dependencies"]["reference_ids"]) == 6
@@ -200,6 +201,29 @@ def test_parse_failure_limits_are_preserved_and_cannot_prove_completeness(tmp_pa
     assert catalog["failures"][0]["path"].endswith("native.txt")
     assert catalog["parse_failure_scopes"][0]["scope"] == "whole_file"
     assert catalog["consumers"][0]["source_validity"] == "partial"
+
+
+def test_cycle_through_partial_source_is_marked_uncertain(tmp_path: Path) -> None:
+    inventory = _input(
+        tmp_path,
+        {
+            "game/common/ai_strategies/native.txt": "strategy = { weight = first }",
+            "game/common/script_values/native.txt": (
+                "first = { value = second }\nsecond = { value = first }"
+            ),
+        },
+    )
+    record = next(item for item in inventory["files"] if "/script_values/" in item["path"])
+    record["parse_status"] = "partial"
+    inventory["failures"] = [{"kind": "parse", "path": record["path"], "line": 1}]
+    _seal(inventory)
+    catalog = build_native_catalog(tmp_path, inventory)
+    assert (
+        catalog["dependency_cycles"][0]["status"] == "cyclic_static_dependency_with_partial_source"
+    )
+    assert catalog["dependency_cycles"][0]["evidence_completeness"] == "partial"
+    consumer = next(row for row in catalog["consumers"] if row["category"] == "ai_strategies")
+    assert consumer["dependencies"]["status"] == "unresolved_or_cyclic"
 
 
 def test_input_drift_and_tampering_fail_closed(tmp_path: Path) -> None:
@@ -281,3 +305,23 @@ def test_unlisted_content_is_detected_and_path_traversal_rejected(tmp_path: Path
     _seal(inventory)
     with pytest.raises(ValueError, match="path"):
         build_native_catalog(tmp_path, inventory)
+
+
+@pytest.mark.parametrize(
+    "new_path", ["game/common/ai_strategies/new_native.txt", "clausewitz/new.txt", "jomini/new.md"]
+)
+def test_new_native_content_after_inventory_is_rejected_but_mod_is_ignored(
+    tmp_path: Path, new_path: str
+) -> None:
+    inventory = _input(
+        tmp_path, {"game/common/ai_strategies/native.txt": "strategy = { weight = 1 }"}
+    )
+    added = tmp_path / new_path
+    added.parent.mkdir(parents=True, exist_ok=True)
+    added.write_text("strategy = { score = 2 }", encoding="utf-8")
+    with pytest.raises(ValueError, match="unlisted native content"):
+        build_native_catalog(tmp_path, inventory)
+    added.unlink()
+    (tmp_path / "mod").mkdir()
+    (tmp_path / "mod/new_native.txt").write_text("strategy = { score = 3 }", encoding="utf-8")
+    build_native_catalog(tmp_path, inventory)

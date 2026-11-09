@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
@@ -18,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
-from pdx.situated.version_inventory import canonical_json
+from pdx.situated.version_inventory import CONTENT_ROOTS, TEXT_EXTENSIONS, canonical_json
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -54,9 +55,28 @@ MAP_FIELDS = frozenset(
 )
 EXPRESSION_FIELDS = frozenset(
     {
-        "value", "base", "add", "subtract", "multiply", "divide", "min", "max",
-        "if", "else_if", "else", "limit", "always", "exists", "NOT", "OR", "AND",
-        "NOR", "NAND", "trigger", "score", "potential",
+        "value",
+        "base",
+        "add",
+        "subtract",
+        "multiply",
+        "divide",
+        "min",
+        "max",
+        "if",
+        "else_if",
+        "else",
+        "limit",
+        "always",
+        "exists",
+        "NOT",
+        "OR",
+        "AND",
+        "NOR",
+        "NAND",
+        "trigger",
+        "score",
+        "potential",
     }
 )
 NUMERIC_FIELDS = frozenset(
@@ -67,15 +87,44 @@ NUMERIC_FIELDS = frozenset(
 # unless their native documentation explicitly describes the exact field.
 AI_FIELD_CATEGORIES = frozenset(
     {
-        "buildings", "building_groups", "decrees", "laws", "law_groups", "institutions",
-        "diplomatic_actions", "diplomatic_plays", "diplomatic_pacts", "subject_types",
-        "company_types", "company_charter_types", "commander_orders", "combat_unit_types",
-        "decisions", "journal_entries", "government_types", "interest_groups", "ideologies",
-        "power_bloc_identities", "power_bloc_principles", "power_bloc_principle_groups",
-        "production_methods", "production_method_groups", "technologies", "mobilization_options",
-        "treaty_articles", "treaty_article_types", "treaty_categories", "war_goals", "wargoals",
-        "country_formations", "country_creation", "grievance_types", "grievances",
-        "character_interactions", "political_movements", "military_formations",
+        "buildings",
+        "building_groups",
+        "decrees",
+        "laws",
+        "law_groups",
+        "institutions",
+        "diplomatic_actions",
+        "diplomatic_plays",
+        "diplomatic_pacts",
+        "subject_types",
+        "company_types",
+        "company_charter_types",
+        "commander_orders",
+        "combat_unit_types",
+        "decisions",
+        "journal_entries",
+        "government_types",
+        "interest_groups",
+        "ideologies",
+        "power_bloc_identities",
+        "power_bloc_principles",
+        "power_bloc_principle_groups",
+        "production_methods",
+        "production_method_groups",
+        "technologies",
+        "mobilization_options",
+        "treaty_articles",
+        "treaty_article_types",
+        "treaty_categories",
+        "war_goals",
+        "wargoals",
+        "country_formations",
+        "country_creation",
+        "grievance_types",
+        "grievances",
+        "character_interactions",
+        "political_movements",
+        "military_formations",
     }
 )
 _DOC_FIELD = re.compile(r"^\s*(?:#\s*)?([\w]+)\s*(?:=|\s{2,})")
@@ -109,14 +158,18 @@ def _walk(
             yield from _walk(item, location, parents)
 
 
-def _source(path: str, sha: str, item: Assignment | Scalar, address: tuple[int, ...]) -> dict[str, Any]:
+def _source(
+    path: str, sha: str, item: Assignment | Scalar, address: tuple[int, ...]
+) -> dict[str, Any]:
     return {"path": path, "sha256": sha, "line": item.line, "address": list(address)}
 
 
 def _checked_path(installation: Path, relative: str) -> Path:
     parts = PurePosixPath(relative).parts
-    if not parts or PurePosixPath(relative).is_absolute() or any(
-        part in {"..", "."} or ":" in part or "\\" in part for part in parts
+    if (
+        not parts
+        or PurePosixPath(relative).is_absolute()
+        or any(part in {"..", "."} or ":" in part or "\\" in part for part in parts)
     ):
         raise ValueError(f"invalid inventory path: {relative}")
     path = installation
@@ -125,6 +178,37 @@ def _checked_path(installation: Path, relative: str) -> Path:
         if path.is_symlink() or path.resolve() != path.absolute():
             raise ValueError(f"linked inventory path: {relative}")
     return path
+
+
+def _current_content_paths(installation: Path) -> set[str]:
+    """Return eligible native files currently present under declared content roots.
+
+    This deliberately mirrors the inventory scanner's conservative suffix rule.  It
+    catches a new text/PDX file added after inventory creation while leaving mods,
+    binaries and media outside the static native scope.
+    """
+    paths: set[str] = set()
+
+    def on_error(error: OSError) -> None:
+        raise ValueError(f"native content enumeration failed: {error.filename}") from error
+
+    for root_name in CONTENT_ROOTS:
+        root = installation / root_name
+        if not root.is_dir():
+            continue
+        if root.is_symlink() or root.resolve() != root.absolute():
+            raise ValueError(f"linked native content root: {root_name}")
+        for directory, directories, filenames in os.walk(root, followlinks=False, onerror=on_error):
+            for name in [*directories, *filenames]:
+                path = Path(directory) / name
+                relative = path.relative_to(installation).as_posix()
+                if path.is_symlink() or path.resolve() != path.absolute():
+                    raise ValueError(f"linked native content: {relative}")
+            for name in filenames:
+                path = Path(directory) / name
+                if path.suffix.lower() in TEXT_EXTENSIONS:
+                    paths.add(path.relative_to(installation).as_posix())
+    return paths
 
 
 def _documents(
@@ -207,7 +291,8 @@ def _frontier(
 ) -> Iterator[tuple[Assignment, tuple[str, ...], tuple[int, ...], str]]:
     if isinstance(item.value, Block) and (mapped or item.key in MAP_FIELDS):
         children = [
-            (index, child) for index, child in enumerate(item.value.items)
+            (index, child)
+            for index, child in enumerate(item.value.items)
             if isinstance(child, Assignment) and not child.is_variable
         ]
         expression = any(
@@ -217,23 +302,34 @@ def _frontier(
         if children and not expression:
             yield item, field, address, "observational"
             for index, child in children:
-                yield from _frontier(child, (*field, child.full_key), (*address, index), mapped=True)
+                yield from _frontier(
+                    child, (*field, child.full_key), (*address, index), mapped=True
+                )
             return
         if mapped and any(child.key == "score" for _, child in children):
             yield item, field, address, "observational"
             for index, child in children:
                 if child.key in {"score", "trigger", "potential"}:
-                    yield child, (*field, child.full_key), (*address, index), (
-                        "direct_candidate" if child.key == "score" else "observational"
+                    yield (
+                        child,
+                        (*field, child.full_key),
+                        (*address, index),
+                        ("direct_candidate" if child.key == "score" else "observational"),
                     )
             return
     yield item, field, address, "direct_candidate"
 
 
 def _consumer(
-    path: str, record: dict[str, Any], definition: str, item: Assignment,
-    field: tuple[str, ...], address: tuple[int, ...], classification: str,
-    rule: str, evidence: list[dict[str, Any]],
+    path: str,
+    record: dict[str, Any],
+    definition: str,
+    item: Assignment,
+    field: tuple[str, ...],
+    address: tuple[int, ...],
+    classification: str,
+    rule: str,
+    evidence: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source = _source(path, record["sha256"], item, address)
     value = item.value
@@ -252,9 +348,15 @@ def _consumer(
         "legality": "unknown",
         "evidence": evidence,
         "semantics": {
-            "actor_scope": "unknown", "target_scope": "unknown", "operation": "unknown",
-            "zero_behavior": "unknown", "merge_behavior": "unknown", "tail_behavior": "unknown",
-            "evaluation_timing": "unknown", "getter": "unknown", "engine_validation": "unknown",
+            "actor_scope": "unknown",
+            "target_scope": "unknown",
+            "operation": "unknown",
+            "zero_behavior": "unknown",
+            "merge_behavior": "unknown",
+            "tail_behavior": "unknown",
+            "evaluation_timing": "unknown",
+            "getter": "unknown",
+            "engine_validation": "unknown",
         },
         "native_disposition": "native_retained",
         "preservation": "retain_original_source_bytes_until_consumer_contract_is_reproved",
@@ -263,7 +365,10 @@ def _consumer(
 
 
 def _discover_consumers(
-    path: str, record: dict[str, Any], root: Block, lines: list[str],
+    path: str,
+    record: dict[str, Any],
+    root: Block,
+    lines: list[str],
     docs: dict[tuple[str, str], list[dict[str, Any]]],
     heuristics: dict[tuple[int, ...], dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -276,7 +381,15 @@ def _discover_consumers(
                 path, record["sha256"], item, lines, docs.get((category, item.key), [])
             )
             rows[leaf_address] = _consumer(
-                path, record, definition, leaf, leaf_field, leaf_address, classification, rule, evidence
+                path,
+                record,
+                definition,
+                leaf,
+                leaf_field,
+                leaf_address,
+                classification,
+                rule,
+                evidence,
             )
 
     for definition_index, declaration in enumerate(root.items):
@@ -294,15 +407,25 @@ def _discover_consumers(
                 add(item, field, address, "explicit_native_ai_category_field")
             elif item.key == "ai" and isinstance(item.value, Block):
                 rows[address] = _consumer(
-                    path, record, definition, item, field, address, "observational",
-                    "explicit_native_ai_block_container", [],
+                    path,
+                    record,
+                    definition,
+                    item,
+                    field,
+                    address,
+                    "observational",
+                    "explicit_native_ai_block_container",
+                    [],
                 )
                 for index, child in enumerate(item.value.items):
                     if isinstance(child, Assignment) and not child.is_variable:
-                        add(child, (*field, child.full_key), (*address, index), "explicit_native_ai_block_field")
-            elif (
-                direct_child and category in AI_FIELD_CATEGORIES and item.key.startswith("ai_")
-            ):
+                        add(
+                            child,
+                            (*field, child.full_key),
+                            (*address, index),
+                            "explicit_native_ai_block_field",
+                        )
+            elif direct_child and category in AI_FIELD_CATEGORIES and item.key.startswith("ai_"):
                 add(item, field, address, "explicit_native_content_category_ai_field")
             elif direct_child and any(
                 _DOC_AI.search(doc["text"]) for doc in docs.get((category, item.key), [])
@@ -315,9 +438,15 @@ def _discover_consumers(
                     for prefix in parent_addresses
                 )
                 rows[address] = _consumer(
-                    path, record, definition, item, field, address,
+                    path,
+                    record,
+                    definition,
+                    item,
+                    field,
+                    address,
                     "observational" if inside or category in SYMBOL_CATEGORIES else "unresolved",
-                    "raw_inventory_heuristic_without_consumer_contract", [],
+                    "raw_inventory_heuristic_without_consumer_contract",
+                    [],
                 )
     return list(rows.values())
 
@@ -337,18 +466,15 @@ def _symbol_references(
             return result
         expression = value.unquoted
         numeric = item.key in NUMERIC_FIELDS
-        requested = SYMBOL_CATEGORIES.get(item.key, item.key if item.key.startswith("scripted_") else None)
+        requested = SYMBOL_CATEGORIES.get(
+            item.key, item.key if item.key.startswith("scripted_") else None
+        )
     else:
         expression = item.unquoted
         numeric = bool(parents and parents[-1] in NUMERIC_FIELDS)
         requested = None
-    quoted = (
-        (isinstance(item, Scalar) and item.quoted)
-        or (
-            isinstance(item, Assignment)
-        and isinstance(item.value, Scalar)
-        and item.value.quoted
-        )
+    quoted = (isinstance(item, Scalar) and item.quoted) or (
+        isinstance(item, Assignment) and isinstance(item.value, Scalar) and item.value.quoted
     )
     if quoted:
         # A quoted token can be a localization/path/string mention. Preserve
@@ -374,7 +500,14 @@ def _symbol_references(
             result.append((match.group(1), expression, "explicit_symbol_prefix", kind))
         return result
     if requested in {"scripted_value", "script_value", "scripted_trigger", "scripted_effect"}:
-        result.append((expression, expression, "explicit_reference_field", "script_value" if "value" in requested else requested))
+        result.append(
+            (
+                expression,
+                expression,
+                "explicit_reference_field",
+                "script_value" if "value" in requested else requested,
+            )
+        )
         return result
     if _PARAMETER.search(expression):
         result.append((expression, expression, "parameterized_reference", requested))
@@ -382,17 +515,39 @@ def _symbol_references(
     words = _IDENTIFIER.findall(expression)
     known = [word for word in words if word in names]
     for word in dict.fromkeys(known):
-        syntax = "quoted_symbol_observation" if (
-            (isinstance(item, Scalar) and item.quoted)
-            or (isinstance(item, Assignment) and isinstance(item.value, Scalar) and item.value.quoted)
-        ) else "scalar_or_scope_chained_call"
+        syntax = (
+            "quoted_symbol_observation"
+            if (
+                (isinstance(item, Scalar) and item.quoted)
+                or (
+                    isinstance(item, Assignment)
+                    and isinstance(item.value, Scalar)
+                    and item.value.quoted
+                )
+            )
+            else "scalar_or_scope_chained_call"
+        )
         result.append((word, expression, syntax, "script_value" if numeric else None))
-    if not known and numeric and re.fullmatch(r"[A-Za-z_][\w.:]*", expression) and expression not in {"yes", "no"}:
-        result.append((expression, expression, "unresolved_numeric_identifier_or_engine_getter", "script_value"))
+    if (
+        not known
+        and numeric
+        and re.fullmatch(r"[A-Za-z_][\w.:]*", expression)
+        and expression not in {"yes", "no"}
+    ):
+        result.append(
+            (
+                expression,
+                expression,
+                "unresolved_numeric_identifier_or_engine_getter",
+                "script_value",
+            )
+        )
     return result
 
 
-def _cycles(definitions: list[dict[str, Any]], references: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _cycles(
+    definitions: list[dict[str, Any]], references: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Iterative SCC traversal avoids recursion limits on native call chains."""
     names = {row["symbol_id"]: row["name"] for row in definitions}
     graph: dict[str, set[str]] = {symbol: set() for symbol in names}
@@ -417,7 +572,11 @@ def _cycles(definitions: list[dict[str, Any]], references: list[dict[str, Any]])
             elif node not in visited:
                 visited.add(node)
                 stack.append((node, True))
-                stack.extend((child, False) for child in sorted(graph[node], reverse=True) if child not in visited)
+                stack.extend(
+                    (child, False)
+                    for child in sorted(graph[node], reverse=True)
+                    if child not in visited
+                )
     visited.clear()
     result = []
     for origin in reversed(order):
@@ -433,7 +592,25 @@ def _cycles(definitions: list[dict[str, Any]], references: list[dict[str, Any]])
             members.append(node)
             pending.extend(sorted(reverse[node] - visited))
         if len(members) > 1 or origin in graph[origin]:
-            result.append({"symbol_ids": sorted(members), "symbols": sorted(names[node] for node in members), "status": "cyclic_static_dependency"})
+            member_set = set(members)
+            partial = any(
+                reference["status"] == "partial_source"
+                and reference["caller_symbol_id"] in member_set
+                and any(target in member_set for target in reference["resolved_to"])
+                for reference in references
+            )
+            result.append(
+                {
+                    "symbol_ids": sorted(members),
+                    "symbols": sorted(names[node] for node in members),
+                    "status": "cyclic_static_dependency_with_partial_source"
+                    if partial
+                    else "cyclic_static_dependency",
+                    "evidence_completeness": "partial"
+                    if partial
+                    else "complete_within_declared_sources",
+                }
+            )
     return sorted(result, key=canonical_json)
 
 
@@ -450,8 +627,9 @@ def _dependencies(
     for consumer in consumers:
         address = consumer["source"]["address"]
         direct = [
-            ref for ref in by_source[consumer["source"]["path"]]
-            if ref["source"]["address"][:len(address)] == address
+            ref
+            for ref in by_source[consumer["source"]["path"]]
+            if ref["source"]["address"][: len(address)] == address
         ]
         pending = list(direct)
         visited: set[str] = set()
@@ -507,6 +685,11 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
         # Keep only scripts and documentation after checking all raw bytes.
         if record["parse_status"] in {"parsed", "partial"} or path.endswith(".md"):
             inputs[path] = raw
+    listed_content = {path for path in records if path.split("/", 1)[0] in CONTENT_ROOTS}
+    current_content = _current_content_paths(installation)
+    added = sorted(current_content - listed_content)
+    if added:
+        raise ValueError(f"unlisted native content: {added[0]}")
     docs = _documents(records, inputs)
     definitions = []
     symbol_lookup: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -518,7 +701,8 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
             if not isinstance(item, Assignment) or item.is_variable:
                 continue
             symbol = {
-                "symbol_id": _hash([path, [index]]), "name": item.key,
+                "symbol_id": _hash([path, [index]]),
+                "name": item.key,
                 "kind": SYMBOL_CATEGORIES[category],
                 "source": _source(path, records[path]["sha256"], item, (index,)),
                 "source_validity": records[path]["parse_status"],
@@ -528,7 +712,10 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
             definitions.append(symbol)
             symbol_lookup[item.key].append(symbol)
     names = set(symbol_lookup)
-    symbol_source = {(row["source"]["path"], row["source"]["address"][0]): row["symbol_id"] for row in definitions}
+    symbol_source = {
+        (row["source"]["path"], row["source"]["address"][0]): row["symbol_id"]
+        for row in definitions
+    }
     heuristics: dict[str, dict[tuple[int, ...], dict[str, Any]]] = defaultdict(dict)
     for candidate in inventory.get("consumer_candidates", []):
         heuristics[candidate["path"]][tuple(candidate["address"])] = candidate
@@ -540,49 +727,96 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
         if record["parse_status"] not in {"parsed", "partial"}:
             continue
         parsed = parse_bytes(raw, path=path)
-        consumers.extend(_discover_consumers(path, record, parsed.root, raw.decode("utf-8-sig").splitlines(), docs, heuristics.get(path, {})))
+        consumers.extend(
+            _discover_consumers(
+                path,
+                record,
+                parsed.root,
+                raw.decode("utf-8-sig").splitlines(),
+                docs,
+                heuristics.get(path, {}),
+            )
+        )
         if parsed.errors and record["parse_status"] != "partial":
             failures.append({"kind": "catalog_parse_failure", "path": path, "scope": "whole_file"})
         for item, address, parents in _walk(parsed.root):
-            for occurrence, (name, expression, syntax, kind) in enumerate(_symbol_references(item, names, parents)):
-                targets = [symbol for symbol in symbol_lookup.get(name, []) if kind is None or symbol["kind"] == kind]
-                status = "resolved" if len(targets) == 1 else "ambiguous" if targets else "unresolved"
+            for occurrence, (name, expression, syntax, kind) in enumerate(
+                _symbol_references(item, names, parents)
+            ):
+                targets = [
+                    symbol
+                    for symbol in symbol_lookup.get(name, [])
+                    if kind is None or symbol["kind"] == kind
+                ]
+                status = (
+                    "resolved" if len(targets) == 1 else "ambiguous" if targets else "unresolved"
+                )
                 if syntax == "quoted_symbol_observation":
                     status = "observational"
-                elif record["parse_status"] == "partial" or any(symbol["source_validity"] == "partial" for symbol in targets):
+                elif record["parse_status"] == "partial" or any(
+                    symbol["source_validity"] == "partial" for symbol in targets
+                ):
                     status = "partial_source"
-                references.append({
-                    "reference_id": _hash([path, list(address), syntax, name, occurrence]),
-                    "source": _source(path, record["sha256"], item, address),
-                    "definition": parents[0] if parents else (item.key if isinstance(item, Assignment) else "unknown"),
-                    "field": ".".join((*parents[1:], item.key)) if isinstance(item, Assignment) else ".".join(parents[1:]),
-                    "symbol": name, "expression": expression, "syntax": syntax,
-                    "requested_kind": kind or "unknown", "status": status,
-                    "resolved_to": sorted(symbol["symbol_id"] for symbol in targets),
-                    "caller_symbol_id": symbol_source.get((path, address[0])),
-                    "scope_permission": "unknown", "native_disposition": "native_retained",
-                })
+                references.append(
+                    {
+                        "reference_id": _hash([path, list(address), syntax, name, occurrence]),
+                        "source": _source(path, record["sha256"], item, address),
+                        "definition": parents[0]
+                        if parents
+                        else (item.key if isinstance(item, Assignment) else "unknown"),
+                        "field": ".".join((*parents[1:], item.key))
+                        if isinstance(item, Assignment)
+                        else ".".join(parents[1:]),
+                        "symbol": name,
+                        "expression": expression,
+                        "syntax": syntax,
+                        "requested_kind": kind or "unknown",
+                        "status": status,
+                        "resolved_to": sorted(symbol["symbol_id"] for symbol in targets),
+                        "caller_symbol_id": symbol_source.get((path, address[0])),
+                        "scope_permission": "unknown",
+                        "native_disposition": "native_retained",
+                    }
+                )
     cycles = _cycles(definitions, references)
     _dependencies(consumers, references, cycles)
     consumers.sort(key=lambda row: (row["source"]["path"], row["source"]["address"]))
-    references.sort(key=lambda row: (row["source"]["path"], row["source"]["address"], row["reference_id"]))
+    references.sort(
+        key=lambda row: (row["source"]["path"], row["source"]["address"], row["reference_id"])
+    )
     definitions.sort(key=lambda row: (row["source"]["path"], row["source"]["address"]))
     failure_scopes = [
-        {"path": path, "scope": "whole_file", "parse_status": record["parse_status"], "consumer_completeness": "unknown", "dependency_completeness": "unknown"}
-        for path, record in sorted(records.items()) if record["parse_status"] in {"partial", "failed"}
+        {
+            "path": path,
+            "scope": "whole_file",
+            "parse_status": record["parse_status"],
+            "consumer_completeness": "unknown",
+            "dependency_completeness": "unknown",
+        }
+        for path, record in sorted(records.items())
+        if record["parse_status"] in {"partial", "failed"}
     ]
     by_category: dict[str, Counter[str]] = defaultdict(Counter)
     for row in consumers:
         by_category[row["category"]][row["classification"]] += 1
     result: dict[str, Any] = {
-        "schema": SCHEMA, "evidence_kind": "static_check",
-        "inventory_sha256": claimed, "expected_version": inventory["expected_version"],
-        "status": "incomplete" if failures else "static_candidate_index_complete_within_declared_rules_semantics_unknown",
-        "scanner": {"module": "pdx.situated.native_catalog", "sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},
+        "schema": SCHEMA,
+        "evidence_kind": "static_check",
+        "inventory_sha256": claimed,
+        "expected_version": inventory["expected_version"],
+        "status": "incomplete"
+        if failures
+        else "static_candidate_index_complete_within_declared_rules_semantics_unknown",
+        "scanner": {
+            "module": "pdx.situated.native_catalog",
+            "sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        },
         "scope": {
-            "input": "all_hashed_native_files_from_raw_inventory", "mod_inputs": [],
+            "input": "all_hashed_native_files_from_raw_inventory",
+            "mod_inputs": [],
             "strategy_fields": "all_non_variable_definition_fields_except_icon_and_type",
-            "map_fields": sorted(MAP_FIELDS), "explicit_ai_field_categories": sorted(AI_FIELD_CATEGORIES),
+            "map_fields": sorted(MAP_FIELDS),
+            "explicit_ai_field_categories": sorted(AI_FIELD_CATEGORIES),
             "other_fields": "documented_scored_candidates_and_unresolved_raw_heuristics",
             "reference_scan": "all_inventory_parsed_native_ASTs_with_symbol_names_explicit_prefixes_and_numeric_unknowns",
             "limitations": [
@@ -598,20 +832,36 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
             "index_kind": "implementation-independent static candidate index",
             "legal_consumers": "unknown",
             "basis": "static candidate occurrences from declared native rules; unresolved, unclassified, and failed scopes prevent a complete engine field denominator",
-            "direct_candidate_occurrences": sum(row["classification"] == "direct_candidate" for row in consumers),
-            "unresolved_occurrences": sum(row["classification"] == "unresolved" for row in consumers),
+            "direct_candidate_occurrences": sum(
+                row["classification"] == "direct_candidate" for row in consumers
+            ),
+            "unresolved_occurrences": sum(
+                row["classification"] == "unresolved" for row in consumers
+            ),
             "engine_completeness": "incomplete_unresolved_unclassified_or_failed_scopes",
         },
-        "consumers": consumers, "symbol_definitions": definitions, "references": references,
-        "dependency_cycles": cycles, "parse_failure_scopes": failure_scopes,
+        "consumers": consumers,
+        "symbol_definitions": definitions,
+        "references": references,
+        "dependency_cycles": cycles,
+        "parse_failure_scopes": failure_scopes,
         "failures": sorted(failures, key=canonical_json),
         "summary": {
-            "checked_input_files": len(records), "consumers": len(consumers),
-            "classifications": dict(sorted(Counter(row["classification"] for row in consumers).items())),
-            "categories": {key: dict(sorted(value.items())) for key, value in sorted(by_category.items())},
-            "symbol_definitions": len(definitions), "references": len(references),
-            "reference_statuses": dict(sorted(Counter(row["status"] for row in references).items())),
-            "dependency_cycles": len(cycles), "failures": len(failures),
+            "checked_input_files": len(records),
+            "consumers": len(consumers),
+            "classifications": dict(
+                sorted(Counter(row["classification"] for row in consumers).items())
+            ),
+            "categories": {
+                key: dict(sorted(value.items())) for key, value in sorted(by_category.items())
+            },
+            "symbol_definitions": len(definitions),
+            "references": len(references),
+            "reference_statuses": dict(
+                sorted(Counter(row["status"] for row in references).items())
+            ),
+            "dependency_cycles": len(cycles),
+            "failures": len(failures),
         },
     }
     result["catalog_sha256"] = _hash(result)
@@ -624,7 +874,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inventory", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args(argv)
-    result = build_native_catalog(args.installation, json.loads(args.inventory.read_text(encoding="utf-8")))
+    result = build_native_catalog(
+        args.installation, json.loads(args.inventory.read_text(encoding="utf-8"))
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(canonical_json(result), encoding="utf-8", newline="\n")
     print(canonical_json(result["summary"]), end="")

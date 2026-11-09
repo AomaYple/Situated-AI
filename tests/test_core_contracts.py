@@ -73,7 +73,7 @@ def test_contract_mapping_roundtrip_preserves_typed_immutable_values():
     decoded = c.FactSpec.from_mapping(original.as_dict())
     assert decoded == original
     with pytest.raises(FrozenInstanceError):
-        decoded.id = "changed"
+        decoded.id = "changed"  # type: ignore[misc]
     with pytest.raises(ValueError, match="tuple"):
         replace(original, consumer_ids=["finance.consumer"])
 

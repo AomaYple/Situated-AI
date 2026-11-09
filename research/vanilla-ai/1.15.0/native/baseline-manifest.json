@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "profile": "situated-ai/production/1.15",
+  "game_version": "1.15.0",
+  "build_id": "caligula:6338547985dbc271523e149f362a6fd93dc62975;clausewitz:a65fc88f3e604839357cb5b2aaf3b123e9d7434e",
+  "files": [
+    {
+      "path": "launcher/launcher-settings.json",
+      "sha256": "4b7032eeb5fc7f0f64b60690d5d2b1bbc4b7ca5119b44bb76eb2f7788a9fd91c"
+    },
+    {
+      "path": "caligula_branch.txt",
+      "sha256": "d63c818d818af02cdb1d59d338ca1b68420421ccdcf1b131193f58e191eb6ca8"
+    },
+    {
+      "path": "caligula_rev.txt",
+      "sha256": "41646ad1bb09180c7ce218ed46af8d9143c54dc3b69dfc0fba6254db65ad299d"
+    },
+    {
+      "path": "clausewitz_branch.txt",
+      "sha256": "673cffa83790df7106aa75435d0a8bee40d68c6cf5cfe6d47cd89df223ff2294"
+    },
+    {
+      "path": "clausewitz_rev.txt",
+      "sha256": "1085952c68b4ffa4ebab5d7ebd017e7a6492e22511494e0b371120a8f56a8107"
+    },
+    {
+      "path": "binaries/checksum.txt",
+      "sha256": "7d1e8421e8f37c4cd71d3d6fa016e1f5730aef669c9eee786b1cfbce83a0a8d6"
+    },
+    {
+      "path": "game/common/decrees/00_decree.txt",
+      "sha256": "3d2427216709844f4233649208efad0056b8a09608eb078249aeb6ff855c2445"
+    },
+    {
+      "path": "game/common/ai_strategies/00_default_strategy.txt",
+      "sha256": "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73"
+    },
+    {
+      "path": "game/common/ai_strategies/03_political_strategies.txt",
+      "sha256": "2b0b83d06cc4ef8fb1bc58902ca4f90cf0723838afef6d81854e301f5f7c62f4"
+    },
+    {
+      "path": "game/common/diplomatic_actions/00_relations_actions.txt",
+      "sha256": "6cd5d572ae976a2e1f4f4af5c81fb577ed4804bace442e6fa31bace09881749b"
+    }
+  ]
+}

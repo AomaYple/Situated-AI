@@ -97,6 +97,7 @@ from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
 from pdx.situated import bindings as situated_bindings
 from pdx.situated import domain_coverage as situated_domain_coverage
 from pdx.situated import inventory as situated_inventory
+from pdx.situated import production_profile as situated_production_profile
 
 # 必须在构造 Console 之前调用 —— 理由见 pdx/console.py 的模块文档：
 # rich 替代不了编码兜底，GBK 重定向下它自己就会抛 UnicodeEncodeError。
@@ -2646,15 +2647,51 @@ def _modgen_output_changes(production: dict[str, str | bytes]) -> dict[Path, byt
         }
 
 
+def _production_profile(name: str | None):
+    """Load an explicitly requested profile from the frozen native baseline.
+
+    Profile generation is intentionally offline and reproducible.  The live
+    game installation is not an implicit input to the 1.15 delivery path.
+    """
+    if name is None:
+        return None
+    if name != "1.15.0":
+        raise ValueError(f"不支持的 production profile：{name}（仅支持 1.15.0）")
+    situated_production_profile.verify_baseline()
+    return situated_production_profile.load_profile(situated_production_profile.BASELINE_ROOT)
+
+
+def _profile_output_root() -> Path:
+    return distribution.profile_output_root()
+
+
+def _check_profile_outputs(profile) -> dict[str, bytes]:
+    return distribution.check_profile_outputs(profile, root=_profile_output_root())
+
+
 @app.command("modgen")
 def modgen_cmd(
     write: Annotated[bool, typer.Option("--write", help="生成唯一正式 Mod 的仓库产物")] = False,
     check: Annotated[bool, typer.Option("--check", help="逐字节核对生成物，不写盘")] = False,
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+    ] = None,
 ) -> None:
     """从生产 TOML 和锁定原版底本生成标准 Mod；生成物禁止手改。"""
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
+        selected_profile = _production_profile(profile)
+        if selected_profile is not None:
+            if write:
+                files = distribution.write_profile_outputs(selected_profile)
+                console.print(f"[green]已生成 1.15.0 policy 产物：{len(files)} 个文件[/]")
+            elif check:
+                _check_profile_outputs(selected_profile)
+                console.print("[green]1.15.0 隔离产物与 profile lock 逐字节一致[/]")
+            else:
+                console.print("Situated AI 1.15.0 profile：使用 --write 生成 / --check 核对")
+            return
         if not (config.GAME / "common").is_dir():
             raise ValueError(f"缺少锁定游戏原件：{config.GAME / 'common'}")
         if write:
@@ -2710,10 +2747,18 @@ def package_cmd(
     output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = (
         distribution.DEFAULT_PACKAGE_PATH
     ),
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+    ] = None,
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
     try:
-        target = distribution.package(output)
+        selected_profile = _production_profile(profile)
+        target = (
+            distribution.profile_package(output, selected_profile)
+            if selected_profile is not None
+            else distribution.package(output)
+        )
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
     console.print(f"[green]已生成[/] {escape(str(target))}")
@@ -2773,9 +2818,17 @@ def citations_cmd(
 @app.command("modguard")
 def modguard_cmd(
     offline: Annotated[bool, typer.Option("--offline", help="从入库快照核对原版接口")] = False,
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+    ] = None,
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
+        selected_profile = _production_profile(profile)
+        if selected_profile is not None:
+            distribution.check_profile_outputs(selected_profile)
+            console.print("[green]1.15.0 profile 身份、底本、policy 接线和隔离产物检查通过[/]")
+            return
         if offline:
             distribution.check_generation_lock()
             policy, extensions = distribution.production_configuration()
@@ -2825,6 +2878,9 @@ def decision_audit_cmd(
         "--offline",
         help="只使用入库源和锁定底本；适用于无游戏目录的 CI 静态合同检查",
     ),
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+    ] = None,
 ) -> None:
     """核对情境决策合同并生成可解释报告。
 
@@ -2834,6 +2890,39 @@ def decision_audit_cmd(
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
+        selected_profile = _production_profile(profile)
+        if selected_profile is not None:
+            profile_files = distribution.check_profile_outputs(selected_profile)
+            metadata = json.loads(profile_files[distribution.METADATA_NAME])
+            custom = metadata.get("game_custom_data", {})
+            policy_name = custom.get("policy") if isinstance(custom, dict) else None
+            metadata = {
+                "schema": 1,
+                "evidence": "generated_1.15_profile_contract",
+                "profile": "situated-ai/production/1.15",
+                "game_version": selected_profile.game_version,
+                "build_id": selected_profile.build_id,
+                "policy": policy_name,
+                "generated_output": str(distribution.profile_output_root()),
+                "consumers": [
+                    {
+                        "id": row.id,
+                        "source": row.source,
+                        "definition": row.definition,
+                        "field": list(row.field),
+                        "actor": row.actor,
+                        "target": row.target,
+                        "operation": row.operation,
+                        "neutral": row.neutral,
+                        "bounds": list(row.bounds),
+                    }
+                    for row in selected_profile.declarations
+                ],
+            }
+            report = metadata
+            _write_json(target, report)
+            console.print("[green]1.15.0 profile 静态审计通过[/]")
+            return
         if offline:
             metadata = decision_report.source_metadata()
         else:

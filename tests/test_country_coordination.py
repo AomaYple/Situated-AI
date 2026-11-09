@@ -67,6 +67,24 @@ def test_typed_state_bridge_preserves_local_unknowns(policy):
     assert result.as_dict()["unknown_policy"] == "unknown_never_inferred_false"
 
 
+def test_typed_state_bridge_uses_normalized_policy_thresholds(policy):
+    changed = deepcopy(policy.data)
+    changed["coordination"]["needs"]["education"]["when"] = (
+        (
+            {"fact": "literacy", "op": "<", "value": 0.25},
+            {"fact": "population", "op": ">", "value": 0},
+        ),
+    )
+    modified = replace(policy, data=changed)
+    baseline = country_coordination.evaluate_typed(policy, facts(literacy=0.4))
+    result = country_coordination.evaluate_typed(modified, facts(literacy=0.4))
+    assert next(item for item in baseline.needs if item.id == "need_education").value is True
+    signal = next(item for item in result.needs if item.id == "need_education")
+    assert signal.value is False
+    assert "0.25" in signal.expression
+    assert signal.source_facts == ("literacy", "population")
+
+
 def test_unknown_recovery_can_use_proven_lower_capacity(policy):
     # A missing auxiliary high-tier fact must not manufacture an expansion signal.
     values = facts(default=None, debt_ratio=0.1, net_surplus=100, bureaucracy=0)

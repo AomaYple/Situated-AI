@@ -829,6 +829,7 @@ def main() -> int:
         "observation.json",
         "actor-objectives.json",
         "static-baseline.json",
+        "configuration-baseline.json",
         "cost-baseline.json",
     }:
         raise ValueError("output would overwrite input inventory")
@@ -863,7 +864,11 @@ def main() -> int:
             result["id"] = identity
             log = args.output.resolve() / f"cost-{identity}.log"
             log.write_text(result.pop("output"), encoding="utf-8", newline="\n")
-            result["log"] = log.relative_to(ROOT).as_posix()
+            # Receipts resolve log paths relative to the directory containing
+            # cost-baseline.json.  Keep that contract identical for repository
+            # and temporary outputs; a ROOT-relative path would be ambiguous
+            # when the caller writes evidence outside the repository.
+            result["log"] = log.relative_to(args.output.resolve()).as_posix()
             measurements.append(result)
         write_json(
             args.output / "cost-baseline.json",
@@ -871,6 +876,8 @@ def main() -> int:
                 "schema": "situated-ai.a0-offline-cost/1",
                 "evidence_kind": "measured_offline",
                 "producer_sha256": digest(Path(__file__).read_bytes()),
+                "input_inventory_sha256": digest(inventory_raw),
+                "log_base": "cost-baseline.json parent",
                 "python": sys.version,
                 "platform": platform.platform(),
                 "parallelism": 1,
