@@ -59,8 +59,10 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
-    assert "当前没有待执行的开发计划" in plan_entry
-    assert "当前没有待执行的方向子计划" in subplan_entry
+    assert "架构实现未开始" in plan_entry
+    assert "(1.15架构设计.md)" in plan_entry
+    assert "(exec/1.15架构-实施计划.md)" in plan_entry
+    assert "仅目标，未启动" in subplan_entry
     assert "(archive/X1/架构主计划.md)" in plan_entry
     assert "(archive/X1/架构子计划.md)" in subplan_entry
     assert "已完成并归档" in plan
@@ -105,7 +107,7 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     assert "由用户验收" in plan
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
-    assert "当前没有待执行的开发计划" in checklist
+    assert "本轮仅交付设计与计划" in checklist
     assert "架构主计划 X1" in checklist
     assert "长期行为" in checklist
     assert distribution.RELEASE_VERSION in checklist
