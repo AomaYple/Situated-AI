@@ -11,7 +11,7 @@ import pytest
 
 from pdx.parser import parse_text
 from pdx.situated import compiler, network_profile, production_profile, r2_reader_authority
-from pdx.version_contracts import select_version
+from pdx.version_contracts import active_version, select_version
 from tools.ci import architecture_inventory as inventory
 
 
@@ -134,8 +134,46 @@ def test_measure_uses_selected_game_root_even_with_inherited_environment(monkeyp
     assert result["output"].strip() == str(game.resolve())
 
 
+@pytest.mark.parametrize("parent_version", ["1.14.5", "1.15.0"])
+@pytest.mark.parametrize("selected_version", ["1.14.5", "1.15.0"])
+def test_measure_explicit_contract_reaches_the_real_child(
+    monkeypatch, parent_version, selected_version
+):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", parent_version)
+    result = inventory.measure(
+        [
+            sys.executable,
+            "-B",
+            "-c",
+            "from pdx.version_contracts import active_version; print(active_version())",
+        ],
+        contract_version=selected_version,
+    )
+    assert result["exit_code"] == 0
+    assert result["V3_CONTRACT_PROFILE"] == selected_version
+    assert result["output"].strip() == selected_version
+    assert active_version() == parent_version
+
+
+@pytest.mark.parametrize("parent_version", ["1.14.5", "1.15.0"])
+def test_offline_worker_keeps_the_real_historical_model(
+    monkeypatch, capsys, tmp_path, parent_version
+):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", parent_version)
+    inventory.worker("offline_model", tmp_path)
+    observed = json.loads(capsys.readouterr().out)
+    assert observed["contract_version"] == "1.14.5"
+    assert observed["action_instances"] == 5742
+    assert observed["writers"] == 5775
+    assert active_version() == parent_version
+
+
+@pytest.mark.parametrize("parent_version", ["1.14.5", "1.15.0"])
 @pytest.mark.parametrize("r2", [False, True])
-def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, tmp_path, r2):
+def test_measurement_can_write_outside_repository_with_bound_input(
+    monkeypatch, tmp_path, r2, parent_version
+):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", parent_version)
     output = tmp_path / "output"
     source = tmp_path / "inventory.json"
     source.write_bytes(b"{}")
@@ -167,9 +205,11 @@ def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, 
         inventory, "r2_profile_baseline", lambda *_: {"budget_violations": [], "actual_r2": True}
     )
     calls = []
+    selected_versions = []
 
-    def measured(command, **_kwargs):
+    def measured(command, **kwargs):
         calls.append(command)
+        selected_versions.append(kwargs.get("contract_version"))
         # A failing old generator remains a failing workload in the receipt.
         return {"output": "measured", "exit_code": 3 if "modgen" in command else 0}
 
@@ -180,6 +220,8 @@ def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, 
     for measurement in cost["measurements"]:
         assert (output / measurement["log"]).read_text(encoding="utf-8") == "measured"
     assert len(calls) == (4 if r2 else 3)
+    assert selected_versions == ["1.15.0", "1.14.5", "1.14.5"] + (["1.15.0"] if r2 else [])
+    assert [row["contract_version"] for row in cost["measurements"]] == selected_versions
     assert cost["parallelism"] == 1
     assert (
         next(row for row in cost["measurements"] if row["id"] == "old_generator_on_local_1.15")[
@@ -424,15 +466,17 @@ def test_r2_metrics_read_actual_built_overlay_and_keep_violations(monkeypatch):
     assert road["overlay_ast"]["query_forms"] == {"every_country": 1}
 
 
+@pytest.mark.parametrize("parent_version", ["1.14.5", "1.15.0"])
 @pytest.mark.parametrize("violations", [[], [{"budget": "excess"}]])
 def test_r2_worker_emits_budget_receipt_and_fails_on_excess(
-    monkeypatch, capsys, tmp_path, violations
+    monkeypatch, capsys, tmp_path, violations, parent_version
 ):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", parent_version)
     report = {"budget_violations": violations, "runtime": "unknown"}
     calls = []
 
     def baseline(game):
-        calls.append(game)
+        calls.append((game, active_version()))
         return report
 
     monkeypatch.setattr(inventory, "r2_profile_baseline", baseline)
@@ -441,5 +485,6 @@ def test_r2_worker_emits_budget_receipt_and_fails_on_excess(
             inventory.worker("r2_profile", tmp_path)
     else:
         inventory.worker("r2_profile", tmp_path)
-    assert calls == [tmp_path]
+    assert calls == [(tmp_path, "1.15.0")]
     assert json.loads(capsys.readouterr().out) == report
+    assert active_version() == parent_version

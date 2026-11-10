@@ -28,6 +28,7 @@ import psutil
 
 from pdx.model import Block, Scalar
 from pdx.parser import parse_bytes
+from pdx.version_contracts import active_version, select_version
 
 if TYPE_CHECKING:
     from pdx.situated.action_network import NetworkProgram
@@ -1168,13 +1169,21 @@ def configuration_inventory(native_inventory: dict) -> dict[str, Any]:
     }
 
 
-def measure(command: list[str], *, cwd: Path = ROOT, game: Path | None = None) -> dict[str, Any]:
+def measure(
+    command: list[str],
+    *,
+    cwd: Path = ROOT,
+    game: Path | None = None,
+    contract_version: str | None = None,
+) -> dict[str, Any]:
     """Serial sampled RSS of the command's process tree; do not include observer."""
     with tempfile.TemporaryFile() as output:
         started = time.perf_counter()
         env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
         if game is not None:
             env["V3_ROOT"] = str(game.resolve())
+        if contract_version is not None:
+            env["V3_CONTRACT_PROFILE"] = active_version(contract_version)
         process = subprocess.Popen(
             command,
             cwd=cwd,
@@ -1205,6 +1214,7 @@ def measure(command: list[str], *, cwd: Path = ROOT, game: Path | None = None) -
     return {
         "command": command,
         "V3_ROOT": env.get("V3_ROOT"),
+        "V3_CONTRACT_PROFILE": env.get("V3_CONTRACT_PROFILE"),
         "cwd": str(cwd),
         "exit_code": process.returncode,
         "wall_seconds": wall,
@@ -1223,10 +1233,12 @@ def worker(kind: str, game: Path) -> None:
     elif kind == "offline_model":
         from pdx.situated.compiler import load_model  # noqa: PLC0415
 
-        model = load_model()
+        with select_version("1.14.5"):
+            model = load_model()
         print(
             json.dumps(
                 {
+                    "contract_version": "1.14.5",
                     "action_instances": len(model.action_instances),
                     "writers": len(model.consumer_ir.writers) if model.consumer_ir else None,
                     "meaning": "old offline IR construction; not native regeneration",
@@ -1234,7 +1246,8 @@ def worker(kind: str, game: Path) -> None:
             )
         )
     elif kind == "r2_profile":
-        result = r2_profile_baseline(game)
+        with select_version("1.15.0"):
+            result = r2_profile_baseline(game)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         if result["budget_violations"]:
             raise ValueError("R2 static cost exceeds declared budgets; see worker JSON")
@@ -1276,7 +1289,8 @@ def main() -> int:
     observation = observation_inventory(inventory, args.game_root)
     static = static_samples(args.game_root)
     if args.r2:
-        static["r2_profile"] = r2_profile_baseline(args.game_root)
+        with select_version("1.15.0"):
+            static["r2_profile"] = r2_profile_baseline(args.game_root)
     capability = capability_inventory(inventory, args.game_root) if args.r2 else None
     validate_inventory(inventory, args.game_root)
     reports = [
@@ -1296,18 +1310,27 @@ def main() -> int:
         prefix = [sys.executable, "-B", "-X", "utf8"]
         base = [str(Path(__file__).resolve()), "--game-root", str(args.game_root)]
         commands = [
-            ("native_and_frozen_parse", [*prefix, *base, "--worker", "parse_samples"]),
-            ("frozen_offline_model_build", [*prefix, *base, "--worker", "offline_model"]),
-            ("old_generator_on_local_1.15", [*prefix, "-m", "pdx.cli", "modgen", "--check"]),
+            ("native_and_frozen_parse", [*prefix, *base, "--worker", "parse_samples"], "1.15.0"),
+            ("frozen_offline_model_build", [*prefix, *base, "--worker", "offline_model"], "1.14.5"),
+            (
+                "old_generator_on_local_1.15",
+                [*prefix, "-m", "pdx.cli", "modgen", "--check"],
+                "1.14.5",
+            ),
         ]
         if args.r2:
             commands.append(
-                ("r2_profile_compile_and_generate", [*prefix, *base, "--worker", "r2_profile"])
+                (
+                    "r2_profile_compile_and_generate",
+                    [*prefix, *base, "--worker", "r2_profile"],
+                    "1.15.0",
+                )
             )
         measurements = []
-        for identity, command in commands:
-            result = measure(command, game=args.game_root)
+        for identity, command, version in commands:
+            result = measure(command, game=args.game_root, contract_version=version)
             result["id"] = identity
+            result["contract_version"] = version
             log = args.output.resolve() / f"cost-{identity}.log"
             log.write_text(result.pop("output"), encoding="utf-8", newline="\n")
             # Receipts resolve log paths relative to the directory containing
