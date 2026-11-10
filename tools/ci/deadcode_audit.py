@@ -37,6 +37,8 @@ DECORATOR_HINTS = (
     "pytest.mark.",
     "app.command",
     "cli.command",
+    "app.callback",
+    "cli.callback",
     "typer.",
     "click.",
     "hookimpl",

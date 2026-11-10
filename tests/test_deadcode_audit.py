@@ -151,3 +151,32 @@ def test_显式文本表缺少源码或引用文件不能冒充空扫描(missing
     supplied.pop(missing)
     with pytest.raises(ValueError, match=missing.replace(".", r"\.")):
         audit.scan_paths(["source.py"], surface=supplied, reference_paths=["reference.py"])
+
+
+@pytest.mark.parametrize("owner", ["app", "cli"])
+@pytest.mark.parametrize("registration", ["callback", "command"])
+def test_Typer注册入口保留且普通未注册函数仍报告(
+    owner, registration, tmp_path, monkeypatch
+) -> None:
+    text = (
+        f"import typer\n{owner} = typer.Typer()\n\n"
+        f"@{owner}.{registration}()\n"
+        "def registered_entry():\n    return None\n\n"
+        "def unused_callback():\n    return None\n"
+    )
+    rows = _scan(("entry.py", text))
+    registered = _one(rows, "registered_entry")
+    assert registered.local_loads == 0
+    assert registered.other_uses == 0
+    assert registered.verdict == "动态入口或 API"
+    candidates = audit._report(rows, ["entry.py"])["definite_candidates"]
+    assert isinstance(candidates, list)
+    assert [row["name"] for row in candidates] == ["unused_callback"]
+    source = "src/pdx/entry.py"
+    path = tmp_path / source
+    path.parent.mkdir(parents=True)
+    path.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(audit, "ROOT", tmp_path)
+    monkeypatch.setattr(audit, "_tracked_paths", lambda: [source])
+    monkeypatch.setattr(audit, "_reference_paths", lambda: [source])
+    assert audit.main(["--check"]) == 1
