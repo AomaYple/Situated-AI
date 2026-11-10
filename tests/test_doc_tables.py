@@ -371,6 +371,77 @@ def test_显式开_allow_drop_才会删行(tmp_path: Path) -> None:
 
 
 @_unit
+@pytest.mark.parametrize(
+    "keys",
+    [
+        ("gone-a", "gone-b", "keep-a", "changed", "keep-b"),
+        ("gone-a", "keep-a", "gone-b", "changed", "keep-b"),
+    ],
+    ids=["adjacent-drops", "separated-drops"],
+)
+def test_multiple_drops_and_append_preserve_original_author_rows_in_one_pass(
+    tmp_path: Path, keys: tuple[str, ...]
+) -> None:
+    rows = {
+        "gone-a": "| `gone-a` | 8 | 已移除甲 |",
+        "gone-b": "| `gone-b` | 9 | 已移除乙 |",
+        "keep-a": "|  **`keep-a`** | **1** | 手写说明甲 |",
+        "changed": "| `changed` | 2 | 手写说明乙 |",
+        "keep-b": "| `keep-b` | 3 | |",
+    }
+    prefix = "表前散文\n\n" + HEAD3
+    suffix = "\n表后散文\n"
+    doc = _doc(tmp_path, prefix + "\n".join(rows[key] for key in keys) + "\n" + suffix)
+    spec = doc_tables.KeyedTableSpec(
+        name="drop-and-append",
+        header=HEAD3_LINE,
+        cells=lambda: [
+            ("keep-a", {1: "1"}),
+            ("changed", {1: "20"}),
+            ("keep-b", {1: "3"}),
+            ("new", {1: "4"}),
+        ],
+        allow_drop=True,
+    )
+    expected = (
+        prefix
+        + rows["keep-a"]
+        + "\n| `changed` | 20 | 手写说明乙 |\n"
+        + rows["keep-b"]
+        + f"\n| `new` | 4 | {doc_tables.NEW_CELL} |\n"
+        + suffix
+    ).encode()
+    doc_tables.patch_doc(doc, [spec], write=True)
+    assert doc.read_bytes() == expected
+    doc_tables.patch_doc(doc, [spec], write=True)
+    assert doc.read_bytes() == expected
+
+
+@_unit
+def test_skipped_short_row_does_not_shift_raw_rows(tmp_path: Path) -> None:
+    doc = _doc(
+        tmp_path,
+        "| 作者 | 文件 | 字节 |\n|---|---|---|\n"
+        "| |\n| 手写甲 | `unknown` | 7 |\n| 手写乙 | `kept` | 2 |\n",
+    )
+    spec = doc_tables.KeyedTableSpec(
+        name="nonfirst-key",
+        header="| 作者 | 文件 | 字节 |",
+        key_column=1,
+        cells=lambda: [("kept", {2: "2"})],
+        append_new=False,
+    )
+    expected = (
+        "| 作者 | 文件 | 字节 |\n|---|---|---|\n"
+        "| 手写甲 | `unknown` | 7 |\n| 手写乙 | `kept` | 2 |\n"
+    ).encode()
+    doc_tables.patch_doc(doc, [spec], write=True)
+    assert doc.read_bytes() == expected
+    doc_tables.patch_doc(doc, [spec], write=True)
+    assert doc.read_bytes() == expected
+
+
+@_unit
 def test_未匹配行在枚举型表上会出声(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """声称枚举全部条目的表，遇到解释不了的行必须提示。
 

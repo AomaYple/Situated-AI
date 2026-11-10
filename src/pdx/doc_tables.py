@@ -288,7 +288,7 @@ def merge_rows(
     seen: set[str] = set()
     dropped: list[str] = []
     unmatched: list[str] = []
-    for row in existing:
+    for row_index, row in enumerate(existing):
         if len(row) <= spec.key_column:
             continue
         norm = norm_key(row[spec.key_column])
@@ -302,7 +302,7 @@ def merge_rows(
             # 而错位的散文比错的数字更难发现。确实该删的表用 allow_drop 显式声明。
             if not spec.allow_drop:
                 # 原样输出**原文**：从单元格重拼会把 `| |` 写成 `|  |`
-                out.append(raw[len(out)] if raw is not None else "| " + " | ".join(row) + " |")
+                out.append(raw[row_index] if raw is not None else "| " + " | ".join(row) + " |")
                 unmatched.append(norm)
             else:
                 dropped.append(norm)
@@ -323,7 +323,7 @@ def merge_rows(
             else {i: _merge_cell(row[i] if i < len(row) else "", text) for i, text in cells.items()}
         )
         if raw is not None and _same_cells(row, merged):
-            out.append(raw[len(out)])  # 值没变 → 整行原样（含空格与加粗）
+            out.append(raw[row_index])  # 值没变 → 整行原样（含空格与加粗）
         else:
             out.append(_render(row, merged))
     if dropped:
