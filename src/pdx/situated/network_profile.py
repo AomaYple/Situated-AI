@@ -20,6 +20,7 @@ from pdx.parser import parse_text
 from . import action_network as net
 from . import core_contracts as core
 from . import expressions as ex
+from . import network_support
 from . import production_profile as native
 from . import r2_reader_authority as authority
 from .profile_configuration import ProfileConfiguration
@@ -509,6 +510,7 @@ def compile_profile(
             ),
         )
         program = net.compile_action_network(network)
+        network_support.validate_production(program)
         if row.domain in configuration.enabled_domains:
             programs.append(program)
     if seen != {item.id for item in profile.declarations}:
@@ -609,12 +611,7 @@ def _render_condition(
 
 
 def render_program(program: net.NetworkProgram, *, available: tuple[str, ...] | None = None) -> str:
-    """Lower one audited context using either supported numeric algebra.
-
-    Multiplication here is a shared lowering capability. The three installed
-    profile declarations authorize additive overlays only; this function does
-    not grant a different write operation to those physical insertion points.
-    """
+    """Lower one audited native context within its explicit support permissions."""
     if type(program) is not net.NetworkProgram or len(program.network.actions) != 1:
         raise ValueError("R2 renderer requires exactly one action in one consumer")
     if not program.network.objectives:
@@ -647,6 +644,7 @@ def render_program(program: net.NetworkProgram, *, available: tuple[str, ...] | 
             or fact != capability.fact(fact.id)
         ):
             raise ValueError("R2 renderer fact declaration differs from audited reader capability")
+    network_support.validate_lowering(program)
     known = tuple(fact.id for fact in program.network.facts) if available is None else available
     lowered = net.specialize_program(program, known)
     operation = action.definition.operation
@@ -756,6 +754,7 @@ def audit(
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "evidence": "static_symbolic_lowering",
         "runtime": "unknown",
+        "support_matrix": network_support.matrix(profile, programs),
         "programs": [
             {
                 "consumer": program.network.actions[0].definition.consumer_id,

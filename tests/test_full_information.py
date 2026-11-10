@@ -30,10 +30,12 @@ from pdx import (
     decisions,
     distribution,
     information_catalog,
+    version_contracts,
 )
 from pdx.consumer_matrix import ConsumerMatrix
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
+from pdx.situated import engine_reader_115
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,9 +51,51 @@ _SYNTHETIC_READER_EVIDENCE = (
 )
 
 
+def _source_data():
+    """Current test mutations start from the same exact declaration projection."""
+    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    if version_contracts.active_version() == "1.15.0":
+        data["baseline_sha256"] = decision_adapters.native_authority_115()["sources"][
+            "common/ai_strategies/00_default_strategy.txt"
+        ]
+        engine_reader_115.project_information_readers(data["readers"])
+    return data
+
+
+def test_current_information_projection_changes_only_reviewed_native_identity_and_two_units():
+    historical = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    with version_contracts.select_version("1.15.0"):
+        current = _source_data()
+        assert (
+            current["baseline_sha256"]
+            == hashlib.sha256(decisions.baseline_path().read_bytes()).hexdigest()
+        )
+        assert current["rules"] == historical["rules"]
+        assert current["domains"] == historical["domains"]
+        assert set(current["readers"]) == set(historical["readers"])
+        for key, row in current["readers"].items():
+            if key in {"native_army_capacity", "native_marine_capacity"}:
+                assert row == {**historical["readers"][key], "unit": "barracks_levels"}
+            else:
+                assert row == historical["readers"][key]
+        assert current["readers"]["army"]["unit"] == "battalions"
+    with version_contracts.select_version("1.14.5"):
+        assert _source_data() == historical
+
+
+@pytest.mark.parametrize("scope", ["target_country", "overlord", "enemy_country"])
+def test_current_native_target_units_do_not_authorize_foreign_country_context(scope):
+    with version_contracts.select_version("1.15.0"):
+        rules = decision_rules.load()
+        for key in ("native_army_capacity", "native_marine_capacity"):
+            reader = next(row for row in rules.readers if row.key == key)
+            with pytest.raises(ValueError, match="本国根"):
+                decision_interfaces.reader_scope(replace(reader, scope=scope), ())
+
+
 @pytest.mark.parametrize("excess", ["candidates", "field_predicates", "rule_predicates"])
 def test_configuration_growth_cannot_bypass_static_runtime_budget(excess):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     first = next(row for row in data["rules"] if row["field"] == "wanted_construction_output")
     count = 33 if excess == "candidates" else 28 if excess == "field_predicates" else 1
     predicates = 17 if excess == "rule_predicates" else 6 if excess == "field_predicates" else 1
@@ -89,7 +133,7 @@ def test_shared_information_readers_have_sha_locked_native_evidence(rules):
         or reader.engine in country_state.owned_triggers(country_state.load())
         for reader in rules.readers
     )
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     script = decision_rules.patch(
         baseline,
         rules,
@@ -176,7 +220,7 @@ def test_synthetic_values_cover_every_production_reader(rules):
 
 
 def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rules):
-    source = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    source = _source_data()
     assert {rule.id for rule in rules.rules} == {row["id"] for row in source["rules"]}
     assert {reader.key for reader in rules.readers} == set(source["readers"])
     assert {"state_value", "wanted_construction_output"} <= {
@@ -193,7 +237,7 @@ def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rule
         "geography",
         "identity",
     }
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     script = decision_rules.patch(
         baseline,
         rules,
@@ -226,7 +270,7 @@ def test_unknown_player_and_empty_switches_preserve_vanilla(rules):
         )
         is None
     )
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     assert (
         decision_rules.patch(
             baseline,
@@ -634,9 +678,13 @@ def _geography_branch_value(branch: Block, facts: dict[str, bool]) -> float:
 
 
 def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(rules):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
-    generated = (config.REPO / "mod/common/ai_strategies/00_default_strategy.txt").read_text(
-        encoding="utf-8"
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+    generated = decision_rules.patch(
+        baseline,
+        rules,
+        baseline=baseline,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        country_policy=country_state.load(),
     )
     vanilla_strategy = parse_text(baseline).root.first("ai_strategy_default")
     generated_strategy = parse_text(generated).root.first("ai_strategy_default")
@@ -697,7 +745,7 @@ def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(ru
 
 @pytest.mark.parametrize("high_uses_target", [True, False])
 def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_uses_target):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     original = next(rule for rule in rules.rules if rule.id == "geographic_port_continuity")
     top = replace(original, field=("state_value",), priority=100, value=1.1)
     lower = replace(original, id="lower", priority=50, value=0.9)
@@ -757,7 +805,7 @@ class GeneratedRuleBlocks(NamedTuple):
 
 @pytest.fixture(scope="module")
 def generated_rule_blocks(rules):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     generated = decision_rules.patch(
         baseline,
         rules,
@@ -990,7 +1038,7 @@ def test_geographic_cost_precedes_reward_and_missing_state_preserves_vanilla(
 
 
 def test_drift_bad_path_and_unproven_reader_refuse_generation(rules):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     with pytest.raises(ValueError, match="漂移"):
         decision_rules.patch(baseline, rules, baseline=baseline + "\n")
     broken = replace(
@@ -1045,14 +1093,14 @@ def test_invalid_configuration_fails_closed(tmp_path, before, after):
 
 @pytest.mark.parametrize("path", [["in_default"], ["market", "owner"], ["owner"]])
 def test_known_words_cannot_be_recombined_into_invented_scopes(path):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["readers"]["default"]["path"] = path
     with pytest.raises(ValueError, match="作用域"):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 def test_parent_and_child_fields_cannot_have_separate_authors():
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["rules"][0]["field"] = "institution_scores"
     with pytest.raises(ValueError, match="父子字段"):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
@@ -1068,7 +1116,7 @@ def test_parent_and_child_fields_cannot_have_separate_authors():
     ],
 )
 def test_compound_number_reader_rejects_ambiguous_shapes(overrides):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data = copy.deepcopy(data)
     data["readers"]["net_surplus"].update(overrides)
     with pytest.raises(ValueError, match="复合数值"):
@@ -1086,7 +1134,7 @@ def test_compound_number_reader_rejects_ambiguous_shapes(overrides):
     ],
 )
 def test_compound_boolean_reader_rejects_unsafe_parameters(parameters):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["readers"]["default"]["engine"] = "is_production_method_active"
     data["readers"]["default"]["parameters"] = parameters
     with pytest.raises(ValueError, match="复合布尔"):
@@ -1097,14 +1145,14 @@ def test_compound_boolean_reader_rejects_unsafe_parameters(parameters):
     "contexts", [[], {"unused": []}, {"unused": [{"fact": "default", "op": "=", "value": True}]}]
 )
 def test_unconsumed_or_invalid_shared_constraint_fails_closed(contexts):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["contexts"] = contexts
     with pytest.raises(ValueError, match="共享约束"):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 def test_shared_constraints_expand_into_real_fields_once(rules):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     selected = next(row for row in data["rules"] if row["id"] == "fiscal_construction_guard")
     conditions = copy.deepcopy(selected["conditions"])
     data["contexts"] = {"shared_fiscal_risk": conditions}
@@ -1122,7 +1170,7 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
             assert decision_rules.evaluate(policy, values, is_ai=True) == decision_rules.evaluate(
                 rules, values, is_ai=True
             )
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     assert decision_rules.patch(
         baseline,
         policy,
@@ -1152,10 +1200,17 @@ def test_release_package_is_deterministic(standard_release_package, tmp_path):
 def standard_release_package(tmp_path_factory):
     if not (config.GAME / "common/laws/readme.md").is_file():
         pytest.skip("需要锁定版本的游戏原件")
-    return distribution.package(
-        tmp_path_factory.mktemp("standard-release")
-        / f"situated-ai-{distribution.RELEASE_VERSION}.zip"
-    )
+    root = tmp_path_factory.mktemp("standard-release")
+    if version_contracts.active_version() == "1.15.0":
+        # Build a complete current witness through the live production boundary.
+        # The output directory is private to this module's worker; the actual
+        # source root and every executable/source check stay unchanged.
+        with pytest.MonkeyPatch.context() as patches:
+            patches.setattr(decisions, "product_path", lambda: root / "compatibility")
+            distribution.write_compatibility_outputs()
+            yield distribution.package(root / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
+    else:
+        yield distribution.package(root / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
 
 
 @pytest.mark.integration
@@ -1188,7 +1243,9 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
         assert metadata["version"] == distribution.RELEASE_VERSION
-        assert contract["status"] == "released"
+        assert contract["status"] == (
+            "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+        )
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False
         assert engineering_metadata["consumer_adapters"]["behavior_verified"] is False
@@ -1201,9 +1258,15 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert b"# SITAI SUBJECTS BEGIN" not in archive.read(
             "common/ai_strategies/00_default_strategy.txt"
         )
-        # X1 adds the local power-plant source and three treaty sources
-        # to the 70-source A2 baseline; these are physical files, not cards.
-        assert contract["consumer_count"] == 74
+        # The 1.15 native company definitions add the reviewed IP5 source to
+        # the 74 physical consumer files retained by the historical contract.
+        current = version_contracts.active_version() == "1.15.0"
+        assert contract["consumer_count"] == (75 if current else 74)
+        consumer_sources = {
+            row["source"] for row in engineering_metadata["consumer_adapters"]["consumers"]
+        }
+        assert ("common/company_types/00_companies_ip5.txt" in consumer_sources) is current
+        assert len(consumer_sources) == contract["consumer_count"]
         assert "information_rules" in contract["enabled_modules"]
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt")
         assert strategy.startswith(codecs.BOM_UTF8)

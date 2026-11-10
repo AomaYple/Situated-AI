@@ -7,16 +7,20 @@ These are static semantic witnesses, not evidence of engine execution.
 
 from __future__ import annotations
 
+import ast
 import itertools
 import re
-from typing import TYPE_CHECKING
+from dataclasses import replace
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import action_network as net
+from pdx.situated import expressions as ex
 from pdx.situated import network_profile as adapter
+from pdx.situated import network_support
 from pdx.situated import production_profile as native
 from pdx.situated.profile_configuration import DOMAINS, ProfileConfiguration
 
@@ -27,6 +31,196 @@ if TYPE_CHECKING:
 ROAD = "a0-econ-road"
 SCHOOL = "a0-pol-schools"
 DIPLOMACY = "a0-dip-relations"
+
+
+@pytest.mark.parametrize("consumer", [ROAD, SCHOOL, DIPLOMACY])
+@pytest.mark.parametrize("operator", ["eq", "ne", "lt", "le", "gt", "ge"])
+def test_supported_comparisons_have_independent_pdx_witness(consumer, operator):
+    fact = {ROAD: "infrastructure", SCHOOL: "literacy", DIPLOMACY: "influence"}[consumer]
+    root = _parsed(adapter._render_condition(ex.Compare(fact, operator, 0.5), consumer))
+    for value in (0.25, 0.5, 0.75):
+        expected = {
+            "eq": value == 0.5,
+            "ne": value != 0.5,
+            "lt": value < 0.5,
+            "le": value <= 0.5,
+            "gt": value > 0.5,
+            "ge": value >= 0.5,
+        }[operator]
+        assert _condition(root, {fact: value}, "state" if consumer == ROAD else "actor") is expected
+    if operator in {"eq", "ne"}:
+        boolean = {ROAD: "road-present", SCHOOL: "default", DIPLOMACY: "protective"}[consumer]
+        for actual, expected_boolean in itertools.product((True, False), repeat=2):
+            predicate = _parsed(
+                adapter._render_condition(ex.Compare(boolean, operator, expected_boolean), consumer)
+            )
+            expected = (
+                actual == expected_boolean if operator == "eq" else actual != expected_boolean
+            )
+            assert (
+                _condition(predicate, {boolean: actual}, "state" if consumer == ROAD else "actor")
+                is expected
+            )
+
+
+def test_support_matrix_covers_closed_features_and_actual_consumers(profile, programs):
+    network_support.validate_catalog()
+    rows = adapter.audit(profile)["support_matrix"]
+    assert isinstance(rows, list)
+    assert {(row["consumer"], row["feature"]) for row in rows} == set(
+        itertools.product(network_support.CONSUMERS, network_support.FEATURES)
+    )
+    assert len(rows) == len(network_support.CONSUMERS) * len(network_support.FEATURES)
+    assert {row["status"] for row in rows} == {"reference_only", "lowerable", "production_bound"}
+    for row in rows:
+        assert row["runtime"] == "unknown"
+        assert row["native_context"]["source"].startswith("game/common/")
+        assert row["witnesses"]
+        assert row["production_eligible"] is (row["status"] == "production_bound")
+        if row["status"] == "production_bound":
+            assert row["source_maps"]
+            assert row["production_eligible"] is True
+            assert row["lowerer"] == "network_profile.render_program"
+        else:
+            assert not row["source_maps"]
+        if row["feature"] in network_support.REFERENCE_ONLY:
+            assert row["status"] == "reference_only"
+            assert row["production_eligible"] is False
+            assert row["lowerer"] is None
+    references = {reference for row in rows for reference in row["witnesses"]}
+    for reference in references:
+        relative, *names = reference.split("::")
+        path = native.ROOT / relative
+        assert path.is_file()
+        if names:
+            functions = {
+                node.name
+                for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+                if isinstance(node, ast.FunctionDef)
+            }
+            assert len(names) == 1
+            assert names[0] in functions
+    by_identity = {(row["consumer"], row["feature"]): row for row in rows}
+    assert by_identity[ROAD, "path.interaction"]["status"] == "lowerable"
+    assert by_identity[ROAD, "path.interaction"]["production_eligible"] is False
+    assert by_identity[SCHOOL, "relation.residual"]["status"] == "production_bound"
+    assert by_identity[DIPLOMACY, "relation.residual"]["status"] == "production_bound"
+    assert set(programs) == set(network_support.CONSUMERS)
+
+
+def test_disabled_support_matrix_never_claims_an_active_writer(profile):
+    result = adapter.audit(profile, configuration=ProfileConfiguration(core=False))
+    rows = result["support_matrix"]
+    assert isinstance(rows, list)
+    assert result["programs"] == []
+    assert len(rows) == len(network_support.CONSUMERS) * len(network_support.FEATURES)
+    assert all(row["status"] != "production_bound" and not row["source_maps"] for row in rows)
+
+
+def test_new_public_core_node_cannot_silently_escape_support_classification(monkeypatch):
+    monkeypatch.setattr(net, "UnreviewedNode", net.Constant, raising=False)
+    monkeypatch.setattr(net, "__all__", [*net.__all__, "UnreviewedNode"])
+    with pytest.raises(ValueError, match="unclassified"):
+        network_support.validate_catalog()
+
+
+def test_missing_existing_feature_classification_is_rejected(monkeypatch):
+    monkeypatch.setattr(
+        network_support,
+        "FEATURES",
+        tuple(feature for feature in network_support.FEATURES if feature != "path.derived"),
+    )
+    with pytest.raises(ValueError, match="unclassified"):
+        network_support.validate_catalog()
+
+
+def test_new_path_enum_cannot_silently_gain_a_support_status(monkeypatch):
+    monkeypatch.setattr(net, "PathKind", Literal["direct", "derived", "interaction", "unreviewed"])
+    with pytest.raises(ValueError, match="unclassified"):
+        network_support.validate_catalog()
+
+
+def test_core_alias_support_cannot_self_promote_to_a_production_writer(programs):
+    original = programs[ROAD].network
+    alias = net.EffectAlias("unreviewed-alias", original.registry.accounts[0].id, ("core-proof",))
+    reference = net.compile_action_network(
+        replace(original, registry=replace(original.registry, aliases=(alias,)))
+    )
+    with pytest.raises(ValueError, match=r"production_bound.*relation.alias"):
+        network_support.validate_production(reference)
+    with pytest.raises(ValueError, match=r"lowerable.*relation.alias"):
+        adapter.render_program(reference)
+
+
+def test_core_multiply_support_cannot_change_a_native_additive_consumer(programs):
+    original = programs[ROAD].network
+    action = original.actions[0]
+    multiplied = replace(
+        action,
+        definition=replace(
+            action.definition,
+            operation="multiply",
+            unit="multiplier",
+            neutral=1,
+            lower=0.1,
+            upper=10,
+        ),
+    )
+    factors = (1.2, 1.4, 0.8)
+    reference = net.compile_action_network(
+        replace(
+            original,
+            actions=(multiplied,),
+            bridges=tuple(
+                replace(
+                    bridge,
+                    action=multiplied,
+                    term=replace(bridge.term, value=net.Constant(factor)),
+                )
+                for bridge, factor in zip(original.bridges, factors, strict=True)
+            ),
+            objectives=tuple(replace(goal, action=multiplied) for goal in original.objectives),
+            registry=replace(
+                original.registry,
+                accounts=tuple(
+                    replace(account, unit="multiplier") for account in original.registry.accounts
+                ),
+            ),
+        )
+    )
+    with pytest.raises(ValueError, match=r"production_bound.*operator.multiply"):
+        network_support.validate_production(reference)
+    with pytest.raises(ValueError, match=r"lowerable.*operator.multiply"):
+        adapter.render_program(reference)
+
+
+def test_support_matrix_rejects_forged_compiled_program(profile, programs):
+    forged = replace(programs[ROAD], contributions=())
+    with pytest.raises(ValueError, match="canonical"):
+        network_support.matrix(profile, (forged,))
+
+
+def test_lowerable_path_does_not_authorize_production_policy(profile, programs, tmp_path):
+    original = programs[ROAD].network
+    reference = net.compile_action_network(
+        replace(
+            original,
+            bridges=(replace(original.bridges[0], path="interaction"), *original.bridges[1:]),
+        )
+    )
+    lowered = _parsed(adapter.render_program(reference))
+    assert _score(lowered, {"ai": True, "infrastructure": 0.4, "road-present": False}, "state") == 2
+    with pytest.raises(ValueError, match=r"production_bound.*path.interaction"):
+        network_support.matrix(profile, (reference,))
+    source = tmp_path / "unproved-road-interaction.toml"
+    source.write_text(
+        adapter.SOURCE.read_text(encoding="utf-8").replace(
+            'path = "direct"', 'path = "interaction"', 1
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match=r"production_bound.*path.interaction"):
+        adapter.build(profile, source=source)
 
 
 def _block(value: object) -> Block:
@@ -170,8 +364,13 @@ def _condition(block: Block, facts: dict[str, object], scope: str = "actor") -> 
                 "in_default": ("default", "actor", "yes"),
             }[item.key]
             assert scope == expected_scope
-            assert _scalar(item.value) == token
-            results.append(_comparison(facts.get(fact), item.op, True))
+            if item.key == "in_default":
+                assert _scalar(item.value) in {"yes", "no"}
+                expected = _scalar(item.value) == "yes"
+            else:
+                assert _scalar(item.value) == token
+                expected = True
+            results.append(_comparison(facts.get(fact), item.op, expected))
         elif item.key == "has_attitude":
             assert scope == "actor"
             parameters = {
