@@ -36,6 +36,48 @@ if TYPE_CHECKING:
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
+def test_current_native_authority_recapture_reproduces_reviewed_bytes_twice(tmp_path, monkeypatch):
+    """Exercise the explicit writer against live sources, keeping frozen evidence untouched."""
+    reviewed = decision_adapters.NATIVE_AUTHORITY_115.read_bytes()
+    assert hashlib.sha256(reviewed).hexdigest() == decision_adapters.NATIVE_AUTHORITY_115_SHA256
+    destination = tmp_path / "authority" / "native-authority.json"
+    monkeypatch.setattr(decision_adapters, "NATIVE_AUTHORITY_115", destination)
+    with version_contracts.select_version("1.15.0"):
+        assert decision_adapters.write_native_authority_115(config.GAME) == destination
+        first = destination.read_bytes()
+        assert first == reviewed
+        assert decision_adapters.write_native_authority_115(config.GAME) == destination
+        assert destination.read_bytes() == first
+        assert decision_adapters.native_authority_115()["game_version"] == "1.15.0"
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
+)
+def test_current_native_authority_recapture_rejects_existing_drift_without_overwriting(
+    tmp_path, monkeypatch
+):
+    reviewed = decision_adapters.NATIVE_AUTHORITY_115.read_bytes()
+    destination = tmp_path / "native-authority.json"
+    damaged = reviewed + b"\n"
+    destination.write_bytes(damaged)
+    sentinel = tmp_path / "keep.txt"
+    sentinel.write_bytes(b"existing evidence must survive")
+    before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
+    monkeypatch.setattr(decision_adapters, "NATIVE_AUTHORITY_115", destination)
+    with (
+        version_contracts.select_version("1.15.0"),
+        pytest.raises(ValueError, match="frozen declaration drift"),
+    ):
+        decision_adapters.write_native_authority_115(config.GAME)
+    assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == before
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
+)
 def test_actual_input_pressure_and_output_use_opposite_joint_groups():
     """投入和产出都必须进入联合程序，不用优先级屏蔽另一方向。"""
     from pdx.situated import programs
