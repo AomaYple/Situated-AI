@@ -52,10 +52,10 @@ def supply_enum_case(tmp_path, monkeypatch):
         ),
     }
     native.update(evidence)
+    parameter_hashes = dict(vanilla_inventory._parameter_evidence_contract())
+    monkeypatch.setattr(vanilla_inventory, "_parameter_evidence_contract", lambda: parameter_hashes)
     for name, raw in evidence.items():
-        monkeypatch.setitem(
-            vanilla_inventory._PARAMETER_EVIDENCE_HASHES, name, hashlib.sha256(raw).hexdigest()
-        )
+        monkeypatch.setitem(parameter_hashes, name, hashlib.sha256(raw).hexdigest())
     monkeypatch.setattr(
         engine_scope,
         "strategy_snapshot",
@@ -166,7 +166,9 @@ def test_supply_getter_proof_checks_actual_ast_after_a_new_hash(supply_enum_case
     name = "common/alert_types/00_alert_types.txt"
     native[name] = native[name].replace(b"market_goods_pricier", b"invented_getter")
     monkeypatch.setitem(
-        vanilla_inventory._PARAMETER_EVIDENCE_HASHES, name, hashlib.sha256(native[name]).hexdigest()
+        vanilla_inventory._parameter_evidence_contract(),
+        name,
+        hashlib.sha256(native[name]).hexdigest(),
     )
     inventory = replace(
         inventory,
@@ -557,19 +559,27 @@ def test_nested_native_fragment_keeps_all_ancestor_guards_and_exact_body(
 
 @pytest.fixture(params=["laborers", "peasants", "machinists"])
 def population_case(tmp_path, monkeypatch, request):
+    from pdx import version_contracts
+
     case = _reader_case("resource", tmp_path, monkeypatch)
     inventory, native, generated, _ = case
     source = inventory.surfaces[0].source
     getter = "common/journal_entries/00_urbanization.txt"
     pop_type = request.param
     definition = f"common/pop_types/{pop_type}.txt"
-    native[getter] = (
-        b"je_urbanization_events_1={possible={pop_type_percent_country={pop_type=peasants percent>0.6}}}"
+    current = version_contracts.active_version() == "1.15.0"
+    parameters = (
+        "target=pop_type:peasants value>0.6" if current else "pop_type=peasants percent>0.6"
     )
+    native[getter] = (
+        "je_urbanization_events_1={possible={pop_type_percent_country={" + parameters + "}}}"
+    ).encode()
     native[definition] = f"{pop_type}={{wage_weight=1}}".encode()
+    expected_hashes = dict(vanilla_inventory._parameter_evidence_contract())
+    monkeypatch.setattr(vanilla_inventory, "_parameter_evidence_contract", lambda: expected_hashes)
     for name in (getter, definition):
         monkeypatch.setitem(
-            vanilla_inventory._PARAMETER_EVIDENCE_HASHES,
+            expected_hashes,
             name,
             hashlib.sha256(native[name]).hexdigest(),
         )
@@ -582,8 +592,8 @@ def population_case(tmp_path, monkeypatch, request):
         minimum=0,
         maximum=1,
         path=("owner",),
-        value_field="percent",
-        parameters=(("pop_type", pop_type),),
+        value_field="value" if current else "percent",
+        parameters=(("target", "pop_type:" + pop_type),) if current else (("pop_type", pop_type),),
     )
     policy = replace(policy, readers=(reader,))
     updated = replace(adapters, policies=((source, policy),))
@@ -625,7 +635,13 @@ def test_exact_population_reader_closes_the_optional_field_condition(population_
     assert node is not None
     assert _implicit_conditions_known(node, {"actor_scope": "state"}, deps.native, proof)
     assert not _implicit_conditions_known(node, {"actor_scope": "state"}, deps.native, {})
-    pop_type = decision_adapters.load().policies[0][1].readers[0].parameters[0][1]
+    pop_type = (
+        decision_adapters.load()
+        .policies[0][1]
+        .readers[0]
+        .parameters[0][1]
+        .removeprefix("pop_type:")
+    )
     assert f"common/pop_types/{pop_type}.txt" in proof["native_sources"]
 
 
@@ -649,23 +665,29 @@ def test_population_reader_does_not_license_a_name_without_original_context(
     native, generated = population_case[1:3]
     source = population_case[0].surfaces[0].source
     getter = "common/journal_entries/00_urbanization.txt"
-    pop_type = decision_adapters.load().policies[0][1].readers[0].parameters[0][1]
+    reader = decision_adapters.load().policies[0][1].readers[0]
+    key, argument = reader.parameters[0]
+    pop_type = argument.removeprefix("pop_type:")
+    field = reader.value_field
     definition = f"common/pop_types/{pop_type}.txt"
     if fault == "missing":
         native.pop(definition)
     elif fault == "bytes":
         native[definition] += b"\n# drift"
     elif fault == "getter_ast":
-        native[getter] = native[getter].replace(b"percent>0.6", b"value>0.6")
+        old = b"value>0.6" if field == "value" else b"percent>0.6"
+        changed = b"percent>0.6" if field == "value" else b"value>0.6"
+        assert old in native[getter]
+        native[getter] = native[getter].replace(old, changed)
         monkeypatch.setitem(
-            vanilla_inventory._PARAMETER_EVIDENCE_HASHES,
+            vanilla_inventory._parameter_evidence_contract(),
             getter,
             hashlib.sha256(native[getter]).hexdigest(),
         )
     elif fault == "definition":
         native[definition] = b"invented={wage_weight=1}"
         monkeypatch.setitem(
-            vanilla_inventory._PARAMETER_EVIDENCE_HASHES,
+            vanilla_inventory._parameter_evidence_contract(),
             definition,
             hashlib.sha256(native[definition]).hexdigest(),
         )
@@ -673,17 +695,18 @@ def test_population_reader_does_not_license_a_name_without_original_context(
         generated["common/pop_types/duplicate.txt"] = f"{pop_type}={{wage_weight=1}}".encode()
     elif fault == "argument":
         generated[source] = generated[source].replace(
-            f"pop_type = {pop_type}".encode(), b"pop_type = invented"
+            f"{key} = {argument}".encode(), f"{key} = invented".encode()
         )
     elif fault == "extra_parameter":
         generated[source] = generated[source].replace(
-            f"pop_type = {pop_type}".encode(), f"pop_type = {pop_type} invented = yes".encode()
+            f"{key} = {argument}".encode(), f"{key} = {argument} invented = yes".encode()
         )
     elif fault == "field":
+        wrong_field = "percent" if field == "value" else "value"
         generated[source] = (
             generated[source]
-            .replace(b"percent >=", b"value >=")
-            .replace(b"percent <=", b"value <=")
+            .replace(f"{field} >=".encode(), f"{wrong_field} >=".encode())
+            .replace(f"{field} <=".encode(), f"{wrong_field} <=".encode())
         )
     else:
         generated[source] = generated[source].replace(b"owner = {", b"market = {")
@@ -714,8 +737,10 @@ def test_population_reader_does_not_license_a_name_without_original_context(
 def test_country_auxiliary_sources_remain_required_exact_bytes(
     tmp_path, monkeypatch, source, fault
 ):
-    expected = vanilla_inventory._PARAMETER_EVIDENCE_HASHES[source]
-    monkeypatch.setattr(vanilla_inventory, "_PARAMETER_EVIDENCE_HASHES", {source: expected})
+    expected = vanilla_inventory._parameter_evidence_contract()[source]
+    monkeypatch.setattr(
+        vanilla_inventory, "_parameter_evidence_contract", lambda: {source: expected}
+    )
     if fault == "missing":
         assert vanilla_inventory.parameter_evidence_hashes(tmp_path) == {}
     else:

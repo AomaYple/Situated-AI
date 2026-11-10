@@ -321,15 +321,29 @@ def test_distribution_cli(tmp_path, monkeypatch):
 def test_package_cli_success_and_refusal(tmp_path, monkeypatch):
     from typer.testing import CliRunner
 
-    from pdx import cli
+    from pdx import cli, version_contracts
 
     target = tmp_path / "delivery.zip"
     runner = CliRunner()
     assert runner.invoke(cli.app, ["package", "--output", str(target)]).exit_code == 0
     assert target.is_file()
     before = target.read_bytes()
-    monkeypatch.setattr(distribution.decisions, "check", lambda *_: ["drift"])
+    current = version_contracts.active_version() == "1.15.0"
+    checked = False
+
+    def drift(*_args, **_kwargs):
+        nonlocal checked
+        checked = True
+        if current:
+            raise ValueError("隔离产物漂移，拒绝打包")
+        return ["drift"]
+
+    if current:
+        monkeypatch.setattr(distribution, "check_profile_outputs", drift)
+    else:
+        monkeypatch.setattr(distribution.decisions, "check", drift)
     result = runner.invoke(cli.app, ["package", "--output", str(target)])
+    assert checked
     assert result.exit_code == 1
     assert "拒绝打包" in result.stdout
     assert target.read_bytes() == before

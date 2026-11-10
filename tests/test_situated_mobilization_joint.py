@@ -146,7 +146,7 @@ def test_paid_consumers_keep_explicit_formation_root_owner_context_and_complete_
             (binding.name, binding.kind, binding.role) for binding in context.auxiliary_scopes
         ] == [("root", "military_formation", "auxiliary")]
         assert context.targets == ()
-        assert any(medical.BASELINE_SHA256 in evidence for evidence in context.evidence)
+        assert any(medical.baseline_sha256() in evidence for evidence in context.evidence)
     for writer in writers:
         assert writer.actor == "owner"
         assert writer.reader_context_bindings

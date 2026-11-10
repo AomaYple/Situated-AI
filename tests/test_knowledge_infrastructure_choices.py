@@ -24,6 +24,9 @@ RAIL_PM = "pm_active_building_railway_pm_early_trains"
 def _raw_policies():
     raw_bytes = decision_adapters.SOURCE.read_bytes()
     data = tomllib.loads(raw_bytes.decode("utf-8"))
+    # Reuse the selected contract's independently frozen native identities;
+    # the handwritten declaration and choice expectations remain below.
+    data["sources"] = dict(decision_adapters.load().sources)
     selected = []
     for source, field in FIELDS.items():
         rules = [

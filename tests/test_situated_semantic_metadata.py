@@ -5,7 +5,7 @@ import json
 import pytest
 from _situated_sources import production_policy_sources
 
-from pdx import config, decisions, distribution
+from pdx import config, decisions, distribution, version_contracts
 from pdx.situated import action_instances
 from pdx.situated.compiler import load_model
 
@@ -65,19 +65,30 @@ def _assert_legacy_contract(witness) -> None:
     assert witness["behavior_quality"] == "not_evaluated"
 
 
-def test_frozen_production_contains_legacy_behavior_witness_contract() -> None:
+def test_historical_frozen_tree_contains_its_own_legacy_behavior_witness_contract() -> None:
     production = config.REPO / "mod"
     files = {
         path.relative_to(production).as_posix(): path.read_text(encoding="utf-8")
         for path in (production / "common").rglob("*.txt")
     }
-    _assert_legacy_contract(
-        action_instances.behavior_witness_contract(load_model().action_instances, files)
-    )
+    # mod/ is the archived 1.14.5 generation, not the active 1.15 tree.
+    with version_contracts.select_version("1.14.5"):
+        _assert_legacy_contract(
+            action_instances.behavior_witness_contract(load_model().action_instances, files)
+        )
 
 
 @pytest.mark.integration
 def test_metadata_contains_legacy_behavior_witness_contract() -> None:
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    _assert_legacy_contract(metadata["situated_actions"]["legacy_behavior_witness_contract"])
+    witness = metadata["situated_actions"]["legacy_behavior_witness_contract"]
+    _assert_legacy_contract(witness)
+    final_texts = {
+        name: text
+        for name, text in files.items()
+        if name.startswith("common/") and name.endswith(".txt") and isinstance(text, str)
+    }
+    actual = action_instances.behavior_witness_contract(load_model().action_instances, final_texts)
+    _assert_legacy_contract(actual)
+    assert actual == witness

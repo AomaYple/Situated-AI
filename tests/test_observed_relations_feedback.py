@@ -202,7 +202,7 @@ def _tree(item):
 
 
 def test_actual_default_patch_preserves_native_tail_player_and_switches(model):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     overlay = compiler.strategy_overlay(model)
     profile = decisions.load_extensions(profile="release")
     patched = decisions.patch_default(baseline, decisions.load(), profile, action_overlay=overlay)

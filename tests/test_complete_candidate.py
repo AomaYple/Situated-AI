@@ -9,7 +9,7 @@ from typing import cast
 
 import pytest
 
-from pdx import decisions, distribution
+from pdx import decisions, distribution, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 
@@ -57,7 +57,8 @@ def test_外部配置超大整数按配置错误拒绝(tmp_path):
         decisions.load_extensions(source)
 
 
-def test_打包命令只生成唯一正式变体(tmp_path, monkeypatch):
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, version):
     from typer.testing import CliRunner
 
     from pdx.cli import app
@@ -65,15 +66,25 @@ def test_打包命令只生成唯一正式变体(tmp_path, monkeypatch):
     calls = []
 
     def capture(destination):
-        calls.append(destination)
+        calls.append(("historical", destination))
+        return destination
+
+    def capture_profile(destination, profile, *, configuration=None):
+        from pdx.situated.profile_configuration import ProfileConfiguration
+
+        assert profile.game_version == "1.15.0"
+        assert configuration == ProfileConfiguration()
+        calls.append(("current", destination))
         return destination
 
     monkeypatch.setattr(distribution, "package", capture)
+    monkeypatch.setattr(distribution, "profile_package", capture_profile)
     runner = CliRunner()
     output = tmp_path / "release.zip"
-    result = runner.invoke(app, ["package", "--output", str(output)])
+    with version_contracts.select_version(version):
+        result = runner.invoke(app, ["package", "--output", str(output)])
     assert result.exit_code == 0, result.output
-    assert calls == [output]
+    assert calls == [("current" if version == "1.15.0" else "historical", output)]
 
 
 @pytest.mark.parametrize(
@@ -119,7 +130,9 @@ def test_正式候选包含所有生产模块且不修改生成源():
         "consumer_adapters",
         "country_state",
     }
-    assert metadata["status"] == "released"
+    assert metadata["status"] == (
+        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+    )
     assert policy.aggression == 0
     assert extra.security_enabled
     assert extra.economy_enabled

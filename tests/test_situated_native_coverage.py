@@ -6,7 +6,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules
+from pdx import decision_rules, version_contracts
 from pdx.situated import engine_scope
 from pdx.situated.action_instances import ActionInstance
 from pdx.situated.decision_ir import ContextBinding, EvaluationContext
@@ -272,12 +272,13 @@ def implicit_company(monkeypatch):
     monkeypatch.setattr(
         engine_scope, "company_default_snapshot", lambda: json.dumps(default).encode()
     )
+    _, manifest_id, manifest_sha256 = engine_scope._company_manifest()
     context = EvaluationContext(
-        actor_scope=ContextBinding("root", "country", "actor", engine_scope.COMPANY_MANIFEST_ID, 1),
+        actor_scope=ContextBinding("root", "country", "actor", manifest_id, 1),
         evidence=(
-            f"{engine_scope.COMPANY_MANIFEST_ID}:1",
-            f"{engine_scope.COMPANY_MANIFEST_ID}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}",
-            f"{engine_scope.COMPANY_MANIFEST_ID}:definition_only:company_type",
+            f"{manifest_id}:1",
+            f"{manifest_id}:sha256={manifest_sha256}",
+            f"{manifest_id}:definition_only:company_type",
         ),
     )
     instance = _instance(
@@ -692,10 +693,22 @@ def test_secret_goal_projection_cannot_guess_ambiguous_or_adjacent_structure(goa
 def test_exact_evidenced_numeric_contracts_preserve_field_operation_actor_and_target(
     field, native_operation, writer_operation, target, context
 ):
+    if field == "change_law_chance" and version_contracts.active_version() == "1.15.0":
+        native_operation = "first_nonzero_active_change_law_chance_else_default"
     surface = _surface(field=field, operation=native_operation, target_scope=target)
     instance = _instance(
         consumer_field=field, operation=writer_operation, evaluation_context=context
     )
+    if field == "change_law_chance":
+        other_operation = (
+            "additive_percentage_chance"
+            if version_contracts.active_version() == "1.15.0"
+            else "first_nonzero_active_change_law_chance_else_default"
+        )
+        incompatible = native_coverage(
+            _inventory(replace(surface, operation=other_operation)), (instance,)
+        )
+        assert incompatible["counts"]["actual_covered"] == 0
     good = native_coverage(_inventory(surface), (instance,))
     assert good["counts"]["actual_covered"] == 1
     assert good["binding_issue_count"] == 0

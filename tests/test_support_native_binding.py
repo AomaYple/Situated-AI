@@ -13,11 +13,9 @@ import pytest
 
 from pdx import config, decision_adapters, decisions, distribution, equipment_opportunities
 from pdx.model import Block
-from pdx.situated import audit, domain_coverage, vanilla_inventory
+from pdx.situated import audit, compiler, domain_coverage, vanilla_inventory
 from pdx.situated.decision_ir import (
     ConsumerIRBundle,
-    ContextBinding,
-    EvaluationContext,
     WriterDecisionIR,
 )
 from pdx.situated.support_program import SupportProgram
@@ -44,7 +42,6 @@ def controlled_output():
     """A declared unit fixture; the separate integration test must prove build()."""
     extra = replace(decisions.Extensions(), market_enabled=True, security_enabled=True)
     program = SupportProgram.from_extensions(extra)
-    source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
     writer = WriterDecisionIR(
         writer_id=program.writer_id,
         kind="support_program",
@@ -58,14 +55,7 @@ def controlled_output():
         vanilla_tail="preserve",
         owner="situated_kernel",
         program=program,
-        evaluation_context=EvaluationContext(
-            actor_scope=ContextBinding("root", "country", "actor", source, 183),
-            targets=(
-                ContextBinding("target_country", "country", "target", source, 184),
-                ContextBinding("enemy_country", "country", "target", source, 185),
-            ),
-            evidence=tuple(f"{source}:{line}" for line in (183, 184, 185)),
-        ),
+        evaluation_context=compiler.support_evaluation_context(),
     )
     metadata = {
         "situated_actions": {"consumer_ir": ConsumerIRBundle(1, (), (writer,)).as_dict()},
@@ -73,7 +63,7 @@ def controlled_output():
     }
     return {
         SOURCE: decisions.patch_default(
-            decisions.BASELINE.read_text(encoding="utf-8"),
+            decisions.baseline_path().read_text(encoding="utf-8"),
             replace(decisions.load(), enabled=False),
             extra,
         ),
@@ -95,7 +85,7 @@ def test_real_build_program_has_an_exact_native_mapping(real_production, real_na
 
 
 def _native_scope(getter: bytes):
-    raw = b"\xef\xbb\xbf" + decisions.BASELINE.read_bytes()
+    raw = b"\xef\xbb\xbf" + decisions.baseline_path().read_bytes()
     parsed = vanilla_inventory.parse_bytes(raw, path=SOURCE)
     strategy = parsed.root.first("ai_strategy_default")
     assert strategy is not None

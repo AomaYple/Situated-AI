@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import config, decision_adapters
+from pdx import config, decision_adapters, distribution, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_bytes
 from pdx.situated.native_treatments import native_treatments
@@ -612,7 +612,14 @@ def test_each_added_operation_has_installed_scope_evidence_and_supported_actual_
 
     source = "common/ai_strategies/00_default_strategy.txt"
     native = parse_bytes((config.GAME / source).read_bytes(), path=source).root
-    generated = parse_bytes((config.REPO / "mod" / source).read_bytes(), path=source).root
+    # Exercise the full current compatibility generation, including its added
+    # operations; the narrow R2 profile intentionally retains these native fields.
+    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+    generated_source = files[source]
+    generated_raw = (
+        generated_source.encode("utf-8") if isinstance(generated_source, str) else generated_source
+    )
+    generated = parse_bytes(generated_raw, path=source).root
     for field, operation in EXACT_DEFAULT_OPERATIONS:
         candidates = [
             surface
@@ -954,15 +961,17 @@ def test_full_first_batch_against_installed_native_declarations(installed_invent
         surface.declaration_id for surface in selected
     }
     counts = report["interface_counts"]
-    assert counts["static_modifier_valuation"] == 2197
-    assert counts["static_construction_cap"] == 261
+    current = version_contracts.active_version() == "1.15.0"
+    # Independent native AST counts retain the historical denominator too.
+    assert counts["static_modifier_valuation"] == (2291 if current else 2197)
+    assert counts["static_construction_cap"] == (271 if current else 261)
     assert counts["lifecycle_effect"] == 12
-    assert counts["completion_observation"] == 5
+    assert counts["completion_observation"] == (8 if current else 5)
     gates = [row for row in report["rows"] if row["interface_kind"] == "eligibility"]
     for family, expected in [
-        ("company_types", 221),
+        ("company_types", 231 if current else 221),
         ("country_creation", 394),
-        ("country_formation", 73),
+        ("country_formation", 74 if current else 73),
     ]:
         assert sum(row["source"].split("/")[-2] == family for row in gates) == expected
     assert sum(row["native_terminal"] == "always_false" for row in gates) == 398

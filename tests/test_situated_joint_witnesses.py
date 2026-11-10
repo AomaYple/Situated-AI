@@ -44,10 +44,11 @@ def generated():
         consumer_ir=model.consumer_ir,
     )
     info_policy = compiled[0][1]
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     info_text = decision_rules.patch(
-        compiler.BASELINE.read_text(encoding="utf-8"),
+        baseline,
         info_policy,
-        baseline=compiler.BASELINE.read_text(encoding="utf-8"),
+        baseline=baseline,
         reader_words=(
             frozenset(decision_adapters.reader_evidence(inputs))
             | decision_interfaces.proven_reader_words()

@@ -13,7 +13,7 @@ from test_native_parameter_boundary_proofs import _dependencies
 from test_native_parameter_closure import _reader_case
 from test_native_parameter_contract_reuse import _wire_contract
 
-from pdx import decision_adapters, decision_rules, observation_queries
+from pdx import decision_adapters, decision_rules, observation_queries, version_contracts
 from pdx.situated import vanilla_inventory
 from pdx.situated.native_treatments import _implicit_conditions_known, _resolve, native_treatments
 
@@ -34,13 +34,19 @@ def local_case(request, tmp_path, monkeypatch):
             b"building_government_administration={should_auto_expand={occupancy>=0.8 "
             b"OR={state.tax_capacity<state.tax_capacity_usage owner={bureaucracy<-10}}}}"
         )
-        native[PORTUGAL] = (
-            b"je_portugal_regeneration_public_works={complete={any_scope_state={"
-            b"filter={is_incorporated=yes} has_building=building_railway percent=1}}}"
+        trigger = (
+            "any_scope_state={filter={is_incorporated=yes} has_building=building_railway percent=1}"
         )
+        completion = (
+            "outcome={header=je_standard_completion_header "
+            "effect_header=je_standard_on_completion_header trigger={" + trigger + "}}"
+            if version_contracts.active_version() == "1.15.0"
+            else "complete={" + trigger + "}"
+        )
+        native[PORTUGAL] = ("je_portugal_regeneration_public_works={" + completion + "}").encode()
         for name in (TAX, PORTUGAL):
             monkeypatch.setitem(
-                observation_queries.SOURCE_HASHES, name, hashlib.sha256(native[name]).hexdigest()
+                observation_queries.source_hashes(), name, hashlib.sha256(native[name]).hexdigest()
             )
         readers = tuple(
             decision_rules.Reader(key, engine, "root", "tax_capacity_points", "number")
@@ -50,6 +56,10 @@ def local_case(request, tmp_path, monkeypatch):
             "capacity", "<", decision_rules.FactReference("usage", "ROOT.tax_capacity_usage")
         )
     else:
+        expected_hashes = dict(vanilla_inventory._parameter_evidence_contract())
+        monkeypatch.setattr(
+            vanilla_inventory, "_parameter_evidence_contract", lambda: expected_hashes
+        )
         native[MOVEMENT] = (
             b"movement_slave_revolt={creation_trigger={OR={any_scope_state={"
             b"pop_type_percent_state={target=pop_type:slaves value>=0.55}}}}}"
@@ -57,7 +67,7 @@ def local_case(request, tmp_path, monkeypatch):
         native[POP] = b"peasants={wage_weight=1}"
         for name in (MOVEMENT, POP):
             monkeypatch.setitem(
-                vanilla_inventory._PARAMETER_EVIDENCE_HASHES,
+                expected_hashes,
                 name,
                 hashlib.sha256(native[name]).hexdigest(),
             )
@@ -175,9 +185,9 @@ def test_native_local_proof_requires_pinned_ast_and_unique_identity(local_case, 
             b"state.tax_capacity_usage" if kind == "tax" else b"pop_type:slaves", b"invented"
         )
         registry = (
-            observation_queries.SOURCE_HASHES
+            observation_queries.source_hashes()
             if kind == "tax"
-            else vanilla_inventory._PARAMETER_EVIDENCE_HASHES
+            else vanilla_inventory._parameter_evidence_contract()
         )
         monkeypatch.setitem(registry, evidence, hashlib.sha256(native[evidence]).hexdigest())
         # Even coherently refreshed source claims cannot replace the native AST.
@@ -253,7 +263,7 @@ def test_state_population_contract_cannot_expand_past_exact_native_identity(
     elif fault == "pop_identity":
         native[POP] = b"invented={wage_weight=1}"
         monkeypatch.setitem(
-            vanilla_inventory._PARAMETER_EVIDENCE_HASHES,
+            vanilla_inventory._parameter_evidence_contract(),
             POP,
             hashlib.sha256(native[POP]).hexdigest(),
         )

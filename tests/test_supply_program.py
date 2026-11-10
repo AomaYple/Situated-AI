@@ -253,7 +253,7 @@ def _assert_no_produced_supply(files):
     assert "supply_plan" not in metadata.get("default_field_owners", {}).values()
     actual = files[SOURCE]
     assert "# SITAI BEGIN supply:goods_stances" not in actual
-    assert _stance_ast(actual) == _stance_ast(decisions.BASELINE.read_text(encoding="utf-8"))
+    assert _stance_ast(actual) == _stance_ast(decisions.baseline_path().read_text(encoding="utf-8"))
     return metadata
 
 

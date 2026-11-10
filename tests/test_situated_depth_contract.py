@@ -7,10 +7,18 @@ from pathlib import Path
 
 import pytest
 
-from pdx import ai_surface
+from pdx import ai_surface, version_contracts
 from pdx.situated import inventory, vanilla_inventory
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def historical_discovery_contract():
+    # These synthetic fixtures declare release/1.14.5 and its documentation;
+    # installed 1.15 integrations keep their independently selected contract.
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 def _write(game: Path, relative: str, text: str) -> None:

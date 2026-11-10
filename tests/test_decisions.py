@@ -613,17 +613,13 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
     import codecs
     import zipfile
 
-    from typer.testing import CliRunner
-
-    from pdx import cli
-
+    # This API explicitly exercises the complete compatibility artifact.
+    # The CLI selects the narrow R2 artifact under 1.15; its real API/CLI
+    # equivalence and determinism are checked separately below.
     target = tmp_path / "release.zip"
-    runner = CliRunner()
-    args = ["package", "--output", str(target)]
-    result = runner.invoke(cli.app, args)
-    assert result.exit_code == 0, result.output
+    distribution.package(target)
     raw = target.read_bytes()
-    assert runner.invoke(cli.app, args).exit_code == 0
+    distribution.package(target)
     assert target.read_bytes() == raw
     with zipfile.ZipFile(target) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
@@ -673,15 +669,32 @@ def test_正式包API和CLI输出逐字节一致(tmp_path):
     from pdx import cli, distribution
 
     api_target, cli_target = tmp_path / "api.zip", tmp_path / "cli.zip"
-    distribution.package(api_target)
-    result = CliRunner().invoke(cli.app, ["package", "--output", str(cli_target)])
+    current = version_contracts.active_version() == "1.15.0"
+    if current:
+        from pdx.situated import production_profile
+
+        profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
+        distribution.profile_package(api_target, profile)
+    else:
+        distribution.package(api_target)
+    args = ["package", "--output", str(cli_target)]
+    result = CliRunner().invoke(cli.app, args)
     assert result.exit_code == 0, result.output
+    assert cli_target.read_bytes() == api_target.read_bytes()
+    assert CliRunner().invoke(cli.app, args).exit_code == 0
     assert cli_target.read_bytes() == api_target.read_bytes()
     with zipfile.ZipFile(api_target) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
-        assert manifest["generation"]["variant"] == distribution.RELEASE_VARIANT
-        assert "fiscal" in manifest["contract"]["enabled_modules"]
-        assert "common/on_actions/sitai_fiscal_on_actions.txt" in archive.namelist()
+        if current:
+            assert manifest["generation"]["profile"] == "situated-ai/production/1.15"
+            assert manifest["generation"]["game_version"] == "1.15.0"
+            assert manifest["contract"]["game_version"] == "1.15.0"
+            assert "common/decrees/00_decree.txt" in archive.namelist()
+            assert "common/diplomatic_actions/00_relations_actions.txt" in archive.namelist()
+        else:
+            assert manifest["generation"]["variant"] == distribution.RELEASE_VARIANT
+            assert "fiscal" in manifest["contract"]["enabled_modules"]
+            assert "common/on_actions/sitai_fiscal_on_actions.txt" in archive.namelist()
 
 
 @pytest.mark.integration

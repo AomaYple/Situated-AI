@@ -1639,18 +1639,29 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
                     pairs.append((item.key, item.value.unquoted))
                 parameters = tuple(sorted(pairs))
                 return current.get((key, parameters)) is True
-            if key in {"pop_type_percent_country", "radical_fraction", "loyalist_fraction"} and any(
-                item.key == "pop_type" for item in values
+            if key == "pop_type_percent_country" or (
+                key in {"radical_fraction", "loyalist_fraction"}
+                and any(item.key == "pop_type" for item in values)
             ):
-                parameter_items = [item for item in values if item.key == "pop_type"]
+                current_population = (
+                    key == "pop_type_percent_country"
+                    and version_contracts.active_version() == "1.15.0"
+                )
+                parameter_key = "target" if current_population else "pop_type"
+                parameter_items = [item for item in values if item.key == parameter_key]
                 assert len(parameter_items) == 1
                 assert isinstance(parameter_items[0].value, Scalar)
                 signature = (
                     key,
-                    (("pop_type", parameter_items[0].value.unquoted),),
+                    ((parameter_key, parameter_items[0].value.unquoted),),
                 )
                 actual = current.get(signature)
-                value_key = "percent" if key == "pop_type_percent_country" else "value"
+                value_key = (
+                    "percent"
+                    if key == "pop_type_percent_country" and not current_population
+                    else "value"
+                )
+                assert {item.key for item in values} == {parameter_key, value_key}
                 return all(
                     condition(item, {value_key: actual}) for item in values if item.key == value_key
                 )
@@ -1872,6 +1883,7 @@ def test_wartime_defense_intent_survives_insolvency_in_generated_script(real_gen
 @pytest.fixture(scope="module")
 def population_candidate():
     source = "law_demo = { ai_enact_weight_modifier = { value = 0 } }\n"
+    current = version_contracts.active_version() == "1.15.0"
     policy = decision_rules.from_data(
         {
             "schema": 1,
@@ -1885,8 +1897,10 @@ def population_candidate():
                     "unit": "ratio",
                     "minimum": 0,
                     "maximum": 1,
-                    "value_field": "percent",
-                    "parameters": {"pop_type": "peasants"},
+                    "value_field": "value" if current else "percent",
+                    "parameters": {"target": "pop_type:peasants"}
+                    if current
+                    else {"pop_type": "peasants"},
                 }
             },
             "rules": [
@@ -1910,7 +1924,11 @@ def population_candidate():
         policy,
         baseline=source,
         default_strategy=False,
-        reader_evidence="pop_type_percent_country = { pop_type = peasants percent > 0.6 }",
+        reader_evidence=(
+            "pop_type_percent_country = { target = pop_type:peasants value > 0.6 }"
+            if current
+            else "pop_type_percent_country = { pop_type = peasants percent > 0.6 }"
+        ),
     )
     match = re.search(r"# SITAI BEGIN information:[^\n]+\n(.*?)# SITAI END", script, re.DOTALL)
     assert match is not None
@@ -1920,9 +1938,12 @@ def population_candidate():
 @given(share=st.floats(0, 1, allow_nan=False), is_ai=st.booleans())
 def test_population_selector_matches_independent_generated_ast(population_candidate, share, is_ai):
     policy, block = population_candidate
-    scopes = {
-        "ROOT": {"is_ai": is_ai, ("pop_type_percent_country", (("pop_type", "peasants"),)): share}
-    }
+    population_identity = (
+        (("target", "pop_type:peasants"),)
+        if version_contracts.active_version() == "1.15.0"
+        else (("pop_type", "peasants"),)
+    )
+    scopes = {"ROOT": {"is_ai": is_ai, ("pop_type_percent_country", population_identity): share}}
     actual = _interpret_adjustments(block, scopes)
     expected = ("add", 5.0) if is_ai and share >= 0.6 else None
     assert actual == expected

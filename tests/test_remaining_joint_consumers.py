@@ -53,7 +53,7 @@ def production():
     generated, _ = decision_adapters.build(
         selected, texts=inputs, country_policy=country_state.load(), consumer_ir=model.consumer_ir
     )
-    native_info = compiler.BASELINE.read_text(encoding="utf-8")
+    native_info = compiler.baseline_path().read_text(encoding="utf-8")
     words = (
         frozenset(decision_adapters.reader_evidence(inputs))
         | decision_interfaces.proven_reader_words()

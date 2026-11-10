@@ -14,7 +14,6 @@ from pdx import (
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
-from pdx.situated.compiler import BASELINE
 
 pytestmark = pytest.mark.unit
 INDUSTRY = "common/buildings/01_industry.txt"
@@ -322,7 +321,7 @@ def generated(policies):
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
     )
-    baseline = BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     files[INFO] = decision_rules.patch(
         baseline,
         policies[INFO],
@@ -587,7 +586,7 @@ def test_all_depth_links_disabled_retain_exact_native_and_source_selection_canno
     adapters = decision_adapters.load()
     disabled, _ = decision_adapters.build(adapters, texts=inputs, enabled_domains=frozenset())
     assert disabled == {}
-    baseline = BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     assert (
         decision_rules.patch(
             baseline, policies[INFO], baseline=baseline, enabled_domains=frozenset()
