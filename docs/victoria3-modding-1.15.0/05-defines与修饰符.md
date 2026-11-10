@@ -2153,7 +2153,7 @@ has_game_rule = high_ai_aggression
 >   所以**只能写标量**；块形式是本条【未确认】的答案，不是「没人试过」。
 > * MOD 自己新增的设置也可以被查到：探针里新增规则 `zzprobe_rule`（设置 `zzprobe_on`，
 >   带 `flag = zzprobe_on`）后 `has_game_rule = zzprobe_on` **加载期零报错**。
-> * 历史取证（已退役）：`v3 experiment launch --risky` 的 `[P1]`（探针 `zz_probe_p1_t1/t2/t3.txt`），当前工作树不再提供该子命令。
+> * 历史取证（已退役）：旧实验工具的高风险探针启动动作对应的 `[P1]`（探针 `zz_probe_p1_t1/t2/t3.txt`），当前工作树不再提供该子命令。
 
 ### 4.10 做 game rule mod 的注意点
 

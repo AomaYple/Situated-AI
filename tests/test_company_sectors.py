@@ -107,6 +107,15 @@ art = { building_modifiers = { workforce_scaled = { goods_input_paper_add = 10 g
     }
 
 
+def _policy_readers(readers):
+    selected = copy.deepcopy(readers)
+    if version_contracts.active_version() == "1.15.0":
+        from pdx.situated.engine_reader_115 import project_population_readers
+
+        project_population_readers(selected)
+    return selected
+
+
 def _policy(derived, company):
     source = derived["profiles"][company]["source"]
     rows = [row for row in derived["rules"] if row["field"] == f"{company}.ai_weight"]
@@ -116,7 +125,9 @@ def _policy(derived, company):
             "schema": 1,
             "baseline_sha256": derived["sources"][source],
             "domains": {"market": True},
-            "readers": {key: value for key, value in derived["readers"].items() if key in keys},
+            "readers": _policy_readers(
+                {key: value for key, value in derived["readers"].items() if key in keys}
+            ),
             "rules": [
                 {key: value for key, value in row.items() if key != "source"} for row in rows
             ],
@@ -169,6 +180,17 @@ def _assert_joint(derived, company, changes, expected, *, observations=None, is_
         assert result.fallback == "vanilla"
         assert result.action_id is None
         assert result.operation is None
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_company_fixture_binds_selected_population_without_mutating_derivation(
+    inputs, monkeypatch, version
+):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
+    derived = company_sectors.derive(inputs)
+    historical_readers = copy.deepcopy(derived["readers"])
+    _assert_joint(derived, "company_lkab", {"industrial_workforce": 0.15}, 1.04)
+    assert derived["readers"] == historical_readers
 
 
 @pytest.fixture
@@ -544,7 +566,7 @@ def test_all_companies_in_one_source_load_as_one_real_rule_set_with_unique_prior
             "schema": 1,
             "baseline_sha256": derived["sources"][COMPANY],
             "domains": {"market": True},
-            "readers": derived["readers"],
+            "readers": _policy_readers(derived["readers"]),
             "rules": [
                 {key: value for key, value in row.items() if key != "source"}
                 for row in derived["rules"]

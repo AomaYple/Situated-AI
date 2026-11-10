@@ -33,7 +33,7 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from pdx import config, verify
+from pdx import config, verify, version_contracts
 
 pytestmark = pytest.mark.docs
 
@@ -183,6 +183,11 @@ _NO_ANCHOR_CLAIMS: dict[str, str] = {
     "内容时效性另由 test_docs_mirror.py 用 sha256 逐篇比对本体看守",
     "pfx.mods_total": "描述里只有 'mod'，全库出现上千次；统计对象是本机 mod，机器相关",
 }
+
+
+# 1.15 的列表数已在正文逐值绑定；历史页面仍由生成表维护。
+if version_contracts.active_version() == "1.15.0":
+    _NO_ANCHOR_CLAIMS.pop("script.lists_doc04")
 
 
 def test_抽不出锚点的断言集合没有扩大() -> None:

@@ -23,12 +23,17 @@ def derived():
 def _policy(derived, source):
     rows = [rule for rule in derived["rules"] if rule["source"] == source]
     used = {clause["fact"] for rule in rows for clause in rule["conditions"]}
+    readers = copy.deepcopy({key: derived["readers"][key] for key in sorted(used)})
+    if version_contracts.active_version() == "1.15.0":
+        from pdx.situated.engine_reader_115 import project_population_readers
+
+        project_population_readers(readers)
     policy = decision_rules.from_data(
         {
             "schema": 1,
             "baseline_sha256": "0" * 64,
             "domains": dict.fromkeys({row["domain"] for row in rows}, True),
-            "readers": {key: derived["readers"][key] for key in sorted(used)},
+            "readers": readers,
             "rules": [
                 {key: value for key, value in row.items() if key != "source"} for row in rows
             ],
@@ -50,6 +55,24 @@ def _value(derived, law, changes):
         f"{law}.ai_enact_weight_modifier"
     )
     return result[1] if result else 0
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_law_fixture_preserves_rural_transition_under_selected_population_contract(
+    derived, monkeypatch, version
+):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
+    historical_readers = copy.deepcopy(derived["readers"])
+    assert (
+        _value(
+            derived,
+            "law_tenant_farmers",
+            {"law_context_current_law_serfdom": True, "peasant_share": 0.6},
+        )
+        == 12
+    )
+    assert _value(derived, "law_tenant_farmers", {"peasant_share": 0.9}) == 0
+    assert derived["readers"] == historical_readers
 
 
 def test_six_complete_native_families_have_37_unique_concrete_consumers(derived):
