@@ -292,10 +292,10 @@ def test_zero_cost_ship_transfer_and_missing_fields_are_not_initialized(raw, bas
     )
     assert len(derived["covered"]) == 10
     assert len(derived["rules"]) == 27
-    reasons = {"no_role_safe_new_contribution", "missing_native_proposal_weight"}
+    expected_reasons = {"no_role_safe_new_contribution", "missing_native_proposal_weight"}
     if treaty.version_contracts.active_version() == "1.15.0":
-        reasons.add("no_reviewed_article_policy")
-    assert {row["reason"] for row in derived["uncovered"]} == reasons
+        expected_reasons.add("no_reviewed_article_policy")
+    assert {row["reason"] for row in derived["uncovered"]} == expected_reasons
     assert not {"initial_values", "scalar_values", "actors", "contexts"} & derived.keys()
     assert all(
         spec["scope"] == "root" and "path" not in spec for spec in derived["readers"].values()
@@ -643,14 +643,13 @@ def test_evaluation_preserves_real_native_rank_add_zero_and_input_tail(
             )
         for predicate, observed, increment in native_conditions:
             wanted = treaty._ast(parse_text(predicate).root)
-            matches = [
-                node.value.first("limit")
-                for node in cloned.assignments()
-                if node.key == "if"
-                and isinstance(node.value, Block)
-                and node.value.first("limit") is not None
-                and treaty._ast(node.value.first("limit").value) == wanted
-            ]
+            matches = []
+            for node in cloned.assignments():
+                if node.key != "if" or not isinstance(node.value, Block):
+                    continue
+                native_limit = node.value.first("limit")
+                if native_limit is not None and treaty._ast(native_limit.value) == wanted:
+                    matches.append(native_limit)
             assert len(matches) == 1
             # As with the rank above, supply the native predicate observation;
             # the independent evaluator does not guess optional country-tag semantics.

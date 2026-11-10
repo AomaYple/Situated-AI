@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from pdx import version_contracts
+from pdx.model import Scalar
 from pdx.parser import parse_text
 
 
@@ -58,7 +59,9 @@ def test_completion_role_does_not_depend_on_outcome_order(source):
     predicate = version_contracts.journal_completion(journal)
     effect = version_contracts.journal_completion(journal, effect=True)
     assert predicate.all("any_scope_state")
-    assert effect.all("set_variable")[0].value.unquoted == "completed"
+    value = effect.all("set_variable")[0].value
+    assert isinstance(value, Scalar)
+    assert value.unquoted == "completed"
 
 
 @pytest.mark.parametrize(

@@ -101,7 +101,9 @@ def test_snapshot_selection_never_falls_back_to_a_different_version(tmp_path, mo
         assert vanilla_index.snapshot_index() is None
         assert tables_offline.load_tables() == {}
     with select_version("1.14.5"):
-        assert verify.latest_compact_snapshot().version_label == "release/1.14.5"
+        historical = verify.latest_compact_snapshot()
+        assert historical is not None
+        assert historical.version_label == "release/1.14.5"
 
 
 @pytest.mark.parametrize("branch", ["release/1.14.5", "release/1.16.0", "", "unknown"])

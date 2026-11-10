@@ -35,7 +35,9 @@ def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_hi
         reader = readers[key]
         assert reader.unit == "barracks_levels"
         assert decision_interfaces.reader_scope(reader, ()) == "country"
-        assert joint_chain_contract._expected_reader_signature(key)[7] == "barracks_levels"
+        signature = joint_chain_contract._expected_reader_signature(key)
+        assert signature is not None
+        assert signature[7] == "barracks_levels"
         with pytest.raises(ValueError, match="单位"):
             decision_interfaces.reader_scope(replace(reader, unit="battalions"), ())
         assert historical["readers"][key]["unit"] == "battalions"
@@ -43,9 +45,9 @@ def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_hi
     monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
     old = {reader.key: reader for reader in decision_rules.load().readers}
     assert old["native_army_capacity"].unit == "battalions"
-    assert (
-        joint_chain_contract._expected_reader_signature("native_army_capacity")[7] == "battalions"
-    )
+    signature = joint_chain_contract._expected_reader_signature("native_army_capacity")
+    assert signature is not None
+    assert signature[7] == "battalions"
     assert current.source_sha256 != decision_rules.load().source_sha256
 
 

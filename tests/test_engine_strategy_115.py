@@ -12,6 +12,8 @@ from pdx import version_contracts
 from pdx.situated import engine_scope, engine_scope_115, engine_strategy_115
 
 pytestmark = pytest.mark.unit
+_CURRENT_CONSUMERS = engine_strategy_115._CONTRACTS["consumers"]
+assert isinstance(_CURRENT_CONSUMERS, dict)
 
 
 @pytest.fixture
@@ -77,7 +79,7 @@ def test_current_strategy_snapshot_drift_is_rejected(tmp_path, monkeypatch):
         engine_scope.strategy_snapshot()
 
 
-@pytest.mark.parametrize("field", tuple(engine_strategy_115._CONTRACTS["consumers"]))
+@pytest.mark.parametrize("field", tuple(_CURRENT_CONSUMERS))
 @pytest.mark.parametrize(
     ("key", "value"),
     [

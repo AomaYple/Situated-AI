@@ -734,7 +734,7 @@ def company_default_snapshot() -> bytes:
         "explicit_empty_requirement": "reject_initializer",
         "explicit_nonpositive_requirement": "preserve_native_score_and_rejection",
     }
-    identities = (
+    identities: tuple[tuple[str, int], ...] = (
         ("company_basic_agriculture_1", 1),
         ("company_basic_agriculture_2", 68),
         ("company_basic_fabrics", 139),

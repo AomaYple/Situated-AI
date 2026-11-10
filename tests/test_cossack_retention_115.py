@@ -18,7 +18,9 @@ def test_current_cossack_field_is_retained_without_mod_writer():
     assert row["status"] == "retained_vanilla_not_new_mod_implementation"
     assert row["writers"] == {}
     assert row["behavior_verified"] is False
-    assert row["retained_disposition"]["disposition"] == "native_cossack_host_policy"
+    disposition = row["retained_disposition"]
+    assert isinstance(disposition, dict)
+    assert disposition["disposition"] == "native_cossack_host_policy"
 
 
 @pytest.mark.parametrize(
