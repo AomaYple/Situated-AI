@@ -135,6 +135,13 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
+@app.callback()
+def _command_lifetime(context: typer.Context) -> None:
+    """Release only completed-command memo ownership, including failure exits."""
+    context.call_on_close(cache.release_memo)
+
+
 situated_app = typer.Typer(
     help="处境行动内核的静态审计、报告和解释。",
     no_args_is_help=True,

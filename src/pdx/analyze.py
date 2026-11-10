@@ -38,7 +38,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from . import config
-from .cache import parse_cached
+from .cache import memo_lifetime, parse_cached
 from .extract import DirExtract, extract_file, global_usage
 from .localization import LocalizationReport, extract_localization
 
@@ -922,6 +922,7 @@ MODS_OUT = config.OUT_MODS
 CROSS_OUT = config.OUT_CROSS
 
 
+@memo_lifetime()
 def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict[str, Path]:
     """落盘。游戏本体、mod、交叉三者**分别存放**。"""
     for d in (GAME_OUT, MODS_OUT, CROSS_OUT, config.REPORTS):

@@ -17,7 +17,8 @@ mod 分析同理：多个 mod 覆盖同一个原版文件时，那个文件会�
 
 * **内存层** —— 标准库 :func:`functools.lru_cache`（**有上限**，见
   :data:`MEMO_MAX_ENTRIES`），不自己维护字典。
-  命中率统计由 ``cache_info()`` 提供，与 :func:`stats` 的三个字段一一对应；
+  :func:`stats` 的条目取当前 ``cache_info()``，命中与未命中加上已释放世代的累计值；
+  显式 :func:`clear` 将统计归零。
   线程安全由 ``lru_cache`` 内部的锁保证。
 * **磁盘层** —— 键是 ``sha256(路径 + mtime_ns + size + 引擎指纹)``（下称**世代键**：
   它标识的是「哪一代的输入」，不是内容本身），
@@ -84,20 +85,25 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import gc
 import hashlib
 import io
 import os
 import pickle
 import tempfile
+import threading
 import zlib
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from . import config
 from .model import Assignment, Block, Node, ParsedFile, Scalar
 from .parser import parse_bytes
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 #: 磁盘缓存的**布局版本**。结构变了、或**文件布局**变了就 +1
 #: （v2 = 逐条存储 + 偏移索引，见模块文档「磁盘层的物理布局」）。
@@ -270,6 +276,20 @@ class _DiskState:
 _state = _DiskState()
 
 
+@dataclass
+class _MemoState:
+    """Coordinate a memo lifetime boundary without serializing actual parses."""
+
+    condition: threading.Condition = field(default_factory=threading.Condition)
+    active: dict[int, int] = field(default_factory=dict)
+    release_requested: bool = False
+    hits: int = 0
+    misses: int = 0
+
+
+_memo = _MemoState()
+
+
 def _pending_total() -> int:
     """待落盘区一共多少条（用来判要不要先落盘腾地方）。"""
     return sum(len(chunk) for chunk in _state.pending.values())
@@ -315,12 +335,77 @@ def parse_cached(path: str | Path) -> ParsedFile:
         for attr in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
     ):
         raise OSError(f"源文件读取期间发生变化，拒绝缓存：{key}")
-    return _parse_by_key(key, digest)
+    worker = threading.get_ident()
+    with _memo.condition:
+        # An already active parser may recurse while release is pending. Waiting
+        # for itself here would prevent the outer call from ever finishing.
+        _memo.condition.wait_for(lambda: not _memo.release_requested or worker in _memo.active)
+        _memo.active[worker] = _memo.active.get(worker, 0) + 1
+    try:
+        return _parse_by_key(key, digest)
+    finally:
+        released = False
+        with _memo.condition:
+            if _memo.active[worker] == 1:
+                del _memo.active[worker]
+            else:
+                _memo.active[worker] -= 1
+            if not _memo.active and _memo.release_requested:
+                released = _release_memo_locked()
+        if released:
+            gc.collect()
+
+
+def _release_memo_locked() -> bool:
+    """Finish one requested release while no cached parse is in flight."""
+    info = _parse_by_key.cache_info()
+    released = info.currsize > 0
+    if released:
+        _memo.hits += info.hits
+        _memo.misses += info.misses
+        _parse_by_key.cache_clear()
+    _memo.release_requested = False
+    _memo.condition.notify_all()
+    return released
+
+
+def release_memo() -> None:
+    """Release completed-operation memo ownership, preserving cumulative stats.
+
+    Caller-held trees, pending disk writes, indexes and the engine identity stay
+    intact. New threads enter after the boundary; in-flight parses finish first.
+    A request from inside a parser is deferred until its outermost call returns,
+    so it cannot wait for itself. Only an actual release triggers ordinary Python
+    cycle collection; this is not a platform-specific working-set trim.
+    """
+    released = False
+    with _memo.condition:
+        _memo.release_requested = True
+        _memo.condition.notify_all()
+        if not _memo.active:
+            released = _release_memo_locked()
+        elif threading.get_ident() in _memo.active:
+            return
+        else:
+            _memo.condition.wait_for(lambda: not _memo.release_requested)
+    if released:
+        gc.collect()
+
+
+@contextlib.contextmanager
+def memo_lifetime() -> Iterator[None]:
+    """Release memo ownership at a completed operation, including failure exits."""
+    try:
+        yield
+    finally:
+        release_memo()
 
 
 def clear() -> None:
     """清空**内存**缓存并重置统计。磁盘层不受影响（用 :func:`clear_disk`）。"""
-    _parse_by_key.cache_clear()
+    with _memo.condition:
+        _parse_by_key.cache_clear()
+        _memo.hits = _memo.misses = 0
 
 
 def memo_maxsize() -> int | None:
@@ -330,12 +415,13 @@ def memo_maxsize() -> int | None:
 
 def stats() -> dict[str, int]:
     """内存缓存统计。字段名保持历史口径，避免调用方与文档大改。"""
-    info = _parse_by_key.cache_info()
-    return {
-        "条目": info.currsize,
-        "命中": info.hits,
-        "未命中": info.misses,
-    }
+    with _memo.condition:
+        info = _parse_by_key.cache_info()
+        return {
+            "条目": info.currsize,
+            "命中": _memo.hits + info.hits,
+            "未命中": _memo.misses + info.misses,
+        }
 
 
 # ────────────────────────── 磁盘层 ──────────────────────────
@@ -794,7 +880,7 @@ def clear_disk() -> int:
     _state.indexes.clear()
     _state.dirty.clear()
     _state.parsed_total = 0
-    _parse_by_key.cache_clear()
+    clear()
     return len(files)
 
 
