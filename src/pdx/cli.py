@@ -2649,11 +2649,14 @@ def _modgen_output_changes(production: dict[str, str | bytes]) -> dict[Path, byt
         }
 
 
-def _production_profile(name: str | None, configuration: Path | None = None):
-    """Load an explicitly requested profile from the frozen native baseline.
+def _production_profile(
+    name: str | None, configuration: Path | None = None, *, offline: bool = False
+):
+    """Require reviewed installed originals for every online production entry.
 
-    Profile generation is intentionally offline and reproducible.  The live
-    game installation is not an implicit input to the 1.15 delivery path.
+    Offline checks retain the reproducible frozen input contract. Online calls
+    verify both that contract and the complete installed identity/reader closure;
+    a missing installation never silently selects the frozen copy instead.
     """
     if name is None:
         if configuration is not None:
@@ -2662,7 +2665,10 @@ def _production_profile(name: str | None, configuration: Path | None = None):
     if name != "1.15.0":
         raise ValueError(f"不支持的 production profile：{name}（仅支持 1.15.0）")
     situated_production_profile.verify_baseline()
-    return situated_production_profile.load_profile(situated_production_profile.BASELINE_ROOT)
+    frozen = situated_production_profile.load_profile(situated_production_profile.BASELINE_ROOT)
+    if offline:
+        return frozen
+    return distribution.check_profile_installation(frozen)
 
 
 def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutral"] = "policy"):
@@ -2839,7 +2845,7 @@ def modguard_cmd(
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
-        selected_profile = _production_profile(profile, configuration)
+        selected_profile = _production_profile(profile, configuration, offline=offline)
         if selected_profile is not None:
             distribution.check_profile_outputs(
                 selected_profile, configuration=_profile_configuration(configuration)
@@ -2910,7 +2916,7 @@ def decision_audit_cmd(
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
-        selected_profile = _production_profile(profile, configuration)
+        selected_profile = _production_profile(profile, configuration, offline=offline)
         if selected_profile is not None:
             resolved = _profile_configuration(configuration)
             profile_files = distribution.check_profile_outputs(

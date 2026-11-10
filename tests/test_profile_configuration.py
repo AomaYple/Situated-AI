@@ -9,7 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from pdx import cli, config, distribution
-from pdx.situated import production_profile
+from pdx.situated import production_profile, r2_reader_authority
 from pdx.situated.profile_configuration import ProfileConfiguration, load
 
 
@@ -32,6 +32,7 @@ def test_configuration_is_strict_and_core_off_is_effective(tmp_path):
 
 
 def test_configured_generation_check_and_package_share_identity(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "ROOT", r2_reader_authority.FROZEN_ROOT)
     monkeypatch.setattr(config, "OUT", tmp_path / "out")
     profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
     selected = ProfileConfiguration(domains=frozenset({"economy"}))
@@ -53,6 +54,7 @@ def test_configured_generation_check_and_package_share_identity(tmp_path, monkey
 
 
 def test_cli_audit_resolves_configuration_once_for_real_check_and_audit(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "ROOT", r2_reader_authority.FROZEN_ROOT)
     monkeypatch.setattr(config, "OUT", tmp_path / "out")
     path = tmp_path / "profile.toml"
     path.write_text('schema=1\ncore=true\ndomains=["economy"]\nmode="policy"\n')

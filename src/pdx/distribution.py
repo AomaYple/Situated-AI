@@ -37,7 +37,7 @@ from pdx.situated import (
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
 MOD_ID = config.MOD_ID
 RELEASE_VERSION = "3.2.0"
@@ -467,6 +467,7 @@ def write_zip(
     *,
     generation: Mapping[str, object] | None = None,
     release: bool = False,
+    before_replace: Callable[[], None] | None = None,
 ) -> Path:
     """先完成并核验临时 ZIP，再原子替换目标；不修改仓库产物。"""
     data = payloads(files)
@@ -497,6 +498,8 @@ def write_zip(
             expected_generation=generation,
             release=release,
         )
+        if before_replace is not None:
+            before_replace()
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)
@@ -842,6 +845,21 @@ def _profile_directory_files(root: Path) -> dict[str, Path]:
     return {path.relative_to(root).as_posix(): path for path in paths if path.is_file()}
 
 
+def check_profile_installation(
+    profile: production_profile.ProductionProfile,
+) -> production_profile.ProductionProfile:
+    """Bind production writes to reviewed installed identity and reader bytes.
+
+    Pure output construction and frozen-output comparison remain offline. Any
+    entry that materializes a new candidate or ZIP must cross this boundary.
+    """
+    r2_reader_authority.verify_installation(config.ROOT)
+    installed = production_profile.load_profile(config.ROOT)
+    if installed != profile:
+        raise ValueError("1.15.0 本机原版 profile 与冻结生成身份不一致")
+    return installed
+
+
 def write_profile_outputs(
     profile: production_profile.ProductionProfile,
     *,
@@ -854,6 +872,7 @@ def write_profile_outputs(
     never silently deletes them. Source drift during replacement fails inside
     the transaction, before original backups are discarded.
     """
+    check_profile_installation(profile)
     files: dict[str, str | bytes] = dict(profile_outputs(profile, configuration=configuration))
     _validate_paths(list(files))
     lock = profile_generation_lock(profile, files)
@@ -870,6 +889,7 @@ def write_profile_outputs(
         transaction.replace({target / name: raw for name, raw in expected.items()})
         if profile_generation_lock(profile, files) != lock:
             raise ValueError("1.15.0 生成期间源码发生漂移，已拒绝提交产物")
+        check_profile_installation(profile)
         for name, raw in expected.items():
             if (target / name).read_bytes() != raw:
                 raise ValueError(f"1.15.0 生成期间产物发生漂移：{name}")
@@ -919,7 +939,8 @@ def profile_package(
     *,
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> Path:
-    """Package only an already verified isolated profile."""
+    """Package checked outputs only after verifying the installed originals."""
+    check_profile_installation(profile)
     files = check_profile_outputs(profile, configuration=configuration)
     lock = profile_generation_lock(profile, files)
     if (profile_output_root() / "generation-lock.json").read_bytes() != lock.encode("utf-8"):
@@ -933,6 +954,17 @@ def profile_package(
         else raw
         for name, raw in files.items()
     }
+
+    def verify_before_replace() -> None:
+        # ZIP assembly and validation can outlive its initial input checks.
+        # Recheck at the atomic commit boundary so any detected installed,
+        # source, lock or generated-output drift preserves the previous ZIP.
+        check_profile_installation(profile)
+        if profile_generation_lock(profile, files) != lock:
+            raise ValueError("1.15.0 打包期间生成源码发生漂移")
+        if check_profile_outputs(profile, configuration=configuration) != files:
+            raise ValueError("1.15.0 打包期间隔离产物发生漂移")
+
     return write_zip(
         package_files,
         destination,
@@ -943,6 +975,7 @@ def profile_package(
             "lock": json.loads(lock),
         },
         release=False,
+        before_replace=verify_before_replace,
     )
 
 

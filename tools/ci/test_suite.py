@@ -283,8 +283,9 @@ def _resource_evidence(out: Path, summary: dict[str, Any]) -> dict[str, Any]:
         _number(row["final_ws_mb"])
         if row["peak_ws_mb"] < row["final_ws_mb"]:
             raise ValueError("进程内高水位小于最终 RSS")
-        if row["errors"] or type(row["exitstatus"]) is not int or row["exitstatus"] != 0:
+        if row["errors"]:
             raise ValueError(f"进程内采样失败：{worker}")
+        _number(row["exitstatus"], integer=True)
         by_worker[worker] = row
     master = by_worker.pop("master")
     _number(summary["controller_pid"], positive=True, integer=True)
@@ -333,6 +334,21 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
 
     errors: list[str] = []
     report: dict[str, Any] = {"groups": [summary], "errors": errors, "output": str(out)}
+    # 资源预算失败仍保留仪器身份；测试失败不能造成虚假的 worker 身份失配。
+    try:
+        report["resources"] = {
+            "inproc": [
+                json.loads(path.read_text(encoding="utf-8"))
+                for path in sorted(out.glob("inproc-full-*.json"))
+            ]
+        }
+        if any(
+            row["exitstatus"] != 0 or row.get("test_errors")
+            for row in report["resources"]["inproc"]
+        ):
+            errors.append("进程内 pytest 执行存在失败")
+    except Exception as exc:
+        errors.append(f"进程内采样身份无法读取：{exc}")
     try:
         for field in ("peak_total_mb", "per_worker_peak_mb", "n_workers", "samples"):
             value = summary[field]
@@ -392,13 +408,37 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
             for row in collection["reports"]
             if row["when"] == "call" and not row.get("subtest", False)
         )
-        skipped_setup = Counter(
+        terminal_setup = Counter(
             row["nodeid"]
             for row in collection["reports"]
-            if row["when"] == "setup" and row["outcome"] == "skipped"
+            if row["when"] == "setup" and row["outcome"] in {"skipped", "failed"}
         )
-        if calls + skipped_setup != expected:
+        if calls + terminal_setup != expected:
             errors.append("执行 call/skip 身份/重复次数不一致")
+        # 同一用例的所有主阶段必须由同一真实执行者负责；合法 worker 名单本身不足以证明。
+        phase_workers = {
+            phase: Counter(
+                (row["nodeid"], row["worker"])
+                for row in collection["reports"]
+                if row["when"] == phase and not row.get("subtest", False)
+            )
+            for phase in ("setup", "call", "teardown")
+        }
+        terminal_workers = Counter(
+            (row["nodeid"], row["worker"])
+            for row in collection["reports"]
+            if row["when"] == "setup" and row["outcome"] in {"skipped", "failed"}
+        )
+        if (
+            phase_workers["setup"] != phase_workers["teardown"]
+            or phase_workers["call"] + terminal_workers != phase_workers["setup"]
+            or any(
+                (row["nodeid"], row["worker"]) not in phase_workers["setup"]
+                for row in collection["reports"]
+                if row.get("subtest", False)
+            )
+        ):
+            errors.append("执行阶段 worker 身份/重复次数不一致")
         if report.get("tests", {}).get("tests") != sum(expected.values()):
             errors.append("JUnit 用例次数与收集集合不一致")
         effective = collection["effective"]
@@ -462,8 +502,12 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
 
 
 def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict[str, Any]:
-    game_input = capture_game_identity(out, getattr(args, "profile", None))
+    profile = getattr(args, "profile", None)
+    game_input = capture_game_identity(out, profile)
     env = dict(os.environ)
+    if profile is not None:
+        # 版本合同贯穿全部用例及其普通子进程，不能只记录 profile 而仍执行旧默认。
+        env["V3_CONTRACT_PROFILE"] = profile
     # 子验收是独立 controller，不能继承外层 pytest worker 的身份。
     for variable in (
         "PYTEST_XDIST_WORKER",
@@ -515,6 +559,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
             "V3_ROOT",
             "V3_USERDIR",
             "V3_WORKSHOP",
+            "V3_CONTRACT_PROFILE",
         )
     }
     machine = mem.machine_info()

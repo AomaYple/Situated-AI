@@ -265,8 +265,36 @@ def test_inproc_fixture_wrapper_preserves_setup_error(mem, monkeypatch):
     with pytest.raises(ValueError) as result:
         hook.throw(error)
     assert result.value is error
-    assert mem._INPROC["errors"] == ["FIXTURE-ERROR broken: ValueError('fixture setup failed')"]
+    assert mem._INPROC["errors"] == []
+    assert mem._INPROC["test_errors"] == [
+        "FIXTURE-ERROR broken: ValueError('fixture setup failed')"
+    ]
     assert not mem._INPROC["fixtures"]
+
+
+def test_inproc_sampler_records_instrument_failure(mem, monkeypatch):
+    """线程失败必须持久化为仪器错误，不能被一次成功的最终快照抹去。"""
+    monkeypatch.setattr(mem._INPROC_STOP, "wait", lambda _timeout: False)
+    monkeypatch.setattr(mem, "_inproc_snapshot", Mock(side_effect=OSError("counter unavailable")))
+    mem._inproc_sampler()
+    assert mem._INPROC["errors"] == ["SAMPLER-ERROR OSError('counter unavailable')"]
+    assert mem._INPROC["test_errors"] == []
+
+
+@pytest.mark.parametrize("outcome", ["passed", "failed", "skipped"])
+def test_inproc_test_outcomes_do_not_invalidate_sampling(mem, monkeypatch, outcome):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(mem, "_INPROC_ACTIVE", True)
+    mem.pytest_runtest_logreport(
+        SimpleNamespace(when="call", nodeid="sample.py::test_case", outcome=outcome)
+    )
+    assert mem._INPROC["errors"] == []
+    assert mem._INPROC["test_errors"] == (
+        ["FAILED sample.py::test_case"] if outcome == "failed" else []
+    )
+    key = outcome if outcome != "skipped" else "other"
+    assert mem._INPROC["counts"][key] == 1
 
 
 def test_inproc_fixture_wrapper_preserves_unittest_skip_without_sampler_error(mem, monkeypatch):

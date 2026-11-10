@@ -63,6 +63,7 @@ def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
     calls = []
 
     def run(argv, **kwargs):
+        assert kwargs["env"]["V3_CONTRACT_PROFILE"] == "1.15.0"
         calls.append(argv[argv.index("-m") + 1 :])
         return SimpleNamespace(returncode=0)
 

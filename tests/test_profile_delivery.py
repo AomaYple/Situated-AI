@@ -14,7 +14,10 @@ from pdx.situated import production_profile, r2_reader_authority
 
 
 @pytest.fixture
-def profile() -> production_profile.ProductionProfile:
+def profile(monkeypatch) -> production_profile.ProductionProfile:
+    # Reviewed file bytes exercise the production filesystem contract, not a
+    # complete installation or engine execution.
+    monkeypatch.setattr(config, "ROOT", r2_reader_authority.FROZEN_ROOT)
     production_profile.verify_baseline()
     return production_profile.load_profile(production_profile.BASELINE_ROOT)
 

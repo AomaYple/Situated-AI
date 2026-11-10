@@ -69,6 +69,8 @@ def main() -> int:
         args = parser.parse_args(sys.argv[2:])
         commands = list(BASELINE_COMMANDS)
         if args.profile:
+            # 原有离线断言、表格和 AI 面也消费相同版本合同；完整集合继续保留。
+            env["V3_CONTRACT_PROFILE"] = args.profile
             commands.extend(
                 (
                     f"{args.profile} {name}",

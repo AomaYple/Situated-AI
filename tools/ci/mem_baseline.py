@@ -2374,6 +2374,7 @@ class InprocState(TypedDict):
     series: list[list[float]]
     counts: dict[str, int]
     errors: list[str]
+    test_errors: list[str]
 
 
 _INPROC: InprocState = {
@@ -2383,6 +2384,7 @@ _INPROC: InprocState = {
     "series": [],
     "counts": {"passed": 0, "failed": 0, "other": 0},
     "errors": [],
+    "test_errors": [],
 }
 _INPROC_LOCK = threading.Lock()
 _INPROC_STOP = threading.Event()
@@ -2401,7 +2403,13 @@ def _inproc_snapshot() -> tuple[float, float]:
 
 def _inproc_sampler() -> None:  # pragma: no cover - 线程体
     while not _INPROC_STOP.wait(0.5):
-        rss, hwm = _inproc_snapshot()
+        try:
+            rss, hwm = _inproc_snapshot()
+        except Exception as exc:
+            # 仪器失败与被测代码失败分别保存；线程异常不能无声丢失。
+            with _INPROC_LOCK:
+                _INPROC["errors"].append(f"SAMPLER-ERROR {exc!r}")
+            return
         with _INPROC_LOCK:
             _INPROC["series"].append([round(time.time() - _INPROC_T0, 3), rss, hwm])
 
@@ -2429,6 +2437,7 @@ def _inproc_write(exitstatus: Any) -> Path | None:
     worker = os.environ.get("PYTEST_XDIST_WORKER", "master")
     rss, hwm = _inproc_snapshot()
     payload = {
+        "schema": 2,
         "tag": tag,
         "worker": worker,
         "pid": os.getpid(),
@@ -2445,6 +2454,7 @@ def _inproc_write(exitstatus: Any) -> Path | None:
         "phases": _INPROC["phases"],
         "series": _INPROC["series"],
         "errors": _INPROC["errors"][:20],
+        "test_errors": _INPROC["test_errors"][:20],
     }
     path = out / f"inproc-{tag}-{worker}.json"
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8", newline="\n")
@@ -2502,14 +2512,17 @@ def pytest_runtest_logreport(report: Any) -> None:  # pragma: no cover
         "t_s": round(time.time() - _INPROC_T0, 3),
         "ws_mb": rss,
         "peak_mb": hwm,
+        "subtest": hasattr(report, "context") or type(report).__name__ == "SubTestReport",
     }
     with _INPROC_LOCK:
         _INPROC["tests"].append(row)
         if report.outcome == "failed":
             _INPROC["counts"]["failed"] += 1
-            _INPROC["errors"].append(f"FAILED {report.nodeid}")
-        else:
+            _INPROC["test_errors"].append(f"FAILED {report.nodeid}")
+        elif report.outcome == "passed":
             _INPROC["counts"]["passed"] += 1
+        else:
+            _INPROC["counts"]["other"] += 1
 
 
 if pytest is not None:  # pragma: no branch
@@ -2529,7 +2542,7 @@ if pytest is not None:  # pragma: no branch
             raise
         except Exception as exc:
             if _inproc_enabled():
-                _INPROC["errors"].append(f"FIXTURE-ERROR {fixturedef.argname}: {exc!r}")
+                _INPROC["test_errors"].append(f"FIXTURE-ERROR {fixturedef.argname}: {exc!r}")
             raise
         if not _inproc_enabled():
             return value

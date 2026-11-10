@@ -218,6 +218,179 @@ def test_three_production_objectives_bind_the_actual_current_baseline(
     assert all(not isinstance(item, core.Observation) for item in program.network.objectives)
 
 
+@pytest.mark.parametrize(
+    ("consumer", "initial", "steps"),
+    [
+        (
+            witness.ROAD,
+            {"infrastructure": 0.6, "road-present": False},
+            [
+                ({}, {}, 0, ()),
+                ({"infrastructure": 0.1, "road-present": True}, {}, 4, (("road-relief", 4),)),
+                ({}, {"road-present": "unknown"}, 4, (("road-relief", 4),)),
+                ({}, {"road-present": "stale"}, 4, (("road-relief", 4),)),
+                ({}, {}, 4, (("road-relief", 4),)),
+                ({"infrastructure": 0.8}, {}, -2, (("road-held-authority", -2),)),
+                ({}, {"infrastructure": "unknown"}, 0, ()),
+                ({}, {"infrastructure": "stale"}, 0, ()),
+                ({}, {}, -2, (("road-held-authority", -2),)),
+                ({"infrastructure": 0.6, "road-present": False}, {}, 0, ()),
+            ],
+        ),
+        (
+            witness.SCHOOL,
+            {"literacy": 0.7, "bureaucracy": 0, "default": False, "school-agenda": True},
+            [
+                ({}, {}, 0, ()),
+                (
+                    {"literacy": 0.2},
+                    {},
+                    3,
+                    (("school-agenda-residual", 1), ("school-literacy", 2)),
+                ),
+                ({}, {"school-agenda": "unknown"}, 2, (("school-literacy", 2),)),
+                ({}, {"school-agenda": "stale"}, 2, (("school-literacy", 2),)),
+                ({}, {}, 3, (("school-agenda-residual", 1), ("school-literacy", 2))),
+                ({}, {"bureaucracy": "unknown"}, 0, ()),
+                ({}, {"bureaucracy": "stale"}, 0, ()),
+                ({}, {}, 3, (("school-agenda-residual", 1), ("school-literacy", 2))),
+                ({"literacy": 0.7}, {}, 0, ()),
+            ],
+        ),
+        (
+            witness.DIPLOMACY,
+            {"protective": False, "influence": 500, "target-interference": False},
+            [
+                ({}, {}, 0, ()),
+                (
+                    {"protective": True, "influence": 100, "target-interference": True},
+                    {},
+                    -1,
+                    (
+                        ("relations-influence-opportunity", -2),
+                        ("relations-interference-residual", -1),
+                        ("relations-protective-value", 2),
+                    ),
+                ),
+                (
+                    {},
+                    {"target-interference": "unknown"},
+                    0,
+                    (("relations-influence-opportunity", -2), ("relations-protective-value", 2)),
+                ),
+                (
+                    {},
+                    {"target-interference": "stale"},
+                    0,
+                    (("relations-influence-opportunity", -2), ("relations-protective-value", 2)),
+                ),
+                (
+                    {},
+                    {},
+                    -1,
+                    (
+                        ("relations-influence-opportunity", -2),
+                        ("relations-interference-residual", -1),
+                        ("relations-protective-value", 2),
+                    ),
+                ),
+                ({}, {"influence": "unknown"}, 0, ()),
+                ({}, {"influence": "stale"}, 0, ()),
+                (
+                    {"influence": 500, "target-interference": False},
+                    {},
+                    2,
+                    (("relations-protective-value", 2),),
+                ),
+            ],
+        ),
+    ],
+)
+def test_three_real_consumers_refresh_through_shock_unknown_stale_and_recovery(
+    profile, programs, consumer, initial, steps
+):
+    """Static observation sequence, with independent lowered-PDX arithmetic.
+
+    Each step supplies new typed observations to the actual production network.
+    Unavailable-reader specialization witnesses the declared unknown contract;
+    it does not pretend that a fixed installed script observes Python status or
+    that this sequence was sampled from a running engine.
+    """
+    canonical = programs[consumer]
+    generated = adapter.build(profile)
+    row = next(item for item in profile.declarations if item.id == consumer)
+    installed_overlay = witness._overlay(generated[row.source.removeprefix("game/")], consumer)
+    scope = "state" if consumer == witness.ROAD else "actor"
+    stable_values = {
+        witness.ROAD: {"infrastructure": 0.1, "road-present": False},
+        witness.SCHOOL: {
+            "literacy": 0.2,
+            "bureaucracy": 0,
+            "default": False,
+            "school-agenda": True,
+        },
+        witness.DIPLOMACY: {
+            "protective": True,
+            "influence": 500,
+            "target-interference": True,
+        },
+    }
+    stable = {
+        key: net.evaluate_observations(programs[key], observations(programs[key], values))
+        for key, values in stable_values.items()
+        if key != consumer
+    }
+    current = dict(initial)
+    previous_batch = None
+    for evaluation, (changes, statuses, expected, effects) in enumerate(steps):
+        current.update(changes)
+        action = replace(
+            canonical.network.actions[0], time=core.TimeIdentity("native-on-demand", evaluation)
+        )
+        program = with_action(canonical, action)
+        batch = observations(program, current)
+        batch = replace(
+            batch,
+            observations=tuple(
+                replace(
+                    item,
+                    status=statuses[item.spec_id],
+                    value=None if statuses[item.spec_id] == "unknown" else item.value,
+                )
+                if item.spec_id in statuses
+                else item
+                for item in batch.observations
+            ),
+        )
+        result = net.evaluate_observations(program, batch)
+        assert result.total == expected, (consumer, evaluation)
+        assert result.effects == effects, (consumer, evaluation)
+        # Repeating one exact evaluation cannot accumulate a previous delta.
+        assert net.evaluate_observations(program, batch) == result
+        assert result.action.time == action.time
+        assert all(item.starts == item.deadline == action.time for item in result.objectives)
+        available = tuple(item.spec_id for item in batch.observations if item.status == "known")
+        known = {item.spec_id: item.value for item in batch.observations if item.status == "known"}
+        pdx = witness._parsed(adapter.render_program(canonical, available=available))
+        assert witness._score(pdx, {**known, "ai": True}, scope) == expected
+        assert witness._score(pdx, {**known, "ai": False}, scope) == 0
+        if not statuses:
+            # Known rounds also exercise the actual production file's overlay,
+            # rather than only the standalone specialization renderer.
+            assert witness._score(installed_overlay, {**current, "ai": True}, scope) == expected
+        if previous_batch is not None:
+            with pytest.raises(ValueError, match="候选上下文"):
+                net.evaluate_observations(program, previous_batch)
+        previous_batch = batch
+        for key, stable_result in stable.items():
+            assert (
+                net.evaluate_observations(
+                    programs[key], observations(programs[key], stable_values[key])
+                )
+                == stable_result
+            )
+
+
 @pytest.mark.parametrize("mode", ["omitted", "unknown", "stale"])
 def test_unknown_or_stale_required_goal_baseline_withdraws_complete_groups(programs, mode):
     program = programs[witness.SCHOOL]
