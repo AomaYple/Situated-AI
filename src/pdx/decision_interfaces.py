@@ -7,12 +7,13 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import math
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import observation_queries
+from . import observation_queries, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 
@@ -28,12 +29,21 @@ SCRIPTED_PREDICATE_SOURCE = Path(__file__).resolve().parents[2] / (
     "research/situated/victoria3-1.14.5-scripted-predicate.json"
 )
 SCRIPTED_PREDICATE_SHA256 = "128c85f83fdc007a42d19c97dad7bf8d61351be42121095e680ed1028a38918c"
+SCRIPTED_PREDICATE_115 = Path(__file__).resolve().parents[2] / (
+    "research/situated/1.15.0/scripted-predicate.json"
+)
+SCRIPTED_PREDICATE_115_SHA256 = "31dd68a463d5de5c7d1bf7e234be29db8850af011544c5bf6fa0702c49ef52fa"
 
 
 def scripted_trigger_snapshot() -> bytes:
     """Identify the exact historical scripted predicate, never a builtin getter."""
-    raw = SCRIPTED_PREDICATE_SOURCE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != SCRIPTED_PREDICATE_SHA256:
+    version = version_contracts.active_version()
+    source = SCRIPTED_PREDICATE_115 if version == "1.15.0" else SCRIPTED_PREDICATE_SOURCE
+    expected_hash = (
+        SCRIPTED_PREDICATE_115_SHA256 if version == "1.15.0" else SCRIPTED_PREDICATE_SHA256
+    )
+    raw = source.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != expected_hash:
         raise ValueError("原版脚本布尔谓词冻结证据漂移")
     data = json.loads(raw)
     if data.get("reader") != {
@@ -43,7 +53,7 @@ def scripted_trigger_snapshot() -> bytes:
         "result": "boolean",
         "unit": "boolean",
         "source": "common/scripted_triggers/00_scripted_triggers.txt",
-        "line": 1117,
+        "line": 1243 if version == "1.15.0" else 1117,
         "definition": (
             "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
         ),
@@ -77,6 +87,66 @@ def _insurrection_predicate_definition(item: Assignment) -> bool:
         and not predicate.value.quoted
         and predicate.value.text == "yes"
     )
+
+
+def write_scripted_trigger_authority_115(game: Path) -> Path:
+    """Recapture the complete native trigger namespace after exact AST proof."""
+    from .situated import r2_reader_authority  # noqa: PLC0415
+
+    if SCRIPTED_PREDICATE_115.exists() and (
+        hashlib.sha256(SCRIPTED_PREDICATE_115.read_bytes()).hexdigest()
+        != SCRIPTED_PREDICATE_115_SHA256
+    ):
+        raise ValueError("1.15 scripted predicate: existing reviewed evidence drift")
+    r2_reader_authority.verify_installation(game.parent)
+    paths = sorted((game / "common/scripted_triggers").rglob("*.txt"))
+    sources = {
+        path.relative_to(game).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in paths
+    }
+    matches: list[tuple[Path, Assignment]] = []
+    for path in paths:
+        parsed = parse_text(path.read_text(encoding="utf-8-sig"))
+        if parsed.errors:
+            raise ValueError("1.15 scripted predicate: invalid source AST")
+        matches.extend((path, item) for item in parsed.root.all("any_insurrection_ongoing"))
+    if len(matches) != 1 or not _insurrection_predicate_definition(matches[0][1]):
+        raise ValueError("1.15 scripted predicate: missing exact unique definition")
+    data = {
+        "schema": 1,
+        "evidence_category": "static_check",
+        "baseline": "victoria3-1.15.0",
+        "builder": {
+            "path": "src/pdx/decision_interfaces.py",
+            "function": "write_scripted_trigger_authority_115",
+            "source_sha256": hashlib.sha256(
+                inspect.getsource(write_scripted_trigger_authority_115).encode()
+            ).hexdigest(),
+        },
+        "sources": sources,
+        "reader": {
+            "engine": "any_insurrection_ongoing",
+            "origin": "scripted_trigger",
+            "scope": "root",
+            "result": "boolean",
+            "unit": "boolean",
+            "source": matches[0][0].relative_to(game).as_posix(),
+            "line": matches[0][1].line,
+            "definition": (
+                "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
+            ),
+        },
+        "limits": [
+            "The exact current native scripted trigger is not a builtin getter.",
+            "Only exact country ROOT without arguments, paths or parameters is authorized.",
+            "The complete current trigger namespace and unique AST require live source verification; runtime remains unknown.",
+        ],
+    }
+    SCRIPTED_PREDICATE_115.parent.mkdir(parents=True, exist_ok=True)
+    SCRIPTED_PREDICATE_115.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    return SCRIPTED_PREDICATE_115
 
 
 def verify_scripted_trigger_game(game: Path) -> tuple[tuple[str, str], ...]:
@@ -798,6 +868,11 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
         STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
         "common/on_actions/00_code_on_actions.txt": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
     }
+    if version_contracts.active_version() == "1.15.0":
+        sources = {
+            STATE_DEVASTATION_SOURCE: "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4",
+            "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
+        }
     parsed = {}
     for source, expected in sources.items():
         text = texts.get(source)
@@ -821,8 +896,15 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
         raise ValueError("州恢复原版AST含未知节点")
 
     ideology = parsed[STATE_DEVASTATION_SOURCE].first("ideology_pacifist")
+    # Current native owner ?= is an optional scope transition. It witnesses
+    # the state getter only inside that guarded owner branch; it grants no
+    # unguarded root/foreign-owner access. The produced state consumer retains
+    # its own proved state scope and does not copy or remove this native gate.
+    owner_operator = "?=" if version_contracts.active_version() == "1.15.0" else "="
     expected = shape(
-        parse_text("owner = { any_scope_state = { is_incorporated = yes devastation > 0.2 } }").root
+        parse_text(
+            f"owner {owner_operator} {{ any_scope_state = {{ is_incorporated = yes devastation > 0.2 }} }}"
+        ).root
     )
     references = []
     if ideology is None or not isinstance(ideology.value, Block):

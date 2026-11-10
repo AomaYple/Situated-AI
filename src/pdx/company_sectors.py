@@ -9,6 +9,7 @@ Recipe possibilities are not observations of active PMs or current employment.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import math
 import re
@@ -16,7 +17,7 @@ import tomllib
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from . import company_observations, config
+from . import company_observations, config, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .situated import engine_scope
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 
 PARAMETERS = config.REPO / "mod/decisions/company_sectors.toml"
 BASELINE = config.REPO / "research/situated/company-sector-baseline.json"
+BASELINE_115 = config.REPO / "research/situated/1.15.0/company-sector-baseline.json"
 _FAMILIES = frozenset(
     {
         "company_types",
@@ -55,6 +57,10 @@ _KEYS = frozenset(
 )
 _GOOD = re.compile(r"goods_(input|output)_([a-z_]+)_add\Z")
 _JOB = re.compile(r"building_employment_([a-z_]+)_add\Z")
+
+
+def baseline_path() -> Path:
+    return BASELINE_115 if version_contracts.active_version() == "1.15.0" else BASELINE
 
 
 def _parameters(values: Mapping[str, object]) -> dict[str, float]:
@@ -427,7 +433,7 @@ def query_source_hashes(data: Mapping[str, Any]) -> dict[str, str]:
             continue
         query = company_observations.from_reader(reader["engine"], reader["parameters"])
         sources.update(company_observations.required_sources(query))
-    return {source: company_observations.SOURCE_HASHES[source] for source in sorted(sources)}
+    return {source: company_observations.source_hashes()[source] for source in sorted(sources)}
 
 
 def unsupported_facets(data: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -447,7 +453,7 @@ def _rules(profile, parameters):
     def add(suffix, cause, value, conditions, why):
         rows.append(
             {
-                "id": f"company_sector_{company}_{suffix}",
+                "id": f"company_sector_{company.replace('-', '_')}_{suffix}",
                 "source": profile["source"],
                 "field": profile["field"],
                 "domain": "market",
@@ -726,6 +732,8 @@ def derive(
             "evaluation": "static_recipe_opportunity_not_active_pm",
         }
         profiles[company] = profile
+    if len({identity.replace("-", "_") for identity in profiles}) != len(profiles):
+        raise ValueError("公司部门原生身份映射到规则ID后冲突")
     rules = _profile_rules(profiles, chosen)
     readers = _readers(rules, chosen)
     return {
@@ -769,7 +777,7 @@ def _frozen_profile(profile, sources):
         raise ValueError("公司部门冻结画像键无效")
     if (
         not isinstance(profile["id"], str)
-        or not re.fullmatch("[a-z][a-z0-9_]*", profile["id"])
+        or not re.fullmatch("[a-z][a-z0-9_-]*", profile["id"])
         or profile["source"] not in sources
         or _family(profile["source"]) != "company_types"
         or type(profile["line"]) is not int
@@ -889,9 +897,21 @@ def write_baseline(game: Path) -> Path:
     """Explicit production step; never called by model loading or import."""
     inputs = read_inputs(game)
     data = derive(inputs, parameters=load_parameters())
-    BASELINE.parent.mkdir(parents=True, exist_ok=True)
-    BASELINE.write_text(_canonical(_freeze(data)), encoding="utf-8", newline="\n")
-    return BASELINE
+    destination = baseline_path()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    frozen = _freeze(data)
+    if version_contracts.active_version() == "1.15.0":
+        from .situated import r2_reader_authority  # noqa: PLC0415
+
+        r2_reader_authority.verify_installation(game.parent)
+        frozen = {
+            "schema": 3,
+            "game_version": "1.15.0",
+            "provenance": _baseline_provenance(),
+            "payload": frozen,
+        }
+    destination.write_text(_canonical(frozen), encoding="utf-8", newline="\n")
+    return destination
 
 
 def _freeze(data: dict[str, Any]) -> dict[str, Any]:
@@ -1018,11 +1038,35 @@ def _validate_runtime(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+def _baseline_provenance() -> dict[str, str]:
+    """Bind regeneration code, tuning and independently proved default rights."""
+    return {
+        "builder_path": "src/pdx/company_sectors.py",
+        "builder_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "rule_builder_source_sha256": hashlib.sha256(
+            inspect.getsource(_rules).encode()
+        ).hexdigest(),
+        "parameters_sha256": hashlib.sha256(PARAMETERS.read_bytes()).hexdigest(),
+        "default_authority_sha256": hashlib.sha256(
+            engine_scope.company_default_snapshot()
+        ).hexdigest(),
+    }
+
+
 def _load_baseline() -> dict[str, Any]:
-    raw = BASELINE.read_text(encoding="utf-8")
+    raw = baseline_path().read_text(encoding="utf-8")
     data = json.loads(raw)
     if raw != _canonical(data):
         raise ValueError("公司部门冻结基线不是规范格式")
+    if version_contracts.active_version() == "1.15.0":
+        if (
+            set(data) != {"schema", "game_version", "provenance", "payload"}
+            or data["schema"] != 3
+            or data["game_version"] != "1.15.0"
+            or data["provenance"] != _baseline_provenance()
+        ):
+            raise ValueError("公司部门1.15派生版本或生成来源漂移")
+        data = data["payload"]
     return _validate_runtime(_thaw(data))
 
 

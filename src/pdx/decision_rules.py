@@ -19,9 +19,9 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import config, decision_intents, decision_interfaces, observation_queries
+from . import config, decision_intents, decision_interfaces, observation_queries, version_contracts
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
-from .model import Block, Scalar
+from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
 
@@ -194,6 +194,14 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     """严格解析版本锁定的规则；不接受自由脚本、隐式数值或重复优先级。"""
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
+    if source == SOURCE and version_contracts.active_version() == "1.15.0":
+        # Keep the historical TOML identity intact. The new complete native AST
+        # authority supplies this version's reviewed default-strategy input.
+        from .decision_adapters import native_authority_115  # noqa: PLC0415
+
+        data["baseline_sha256"] = native_authority_115()["sources"][
+            "common/ai_strategies/00_default_strategy.txt"
+        ]
     if source == SOURCE and strategy is None:
         strategy = decision_intents.load()
     return from_data(data, source_sha256=hashlib.sha256(raw).hexdigest(), strategy=strategy)
@@ -799,20 +807,23 @@ def _protected_offsets(
             limit = branch.value.first("limit")
             # 除源 SHA 外逐字核对门的词法形状，禁止误选另一个 if。
             expected = "OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } }"
+            if version_contracts.active_version() == "1.15.0":
+                expected = expected.replace(
+                    "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
+                )
             if limit is None or not isinstance(limit.value, Block):
                 raise ValueError("属国消费者可达性保护形状漂移")
 
-            def signature(node: Block) -> tuple:
-                return tuple(
-                    (
-                        item.key,
-                        item.op,
-                        signature(item.value)
-                        if isinstance(item.value, Block)
-                        else getattr(item.value, "text", None),
-                    )
-                    for item in node.assignments()
-                )
+            def signature(node: Assignment | Block | Scalar | None) -> object:
+                if isinstance(node, Block):
+                    return tuple(signature(item) for item in node.items)
+                if isinstance(node, Assignment):
+                    return node.key, node.op, node.prefix, signature(node.value)
+                if isinstance(node, Scalar):
+                    return node.text, node.quoted
+                if node is None:
+                    return None
+                raise ValueError("属国消费者可达性保护包含未知AST节点")
 
             if signature(limit.value) != signature(parse_text(expected).root):
                 raise ValueError("属国消费者可达性保护形状漂移")
