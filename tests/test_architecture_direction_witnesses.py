@@ -55,7 +55,7 @@ def candidate():
     return {
         "built": files[explicit.SOURCE],
         "files": files,
-        "baseline": decisions.BASELINE.read_text(encoding="utf-8"),
+        "baseline": decisions.baseline_path().read_text(encoding="utf-8"),
         "disabled": disabled[explicit.SOURCE],
         "disabled_files": disabled,
         "model": model,
@@ -133,8 +133,12 @@ def test_s2_actual_railway_costs_saturation_and_unknowns_have_distinct_six_roles
     candidate, architecture_witness
 ):
     built = candidate["files"][RAIL]
-    installed = (config.REPO / "mod" / RAIL).read_text(encoding="utf-8-sig")
-    consumer = {"path": "mod/" + RAIL, "definition": RAIL_FIELD[0], "field": RAIL_FIELD[1]}
+    installed = (decisions.product_path() / RAIL).read_text(encoding="utf-8-sig")
+    consumer = {
+        "path": (decisions.product_path().relative_to(config.REPO) / RAIL).as_posix(),
+        "definition": RAIL_FIELD[0],
+        "field": RAIL_FIELD[1],
+    }
     assert _digest(_node(installed, *RAIL_FIELD).value) == _digest(_node(built, *RAIL_FIELD).value)
     overlay = _rail_overlay(installed)
     policy = candidate["rail_policy"]
@@ -428,7 +432,7 @@ def test_s3_world_feedback_recomputes_completed_commitments_threats_and_opportun
     installed = explicit._disk(candidate, field)
     overlay = explicit._overlay(installed, field)
     helper_built = candidate["files"][HELPERS]
-    helper_disk = (config.REPO / "mod" / HELPERS).read_text(encoding="utf-8-sig")
+    helper_disk = (decisions.product_path() / HELPERS).read_text(encoding="utf-8-sig")
     parsed = parse_text(helper_disk)
     assert not parsed.errors
     assert _digest(parsed.root) == _digest(parse_text(helper_built).root)

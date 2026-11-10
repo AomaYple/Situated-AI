@@ -18,7 +18,14 @@ from typing import Any, cast
 import pytest
 import test_situated_writer_pdx_oracle as oracle
 
-from pdx import config, country_state, decision_adapters, decision_rules
+from pdx import (
+    config,
+    country_state,
+    decision_adapters,
+    decision_rules,
+    decisions,
+    version_contracts,
+)
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import action_instances, compiler, pdx_eval
@@ -197,7 +204,8 @@ def _consumer(source, field):
         definition, path = "sitai_adapter_fleet_supply_weight", "__body__"
     else:
         definition, path = field[0], ".".join(field[1:])
-    return {"path": "mod/" + output, "definition": definition, "field": path}
+    root = decisions.product_path().relative_to(config.REPO).as_posix()
+    return {"path": root + "/" + output, "definition": definition, "field": path}
 
 
 def _root(candidate, text):
@@ -329,7 +337,7 @@ def test_each_legacy_physical_consumer_has_six_executed_roles(
         # The numeric body is reached through a separate physical strategy
         # field. Prove both ends; body-only evidence cannot close that field.
         linked_consumer = {
-            "path": "mod/" + source,
+            "path": decisions.product_path().relative_to(config.REPO).as_posix() + "/" + source,
             "definition": field[0],
             "field": ".".join(field[1:]),
         }
@@ -358,6 +366,7 @@ def test_each_legacy_physical_consumer_has_six_executed_roles(
             case_id=f"legacy.{base_id}.{role}",
             role=role,
             input={
+                "contract_version": version_contracts.active_version(),
                 "source": source,
                 "field": ".".join(field),
                 "responsibility_stage": stage,
@@ -379,6 +388,7 @@ def test_each_legacy_physical_consumer_has_six_executed_roles(
                 case_id=f"legacy.{base_id}.strategy_link.{role}",
                 role=role,
                 input={
+                    "contract_version": version_contracts.active_version(),
                     "script_value": "sitai_adapter_fleet_supply_weight",
                     "disabled_native_value": 1,
                     **_json_observation(observations),
@@ -468,6 +478,9 @@ def test_legacy_module_declares_only_its_actual_denominator(witness_candidate):
         for field in {rule.field for rule in policy.rules}
     }
     assert set(IDENTITIES) == actual
+    assert actual == {
+        (consumer.source, consumer.field) for consumer in candidate["model"].production_consumers
+    }
     writers = candidate["model"].consumer_ir.writers
     outside = [writer.writer_id for writer in writers if writer.kind != "rule_action"]
     assert outside, "explicit actions and SupportProgram must remain separate responsibilities"

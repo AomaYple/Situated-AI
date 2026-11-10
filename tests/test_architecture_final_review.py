@@ -21,7 +21,15 @@ import test_observed_relations_feedback as feedback
 import test_observed_relations_witness_capture as witness
 import test_situated_production_guards as guards
 
-from pdx import config, country_state, decision_adapters, decision_rules, decisions, distribution
+from pdx import (
+    config,
+    country_state,
+    decision_adapters,
+    decision_rules,
+    decisions,
+    distribution,
+    version_contracts,
+)
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import (
@@ -31,6 +39,7 @@ from pdx.situated import (
     migration_baseline,
     pdx_eval,
     relations,
+    vanilla_inventory,
 )
 from pdx.situated.native_treatments import _digest, _resolve
 from pdx.situated.receipts import digest
@@ -127,6 +136,10 @@ def final_native(final_candidate):
         report = audit.native_report()
     assert report["source_snapshot_sha256"] == final_candidate["snapshot"]
     assert report["plan_version"] == architecture_receipts.PLAN_VERSION
+    # Re-discover the installed originals independently of the supplied/built
+    # treatment report. A report cannot choose its own source denominator.
+    installed_scope = vanilla_inventory.discover()
+    assert report["scope"] == installed_scope.as_dict()
     treatments = report["native_treatments"]
     assert treatments["production_hashes"] == {
         name: hashlib.sha256(raw).hexdigest() for name, raw in final_candidate["files"].items()
@@ -162,7 +175,8 @@ def final_supply(final_candidate, final_disabled):
     assert len(writers) == len(programs) == len(SUPPLY_GOODS)
     assert set(programs) == set(SUPPLY_GOODS)
     source = explicit.SOURCE
-    original = parse_text(compiler.BASELINE.read_text(encoding="utf-8")).root
+    original = parse_text(compiler.baseline_path().read_text(encoding="utf-8")).root
+    installed_original = parse_text((config.GAME / source).read_text(encoding="utf-8-sig")).root
     current = parse_text(candidate["files"][source].decode("utf-8-sig")).root
     disabled = parse_text(final_disabled[source]).root
     original_map, status = _resolve(original, "ai_strategy_default", "goods_stances")
@@ -170,7 +184,13 @@ def final_supply(final_candidate, final_disabled):
     assert original_map is not None
     assert isinstance(original_map.value, Block)
     originals = {item.key: _digest(item) for item in original_map.value.assignments()}
-    assert len(originals) == 17
+    installed_map, status = _resolve(installed_original, "ai_strategy_default", "goods_stances")
+    assert status == "found"
+    assert installed_map is not None
+    assert isinstance(installed_map.value, Block)
+    installed_originals = {item.key: _digest(item) for item in installed_map.value.assignments()}
+    assert originals == installed_originals
+    assert len(originals) == {"1.14.5": 17, "1.15.0": 18}[version_contracts.active_version()]
     actual_map, status = _resolve(current, "ai_strategy_default", "goods_stances")
     assert status == "found"
     assert actual_map is not None
@@ -227,6 +247,7 @@ def _supply_rows(context, good):
         enabled = role != "disabled"
         inputs = {
             "good": good,
+            "contract_version": version_contracts.active_version(),
             "is_ai": is_ai,
             "price": price,
             "delta": delta,
@@ -275,7 +296,11 @@ def _supply_rows(context, good):
                 "src/pdx/situated/compiler.py",
             ],
             "consumers": [
-                {"path": "mod/" + source, "definition": "ai_strategy_default", "field": field}
+                {
+                    "path": (decisions.product_path().relative_to(config.REPO) / source).as_posix(),
+                    "definition": "ai_strategy_default",
+                    "field": field,
+                }
             ],
         }
 
@@ -376,7 +401,7 @@ def _native_review(candidate, report, *, integration):
     scope, treatments = report["scope"], report["native_treatments"]
     rows = treatments["rows"]
     expected = [row["declaration_id"] for row in scope["surfaces"]]
-    assert scope["discovered_count"] == treatments["denominator"] == len(expected) == 8856
+    assert scope["discovered_count"] == treatments["denominator"] == len(expected)
     assert len(set(expected)) == len(expected)
     assert Counter(expected) == Counter(row["declaration_id"] for row in rows)
     assert scope["parse_failures"] == []
@@ -403,7 +428,7 @@ def _native_review(candidate, report, *, integration):
         # every actual game script and localization byte must match this build.
         for name, raw in candidate["files"].items():
             if name.startswith(("common/", "events/", "localization/")):
-                assert (config.REPO / "mod" / name).read_bytes() == raw, name
+                assert (decisions.product_path() / name).read_bytes() == raw, name
     return {
         "declarations": len(rows),
         "active_unknown": 0,
@@ -425,7 +450,7 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
         for name, raw in candidate["files"].items()
         if name.endswith((".txt", ".yml", ".json"))
     }
-    baseline = compiler.BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     # pytest exposes the original factory through __wrapped__ at runtime;
     # FixtureFunctionDefinition's type stub does not declare that attribute.
     legacy_candidate = cast("Any", legacy.witness_candidate).__wrapped__(
@@ -473,29 +498,59 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     for good in SUPPLY_GOODS:
         for case in _supply_rows(final_supply, good):
             record(**case)
-    assert len(legacy.IDENTITIES) == 927
+    expected_legacy = {"1.14.5": 927, "1.15.0": 937}[version_contracts.active_version()]
+    assert len(legacy.IDENTITIES) == expected_legacy
     assert len(explicit.CARDS) == 11
     # The external fleet script body and its actual strategy reference are
     # separate physical consumers; both require their own six executed roles.
-    assert len(rows) == (927 + 1 + 11 + 1 + 33) * len(ROLES)
+    expected_cases_per_role = expected_legacy + 1 + len(explicit.CARDS) + 1 + len(SUPPLY_GOODS)
+    assert len(rows) == expected_cases_per_role * len(ROLES)
     assert len({row["case_id"] for row in rows}) == len(rows)
     consumers = {
         (item["path"], item["definition"], item["field"])
         for row in rows
         for item in row["consumers"]
     }
-    assert len(consumers) == 970
-    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, 973)
+    # Establish the physical field set from rules, explicit cards, the native
+    # fleet reference, support and the independent supply list before comparing
+    # executed records. Coexisting responsibilities can share physical fields.
+    expected_consumers = {
+        tuple(legacy._consumer(source, field)[key] for key in ("path", "definition", "field"))
+        for source, field in legacy.IDENTITIES
+    }
+    current_path = (decisions.product_path().relative_to(config.REPO) / explicit.SOURCE).as_posix()
+    expected_consumers.update(
+        (current_path, explicit.DEFINITION, card[1]) for card in explicit.CARDS
+    )
+    expected_consumers.add((current_path, explicit.DEFINITION, "diplomatic_play_support"))
+    fleet_links = {
+        (
+            (decisions.product_path().relative_to(config.REPO) / source).as_posix(),
+            field[0],
+            ".".join(field[1:]),
+        )
+        for source, field in legacy.IDENTITIES
+        if legacy._consumer(source, field)["field"] == "__body__"
+    }
+    assert len(fleet_links) == 1
+    expected_consumers.update(fleet_links)
+    expected_consumers.update(
+        (current_path, explicit.DEFINITION, f"goods_stances.{good}") for good in SUPPLY_GOODS
+    )
+    assert consumers == expected_consumers
+    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, expected_cases_per_role)
     assert digest(architecture_receipts.source_snapshot(config.REPO)) == candidate["snapshot"]
     return {
         "review": {
-            "legacy_consumers": 927,
+            "contract_version": version_contracts.active_version(),
+            "legacy_consumers": expected_legacy,
             "legacy_strategy_links": 1,
             "explicit_cards": 11,
             "support_programs": 1,
             "supply_enum_programs": 33,
             "physical_consumers": len(consumers),
             "executed_cases": len(rows),
+            "expected_cases": expected_cases_per_role * len(ROLES),
             "roles": list(ROLES),
             "fresh_execution_sha256": digest(rows),
             "production_output_hashes": {
@@ -508,7 +563,8 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
 
 def test_whole_mod_review_reexecutes_the_exact_current_consumer_matrix(final_whole_review):
     """Build-only verification; formal S5 capture occurs in its six role tests."""
-    assert final_whole_review["review"]["executed_cases"] == 5838
+    review = final_whole_review["review"]
+    assert review["executed_cases"] == review["expected_cases"]
 
 
 @pytest.fixture(scope="module")

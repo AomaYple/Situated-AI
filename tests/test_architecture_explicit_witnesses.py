@@ -17,7 +17,14 @@ import pytest
 from test_architecture_all_consumer_witnesses import _json_observation, _units
 from test_situated_action_reference import _COMPLETE, _typed
 
-from pdx import config, decision_adapters, decision_rules, decisions, distribution
+from pdx import (
+    config,
+    decision_adapters,
+    decision_rules,
+    decisions,
+    distribution,
+    version_contracts,
+)
 from pdx.parser import parse_text
 from pdx.situated import audit, compiler, pdx_eval
 from pdx.situated.native_treatments import _digest, _resolve
@@ -26,7 +33,7 @@ from pdx.situated.support_program import SupportObservation
 pytest_plugins = ("tools.ci.architecture_witness_capture",)
 pytestmark = pytest.mark.integration
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
-PATH = "mod/" + SOURCE
+PATH = (decisions.product_path().relative_to(config.REPO) / SOURCE).as_posix()
 DEFINITION = "ai_strategy_default"
 _MARKED = re.compile(r"(?ms)^\s*# SITAI BEGIN [^\n]+\n.*?^\s*# SITAI END [^\n]+\n")
 
@@ -183,7 +190,7 @@ def candidate():
         "metadata": metadata,
         "support": support,
         "disabled": disabled[SOURCE],
-        "baseline": decisions.BASELINE.read_text(encoding="utf-8"),
+        "baseline": decisions.baseline_path().read_text(encoding="utf-8"),
     }
 
 
@@ -204,6 +211,7 @@ def _record(
         role=role,
         input={
             "card": card,
+            "contract_version": version_contracts.active_version(),
             "responsibility_stage": stage,
             "responsibility_requirement": requirement,
             **_json_observation(observations),
@@ -292,7 +300,7 @@ def _boundary_roles(
         role="native_tail",
         observations={
             "remove_only_declared_overlays": True,
-            "original_source": str(decisions.BASELINE.relative_to(config.REPO)),
+            "original_source": decisions.baseline_path().relative_to(config.REPO).as_posix(),
             "original_sha256": hashlib.sha256(candidate["baseline"].encode()).hexdigest(),
         },
         expected=expected_native,
