@@ -2025,8 +2025,16 @@ class _Dependencies:
                 if source != "common/on_actions/00_code_on_actions.txt"
             ):
                 return {}
-            evidence = json.loads(country_interfaces.EVIDENCE.read_bytes())
-            if evidence.get("schema") != 1:
+            evidence_raw = country_interfaces.evidence_file().read_bytes()
+            evidence = json.loads(evidence_raw)
+            if evidence.get("schema") != 1 or (
+                version_contracts.active_version() == "1.15.0"
+                and (
+                    hashlib.sha256(evidence_raw).hexdigest()
+                    != country_interfaces.EVIDENCE_115_SHA256
+                    or evidence.get("baseline_version") != "1.15.0"
+                )
+            ):
                 return {}
             observed = {}
             source_identities = {}
