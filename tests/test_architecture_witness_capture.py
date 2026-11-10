@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -309,3 +311,236 @@ def test_batch_plan_rejects_ambiguous_or_noncanonical_responsibility(tmp_path, f
     isolated_plan.write_text(json.dumps({"schema": 1, "rows": rows}), encoding="utf-8")
     with pytest.raises(pytest.UsageError):
         _plan(tmp_path, "tools/out/fixture-plan.json")
+
+
+def _current_fixture(tmp_path, monkeypatch):
+    """Exercise the real lock/tree orchestration with a tiny native fixture.
+
+    Live installation verification and discovery have independent integration
+    coverage; here only their narrow native input is substituted.
+    """
+    from pdx import config, decisions, distribution
+    from tools.ci import architecture_witness_capture as capture
+
+    source = tmp_path / "mod/decisions/actions.toml"
+    source.parent.mkdir(parents=True)
+    source.write_text("schema = 1\n", encoding="utf-8")
+    test = tmp_path / "tests/test_business.py"
+    test.parent.mkdir()
+    test.write_text("def test_actual(role):\n    pass\n", encoding="utf-8")
+    baseline = tmp_path / "research/vanilla-ai/1.15.0/default.txt"
+    baseline.parent.mkdir(parents=True)
+    baseline.write_text("native = {}\n", encoding="utf-8")
+    product = tmp_path / capture._CURRENT_ROOT
+    generated = product / "common/generated.txt"
+    generated.parent.mkdir(parents=True)
+    generated.write_text("strategy = { weight = { value = 1 } }\n", encoding="utf-8")
+    native = tmp_path / "installation/game/common/native.txt"
+    native.parent.mkdir(parents=True)
+    native.write_bytes(b"native = {}\n")
+    native_hash = hashlib.sha256(native.read_bytes()).hexdigest()
+    native_sources = {"common/native.txt": native_hash}
+    scope_hash = digest(native_sources)
+    monkeypatch.setattr(config, "REPO", tmp_path)
+    monkeypatch.setattr(config, "GAME", native.parents[1])
+    monkeypatch.setattr(decisions, "PRODUCT", tmp_path / "mod")
+    monkeypatch.setattr(decisions, "_HISTORICAL_PRODUCT", tmp_path / "mod")
+    monkeypatch.setattr(decisions, "baseline_path", lambda: baseline)
+    calls = []
+
+    def verify_native():
+        calls.append("verify_native")
+        if hashlib.sha256(native.read_bytes()).hexdigest() != native_hash:
+            raise ValueError("native fixture source drift")
+
+    def discover_native():
+        calls.append("discover_native")
+        verify_native()
+        return SimpleNamespace(
+            baseline_id="victoria3-1.15.0:fixture",
+            scope_hash=scope_hash,
+            source_hashes=native_sources,
+            discovered_count=1,
+        )
+
+    monkeypatch.setattr(distribution, "verify_compatibility_installation", verify_native)
+    monkeypatch.setattr(capture.vanilla_inventory, "discover", discover_native)
+    built = {"common/generated.txt": generated.read_bytes()}
+
+    def package_inputs(*, include_engineering_metadata=False):
+        assert include_engineering_metadata is True
+        verify_native()
+        return None, None, dict(built)
+
+    monkeypatch.setattr(distribution, "package_inputs", package_inputs)
+    monkeypatch.setattr(distribution, "_release_files", lambda files: files)
+    lock = product / "generation-lock.json"
+    lock.write_text(
+        distribution.generation_lock({"common/generated.txt": generated.read_bytes()}),
+        encoding="utf-8",
+        newline="\n",
+    )
+    options = {
+        "architecture_witness_output": "tools/out/current.json",
+        "architecture_witness_stage": "S3",
+        "architecture_witness_requirement": "observed_feedback_opportunity_cost",
+        "architecture_witness_id": "current.executed",
+        "architecture_witness_scope": scope_hash,
+        "architecture_witness_profile": "1.15.0",
+        "numprocesses": 0,
+    }
+    cfg = SimpleNamespace(
+        rootpath=tmp_path, getoption=lambda name, default=None: options.get(name, default)
+    )
+    return (
+        capture,
+        cfg,
+        options,
+        {"source": source, "generated": generated, "native": native, "lock": lock},
+        calls,
+    )
+
+
+def _record_current_roles(state, consumer=None):
+    from tools.ci import architecture_witness_capture as capture
+
+    for role in sorted(receipts.WITNESS_ROLES):
+        nodeid = f"tests/test_business.py::test_actual[{role}]"
+        value = int(role == "positive")
+        state.record(
+            nodeid,
+            case_id=role,
+            role=role,
+            input={"role": role, "contract_version": "1.15.0"},
+            expected={"value": value},
+            reference={"value": value},
+            generated={"value": value},
+            production=["mod/decisions/actions.toml"],
+            consumers=[
+                {
+                    "path": consumer or capture._CURRENT_ROOT + "/common/generated.txt",
+                    "definition": "strategy",
+                    "field": "weight",
+                }
+            ],
+        )
+        for phase in ("setup", "call", "teardown"):
+            state.pytest_runtest_logreport(
+                SimpleNamespace(nodeid=nodeid, when=phase, outcome="passed")
+            )
+
+
+def test_explicit_current_capture_binds_raw_lock_native_scope_and_true_output_tree(
+    tmp_path, monkeypatch
+):
+    from pdx import version_contracts
+
+    capture, cfg, _options, paths, calls = _current_fixture(tmp_path, monkeypatch)
+    with version_contracts.select_version("1.15.0"):
+        state = capture.Capture(cfg)
+        _record_current_roles(state)
+        result = state.pytest_sessionfinish(SimpleNamespace(testscollected=6, exitstatus=0), 0)
+    assert result["status"] == "passed"
+    assert result["schema"] == 2
+    assert result["protocol"] == capture._CURRENT_PROTOCOL
+    assert result["contract_version"] == "1.15.0"
+    assert result["current_boundary"]["generated_root"] == capture._CURRENT_ROOT
+    assert calls.count("discover_native") == 2
+    assert (
+        result["current_boundary"]["generation_lock"]["sha256"]
+        == hashlib.sha256(paths["lock"].read_bytes()).hexdigest()
+    )
+    row_path = tmp_path / "tools/out/current.current-row.json"
+    assert row_path.is_file()
+    assert not (tmp_path / "tools/out/current.row.json").exists()
+    row = json.loads(row_path.read_bytes())
+    assert receipts._evidence(
+        tmp_path, "S3", row, result["source_snapshot_sha256"], result["scope_hash"]
+    )
+
+
+@pytest.mark.parametrize(
+    "consumer", ["mod/common/generated.txt", "tools/out/arbitrary/common/generated.txt"]
+)
+def test_current_capture_rejects_old_or_arbitrary_generated_roots(tmp_path, monkeypatch, consumer):
+    from pdx import version_contracts
+
+    capture, cfg, _options, _paths, _calls = _current_fixture(tmp_path, monkeypatch)
+    with version_contracts.select_version("1.15.0"):
+        state = capture.Capture(cfg)
+        with pytest.raises(ValueError, match="exact compatibility output root"):
+            _record_current_roles(state, consumer)
+
+
+@pytest.mark.parametrize("fault", ["source", "generated", "lock", "native", "extra_output"])
+def test_current_capture_rejects_changed_source_lock_output_or_native_bytes(
+    tmp_path, monkeypatch, fault
+):
+    from pdx import version_contracts
+
+    capture, cfg, _options, paths, _calls = _current_fixture(tmp_path, monkeypatch)
+    with version_contracts.select_version("1.15.0"):
+        state = capture.Capture(cfg)
+        _record_current_roles(state)
+        if fault == "extra_output":
+            paths["generated"].with_name("unknown.txt").write_bytes(b"unknown={}")
+        else:
+            paths[fault].write_bytes(paths[fault].read_bytes() + b"\n# drift\n")
+        session = SimpleNamespace(testscollected=6, exitstatus=0)
+        result = state.pytest_sessionfinish(session, 0)
+    assert result["status"] == "rejected"
+    assert result["open_items"]
+    assert session.exitstatus == pytest.ExitCode.TESTS_FAILED
+    assert not (tmp_path / "tools/out/current.current-row.json").exists()
+
+
+def test_current_capture_rejects_old_tree_even_with_a_coherently_refreshed_current_lock(
+    tmp_path, monkeypatch
+):
+    from pdx import distribution, version_contracts
+
+    capture, cfg, _options, paths, _calls = _current_fixture(tmp_path, monkeypatch)
+    with version_contracts.select_version("1.15.0"):
+        paths["generated"].write_bytes(b"strategy = { weight = { value = 99 } }\n")
+        paths["lock"].write_text(
+            distribution.generation_lock({"common/generated.txt": paths["generated"].read_bytes()}),
+            encoding="utf-8",
+            newline="\n",
+        )
+        with pytest.raises(pytest.UsageError, match="freshly built production bytes"):
+            capture.Capture(cfg)
+
+
+@pytest.mark.parametrize("fault", ["scope", "profile", "configured_root"])
+def test_current_capture_requires_matching_discovered_scope_and_configured_profile(
+    tmp_path, monkeypatch, fault
+):
+    from pdx import decisions, version_contracts
+
+    capture, cfg, options, _paths, _calls = _current_fixture(tmp_path, monkeypatch)
+    if fault == "scope":
+        options["architecture_witness_scope"] = "0" * 64
+    elif fault == "configured_root":
+        monkeypatch.setattr(decisions, "PRODUCT", tmp_path / "other-output")
+    with (
+        version_contracts.select_version("1.14.5" if fault == "profile" else "1.15.0"),
+        pytest.raises(pytest.UsageError, match="current architecture witness boundary"),
+    ):
+        capture.Capture(cfg)
+
+
+def test_current_batch_responsibilities_share_one_complete_boundary_check(tmp_path, monkeypatch):
+    from pdx import version_contracts
+
+    capture, cfg, options, _paths, calls = _current_fixture(tmp_path, monkeypatch)
+    with version_contracts.select_version("1.15.0"):
+        boundary = capture._CurrentBoundary(tmp_path)
+        first = capture.Capture(cfg, current_boundary=boundary)
+        options["architecture_witness_output"] = "tools/out/second.json"
+        options["architecture_witness_id"] = "second.executed"
+        second = capture.Capture(cfg, current_boundary=boundary)
+        for state in (first, second):
+            _record_current_roles(state)
+            result = state.pytest_sessionfinish(SimpleNamespace(testscollected=6, exitstatus=0), 0)
+            assert result["status"] == "passed"
+    assert calls.count("discover_native") == 2

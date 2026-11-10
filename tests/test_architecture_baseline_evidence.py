@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 import test_decision_adapters as adapter_tests
 
-from pdx import config
+from pdx import config, decisions, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes, parse_text
 from pdx.situated import architecture_receipts as receipts
@@ -257,6 +257,11 @@ def baseline_capture(request: pytest.FixtureRequest) -> BaselineCapture:
     name = os.environ.get("SITAI_S0_EVIDENCE_OUTPUT")
     output = None
     if name:
+        if version_contracts.active_version() != "1.14.5":
+            raise pytest.UsageError(
+                "S0 A2 evidence capture is historical and requires the 1.14.5 contract; "
+                "use the current independent inventory evidence entry for 1.15.0"
+            )
         output = (ROOT / name).resolve()
         if (
             not output.is_relative_to((ROOT / "tools/out").resolve())
@@ -373,7 +378,8 @@ def test_s0_independent_scope(
 ) -> None:
     inventory = actual_scope
     requirement = "independent_scope"
-    expected = {
+    version = version_contracts.active_version()
+    historical_expected = {
         "declarations": 8856,
         "legal": 5463,
         "capabilities": {
@@ -387,6 +393,24 @@ def test_s0_independent_scope(
         "content_roots": ["common"],
         "parse_failures": [],
     }
+    expected = (
+        {
+            "declarations": 9766,
+            "legal": 5740,
+            "capabilities": {
+                "direct": 2899,
+                "indirect": 2841,
+                "observation": 3403,
+                "pending": 623,
+                "unexposed": 0,
+            },
+            "parsed_files": 1878,
+            "content_roots": ["common"],
+            "parse_failures": [],
+        }
+        if version == "1.15.0"
+        else historical_expected
+    )
     observed = {
         "declarations": len(inventory.surfaces),
         "legal": sum(
@@ -419,7 +443,7 @@ def test_s0_independent_scope(
         request,
         "installed-native-denominator",
         {
-            "game_version": "1.14.5",
+            "game_version": version,
             "activation": "all_installed_content_not_runtime_activation",
             "migration_denominator_not_discovery": 1401,
         },
@@ -429,19 +453,9 @@ def test_s0_independent_scope(
     )
     native_sources = _actual_sources(inventory)
     # Complete achievement and population sources prove reader scopes without
-    # entering consumer discovery or changing its 8,856 declarations.
-    assert len(native_sources) == 1894
-    assert {
-        name: native_sources[name]
-        for name in (
-            "common/achievements/ep1_sphere_of_influence_achievements.txt",
-            "common/achievements/ip4_iberian_twilight_achievements.txt",
-            "common/pop_types/laborers.txt",
-            "common/pop_types/peasants.txt",
-            "common/pop_types/machinists.txt",
-            "common/journal_entries/00_urbanization.txt",
-        )
-    } == {
+    # entering consumer discovery or changing its reviewed declaration count.
+    assert len(native_sources) == (1960 if version == "1.15.0" else 1894)
+    historical_pins = {
         "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
         "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
         "common/pop_types/laborers.txt": "90e109f061ca04c308d3d60cf6ba6d91cbe3769759ff28f0a9a0bd34e169a2d5",
@@ -449,6 +463,19 @@ def test_s0_independent_scope(
         "common/pop_types/machinists.txt": "e0ddad8032fd6be5d0eb77533cf9f711a5baf5fe275d20819bc5ba8e3f6785ee",
         "common/journal_entries/00_urbanization.txt": "0be06294448f31679d2b14280b4e6c1991f0d2fa34f97ccc0452068c7cdc5ee6",
     }
+    expected_pins = (
+        {
+            "common/achievements/ep1_sphere_of_influence_achievements.txt": "323263f0483c14145c79b2a054bc7dd04aee5783731e5204604861d602cd4969",
+            "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
+            "common/pop_types/laborers.txt": "3b136e31556cd483ea213c82eef47c93f9774490775870622331f6139160d9f2",
+            "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
+            "common/pop_types/machinists.txt": "5960f8b6cc15e67b1305bf5d0d74368d2004572099b87ce4c6c827818497c39f",
+            "common/journal_entries/00_urbanization.txt": "dff544be003ef9c6283132b38696bf2b765f170aa0a06771a6ce4afc820fd622",
+        }
+        if version == "1.15.0"
+        else historical_pins
+    )
+    assert {name: native_sources[name] for name in expected_pins} == expected_pins
     baseline_capture.record(
         requirement,
         request,
@@ -510,13 +537,14 @@ def test_s0_independent_scope(
             )
         for numbers in occurrences.values():
             assert sorted(numbers) == list(range(1, len(numbers) + 1))
-    assert len({c["declaration_id"] for c in contexts}) == 8856
+    declarations = expected["declarations"]
+    assert len({c["declaration_id"] for c in contexts}) == declarations
     baseline_capture.record(
         requirement,
         request,
         "syntax-identity-occurrence-parent-closure",
-        {"declarations": 8856, "native_sources": len(surfaces_by_source)},
-        {"closed": 8856, "unique": 8856},
+        {"declarations": declarations, "native_sources": len(surfaces_by_source)},
+        {"closed": declarations, "unique": declarations},
         {
             "closed": inventory.discovered_count,
             "unique": len({s.declaration_id for s in inventory.surfaces}),
@@ -609,23 +637,63 @@ def _known_failure_observations(
         observed_diagnostics,
     )
     capture.artifact(requirement, ROOT / "tests/test_decision_adapters.py")
-    data = json.loads(engine_scope.LAW_MANIFEST.read_bytes())
-    assert (
-        _sha(engine_scope.LAW_MANIFEST.read_bytes())
-        == "eb96a222582705af59147adc6da9e6f2b11533e05a73eb9583e55171f79b0ba9"
+    current = version_contracts.active_version() == "1.15.0"
+    law_manifest = (
+        ROOT / "research/situated/victoria3-1.15.0-law-scope.json"
+        if current
+        else engine_scope.LAW_MANIFEST
     )
+    expected_manifest_sha = (
+        "5787364832b3a7c0ab9028d2733623ddbe999af0bd6a613eafcd0dea7ed28a7b"
+        if current
+        else "eb96a222582705af59147adc6da9e6f2b11533e05a73eb9583e55171f79b0ba9"
+    )
+    manifest_bytes = law_manifest.read_bytes()
+    assert _sha(manifest_bytes) == expected_manifest_sha
+    data = json.loads(manifest_bytes)
+    assert data["baseline"] == f"victoria3-{version_contracts.active_version()}-windows-x64"
     inputs = {source: (config.GAME / source).read_bytes() for source in data["script_hashes"]}
     actual_hashes = {source: _sha(raw) for source, raw in inputs.items()}
-    assert len(actual_hashes) == 21
+    expected_sources = 25 if current else 21
+    assert len(actual_hashes) == expected_sources
     assert actual_hashes == data["script_hashes"]
     proof = engine_scope.law_evidence(config.GAME, inputs)
     assert proof.verified
+    if current:
+        # Independently pinned current edges lie in the reviewed, byte-locked
+        # observation windows. Do not inherit historical instruction addresses.
+        control_flow_checks = [
+            {
+                "label": label,
+                "instruction_va": address,
+                "instruction_bytes": instruction,
+                "target_va": target,
+            }
+            for label, address, instruction, target in (
+                ("law parser thunk", "0x140840e3f", "e97cbefa00", "0x1417eccc0"),
+                ("law exact token dispatch", "0x1417ecee7", "0f8447010000", "0x1417ed034"),
+                ("law qualification wrapper", "0x141621f79", "e832da1c00", "0x1417ef9b0"),
+                ("actual law AI candidate consumer", "0x1415e1449", "e842090400", "0x141621d90"),
+                ("actual law AI candidate consumer", "0x1415e1455", "0f848d020000", "0x1415e16e8"),
+            )
+        ]
+        windows = {point["label"]: point for point in data["observations"]}
+        for check in control_flow_checks:
+            point = windows[check["label"]]
+            offset = int(check["instruction_va"], 16) - int(point["va"], 16)
+            instruction = bytes.fromhex(check["instruction_bytes"])
+            assert offset >= 0
+            assert bytes.fromhex(point["bytes"])[offset : offset + len(instruction)] == instruction
+    else:
+        control_flow_checks = data["control_flow_checks"]
     executable = config.GAME.parent / "binaries/victoria3.exe"
+    assert executable.stat().st_size == data["exe"]["bytes"]
     with executable.open("rb") as stream:
+        assert hashlib.file_digest(stream, "sha256").hexdigest() == data["exe"]["sha256"]
         for point in data["observations"]:
             stream.seek(int(point["file_offset"], 16))
             assert stream.read(len(bytes.fromhex(point["bytes"]))) == bytes.fromhex(point["bytes"])
-    for check in data["control_flow_checks"]:
+    for check in control_flow_checks:
         raw = bytes.fromhex(check["instruction_bytes"])
         assert int(check["instruction_va"], 16) + len(raw) + struct.unpack_from(
             "<i", raw, len(raw) - 4
@@ -646,13 +714,13 @@ def _known_failure_observations(
         {
             "native_sources": sorted(inputs),
             "machine_byte_points": len(data["observations"]),
-            "control_flow_edges": len(data["control_flow_checks"]),
+            "control_flow_edges": len(control_flow_checks),
         },
         expected_contract,
         data["contract"],
-        expected_contract if proof.verified and len(proof.sources) == 21 else {},
+        expected_contract if proof.verified and len(proof.sources) == expected_sources else {},
     )
-    capture.artifact(requirement, engine_scope.LAW_MANIFEST)
+    capture.artifact(requirement, law_manifest)
     capture.observation(
         requirement,
         "historical-failure-inputs.json",
@@ -660,7 +728,7 @@ def _known_failure_observations(
             "nested_scripts": scripts,
             "typed_input": {"seed": 284, "is_ai": True, "missing_target": False},
             "law_sources": actual_hashes,
-            "law_control_flow": data["control_flow_checks"],
+            "law_control_flow": control_flow_checks,
             "memory": {
                 "reproduced_problem": "unbounded diagnostic fixture expansion",
                 "current_check": "actual complete fixture has bounded representations",
@@ -697,6 +765,38 @@ def test_s0_known_failures_migration(
     retirements = {
         (row["source"], row["definition"]): row for row in retirement_data["retirements"]
     }
+    versioned = migration_baseline._versioned_contract()
+    redirects = (
+        {
+            (entry["source"], entry["definition"], entry["historical_replacement"]): entry
+            for entry in versioned["replacement_redirects"]
+        }
+        if versioned is not None
+        else {}
+    )
+    if versioned is not None:
+        assert len(redirects) == len(versioned["replacement_redirects"])
+        assert set(redirects) == {
+            (
+                "common/technology/technologies/10_production.txt",
+                "dough_rollers_ai_weight",
+                "technology_dough_rollers_labor_ready",
+            )
+        }
+        current_native = ROOT / versioned["source"]
+        assert _sha(current_native.read_bytes()) == versioned["source_sha256"]
+        for field, expected_hash in versioned["retentions"].items():
+            assert (
+                _native_field_hash(current_native, versioned["definition"], field) == expected_hash
+            )
+            assert (
+                _native_field_hash(
+                    config.GAME / "common/ai_strategies/00_default_strategy.txt",
+                    versioned["definition"],
+                    field,
+                )
+                == expected_hash
+            )
     assert len(retirements) == len(retirement_data["retirements"])
     assert retired == set(retirements)
     expected_rows = []
@@ -720,7 +820,7 @@ def test_s0_known_failures_migration(
                 )
                 assert (
                     _native_field_hash(
-                        ROOT / "mod/common/ai_strategies/00_default_strategy.txt",
+                        decisions.product_path() / "common/ai_strategies/00_default_strategy.txt",
                         evidence["definition"],
                         evidence["field"],
                     )
@@ -735,7 +835,15 @@ def test_s0_known_failures_migration(
                 )
             else:
                 for replacement in retirement["replacements"]:
-                    writer = rules[(row["source"], replacement)]
+                    redirect = redirects.get((row["source"], row["definition"], replacement))
+                    current_replacement = replacement
+                    if redirect is not None:
+                        assert {
+                            field: redirect[field] for field in FIELDS if field != "definition"
+                        } == {field: row[field] for field in FIELDS if field != "definition"}
+                        current_replacement = redirect["current_replacement"]
+                        assert (row["source"], replacement) not in all_ids
+                    writer = rules[(row["source"], current_replacement)]
                     assert {
                         field: getattr(writer, field) for field in FIELDS if field != "definition"
                     } == {field: row[field] for field in FIELDS if field != "definition"}
@@ -822,7 +930,7 @@ def test_s0_known_failures_migration(
         {
             "business_complete": False,
             "ast_sha256": _native_field_hash(
-                ROOT / "mod/common/ai_strategies/00_default_strategy.txt",
+                decisions.product_path() / "common/ai_strategies/00_default_strategy.txt",
                 native["definition"],
                 native["field"],
             ),
@@ -830,6 +938,8 @@ def test_s0_known_failures_migration(
     )
     baseline_capture.artifact(requirement, migration_baseline.DEFAULT_SOURCE)
     baseline_capture.artifact(requirement, migration_baseline.RETIREMENTS_SOURCE)
+    if versioned is not None:
+        baseline_capture.artifact(requirement, migration_baseline._VERSION_115_SOURCE)
     baseline_capture.observation(
         requirement,
         "migration-responsibilities.json",
