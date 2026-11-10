@@ -172,7 +172,7 @@ def _production_continuous_bindings(
             raise ValueError("支持程序实际overlay与完整语义不一致或重复")
         restored = pattern.sub("", content)
         if without_lines(asdict(support_node(restored))) != without_lines(
-            asdict(support_node(decisions.BASELINE.read_text(encoding="utf-8")))
+            asdict(support_node(decisions.baseline_path().read_text(encoding="utf-8")))
         ):
             raise ValueError("支持程序存在未登记写入或原版尾部漂移")
         binding = domain_coverage.ContinuousProgramBinding(

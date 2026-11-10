@@ -319,7 +319,7 @@ def source_metadata() -> dict[str, Any]:
     metadata = decisions.metadata_payload(
         policy,
         extensions,
-        baseline=decisions.BASELINE.read_text(encoding="utf-8"),
+        baseline=decisions.baseline_path().read_text(encoding="utf-8"),
         complete_localization=True,
         country_policy=country_policy,
     )
