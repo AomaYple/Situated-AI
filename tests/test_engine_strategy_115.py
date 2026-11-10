@@ -22,6 +22,59 @@ def strategy_data():
         return json.loads(engine_scope.strategy_snapshot())
 
 
+@pytest.fixture
+def current_strategy_image(monkeypatch, tmp_path):
+    """Full current proof; compact offsets are failure instrumentation only."""
+    with version_contracts.select_version("1.15.0"):
+        game = tmp_path / "game"
+        executable = tmp_path / "binaries/victoria3.exe"
+        executable.parent.mkdir()
+        data = json.loads(engine_scope.strategy_snapshot())
+        image = bytearray()
+        for point in data["observations"]:
+            point["file_offset"] = hex(len(image))
+            image.extend(bytes.fromhex(point["bytes"]))
+        executable.write_bytes(image)
+        data["exe"] = {
+            "sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+            "bytes": executable.stat().st_size,
+        }
+        for source in data["script_hashes"]:
+            path = game / source
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(source.encode())
+            data["script_hashes"][source] = hashlib.sha256(path.read_bytes()).hexdigest()
+        for source in data["institution_definition_sources"]:
+            path = game / source
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(
+                bytes.fromhex(data["institution_definition_bytes"][source])
+                if "institution_definition_bytes" in data
+                else source.encode()
+            )
+            data["institution_definition_sources"][source] = hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+        for source, raw_hex in data["stance_definition_bytes"].items():
+            path = game / source
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(bytes.fromhex(raw_hex))
+        manifest = tmp_path / "manifest.json"
+
+        def freeze():
+            raw = json.dumps(data, indent=2).encode()
+            manifest.write_bytes(raw)
+            digest = hashlib.sha256(raw).hexdigest()
+            if version_contracts.active_version() == "1.15.0":
+                monkeypatch.setitem(engine_scope_115.MANIFESTS, "strategy", (str(manifest), digest))
+            else:
+                monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
+                monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST_SHA256", digest)
+
+        freeze()
+        yield game, executable, data, freeze
+
+
 def test_current_strategy_is_independently_pinned_and_never_claims_runtime(strategy_data):
     path, identity, digest = engine_scope_115.manifest("strategy")
     assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
@@ -89,15 +142,30 @@ def test_current_strategy_snapshot_drift_is_rejected(tmp_path, monkeypatch):
         ("parser_va", "0x141823040"),
         ("consumer_va", "0x141656424"),
         ("operation", "generic_score"),
+        ("capability", "pending"),
+        ("unit", "unproven"),
+        ("field", "adjacent"),
     ],
 )
-def test_each_current_field_rejects_another_members_permission(strategy_data, field, key, value):
+def test_each_current_field_rejects_another_members_permission(
+    current_strategy_image, field, key, value
+):
+    game, _, strategy_data, freeze = current_strategy_image
     row = strategy_data["consumers"][field]
-    if row[key] == value:
-        value = "unreviewed"
-    row[key] = value
+    if key == "field":
+        strategy_data["consumers"][field + "_adjacent"] = strategy_data["consumers"].pop(field)
+    else:
+        if row[key] == value:
+            value = "unreviewed"
+        row[key] = value
+    freeze()
     with pytest.raises(ValueError, match="独立字段合同"):
         engine_strategy_115.validate(strategy_data)
+    with pytest.raises(ValueError, match="独立字段合同"):
+        engine_scope.strategy_snapshot()
+    inputs = {source: (game / source).read_bytes() for source in strategy_data["script_hashes"]}
+    with pytest.raises(ValueError, match="独立字段合同"):
+        engine_scope.strategy_evidence(game, inputs)
 
 
 @pytest.mark.parametrize(
@@ -132,9 +200,11 @@ def test_current_definition_bytes_cannot_disagree_with_definition_identity(strat
         engine_strategy_115.validate(strategy_data)
 
 
-def test_current_field_proof_requires_own_code_observation(strategy_data):
+@pytest.mark.parametrize("field", tuple(_CURRENT_CONSUMERS))
+@pytest.mark.parametrize("member", ["parser_va", "consumer_va"])
+def test_current_field_proof_requires_own_code_observation(strategy_data, field, member):
     changed = copy.deepcopy(strategy_data)
-    address = int(changed["consumers"]["weight"]["consumer_va"], 16)
+    address = int(changed["consumers"][field][member], 16)
     changed["observations"] = [
         point
         for point in changed["observations"]
@@ -142,5 +212,42 @@ def test_current_field_proof_requires_own_code_observation(strategy_data):
         <= address
         < int(point["va"], 16) + len(bytes.fromhex(point["bytes"]))
     ]
-    with pytest.raises(ValueError, match=r"缺少真实观察：weight\.consumer_va"):
+    with pytest.raises(ValueError, match="缺少真实观察"):
         engine_strategy_115.validate(changed)
+
+
+@pytest.mark.parametrize("index", range(307))
+def test_every_current_observation_rejects_byte_tampering_after_exe_and_manifest_repin(
+    current_strategy_image, index
+):
+    game, executable, data, freeze = current_strategy_image
+    assert len(data["observations"]) == 307
+    inputs = {source: (game / source).read_bytes() for source in data["script_hashes"]}
+    assert engine_scope.strategy_evidence(game, inputs).verified
+    image = bytearray(executable.read_bytes())
+    image[int(data["observations"][index]["file_offset"], 16)] ^= 1
+    executable.write_bytes(image)
+    data["exe"]["sha256"] = hashlib.sha256(image).hexdigest()
+    freeze()
+    with pytest.raises(ValueError, match="字节不一致"):
+        engine_scope.strategy_evidence(game, inputs)
+
+
+@pytest.mark.parametrize(
+    "field", ["wargoal_scores", "secret_goal_scores", "treaty_category_scores"]
+)
+@pytest.mark.parametrize("damage", ["unknown", "order", "duplicate", "missing"])
+def test_current_ordered_score_keys_reject_repin(current_strategy_image, field, damage):
+    _, _, data, freeze = current_strategy_image
+    keys = data["strategy_score_keys"][field]
+    if damage == "unknown":
+        keys[0] = "adjacent_unreviewed"
+    elif damage == "order":
+        keys.reverse()
+    elif damage == "duplicate":
+        keys.append(keys[0])
+    else:
+        keys.pop()
+    freeze()
+    with pytest.raises(ValueError, match="独立字段合同"):
+        engine_scope.strategy_snapshot()

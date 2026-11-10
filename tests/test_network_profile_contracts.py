@@ -15,6 +15,7 @@ from pdx.situated import action_network as net
 from pdx.situated import core_contracts as core
 from pdx.situated import expressions as ex
 from pdx.situated import network_profile as adapter
+from pdx.situated import network_support
 from pdx.situated import production_profile as native
 
 
@@ -236,10 +237,27 @@ def _program(
     )
 
 
+def _reference_pdx(program, monkeypatch, *, available=None):
+    """Witness core arithmetic after independently checking both native gates refuse it.
+
+    This local reference harness grants no production configuration permission.
+    All canonical-program, candidate-context and reader checks still execute.
+    """
+    with pytest.raises(ValueError, match="production_bound"):
+        network_support.validate_production(program)
+    with pytest.raises(ValueError, match="lowerable"):
+        adapter.render_program(program, available=available)
+    with monkeypatch.context() as reference:
+        reference.setattr(network_support, "validate_lowering", lambda _program: None)
+        return adapter.render_program(program, available=available)
+
+
 @pytest.mark.parametrize(("operation", "expected"), [("add", 25.0), ("multiply", 1.5)])
-def test_final_pdx_reconstructs_mapped_residual_in_the_consumer_algebra(operation, expected):
+def test_reference_pdx_reconstructs_mapped_residual_and_native_gates_refuse_it(
+    operation, expected, monkeypatch
+):
     program = _program(operation, residual=True)
-    rendered = adapter.render_program(program)
+    rendered = _reference_pdx(program, monkeypatch)
     facts: dict[str, object | None] = {"literacy": 0.2, "school-agenda": True}
     neutral = 0 if operation == "add" else 1
     assert math.isclose(net.evaluate_network(program, facts).total, expected, rel_tol=1e-14)
@@ -251,7 +269,9 @@ def test_final_pdx_reconstructs_mapped_residual_in_the_consumer_algebra(operatio
 
 
 @pytest.mark.parametrize("available", [("literacy", "school-agenda"), ("literacy",)])
-def test_final_pdx_unknown_replacement_restores_complete_basic_contribution(available):
+def test_reference_pdx_unknown_replacement_restores_basic_and_native_gates_refuse_it(
+    available, monkeypatch
+):
     program = _program(replacement=True)
     facts: dict[str, object | None] = {
         "literacy": 0.2,
@@ -259,7 +279,7 @@ def test_final_pdx_unknown_replacement_restores_complete_basic_contribution(avai
     }
     expected = 5 if "school-agenda" in available else 3
     assert net.evaluate_network(program, facts).total == expected
-    rendered = adapter.render_program(program, available=available)
+    rendered = _reference_pdx(program, monkeypatch, available=available)
     assert _score(_parsed(rendered), {**facts, "ai": True}) == expected
 
 

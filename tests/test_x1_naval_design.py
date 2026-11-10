@@ -32,7 +32,7 @@ def design():
         ),
         source="mod/decisions/information.toml",
     )
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     text = decision_rules.patch(
         baseline, policy, baseline=baseline, reader_words=frozenset({"is_at_war", "in_default"})
     )

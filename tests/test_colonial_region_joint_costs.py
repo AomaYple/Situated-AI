@@ -37,7 +37,7 @@ def production():
         ),
         source=SOURCE,
     )
-    native = compiler.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_path().read_text(encoding="utf-8")
     patched = decision_rules.patch(
         native,
         policy,

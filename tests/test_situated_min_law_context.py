@@ -8,14 +8,21 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules
+from pdx import decision_rules, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, decision_ir, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
 
-def test_min_law_contract_has_country_actor_and_actual_law_instance():
+@pytest.fixture
+def historical_strategy_contract():
+    """Only synthetic revision attacks use the reviewed historical schema."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+def test_min_law_contract_has_country_actor_and_actual_law_instance(historical_strategy_contract):
     data = json.loads(engine_scope.strategy_snapshot())
     contract = data["consumers"]["min_law_chance_to_pass"]
     assert contract == {
@@ -34,7 +41,7 @@ def test_min_law_contract_has_country_actor_and_actual_law_instance():
 
 
 @pytest.fixture
-def min_law_proof(tmp_path, monkeypatch):
+def min_law_proof(tmp_path, monkeypatch, historical_strategy_contract):
     data = json.loads(engine_scope.strategy_snapshot())
     points = data["observations"][148:169]
     assert len(points) == 21

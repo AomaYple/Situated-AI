@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_adapters, decision_rules
+from pdx import config, decision_adapters, decision_rules, version_contracts
 from pdx.situated import compiler
 
 pytestmark = pytest.mark.unit
@@ -162,11 +162,23 @@ def test_frozen_law_evidence_rejects_snapshot_and_live_byte_drift(monkeypatch, t
 
 
 def test_law_manifest_evidence_cannot_be_relabelled(monkeypatch, tmp_path):
-    manifest = json.loads(compiler._LAW_DOC_MANIFEST.read_text(encoding="utf-8"))
+    current = version_contracts.active_version() == "1.15.0"
+    original = (
+        compiler.REPO / "research/official-docs-1.15.0.manifest.json"
+        if current
+        else compiler._LAW_DOC_MANIFEST
+    )
+    manifest = json.loads(original.read_text(encoding="utf-8"))
     manifest["文档"]["game/common/laws/readme.md"]["sha256"] = "f" * 64
     path = tmp_path / "manifest.json"
     path.write_text(json.dumps(manifest), encoding="utf-8")
-    monkeypatch.setattr(compiler, "_LAW_DOC_MANIFEST", path)
+    if current:
+        target = tmp_path / "research/official-docs-1.15.0.manifest.json"
+        target.parent.mkdir()
+        target.write_bytes(path.read_bytes())
+        monkeypatch.setattr(compiler, "REPO", tmp_path)
+    else:
+        monkeypatch.setattr(compiler, "_LAW_DOC_MANIFEST", path)
     with pytest.raises(ValueError, match="冻结文档"):
         compiler._frozen_law_context()
 

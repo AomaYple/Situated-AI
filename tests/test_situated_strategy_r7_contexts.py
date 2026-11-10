@@ -8,12 +8,21 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules
+from pdx import decision_rules, equipment_opportunities, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture
+def historical_strategy_contract():
+    """Only synthetic revision attacks use the reviewed historical schema."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
 FIELDS = (
     "treaty_category_scores",
     "strategic_region_stance_type_scores",
@@ -23,7 +32,9 @@ FIELDS = (
 MAPS = ((FIELDS[0], "trade"), (FIELDS[1], "stance_conquer_region"))
 
 
-def test_r7_preserves_r6_original_bytes_and_every_existing_observation():
+def test_r7_preserves_r6_original_bytes_and_every_existing_observation(
+    historical_strategy_contract,
+):
     old_path = engine_scope.REPO / "research/situated/victoria3-1.14.5-strategy-scope-r6.json"
     raw = old_path.read_bytes()
     assert (
@@ -41,7 +52,7 @@ def test_r7_preserves_r6_original_bytes_and_every_existing_observation():
 
 
 @pytest.fixture
-def proof(tmp_path, monkeypatch):
+def proof(tmp_path, monkeypatch, historical_strategy_contract):
     data = json.loads(engine_scope.strategy_snapshot())
     points = data["observations"][388:]
     image = bytearray()
@@ -414,7 +425,27 @@ def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monk
         "wanted_num_supply_ships": 3,
         "max_ship_design_complexity": 1,
     }
-    assert len(equipment) == 1517
+    # Count from the independently pinned native candidate/material identities,
+    # rather than accepting the compiler's current total as its own oracle.
+    frozen = equipment_opportunities.load_baseline()
+    materials = {
+        (row["source"], f"{identity}.ai_weight"): row["ordinary_goods"]
+        for identity, row in frozen["candidates"].items()
+        if row["weight_shape"] == "block"
+        and row["scope_status"] == "direct"
+        and row["ordinary_goods"]
+    }
+    expected_goods, expected_writers = (
+        (426, 1541) if version_contracts.active_version() == "1.15.0" else (418, 1517)
+    )
+    assert len(materials) == 263
+    assert sum(map(len, materials.values())) == expected_goods
+    # Each actual material has opportunity, scarcity and high-price pressure;
+    # every candidate also has one independent default cost.
+    assert Counter((writer.source, writer.field) for writer in equipment) == {
+        key: 3 * len(goods) + 1 for key, goods in materials.items()
+    }
+    assert len(equipment) == expected_writers
     for writer in [*strategy, *equipment]:
         instance = instances[writer.writer_id]
         assert instance.actor_scope == "root"

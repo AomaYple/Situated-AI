@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from pdx import decision_adapters, decision_interfaces, decision_rules
+from pdx import decision_adapters, decision_interfaces, decision_rules, version_contracts
 from pdx.situated import actions, compiler, decision_ir, evidence, relations, support_signals
 
 pytestmark = pytest.mark.unit
@@ -30,9 +30,16 @@ def scripted_source(tmp_path, monkeypatch):
     def freeze():
         raw = json.dumps(data).encode()
         manifest.write_bytes(raw)
-        monkeypatch.setattr(decision_interfaces, "SCRIPTED_PREDICATE_SOURCE", manifest)
+        current = version_contracts.active_version() == "1.15.0"
         monkeypatch.setattr(
-            decision_interfaces, "SCRIPTED_PREDICATE_SHA256", hashlib.sha256(raw).hexdigest()
+            decision_interfaces,
+            "SCRIPTED_PREDICATE_115" if current else "SCRIPTED_PREDICATE_SOURCE",
+            manifest,
+        )
+        monkeypatch.setattr(
+            decision_interfaces,
+            "SCRIPTED_PREDICATE_115_SHA256" if current else "SCRIPTED_PREDICATE_SHA256",
+            hashlib.sha256(raw).hexdigest(),
         )
 
     freeze()

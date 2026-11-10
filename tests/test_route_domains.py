@@ -38,7 +38,7 @@ def production():
     )
     policy, _ = compiler.compile_policy(selected, INFO, model)
     adapters = decision_adapters.load()
-    native = compiler.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_path().read_text(encoding="utf-8")
     words = frozen_reader_words(native)
     generated = decision_rules.patch(
         native,

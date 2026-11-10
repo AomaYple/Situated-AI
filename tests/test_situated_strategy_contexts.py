@@ -6,12 +6,13 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_adapters, decision_rules
+from pdx import config, decision_adapters, decision_rules, version_contracts
 from pdx.situated import (
     actions,
     compiler,
     decision_ir,
     engine_scope,
+    engine_scope_115,
     evidence,
     relations,
     support_signals,
@@ -19,6 +20,12 @@ from pdx.situated import (
 from pdx.situated.schema import RankTerm, Relation
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture
+def historical_strategy_contract():
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 @pytest.mark.parametrize(
@@ -29,7 +36,14 @@ pytestmark = pytest.mark.unit
     ],
 )
 def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
-    monkeypatch, tmp_path, field, target, actor_line, target_line, address
+    monkeypatch,
+    tmp_path,
+    field,
+    target,
+    actor_line,
+    target_line,
+    address,
+    historical_strategy_contract,
 ):
     snapshot = compiler._frozen_strategy_contexts()
     monkeypatch.setattr(config, "GAME", tmp_path / "absent-game")
@@ -85,7 +99,7 @@ def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
     assert not any(item.startswith("@engine/") for item in context.evidence)
 
 
-def test_snapshot_rejects_manifest_byte_drift(monkeypatch, tmp_path):
+def test_snapshot_rejects_manifest_byte_drift(monkeypatch, tmp_path, historical_strategy_contract):
     path = tmp_path / "manifest.json"
     path.write_bytes(engine_scope.STRATEGY_MANIFEST.read_bytes() + b" ")
     monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", path)
@@ -98,7 +112,7 @@ def test_snapshot_rejects_manifest_byte_drift(monkeypatch, tmp_path):
     ["actor_scope", "target_scope", "operation", "capability", "unit", "consumer_va", "field"],
 )
 def test_repinning_a_changed_consumer_cannot_authorize_another_contract(
-    monkeypatch, tmp_path, member
+    monkeypatch, tmp_path, member, historical_strategy_contract
 ):
     data = json.loads(engine_scope.STRATEGY_MANIFEST.read_bytes())
     entry = data["consumers"]["recklessness"]
@@ -324,15 +338,16 @@ def current_game_fixture(monkeypatch, tmp_path):
     game = tmp_path / "game"
     executable = tmp_path / "binaries/victoria3.exe"
     executable.parent.mkdir()
-    executable.write_bytes(b"pinned-image-bytes")
     data = json.loads(engine_scope.strategy_snapshot())
+    image = bytearray()
+    for point in data["observations"]:
+        point["file_offset"] = hex(len(image))
+        image.extend(bytes.fromhex(point["bytes"]))
+    executable.write_bytes(image)
     data["exe"] = {
         "sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
         "bytes": executable.stat().st_size,
     }
-    data["observations"] = [
-        {"label": "consumer byte", "file_offset": "0x0", "bytes": b"pinned".hex()}
-    ]
     for source in data["script_hashes"]:
         path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -341,7 +356,11 @@ def current_game_fixture(monkeypatch, tmp_path):
     for source in data["institution_definition_sources"]:
         path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(source.encode())
+        path.write_bytes(
+            bytes.fromhex(data["institution_definition_bytes"][source])
+            if "institution_definition_bytes" in data
+            else source.encode()
+        )
         data["institution_definition_sources"][source] = hashlib.sha256(
             path.read_bytes()
         ).hexdigest()
@@ -354,10 +373,12 @@ def current_game_fixture(monkeypatch, tmp_path):
     def freeze():
         raw = json.dumps(data, indent=2).encode()
         manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
-        monkeypatch.setattr(
-            engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
+        digest = hashlib.sha256(raw).hexdigest()
+        if version_contracts.active_version() == "1.15.0":
+            monkeypatch.setitem(engine_scope_115.MANIFESTS, "strategy", (str(manifest), digest))
+        else:
+            monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
+            monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST_SHA256", digest)
 
     freeze()
     return game, executable, data, freeze
