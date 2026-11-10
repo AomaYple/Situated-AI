@@ -308,6 +308,59 @@ def test_diagnostic_arguments_preserve_windows_argument_boundaries():
     assert test_suite.validate_pytest_args(args) == args
 
 
+def test_real_xdist_workers_and_children_preserve_utf8_capture_with_encoding_overrides(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "utf8-project"
+    project.mkdir()
+    (project / "pytest.ini").write_text("[pytest]\naddopts = -n 2 --dist load\n", encoding="utf-8")
+    (project / "test_roundtrip.py").write_text(
+        "import os, subprocess, sys\n"
+        "import pytest\n"
+        "@pytest.mark.parametrize('case', [0, 1])\n"
+        "def test_roundtrip(case):\n"
+        "    assert os.environ['PYTHONUTF8'] == '1'\n"
+        "    assert os.environ['PYTHONIOENCODING'] == 'utf-8'\n"
+        "    assert sys.flags.utf8_mode == 1\n"
+        "    text = '未支持的原版合同版本：人口比例' + str(case)\n"
+        "    command = [sys.executable, '-c', \"import sys; "
+        'data=sys.stdin.read(); print(data); print(data, file=sys.stderr); sys.exit(7)"]\n'
+        "    result = subprocess.run(command, input=text, capture_output=True, text=True, "
+        "check=False, timeout=15)\n"
+        "    assert result.returncode == 7\n"
+        "    assert result.stdout == result.stderr == text + '\\n'\n"
+        '    command[-1] = "import sys; print(sys.argv[1])"\n'
+        "    assert subprocess.check_output([*command, text], text=True, timeout=15) == text + '\\n'\n"
+        '    command[-1] = "import sys; data=sys.stdin.read(); print(data); '
+        'print(data, file=sys.stderr)"\n'
+        "    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, "
+        "stderr=subprocess.PIPE, text=True) as process:\n"
+        "        stdout, stderr = process.communicate(text, timeout=15)\n"
+        "        assert stdout == stderr == text + '\\n'\n"
+        "        assert process.returncode == 0\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(test_suite, "ROOT", project)
+    monkeypatch.setattr(
+        test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
+    )
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).resolve().parents[1]))
+    monkeypatch.setenv("PYTHONUTF8", "0")
+    monkeypatch.setenv("PYTHONIOENCODING", "cp936")
+    out = test_suite.create_run_dir(tmp_path / "reports")
+    summary = test_suite.execute(
+        out, Namespace(timeout_s=45, quiet=True, allow_concurrent=True, profile="1.15.0"), []
+    )
+    assert summary["exit_code"] == 0, (out / "pytest.log").read_text(encoding="utf-8")
+    reports = json.loads((out / "collection.json").read_text(encoding="utf-8"))["reports"]
+    calls = [row for row in reports if row["when"] == "call"]
+    assert len(calls) == 2
+    assert {row["worker"] for row in calls} == {"gw0", "gw1"}
+    assert all(row["outcome"] == "passed" for row in calls)
+    assert os.environ["PYTHONUTF8"] == "0"
+    assert os.environ["PYTHONIOENCODING"] == "cp936"
+
+
 @pytest.mark.parametrize("workers", [0, 2])
 @pytest.mark.parametrize("failure_kind", ["none", "subtest", "setup"])
 def test_real_pytest_records_collection_multiplicity_and_reports(

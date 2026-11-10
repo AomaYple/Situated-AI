@@ -520,6 +520,9 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
         {
             "COVERAGE_FILE": str(out / ".coverage"),
             "PYTHONIOENCODING": "utf-8",
+            # xdist and ordinary Python children do not inherit -X utf8.
+            # text=True uses the interpreter's locale mode, not stdio encoding.
+            "PYTHONUTF8": "1",
             _COLLECTION_ENV: str(out / "collection.json"),
             "MEMBASELINE_OUT": str(out),
             "MEMBASELINE_TAG": "full",
@@ -551,6 +554,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
             "PYTEST_DEBUG_TEMPROOT",
             "COVERAGE_FILE",
             "PYTHONIOENCODING",
+            "PYTHONUTF8",
             _COLLECTION_ENV,
             "MEMBASELINE_OUT",
             "MEMBASELINE_TAG",
