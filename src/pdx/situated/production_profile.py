@@ -1188,7 +1188,7 @@ def build_policy_115(
             )
             guards = {item.id: item.guard for item in selected}
             ai_guard = (
-                "exists = country country = { is_ai = yes }"
+                "exists = scope:country scope:country = { is_ai = yes }"
                 if row.actor == "country"
                 else "exists = ROOT ROOT = { is_ai = yes }"
             )

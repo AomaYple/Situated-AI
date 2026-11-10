@@ -99,14 +99,16 @@ def _condition(block: Block, facts: dict[str, object], scope: str = "actor") -> 
         elif item.key == "always":
             results.append(_scalar(item.value) == "yes")
         elif item.key == "exists":
-            assert _scalar(item.value) == "country"
             assert scope == "state"
-            results.append(bool(facts.get("owner_exists", True)))
+            target = _scalar(item.value)
+            assert target in {"country", "scope:country"}
+            existence = "actor_exists" if target == "scope:country" else "owner_exists"
+            results.append(bool(facts.get(existence, True)))
         elif item.key == "country":
             assert scope == "state"
             results.append(
                 bool(facts.get("owner_exists", True))
-                and _condition(_block(item.value), facts, "actor")
+                and _condition(_block(item.value), facts, "owner")
             )
         elif item.key == "scope:target_country":
             assert scope == "actor"
@@ -115,12 +117,13 @@ def _condition(block: Block, facts: dict[str, object], scope: str = "actor") -> 
             assert scope == "state"
             assert item.op in {"=", "?="}
             results.append(
-                bool(facts.get("owner_exists", True))
+                bool(facts.get("actor_exists", True))
                 and _condition(_block(item.value), facts, "actor")
             )
         elif item.key == "is_ai":
-            assert scope == "actor"
-            results.append(_comparison(facts["ai"], item.op, _scalar(item.value) == "yes"))
+            assert scope in {"actor", "owner"}
+            ai = facts["ai"] if scope == "actor" else facts["owner_ai"]
+            results.append(_comparison(ai, item.op, _scalar(item.value) == "yes"))
         elif item.key in {"relative_infrastructure", "literacy_rate", "bureaucracy", "influence"}:
             fact, expected_scope = {
                 "relative_infrastructure": ("infrastructure", "state"),
@@ -258,7 +261,7 @@ def _witness(
     assert _score(root, {**facts, "ai": False}, scope) == 0, facts
 
 
-def test_road_literal_tiers_boundaries_recovery_and_owner_guard(profile, programs, generated):
+def test_road_literal_tiers_boundaries_recovery_and_actor_guard(profile, programs, generated):
     for infrastructure, active in itertools.product(
         (0.0, 0.249, 0.25, 0.499, 0.5, 0.749, 0.75, 1.3), (False, True)
     ):
@@ -278,10 +281,43 @@ def test_road_literal_tiers_boundaries_recovery_and_owner_guard(profile, program
     assert (
         _score(
             root,
-            {"ai": True, "owner_exists": False, "infrastructure": 0.1, "road-present": False},
+            {"ai": True, "actor_exists": False, "infrastructure": 0.1, "road-present": False},
             "state",
         )
         == 0
+    )
+
+
+@pytest.mark.parametrize(
+    ("actor_ai", "owner_ai", "actor_exists", "owner_exists", "expected"),
+    [
+        (True, False, True, True, 4),
+        (False, True, True, True, 0),
+        (True, False, True, False, 4),
+        (False, True, True, False, 0),
+        (True, True, False, True, 0),
+        (False, True, False, True, 0),
+    ],
+)
+def test_road_named_actor_guard_never_uses_state_owner(
+    generated, actor_ai, owner_ai, actor_exists, owner_exists, expected
+):
+    text = generated["common/decrees/00_decree.txt"]
+    root = _overlay(text, ROAD)
+    assert (
+        _score(
+            root,
+            {
+                "ai": actor_ai,
+                "owner_ai": owner_ai,
+                "actor_exists": actor_exists,
+                "owner_exists": owner_exists,
+                "infrastructure": 0.1,
+                "road-present": False,
+            },
+            "state",
+        )
+        == expected
     )
 
 

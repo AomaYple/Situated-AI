@@ -314,8 +314,21 @@ def _policy_root(text: str, consumer_id: str) -> Block:
 def _policy_condition(block: Block, facts: dict[str, object]) -> bool:
     results: list[bool] = []
     for item in block.assignments():
-        if item.key in {"exists", "country", "ROOT"}:
-            results.append(bool(facts.get("ai", False)))
+        if item.key == "exists":
+            assert isinstance(item.value, Scalar)
+            assert item.value.text in {"country", "scope:country", "ROOT"}
+            existence = "owner_exists" if item.value.text == "country" else "actor_exists"
+            results.append(bool(facts.get(existence, True)))
+        elif item.key in {"scope:country", "ROOT", "country"}:
+            assert isinstance(item.value, Block)
+            owner = item.key == "country"
+            exists = facts.get("owner_exists" if owner else "actor_exists", True)
+            scoped_facts = {**facts, "ai": facts["owner_ai"]} if owner else facts
+            results.append(bool(exists) and _policy_condition(item.value, scoped_facts))
+        elif item.key == "is_ai":
+            assert isinstance(item.value, Scalar)
+            assert item.value.text == "yes"
+            results.append(bool(facts["ai"]))
         elif item.key == "AND":
             assert isinstance(item.value, Block)
             results.append(_policy_condition(item.value, facts))
@@ -401,8 +414,14 @@ def _native_condition(block: Block, facts: dict[str, object]) -> bool:
             values.append(bool(facts.get("journal", False)))
         elif item.key == "is_capital":
             values.append(bool(facts.get("capital", False)))
-        elif item.key in {"exists", "country", "ROOT"}:
-            values.append(bool(facts.get("ai", False)))
+        elif item.key in {"exists", "is_ai"}:
+            values.append(_policy_condition(Block([item]), facts))
+        elif item.key in {"country", "ROOT", "scope:country"}:
+            assert isinstance(item.value, Block)
+            owner = item.key == "country"
+            exists = facts.get("owner_exists" if owner else "actor_exists", True)
+            scoped_facts = {**facts, "ai": facts["owner_ai"]} if owner else facts
+            values.append(bool(exists) and _native_condition(item.value, scoped_facts))
         elif item.key.startswith("scope:"):
             assert isinstance(item.value, Block)
             values.append(_native_condition(item.value, facts))
@@ -526,6 +545,37 @@ def test_generated_policy_ast_witnesses_complete_native_numeric_result():
         node = _consumer_block(outputs["common/decrees/00_decree.txt"], road_keys)
         witness_facts: dict[str, object] = dict(facts)
         assert _native_score(node, witness_facts) == expected
+
+
+@pytest.mark.parametrize(
+    ("actor_ai", "owner_ai", "actor_exists", "owner_exists", "expected"),
+    [
+        (True, False, True, True, 4),
+        (False, True, True, True, 0),
+        (True, False, True, False, 4),
+        (False, True, True, False, 0),
+        (True, True, False, True, 0),
+    ],
+)
+def test_legacy_road_policy_guard_preserves_named_actor(
+    actor_ai, owner_ai, actor_exists, owner_exists, expected
+):
+    loaded = profile.load_profile(profile.BASELINE_ROOT)
+    outputs = profile.build_policy_115(loaded, profile.BASELINE_ROOT)
+    road = _policy_root(outputs["common/decrees/00_decree.txt"], "a0-econ-road")
+    assert (
+        _policy_delta(
+            road,
+            {
+                "ai": actor_ai,
+                "owner_ai": owner_ai,
+                "actor_exists": actor_exists,
+                "owner_exists": owner_exists,
+                "relative_infrastructure": 0.2,
+            },
+        )
+        == expected
+    )
 
 
 @pytest.mark.skipif(not GAME.is_dir(), reason="requires actual 1.15 installation")

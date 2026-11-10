@@ -653,7 +653,9 @@ def render_program(program: net.NetworkProgram, *, available: tuple[str, ...] | 
     if operation not in {"add", "multiply"}:
         raise ValueError("R2 renderer has no lowering for this numeric algebra")
     ai = (
-        "exists = country country = { is_ai = yes }"
+        # Native decree ai_weight binds its deciding country as a named scope;
+        # a state-to-country link does not establish that actor's identity.
+        "exists = scope:country scope:country = { is_ai = yes }"
         if action.target and action.target.kind == "state"
         else "is_ai = yes"
     )
