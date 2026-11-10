@@ -4,13 +4,46 @@ from __future__ import annotations
 
 import copy
 import json
+import os
+import subprocess
+import sys
 from collections import Counter
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tools.ci import architecture_inventory as a0
 from tools.ci import migration_dispositions as migration
+
+
+def test_cli_help_script_and_module_entries_are_equivalent():
+    root = Path(__file__).resolve().parents[1]
+    environment = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+    outputs = []
+    for entry in (
+        (str(root / "tools/ci/migration_dispositions.py"),),
+        ("-m", "tools.ci.migration_dispositions"),
+    ):
+        result = subprocess.run(
+            [sys.executable, "-B", "-X", "utf8", *entry, "--help"],
+            cwd=root,
+            env=environment,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert result.stderr == ""
+        outputs.append(result.stdout)
+    # Python 3.14 renders the script and -m invocation differently in usage.
+    # Their description and complete option contracts must still be identical.
+    assert outputs[0].split("\n\n", 1)[1] == outputs[1].split("\n\n", 1)[1]
+    assert "--inventory" in outputs[0]
+    assert "--game-root" in outputs[0]
+    assert "--output" in outputs[0]
 
 
 @pytest.fixture

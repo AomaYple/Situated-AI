@@ -10,16 +10,20 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from pdx.version_contracts import select_version
 from tools.ci import architecture_inventory as a0
 
 ROOT = a0.ROOT
 AUTHORITY = ROOT / "research/situated/1.15.0/a0-disposition-authority.json"
-AUTHORITY_SHA256 = "a710ec85e1c2efbe21ae63bd996846c2d25d5e659d115e6b8a07add51910c01f"
+AUTHORITY_SHA256 = "59521374ba63682a8d2737e1abdcf1dd03077f678911a68e4ec1584b8ab0cd3c"
 
 if TYPE_CHECKING:
     from pdx.situated.production_profile import ProductionProfile

@@ -1773,6 +1773,369 @@
         "adapter:common/technology/technologies/10_production.txt:watertube_boiler.ai_weight"
       ],
       "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "9f0feae41e8f00b54a136e47eb90616f4e4c3bee3220a78ab41235b3dbc48c86",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "a1a6fa8adca6449d2198362d2b300e36947c0c648c9879114655540dc24c13a8",
+      "identity": [
+        "compiled_reader_binding",
+        "common/ai_strategies/00_default_strategy.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/ai_strategies/00_default_strategy.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "e901c8b58f1f9457b7d770a97e1200f4f5df54063aea156e625fbaa4ac2545a1",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d08a4a760134f5237dedb9434f816cb73740c616581b5917229af01103f6cb52",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_africa.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_africa.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "5d9a9246e6401a06830bac9b1a11d2e0cd8b5e4eb635a5eeb46fbe15419564b4",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "60249f80b6ad3d088c5c5165d6ccbf711344d7f855987bf19e7e06927ce5c139",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_americas.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_americas.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "1ea108df567819ba8e3a03235cda3a5109e22986698a6be98ed151385f2f3527",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "96af30676fe44a1c7a2709a30fcda984b31e5c813c0925c9b1031f7075319e89",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_asia.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_asia.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "a687c4a9bad00064a7bfba7da1782f42213f843a4e11227fd5bae8fe298fb64f",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "b5f77e3690a5f50e1af66757f77be50a3c062352f075e9dc4f788b89f2d1160a",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_austria_hungary.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_austria_hungary.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "f7e97f29ccc80585d4dd35bf605d99f427673d789ffd572f88374e50e315d65b",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "86d0859cc5672d368090ac9314f053bcb8b9c71ca84e05a26b5bed57e553c8e3",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_china.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_china.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "029be02333796824fc4827df02978334074d7e1a87f698bddd9c456368eda7cc",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d9fd375d19bf6214994d88a7dc269ad1125fa7c3202097bdd039086d3f3adbc7",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_cots.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "d4a08ebd49d71a9fa40390a3c61874212c0a3d6c2e507c1e61c9852e6b7ff4ff",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "57017f207809f9e5718ba7623e386b9cd5d32e9b6a44b8c72e8442ef8c076dfb",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ep2.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ep2.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "2bb9a3199346f848ab7f6e3fe107f89bd286951a21574064b6ba1b25301a5c03",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "dbb8c570261723e4ba5193c6e6b7e4cf01d5935e3bdb133d122e10651bf1f4e6",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_europe.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_europe.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "72429dbcb0ec953e4dd1df88874170e735323dd417093a185b16848329e41202",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "a0cbd2f04dfc8cdf2e5d04c3b740ed5128f5ae593533e18cc185387cf3576872",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_france.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_france.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "3fd2e6ea05e20b8d01834026e5927357e2d5c66de3ae270e1b7fd0433ce05e6a",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c662cb6692ce19626cdbb5becba62ce1f9f11139f64c225cbe05da94d620d5a2",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_germany.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_germany.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "b7c5b3411acc8e2db4afafc9f88980a7043f5e06d0c2ba06d39c30af3fe30345",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "a09d96500a46450cd95934da01ad510265a5e200e94e0792dd70d9010e9577d1",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_great_britain.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_great_britain.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "32552971894ea0220be51ec700d2aa7331bfa1725f87b4f00208866a50da9911",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d88244405d1495d94254250c7f7deb567f1e39b0d9cde502671cd0b400013037",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ip2.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ip2.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "97a68deb374f0afdc7fb8eb5bfa679b1c1b3aee0af12d69e26daee409b10f885",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c9af9b1012f3ddce89dcbaeb0144081439300adbc94ddfd0de52f928c586fa59",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ip3.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ip3.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "48de4aeec067daa90bef2e1be67f8c48b9300631f8a04c317ecf39a504f58af7",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "541d70352503b938a76d0199773e47fa62788cd75bedcf6776a93c6457e853ee",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ip4.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ip4.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "77c3f95c3621fdcba20394c6bb17b8ba195759e7a65b06fc83a645e215078d4c",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "ff7b39c601f6312ef88719416b9de5ad7850bb88c4b896126cc2089d66a55194",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_italy.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_italy.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "3045d91fb4bf45456144d22a9af82862299f102f4f124000163c31145c3eeb4d",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "4a00426558a0bad4da1e1bdab7463d68efdf0dc408db098196cb7d588e973494",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_japan.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_japan.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "cad4c395ffe0e46362b7ac882648f96c1bf4f6feeea9e158f18ca13708b04a53",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "06b1021a4c660044f7b847b878b29f037a31ca6cfb5b03ef21ecde970a484b95",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_mp1.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_mp1.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "57b95126cc8ab2fa9fbccd0ab05481dee1efcdb9b4072071ca2bc79ea8ad492f",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d5755ffaade734edd21b04761ab0e86376f6530f3a6bcc72f14bdf2dfb160093",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_russia.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_russia.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "f2fa548a14fc9d9f60104851de64c06e7044a8aeef6abd7c9c73ed91721c2f44",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "7b9077dbb1fa2b70e1c28f3c5a0209d8c53f3d7bb7af61c8ea4b2c28dc83486b",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_soi.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_soi.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "fe5d7e80435571cf130e3990b6405f76e74576bc5c2dc8679128f990f26bc6e3",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "78bb40012435646c9266f4c218449b310f0b6ffafea9827d9817aa774f0dcf80",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_totally_normal.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_totally_normal.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "b8a7e7f28683d4e269fae1db0bf34ad7762ef00c2c72cd1a6e7ba11dc03d5f6d",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "39f0e6717704aa438cb04fb5012ccbf2a2ef6c8f90a2ee015ccb14ed61edc4e1",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_usa.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_usa.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "8da895121cdc10d86c22eb07aa558d9e97acf0120d1293600cdc307ed5e7059e",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "68aa43e5bbff8a43739f51d79767ae114c227deadf60d191f89c19b40bc68fc5",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/99_basic_companies.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/99_basic_companies.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "c2070ca624ac23512a8e2decdcbf9373a65ba14428be7087cd01d1594e0eac07",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "3620a3c8b12d4eff85c39067849bed6ddea12b769f03eef53fc257ed3eeda86d",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/00_distribution_of_power.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/00_distribution_of_power.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "9855b50fb3ef84a7deb0f2e929c1d8c8f1454f8a082e9d66407895aa5a3b71b8",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "97ded9c5d9fb48d18533afb6def0768ca91d7315dc263089baabbb994e98ba6f",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/01_education_system.txt",
+        "peasant_share"
+      ],
+      "rationale": "For common/laws/01_education_system.txt / peasant_share, the 1.15 country population getter binds target=pop_type:peasants and compares value. The historical pop_type=peasants / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact peasants definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "012ef49b2a5414bdfb040f2da8a85b560a26344d36725b415f9ea3d6b01fe252",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c51bb6183063d557713de3b421d2bfca69cabc6f44c164ff7ec740ad7c4d699b",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/01_land_reform.txt",
+        "peasant_share"
+      ],
+      "rationale": "For common/laws/01_land_reform.txt / peasant_share, the 1.15 country population getter binds target=pop_type:peasants and compares value. The historical pop_type=peasants / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact peasants definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "70b517d8738643378c1439275a25ba15350aae8688b73eafd10e32a0760b1a55",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "e9a471e1090878f09d272d90235fb94afa5fb825b33dd3875f68ffe8e36da4e4",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_childrens_rights.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/02_childrens_rights.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "ce7f0bc71821c26aab26a4ccd6bb9c98df66f19887fba6e4aabd64ffffbe8329",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "7cce1056647fae2ab67730758cfe279b11d92ecad4739e243b3b929bc54f0c49",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_childrens_rights.txt",
+        "peasant_share"
+      ],
+      "rationale": "For common/laws/02_childrens_rights.txt / peasant_share, the 1.15 country population getter binds target=pop_type:peasants and compares value. The historical pop_type=peasants / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact peasants definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "964e152beaf57511694b8aca841da9ad3db6a0a43a846f0b2405705812ec1628",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "8e094ba4677378252f2291002e17f2e8e91caa07f1dc968e8dd62851977e25cd",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_labor_rights.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/02_labor_rights.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "35557dc26c0318877238ffe9478d8f27712981313376b2ba8ef4b84c9e2b2c18",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "b1f5789219c4298c600ebd6fb849b6f33fc63534e3d478500e130f25c0a702fc",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_rights_of_women.txt",
+        "skilled_workforce"
+      ],
+      "rationale": "For common/laws/02_rights_of_women.txt / skilled_workforce, the 1.15 country population getter binds target=pop_type:machinists and compares value. The historical pop_type=machinists / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact machinists definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "5889588ccfeb90604d5399da6c2ad3e611d81925766397cce5b44db678d968c4",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "580c7a395fb89b1922914d2350370b38101c8cceb691bad60f2aafc8b5f31d58",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_welfare.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/02_welfare.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "09e499d3eb9a6cc069e9312005612706d50ec9dfab629809e88aa9b600289b19",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "4b012bd6d1f8e7c643ef0808aa910f527f3b290597cbb1649f9b283e06207cf5",
+      "identity": [
+        "compiled_reader_binding",
+        "common/technology/technologies/30_society.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/technology/technologies/30_society.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "9698ecff1718824eaa6d0700ab118246dd036e48e2efe280b53009c51890ff2c",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "6f76fdb6beebc315e028cefa8e2f0fdd91af32be5909d6a0d2f5e835f6f573d7",
+      "identity": [
+        "compiled_reader_binding",
+        "common/technology/technologies/30_society.txt",
+        "skilled_workforce"
+      ],
+      "rationale": "For common/technology/technologies/30_society.txt / skilled_workforce, the 1.15 country population getter binds target=pop_type:machinists and compares value. The historical pop_type=machinists / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact machinists definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
     }
   ],
   "historical_counts": {
