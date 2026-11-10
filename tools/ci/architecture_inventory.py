@@ -315,9 +315,11 @@ def declaration_rows(data: dict, source: str) -> list[dict[str, Any]]:
     return rows
 
 
-def migration_inventory(root: Path = ROOT) -> dict[str, Any]:
+def migration_inventory(root: Path = ROOT, *, version: str = "1.14.5") -> dict[str, Any]:
     """Include raw declarations and actual expanded frozen compiler identities."""
+    from pdx import decision_adapters  # noqa: PLC0415
     from pdx.situated.compiler import load_model  # noqa: PLC0415
+    from pdx.version_contracts import select_version  # noqa: PLC0415
 
     rows: list[dict[str, Any]] = []
     sources = []
@@ -326,7 +328,22 @@ def migration_inventory(root: Path = ROOT) -> dict[str, Any]:
         relative = path.relative_to(root).as_posix()
         sources.append({"path": relative, "sha256": digest(raw), "bytes": len(raw)})
         rows.extend(declaration_rows(tomllib.loads(raw.decode("utf-8")), relative))
-    model = load_model()
+    # The old denominator must not inherit an ambient 1.15 selection. Current
+    # compatibility identities are captured separately with an explicit version.
+    with select_version(version):
+        model = load_model()
+        native_adapter_sources = dict(decision_adapters.load().sources)
+    if version == "1.15.0":
+        # These versioned ledgers are consumed by the selected compiler; keep
+        # their identity separate from the frozen historical declaration rows.
+        sources.extend(
+            {
+                "path": path.relative_to(root).as_posix(),
+                "sha256": digest(path.read_bytes()),
+                "bytes": path.stat().st_size,
+            }
+            for path in sorted((root / "mod/decisions/1.15.0").glob("*.toml"))
+        )
     for index, (source, reader_id, signature) in enumerate(model.observation_contracts):
         rows.append(
             pending(
@@ -423,10 +440,16 @@ def migration_inventory(root: Path = ROOT) -> dict[str, Any]:
     return {
         "schema": "situated-ai.a0-migration/1",
         "evidence_kind": "static_check",
-        "baseline": "frozen 1.14.5 production declarations and offline compiler; not local 1.15 proof",
+        "baseline": (
+            "frozen 1.14.5 production declarations and offline compiler; not local 1.15 proof"
+            if version == "1.14.5"
+            else f"{version} engineering compatibility compiler; not R2 production policy"
+        ),
         "contract": CONTRACT,
         "sources": sources,
         "generator_sources": generator_sources,
+        "model_source_fingerprints": dict(model.source_sha256),
+        "native_adapter_sources": native_adapter_sources,
         "counts": dict(sorted(Counter(item["kind"] for item in rows).items())),
         "dispositions": {"pending_reproof": len(rows)},
         "rows": rows,

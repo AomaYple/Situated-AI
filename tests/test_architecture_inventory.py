@@ -11,6 +11,7 @@ import pytest
 
 from pdx.parser import parse_text
 from pdx.situated import compiler, network_profile, production_profile, r2_reader_authority
+from pdx.version_contracts import select_version
 from tools.ci import architecture_inventory as inventory
 
 
@@ -95,7 +96,8 @@ def test_failures_retained_with_selected_source_blocking_and_external_limits():
 
 
 def test_migration_uses_expanded_compiler_writers_and_reader_shapes(monkeypatch):
-    model = compiler.load_model()
+    with select_version("1.14.5"):
+        model = compiler.load_model()
     monkeypatch.setattr(compiler, "load_model", lambda: model)
     result = inventory.migration_inventory()
     writers = [row for row in result["rows"] if row["kind"] == "compiled_writer"]
