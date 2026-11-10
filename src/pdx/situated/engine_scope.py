@@ -669,12 +669,53 @@ def verify_strategy_game(game: Path) -> StrategyScopeEvidence:
     )
 
 
+def _company_score_contract() -> dict[str, str]:
+    """Exact reviewed score coordinates, selected independently for each EXE."""
+    coordinates = {
+        "1.14.5": {
+            "consumer": "0x14169a3b0",
+            "actual_call": "0x1415c9855",
+            "numeric_member": "0x390",
+            "parser": "0x141698300",
+            "parser_receiver": "0x598",
+            "nonpositive_rejection": "0x141510b30",
+        },
+        "1.15.0": {
+            "consumer": "0x141732900",
+            "actual_call": "0x141632075",
+            "numeric_member": "0x390",
+            "parser": "0x141730850",
+            "parser_receiver": "0x598",
+            "nonpositive_rejection": "0x141641350",
+        },
+    }
+    return {
+        "field": "ai_weight",
+        "actor": "country",
+        "target": "definition_only:company_type",
+        "operation": "base_candidate_score",
+        "capability": "direct",
+        **coordinates[version_contracts.active_version()],
+    }
+
+
+def _validate_company_score_contract(data: Mapping[str, Any]) -> None:
+    """A new digest cannot authorize a different company score consumer."""
+    matches = [row for row in data["contracts"] if row.get("field") == "ai_weight"]
+    if len(matches) != 1:
+        raise ValueError("公司基础评分缺少唯一作用域合同")
+    row = matches[0]
+    if any(row.get(key) != value for key, value in _company_score_contract().items()):
+        raise ValueError("公司基础评分作用域合同漂移")
+
+
 def company_snapshot() -> bytes:
     """固定公司候选证据；不把定义身份当作脚本 company 目标。"""
     manifest, _, digest = _company_manifest()
     raw = manifest.read_bytes()
     if hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("锁定公司作用域证据已变化，必须重新独立复核")
+    _validate_company_score_contract(json.loads(raw))
     return raw
 
 
@@ -703,14 +744,15 @@ def company_default_snapshot() -> bytes:
     if hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("锁定公司缺省权重证据已变化，必须重新独立复核")
     data = json.loads(raw)
+    score_contract = _company_score_contract()
     expected = {
         "field": "ai_weight",
         "actor": "country",
         "target": "definition_only:company_type",
         "operation": "missing_base_candidate_score",
         "capability": "exact_default_initializer",
-        "consumer": "0x14169a3b0",
-        "numeric_member": "0x390",
+        "consumer": score_contract["consumer"],
+        "numeric_member": score_contract["numeric_member"],
         "empty_expression_member": "0xa8",
         "empty_expression_branch": "0x14169a3dd",
         "nonempty_expression_branch": "0x14169a3f5",
@@ -728,8 +770,8 @@ def company_default_snapshot() -> bytes:
         "define_global_write": "0x140975a56",
         "define_binding": "0x140975a70",
         "define_registration": "0x140975a90",
-        "actual_call": "0x1415c9855",
-        "nonpositive_rejection": "0x141510b30",
+        "actual_call": score_contract["actual_call"],
+        "nonpositive_rejection": score_contract["nonpositive_rejection"],
         "source_requirement": "exactly_missing_ai_weight_only",
         "explicit_empty_requirement": "reject_initializer",
         "explicit_nonpositive_requirement": "preserve_native_score_and_rejection",
@@ -766,7 +808,6 @@ def company_default_snapshot() -> bytes:
         # Independently decoded current consumer, define bridge and exact
         # source sites. No historical address authorizes the current EXE.
         expected.update(
-            consumer="0x141732900",
             empty_expression_branch="0x14173292d",
             nonempty_expression_branch="0x141732945",
             default_load="0x141732936",
@@ -778,8 +819,6 @@ def company_default_snapshot() -> bytes:
             define_global_write="0x141182176",
             define_binding="0x141182190",
             define_registration="0x1411821b0",
-            actual_call="0x141632075",
-            nonpositive_rejection="0x141641350",
         )
         reviewed_lines = (
             1,
@@ -933,6 +972,7 @@ def company_evidence(game: Path, inputs: Mapping[str, bytes]) -> CompanyScopeEvi
         *_company_manifest(),
         "锁定公司作用域证据",
     )
+    _validate_company_score_contract(data)
     if not verified:
         return CompanyScopeEvidence(False, hashes)
     _, manifest_id, digest = _company_manifest()

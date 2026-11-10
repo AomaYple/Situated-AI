@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import company_sectors, config
+from pdx import company_sectors, config, decision_adapters, decision_rules, version_contracts
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 
@@ -182,6 +182,13 @@ def native():
 
 @pytest.mark.integration
 def test_current_exe_and_scripts_match_independent_default_witnesses(evidence):
+    if version_contracts.active_version() == "1.15.0":
+        from pdx.situated import engine_scope_115
+
+        path, _identity, digest = engine_scope_115.manifest("company-default")
+        frozen = path.read_bytes()
+        assert hashlib.sha256(frozen).hexdigest() == digest
+        evidence = json.loads(frozen)
     executable = config.GAME.parent / evidence["exe"]["path"]
     if not executable.is_file():
         pytest.skip("locked Victoria 3 Windows executable unavailable")
@@ -194,6 +201,31 @@ def test_current_exe_and_scripts_match_independent_default_witnesses(evidence):
         assert raw[start : start + len(expected)] == expected
     for source, expected_sha in evidence["script_hashes"].items():
         assert hashlib.sha256((config.GAME / source).read_bytes()).hexdigest() == expected_sha
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_company_consumer_metadata_names_selected_independent_scope_evidence(version):
+    from pdx.situated import engine_scope
+
+    with version_contracts.select_version(version):
+        source, policy = next(
+            (source, policy)
+            for source, policy in decision_adapters.load().policies
+            if source.startswith("common/company_types/")
+        )
+        contract = decision_rules.contract(policy, owner="consumer_adapters", source=source)
+        path, identity, digest = engine_scope._company_manifest()
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
+        assert engine_scope.company_snapshot() == path.read_bytes()
+        assert identity == f"research/situated/victoria3-{version}-company-scope.json"
+        rules = contract["rules"]
+        assert isinstance(rules, list)
+        assert rules
+        for rule in rules:
+            assert isinstance(rule, dict)
+            assert rule["consumer"]["scope_evidence"] == identity
+            assert rule["consumer"]["role"] == "vanilla_company_base_candidate_weight"
 
 
 @pytest.mark.integration
@@ -222,16 +254,24 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
     expected = set(MIXED_SPECIAL)
     for names in SPECIAL_GROUPS.values():
         expected.update(names)
+    current = version_contracts.active_version() == "1.15.0"
+    migrated_shipyards = {"company_ap_moller", "company_sudamericana_de_vapores"}
+    if current:
+        expected -= migrated_shipyards
     actual = {
         name
         for name, row in profiles.items()
         if row["explicit_weight"] and not row["market_outputs"]
     }
     assert actual == expected
-    assert len(actual) == 25
+    assert len(actual) == (23 if current else 25)
     for building, names in SPECIAL_GROUPS.items():
         for name in names:
-            assert profiles[name]["primary"] == [building]
+            if current and name in migrated_shipyards:
+                assert profiles[name]["primary"] == ["building_shipyard"]
+                assert profiles[name]["market_outputs"] == ["clippers", "steamers"]
+            else:
+                assert profiles[name]["primary"] == [building]
     for name, buildings in MIXED_SPECIAL.items():
         assert set(profiles[name]["primary"]) == buildings
 
@@ -243,7 +283,7 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
         ("company_gwr", "transportation", "local_good_requires_state_market_evidence"),
         ("company_calcutta_electric", "electricity", "local_good_requires_state_market_evidence"),
         ("company_de_beers", "gold", "fixed_price_good_retains_native_mechanism"),
-        ("company_ap_moller", None, "no_mandatory_output_recipe_group"),
+        ("company_white_star_line", None, "no_mandatory_output_recipe_group"),
         ("company_suez_company", None, "no_goods_output_native_service"),
     ],
 )
@@ -266,6 +306,8 @@ def test_merchant_marine_is_ordinary_good_but_port_has_outputless_option(native)
     for flag in ("local", "fixed_price"):
         assert goods[0].value.all(flag) == []
     assert goods[0].value.all("tradeable") == []
-    port = profiles["company_ap_moller"]["base_recipes"][0]
+    # White Star remains a real port consumer in both versions. The two
+    # current shipyard companies are checked independently above.
+    port = profiles["company_white_star_line"]["base_recipes"][0]
     assert port["potential_outputs"] == ["merchant_marine"]
     assert port["market_outputs"] == []

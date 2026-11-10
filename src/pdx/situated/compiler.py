@@ -733,32 +733,8 @@ def _frozen_strategy_score_contexts(
 def _frozen_company_context() -> decision_ir.EvaluationContext:
     """公司基础评分的国家对象来源，不授权章程、建设目标或新getter。"""
     raw = engine_scope.company_snapshot()
-    data = json.loads(raw)
-    matches = [row for row in data["contracts"] if row["field"] == "ai_weight"]
-    if len(matches) != 1:
-        raise ValueError("公司基础评分缺少唯一作用域合同")
-    row = matches[0]
-    expected = {
-        "actor": "country",
-        "target": "definition_only:company_type",
-        "operation": "base_candidate_score",
-        "capability": "direct",
-    }
-    if version_contracts.active_version() == "1.14.5":
-        expected.update(
-            {
-                "consumer": "0x14169a3b0",
-                "actual_call": "0x1415c9855",
-                "numeric_member": "0x390",
-                "parser": "0x141698300",
-                "parser_receiver": "0x598",
-                "nonpositive_rejection": "0x141510b30",
-            }
-        )
     # company_snapshot validates every current-version coordinate before
     # projecting its semantic country-only context here.
-    if any(row[key] != value for key, value in expected.items()):
-        raise ValueError("公司基础评分作用域合同漂移")
     text = raw.decode("utf-8")
     section = text.index('"field": "ai_weight"')
     line = text.count("\n", 0, text.index('"actor": "country"', section)) + 1

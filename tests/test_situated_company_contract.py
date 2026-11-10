@@ -7,8 +7,8 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_adapters, decision_interfaces
-from pdx.situated import compiler, engine_scope
+from pdx import config, decision_adapters, decision_interfaces, version_contracts
+from pdx.situated import compiler, engine_scope, engine_scope_115
 from pdx.textio import normalized_text
 
 pytestmark = pytest.mark.unit
@@ -19,8 +19,12 @@ def _repin(monkeypatch, tmp_path, data):
     raw = json.dumps(data, indent=2).encode()
     path = tmp_path / "company-manifest.json"
     path.write_bytes(raw)
-    monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", path)
-    monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest())
+    digest = hashlib.sha256(raw).hexdigest()
+    if version_contracts.active_version() == "1.15.0":
+        monkeypatch.setitem(engine_scope_115.MANIFESTS, "company", (str(path), digest))
+    else:
+        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", path)
+        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST_SHA256", digest)
 
 
 def test_snapshot_context_has_exact_actor_line_definition_only_and_no_live_claim(
@@ -28,6 +32,7 @@ def test_snapshot_context_has_exact_actor_line_definition_only_and_no_live_claim
 ):
     raw = engine_scope.company_snapshot()
     expected = compiler._frozen_company_context()
+    _, identity, _ = engine_scope._company_manifest()
     monkeypatch.setattr(config, "GAME", tmp_path / "absent-game")
     monkeypatch.setattr(
         engine_scope,
@@ -46,13 +51,13 @@ def test_snapshot_context_has_exact_actor_line_definition_only_and_no_live_claim
         "root",
         "country",
         "actor",
-        engine_scope.COMPANY_MANIFEST_ID,
+        identity,
     )
     assert raw.decode().splitlines()[actor.line - 1].strip() == '"actor": "country",'
     assert expected.status == "observed"
     assert expected.targets == ()
     assert expected.auxiliary_scopes == ()
-    assert f"{engine_scope.COMPANY_MANIFEST_ID}:definition_only:company_type" in expected.evidence
+    assert f"{identity}:definition_only:company_type" in expected.evidence
     assert any("evidence=frozen_engine_snapshot" in item for item in expected.evidence)
     assert not any(item.startswith("@engine/") for item in expected.evidence)
 
@@ -60,7 +65,11 @@ def test_snapshot_context_has_exact_actor_line_definition_only_and_no_live_claim
 def test_company_snapshot_rejects_even_whitespace_byte_drift(monkeypatch, tmp_path):
     path = tmp_path / "company-manifest.json"
     path.write_bytes(engine_scope.company_snapshot() + b" ")
-    monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", path)
+    if version_contracts.active_version() == "1.15.0":
+        _, _, digest = engine_scope_115.manifest("company")
+        monkeypatch.setitem(engine_scope_115.MANIFESTS, "company", (str(path), digest))
+    else:
+        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", path)
     with pytest.raises(ValueError, match="公司作用域证据"):
         engine_scope.company_snapshot()
     with pytest.raises(ValueError, match="公司作用域证据"):
@@ -139,7 +148,7 @@ def test_current_company_game_verifies_every_locked_script_and_exe(current_compa
     proof = engine_scope.verify_company_game(game)
     assert proof.verified
     assert set(proof.sources) == set(data["script_hashes"])
-    assert len(proof.sources) == 22
+    assert len(proof.sources) == (23 if version_contracts.active_version() == "1.15.0" else 22)
     assert (
         dict(proof.source_hashes)["@engine/binaries/victoria3.exe"]
         == hashlib.sha256(executable.read_bytes()).hexdigest()
@@ -214,7 +223,7 @@ def test_company_model_and_writer_contexts_are_equal_without_game(monkeypatch, t
 @pytest.mark.parametrize(
     ("source", "role", "evidence"),
     [
-        (SOURCE, "vanilla_company_base_candidate_weight", engine_scope.COMPANY_MANIFEST_ID),
+        (SOURCE, "vanilla_company_base_candidate_weight", None),
         (
             "common/technology/technologies/10_production.txt",
             "vanilla_research_candidate_weight",
@@ -223,6 +232,8 @@ def test_company_model_and_writer_contexts_are_equal_without_game(monkeypatch, t
     ],
 )
 def test_ai_weight_metadata_is_source_aware(source, role, evidence):
+    if evidence is None:
+        _, evidence, _ = engine_scope._company_manifest()
     consumer = decision_interfaces.consumer(("candidate", "ai_weight"), (), source=source)
     assert consumer["role"] == role
     assert consumer["scope_evidence"] == evidence

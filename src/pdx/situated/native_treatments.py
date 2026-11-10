@@ -1366,8 +1366,9 @@ class _Dependencies:
 
     def population_parameter_sources(self, reader: Any) -> dict[str, str]:
         """Prove the exact scoped percentage getter and registered pop argument."""
-        from .vanilla_inventory import _PARAMETER_EVIDENCE_HASHES  # noqa: PLC0415
+        from .vanilla_inventory import _parameter_evidence_contract  # noqa: PLC0415
 
+        evidence_hashes = _parameter_evidence_contract()
         if reader.engine == "pop_type_percent_state":
             if (
                 reader.scope != "root"
@@ -1390,7 +1391,7 @@ class _Dependencies:
                 if (
                     raw is None
                     or source not in self.native.roots
-                    or hashlib.sha256(raw).hexdigest() != _PARAMETER_EVIDENCE_HASHES[source]
+                    or hashlib.sha256(raw).hexdigest() != evidence_hashes[source]
                     or self.effective_bytes.get(source) != raw
                 ):
                     return {}
@@ -1425,21 +1426,31 @@ class _Dependencies:
                 source: hashlib.sha256(self.native_bytes[source]).hexdigest() for source in sources
             }
 
+        current = version_contracts.active_version() == "1.15.0"
+        parameter = "target" if current else "pop_type"
         if (
             reader.engine != "pop_type_percent_country"
             or len(reader.parameters) != 1
-            or reader.parameters[0][0] != "pop_type"
+            or reader.parameters[0][0] != parameter
             or reader.kind != "number"
-            or reader.value_field != "percent"
+            or reader.unit != "ratio"
+            or reader.value_field != ("value" if current else "percent")
             or reader.argument is not None
+            or reader.minimum != 0
+            or reader.maximum != 1
         ):
             return {}
-        pop_type = reader.parameters[0][1]
+        argument = reader.parameters[0][1]
+        if current and not argument.startswith("pop_type:"):
+            return {}
+        pop_type = argument.removeprefix("pop_type:") if current else argument
+        if pop_type not in {"peasants", "laborers", "machinists"}:
+            return {}
         # The argument must have independent pinned definition bytes. The
         # complete consumer contract binds which argument is actually used;
         # this is not permission for other names or compound getter shapes.
         definition_source = f"common/pop_types/{pop_type}.txt"
-        if definition_source not in _PARAMETER_EVIDENCE_HASHES:
+        if definition_source not in evidence_hashes:
             return {}
         sources = (
             "common/journal_entries/00_urbanization.txt",
@@ -1450,7 +1461,7 @@ class _Dependencies:
             if (
                 raw is None
                 or source not in self.native.roots
-                or hashlib.sha256(raw).hexdigest() != _PARAMETER_EVIDENCE_HASHES[source]
+                or hashlib.sha256(raw).hexdigest() != evidence_hashes[source]
                 or self.effective_bytes.get(source) != raw
             ):
                 return {}
@@ -1460,7 +1471,11 @@ class _Dependencies:
             "possible.pop_type_percent_country",
         )
         expected = parse_bytes(
-            b"pop_type_percent_country={pop_type=peasants percent>0.6}",
+            (
+                b"pop_type_percent_country={target=pop_type:peasants value>0.6}"
+                if current
+                else b"pop_type_percent_country={pop_type=peasants percent>0.6}"
+            ),
             path="native-population-percentage-example",
         ).root.items[0]
         definition, definition_state = _resolve(self.native.roots[sources[1]], pop_type, "__body__")
@@ -2679,7 +2694,7 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
     """
     from .. import decision_adapters, decision_interfaces, decision_rules  # noqa: PLC0415, TID252
     from . import engine_scope, supply_program  # noqa: PLC0415
-    from .vanilla_inventory import _PARAMETER_EVIDENCE_HASHES  # noqa: PLC0415
+    from .vanilla_inventory import _parameter_evidence_contract  # noqa: PLC0415
 
     source = "common/ai_strategies/00_default_strategy.txt"
     if (
@@ -2739,10 +2754,11 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
         ):
             return {}
         strategy = json.loads(engine_scope.strategy_snapshot())
+        evidence_hashes = _parameter_evidence_contract()
         pins = {
             source: strategy["script_hashes"][source],
             **{
-                name: _PARAMETER_EVIDENCE_HASHES[name]
+                name: evidence_hashes[name]
                 for name in (
                     "common/goods/00_goods.txt",
                     "common/alert_types/00_alert_types.txt",

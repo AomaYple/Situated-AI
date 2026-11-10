@@ -31,14 +31,19 @@ def company_proof(tmp_path, monkeypatch):
     exe.write_bytes(b"fixed company image")
     source = "common/company_types/sample.txt"
     inputs = {source: b"sample = { ai_will_do = { always = yes } ai_weight = { value = 1 } }"}
-    data = {
-        "exe": {
-            "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-            "bytes": exe.stat().st_size,
-        },
-        "script_hashes": {},
-        "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
-    }
+    # Retain the reviewed historical member contract while replacing only the
+    # filesystem evidence used by these compact byte/source drift witnesses.
+    data = json.loads(engine_scope.company_snapshot())
+    data.update(
+        {
+            "exe": {
+                "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+                "bytes": exe.stat().st_size,
+            },
+            "script_hashes": {},
+            "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
+        }
+    )
     manifest = tmp_path / "company.json"
 
     def freeze():

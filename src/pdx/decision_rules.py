@@ -85,6 +85,23 @@ class Reader:
         return ".".join((scope, *self.path, self.engine))
 
     def expression(self, op: str, value: bool | float | FactReference) -> str:
+        if self.engine == "pop_type_percent_country":
+            parameter, value_field = (
+                ("target", "value")
+                if version_contracts.active_version() == "1.15.0"
+                else ("pop_type", "percent")
+            )
+            if (
+                len(self.parameters) != 1
+                or self.parameters[0][0] != parameter
+                or self.value_field != value_field
+                or self.parameters[0][1]
+                not in {
+                    f"pop_type:{name}" if parameter == "target" else name
+                    for name in ("peasants", "laborers", "machinists")
+                }
+            ):
+                raise ValueError("人口比例读取器与所选版本参数签名不一致")
         if self.engine in observation_queries.QUERY_ENGINES:
             if self.kind != "boolean" or op != "=" or type(value) is not bool:
                 raise ValueError("本国聚合查询只接受布尔等值条件")
@@ -288,7 +305,11 @@ def from_data(
                 "building_type",
                 "production_method",
             },
-            ("pop_type_percent_country", "number", "percent"): {"pop_type"},
+            (
+                "pop_type_percent_country",
+                "number",
+                "value" if version_contracts.active_version() == "1.15.0" else "percent",
+            ): {"target" if version_contracts.active_version() == "1.15.0" else "pop_type"},
             ("radical_fraction", "number", "value"): {"pop_type"},
             ("loyalist_fraction", "number", "value"): {"pop_type"},
             ("has_diplomatic_pact", "boolean", None): {"who", "type"},
@@ -329,8 +350,16 @@ def from_data(
                     or (
                         not re.fullmatch(r"[a-z][a-z0-9_-]*", literal)
                         and not (
-                            item["engine"] == "pop_type_percent_state"
-                            and literal == "pop_type:peasants"
+                            (
+                                item["engine"] == "pop_type_percent_state"
+                                and literal == "pop_type:peasants"
+                            )
+                            or (
+                                item["engine"] == "pop_type_percent_country"
+                                and version_contracts.active_version() == "1.15.0"
+                                and literal
+                                in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
+                            )
                         )
                     )
                     for literal in parameters.values()
@@ -347,9 +376,17 @@ def from_data(
         ):
             raise ValueError("复合数值读取器只支持已声明的 value 比较，不能混用布尔参数")
         if item["engine"] == "pop_type_percent_country" and (
-            value_field != "percent" or not parameters
+            value_field
+            != ("value" if version_contracts.active_version() == "1.15.0" else "percent")
+            or parameters
+            not in [
+                {"target": f"pop_type:{name}"}
+                if version_contracts.active_version() == "1.15.0"
+                else {"pop_type": name}
+                for name in ("peasants", "laborers", "machinists")
+            ]
         ):
-            raise ValueError("人口比例读取器必须声明 percent 和 pop_type 参数")
+            raise ValueError("人口比例读取器必须声明所选版本的精确人口参数与比较字段")
         if item["engine"] == "is_production_method_active" and not parameters:
             raise ValueError("复合布尔生产方式读取器必须声明完整参数")
         if item["engine"] == "institution_investment_level" and (
@@ -1115,10 +1152,20 @@ def patch(
             or any(
                 literal not in words
                 and not (
-                    reader.engine == "pop_type_percent_state"
-                    and literal == "pop_type:peasants"
-                    and "peasants" in words
-                    and "pop_type:slaves" in words
+                    (
+                        reader.engine == "pop_type_percent_state"
+                        and literal == "pop_type:peasants"
+                        and "peasants" in words
+                        and "pop_type:slaves" in words
+                    )
+                    or (
+                        reader.engine == "pop_type_percent_country"
+                        and version_contracts.active_version() == "1.15.0"
+                        and literal
+                        in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
+                        and literal.removeprefix("pop_type:") in words
+                        and "pop_type:peasants" in words
+                    )
                 )
                 for _, literal in reader.parameters
             )

@@ -431,6 +431,14 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + b"\0generator:"
             + Path(technology_opportunities.__file__).read_bytes()
         ).hexdigest()
+    population_reader_digest = None
+    if source == SOURCE and version_contracts.active_version() == "1.15.0":
+        from .situated import engine_reader_115  # noqa: PLC0415
+
+        engine_reader_115.project_population_readers(data["readers"])
+        population_reader_digest = hashlib.sha256(
+            Path(engine_reader_115.__file__).read_bytes()
+        ).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
     for name, digest in data["sources"].items():
@@ -494,6 +502,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     used_contexts: set[str] = set()
     digest = hashlib.sha256(
         raw
+        + (
+            b"\0population_reader_generator:" + population_reader_digest.encode("ascii")
+            if population_reader_digest
+            else b""
+        )
         + (b"\0native_authority:" + authority_digest.encode("ascii") if authority_digest else b"")
         + (
             b"\0building_default_engine:" + building_default_digest.encode("ascii")

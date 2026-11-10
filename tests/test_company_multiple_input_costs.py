@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from pdx import company_sectors, config, decision_rules
+from pdx import company_sectors, config, decision_rules, version_contracts
 from pdx.situated import pdx_eval, programs
 from pdx.textio import normalized_text
 
@@ -26,6 +26,7 @@ READER_WORDS = frozenset(
         "market_goods_pricier",
         "pop_type_percent_country",
         "laborers",
+        "pop_type:peasants",
         "in_default",
         "dye",
         "fertilizer",
@@ -35,6 +36,7 @@ READER_WORDS = frozenset(
         "engines",
         "steel",
         "coal",
+        "copper",
         "explosives",
         "lead",
         "oil",
@@ -49,7 +51,9 @@ READER_WORDS = frozenset(
 def frozen_profiles():
     # Read the independent native recipe evidence, without accepting its old
     # derived rules as the oracle for the new aggregation behavior.
-    raw = json.loads(company_sectors.BASELINE.read_text(encoding="utf-8"))
+    raw = json.loads(company_sectors.baseline_path().read_text(encoding="utf-8"))
+    if version_contracts.active_version() == "1.15.0":
+        raw = raw["payload"]
     return company_sectors._thaw(raw)["profiles"]
 
 
@@ -57,12 +61,17 @@ def _policy(profile, native=None):
     rows = company_sectors._profile_rules({profile["id"]: profile}, company_sectors.DEFAULTS)
     source = profile["source"]
     native = native or f"{profile['id']} = {{ ai_weight = {{ value = 3 }} }}\n"
+    readers = company_sectors._readers(rows, company_sectors.DEFAULTS)
+    if version_contracts.active_version() == "1.15.0":
+        from pdx.situated.engine_reader_115 import project_population_readers
+
+        project_population_readers(readers)
     policy = decision_rules.from_data(
         {
             "schema": 1,
             "baseline_sha256": hashlib.sha256(normalized_text(native).encode()).hexdigest(),
             "domains": {"market": True},
-            "readers": company_sectors._readers(rows, company_sectors.DEFAULTS),
+            "readers": readers,
             "rules": [
                 {key: value for key, value in row.items() if key != "source"} for row in rows
             ],
@@ -199,7 +208,9 @@ def test_alternative_schneider_recipe_inputs_are_not_mandatory(frozen_profiles):
 def test_native_basf_overlay_preserves_player_and_disabled_domain(frozen_profiles):
     profile = frozen_profiles["company_basf"]
     native = (config.GAME / profile["source"]).read_text(encoding="utf-8-sig")
-    frozen = json.loads(company_sectors.BASELINE.read_text(encoding="utf-8"))
+    frozen = json.loads(company_sectors.baseline_path().read_text(encoding="utf-8"))
+    if version_contracts.active_version() == "1.15.0":
+        frozen = frozen["payload"]
     assert (
         hashlib.sha256(normalized_text(native).encode()).hexdigest()
         == frozen["sources"][profile["source"]]

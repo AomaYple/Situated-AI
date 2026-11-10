@@ -91,6 +91,31 @@ def test_rebound_reader_evidence_cannot_expand_permission(tmp_path, monkeypatch,
         engine_reader_115.snapshot()
 
 
+@pytest.mark.parametrize(
+    ("section", "field", "impostor"),
+    [
+        ("flag_map", "is_defensive_pact_index", True),
+        ("flag_map", "is_defensive_pact_index", 1.0),
+        ("exe", "bytes", float(engine_scope_115.EXE_BYTES)),
+    ],
+)
+def test_rebound_reader_integer_identity_rejects_equal_nonintegers(
+    tmp_path, monkeypatch, section, field, impostor
+):
+    data = json.loads(engine_reader_115.snapshot())
+    data[section][field] = impostor
+    raw = json.dumps(data).encode()
+    candidate = tmp_path / "candidate.json"
+    candidate.write_bytes(raw)
+    monkeypatch.setitem(
+        engine_scope_115.MANIFESTS,
+        "defensive-pact-reader",
+        (str(candidate), hashlib.sha256(raw).hexdigest()),
+    )
+    with pytest.raises(ValueError, match="exact reader or native-value contract drift"):
+        engine_reader_115.snapshot()
+
+
 @pytest.mark.integration
 def test_current_original_value_drift_blocks_getter_proof(tmp_path):
     data = json.loads(engine_reader_115.snapshot())

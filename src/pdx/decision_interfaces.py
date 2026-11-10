@@ -343,6 +343,25 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine == "pop_type_percent_country":
+        current = version_contracts.active_version() == "1.15.0"
+        parameter = "target" if current else "pop_type"
+        values = {"peasants", "laborers", "machinists"}
+        if (
+            reader.scope != "root"
+            or reader.path != actor_path
+            or reader.argument is not None
+            or len(reader.parameters) != 1
+            or reader.parameters[0][0] != parameter
+            or reader.parameters[0][1]
+            not in ({f"pop_type:{name}" for name in values} if current else values)
+            or reader.value_field != ("value" if current else "percent")
+            or reader.kind != "number"
+            or reader.unit != "ratio"
+            or reader.minimum != 0
+            or reader.maximum != 1
+        ):
+            raise ValueError(f"人口比例必须保持所选版本的精确国家参数合同：{reader.key}")
     if reader.engine == "pop_type_percent_state" and (
         root != "state"
         or reader.scope != "root"
@@ -643,10 +662,10 @@ def consumer(
     if leaf == "ai_enact_weight_modifier":
         evidence, role = "common/laws/readme.md", "vanilla_law_candidate_weight"
     elif leaf == "ai_weight" and source is not None and source.startswith("common/company_types/"):
-        evidence, role = (
-            "research/situated/victoria3-1.14.5-company-scope.json",
-            "vanilla_company_base_candidate_weight",
-        )
+        from .situated import engine_scope  # noqa: PLC0415
+
+        _, evidence, _ = engine_scope._company_manifest()
+        role = "vanilla_company_base_candidate_weight"
     elif leaf == "ai_weight" and source == "common/mobilization_options/00_mobilization_option.txt":
         from .mobilization_opportunities import CANDIDATE_IDS  # noqa: PLC0415
 

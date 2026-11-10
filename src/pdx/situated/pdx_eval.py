@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal, cast
 
+from pdx import version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 
@@ -173,6 +174,12 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
         parameters = {"argument": argument}
     elif isinstance(assignment.value, Block):
         block_shape = _PARAMETER_QUERY_BLOCKS.get(assignment.key)
+        if assignment.key == "pop_type_percent_country":
+            block_shape = (
+                (frozenset({"target"}), "value")
+                if version_contracts.active_version() == "1.15.0"
+                else (frozenset({"pop_type"}), "percent")
+            )
         if block_shape is None:
             raise UnsupportedPdxError(f"参数化查询 {assignment.key} 不支持参数块形状")
         items = list(assignment.value.assignments())
@@ -208,6 +215,13 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
     else:
         raise UnsupportedPdxError(f"参数化查询 {assignment.key} 参数必须是标量或块")
 
+    if assignment.key == "pop_type_percent_country":
+        current = version_contracts.active_version() == "1.15.0"
+        parameter = "target" if current else "pop_type"
+        values = {"peasants", "laborers", "machinists"}
+        allowed_values = {f"pop_type:{name}" for name in values} if current else values
+        if parameters.get(parameter) not in allowed_values:
+            raise UnsupportedPdxError("人口比例查询只支持所选版本已登记的人口类别")
     identity = tuple(sorted(parameters.items()))
     if assignment.key in {"sitai_defense_commitment", "sitai_neighbor_defense"}:
         if any(

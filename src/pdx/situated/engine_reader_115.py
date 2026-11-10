@@ -27,6 +27,7 @@ def snapshot() -> bytes:
         or data["parent_scope_manifest"]["path"] != identity
         or data["parent_scope_manifest"]["sha256"] != strategy_digest
         or data["exe"]["sha256"] != engine_scope_115.EXE_SHA256
+        or type(data["exe"]["bytes"]) is not int
         or data["exe"]["bytes"] != engine_scope_115.EXE_BYTES
         or data["runtime"] != "unknown"
         or data["reader"]
@@ -46,6 +47,7 @@ def snapshot() -> bytes:
             {"engine": name, "scope": "root", "kind": "number", "unit": "barracks_levels"}
             for name in ("wanted_army_size_script_value", "wanted_marines_size_script_value")
         ]
+        or type(data["flag_map"]["is_defensive_pact_index"]) is not int
         or data["flag_map"]["is_defensive_pact_index"] != 1
         or data["flag_map"]["complete_object_flags_offset"] != "0xd0"
     ):
@@ -76,6 +78,35 @@ def project_information_readers(readers: dict) -> None:
         if row != {"engine": engine, "scope": "root", "unit": "battalions", "kind": "number"}:
             raise ValueError("1.15 LJ10 reader: historical declaration identity drift")
         readers[key] = {**row, "unit": "barracks_levels"}
+
+
+def project_population_readers(readers: dict) -> None:
+    """Project historical country declarations onto the current native signature.
+
+    The current urbanization and slave-revolt native examples both use a typed
+    pop-type target and value comparison. State percentage readers already use
+    this format and are deliberately outside this country-only projection.
+    """
+    for key, row in readers.items():
+        if row.get("engine") != "pop_type_percent_country":
+            continue
+        pop_type = row.get("parameters", {}).get("pop_type")
+        if pop_type not in {"peasants", "laborers", "machinists"} or row != {
+            "engine": "pop_type_percent_country",
+            "scope": "root",
+            "unit": "ratio",
+            "kind": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "value_field": "percent",
+            "parameters": {"pop_type": pop_type},
+        }:
+            raise ValueError(f"1.15 population reader: historical declaration drift: {key}")
+        readers[key] = {
+            **row,
+            "value_field": "value",
+            "parameters": {"target": f"pop_type:{pop_type}"},
+        }
 
 
 def verify_game(game: Path) -> tuple[tuple[str, str], ...]:
