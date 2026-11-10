@@ -97,7 +97,9 @@ from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
 from pdx.situated import bindings as situated_bindings
 from pdx.situated import domain_coverage as situated_domain_coverage
 from pdx.situated import inventory as situated_inventory
+from pdx.situated import network_profile as situated_network_profile
 from pdx.situated import production_profile as situated_production_profile
+from pdx.situated import profile_configuration
 
 # 必须在构造 Console 之前调用 —— 理由见 pdx/console.py 的模块文档：
 # rich 替代不了编码兜底，GBK 重定向下它自己就会抛 UnicodeEncodeError。
@@ -2647,13 +2649,15 @@ def _modgen_output_changes(production: dict[str, str | bytes]) -> dict[Path, byt
         }
 
 
-def _production_profile(name: str | None):
+def _production_profile(name: str | None, configuration: Path | None = None):
     """Load an explicitly requested profile from the frozen native baseline.
 
     Profile generation is intentionally offline and reproducible.  The live
     game installation is not an implicit input to the 1.15 delivery path.
     """
     if name is None:
+        if configuration is not None:
+            raise ValueError("--configuration 必须同时指定 --profile 1.15.0")
         return None
     if name != "1.15.0":
         raise ValueError(f"不支持的 production profile：{name}（仅支持 1.15.0）")
@@ -2661,12 +2665,11 @@ def _production_profile(name: str | None):
     return situated_production_profile.load_profile(situated_production_profile.BASELINE_ROOT)
 
 
-def _profile_output_root() -> Path:
-    return distribution.profile_output_root()
-
-
-def _check_profile_outputs(profile) -> dict[str, bytes]:
-    return distribution.check_profile_outputs(profile, root=_profile_output_root())
+def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutral"] = "policy"):
+    """Resolve configuration once at the CLI boundary."""
+    if path is None:
+        return profile_configuration.ProfileConfiguration(mode=mode)
+    return profile_configuration.load(path)
 
 
 @app.command("modgen")
@@ -2676,18 +2679,22 @@ def modgen_cmd(
     profile: Annotated[
         str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
     ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """从生产 TOML 和锁定原版底本生成标准 Mod；生成物禁止手改。"""
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
-        selected_profile = _production_profile(profile)
+        selected_profile = _production_profile(profile, configuration)
         if selected_profile is not None:
+            resolved = _profile_configuration(configuration)
             if write:
-                files = distribution.write_profile_outputs(selected_profile)
-                console.print(f"[green]已生成 1.15.0 policy 产物：{len(files)} 个文件[/]")
+                files = distribution.write_profile_outputs(selected_profile, configuration=resolved)
+                console.print(f"[green]已生成 1.15.0 {resolved.mode} 产物：{len(files)} 个文件[/]")
             elif check:
-                _check_profile_outputs(selected_profile)
+                distribution.check_profile_outputs(selected_profile, configuration=resolved)
                 console.print("[green]1.15.0 隔离产物与 profile lock 逐字节一致[/]")
             else:
                 console.print("Situated AI 1.15.0 profile：使用 --write 生成 / --check 核对")
@@ -2750,12 +2757,17 @@ def package_cmd(
     profile: Annotated[
         str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
     ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
     try:
-        selected_profile = _production_profile(profile)
+        selected_profile = _production_profile(profile, configuration)
         target = (
-            distribution.profile_package(output, selected_profile)
+            distribution.profile_package(
+                output, selected_profile, configuration=_profile_configuration(configuration)
+            )
             if selected_profile is not None
             else distribution.package(output)
         )
@@ -2821,12 +2833,17 @@ def modguard_cmd(
     profile: Annotated[
         str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
     ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
-        selected_profile = _production_profile(profile)
+        selected_profile = _production_profile(profile, configuration)
         if selected_profile is not None:
-            distribution.check_profile_outputs(selected_profile)
+            distribution.check_profile_outputs(
+                selected_profile, configuration=_profile_configuration(configuration)
+            )
             console.print("[green]1.15.0 profile 身份、底本、policy 接线和隔离产物检查通过[/]")
             return
         if offline:
@@ -2881,6 +2898,9 @@ def decision_audit_cmd(
     profile: Annotated[
         str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
     ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """核对情境决策合同并生成可解释报告。
 
@@ -2890,12 +2910,16 @@ def decision_audit_cmd(
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
-        selected_profile = _production_profile(profile)
+        selected_profile = _production_profile(profile, configuration)
         if selected_profile is not None:
-            profile_files = distribution.check_profile_outputs(selected_profile)
+            resolved = _profile_configuration(configuration)
+            profile_files = distribution.check_profile_outputs(
+                selected_profile, configuration=resolved
+            )
             metadata = json.loads(profile_files[distribution.METADATA_NAME])
             custom = metadata.get("game_custom_data", {})
             policy_name = custom.get("policy") if isinstance(custom, dict) else None
+            resolved_identity = custom.get("configuration") if isinstance(custom, dict) else None
             metadata = {
                 "schema": 1,
                 "evidence": "generated_1.15_profile_contract",
@@ -2903,10 +2927,16 @@ def decision_audit_cmd(
                 "game_version": selected_profile.game_version,
                 "build_id": selected_profile.build_id,
                 "policy": policy_name,
+                "configuration": resolved_identity,
+                "action_network": situated_network_profile.audit(
+                    selected_profile, configuration=resolved
+                ),
                 "generated_output": str(distribution.profile_output_root()),
                 "consumers": [
                     {
                         "id": row.id,
+                        "enabled": isinstance(resolved_identity, dict)
+                        and row.domain in resolved_identity.get("enabled_domains", []),
                         "source": row.source,
                         "definition": row.definition,
                         "field": list(row.field),
@@ -2914,7 +2944,7 @@ def decision_audit_cmd(
                         "target": row.target,
                         "operation": row.operation,
                         "neutral": row.neutral,
-                        "bounds": list(row.bounds),
+                        "native_contract_bounds": list(row.bounds),
                     }
                     for row in selected_profile.declarations
                 ],

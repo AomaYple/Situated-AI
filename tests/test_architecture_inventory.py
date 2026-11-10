@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from typing import Any
 
 import pytest
 
 from pdx.parser import parse_text
-from pdx.situated import compiler
+from pdx.situated import compiler, network_profile, production_profile, r2_reader_authority
 from tools.ci import architecture_inventory as inventory
 
 
@@ -57,7 +58,7 @@ def test_metrics_retain_repeated_operations_and_anonymous_blocks():
 
 def test_actor_coverage_cannot_filter_unreachable_tags_or_dynamic_countries(monkeypatch, tmp_path):
     monkeypatch.setattr(inventory, "fact_sources", lambda _game: [])
-    source = {
+    source: dict[str, Any] = {
         "inventory_sha256": "a" * 64,
         "actor_universe": {
             "actors": ["ZZZ", "AAA"],
@@ -70,7 +71,7 @@ def test_actor_coverage_cannot_filter_unreachable_tags_or_dynamic_countries(monk
     assert result["static_rows"] == 6
     assert result["dynamic_rows"] == 3
     assert {row["actor"] for row in result["rows"]} == {"AAA", "ZZZ", "*DYNAMIC_COUNTRY*"}
-    assert all(row["consumer_wiring"] == "not_connected_1.15" for row in result["rows"])
+    assert all(row["consumer_wiring"] == "not_assessed_by_A0_enumeration" for row in result["rows"])
     assert all(row["runtime_observation"] == "unknown" for row in result["rows"])
     assert all(row["ttl"] == "this_consumer_evaluation" for row in result["rows"])
     assert result["excluded_actors"] == []
@@ -131,7 +132,8 @@ def test_measure_uses_selected_game_root_even_with_inherited_environment(monkeyp
     assert result["output"].strip() == str(game.resolve())
 
 
-def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, tmp_path):
+@pytest.mark.parametrize("r2", [False, True])
+def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, tmp_path, r2):
     output = tmp_path / "output"
     source = tmp_path / "inventory.json"
     source.write_bytes(b"{}")
@@ -147,7 +149,8 @@ def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, 
             "--output",
             str(output),
             "--measure",
-        ],
+        ]
+        + (["--r2"] if r2 else []),
     )
     monkeypatch.setattr(inventory, "validate_inventory", lambda *_: None)
     monkeypatch.setattr(inventory, "migration_inventory", lambda: {"counts": {}})
@@ -157,14 +160,39 @@ def test_measurement_can_write_outside_repository_with_bound_input(monkeypatch, 
     monkeypatch.setattr(inventory, "static_samples", lambda *_: {"samples": []})
     monkeypatch.setattr(inventory, "configuration_inventory", lambda *_: {})
     monkeypatch.setattr(inventory, "objectives", lambda *_: {})
+    monkeypatch.setattr(inventory, "capability_inventory", lambda *_: {})
     monkeypatch.setattr(
-        inventory, "measure", lambda *_, **__: {"output": "measured", "exit_code": 0}
+        inventory, "r2_profile_baseline", lambda *_: {"budget_violations": [], "actual_r2": True}
     )
+    calls = []
+
+    def measured(command, **_kwargs):
+        calls.append(command)
+        # A failing old generator remains a failing workload in the receipt.
+        return {"output": "measured", "exit_code": 3 if "modgen" in command else 0}
+
+    monkeypatch.setattr(inventory, "measure", measured)
     assert inventory.main() == 0
     cost = json.loads((output / "cost-baseline.json").read_text(encoding="utf-8"))
     assert cost["input_inventory_sha256"] == inventory.digest(b"{}")
     for measurement in cost["measurements"]:
         assert (output / measurement["log"]).read_text(encoding="utf-8") == "measured"
+    assert len(calls) == (4 if r2 else 3)
+    assert cost["parallelism"] == 1
+    assert (
+        next(row for row in cost["measurements"] if row["id"] == "old_generator_on_local_1.15")[
+            "exit_code"
+        ]
+        == 3
+    )
+    assert any(command[-1] == "r2_profile" for command in calls) is r2
+    static = json.loads((output / "static-baseline.json").read_text(encoding="utf-8"))
+    if r2:
+        assert static["r2_profile"]["actual_r2"] is True
+        assert cost["r2_profile"] == static["r2_profile"]
+    else:
+        assert "r2_profile" not in static
+        assert cost["r2_profile"] is None
 
 
 def test_configuration_output_cannot_overwrite_input(monkeypatch, tmp_path):
@@ -264,3 +292,152 @@ def test_json_and_scan_identity_reject_untrusted_or_drifted_inputs(tmp_path):
     seal()
     with pytest.raises(ValueError, match="duplicate"):
         inventory.validate_inventory(source, tmp_path)
+
+
+def test_r2_capabilities_reject_partial_drifted_and_missing_context(monkeypatch, tmp_path):
+    relative = "game/capability.txt"
+    documentation = "game/contract.md"
+    monkeypatch.setattr(inventory, "R2_CAPABILITY_SOURCES", {relative: ("influence",)})
+    monkeypatch.setattr(inventory, "R2_DOCUMENTATION_ANCHORS", {documentation: ("root country",)})
+    (tmp_path / "game").mkdir()
+    (tmp_path / relative).write_bytes(b"a = { will_propose = { influence < 200 } }")
+    (tmp_path / documentation).write_bytes(b"AI root country")
+    source: dict[str, Any] = {
+        "inventory_sha256": "a" * 64,
+        "files": [
+            {
+                "path": relative,
+                "parse_status": "parsed",
+                "sha256": inventory.digest((tmp_path / relative).read_bytes()),
+            },
+            {
+                "path": documentation,
+                "parse_status": "not_pdx",
+                "sha256": inventory.digest((tmp_path / documentation).read_bytes()),
+            },
+        ],
+    }
+    result = inventory.capability_inventory(source, tmp_path)
+    assignment = next(row for row in result["sources"] if row["path"] == relative)["assignments"][
+        "influence"
+    ][0]
+    assert assignment["parents"] == ["a", "will_propose"]
+    assert result["runtime"] == "unknown; game not started"
+    assert result["proposed_minimum"]["consumer_extension_required"] is False
+    files: Any = source["files"]
+    files[0]["parse_status"] = "partial"
+    with pytest.raises(ValueError, match="incomplete capability"):
+        inventory.capability_inventory(source, tmp_path)
+    files[0]["parse_status"] = "parsed"
+    (tmp_path / relative).write_bytes(b"changed")
+    with pytest.raises(ValueError, match="capability source drift"):
+        inventory.capability_inventory(source, tmp_path)
+    files[0]["sha256"] = inventory.digest(b"changed")
+    with pytest.raises(ValueError, match="assignment missing"):
+        inventory.capability_inventory(source, tmp_path)
+
+
+def test_scanner_identity_failure_requires_rescan_not_asset_classification():
+    result = inventory.classify_failures(
+        {"failures": [{"kind": "scanner_source_changed_during_scan", "path": "src/pdx/parser.py"}]}
+    )
+    assert result[0]["impact"] == "blocks_source_identity; rescan_required"
+
+
+@pytest.fixture(scope="module")
+def r2_baseline():
+    # The independently frozen original reader closure is a real versioned
+    # input. No installation-wide scan or game process is needed by this test.
+    return inventory.r2_profile_baseline(r2_reader_authority.FROZEN_ROOT)
+
+
+def test_r2_baseline_runs_actual_native_parser_compile_and_build(r2_baseline):
+    assert r2_baseline["game_version"] == "1.15.0"
+    assert r2_baseline["evidence_kind"] == "actual_offline_compile_and_generation"
+    assert len(r2_baseline["reader_authority"]["files"]) == 17
+    assert len(r2_baseline["native_parsed_sources"]) > 3
+    assert len(r2_baseline["generated_files"]) == 3
+    assert len(r2_baseline["programs"]) == 3
+    assert "engine execution" in r2_baseline["runtime"]
+    assert r2_baseline["generator_sources"]
+    assert r2_baseline["budget_status"] == "passed", r2_baseline["budget_violations"]
+    for row in r2_baseline["programs"]:
+        assert row["network"]["dag_nodes"] > row["network"]["raw_facts"] > 0
+        assert row["network"]["dag_edges"] > 0
+        assert row["network"]["pre_expansion_expressions"]
+        assert row["network"]["expanded_guard_nodes"] > 0
+        assert row["overlay_ast"]["assignments"] > 0
+        assert row["overlay_bytes"] > 0
+        assert row["generated_file_bytes"] >= row["overlay_bytes"]
+        assert row["original_consumer_ast"]["assignments"] > 0
+        assert (
+            row["generated_consumer_ast"]["assignments"]
+            > row["original_consumer_ast"]["assignments"]
+        )
+        assert row["readers"]["declared"]
+        assert row["readers"]["generated_occurrences"]
+        for check in row["network"]["budget_checks"].values():
+            assert check["passed"] is (check["actual"] <= check["limit"])
+        for check in row["local_budget_checks"].values():
+            assert check["passed"] is (check["actual"] <= check["limit"])
+        objects = row["local_budget_checks"]["selected_candidates_per_evaluation"]
+        assert objects == {"actual": 1, "limit": 1, "passed": True}
+        assert row["local_budget_checks"]["additional_iterators"]["actual"] == 0
+
+
+def test_r2_network_cost_uses_predeclared_limits_and_reports_excess():
+    profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
+    program = network_profile.compile_profile(profile)[0]
+    tightened = replace(program.network.budget, max_bridges=1, max_edges=1, max_guard_nodes=1)
+    result = inventory.r2_program_metrics(
+        replace(program, network=replace(program.network, budget=tightened))
+    )
+    assert result["declared_budget"]["max_bridges"] == 1
+    assert result["budget_checks"]["max_bridges"]["passed"] is False
+    assert result["budget_checks"]["max_edges"]["passed"] is False
+    assert result["budget_checks"]["max_guard_nodes"]["passed"] is False
+
+
+def test_r2_metrics_read_actual_built_overlay_and_keep_violations(monkeypatch):
+    build = network_profile.build
+
+    def modified(*args, **kwargs):
+        outputs = build(*args, **kwargs)
+        path = "common/decrees/00_decree.txt"
+        marker = "# SITAI POLICY 1.15.0 END a0-econ-road"
+        # Native tail queries must be excluded, but a newly emitted world
+        # iterator cannot hide behind the compiler's otherwise valid program.
+        injection = "every_country = { " + "nested = { " * 12 + "value = 1 " + "} " * 13
+        outputs[path] = outputs[path].replace(marker, injection + "\n\t" + marker)
+        return outputs
+
+    monkeypatch.setattr(network_profile, "build", modified)
+    report = inventory.r2_profile_baseline(r2_reader_authority.FROZEN_ROOT)
+    assert report["budget_status"] == "failed"
+    violated = {item["budget"] for item in report["budget_violations"]}
+    assert "additional_iterators" in violated
+    assert "additional_global_scans" in violated
+    assert "additional_consumer_block_depth" in violated
+    road = next(row for row in report["programs"] if row["consumer"] == "a0-econ-road")
+    assert road["overlay_ast"]["query_forms"] == {"every_country": 1}
+
+
+@pytest.mark.parametrize("violations", [[], [{"budget": "excess"}]])
+def test_r2_worker_emits_budget_receipt_and_fails_on_excess(
+    monkeypatch, capsys, tmp_path, violations
+):
+    report = {"budget_violations": violations, "runtime": "unknown"}
+    calls = []
+
+    def baseline(game):
+        calls.append(game)
+        return report
+
+    monkeypatch.setattr(inventory, "r2_profile_baseline", baseline)
+    if violations:
+        with pytest.raises(ValueError, match="exceeds declared budgets"):
+            inventory.worker("r2_profile", tmp_path)
+    else:
+        inventory.worker("r2_profile", tmp_path)
+    assert calls == [tmp_path]
+    assert json.loads(capsys.readouterr().out) == report

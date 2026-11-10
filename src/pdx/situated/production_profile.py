@@ -801,10 +801,6 @@ def _policy_predicates(variant: PolicyVariant) -> tuple[tuple[str, str, object],
     return tuple(predicates)
 
 
-def _policy_legacy(row: ConsumerDeclaration, variant: PolicyVariant) -> LegacyDecisionIR:
-    return _policy_semantic_rows(None, row, variant)[1]
-
-
 def _policy_semantic_rows(
     profile: ProductionProfile | None,
     row: ConsumerDeclaration,
@@ -1242,7 +1238,7 @@ def capture_baseline(
             raise ValueError("1.15 baseline 已存在，拒绝静默刷新")
     staging = destination.with_name(destination.name + ".staging")
     if staging.exists():
-        shutil.rmtree(staging)
+        raise ValueError("1.15 baseline staging 已存在，拒绝删除或覆盖")
     records: list[dict[str, str]] = []
     try:
         for rel in paths:
@@ -1264,6 +1260,9 @@ def capture_baseline(
             encoding="utf-8",
             newline="\n",
         )
+        # Copying can race with source changes. Do not let freshly calculated
+        # manifest hashes reauthorize bytes that differ from the declaration.
+        verify_baseline(staging, declaration=declaration)
         if destination.exists():
             if overwrite:
                 shutil.rmtree(destination)

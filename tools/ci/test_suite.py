@@ -46,6 +46,53 @@ def create_run_dir(root: Path) -> Path:
     return target
 
 
+def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
+    """记录实际测试输入；版本 profile 的静态输入核验不替代全仓测试。"""
+    # 此模块也作为早期 pytest 插件加载，不能在模块导入期预载业务代码。
+    from pdx import config  # noqa: PLC0415
+
+    installation = config.ROOT.resolve()
+    identity: dict[str, Any] = {
+        "schema": 1,
+        "profile": profile,
+        "installation": str(installation),
+        "game_available": (installation / "game/common").is_dir(),
+        "version": config.game_version(installation),
+        "evidence": "test_input_identity_not_engine_scope_or_functional_acceptance",
+        "verified": False,
+    }
+    try:
+        binary = installation / "binaries/victoria3.exe"
+        if binary.is_file():
+            with binary.open("rb") as stream:
+                digest = hashlib.file_digest(stream, "sha256").hexdigest()
+            identity["executable"] = {"sha256": digest, "bytes": binary.stat().st_size}
+        if profile is not None:
+            from pdx.situated import production_profile, r2_reader_authority  # noqa: PLC0415
+
+            if profile != production_profile.EXPECTED_VERSION:
+                raise ValueError(f"不支持的完整验收 profile：{profile}")
+            if not binary.is_file():
+                raise ValueError("完整版本验收缺少实际游戏 EXE")
+            loaded = production_profile.load_profile(installation)
+            production_profile.verify_baseline()
+            r2_reader_authority.verify_frozen()
+            authority = r2_reader_authority.verify_installation(installation)
+            identity["reader_authority"] = authority
+            identity["profile_source_hashes"] = dict(loaded.source_hashes)
+            identity["build_id"] = loaded.build_id
+            identity["baseline_manifest_sha256"] = hashlib.sha256(
+                production_profile.BASELINE_MANIFEST.read_bytes()
+            ).hexdigest()
+            identity["verified"] = True
+    except (ValueError, OSError) as exc:
+        identity["error"] = str(exc)
+        _write(out / "game-input.json", identity)
+        raise ValueError(f"完整验收输入身份核对失败：{exc}") from exc
+    _write(out / "game-input.json", identity)
+    return identity
+
+
 def validate_pytest_args(args: list[str]) -> list[str]:
     """只允许不会改变用例集合及执行次数的调度与种子参数。"""
     seen: set[str] = set()
@@ -415,6 +462,7 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
 
 
 def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict[str, Any]:
+    game_input = capture_game_identity(out, getattr(args, "profile", None))
     env = dict(os.environ)
     # 子验收是独立 controller，不能继承外层 pytest worker 的身份。
     for variable in (
@@ -464,6 +512,9 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
             "MEMBASELINE_TAG",
             "SITAI_XDIST_WORKERS",
             "PYTEST_XDIST_AUTO_NUM_WORKERS",
+            "V3_ROOT",
+            "V3_USERDIR",
+            "V3_WORKSHOP",
         )
     }
     machine = mem.machine_info()
@@ -478,6 +529,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
         "cwd": str(ROOT),
         "machine": machine,
         "environment": environment,
+        "game_input": game_input,
         "environment_sha256": hashlib.sha256(
             json.dumps(environment, sort_keys=True).encode("utf-8")
         ).hexdigest(),
@@ -585,6 +637,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--allow-concurrent", action="store_true")
     parser.add_argument("--reference", type=Path)
+    parser.add_argument("--profile", choices=("1.15.0",))
     raw = list(sys.argv[1:] if argv is None else argv)
     split = raw.index("--") if "--" in raw else len(raw)
     args = parser.parse_args(raw[:split])
@@ -609,6 +662,9 @@ def main(argv: list[str] | None = None) -> int:
         summary = execute(out, args, pytest_args)
     except (Exception, SystemExit) as exc:
         summary = {"tag": "full", "exit_code": 2, "execution_error": str(exc)}
+        identity_path = out / "game-input.json"
+        if identity_path.is_file():
+            summary["game_input"] = json.loads(identity_path.read_text(encoding="utf-8"))
     code = finalize(out, summary, reference=args.reference)
     print(f"[full-acceptance] exit={code}，报告：{out / 'full-acceptance.json'}", flush=True)
     return code

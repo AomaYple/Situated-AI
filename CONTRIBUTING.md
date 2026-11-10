@@ -71,6 +71,12 @@ python -m pdx.cli package
 标准包只包含 Mod 安装所需内容，不含探针、Python、日志、缓存、本体资源或历史实验。ZIP 路径使用 POSIX 形式；
 游戏文本的 BOM 只在游戏安装或打包边界添加。完整包内合同和恢复边界见工程交付基线。
 
+1.15 R2 候选在以上 `modgen`、`modguard`、`decision-audit` 和 `package` 命令中显式使用
+`--profile 1.15.0`；产物隔离在 `tools/out/production/1.15.0/`，不会更新旧正式版本的生成锁。
+同一组命令可用 `--configuration <TOML路径>` 选择构建配置（严格 schema、核心、领域和 policy/neutral 模式），
+检查与打包必须传入同一配置；具体字段见 `src/pdx/situated/profile_configuration.py`。
+候选静态通过及 ZIP 生成不代表完整工程门通过，也不构成发布或部署。
+
 ## 验证
 
 按风险选择检查。阶段开发运行改动域测试；冻结最终候选后运行一次完整回归。静态收口至少运行：

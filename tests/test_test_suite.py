@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from argparse import Namespace
@@ -15,6 +16,63 @@ import pytest
 
 from pdx import covgate
 from tools.ci import test_suite
+
+
+def test_profile_identity_records_verified_live_inputs_and_binary(tmp_path, monkeypatch):
+    from pdx import config
+    from pdx.situated import production_profile, r2_reader_authority
+
+    installation = tmp_path / "installation"
+    shutil.copytree(production_profile.BASELINE_ROOT, installation)
+    shutil.copytree(r2_reader_authority.FROZEN_ROOT, installation, dirs_exist_ok=True)
+    binary = installation / "binaries/victoria3.exe"
+    binary.write_bytes(b"identity only; not an engine scope proof")
+    monkeypatch.setattr(config, "ROOT", installation)
+    identity = test_suite.capture_game_identity(tmp_path, "1.15.0")
+    assert identity["profile"] == "1.15.0"
+    assert identity["version"]["caligula_branch"] == "release/1.15.0"
+    assert identity["profile_source_hashes"] == dict(
+        production_profile.load_profile(installation).source_hashes
+    )
+    assert identity["installation"] == str(installation.resolve())
+    assert identity["executable"]["bytes"] == binary.stat().st_size
+    assert identity["verified"] is True
+    assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
+    assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
+
+
+@pytest.mark.parametrize("broken", ["version", "input", "missing_binary"])
+def test_profile_identity_fails_closed_and_preserves_failure(tmp_path, monkeypatch, broken):
+    from pdx import config
+    from pdx.situated import production_profile
+
+    installation = tmp_path / "installation"
+    shutil.copytree(production_profile.BASELINE_ROOT, installation)
+    binary = installation / "binaries/victoria3.exe"
+    binary.write_bytes(b"identity only")
+    target = {
+        "version": installation / "caligula_branch.txt",
+        "input": installation / "game/common/decrees/00_decree.txt",
+        "missing_binary": binary,
+    }[broken]
+    if broken == "missing_binary":
+        target.unlink()
+    else:
+        target.write_bytes(b"drift")
+    monkeypatch.setattr(config, "ROOT", installation)
+    with pytest.raises(ValueError, match="完整验收输入身份核对失败"):
+        test_suite.capture_game_identity(tmp_path, "1.15.0")
+    report = json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8"))
+    assert report["verified"] is False
+    assert report["error"]
+
+
+def test_full_acceptance_rejects_unsupported_profile_before_launch(tmp_path, monkeypatch):
+    monkeypatch.setattr(test_suite, "execute", lambda *_args: pytest.fail("launch"))
+    with pytest.raises(SystemExit) as caught:
+        test_suite.main(["--output-root", str(tmp_path), "--profile", "1.14.5"])
+    assert caught.value.code == 2
+    assert not list(tmp_path.iterdir())
 
 
 def test_plugin_import_does_not_preload_business_modules_before_coverage():

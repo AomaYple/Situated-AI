@@ -46,3 +46,22 @@ research/vanilla-ai/1.15.0/native/game/common/ai_strategies/00_default_strategy.
 research/vanilla-ai/1.15.0/native/game/common/ai_strategies/03_political_strategies.txt binary
 research/vanilla-ai/1.15.0/native/game/common/diplomatic_actions/00_relations_actions.txt binary
 tests/test_golden/** linguist-generated
+
+# R2 reader authority: individually pinned upstream bytes; manifest remains authored JSON.
+research/vanilla-ai/1.15.0/r2-readers/binaries/checksum.txt binary
+research/vanilla-ai/1.15.0/r2-readers/caligula_branch.txt binary
+research/vanilla-ai/1.15.0/r2-readers/caligula_rev.txt binary
+research/vanilla-ai/1.15.0/r2-readers/clausewitz_branch.txt binary
+research/vanilla-ai/1.15.0/r2-readers/clausewitz_rev.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/ai_strategies/00_default_strategy.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/ai_strategies/01_admin_strategies.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/ai_strategies/03_political_strategies.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/alert_types/00_alert_types.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/decrees/00_decree.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/diplomatic_actions/00_relations_actions.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/diplomatic_actions/01_expel_diplomats.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/diplomatic_actions/diplomatic_action.md binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/journal_entries/08_tsarpoints.txt binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/scripted_buttons/scripted_buttons.md binary
+research/vanilla-ai/1.15.0/r2-readers/game/common/scripted_triggers/05_tsarpoints_scripted_triggers.txt binary
+research/vanilla-ai/1.15.0/r2-readers/launcher/launcher-settings.json binary

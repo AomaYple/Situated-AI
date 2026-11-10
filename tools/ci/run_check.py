@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 import sys
@@ -63,7 +64,23 @@ def main() -> int:
     # -B applies to this child; the environment also covers nested Python tools.
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     if sys.argv[1] == "baseline":
-        for label, command in BASELINE_COMMANDS:
+        parser = argparse.ArgumentParser(description="完整静态基线；版本门追加到现有门禁之后。")
+        parser.add_argument("--profile", choices=("1.15.0",))
+        args = parser.parse_args(sys.argv[2:])
+        commands = list(BASELINE_COMMANDS)
+        if args.profile:
+            commands.extend(
+                (
+                    f"{args.profile} {name}",
+                    ["pdx.cli", name, "--profile", args.profile, *options],
+                )
+                for name, options in (
+                    ("modgen", ["--check"]),
+                    ("modguard", ["--offline"]),
+                    ("decision-audit", ["--offline"]),
+                )
+            )
+        for label, command in commands:
             print(f"[baseline] {label}", flush=True)
             result = subprocess.run(
                 [str(python), "-B", "-X", "utf8", "-m", *command],

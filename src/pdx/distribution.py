@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pdx import (
     company_sectors,
@@ -27,7 +27,13 @@ from pdx import (
 )
 from pdx.generation_transaction import GenerationTransaction
 from pdx.localization import parse_loc_entries
-from pdx.situated import engine_scope, production_profile
+from pdx.situated import (
+    engine_scope,
+    network_profile,
+    production_profile,
+    profile_configuration,
+    r2_reader_authority,
+)
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
@@ -708,24 +714,29 @@ def package(
 def profile_outputs(
     profile: production_profile.ProductionProfile,
     *,
-    policy: str = "policy",
+    policy: str | None = None,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> dict[str, str | bytes]:
     """Build the isolated 1.15 profile from the frozen native baseline.
 
     The production profile is policy-bearing by default.  ``policy="neutral"``
     remains an explicit diagnostic mode for proving reversibility of the native
-    write points; it is never selected by the CLI's production path.
+    write points; the CLI can select it through the same resolved configuration.
     """
+    if configuration is None:
+        if policy not in (None, "policy", "neutral"):
+            raise ValueError(f"未知 1.15 profile policy：{policy}")
+        configuration = profile_configuration.ProfileConfiguration(
+            mode="neutral" if policy == "neutral" else "policy"
+        )
+    if policy is not None and configuration.mode != policy:
+        raise ValueError("profile policy 与 resolved configuration 不一致")
+    policy = configuration.mode
     files: dict[str, str | bytes]
     if policy == "policy":
-        files = dict(
-            production_profile.build_policy_115(
-                profile,
-                core_enabled=True,
-            )
-        )
+        files = dict(network_profile.build(profile, configuration=configuration))
     elif policy == "neutral":
-        files = dict(production_profile.build_neutral(profile))
+        files = dict(production_profile.build_neutral(profile, core_enabled=configuration.core))
     else:
         raise ValueError(f"未知 1.15 profile policy：{policy}")
     policy_label = "policy" if policy == "policy" else "neutral"
@@ -747,6 +758,8 @@ def profile_outputs(
         "game_custom_data": {
             "profile": "situated-ai/production/1.15",
             "policy": policy_label,
+            "configuration": configuration.identity(),
+            "architecture": "R2/action-network-v2",
         },
     }
     files[METADATA_NAME] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
@@ -768,6 +781,8 @@ def profile_generation_lock(
     if files is None:
         files = profile_outputs(profile)
     native = production_profile.verify_baseline()
+    reader_authority = r2_reader_authority.verify_frozen(r2_reader_authority.FROZEN_ROOT)
+    reader_sources = cast("list[dict[str, str]]", reader_authority["files"])
     source_paths = [
         *sorted((root / "src/pdx").rglob("*.py")),
         *sorted((root / "mod/decisions").rglob("*.toml")),
@@ -778,6 +793,17 @@ def profile_generation_lock(
         for path in source_paths
         if path.is_file()
     }
+    # Reader authority is a generation input, including its original bytes.
+    # Keep these required paths out of the optional-file filter above: a source
+    # disappearing after verification must fail rather than shrink the lock.
+    reader_paths = [
+        r2_reader_authority.FROZEN_ROOT / r2_reader_authority.MANIFEST_NAME,
+        *(r2_reader_authority.FROZEN_ROOT / item["path"] for item in reader_sources),
+    ]
+    for path in reader_paths:
+        source_hashes[path.relative_to(root).as_posix()] = hashlib.sha256(
+            path.read_bytes()
+        ).hexdigest()
     return (
         json.dumps(
             {
@@ -820,6 +846,7 @@ def write_profile_outputs(
     profile: production_profile.ProductionProfile,
     *,
     root: Path | None = None,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> dict[str, str | bytes]:
     """Stage the full isolated candidate and restore originals on any exception.
 
@@ -827,7 +854,7 @@ def write_profile_outputs(
     never silently deletes them. Source drift during replacement fails inside
     the transaction, before original backups are discarded.
     """
-    files: dict[str, str | bytes] = dict(profile_outputs(profile))
+    files: dict[str, str | bytes] = dict(profile_outputs(profile, configuration=configuration))
     _validate_paths(list(files))
     lock = profile_generation_lock(profile, files)
     expected = {
@@ -853,6 +880,7 @@ def check_profile_outputs(
     profile: production_profile.ProductionProfile,
     *,
     root: Path | None = None,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> dict[str, bytes]:
     """Verify an already generated profile directory and return its bytes.
 
@@ -860,7 +888,7 @@ def check_profile_outputs(
     directory.  Packaging and guard commands therefore cannot silently rebuild
     around a tampered or stale generated output.
     """
-    expected = profile_outputs(profile)
+    expected = profile_outputs(profile, configuration=configuration)
     expected_bytes = {
         name: raw if isinstance(raw, bytes) else raw.encode("utf-8")
         for name, raw in expected.items()
@@ -885,9 +913,14 @@ def check_profile_outputs(
     return {name: actual[name] for name in sorted(expected_names - {"generation-lock.json"})}
 
 
-def profile_package(destination: Path, profile: production_profile.ProductionProfile) -> Path:
+def profile_package(
+    destination: Path,
+    profile: production_profile.ProductionProfile,
+    *,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
+) -> Path:
     """Package only an already verified isolated profile."""
-    files = check_profile_outputs(profile)
+    files = check_profile_outputs(profile, configuration=configuration)
     lock = profile_generation_lock(profile, files)
     if (profile_output_root() / "generation-lock.json").read_bytes() != lock.encode("utf-8"):
         raise ValueError("1.15.0 打包期间 generation-lock.json 发生漂移")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import cast
@@ -9,7 +10,7 @@ from typing import cast
 import pytest
 
 from pdx import config, distribution
-from pdx.situated import production_profile
+from pdx.situated import production_profile, r2_reader_authority
 
 
 @pytest.fixture
@@ -37,6 +38,85 @@ def test_profile_lock_covers_policy_source(profile):
     assert "mod/decisions/architecture_115.toml" in lock["sources"]
     assert "mod/decisions/policy_115.toml" in lock["sources"]
     assert "research/vanilla-ai/1.15.0/native/baseline-manifest.json" in lock["sources"]
+
+
+def test_profile_lock_binds_complete_reader_authority_and_original_bytes(profile):
+    files = distribution.profile_outputs(profile)
+    lock = json.loads(distribution.profile_generation_lock(profile, files))
+    manifest = r2_reader_authority.verify_frozen()
+    reader_files = cast("list[dict[str, str]]", manifest["files"])
+    root = r2_reader_authority.FROZEN_ROOT
+    expected = {
+        (root / r2_reader_authority.MANIFEST_NAME).relative_to(config.REPO).as_posix(),
+        *((root / item["path"]).relative_to(config.REPO).as_posix() for item in reader_files),
+    }
+    prefix = root.relative_to(config.REPO).as_posix() + "/"
+    assert {name for name in lock["sources"] if name.startswith(prefix)} == expected
+    assert len(reader_files) == 17
+    for name in expected:
+        assert (
+            lock["sources"][name] == hashlib.sha256((config.REPO / name).read_bytes()).hexdigest()
+        )
+    for item in reader_files:
+        assert (
+            lock["sources"][(root / item["path"]).relative_to(config.REPO).as_posix()]
+            == item["sha256"]
+        )
+
+
+@pytest.mark.parametrize("relative", sorted(r2_reader_authority.SOURCE_SHA256))
+def test_profile_lock_rejects_each_tampered_reader_source_even_with_prebuilt_output(
+    profile, monkeypatch, relative
+):
+    files = distribution.profile_outputs(profile)
+    target = r2_reader_authority.FROZEN_ROOT / relative
+    read_bytes = Path.read_bytes
+
+    def tampered(path):
+        raw = read_bytes(path)
+        return raw + b"\nreader evidence drift\n" if path == target else raw
+
+    monkeypatch.setattr(Path, "read_bytes", tampered)
+    with pytest.raises(ValueError, match="R2 reader authority: source drift"):
+        distribution.profile_generation_lock(profile, files)
+
+
+def test_profile_lock_rejects_tampered_reader_manifest_with_prebuilt_output(profile, monkeypatch):
+    files = distribution.profile_outputs(profile)
+    target = r2_reader_authority.FROZEN_ROOT / r2_reader_authority.MANIFEST_NAME
+    read_bytes = Path.read_bytes
+
+    def tampered(path):
+        raw = read_bytes(path)
+        if path == target:
+            manifest = json.loads(raw)
+            manifest["runtime"] = "verified"
+            return json.dumps(manifest).encode("utf-8")
+        return raw
+
+    monkeypatch.setattr(Path, "read_bytes", tampered)
+    with pytest.raises(ValueError, match="R2 reader authority: manifest differs"):
+        distribution.profile_generation_lock(profile, files)
+
+
+def test_profile_lock_records_manifest_bytes_instead_of_reserialized_metadata(profile, monkeypatch):
+    files = distribution.profile_outputs(profile)
+    before = json.loads(distribution.profile_generation_lock(profile, files))
+    target = r2_reader_authority.FROZEN_ROOT / r2_reader_authority.MANIFEST_NAME
+    read_bytes = Path.read_bytes
+    reformatted = json.dumps(json.loads(read_bytes(target)), separators=(",", ":")).encode("utf-8")
+
+    def changed_format(path):
+        return reformatted if path == target else read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", changed_format)
+    # The authority permits equivalent JSON formatting, while the delivery lock
+    # must identify the actual manifest bytes used for this candidate.
+    after = json.loads(distribution.profile_generation_lock(profile, files))
+    name = target.relative_to(config.REPO).as_posix()
+    assert after["sources"][name] == hashlib.sha256(reformatted).hexdigest()
+    assert before["sources"][name] != after["sources"][name]
+    assert {**before["sources"], name: after["sources"][name]} == after["sources"]
 
 
 def test_profile_write_rejects_extras_and_preserves_existing_output(profile, tmp_path, monkeypatch):

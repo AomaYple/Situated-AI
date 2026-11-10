@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import tomllib
 from dataclasses import replace
 from pathlib import Path
@@ -61,6 +62,84 @@ def installation(tmp_path: Path) -> tuple[Path, Path]:
     declaration = tmp_path / "architecture_115.toml"
     declaration.write_text(source, encoding="utf-8", newline="\n")
     return tmp_path, declaration
+
+
+@pytest.fixture
+def frozen_native_copy(tmp_path: Path) -> Path:
+    """Real reviewed native bytes, explicitly not a newly verified installation."""
+    destination = tmp_path / "native-input"
+    shutil.copytree(profile.BASELINE_ROOT, destination)
+    profile.verify_baseline(destination)
+    return destination
+
+
+def test_capture_baseline_reproduces_complete_real_native_bytes(frozen_native_copy, tmp_path):
+    destination = tmp_path / "captured"
+    expected = profile.verify_baseline(frozen_native_copy)
+    manifest = profile.capture_baseline(frozen_native_copy, destination)
+    assert manifest == expected == profile.verify_baseline(destination)
+    assert profile.load_profile(destination) == profile.load_profile(frozen_native_copy)
+    assert (destination / "baseline-manifest.json").read_bytes() == (
+        frozen_native_copy / "baseline-manifest.json"
+    ).read_bytes()
+    expected_paths = {item["path"] for item in manifest["files"]}
+    assert {
+        path.relative_to(destination).as_posix()
+        for path in destination.rglob("*")
+        if path.is_file()
+    } == expected_paths | {"baseline-manifest.json"}
+    for relative in expected_paths:
+        assert (destination / relative).read_bytes() == (frozen_native_copy / relative).read_bytes()
+    assert not destination.with_name(destination.name + ".staging").exists()
+
+
+@pytest.mark.parametrize("existing", ["destination", "staging"])
+def test_capture_baseline_refuses_existing_paths_without_removing_bytes(
+    frozen_native_copy, tmp_path, existing
+):
+    destination = tmp_path / "captured"
+    protected = destination if existing == "destination" else tmp_path / "captured.staging"
+    protected.mkdir()
+    marker = protected / "user-evidence.txt"
+    marker.write_bytes(b"existing evidence must survive\n")
+    with pytest.raises(ValueError, match="已存在"):
+        profile.capture_baseline(frozen_native_copy, destination)
+    assert marker.read_bytes() == b"existing evidence must survive\n"
+    assert {path.name for path in protected.iterdir()} == {"user-evidence.txt"}
+    if existing == "staging":
+        assert not destination.exists()
+
+
+def test_capture_baseline_rejects_changed_input_before_creating_output(
+    frozen_native_copy, tmp_path
+):
+    source = frozen_native_copy / "game/common/decrees/00_decree.txt"
+    source.write_bytes(source.read_bytes() + b"\n# input drift\n")
+    destination = tmp_path / "captured"
+    with pytest.raises(ValueError, match="SHA-256 漂移"):
+        profile.capture_baseline(frozen_native_copy, destination)
+    assert not destination.exists()
+    assert not (tmp_path / "captured.staging").exists()
+
+
+def test_capture_baseline_verifies_copied_bytes_before_publishing(
+    frozen_native_copy, tmp_path, monkeypatch
+):
+    copyfile = shutil.copyfile
+
+    def corrupt_copy(source, target):
+        result = copyfile(source, target)
+        if Path(target).name == "00_decree.txt":
+            path = Path(target)
+            path.write_bytes(path.read_bytes() + b"\n# raced copy\n")
+        return result
+
+    monkeypatch.setattr(shutil, "copyfile", corrupt_copy)
+    destination = tmp_path / "captured"
+    with pytest.raises(ValueError, match="manifest hash 与独立声明不一致"):
+        profile.capture_baseline(frozen_native_copy, destination)
+    assert not destination.exists()
+    assert not (tmp_path / "captured.staging").exists()
 
 
 def _bundle(loaded: profile.ProductionProfile, *, semantic: bool = True) -> ConsumerIRBundle:

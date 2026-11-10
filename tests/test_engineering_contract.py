@@ -58,10 +58,33 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     subplans = (root / "docs/design/archive/X1/架构子计划.md").read_text(encoding="utf-8")
     previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
+    implementation = (root / "docs/design/exec/1.15架构-实施计划.md").read_text(encoding="utf-8")
+    architecture = (root / "docs/design/1.15架构设计.md").read_text(encoding="utf-8")
+    engineering = (root / "docs/principles/工程原则.md").read_text(encoding="utf-8")
+    mod_principles = (root / "docs/principles/Mod开发原则.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
-    assert "架构实现未开始" in plan_entry
+    # R2 implementation has begun; current entry pages must keep authority,
+    # unfinished acceptance and historical evidence separate.
+    assert "尚未整体验收" in plan_entry
+    assert "尚未整体验收" in implementation
+    assert "尚未整体闭合" in checklist
     assert "(1.15架构设计.md)" in plan_entry
     assert "(exec/1.15架构-实施计划.md)" in plan_entry
+    assert "唯一架构规范" in plan_entry
+    assert "规范与稳定需求 ID 的唯一来源为[1.15架构设计](../1.15架构设计.md)" in implementation
+    assert "阶段状态只由[架构主计划](../架构主计划.md)维护" in implementation
+    assert "阶段状态只由[架构主计划](架构主计划.md)维护" in checklist
+    assert "(exec/1.15-R2-需求验收矩阵.md)" in plan_entry
+    assert "(exec/1.15-R2-实施结果.md)" in checklist
+    assert "不改写成R2证据" in plan_entry
+    assert "不证明R2完成" in checklist
+    assert "不能把定向通过签为整体完成" in checklist
+    assert "工程门和 Mod 生产静态语义门均必需" in implementation
+    assert "E 和 M 全部通过才可签署架构静态完成" in architecture
+    assert "工程治理与产品开发分别验收" in engineering
+    assert "保留未完成能力和有效失败的真实状态" in engineering
+    assert "Mod功能验收证明声明的判断真实接入行动与消费者并保持语义" in mod_principles
+    assert "前两类缺口由实现与验证补齐，不能转交用户体验验收" in mod_principles
     assert "仅目标，未启动" in subplan_entry
     assert "(archive/X1/架构主计划.md)" in plan_entry
     assert "(archive/X1/架构子计划.md)" in subplan_entry
@@ -107,14 +130,15 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     assert "由用户验收" in plan
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
-    assert "本轮仅交付设计与计划" in checklist
-    assert "架构主计划 X1" in checklist
+    assert "不能关闭新架构需求" in checklist
+    assert "X1的X0–X6及D1–D4、G1–G3、E1–E4已归档" in checklist
     assert "长期行为" in checklist
     assert distribution.RELEASE_VERSION in checklist
     assert "发布" in checklist
     assert "部署" in checklist
-    assert "Release/ZIP/SHA" in checklist
-    assert "严格工程门" in checklist
+    assert "(exec/版本交付-结果.md)" in checklist
+    assert f"(exec/{distribution.RELEASE_VERSION}-交付结果.md)" in checklist
+    assert "不得缩小源码哈希集合、刷新旧锁或跳过失败制造通过" in checklist
     assert "11 种语言" in previous
 
 

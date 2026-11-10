@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import tempfile
@@ -21,12 +22,15 @@ import tomllib
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import psutil
 
 from pdx.model import Block, Scalar
 from pdx.parser import parse_bytes
+
+if TYPE_CHECKING:
+    from pdx.situated.action_network import NetworkProgram
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = "docs/design/exec/1.15-A0-纵切合同.md"
@@ -146,6 +150,30 @@ FACTS = (
         "native pact requirement; propose_score legality still pending_reproof",
     ),
 )
+R2_CAPABILITY_SOURCES = {
+    "game/common/decrees/00_decree.txt": ("cost", "relative_infrastructure", "has_decree"),
+    "game/common/ai_strategies/03_political_strategies.txt": (
+        "institution_schools",
+        "has_journal_entry",
+    ),
+    "game/common/ai_strategies/01_admin_strategies.txt": ("literacy_rate", "c:FRA"),
+    "game/common/alert_types/00_alert_types.txt": ("script_context", "in_default"),
+    "game/common/scripted_triggers/05_tsarpoints_scripted_triggers.txt": ("bureaucracy",),
+    "game/common/diplomatic_actions/00_relations_actions.txt": (
+        "has_attitude",
+        "has_diplomatic_pact",
+        "cost",
+    ),
+    "game/common/diplomatic_actions/01_expel_diplomats.txt": ("influence", "has_diplomatic_pact"),
+}
+R2_DOCUMENTATION_ANCHORS = {
+    "game/common/diplomatic_actions/diplomatic_action.md": (
+        "In the AI block, the AI country is always root",
+        "will_propose = {}",
+        "propose_score = {}",
+    ),
+    "game/common/scripted_buttons/scripted_buttons.md": ("#Country scope", "bureaucracy > 0"),
+}
 DECLARATION_KINDS = {
     "readers": "declared_reader",
     "actions": "declared_action",
@@ -447,6 +475,269 @@ def block_metrics(root: Block) -> dict[str, Any]:
     }
 
 
+def r2_program_metrics(program: NetworkProgram) -> dict[str, Any]:
+    """Report the same structural counts guarded by the declared core budget.
+
+    This is cost accounting, not a second semantic evaluator. Expansion sizes
+    deliberately use the compiler's counting functions and are labelled as such.
+    """
+    from pdx.situated import action_network as net  # noqa: PLC0415
+
+    network = program.network
+    aliases = dict(network.fact_aliases)
+    graph = {
+        node.id: {aliases.get(name, name) for name in node.source_ids}
+        for node in network.predicates
+    }
+    for bridge in network.bridges:
+        dependencies = {
+            aliases.get(name, name)
+            for name in (*bridge.source_ids, *bridge.depends_on, *bridge.condition_fact_ids)
+        }
+        objective = net._bridge_objective(network, bridge)
+        if objective is not None:
+            dependencies.update(objective.source_fact_ids)
+        graph[bridge.id] = dependencies
+    graph.update(
+        (f"replacement:{item.id}", {aliases.get(name, name) for name in item.condition_fact_ids})
+        for item in network.replacements
+    )
+    depths: dict[str, int] = {}
+
+    def depth(node: str) -> int:
+        if node not in depths:
+            depths[node] = 1 + max((depth(child) for child in graph.get(node, ())), default=0)
+        return depths[node]
+
+    fanout = Counter(child for dependencies in graph.values() for child in dependencies)
+    guards = [item.guard for item in program.contributions]
+    guards.extend(guard for _, guard in program.group_guards)
+    guards.extend(item.guard for item in program.replacements)
+    overlap_seen: dict[tuple[object, ...], set[str]] = {}
+    overlap_checks = 0
+    for item in program.contributions:
+        for root in item.lineage.roots:
+            seen = overlap_seen.setdefault((item.effect.action.key, root), set())
+            overlap_checks += len(seen - {item.effect_id})
+            seen.add(item.effect_id)
+    actual = {
+        "max_bridges": len(network.bridges),
+        "max_edges": sum(map(len, graph.values())),
+        "max_fanout": max(fanout.values(), default=0),
+        "max_depth": max((depth(name) for name in graph), default=0),
+        "max_guard_nodes": sum(net._guard_count(guard) for guard in guards),
+        "max_overlap_checks": overlap_checks,
+    }
+    expansion_costs: dict[str, tuple[int, int]] = {}
+    expressions = [
+        (node.id, node.expression)
+        for node in sorted(network.predicates, key=lambda node: depth(node.id))
+    ]
+    expressions.extend((bridge.id, bridge.condition) for bridge in network.bridges)
+    expressions.extend((f"replacement:{item.id}", item.condition) for item in network.replacements)
+    expansion_rows = {}
+    for name, expression in expressions:
+        cost = net._expression_cost(
+            expression, expansion_costs, aliases, network.budget.max_guard_nodes
+        )
+        expansion_rows[name] = {"nodes": cost[0], "depth": cost[1]}
+        if name in {node.id for node in network.predicates}:
+            expansion_costs[name] = cost
+    limits = asdict(network.budget)
+    checks = {
+        name: {"actual": value, "limit": limits[name], "passed": value <= limits[name]}
+        for name, value in actual.items()
+    }
+    for name, actual_value, limit in (
+        (
+            "pre_expansion_guard_nodes",
+            max((row["nodes"] for row in expansion_rows.values()), default=0),
+            network.budget.max_guard_nodes,
+        ),
+        (
+            "pre_expansion_expression_depth",
+            max((row["depth"] for row in expansion_rows.values()), default=0),
+            network.budget.max_depth * 2,
+        ),
+    ):
+        checks[name] = {"actual": actual_value, "limit": limit, "passed": actual_value <= limit}
+    return {
+        "raw_facts": len(network.facts),
+        "derived_predicates": len(network.predicates),
+        "dag_nodes": len(set(graph) | {item.id for item in network.facts}),
+        "dag_edges": actual["max_edges"],
+        "dag_depth": actual["max_depth"],
+        "fanout": dict(sorted(fanout.items())),
+        "expanded_guard_nodes": actual["max_guard_nodes"],
+        "pre_expansion_expressions": expansion_rows,
+        "contributions": len(program.contributions),
+        "assessment_groups": len(network.groups),
+        "replacements": len(network.replacements),
+        "residuals": len(network.residuals),
+        "declared_budget": limits,
+        "budget_checks": checks,
+        "counting_basis": "compiler DAG and occurrence-based expanded guard accounting; not engine work",
+    }
+
+
+def r2_profile_baseline(game: Path) -> dict[str, Any]:
+    """Actually verify readers, parse native inputs, compile and build R2 in memory."""
+    from pdx.situated import (  # noqa: PLC0415
+        action_network,
+        network_profile,
+        production_profile,
+        r2_reader_authority,
+    )
+
+    authority = r2_reader_authority.verify_installation(game)
+    r2_reader_authority.verify_frozen()
+    profile = production_profile.load_profile(game)
+    reader_sources = cast("list[dict[str, str]]", authority["files"])
+    parsed_sources: dict[str, Block] = {}
+    for source in reader_sources:
+        name = source["path"]
+        if name.startswith("game/") and name.endswith(".txt"):
+            parsed = parse_bytes((game / name).read_bytes(), name)
+            if parsed.errors:
+                raise ValueError(f"R2 native reader parse failure: {name}: {parsed.errors}")
+            parsed_sources[name] = parsed.root
+    programs = network_profile.compile_profile(profile)
+    generated = network_profile.build(profile)
+    rows = []
+    violations = []
+    for program in programs:
+        action = program.network.actions[0]
+        declaration = next(
+            row for row in profile.declarations if row.id == action.definition.consumer_id
+        )
+        field = [declaration.definition, *declaration.field]
+        original = select_block(parsed_sources[declaration.source], field)
+        text = generated[declaration.source.removeprefix("game/")]
+        parsed = parse_bytes(text.encode("utf-8"), declaration.source)
+        if parsed.errors:
+            raise ValueError(f"R2 generated parse failure: {declaration.source}: {parsed.errors}")
+        consumer = select_block(parsed.root, field)
+        matches = list(
+            re.finditer(
+                rf"# SITAI POLICY {re.escape(profile.game_version)} BEGIN {re.escape(declaration.id)}\n"
+                rf"(?P<body>[\s\S]*?)# SITAI POLICY {re.escape(profile.game_version)} END {re.escape(declaration.id)}\n",
+                text,
+            )
+        )
+        if len(matches) != 1:
+            raise ValueError(f"R2 generated overlay identity mismatch: {declaration.id}")
+        overlay = matches[0].group("body")
+        overlay_ast = parse_bytes(overlay.encode("utf-8"), "R2 overlay")
+        if overlay_ast.errors:
+            raise ValueError(f"R2 overlay parse failure: {overlay_ast.errors}")
+        metrics = r2_program_metrics(program)
+        specialized = action_network.specialize_program(
+            program, tuple(fact.id for fact in program.network.facts)
+        )
+        specialized_nodes = sum(
+            action_network._guard_count(item.guard) for item in specialized.contributions
+        )
+        metrics["specialized_guard_nodes"] = specialized_nodes
+        metrics["budget_checks"]["specialized_guard_nodes"] = {
+            "actual": specialized_nodes,
+            "limit": program.network.budget.max_guard_nodes,
+            "passed": specialized_nodes <= program.network.budget.max_guard_nodes,
+        }
+        original_metrics = block_metrics(original)
+        generated_metrics = block_metrics(consumer)
+        overlay_metrics = block_metrics(overlay_ast.root)
+        manifest = next(
+            item for item in profile.registry.manifests if item.id == declaration.domain
+        )
+        query_count = sum(overlay_metrics["query_forms"].values())
+        reader_counts: Counter[str] = Counter()
+        scope_hops = 0
+        stack = [(overlay_ast.root, 0)]
+        engines = {
+            fact.id: network_profile.READERS[fact.id].reader.engine
+            for fact in program.network.facts
+        }
+        while stack:
+            current, hops = stack.pop()
+            for entry in current.assignments():
+                reader_counts.update(
+                    name for name, engine in engines.items() if entry.key == engine
+                )
+                next_hops = hops + int(
+                    entry.key in {"country", "scope:country", "scope:target_country"}
+                )
+                scope_hops = max(scope_hops, next_hops)
+                if isinstance(entry.value, Block):
+                    stack.append((entry.value, next_hops))
+        local_checks = {
+            "selected_candidates_per_evaluation": (
+                len(program.network.actions),
+                manifest.object_budget,
+            ),
+            "additional_iterators": (query_count, 0),
+            "additional_candidate_expansion": (query_count, 0),
+            "cross_candidate_cartesian_products": (query_count, 0),
+            "additional_global_scans": (query_count, 0),
+            "additional_scope_path_hops": (scope_hops, 1),
+            "additional_consumer_block_depth": (
+                max(0, generated_metrics["block_depth"] - original_metrics["block_depth"]),
+                3,
+            ),
+        }
+        checks = {
+            name: {"actual": actual, "limit": limit, "passed": actual <= limit}
+            for name, (actual, limit) in local_checks.items()
+        }
+        for name, check in {**metrics["budget_checks"], **checks}.items():
+            if not check["passed"]:
+                violations.append({"consumer": declaration.id, "budget": name, **check})
+        rows.append(
+            {
+                "consumer": declaration.id,
+                "source": declaration.source,
+                "field": field,
+                "network": metrics,
+                "original_consumer_ast": original_metrics,
+                "generated_consumer_ast": generated_metrics,
+                "overlay_ast": overlay_metrics,
+                "overlay_bytes": len(overlay.encode("utf-8")),
+                "generated_file_bytes": len(text.encode("utf-8")),
+                "readers": {
+                    "declared": sorted(engines),
+                    "generated_occurrences": dict(sorted(reader_counts.items())),
+                    "repeated_occurrences": sum(
+                        max(0, count - 1) for count in reader_counts.values()
+                    ),
+                    "evaluation_count_per_tick": "unknown; native consumer on demand",
+                },
+                "object_budget_source": "ProductionProfile.registry.manifests.object_budget",
+                "local_budget_source": f"{CONTRACT}#A0-BUDGET-LOCAL-ONLY",
+                "local_budget_checks": checks,
+            }
+        )
+    return {
+        "schema": "situated-ai.r2-static-cost/1",
+        "evidence_kind": "actual_offline_compile_and_generation",
+        "game_version": profile.game_version,
+        "build_id": profile.build_id,
+        "reader_authority": authority,
+        "native_parsed_sources": sorted(parsed_sources),
+        "policy_source_sha256": digest(network_profile.SOURCE.read_bytes()),
+        "generator_sources": [
+            {"path": path.relative_to(ROOT).as_posix(), "sha256": digest(path.read_bytes())}
+            for path in sorted((ROOT / "src/pdx").rglob("*.py"))
+        ],
+        "generated_files": {
+            name: {"sha256": digest(text.encode("utf-8")), "bytes": len(text.encode("utf-8"))}
+            for name, text in sorted(generated.items())
+        },
+        "programs": rows,
+        "budget_violations": violations,
+        "budget_status": "failed" if violations else "passed",
+        "runtime": "unknown; Python compilation and generation do not measure engine execution",
+    }
+
+
 def static_samples(game: Path, root: Path = ROOT) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     for spec in SLICES:
@@ -599,7 +890,9 @@ def classify_failures(inventory: dict) -> list[dict[str, Any]]:
     result = []
     for failure in inventory.get("failures", []):
         path = failure.get("path", "")
-        if path in selected:
+        if failure.get("kind") == "scanner_source_changed_during_scan":
+            impact = "blocks_source_identity; rescan_required"
+        elif path in selected:
             impact = "blocks_selected_consumer_contract"
         elif "/dna_data/" in path:
             impact = "limits_character_DNA_coverage; selected_consumer_sources_unaffected"
@@ -619,6 +912,116 @@ def classify_failures(inventory: dict) -> list[dict[str, Any]]:
             }
         )
     return result
+
+
+def capability_inventory(inventory: dict, game: Path) -> dict[str, Any]:
+    """Bind R2 scope-transfer arguments to complete, current native source bytes.
+
+    A native example and a preserved scope establish a static argument, never
+    engine execution, current balances, activated DLC or successful actions.
+    """
+    files = {item["path"]: item for item in inventory["files"]}
+    failed = {item.get("path") for item in inventory.get("failures", [])}
+    sources = []
+    for relative in sorted(set(R2_CAPABILITY_SOURCES) | set(R2_DOCUMENTATION_ANCHORS)):
+        entry = files.get(relative)
+        path = (game / relative).resolve()
+        if not path.is_relative_to(game.resolve()):
+            raise ValueError(f"capability source outside installation: {relative}")
+        if (
+            entry is None
+            or relative in failed
+            or entry.get("parse_status") not in {"parsed", "not_pdx"}
+        ):
+            raise ValueError(f"missing/incomplete capability source: {relative}")
+        raw = path.read_bytes()
+        if digest(raw) != entry["sha256"]:
+            raise ValueError(f"capability source drift: {relative}")
+        if relative in R2_CAPABILITY_SOURCES:
+            occurrences = {
+                key: source_occurrences(raw, relative, key)
+                for key in R2_CAPABILITY_SOURCES[relative]
+            }
+            if any(not rows for rows in occurrences.values()):
+                raise ValueError(f"capability assignment missing: {relative}")
+            evidence: dict[str, Any] = {"assignments": occurrences}
+        else:
+            lines = raw.decode("utf-8-sig").splitlines()
+            anchors = []
+            for anchor in R2_DOCUMENTATION_ANCHORS[relative]:
+                matches = [
+                    {"line": n, "text": line} for n, line in enumerate(lines, 1) if anchor in line
+                ]
+                if not matches:
+                    raise ValueError(
+                        f"capability documentation anchor missing: {relative}: {anchor}"
+                    )
+                anchors.extend(matches)
+            evidence = {"documentation": anchors}
+        sources.append({"path": relative, "sha256": entry["sha256"], **evidence})
+    return {
+        "schema": "situated-ai.r2-native-capability/1",
+        "evidence_kind": "static_check",
+        "native_inventory_identity": inventory["inventory_sha256"],
+        "sources": sources,
+        "reader_contracts": [
+            {
+                "id": "school_literacy",
+                "condition": "literacy_rate < 0.35",
+                "actor": "root country",
+                "proof": "school institution_scores country journal scope; administrative strategy country weight numeric limit; scope_preserving_transfer",
+            },
+            {
+                "id": "school_default",
+                "condition": "in_default = yes",
+                "actor": "root country",
+                "proof": "school country scope; country_default alert script_context=player_country; scope_preserving_transfer",
+            },
+            {
+                "id": "school_bureaucracy",
+                "condition": "bureaucracy < 0",
+                "actor": "root country",
+                "proof": "school country scope; official scripted button Country scope bureaucracy comparison; native scripted trigger corroboration; scope_preserving_transfer",
+            },
+            {
+                "id": "diplomatic_influence",
+                "condition": "influence < 200",
+                "actor": "root AI country",
+                "proof": "official AI root contract; expel_diplomats will_propose root influence read; same AI scope transferred to increase_relations.propose_score",
+            },
+            {
+                "id": "observed_separatism",
+                "condition": "scope:target_country = { has_diplomatic_pact = { who = root type = support_separatism } }",
+                "actor": "root AI country",
+                "target": "scope:target_country",
+                "proof": "expel_diplomats native target-to-root actual pact read; official shared AI scope; scope_preserving_transfer",
+            },
+        ],
+        "unsupported_inferences": [
+            "road cost=100 does not prove readable current actor authority balance",
+            "school institution_investment_level parameter not established by these sources",
+            "planned action or attitude alone is not an observed relationship",
+            "score cost terms do not reserve, spend or deduct engine resources",
+        ],
+        "proposed_minimum": {
+            "consumer_extension_required": False,
+            "school": "literacy/agenda education benefit opposed independently by default and bureaucracy pressure",
+            "diplomacy": "protective objective opposed by influence pressure; observed target separatism pact causes defensive response",
+            "direct": "actor literacy/default/bureaucracy/influence reads",
+            "derived": "same actor benefit and independently retained resource costs",
+            "interaction": "actual target-to-actor support_separatism pact, preserving direction",
+            "native_gates": "preserve all; candidate eligibility remains native and runtime unknown",
+        },
+        "query_budget": {
+            "proposal": "consumer immediate root read plus exact target scope; no all-country search",
+            "refresh": "this_consumer_evaluation; no engine persistent cache claim",
+            "runtime_cost": "unknown; source shape is not measured engine cost",
+        },
+        "dlc": inventory.get("dlc", {}),
+        "localization_languages": inventory.get("localization", {}).get("languages", []),
+        "scan_limitations": classify_failures(inventory),
+        "runtime": "unknown; game not started",
+    }
 
 
 def observation_inventory(inventory: dict, game: Path) -> dict[str, Any]:
@@ -652,8 +1055,8 @@ def observation_inventory(inventory: dict, game: Path) -> dict[str, Any]:
                 "native_eligibility": "unknown_per_actor_and_candidate",
                 "disposition": "native_preserved_pending_integration",
                 "interest_source": spec["interest_source"],
-                "consumer_wiring": "not_connected_1.15",
-                "objective_wiring": "not_connected_1.15",
+                "consumer_wiring": "not_assessed_by_A0_enumeration",
+                "objective_wiring": "not_assessed_by_A0_enumeration",
             }
             for spec in SLICES
         )
@@ -684,7 +1087,7 @@ def objectives(observation: dict) -> dict[str, Any]:
                 "slice_id": spec["id"],
                 "source": spec["interest_source"],
                 "fact_source_ids": spec["facts"],
-                "wiring": "not_connected_1.15",
+                "wiring": "not_assessed_by_A0_enumeration",
                 "actor_value": "unknown",
             }
             for spec in SLICES
@@ -729,7 +1132,8 @@ def configuration_inventory(native_inventory: dict) -> dict[str, Any]:
             "type_validation": "existing loaders reject unknown fields/types; not inherited as 1.15 contract",
             "generation": "pdx.cli modgen --check; current local 1.15 rejects old generation lock",
         },
-        "new_1_15_configuration": "not_implemented; A1 must define typed core/module switches and legal combinations",
+        "new_1_15_configuration": "not_assessed_by_A0_inventory; inspect current production profile configuration contract",
+        "dlc": native_inventory.get("dlc", {}),
         "localization": {
             "languages": localization["languages"],
             "header_sources": localization["header_sources"],
@@ -806,6 +1210,11 @@ def worker(kind: str, game: Path) -> None:
                 }
             )
         )
+    elif kind == "r2_profile":
+        result = r2_profile_baseline(game)
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        if result["budget_violations"]:
+            raise ValueError("R2 static cost exceeds declared budgets; see worker JSON")
     else:
         raise ValueError(f"unknown worker: {kind}")
 
@@ -818,7 +1227,10 @@ def main() -> int:
     parser.add_argument("--game-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=ROOT / "tools/out/version-1150")
     parser.add_argument("--measure", action="store_true")
-    parser.add_argument("--worker", choices=("parse_samples", "offline_model"))
+    parser.add_argument(
+        "--r2", action="store_true", help="also bind R2 reader scope-transfer evidence"
+    )
+    parser.add_argument("--worker", choices=("parse_samples", "offline_model", "r2_profile"))
     args = parser.parse_args()
     if args.worker:
         worker(args.worker, args.game_root)
@@ -831,6 +1243,7 @@ def main() -> int:
         "static-baseline.json",
         "configuration-baseline.json",
         "cost-baseline.json",
+        "capability-baseline.json",
     }:
         raise ValueError("output would overwrite input inventory")
     inventory_raw = args.inventory.read_bytes()
@@ -839,14 +1252,20 @@ def main() -> int:
     migration = migration_inventory()
     observation = observation_inventory(inventory, args.game_root)
     static = static_samples(args.game_root)
+    if args.r2:
+        static["r2_profile"] = r2_profile_baseline(args.game_root)
+    capability = capability_inventory(inventory, args.game_root) if args.r2 else None
     validate_inventory(inventory, args.game_root)
-    for name, data in (
+    reports = [
         ("migration", migration),
         ("observation", observation),
         ("actor-objectives", objectives(observation)),
         ("static-baseline", static),
         ("configuration-baseline", configuration_inventory(inventory)),
-    ):
+    ]
+    if capability is not None:
+        reports.append(("capability-baseline", capability))
+    for name, data in reports:
         data["producer_sha256"] = digest(Path(__file__).read_bytes())
         data["input_inventory_sha256"] = digest(inventory_raw)
         write_json(args.output / f"{name}.json", data)
@@ -858,6 +1277,10 @@ def main() -> int:
             ("frozen_offline_model_build", [*prefix, *base, "--worker", "offline_model"]),
             ("old_generator_on_local_1.15", [*prefix, "-m", "pdx.cli", "modgen", "--check"]),
         ]
+        if args.r2:
+            commands.append(
+                ("r2_profile_compile_and_generate", [*prefix, *base, "--worker", "r2_profile"])
+            )
         measurements = []
         for identity, command in commands:
             result = measure(command, game=args.game_root)
@@ -882,6 +1305,7 @@ def main() -> int:
                 "platform": platform.platform(),
                 "parallelism": 1,
                 "sample_identities": static["samples"],
+                "r2_profile": static.get("r2_profile"),
                 "measurements": measurements,
                 "interpretation": "different workloads; no speedup claim; no game runtime performance evidence",
             },
@@ -897,7 +1321,7 @@ def main() -> int:
             ensure_ascii=False,
         )
     )
-    return 0
+    return int(bool(static.get("r2_profile", {}).get("budget_violations")))
 
 
 if __name__ == "__main__":

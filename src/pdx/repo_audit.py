@@ -13,6 +13,8 @@ import tomllib
 from collections import Counter
 from pathlib import Path
 
+from pdx.situated import r2_reader_authority
+
 REPO = Path(__file__).resolve().parents[2]
 CHUNK_SIZE = 64 * 1024
 BINARY_SUFFIXES = frozenset(
@@ -70,6 +72,7 @@ CACHE_DIRS = frozenset(
     {"__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache", ".hypothesis", ".benchmarks"}
 )
 NATIVE_EVIDENCE_ROOT = "research/vanilla-ai/1.15.0/native/"
+READER_EVIDENCE_ROOT = "research/vanilla-ai/1.15.0/r2-readers/"
 NATIVE_EVIDENCE_PATHS = frozenset(
     {
         "launcher/launcher-settings.json",
@@ -87,11 +90,26 @@ NATIVE_EVIDENCE_PATHS = frozenset(
 
 
 def is_native_evidence_path(rel: str) -> bool:
-    """Only the ten declared upstream files have an original-byte exception."""
+    """Only individually pinned upstream files have an original-byte exception."""
     return (
         rel.startswith(NATIVE_EVIDENCE_ROOT)
         and rel.removeprefix(NATIVE_EVIDENCE_ROOT) in NATIVE_EVIDENCE_PATHS
+    ) or (
+        rel.startswith(READER_EVIDENCE_ROOT)
+        and rel.removeprefix(READER_EVIDENCE_ROOT) in r2_reader_authority.SOURCE_SHA256
     )
+
+
+def reader_evidence_contract(root: Path) -> dict[str, str]:
+    """Grant byte exceptions only after the separate R2 closure verifies."""
+    evidence = root / READER_EVIDENCE_ROOT
+    if not evidence.exists() and not evidence.is_symlink():
+        return {}
+    r2_reader_authority.verify_frozen(evidence)
+    return {
+        READER_EVIDENCE_ROOT + name: digest
+        for name, digest in r2_reader_authority.SOURCE_SHA256.items()
+    }
 
 
 def native_evidence_contract(root: Path) -> dict[str, str]:
@@ -234,7 +252,7 @@ def source_issues(root: Path) -> list[str]:
     """提交门禁包括已跟踪和未忽略的新文件，严格检查所有自有文本。"""
     issues = []
     try:
-        native_files = native_evidence_contract(root)
+        native_files = {**native_evidence_contract(root), **reader_evidence_contract(root)}
     except ValueError as error:
         issues.append(str(error))
         native_files = {}
