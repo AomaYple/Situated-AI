@@ -31,6 +31,42 @@ def installation(tmp_path, monkeypatch):
     return root
 
 
+def test_existing_complete_profile_can_regenerate_without_leaking_owned_backups(installation):
+    profile = native.load_profile(native.BASELINE_ROOT)
+    distribution.write_profile_outputs(profile)
+    root = distribution.profile_output_root()
+    before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
+    distribution.write_profile_outputs(profile)
+    assert {path: path.read_bytes() for path in root.rglob("*") if path.is_file()} == before
+    distribution.check_profile_outputs(profile)
+
+
+@pytest.mark.parametrize("timing", ["existing", "during-transaction"])
+def test_profile_rejects_unowned_same_prefix_file(installation, monkeypatch, timing):
+    profile = native.load_profile(native.BASELINE_ROOT)
+    distribution.write_profile_outputs(profile)
+    root = distribution.profile_output_root()
+    before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
+    unowned = root / "common/.sitai-generation-external"
+    unowned.parent.mkdir(exist_ok=True)
+    if timing == "existing":
+        unowned.write_bytes(b"unowned external bytes\n")
+    else:
+        replace_files = distribution.GenerationTransaction.replace
+
+        def inject(transaction, files):
+            replace_files(transaction, files)
+            assert transaction.temporary_paths
+            unowned.write_bytes(b"unowned external bytes\n")
+
+        monkeypatch.setattr(distribution.GenerationTransaction, "replace", inject)
+    with pytest.raises(ValueError, match=r"额外文件|文件集合.*漂移"):
+        distribution.write_profile_outputs(profile)
+    assert {path: path.read_bytes() for path in before} == before
+    assert unowned.read_bytes() == b"unowned external bytes\n"
+    assert {path for path in root.rglob("*") if path.is_file()} == set(before) | {unowned}
+
+
 @pytest.mark.parametrize("selected", [None, "1.14.5", "1.15.0", "unknown"])
 def test_cli_profile_defaults_follow_strict_version_but_explicit_profile_wins(
     monkeypatch, selected
@@ -284,6 +320,8 @@ def test_change_during_final_profile_live_verification_refuses_transaction(
     monkeypatch.setattr(distribution, "check_profile_installation", drift_during_final_verification)
     with pytest.raises(ValueError, match="漂移"):
         distribution.write_profile_outputs(profile)
+    assert calls == 2
+    assert changed if damage == "source" else extra.is_file()
     changed = False
     assert {path: path.read_bytes() for path in before} == before
     # The transaction restores its owned files. Unknown concurrent files must
@@ -318,5 +356,6 @@ def test_profile_generation_binds_source_before_compilation(installation, tmp_pa
     monkeypatch.setattr(distribution, "profile_outputs", drift_after_build)
     with pytest.raises(ValueError, match="构建期间源码发生漂移"):
         distribution.write_profile_outputs(profile)
+    assert changed
     changed = False
     assert {path: path.read_bytes() for path in before} == before

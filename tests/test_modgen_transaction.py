@@ -8,10 +8,45 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli
+from pdx import cli, version_contracts
 from pdx.generation_transaction import GenerationTransaction
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def historical_cli_contract():
+    # These fixtures model the legacy ledger CLI; current profile transactions
+    # have independent complete-tree/live-installation tests.
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_owned_temporary_paths_are_exact_and_cleaned_on_commit_or_rollback(tmp_path, rollback):
+    target = tmp_path / "generated.txt"
+    target.write_bytes(b"original\n")
+    unowned = tmp_path / ".sitai-generation-external"
+    unowned.write_bytes(b"external\n")
+    transaction = GenerationTransaction()
+    owned: frozenset[Path] = frozenset()
+    try:
+        with transaction:
+            transaction.replace({target: b"replacement\n"})
+            owned = transaction.temporary_paths
+            assert len(owned) == 1
+            assert unowned not in owned
+            assert next(iter(owned)).read_bytes() == b"original\n"
+            assert isinstance(owned, frozenset)
+            if rollback:
+                raise ValueError("injected rollback")
+    except ValueError:
+        assert rollback
+    assert transaction.temporary_paths == frozenset()
+    assert not any(path.exists() for path in owned)
+    assert target.read_bytes() == (b"original\n" if rollback else b"replacement\n")
+    assert unowned.read_bytes() == b"external\n"
+    assert set(tmp_path.iterdir()) == {target, unowned}
 
 
 def _tree(root):

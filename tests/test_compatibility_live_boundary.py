@@ -35,6 +35,41 @@ def compatibility_tree(tmp_path, monkeypatch, complete_inputs):
 
 
 @pytest.mark.integration
+def test_existing_complete_compatibility_tree_regenerates_exactly(compatibility_tree):
+    before = {path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()}
+    distribution.write_compatibility_outputs()
+    assert {
+        path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()
+    } == before
+    distribution.check_generation_lock()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("timing", ["existing", "during-transaction"])
+def test_compatibility_rejects_unowned_same_prefix_file(compatibility_tree, monkeypatch, timing):
+    before = {path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()}
+    unowned = compatibility_tree / "common/.sitai-generation-external"
+    if timing == "existing":
+        unowned.write_bytes(b"unowned external bytes\n")
+    else:
+        replace_files = distribution.GenerationTransaction.replace
+
+        def inject(transaction, files):
+            replace_files(transaction, files)
+            assert transaction.temporary_paths
+            unowned.write_bytes(b"unowned external bytes\n")
+
+        monkeypatch.setattr(distribution.GenerationTransaction, "replace", inject)
+    with pytest.raises(ValueError, match=r"额外文件|文件集合.*漂移"):
+        distribution.write_compatibility_outputs()
+    assert {path: path.read_bytes() for path in before} == before
+    assert unowned.read_bytes() == b"unowned external bytes\n"
+    assert {path for path in compatibility_tree.rglob("*") if path.is_file()} == set(before) | {
+        unowned
+    }
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("damage", ["exe", "native", "source", "output", "lock"])
 def test_final_compatibility_zip_boundary_rejects_drift(
     compatibility_tree, tmp_path, monkeypatch, damage
@@ -69,6 +104,7 @@ def test_final_compatibility_zip_boundary_rejects_drift(
     monkeypatch.setattr(distribution, "_validate_archive", drift_after_validation)
     with pytest.raises(ValueError, match=r"漂移|不一致"):
         distribution.package(destination)
+    assert changed
     assert destination.read_bytes() == b"previous complete ZIP"
     assert list(destination.parent.iterdir()) == [destination]
 
@@ -95,14 +131,15 @@ def test_final_compatibility_generation_live_drift_rolls_back(
     monkeypatch.setattr(Path, "open", open_view)
     check_lock = distribution.check_generation_lock
 
-    def drift_after_lock():
+    def drift_after_lock(*args, **kwargs):
         nonlocal changed
-        check_lock()
+        check_lock(*args, **kwargs)
         changed = True
 
     monkeypatch.setattr(distribution, "check_generation_lock", drift_after_lock)
     with pytest.raises(ValueError, match=r"漂移|不一致"):
         distribution.write_compatibility_outputs()
+    assert changed
     assert {path: path.read_bytes() for path in before} == before
 
 
@@ -138,6 +175,7 @@ def test_change_during_final_live_verification_rolls_back(
     )
     with pytest.raises(ValueError, match="漂移"):
         distribution.write_compatibility_outputs()
+    assert changed
     changed = False
     assert {path: path.read_bytes() for path in before} == before
 

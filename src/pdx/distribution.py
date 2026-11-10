@@ -592,10 +592,10 @@ def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     )
 
 
-def check_generation_lock() -> None:
+def check_generation_lock(files: Mapping[str, str | bytes] | None = None) -> None:
     """拒绝未冻结的源码或产物漂移；原版 SHA 仍由有游戏生成链核验。"""
     path = decisions.product_path() / "generation-lock.json"
-    if path.read_bytes() != generation_lock().encode("utf-8"):
+    if path.read_bytes() != generation_lock(files).encode("utf-8"):
         raise ValueError("生产源码或产物与冻结记录不一致：用锁定原版运行 modgen --write")
 
 
@@ -812,20 +812,21 @@ def write_compatibility_outputs() -> dict[str, str | bytes]:
         raise ValueError("完整兼容隔离产物包含额外文件，拒绝覆盖：" + ", ".join(extras))
     with GenerationTransaction() as transaction:
         transaction.replace({target / name: raw for name, raw in expected.items()})
-        if set(_profile_directory_files(target)) != set(expected):
+        actual_paths = _profile_directory_files(target, excluded=transaction.temporary_paths)
+        if set(actual_paths) != set(expected):
             raise ValueError("完整兼容生成期间产物文件集合发生漂移")
         if generation_lock(files) != lock:
             raise ValueError("完整兼容生成期间源码发生漂移")
-        issues = decisions.check(target, files)
-        if issues:
-            raise ValueError("完整兼容生成产物漂移：" + "; ".join(issues))
-        check_generation_lock()
+        if any(actual_paths[name].read_bytes() != raw for name, raw in expected.items()):
+            raise ValueError("完整兼容生成产物漂移")
+        actual_files = {name: actual_paths[name].read_bytes() for name in files}
+        check_generation_lock(actual_files)
         verify_compatibility_installation()
         # Live verification itself reads the full installation and can overlap
         # a source/output change. Keep final repository checks inside rollback.
         if generation_lock(files) != lock:
             raise ValueError("完整兼容最终原件核验期间源码发生漂移")
-        final_paths = _profile_directory_files(target)
+        final_paths = _profile_directory_files(target, excluded=transaction.temporary_paths)
         if set(final_paths) != set(expected) or any(
             final_paths[name].read_bytes() != raw for name, raw in expected.items()
         ):
@@ -953,7 +954,9 @@ def profile_output_root() -> Path:
     return config.OUT / "production" / "1.15.0"
 
 
-def _profile_directory_files(root: Path) -> dict[str, Path]:
+def _profile_directory_files(
+    root: Path, *, excluded: frozenset[Path] = frozenset()
+) -> dict[str, Path]:
     def reject_redirect(path: Path) -> None:
         try:
             info = path.lstat()
@@ -977,7 +980,7 @@ def _profile_directory_files(root: Path) -> dict[str, Path]:
             reject_redirect(path)
             if path.is_dir():
                 pending.append(path)
-            elif path.is_file():
+            elif path.is_file() and path.absolute() not in excluded:
                 files[path.relative_to(root).as_posix()] = path
     return files
 
@@ -1032,7 +1035,9 @@ def write_profile_outputs(
         check_profile_installation(profile)
         if profile_generation_lock(profile, files) != lock:
             raise ValueError("1.15.0 最终原件核验期间源码发生漂移，已拒绝提交产物")
-        if set(_profile_directory_files(target)) != set(expected):
+        if set(_profile_directory_files(target, excluded=transaction.temporary_paths)) != set(
+            expected
+        ):
             raise ValueError("1.15.0 最终原件核验期间产物文件集合发生漂移")
         for name, raw in expected.items():
             if (target / name).read_bytes() != raw:
