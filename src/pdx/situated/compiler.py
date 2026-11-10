@@ -18,7 +18,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from .. import config, decision_adapters, decision_interfaces, decision_rules  # noqa: TID252
+from .. import (  # noqa: TID252
+    config,
+    decision_adapters,
+    decision_interfaces,
+    decision_rules,
+    version_contracts,
+)
 from ..model import Block  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
 from . import (
@@ -680,8 +686,8 @@ def _frozen_ship_modification_contexts() -> dict[tuple[str, str], decision_ir.Ev
     from .. import equipment_opportunities  # noqa: PLC0415, TID252
 
     data = equipment_opportunities.load_baseline()
-    raw = equipment_opportunities.BASELINE.read_text(encoding="utf-8")
-    source = equipment_opportunities.BASELINE.relative_to(REPO).as_posix()
+    raw = equipment_opportunities.baseline_path().read_text(encoding="utf-8")
+    source = equipment_opportunities.baseline_path().relative_to(REPO).as_posix()
     actor_line = raw.count("\n", 0, raw.index('"actor": "country"')) + 1
     target_line = (
         raw.count("\n", 0, raw.index('"target": "scope:ship_modification_type=ship_modification"'))
@@ -697,7 +703,7 @@ def _frozen_ship_modification_contexts() -> dict[tuple[str, str], decision_ir.Ev
         evidence=(
             f"{source}:{actor_line}",
             f"{source}:{target_line}",
-            f"{source}:sha256={equipment_opportunities.BASELINE_SHA256}",
+            f"{source}:sha256={equipment_opportunities.baseline_sha256()}",
         ),
     )
     return {
@@ -712,14 +718,14 @@ def _frozen_treaty_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCon
     from .. import treaty_opportunities  # noqa: PLC0415, TID252
 
     data = treaty_opportunities.load_baseline()
-    raw = treaty_opportunities.BASELINE.read_text(encoding="utf-8")
-    source = treaty_opportunities.BASELINE.relative_to(REPO).as_posix()
+    raw = treaty_opportunities.baseline_path().read_text(encoding="utf-8")
+    source = treaty_opportunities.baseline_path().relative_to(REPO).as_posix()
     line = raw.count("\n", 0, raw.index('"actor": "country"')) + 1
     context = decision_ir.EvaluationContext(
         actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
         evidence=(
             f"{source}:{line}",
-            f"{source}:sha256={treaty_opportunities.BASELINE_SHA256}",
+            f"{source}:sha256={treaty_opportunities.baseline_sha256()}",
             f"{source}:definition_only:treaty_article",
         ),
     )
@@ -738,21 +744,22 @@ def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.Evaluat
     """付费动员权重保留编队 ROOT 和实际所属国家；候选来自冻结原文。"""
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
-    raw = mobilization_opportunities.BASELINE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != mobilization_opportunities.BASELINE_SHA256:
+    raw = mobilization_opportunities.baseline_path().read_bytes()
+    if hashlib.sha256(raw).hexdigest() != mobilization_opportunities.baseline_sha256():
         raise ValueError("动员冻结资料身份漂移，必须独立复核后重新pin")
-    source = mobilization_opportunities.BASELINE.relative_to(REPO).as_posix()
-    return dict(_mobilization_context_rows(raw, source))
+    source = mobilization_opportunities.baseline_path().relative_to(REPO).as_posix()
+    return dict(_mobilization_context_rows(raw, source, version_contracts.active_version()))
 
 
 @lru_cache(maxsize=1)
 def _mobilization_context_rows(
-    raw: bytes, source: str
+    raw: bytes, source: str, version: str
 ) -> tuple[tuple[tuple[str, str], decision_ir.EvaluationContext], ...]:
     """只复用同字节、同证据路径的不可变上下文；每次入口仍核对当前 pin。"""
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
-    data = mobilization_opportunities.load_baseline(raw=raw)
+    with version_contracts.select_version(version):
+        data = mobilization_opportunities.load_baseline(raw=raw)
     text = raw.decode("utf-8")
     line = text.count("\n", 0, text.index('"native_root": "military_formation"')) + 1
     context = decision_ir.EvaluationContext(
@@ -762,7 +769,7 @@ def _mobilization_context_rows(
         ),
         evidence=(
             f"{source}:{line}",
-            f"{source}:sha256={mobilization_opportunities.BASELINE_SHA256}",
+            f"{source}:sha256={hashlib.sha256(raw).hexdigest()}",
             f"{source}:definition_only:mobilization_option",
         ),
     )

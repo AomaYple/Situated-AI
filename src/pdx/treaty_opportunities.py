@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from . import config, decision_rules
+from . import config, decision_rules, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .situated import vanilla_inventory
@@ -28,6 +28,21 @@ if TYPE_CHECKING:
 
 BASELINE = config.REPO / "research/situated/treaty-opportunities.json"
 BASELINE_SHA256 = "705c51d333ddde9f0f84791e885ad5ac67a7d0e21e32f993cccf231bbcc546cc"
+BASELINE_115 = config.REPO / "research/situated/1.15.0/treaty-opportunities.json"
+BASELINE_SHA256_115 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
+
+
+def baseline_path() -> Path:
+    """Select a reviewed artifact without rewriting the historical baseline."""
+    return BASELINE_115 if version_contracts.active_version() == "1.15.0" else BASELINE
+
+
+def baseline_sha256() -> str:
+    return (
+        BASELINE_SHA256_115 if version_contracts.active_version() == "1.15.0" else BASELINE_SHA256
+    )
+
+
 PARAMETERS = config.REPO / "mod/decisions/treaty_opportunities.toml"
 _DOC = "common/treaty_articles/treaty_articles.md"
 _INFLUENCE = "common/diplomatic_actions/01_expel_diplomats.txt"
@@ -337,15 +352,15 @@ def _validate(data: dict[str, Any]) -> dict[str, Any]:
 def write_baseline(game: Path) -> Path:
     """Explicitly freeze source bytes; caller must review and pin the digest."""
     data = _inventory(read_inputs(game))
-    BASELINE.parent.mkdir(parents=True, exist_ok=True)
-    BASELINE.write_text(_canonical(data), encoding="utf-8", newline="\n")
-    return BASELINE
+    baseline_path().parent.mkdir(parents=True, exist_ok=True)
+    baseline_path().write_text(_canonical(data), encoding="utf-8", newline="\n")
+    return baseline_path()
 
 
 def load_baseline() -> dict[str, Any]:
     """Identify and re-parse offline frozen sources without an installation."""
-    raw = BASELINE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != BASELINE_SHA256:
+    raw = baseline_path().read_bytes()
+    if hashlib.sha256(raw).hexdigest() != baseline_sha256():
         raise ValueError("条约冻结资料身份漂移，必须独立复核后重新pin")
     data = json.loads(raw)
     if raw.decode("utf-8") != _canonical(data):

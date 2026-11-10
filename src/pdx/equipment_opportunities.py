@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from . import config, decision_rules
+from . import config, decision_rules, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .situated import vanilla_inventory
@@ -28,6 +28,21 @@ if TYPE_CHECKING:
 
 BASELINE = config.REPO / "research/situated/equipment-opportunities.json"
 BASELINE_SHA256 = "b5138db9717db003e5415708faadae1f91088e8e8f18ca661b0df800a4fa67ae"
+BASELINE_115 = config.REPO / "research/situated/1.15.0/equipment-opportunities.json"
+BASELINE_SHA256_115 = "f971f5f2aea6ba802e30480b68ff539757a20dc64746b16e705a7f65a71596d5"
+
+
+def baseline_path() -> Path:
+    """Select a reviewed artifact without rewriting the historical baseline."""
+    return BASELINE_115 if version_contracts.active_version() == "1.15.0" else BASELINE
+
+
+def baseline_sha256() -> str:
+    return (
+        BASELINE_SHA256_115 if version_contracts.active_version() == "1.15.0" else BASELINE_SHA256
+    )
+
+
 PARAMETERS = config.REPO / "mod/decisions/equipment_opportunities.toml"
 _DOC = "common/ship_modifications/ship_modifications.md"
 _HELPER = "common/script_values/ai_script_values.txt"
@@ -373,15 +388,15 @@ def _validate(data: dict[str, Any]) -> dict[str, Any]:
 def write_baseline(game: Path) -> Path:
     """Explicitly freeze current native sources; review and pin the new digest."""
     data = _inventory(read_inputs(game))
-    BASELINE.parent.mkdir(parents=True, exist_ok=True)
-    BASELINE.write_text(_canonical(data), encoding="utf-8", newline="\n")
-    return BASELINE
+    baseline_path().parent.mkdir(parents=True, exist_ok=True)
+    baseline_path().write_text(_canonical(data), encoding="utf-8", newline="\n")
+    return baseline_path()
 
 
 def load_baseline() -> dict[str, Any]:
     """Validate the pinned offline artifact without reading a game installation."""
-    raw = BASELINE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != BASELINE_SHA256:
+    raw = baseline_path().read_bytes()
+    if hashlib.sha256(raw).hexdigest() != baseline_sha256():
         raise ValueError("舰船材料冻结资料身份漂移，必须独立复核并重新pin")
     data = json.loads(raw)
     if raw.decode("utf-8") != _canonical(data):

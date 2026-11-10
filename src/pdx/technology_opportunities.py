@@ -20,7 +20,7 @@ from functools import cache
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from . import company_observations, config
+from . import company_observations, config, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
@@ -29,6 +29,14 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 PARAMETERS = config.REPO / "mod/decisions/technology_opportunities.toml"
+PARAMETERS_115 = config.REPO / "mod/decisions/technology_opportunities_115.toml"
+
+
+def parameter_path() -> Path:
+    """Keep the migrated native catalog separate from the historical policy source."""
+    return PARAMETERS_115 if version_contracts.active_version() == "1.15.0" else PARAMETERS
+
+
 _FAMILIES = frozenset(
     {
         "technologies",
@@ -526,14 +534,18 @@ def _parameters(values: Mapping[str, object]) -> dict[str, float]:
 
 
 def load_parameters(path: Path = PARAMETERS) -> dict[str, float]:
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    data = tomllib.loads(
+        (parameter_path() if path == PARAMETERS else path).read_text(encoding="utf-8")
+    )
     if set(data) != {"schema", "parameters", "catalog_json"} or data["schema"] != 1:
         raise ValueError("科技机会配置schema无效")
     return _parameters(data["parameters"])
 
 
 def load_catalog(path: Path = PARAMETERS) -> dict[str, Any]:
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    data = tomllib.loads(
+        (parameter_path() if path == PARAMETERS else path).read_text(encoding="utf-8")
+    )
     if set(data) != {"schema", "parameters", "catalog_json"} or data["schema"] != 1:
         raise ValueError("科技机会配置schema无效")
     catalog = json.loads(data["catalog_json"])
@@ -551,7 +563,7 @@ def _validate_catalog(catalog: Mapping[str, Any]) -> None:
     """
     tables = {"technologies", "goods", "buildings", "groups", "methods", "native_objects"}
     if (
-        set(catalog) != tables | {"schema", "sources", "legacy_rules"}
+        set(catalog) - {"native_retained"} != tables | {"schema", "sources", "legacy_rules"}
         or type(catalog["schema"]) is not int
         or catalog["schema"] != 1
     ):
@@ -567,6 +579,20 @@ def _validate_catalog(catalog: Mapping[str, Any]) -> None:
             or not re.fullmatch(r"[0-9a-f]{64}", digest)
         ):
             raise ValueError("科技机制目录来源身份无效")
+    retained = catalog.get("native_retained", {})
+    if (
+        not isinstance(retained, dict)
+        or set(retained) & set(catalog["technologies"])
+        or any(
+            not isinstance(identity, str)
+            or not _NAME.fullmatch(identity)
+            or not isinstance(source, str)
+            or source not in sources
+            or _family(source) != "technologies"
+            for identity, source in retained.items()
+        )
+    ):
+        raise ValueError("科技机制原版保留候选身份无效")
 
     def identifiers(value: Any) -> bool:
         return (
@@ -741,7 +767,16 @@ def _validate_catalog(catalog: Mapping[str, Any]) -> None:
         identities.add(row["id"])
 
 
-_QUERY_CATALOG = load_catalog()
+with version_contracts.select_version("1.14.5"):
+    _QUERY_CATALOG = load_catalog()
+with version_contracts.select_version("1.15.0"):
+    _QUERY_CATALOG_115 = load_catalog()
+
+
+def _query_catalog() -> dict[str, Any]:
+    return _QUERY_CATALOG_115 if version_contracts.active_version() == "1.15.0" else _QUERY_CATALOG
+
+
 _ART = "common/journal_entries/00_art_jes.txt"
 _CULTURE = "common/script_values/cultural_community_values.txt"
 _SLAVE = "common/political_movements/05_slave_revolt_movements.txt"
@@ -754,6 +789,23 @@ QUERY_SOURCE_HASHES = {
     _COMPANY: "59546f6105092bad8935498d917a6012aa508c58bea873e462dd66a5850f2f1d",
     _OPIUM: "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8",
 }
+QUERY_SOURCE_HASHES_115 = {
+    "common/journal_entries/00_art_jes.txt": "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+    "common/script_values/cultural_community_values.txt": "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30",
+    "common/political_movements/05_slave_revolt_movements.txt": "8ce8f69cdf1ca623ed84e475f1721e9c7945998a687a1f099da0c70f44431968",
+    "common/company_types/00_companies_soi.txt": "5d96e85f5fb786240b201e98d900d9a1e88fff9287389a4a12886e874130f46f",
+    "common/journal_entries/00_opium.txt": "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1",
+}
+
+
+def query_source_hashes() -> dict[str, str]:
+    return (
+        QUERY_SOURCE_HASHES_115
+        if version_contracts.active_version() == "1.15.0"
+        else QUERY_SOURCE_HASHES
+    )
+
+
 UNKNOWN_POLICY = company_observations.UNKNOWN_POLICY
 _PURPOSES = frozenset(
     {
@@ -853,13 +905,13 @@ def query_from_reader(engine: str, parameters: Mapping[str, str]) -> TechnologyQ
 
 
 def _valid_building(building: str, method: str | None = None) -> None:
-    if not isinstance(building, str) or building not in _QUERY_CATALOG["buildings"]:
+    if not isinstance(building, str) or building not in _query_catalog()["buildings"]:
         raise ValueError("科技查询建筑ID未登记")
     if method is not None and (
         not isinstance(method, str)
         or not any(
-            method in _QUERY_CATALOG["groups"][group]["methods"]
-            for group in _QUERY_CATALOG["buildings"][building]["groups"]
+            method in _query_catalog()["groups"][group]["methods"]
+            for group in _query_catalog()["buildings"][building]["groups"]
         )
     ):
         raise ValueError("科技查询PM不属于真实建筑PM组")
@@ -875,7 +927,7 @@ def query_members(
     extra technology requirements. External oracles must interpret those data
     independently, rather than treating this function as a truth evaluator.
     """
-    frozen = _QUERY_CATALOG if catalog is None else catalog
+    frozen = _query_catalog() if catalog is None else catalog
     if query.technology not in frozen["technologies"] or query.purpose not in _PURPOSES:
         raise ValueError("科技或用途不在有限冻结目录内")
     profile = frozen["technologies"][query.technology]
@@ -1046,7 +1098,7 @@ def _or(expressions: list[str]) -> str:
 def _law_and_technology_gates(row: Mapping[str, Any]) -> str:
     clauses = [f"has_technology_researched = {key}" for key in row["requirements"]]
     if row["method"]:
-        method = _QUERY_CATALOG["methods"][row["method"]]
+        method = _query_catalog()["methods"][row["method"]]
         gates = method.get("law_gates", {})
         required = gates.get("unlocking_laws", [])
         if required:
@@ -1091,7 +1143,7 @@ def render_query(query: TechnologyQuery) -> str:
                         [
                             f"market = {{ mg:{good} = {{ market_goods_delta < 0 }} }}"
                             for good in row["outputs"]
-                            if _QUERY_CATALOG["goods"][good]["market"]
+                            if _query_catalog()["goods"][good]["market"]
                         ]
                     )
                 )
@@ -1102,7 +1154,7 @@ def render_query(query: TechnologyQuery) -> str:
                 for good, amount in (row["inputs"] | row["losses"]).items():
                     if amount <= 0:
                         continue
-                    if not _QUERY_CATALOG["goods"][good]["market"]:
+                    if not _query_catalog()["goods"][good]["market"]:
                         usable = False
                         break
                     country.append(f"market = {{ mg:{good} = {{ market_goods_delta >= 0 }} }}")
@@ -1152,7 +1204,7 @@ def render_query(query: TechnologyQuery) -> str:
                     [
                         f"market = {{ mg:{good} = {{ market_goods_delta < 0 }} }}"
                         for good in row["outputs"]
-                        if _QUERY_CATALOG["goods"][good]["market"]
+                        if _query_catalog()["goods"][good]["market"]
                     ]
                 )
             )
@@ -1175,7 +1227,7 @@ def render_query(query: TechnologyQuery) -> str:
                     [
                         f"sg:{good} = {{ state_goods_pricier > 0.25 }}"
                         for good in row["outputs"]
-                        if _QUERY_CATALOG["goods"][good]["local"]
+                        if _query_catalog()["goods"][good]["local"]
                     ]
                 )
             )
@@ -1205,14 +1257,14 @@ def render_query(query: TechnologyQuery) -> str:
             for good, amount in row["inputs"].items():
                 if amount <= 0:
                     continue
-                if _QUERY_CATALOG["goods"][good]["market"]:
+                if _query_catalog()["goods"][good]["market"]:
                     expression = f"market = {{ mg:{good} = {{ market_goods_delta >= 0 }} }}"
                     clauses.append(f"ROOT = {{ {expression} }}" if is_state else expression)
                     if purpose == "knowledge_ready":
                         clauses.append(
                             f"market = {{ mg:{good} = {{ market_goods_pricier <= 0.25 }} }}"
                         )
-                elif _QUERY_CATALOG["goods"][good]["local"]:
+                elif _query_catalog()["goods"][good]["local"]:
                     expression = f"sg:{good} = {{ state_goods_pricier <= 0.25 }}"
                     if is_state:
                         clauses.append(expression)
@@ -1280,7 +1332,7 @@ def required_query_sources(query: TechnologyQuery) -> tuple[str, ...]:
         else query_members(query)
     )
     if isinstance(query, TechnologyUseQuery):
-        sources.add(_QUERY_CATALOG["technologies"][query.technology]["source"])
+        sources.add(_query_catalog()["technologies"][query.technology]["source"])
         state = query.purpose in {
             "labor",
             "labor_ready",
@@ -1302,16 +1354,16 @@ def required_query_sources(query: TechnologyQuery) -> tuple[str, ...]:
     for row in rows:
         if not row["building"]:
             continue
-        building = _QUERY_CATALOG["buildings"][row["building"]]
+        building = _query_catalog()["buildings"][row["building"]]
         sources.add(building["source"])
         for group in building["groups"]:
             if (
-                row["prior"] and row["prior"] in _QUERY_CATALOG["groups"][group]["methods"]
+                row["prior"] and row["prior"] in _query_catalog()["groups"][group]["methods"]
             ) or group == row["group"]:
-                sources.add(_QUERY_CATALOG["groups"][group]["source"])
+                sources.add(_query_catalog()["groups"][group]["source"])
         for method in (row["method"], row["prior"]):
             if method:
-                sources.add(_QUERY_CATALOG["methods"][method]["source"])
+                sources.add(_query_catalog()["methods"][method]["source"])
     sources.add("common/goods/00_goods.txt")
     return tuple(sorted(sources))
 
@@ -1327,7 +1379,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
             raise ValueError(f"科技查询缺少必需原版来源：{source}")
         normalized = normalized_text(text)
         digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-        if digest != {**_QUERY_CATALOG["sources"], **QUERY_SOURCE_HASHES}[source]:
+        if digest != {**_query_catalog()["sources"], **query_source_hashes()}[source]:
             raise ValueError(f"科技查询原版来源漂移：{source}")
         parsed = parse_text(normalized, path=source)
         if parsed.errors:
@@ -1335,8 +1387,11 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
         roots[source] = parsed.root
         hashes.append((source, digest))
     references = []
-    native = company_observations._child(
-        company_observations._child(roots[_ART], "je_romanticism"), "complete"
+    journal = company_observations._child(roots[_ART], "je_romanticism")
+    native = (
+        version_contracts.journal_completion(journal)
+        if version_contracts.active_version() == "1.15.0"
+        else company_observations._child(journal, "complete")
     )
     line = company_observations._exact(
         native,
@@ -1383,13 +1438,13 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
     for row in rows:
         if not row["building"]:
             continue
-        frozen = _QUERY_CATALOG["buildings"][row["building"]]
+        frozen = _query_catalog()["buildings"][row["building"]]
         building = company_observations._child(roots[frozen["source"]], row["building"])
         if list(_company()._list(building, "production_method_groups")) != frozen["groups"]:
             raise ValueError("科技查询建筑PMG成员漂移")
         references.append(f"{frozen['source']}:{frozen['line']}")
         for group in frozen["groups"]:
-            expected = _QUERY_CATALOG["groups"][group]
+            expected = _query_catalog()["groups"][group]
             if expected["source"] not in roots:
                 continue
             actual = company_observations._child(roots[expected["source"]], group)
@@ -1813,7 +1868,7 @@ def derive(
         if key in adapters["readers"] and adapters["readers"][key] != readers[key]:
             raise ValueError(f"科技机会读取器身份漂移：{key}")
     result = {
-        "sources": {**dict(frozen["sources"]), **QUERY_SOURCE_HASHES},
+        "sources": {**dict(frozen["sources"]), **query_source_hashes()},
         "readers": {key: readers[key] for key in sorted(used)},
         "rules": rules,
         "covered": covered,
@@ -1890,6 +1945,21 @@ def verify_inputs(inputs: Mapping[str, str]) -> dict[str, Any]:
     current = inventory(
         focused, {key: row["source"] for key, row in frozen["technologies"].items()}
     )
+    if "native_retained" in frozen:
+        discovered = {}
+        for source, text in focused.items():
+            if _family(source) != "technologies":
+                continue
+            for entry in parse_text(text, path=source).root.assignments():
+                if isinstance(entry.value, Block) and entry.value.all("ai_weight"):
+                    discovered[entry.key] = source
+        claimed = {
+            **{key: row["source"] for key, row in frozen["technologies"].items()},
+            **frozen["native_retained"],
+        }
+        if discovered != claimed:
+            raise ValueError("科技机制原生评分消费者分母漂移")
+        current["native_retained"] = dict(frozen["native_retained"])
     expected = {key: value for key, value in frozen.items() if key != "legacy_rules"}
     if current != expected:
         raise ValueError("科技机会冻结机制与原版完整派生不一致")

@@ -85,10 +85,20 @@ def game(tmp_path):
 
 @pytest.fixture
 def baseline(game, tmp_path, monkeypatch):
-    monkeypatch.setattr(equipment_opportunities, "BASELINE", tmp_path / "baseline.json")
+    monkeypatch.setattr(
+        equipment_opportunities,
+        "BASELINE_115"
+        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
+        else "BASELINE",
+        tmp_path / "baseline.json",
+    )
     path = equipment_opportunities.write_baseline(game)
     monkeypatch.setattr(
-        equipment_opportunities, "BASELINE_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+        equipment_opportunities,
+        "BASELINE_SHA256_115"
+        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
+        else "BASELINE_SHA256",
+        hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     return equipment_opportunities.load_baseline()
 
@@ -500,10 +510,14 @@ def test_repinning_source_hash_does_not_hide_changed_ast_materials(game, baselin
     changed = NATIVE.replace("goods_input_steel_add = 4", "goods_input_steel_add = 99")
     path.write_text(changed, encoding="utf-8")
     baseline["sources"][SOURCE] = hashlib.sha256(changed.encode()).hexdigest()
-    frozen = equipment_opportunities.BASELINE
+    frozen = equipment_opportunities.baseline_path()
     frozen.write_text(equipment_opportunities._canonical(baseline), encoding="utf-8", newline="\n")
     monkeypatch.setattr(
-        equipment_opportunities, "BASELINE_SHA256", hashlib.sha256(frozen.read_bytes()).hexdigest()
+        equipment_opportunities,
+        "BASELINE_SHA256_115"
+        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
+        else "BASELINE_SHA256",
+        hashlib.sha256(frozen.read_bytes()).hexdigest(),
     )
     assert equipment_opportunities.load_baseline() == baseline
     with pytest.raises(ValueError, match="AST"):
@@ -515,7 +529,7 @@ def test_repinning_source_hash_does_not_hide_changed_ast_materials(game, baselin
     ["canonical", "identity", "duplicate_line", "negative_material", "role", "ordinary_union"],
 )
 def test_offline_identity_and_structural_faults_fail_closed(baseline, monkeypatch, mutation):
-    path = equipment_opportunities.BASELINE
+    path = equipment_opportunities.baseline_path()
     if mutation == "identity":
         path.write_bytes(path.read_bytes() + b" ")
         with pytest.raises(ValueError, match="身份"):
@@ -535,7 +549,11 @@ def test_offline_identity_and_structural_faults_fail_closed(baseline, monkeypatc
         text = equipment_opportunities._canonical(baseline)
     path.write_text(text, encoding="utf-8", newline="\n")
     monkeypatch.setattr(
-        equipment_opportunities, "BASELINE_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+        equipment_opportunities,
+        "BASELINE_SHA256_115"
+        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
+        else "BASELINE_SHA256",
+        hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError):
         equipment_opportunities.load_baseline()
@@ -586,8 +604,12 @@ def test_actual_frozen_denominator_and_budgets_are_explicit():
     assert {row["reason"] for row in derived["uncovered"]} == {"missing_native_ai_weight"}
     assert baseline["contract"]["documented_type"] == "fixed_point"
     assert baseline["contract"]["supported_shape"] == "block"
-    assert len(derived["rules"]) == 1517
-    assert len(derived["readers"]) == 39
+    assert len(derived["rules"]) == (
+        1541 if equipment_opportunities.version_contracts.active_version() == "1.15.0" else 1517
+    )
+    assert len(derived["readers"]) == (
+        41 if equipment_opportunities.version_contracts.active_version() == "1.15.0" else 39
+    )
     for field in {rule["field"] for rule in derived["rules"]}:
         rules = [rule for rule in derived["rules"] if rule["field"] == field]
         assert len(rules) <= 32

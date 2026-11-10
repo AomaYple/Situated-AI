@@ -270,7 +270,13 @@ def test_labor_query_keeps_actual_method_employment_and_reserve_pool_on_same_sta
     catalog = module.inventory(
         _native_inputs(), {"threshing_machine": "common/technology/technologies/20_military.txt"}
     )
-    monkeypatch.setattr(module, "_QUERY_CATALOG", catalog)
+    monkeypatch.setattr(
+        module,
+        "_QUERY_CATALOG_115"
+        if module.version_contracts.active_version() == "1.15.0"
+        else "_QUERY_CATALOG",
+        catalog,
+    )
     query = module.query_from_reader(
         "any_scope_state",
         {
@@ -355,7 +361,13 @@ def test_output_shortage_is_a_supply_opportunity_but_consuming_unit_is_not(monke
     catalog = module.inventory(
         _native_inputs(), dict.fromkeys(("artillery", "general_staff", "threshing_machine"), source)
     )
-    monkeypatch.setattr(module, "_QUERY_CATALOG", catalog)
+    monkeypatch.setattr(
+        module,
+        "_QUERY_CATALOG_115"
+        if module.version_contracts.active_version() == "1.15.0"
+        else "_QUERY_CATALOG",
+        catalog,
+    )
     derived = module.derive({"sources": catalog["sources"], "readers": {}, "rules": []}, catalog)
     artillery = _policy(derived, "artillery")
     assert _reference(artillery, {"country_goods_artillery_balance": -1}) == pytest.approx(1.12)

@@ -7,15 +7,18 @@ renderer, compiler, generator or evaluator. Numeric expectations stay in tests.
 from __future__ import annotations
 
 import json
+import os
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+_SOURCE = {
+    "1.14.5": "technology_opportunities.toml",
+    "1.15.0": "technology_opportunities_115.toml",
+}[os.environ.get("V3_CONTRACT_PROFILE", "1.14.5")]
 _RAW = tomllib.loads(
-    (Path(__file__).resolve().parents[1] / "mod/decisions/technology_opportunities.toml").read_text(
-        encoding="utf-8"
-    )
+    (Path(__file__).resolve().parents[1] / "mod/decisions" / _SOURCE).read_text(encoding="utf-8")
 )
 CATALOG = json.loads(_RAW["catalog_json"])
 BUILDING_METHODS = {
