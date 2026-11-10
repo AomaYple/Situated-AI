@@ -7,7 +7,10 @@ It tests filesystem/version contracts, never game execution or sampled values.
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -26,6 +29,49 @@ def installation(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ROOT", root)
     monkeypatch.setattr(config, "OUT", tmp_path / "out")
     return root
+
+
+@pytest.mark.parametrize("selected", [None, "1.14.5", "1.15.0", "unknown"])
+def test_cli_profile_defaults_follow_strict_version_but_explicit_profile_wins(
+    monkeypatch, selected
+):
+    if selected is None:
+        monkeypatch.delenv("V3_CONTRACT_PROFILE", raising=False)
+    else:
+        monkeypatch.setenv("V3_CONTRACT_PROFILE", selected)
+    frozen = native.load_profile(native.BASELINE_ROOT)
+    assert cli._production_profile("1.15.0", offline=True) == frozen
+    if selected == "unknown":
+        with pytest.raises(ValueError, match="合同版本"):
+            cli._production_profile(None, offline=True)
+    else:
+        assert cli._production_profile(None, offline=True) == (
+            frozen if selected == "1.15.0" else None
+        )
+
+
+def test_fresh_cli_import_preserves_explicit_profile_over_unknown_environment():
+    environment = {**os.environ, "V3_CONTRACT_PROFILE": "unknown"}
+    code = (
+        "from pdx import cli\n"
+        "assert cli._production_profile('1.15.0', offline=True) is not None\n"
+        "try:\n"
+        "    cli._production_profile(None, offline=True)\n"
+        "except ValueError as error:\n"
+        "    assert '合同版本' in str(error)\n"
+        "else:\n"
+        "    raise AssertionError('implicit unknown profile must fail')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-B", "-X", "utf8", "-c", code],
+        cwd=config.REPO,
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 @pytest.mark.parametrize("relative", sorted(authority.SOURCE_SHA256))

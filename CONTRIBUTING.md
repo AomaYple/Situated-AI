@@ -77,6 +77,18 @@ python -m pdx.cli package
 检查与打包必须传入同一配置；具体字段见 `src/pdx/situated/profile_configuration.py`。
 候选静态通过及 ZIP 生成不代表完整工程门通过，也不构成发布或部署。
 
+`snapshot`、`tables`、`verify`、`index` 等没有 `--profile` 参数的分析与文档命令，通过
+`V3_CONTRACT_PROFILE=1.15.0` 选择同版本合同、文档、官方文档 manifest 和快照。例如在 PowerShell 中：
+
+```powershell
+$env:V3_CONTRACT_PROFILE = '1.15.0'
+.venv/Scripts/python.exe -B -X utf8 -m pdx.cli verify --from-snapshot
+.venv/Scripts/python.exe -B -X utf8 -m pdx.cli tables --offline
+```
+
+环境变量只选择版本合同，不把当前安装伪装成该版本；读取本机原版的命令仍核对实际安装身份。
+未显式选择时保留历史默认版本边界，不能用无版本命令的旧门结果验收 1.15 候选。
+
 ## 验证
 
 按风险选择检查。阶段开发运行改动域测试；冻结最终候选后运行一次完整回归。静态收口至少运行：
@@ -92,6 +104,15 @@ python tools/ci/run_check.py baseline
 
 `baseline` 已包含依赖一致性、离线断言、离线表格、`modguard --offline`、`decision-audit --offline`、`ai-surface --check`
 和死代码审计，无需另行重复运行。
+
+1.15 候选必须运行版本门；这些入口同时向原有离线检查传递 1.15 合同，并追加候选生成与生产合同检查：
+
+```text
+python tools/ci/run_check.py baseline --profile 1.15.0
+python tools/ci/run_check.py full-acceptance --profile 1.15.0 --quiet
+```
+
+它们保留完整的既有检查集合；不带 `--profile` 的命令仍维护历史验收身份。
 
 涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目；构建不应在工作树留下 `build/` 或 egg-info：
 

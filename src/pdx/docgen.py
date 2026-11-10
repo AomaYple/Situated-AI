@@ -16,6 +16,7 @@ game 根目录与 ``paths.settings`` 在 :mod:`pdx.game_root`，
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING
 
 from . import (
@@ -35,6 +36,7 @@ from . import (
     modifiers,
     tabular,
     usage,
+    version_contracts,
 )
 from .doc_tables import (
     KeyedTableSpec,
@@ -65,41 +67,41 @@ class DocTarget:
 
 def targets() -> tuple[DocTarget, ...]:
     """全部登记在案的生成表。新增一张表 = 在这里多一项。"""
-    return (
+    base = (
         DocTarget(
-            path=config.DOCS / "05-defines与修饰符.md",
+            path=config.docs_root() / "05-defines与修饰符.md",
             # 两份来源拼在一起：defines 的表在前，modifiers 的表在后。
             # 合成一个 DocTarget 而不是登记两份同路径的 target —— 后者会让
             # `write_all` 对同一份文档写两遍（第一遍改过行号，第二遍得从头再找表）。
             specs=tuple(defines.doc_table_specs()) + tuple(modifiers.doc_table_specs()),
         ),
         DocTarget(
-            path=config.DOCS / "19-game根级文件与工具链.md",
+            path=config.docs_root() / "19-game根级文件与工具链.md",
             specs=tuple(game_root.doc_table_specs()),
         ),
         DocTarget(
-            path=config.DOCS / "08-目录全量清单.md",
+            path=config.docs_root() / "08-目录全量清单.md",
             specs=tuple(install_tree.doc_table_specs()),
         ),
         DocTarget(
             # doc 04 / 14 / 16 的「用了多少次」类表（它们还没有各自的领域模块）
-            path=config.DOCS / "04-脚本系统.md",
+            path=config.docs_root() / "04-脚本系统.md",
             specs=tuple(s for s in usage.doc_table_specs() if "doc04" in s.name),
         ),
         DocTarget(
-            path=config.DOCS / "14-经济与生产系统.md",
+            path=config.docs_root() / "14-经济与生产系统.md",
             specs=tuple(s for s in usage.doc_table_specs() if "doc14" in s.name),
         ),
         DocTarget(
             # doc 17 整族（25 张表里接了 24 张）—— 口径有四种，故单独一个模块。
-            path=config.DOCS / "17-角色科技与呈现.md",
+            path=config.docs_root() / "17-角色科技与呈现.md",
             specs=tuple(doc17.doc_table_specs()),
         ),
         DocTarget(
             # doc 06（本地化与界面资源）：安装树那四张表在 install_tree，
             # 两张本地化表在 localization，DDS 头普查在 assets —— 同一棵树的三面，
             # 口径各自写在模块里。
-            path=config.DOCS / "06-本地化与界面资源.md",
+            path=config.docs_root() / "06-本地化与界面资源.md",
             specs=tuple(install_tree.doc06_table_specs())
             + tuple(localization.doc_table_specs())
             + tuple(assets.doc_table_specs())
@@ -107,33 +109,33 @@ def targets() -> tuple[DocTarget, ...]:
         ),
         DocTarget(
             # doc 15（政治人口与社会）：§0 的 25 目录总览 + 四节里的六张表。
-            path=config.DOCS / "15-政治人口与社会.md",
+            path=config.docs_root() / "15-政治人口与社会.md",
             specs=tuple(doc15.doc_table_specs()),
         ),
         DocTarget(
             # doc 04（脚本系统）：scripted_* / events / journal_entries / effect_localization
             # 四块共 15 张表。含 6 张字段表 + 2 张命名形态 + JE 分组两栏。
-            path=config.DOCS / "04-脚本系统.md",
+            path=config.docs_root() / "04-脚本系统.md",
             specs=tuple(doc04.doc_table_specs()),
         ),
         DocTarget(
             # doc 16 剩下的八张「统计单位不是字段」的表（文本级 / 任意深度）。
             # 前面那 23 张在 usage.py 的 doc16 规格里。
-            path=config.DOCS / "16-外交军事与地图.md",
+            path=config.docs_root() / "16-外交军事与地图.md",
             specs=tuple(s for s in usage.doc_table_specs() if "doc16" in s.name)
             + tuple(doc16.doc_table_specs()),
         ),
         DocTarget(
             # doc 07（官方文档索引）：§0 那张统计总览 —— 8 行全部由**入库清单**现算，
             # 不需要游戏（这也是它第一次进生成器）。
-            path=config.DOCS / "07-官方文档索引.md",
+            path=config.docs_root() / "07-官方文档索引.md",
             specs=tuple(docs_mirror.doc_table_specs()),
         ),
         # 散落的单表文档：doc 03 / 09 / 10（AI）、doc 11 / 18 / 20（子目录文件数）。
         # 它们各只有一两张表，为每篇建一个模块是过度设计 —— 按名字前缀分发给各自的目标。
         *(
             DocTarget(
-                path=config.DOCS / f"{doc}.md",
+                path=config.docs_root() / f"{doc}.md",
                 specs=tuple(s for s in (_misc_specs()) if s.name.startswith(f"doc{num} ")),
             )
             for doc, num in (
@@ -145,6 +147,88 @@ def targets() -> tuple[DocTarget, ...]:
                 ("20-引擎共享层jomini与clausewitz", "20"),
             )
         ),
+    )
+    if version_contracts.active_version() == "1.15.0":
+        return (*base, *_native_file_table_targets())
+    return base
+
+
+def _native_file_cells(directory: str, byte_column: int) -> list[tuple[str, dict[int, str]]]:
+    """Own byte columns only; keep each table's selected rows and prose intact."""
+    root = config.GAME / directory
+    return [
+        (path.name, {byte_column: f"{path.stat().st_size:,}"})
+        for path in sorted(root.iterdir())
+        if path.is_file()
+    ]
+
+
+def _native_file_table_targets() -> tuple[DocTarget, ...]:
+    # Previously handwritten file-size columns are native mechanical facts too.
+    # Explicit source directories prevent an identically named file elsewhere
+    # from supplying a value; offline readers only need this declaration.
+    declarations = (
+        ("03-AI系统", "common/ai_strategies", "| 文件 | 字节 | 策略块数 |", 0, 0, 1),
+        ("11-历史初始状态与AI策略分配", "common/history/ai", "| 文件 | 字节 | 作用 |", 0, 0, 1),
+        ("16-外交军事与地图", "common/strategic_regions", "| 文件 | 字节 | 说明 |", 0, 0, 1),
+        ("17-角色科技与呈现", "common/character_traits", "| 文件 | 字节 | 内容 |", 0, 0, 1),
+        ("17-角色科技与呈现", "common/character_roles", "| 文件 | 字节 | 定义的角色 |", 0, 0, 1),
+        (
+            "17-角色科技与呈现",
+            "common/customizable_localization",
+            "| 文件 | 字节 | 说明 |",
+            0,
+            0,
+            1,
+        ),
+        (
+            "17-角色科技与呈现",
+            "common/effect_localization",
+            "| 文件 | 字节 | | 文件 | 字节 |",
+            0,
+            0,
+            1,
+        ),
+        (
+            "17-角色科技与呈现",
+            "common/effect_localization",
+            "| 文件 | 字节 | | 文件 | 字节 |",
+            0,
+            3,
+            4,
+        ),
+        (
+            "17-角色科技与呈现",
+            "common/trigger_localization",
+            "| 文件 | 定义数 | 字节 | 内容 |",
+            0,
+            0,
+            2,
+        ),
+        (
+            "17-角色科技与呈现",
+            "common/modifier_type_definitions",
+            "| 文件 | 定义数 | 字节 | 内容 |",
+            1,
+            0,
+            2,
+        ),
+    )
+    return tuple(
+        DocTarget(
+            config.docs_root() / f"{document}.md",
+            (
+                KeyedTableSpec(
+                    name=f"native source bytes {directory} column {column}",
+                    header=header,
+                    cells=partial(_native_file_cells, directory, column),
+                    occurrence=occurrence,
+                    key_column=key,
+                    append_new=False,
+                ),
+            ),
+        )
+        for document, directory, header, occurrence, key, column in declarations
     )
 
 

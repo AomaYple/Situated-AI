@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import stat
 import tempfile
 from collections import Counter
 from contextlib import suppress
@@ -35,7 +36,7 @@ from .cache import parse_cached
 from .defines import extract_defines
 from .extract import entry_fields
 from .model import Block
-from .scan import walk_files
+from .scan import TEXT_SUFFIXES, walk_files
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -326,6 +327,16 @@ class Snapshot:
     def version_label(self) -> str:
         return self.version.get("caligula_branch", "?") or "?"
 
+    def require_version(self, version: str | None = None) -> None:
+        """Reject offline evidence from a different or unknown native version."""
+        from .version_contracts import active_version  # noqa: PLC0415
+
+        expected = f"release/{active_version(version)}"
+        if self.version_label != expected:
+            raise SnapshotFormatError(
+                f"快照原版版本不匹配：期望 {expected}，实际 {self.version_label}"
+            )
+
     def counts(self) -> dict[str, int]:
         """各域的条目总数，用于快速概览。"""
         return {
@@ -345,7 +356,16 @@ def _doc_tables_snapshot() -> dict[str, list[str]]:
     """
     from . import docgen  # noqa: PLC0415 - docgen 依赖各领域模块，导入期较重
 
-    return docgen.render_all()
+    rows = docgen.render_all()
+    from .version_contracts import active_version  # noqa: PLC0415
+
+    if active_version() == "1.15.0":
+        failed = [
+            key for key, values in rows.items() if any(v.startswith("<未取到：") for v in values)
+        ]
+        if failed:
+            raise ValueError("1.15快照生成表取值失败：" + ", ".join(failed))
+    return rows
 
 
 def _localization_digest(root: Path) -> dict[str, list[str]]:
@@ -387,6 +407,69 @@ def _input_profile_snapshot() -> dict[str, list[str]]:
     return body
 
 
+def _source_identity_snapshot() -> dict[str, list[str]]:
+    """Original text bytes and all file sizes, without links or root escapes.
+
+    Binary/media bytes are outside analysis semantics. Their paths and sizes
+    support the documented filesystem totals. Text hashes use original bytes.
+    """
+    out: dict[str, list[str]] = {}
+
+    def require_native_path(path: Path, boundary: Path) -> None:
+        metadata = path.lstat()
+        reparse = getattr(metadata, "st_file_attributes", 0) & getattr(
+            stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400
+        )
+        resolved = path.resolve(strict=True)
+        if (
+            path.is_symlink()
+            or reparse
+            or resolved != path.absolute()
+            or not resolved.is_relative_to(boundary)
+        ):
+            raise ValueError(f"快照来源包含未核验链接或越界路径：{path}")
+
+    def fail(error: OSError) -> None:
+        raise error
+
+    roots = (("game", config.GAME), ("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ))
+    for label, root in roots:
+        if not root.is_dir():
+            continue
+        boundary = root.resolve(strict=True)
+        require_native_path(root, boundary)
+        for directory, directories, files in os.walk(root, followlinks=False, onerror=fail):
+            base = Path(directory)
+            require_native_path(base, boundary)
+            for name in directories:
+                require_native_path(base / name, boundary)
+            for name in files:
+                path = base / name
+                require_native_path(path, boundary)
+                values = [f"size:{path.stat().st_size}"]
+                if path.suffix.lower() in TEXT_SUFFIXES:
+                    values.append("sha256:" + hashlib.sha256(path.read_bytes()).hexdigest())
+                out[f"{label}/{path.relative_to(root).as_posix()}"] = sorted(values)
+    installation = config.ROOT.resolve(strict=True)
+    require_native_path(config.ROOT, installation)
+    for name in (
+        "caligula_branch.txt",
+        "caligula_rev.txt",
+        "clausewitz_branch.txt",
+        "clausewitz_rev.txt",
+        "launcher/launcher-settings.json",
+    ):
+        path = config.ROOT / name
+        if path.is_file():
+            require_native_path(path, installation)
+            raw = path.read_bytes()
+            out[f"installation/{name}"] = [
+                "sha256:" + hashlib.sha256(raw).hexdigest(),
+                f"size:{len(raw)}",
+            ]
+    return out
+
+
 def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     """生成当前游戏版本的快照。
 
@@ -406,6 +489,9 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     产出 —— 与它们**在线**现算时用的是同一批函数，所以两条路的池子同源。
     """
     snap = Snapshot(version=config.game_version(), compact=compact)
+    snap.require_version()
+    if snap.version_label == "release/1.15.0":
+        snap.sections["source_identity"] = _source_identity_snapshot()
     if verbose:
         print(f"  版本: {snap.version_label}  精简: {compact}")
 

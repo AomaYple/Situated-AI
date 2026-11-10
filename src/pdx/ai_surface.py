@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING
 from pdx import config, vanilla_index
 from pdx.cache import parse_cached
 from pdx.model import Assignment, Block, Node, Scalar
+from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -52,6 +53,14 @@ DOC_PATH = Path("docs") / "design" / "02-可执行面.md"
 
 #: 便于 CLI / 测试引用的路径字符串。
 DOC_REL = DOC_PATH.as_posix()
+
+
+def doc_path() -> Path:
+    """Resolve the selected version without overwriting the historical surface."""
+    if active_version() == "1.15.0":
+        return DOC_PATH.with_name("02-可执行面-1.15.0.md")
+    return DOC_PATH
+
 
 #: 快照里存原版 AI 面的域（由 :func:`snapshot_section` 写入）。
 SECTION = "ai_surface"
@@ -553,12 +562,13 @@ def build(game: Path | None = None, *, top: int = 60) -> str:
 
 
 def _first_diff(current: str, expected: str) -> str:
+    relative = doc_path().as_posix()
     cur_lines = current.splitlines()
     exp_lines = expected.splitlines()
     for idx, (a, b) in enumerate(zip(cur_lines, exp_lines, strict=False), start=1):
         if a != b:
-            return f"{DOC_REL}:{idx} 与生成结果不一致\n  文档： {a[:110]}\n  生成： {b[:110]}"
-    return f"{DOC_REL}: 行数不同（文档 {len(cur_lines)} 行，生成 {len(exp_lines)} 行）"
+            return f"{relative}:{idx} 与生成结果不一致\n  文档： {a[:110]}\n  生成： {b[:110]}"
+    return f"{relative}: 行数不同（文档 {len(cur_lines)} 行，生成 {len(exp_lines)} 行）"
 
 
 # ── 离线通道（`--offline`）：读入库快照，不读游戏 ───────────────
@@ -721,7 +731,7 @@ def write_doc(
     """生成并写盘，返回写入路径（``offline=True`` 时真值来自入库快照）。"""
     base = repo or config.REPO
     text = build_offline(top=top) if offline else build(game, top=top)
-    target = base / DOC_PATH
+    target = base / doc_path()
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8", newline="\n")
     return target
@@ -736,9 +746,9 @@ def check_doc(
     与在线完全同一段代码，只有真值来源不同。
     """
     base = repo or config.REPO
-    target = base / DOC_PATH
+    target = base / doc_path()
     if not target.is_file():
-        return f"缺少 {DOC_REL} —— 先跑 `v3 ai-surface --write`"
+        return f"缺少 {doc_path().as_posix()} —— 先跑 `v3 ai-surface --write`"
     current = target.read_text(encoding="utf-8")
     expected = build_offline(top=top) if offline else build(game, top=top)
     if current == expected:

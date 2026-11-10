@@ -185,6 +185,15 @@ class TestKnownCounts(unittest.TestCase):
         "laws": 138,
     }
 
+    EXPECTED_115 = {
+        "static_modifiers": 6479,
+        "modifier_type_definitions": 2474,
+        "production_methods": 450,
+        "character_templates": 2072,
+        "buildings": 122,
+        "laws": 148,
+    }
+
     def test_directory_key_counts(self):
         from pdx.config import GAME
 
@@ -193,8 +202,10 @@ class TestKnownCounts(unittest.TestCase):
             self.skipTest("游戏目录不可用")
 
         from pdx import parse_file
+        from pdx.version_contracts import active_version
 
-        for name, want in self.EXPECTED.items():
+        expected = self.EXPECTED_115 if active_version() == "1.15.0" else self.EXPECTED
+        for name, want in expected.items():
             with self.subTest(directory=name):
                 keys: set[str] = set()
                 for f in (common / name).rglob("*.txt"):

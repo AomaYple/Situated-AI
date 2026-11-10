@@ -211,6 +211,7 @@ def _crosscheck_fixture(
     """
     root = base / "game"
     (root / "gui").mkdir(parents=True)
+    (base / "caligula_branch.txt").write_text(f"release/{_FIXTURE_VERSION}", encoding="utf-8")
     (root / "gui" / "panel.gui").write_text(vanilla, encoding="utf-8")
 
     workshop = base / "workshop"
@@ -438,6 +439,7 @@ def test_crosscheck_真错配仍判红_阴性对照(monkeypatch) -> None:
             missing_files={"gui/panel.gui"} if missing else set(),
             line_counts=line_counts,
             log_version="1.14.4",
+            source_version="1.14.4",
         )
 
     claim = engine_log.EngineClaim(
@@ -842,9 +844,13 @@ def test_from_snapshot_快照缺域时大声失败(tmp_path, monkeypatch) -> Non
     刻意**不**静默跳过：一份缺域的残缺快照应当吵，而不是让 CI 报绿。
     """
     from pdx import snapshot as _snap
+    from pdx.version_contracts import active_version
 
-    empty = _snap.Snapshot(version={"caligula_branch": "test"}, sections={}, compact=True)
-    empty.write(tmp_path / "x.compact.json")
+    version = active_version()
+    empty = _snap.Snapshot(
+        version={"caligula_branch": f"release/{version}"}, sections={}, compact=True
+    )
+    empty.write(tmp_path / f"release-{version}.compact.json")
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     r = _invoke("verify", "--from-snapshot")
     assert r.exit_code == 1, r.output

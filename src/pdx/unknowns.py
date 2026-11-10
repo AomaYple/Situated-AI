@@ -80,7 +80,7 @@ class Unverified:
 
 def docs_dir() -> Path:
     """知识库目录（``docs/victoria3-modding``）。"""
-    return config.DOCS
+    return config.docs_root()
 
 
 def doc_files(doc: str | None = None) -> list[Path]:

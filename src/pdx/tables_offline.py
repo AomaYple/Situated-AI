@@ -64,6 +64,7 @@ def load_tables(path: Path | None = None) -> dict[str, list[str]]:
     snap = Snapshot.load(path) if path is not None else _latest()
     if snap is None:
         return {}
+    snap.require_version()
     return snap.sections.get(SECTION, {})
 
 

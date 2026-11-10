@@ -104,7 +104,7 @@ def markers_in(path: Path) -> list[Marker]:
 
 def all_markers(docs_dir: Path | None = None) -> list[Marker]:
     """全库标记（按文档名、行号排序）。"""
-    base = docs_dir or config.DOCS
+    base = docs_dir or config.docs_root()
     out: list[Marker] = []
     for path in sorted(base.glob("*.md")):
         out.extend(markers_in(path))

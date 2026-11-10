@@ -89,6 +89,7 @@ from .usage import (
     file_definition_counts,
     file_line_count,
 )
+from .version_contracts import active_version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -2965,6 +2966,42 @@ CLAIMS: list[Claim] = [
 ]
 
 
+MACHINE_CLAIM_KINDS = frozenset(
+    {
+        "mods_total",
+        "mods_files",
+        "mods_prefix_total",
+        "prefix_in_mods",
+    }
+)
+
+
+def claim_scope(claim: Claim) -> str:
+    """Scope labels never bypass a check: live machine claims still read live state."""
+    return "machine_snapshot" if claim.kind in MACHINE_CLAIM_KINDS else "native_installation"
+
+
+HISTORICAL_CLAIMS = CLAIMS
+
+
+def claims_for_version(version: str | None = None) -> list[Claim]:
+    """The full registry for one native version; historical checks retain their meaning."""
+    if active_version(version) == "1.14.5":
+        return HISTORICAL_CLAIMS
+    from .verify_claims_115 import CLAIMS as CLAIMS_115  # noqa: PLC0415
+
+    return CLAIMS_115
+
+
+CLAIMS = claims_for_version("1.15.0" if config.DOCS == config.DOCS_115 else "1.14.5")
+_STARTUP_CLAIMS = CLAIMS
+
+
+def current_claims() -> list[Claim]:
+    """Resolve at call time while retaining explicit synthetic-test overrides."""
+    return claims_for_version() if CLAIMS is _STARTUP_CLAIMS else CLAIMS
+
+
 # ── 执行 ────────────────────────────────────────────────────
 def check(claim: Claim) -> CheckResult:
     fn = _CHECKS.get(claim.kind)
@@ -2981,7 +3018,7 @@ def run_claims(
     claims: list[Claim] | None = None, *, include_slow: bool = True
 ) -> list[CheckResult]:
     """执行断言。``include_slow=False`` 时跳过需要全库扫描的检查。"""
-    selected = claims if claims is not None else CLAIMS
+    selected = claims if claims is not None else current_claims()
     if not include_slow:
         selected = [c for c in selected if c.kind not in SLOW_KINDS]
     return [check(c) for c in selected]
@@ -3087,13 +3124,14 @@ def fix_claims(
     因此第二遍的"改动"是假的（CLI 每次是新进程，实际使用不受影响；
     测试要重载断言表再断言幂等）。
     """
-    path = source or (config.REPO / "src" / "pdx" / "verify.py")
+    filename = "verify_claims_115.py" if active_version() == "1.15.0" else "verify.py"
+    path = source or (config.REPO / "src" / "pdx" / filename)
     text = path.read_text(encoding="utf-8")
     slots = claim_value_slots(text)
     changes: list[ClaimEdit] = []
     skipped: list[str] = []
     edits: dict[str, object] = {}
-    for claim in CLAIMS:
+    for claim in current_claims():
         if only and only not in claim.id:
             continue
         if claim.id not in slots:
@@ -3262,9 +3300,9 @@ def check_markers(docs_dir: Path | None = None) -> list[MarkerIssue]:
     「有标记的断言不再参与锚点漂移扫描」这条规则也在这里生效
     （见 :func:`find_doc_drift`）：绑定比扫描精确，两套同时跑只会互相打脸。
     """
-    by_id = {c.id: c for c in CLAIMS}
+    by_id = {c.id: c for c in current_claims()}
     out: list[MarkerIssue] = []
-    for m in all_markers(docs_dir):
+    for m in all_markers(docs_dir or config.docs_root()):
         claim = by_id.get(m.id)
         if claim is None:
             out.append(MarkerIssue(m.doc, m.line, m.id, "没有这条断言（断言被删或 id 写错）"))
@@ -3287,8 +3325,8 @@ def fix_markers(docs_dir: Path | None = None, *, write: bool = False) -> list[Ma
     ``write=False`` 时只算出改动清单 —— 与 ``--fix`` 共用同一条实现，
     免得「检查说会改 A、实际改了 B」。
     """
-    expected = {c.id: c.expected for c in CLAIMS if isinstance(c.expected, int)}
-    fixes, _checked = apply_fixes(docs_dir or config.DOCS, expected, write=write)
+    expected = {c.id: c.expected for c in current_claims() if isinstance(c.expected, int)}
+    fixes, _checked = apply_fixes(docs_dir or config.docs_root(), expected, write=write)
     return fixes
 
 
@@ -3349,7 +3387,7 @@ def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
     静态文本无法判断哪个是断言要的那个。因此这个函数是**给人看的线索**，
     不是自动改文档的依据。
     """
-    docs_dir = docs_dir or config.DOCS
+    docs_dir = docs_dir or config.docs_root()
     out: list[DocDrift] = []
     if not docs_dir.is_dir():
         return out
@@ -3373,9 +3411,9 @@ def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
     #: 标记直接说明「这个数字属于哪条断言」，比「锚点词 + 量级接近」精确得多。
     #: 于是 ``TEXT_SCAN_EXEMPT`` / ``KNOWN_METRIC_MIXUPS`` 里那些「锚点太通用」
     #: 的豁免可以随迁移逐条删掉（见 pdx.markers）。
-    bound = marker_ids_by_doc(docs_dir)
+    bound = marker_ids_by_doc(docs_dir or config.docs_root())
 
-    for claim in CLAIMS:
+    for claim in current_claims():
         if not isinstance(claim.expected, int) or not claim.expected:
             continue
         if claim.id in TEXT_SCAN_EXEMPT:
@@ -3732,7 +3770,7 @@ def snapshot_kinds() -> frozenset[str]:
 
 
 def latest_compact_snapshot_path() -> Path | None:
-    """仓库里最新一份**精简快照**的路径；一份都没有时返回 ``None``。
+    """所选原版版本的**精简快照**路径；没有该版本时返回 ``None``。
 
     「哪份快照算数」只有这一处定义：:func:`latest_compact_snapshot`（读内容）
     与离线闸门（:mod:`pdx.vanilla_index`，要在输出里写明真值来自哪个文件）
@@ -3740,8 +3778,8 @@ def latest_compact_snapshot_path() -> Path | None:
     """
     if not SNAPSHOT_DIR.is_dir():
         return None
-    paths = sorted(SNAPSHOT_DIR.glob("*.compact.json"))
-    return paths[-1] if paths else None
+    path = SNAPSHOT_DIR / f"release-{active_version()}.compact.json"
+    return path if path.is_file() else None
 
 
 def latest_compact_snapshot() -> Snapshot | None:
@@ -3752,10 +3790,9 @@ def latest_compact_snapshot() -> Snapshot | None:
     path = latest_compact_snapshot_path()
     if path is None:
         return None
-    try:
-        return Snapshot.load(path)
-    except (OSError, ValueError):
-        return None
+    snap = Snapshot.load(path)
+    snap.require_version()
+    return snap
 
 
 def verify_from_snapshot(
@@ -3774,8 +3811,10 @@ def verify_from_snapshot(
     而不是报成失败 —— 这条路的定位就是「无游戏时能查多少查多少」。
     """
     snap = snap or latest_compact_snapshot()
+    if snap is not None:
+        snap.require_version()
     out: list[CheckResult] = []
-    for claim in claims if claims is not None else CLAIMS:
+    for claim in claims if claims is not None else current_claims():
         getter = _SNAPSHOT_GETTERS.get(claim.kind)
         try:
             if getter is not None:
@@ -3809,7 +3848,7 @@ def verify_products(
     静默跳过是让检查表腐烂的最快方式。
     """
     out: list[CheckResult] = []
-    for claim in claims if claims is not None else CLAIMS:
+    for claim in claims if claims is not None else current_claims():
         getter = _PRODUCT_GETTERS.get(claim.kind)
         if getter is None:
             out.append(CheckResult(claim, None, False, f"产物中没有对应字段（{claim.kind}）"))
@@ -3838,10 +3877,10 @@ def find_unregistered_claims(
     用于防止文档新增了断言却忘记登记。返回 ``文档名 -> [(行号, 原文)]``。
     这个扫描刻意宽松（宁可多报也不要漏报），人工复核后再决定是否登记。
     """
-    docs_dir = docs_dir or config.DOCS
+    docs_dir = docs_dir or config.docs_root()
     known = known_values
     if known is None:
-        known = {int(c.expected) for c in CLAIMS if isinstance(c.expected, int)}
+        known = {int(c.expected) for c in current_claims() if isinstance(c.expected, int)}
 
     out: dict[str, list[tuple[int, str]]] = {}
     if not docs_dir.is_dir():

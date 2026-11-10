@@ -88,6 +88,7 @@ from pdx import (
     unknowns,
     vanilla_index,
     verify,
+    version_contracts,
 )
 from pdx import mods as mods_mod
 from pdx.console import enable_utf8_stdio
@@ -670,6 +671,7 @@ def defines_cmd(
 # ── index ───────────────────────────────────────────────────
 #: 全量键名索引的落点。由 `v3 index` 重新生成。
 OUT_INDEX_DOC = config.DOCS / "13-common全量键名索引.md"
+_STARTUP_OUT_INDEX_DOC = OUT_INDEX_DOC
 
 
 def _build_index_doc() -> tuple[str, dict[str, int]]:
@@ -819,15 +821,20 @@ def index_cmd(
         console.print("[yellow]--dry-run：未写文件[/]")
         return
 
+    output_doc = (
+        OUT_INDEX_DOC
+        if OUT_INDEX_DOC != _STARTUP_OUT_INDEX_DOC
+        else config.docs_root() / OUT_INDEX_DOC.name
+    )
     try:
         # newline="\n"：见 analyze.dump 的注释 —— 否则文档在 Windows 上写成
         # CRLF，与 .gitattributes 的 eol=lf 打架，每次 `v3 index` 都弄脏工作树。
-        OUT_INDEX_DOC.write_text(text, encoding="utf-8", newline="\n")
+        output_doc.write_text(text, encoding="utf-8", newline="\n")
     except OSError as exc:
-        _fail(f"无法写入 {OUT_INDEX_DOC}：{type(exc).__name__}: {exc}")
+        _fail(f"无法写入 {output_doc}：{type(exc).__name__}: {exc}")
     console.print(
-        f"[green]已写入[/] {escape(_relative(OUT_INDEX_DOC))}  "
-        f"行数 {len(text.splitlines()):,}  字节 {OUT_INDEX_DOC.stat().st_size:,}"
+        f"[green]已写入[/] {escape(_relative(output_doc))}  "
+        f"行数 {len(text.splitlines()):,}  字节 {output_doc.stat().st_size:,}"
     )
 
 
@@ -1198,7 +1205,7 @@ def refresh_cmd(
     console.rule("[bold]3/3 核验剩下的[/]")
     marker_issues = verify.check_markers()
     drift = verify.unknown_doc_drift()
-    results = verify.run_claims(verify.CLAIMS, include_slow=True)
+    results = verify.run_claims(verify.current_claims(), include_slow=True)
     failed = [r for r in results if not r.ok]
     console.print(
         f"  断言 {len(results) - len(failed)} / {len(results)} 通过"
@@ -1366,7 +1373,10 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
     抽成独立函数而不是塞在 ``verify_cmd`` 里，是为了让「无游戏也能跑」
     这条路径足够显眼 —— 它是 CI 上唯一能真正核对断言的入口。
     """
-    snap = verify.latest_compact_snapshot()
+    try:
+        snap = verify.latest_compact_snapshot()
+    except _READ_ERRORS as exc:
+        _fail(f"当前版本离线快照无法读取：{type(exc).__name__}: {exc}")
     if snap is None:
         # 不再直接退出：官方文档清单是第二份离线真值，没有快照时它照样能核验。
         console.print(
@@ -1377,7 +1387,7 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
 
     selected = [c for c in claims if not only or only in c.id]
     if only and not selected:
-        _fail(f"没有 id 含 {only!r} 的断言（注册表共 {len(verify.CLAIMS)} 条）")
+        _fail(f"没有 id 含 {only!r} 的断言（注册表共 {len(verify.current_claims())} 条）")
 
     results = verify.verify_from_snapshot(snap, selected)
     if not results:
@@ -1410,7 +1420,7 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
     covered = len(results)
     console.print(
         f"通过 {covered - len(failed)} / {covered}    失败 {len(failed)}"
-        f"    [dim]（离线真值覆盖 {covered}/{len(verify.CLAIMS)} 条；"
+        f"    [dim]（离线真值覆盖 {covered}/{len(verify.current_claims())} 条；"
         f"其余需读游戏本体，本地跑 v3 verify）[/]"
     )
     for r in failed:
@@ -1543,11 +1553,11 @@ def verify_cmd(
         return
 
     if from_snapshot:
-        _verify_from_snapshot(claims=verify.CLAIMS, only=only, no_drift=no_drift)
+        _verify_from_snapshot(claims=verify.current_claims(), only=only, no_drift=no_drift)
         return
 
     _require_game()
-    claims = verify.CLAIMS
+    claims = verify.current_claims()
     if unregistered:
         # 覆盖率扫描：文档里还有哪些「数量」没进断言表。
         # 它是**排查工具**不是门禁 —— 输出刻意宽松（宁可多报），退出码 0。
@@ -1576,7 +1586,7 @@ def verify_cmd(
             # 会静默报成功，是最容易骗过 CI 的一类假绿灯。
             _fail(
                 f"没有 id 含 {only!r} 的断言"
-                f"（注册表共 {len(verify.CLAIMS)} 条；用 v3 verify 不带 --only 查看全部）"
+                f"（注册表共 {len(verify.current_claims())} 条；用 v3 verify 不带 --only 查看全部）"
             )
 
     results = verify.run_claims(claims, include_slow=not fast)
@@ -1844,24 +1854,22 @@ def crosscheck_cmd(
 
     if unverifiable:
         console.print(
-            "\n[yellow]⚠️ 不可核对："
-            f"{len(unverifiable)} 条 token 断言所在文件被 mod 覆盖、与原版不是同一套行号"
-            "（行数不同／文件被删）⇒ 行号无从核对。[/]"
+            f"\n[yellow]⚠️ 不可核对：{len(unverifiable)} 条 token 断言的版本或行号不具备可比性。[/]"
         )
         console.print(
             "[yellow]   结论 = 不可核对（既不是通过，也不是不一致；本命令退出码 3）："
             "验不了的不是解析器，是我们与引擎读的不是同一份内容。[/]"
         )
         for v in unverifiable:
-            where = (
-                f"覆盖版里别处有（第 {v.ours} 行）" if v.ours is not None else "覆盖版整份都没有"
+            console.print(
+                f"   ⚠️ {escape(v.file_rel)}  日志第 {v.line} 行 {escape(repr(v.token))}"
+                f" —— {escape(v.reason)}"
             )
-            console.print(f"   ⚠️ {v.file_rel}  日志第 {v.line} 行 {v.token!r} —— {where}")
         if override_source:
             console.print("   覆盖来源（引擎读的是它，我们读的也是它）：")
             for rel in sorted(override_source):
                 console.print(f"     ⚠️ {rel}  ←  {_relative(override_source[rel])}")
-        else:
+        elif not any(v.kind == engine_log.KIND_VERSION_INCOMPARABLE for v in unverifiable):
             # 文件整份缺失的那一档没有覆盖来源可写：宁可少写一行，也不写空标题。
             console.print("   覆盖来源：无（生效文件整份缺失，不是被覆盖版持有）。")
         if misplaced:
@@ -2477,7 +2485,7 @@ def ai_surface_cmd(
             _fail(str(exc))
         if problem:
             _fail(problem)
-        console.print(f"[green]{escape(ai_surface.DOC_REL)} 与生成结果一致 ✅[/]")
+        console.print(f"[green]{escape(ai_surface.doc_path().as_posix())} 与生成结果一致 ✅[/]")
         if offline:
             index = ai_surface.offline_source()
             source = index.describe() if index is not None else "?"
@@ -2529,7 +2537,7 @@ def ai_surface_cmd(
         f"\ndefines 面：`00_ai.txt` {defines.lines} 行 / NAI 块 {defines.nai_keys} 键 / "
         f"原版子系统开关 {len(defines.enabled_switches)} 个 / `AI_*` 条目 {len(defines.ai_keys)} 个。"
     )
-    console.print("跑 `v3 ai-surface --write` 生成 `docs/design/02-可执行面.md`。")
+    console.print(f"跑 `v3 ai-surface --write` 生成 `{ai_surface.doc_path().as_posix()}`。")
 
 
 # ── political-surface（M5：政治候选静态语义）────────────────────
@@ -2658,6 +2666,10 @@ def _production_profile(
     verify both that contract and the complete installed identity/reader closure;
     a missing installation never silently selects the frozen copy instead.
     """
+    if name is None:
+        selected_version = version_contracts.active_version()
+        if selected_version == "1.15.0":
+            name = selected_version
     if name is None:
         if configuration is not None:
             raise ValueError("--configuration 必须同时指定 --profile 1.15.0")

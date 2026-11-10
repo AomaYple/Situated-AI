@@ -43,6 +43,7 @@ __pycache__/
 # 官方原文本地镜像（research/official-docs/）是被忽略的本机副本，原始文件按版权和体积不入库；
 # 入库的只有 research/official-docs.manifest.json
 /research/official-docs/
+/research/official-docs-*/
 
 # 临时盘点、补丁和日志
 /tools/_*.py
