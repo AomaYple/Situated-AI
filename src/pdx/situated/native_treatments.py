@@ -19,6 +19,7 @@ import hashlib
 import json
 import re
 from collections import Counter, defaultdict
+from copy import deepcopy
 from dataclasses import asdict, replace
 from decimal import Decimal
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -33,6 +34,68 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .vanilla_inventory import VanillaInventory, VanillaSurface
+
+
+class _AuditMetadata:
+    """Own only the metadata fields used by one exact candidate audit.
+
+    Readers receive independent copies of this small projection, never the
+    authoritative parsed object. Another candidate must create its own owner;
+    neither decoded caller documents nor a global cache are used.
+    The continuous-writer entry keeps its stricter UTF-8 text decoding contract,
+    while the native byte readers retain json.loads(bytes) encoding semantics.
+    """
+
+    def __init__(self, raw: str | bytes) -> None:
+        self._raw = raw
+        self._loaded = False
+        self._text_loaded = False
+        self._document: Any = None
+
+    def _require(self, raw: str | bytes) -> None:
+        if raw != self._raw:
+            raise ValueError("audit metadata candidate bytes changed")
+
+    def document(self, raw: str | bytes, *, utf8_text: bool = False) -> Any:
+        self._require(raw)
+        if not self._loaded or (utf8_text and not self._text_loaded):
+            value = raw.decode("utf-8") if utf8_text and isinstance(raw, bytes) else raw
+            document = json.loads(value)
+            # Do not retain the full Unicode copy during later AST validation.
+            del value
+            if isinstance(document, dict):
+                projection = {
+                    key: document[key]
+                    for key in (
+                        "consumer_adapters",
+                        "decision_rules",
+                        "source_fingerprint",
+                        "enabled_modules",
+                        "default_field_owners",
+                        "country_state",
+                        "situated_actions",
+                    )
+                    if key in document
+                }
+                actions = projection.get("situated_actions")
+                if isinstance(actions, dict):
+                    projection["situated_actions"] = {
+                        key: actions[key] for key in ("consumer_ir",) if key in actions
+                    }
+                self._document = projection
+            else:
+                # Preserve each consumer's original type failure for malformed roots.
+                self._document = document
+            self._loaded = True
+            self._text_loaded = utf8_text
+        # Keep the original independent-reader semantics without copying the
+        # discarded full lowering witnesses and other engineering-only metadata.
+        return deepcopy(self._document)
+
+    def sha256(self, raw: str | bytes) -> str:
+        self._require(raw)
+        return hashlib.sha256(raw if isinstance(raw, bytes) else raw.encode()).hexdigest()
+
 
 _NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)\Z")
 _STATUSES = (
@@ -605,9 +668,13 @@ class _Dependencies:
         source_hashes: Mapping[str, str],
         *,
         production_complete: bool = False,
+        _metadata: _AuditMetadata | None = None,
     ) -> None:
+        if _metadata is not None and type(_metadata) is not _AuditMetadata:
+            raise TypeError("audit metadata must be a byte-bound audit owner")
         self.native, self.effective = native, effective
         self.production_complete = production_complete
+        self._metadata = _metadata
         # Bytes are immutable; snapshot the mappings so every proof/cache in
         # this audit instance refers to the same supplied candidate inputs.
         self.native_bytes, self.effective_bytes = dict(native_bytes), dict(effective_bytes)
@@ -667,6 +734,16 @@ class _Dependencies:
                     "effective_ast_sha256": None,
                 }
             )
+
+    def metadata_scope(self) -> _AuditMetadata:
+        raw = self.effective_bytes[".metadata/metadata.json"]
+        if self._metadata is None:
+            self._metadata = _AuditMetadata(raw)
+        return self._metadata
+
+    def metadata_document(self) -> Any:
+        raw = self.effective_bytes[".metadata/metadata.json"]
+        return self.metadata_scope().document(raw)
 
     def references(self, node: Assignment, *, numeric: bool = False) -> set[tuple[str, str]]:
         found: set[tuple[str, str]] = set()
@@ -1250,7 +1327,7 @@ class _Dependencies:
                 self.parameter_adapters_loaded = True
                 self.parameter_adapters = decision_adapters.load()
             adapters = self.parameter_adapters
-            document = json.loads(self.effective_bytes[".metadata/metadata.json"])
+            document = self.metadata_document()
             metadata = document["consumer_adapters"]
             if (
                 metadata.get("schema") != 1
@@ -1974,7 +2051,7 @@ class _Dependencies:
                 )
             self.country_parameter_helpers = parameter_helpers
             self.country_contract_checked = True
-            metadata = json.loads(self.effective_bytes[".metadata/metadata.json"])
+            metadata = self.metadata_document()
             self.country_contract_present = "country_state" in metadata
             fingerprint = metadata["source_fingerprint"]
             expected_contract = country_state.contract(policy)
@@ -2325,7 +2402,9 @@ def _support_program_proof(
     from . import audit, domain_coverage, support_program  # noqa: PLC0415
 
     try:
-        bindings = audit._production_continuous_bindings(generated_sources)
+        bindings = audit._production_continuous_bindings(
+            generated_sources, _metadata=dependencies.metadata_scope()
+        )
         if len(bindings) != 1:
             return {}
         binding = bindings[0]
@@ -2339,7 +2418,7 @@ def _support_program_proof(
             return {}
         program = binding.writer.program
         assert isinstance(program, support_program.SupportProgram)
-        metadata = json.loads(generated_sources[".metadata/metadata.json"])
+        metadata = dependencies.metadata_document()
         fingerprint = metadata["source_fingerprint"]
         if (
             fingerprint.get("support_program_generator_sha256")
@@ -3107,6 +3186,7 @@ def native_treatments(
     *,
     coverage: Mapping[str, Any] | None = None,
     production_complete: bool = False,
+    _metadata: _AuditMetadata | None = None,
 ) -> dict[str, Any]:
     """Retain every declaration and independently check native protection duties.
 
@@ -3145,6 +3225,7 @@ def native_treatments(
         effective_bytes,
         inventory.source_hashes,
         production_complete=production_complete,
+        _metadata=_metadata,
     )
     covered, receipt_issues = _coverage_rows(inventory, coverage)
     unknown_scopes = set(inventory.unknown_scopes)

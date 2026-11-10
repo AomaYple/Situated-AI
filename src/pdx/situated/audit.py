@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
 def _production_continuous_bindings(
     generated: Mapping[str, str | bytes],
+    *,
+    _metadata: native_treatments._AuditMetadata | None = None,
 ) -> tuple[domain_coverage.ContinuousProgramBinding, ...]:
     """Read continuous semantics from the same actual package output being audited.
 
@@ -67,8 +69,11 @@ def _production_continuous_bindings(
         return nodes[0]
 
     try:
-        metadata_text = text(generated.get(".metadata/metadata.json", "{}"))
-        metadata = json.loads(metadata_text)
+        if _metadata is not None and type(_metadata) is not native_treatments._AuditMetadata:
+            raise TypeError("audit metadata must be owned by this candidate's byte-bound scope")
+        metadata_raw = generated.get(".metadata/metadata.json", "{}")
+        metadata_owner = _metadata or native_treatments._AuditMetadata(metadata_raw)
+        metadata = metadata_owner.document(metadata_raw, utf8_text=True)
         bundle = metadata.get("situated_actions", {}).get("consumer_ir", {})
         rows = bundle.get("writers", [])
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
@@ -182,7 +187,7 @@ def _production_continuous_bindings(
             production_source=source,
             production_sha256=hashlib.sha256(content.encode()).hexdigest(),
             overlay_sha256=hashlib.sha256(blocks[0].group("body").encode()).hexdigest(),
-            metadata_sha256=hashlib.sha256(metadata_text.encode()).hexdigest(),
+            metadata_sha256=metadata_owner.sha256(metadata_raw),
         )
         problem = domain_coverage.continuous_writer_issue(binding)
         if problem is not None:
@@ -216,6 +221,16 @@ def native_report() -> dict[str, object]:
     from .architecture_receipts import source_snapshot  # noqa: PLC0415
 
     _policy, _extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
+    # All later consumers accept bytes. Convert once and release the much larger
+    # engineering Unicode payload before building the native/effective AST indexes.
+    generated_bytes = {
+        name: text.encode("utf-8") if isinstance(text, str) else text
+        for name, text in generated.items()
+    }
+    del generated
+    metadata = native_treatments._AuditMetadata(
+        generated_bytes.get(".metadata/metadata.json", b"{}")
+    )
     model = load_model()
     scope = vanilla_inventory.discover()
     sources = {
@@ -237,17 +252,15 @@ def native_report() -> dict[str, object]:
         },
         native_sources=sources,
         production_policies=dict(decision_adapters.load().policies),
-        continuous_programs=_production_continuous_bindings(generated),
+        continuous_programs=_production_continuous_bindings(generated_bytes, _metadata=metadata),
     )
     treatments = native_treatments.native_treatments(
         scope,
         sources,
-        {
-            name: text.encode("utf-8") if isinstance(text, str) else text
-            for name, text in generated.items()
-        },
+        generated_bytes,
         coverage=coverage,
         production_complete=True,
+        _metadata=metadata,
     )
     return {
         "schema": 1,
