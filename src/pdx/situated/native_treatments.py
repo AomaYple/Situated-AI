@@ -24,6 +24,7 @@ from decimal import Decimal
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
+from .. import version_contracts  # noqa: TID252
 from ..model import Assignment, Block, Scalar  # noqa: TID252
 from ..parser import parse_bytes  # noqa: TID252
 from . import pdx_eval
@@ -451,6 +452,22 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
     if node.op != "=" or node.prefix is not None:
         return "needs_review"
     family, field, value = _family(surface.source), surface.field, node.value
+    if surface.operation == "first_nonzero_active_change_law_chance_else_default":
+        return (
+            "dynamic_numeric"
+            if (
+                version_contracts.active_version() == "1.15.0"
+                and surface.source == "common/ai_strategies/00_default_strategy.txt"
+                and surface.definition == "ai_strategy_default"
+                and surface.field == "change_law_chance"
+                and surface.actor_scope == "country"
+                and surface.target_scope == "none"
+                and surface.capability == "direct"
+                and surface.legal
+                and isinstance(value, (Block, Scalar))
+            )
+            else "needs_review"
+        )
     if surface.operation in _EXACT_DEFAULT_OPERATIONS.values():
         return (
             "dynamic_numeric"

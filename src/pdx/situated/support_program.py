@@ -10,6 +10,8 @@ import math
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Literal
 
+from pdx import version_contracts
+
 if TYPE_CHECKING:
     from pdx.decisions import Extensions
 
@@ -163,6 +165,11 @@ class SupportProgram:
         return self.market is not None or bool(self.defense)
 
     def as_dict(self) -> dict[str, object]:
+        native_source = "research/vanilla-ai/1.14.5/00_default_strategy.txt:180-188"
+        if version_contracts.active_version() == "1.15.0":
+            from .compiler import support_evaluation_context  # noqa: PLC0415
+
+            native_source = ";".join(support_evaluation_context().evidence)
         return {
             **asdict(self),
             "operation": "add",
@@ -171,7 +178,7 @@ class SupportProgram:
             "defense_direction": "target_positive_initiator_negative",
             "defense_partner": "country_if_target_enemy_country_if_initiator",
             "direction_fact": "exists = scope:is_initiator",
-            "native_source": "research/vanilla-ai/1.14.5/00_default_strategy.txt:180-188",
+            "native_source": native_source,
             "unknown_policy": "core_vanilla_auxiliary_local",
             "single_clamp": True,
             "vanilla_tail": "preserve",

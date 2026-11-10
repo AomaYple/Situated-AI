@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import decision_intents, distribution
+from pdx import decision_intents, distribution, version_contracts
 from pdx.situated import pdx_eval
 
 
@@ -69,7 +69,9 @@ def test_release_is_the_public_full_candidate():
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
     assert metadata["version"] == distribution.RELEASE_VERSION
-    assert metadata["status"] == "released"
+    assert metadata["status"] == (
+        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+    )
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",
@@ -85,6 +87,7 @@ def test_release_is_the_public_full_candidate():
     assert all("probe" not in name.lower() for name in files)
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("key", ["fallback_languages", "production_fallback_languages"])
 def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch, key):
     metadata: dict[str, dict[str, list[str]]] = {
@@ -96,19 +99,6 @@ def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch
     metadata["localization"][key] = ["french"]
     files = {".metadata/metadata.json": json.dumps(metadata)}
     monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
-    monkeypatch.setattr(distribution.country_state, "validate", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
-    monkeypatch.setattr(
-        distribution.decision_interfaces, "verify_scripted_trigger_game", lambda *_args: ()
-    )
-    monkeypatch.setattr(distribution.engine_scope, "verify_company_game", lambda *_args: None)
-    monkeypatch.setattr(
-        distribution.engine_scope, "verify_company_defaults_game", lambda *_args: None
-    )
-    monkeypatch.setattr(distribution.company_sectors, "verify_game", lambda *_args: None)
-    monkeypatch.setattr(distribution.equipment_opportunities, "verify_game", lambda *_args: None)
-    monkeypatch.setattr(distribution.treaty_opportunities, "verify_game", lambda *_args: None)
-    monkeypatch.setattr(distribution.mobilization_opportunities, "verify_game", lambda *_args: None)
     with pytest.raises(ValueError, match="未翻译"):
         distribution.package_inputs()
     assert json.loads(files[".metadata/metadata.json"]) == metadata

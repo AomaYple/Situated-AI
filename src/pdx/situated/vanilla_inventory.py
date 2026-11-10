@@ -15,9 +15,9 @@ from dataclasses import asdict, dataclass, replace
 from itertools import pairwise
 from math import isfinite
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from .. import config  # noqa: TID252
+from .. import config, version_contracts  # noqa: TID252
 from ..lexer import ATOM, LBRACE, OP, RBRACE, STRING, tokenize  # noqa: TID252
 from ..model import Assignment, Block, Scalar  # noqa: TID252
 from ..parser import PREFIXES, parse_bytes  # noqa: TID252
@@ -85,6 +85,29 @@ _PARAMETER_EVIDENCE_HASHES = {
     "events/law_events/state_atheism.txt": "156c7e20ba3326e8aacb0bc3c91acdb9b6bf84988a15d9357467e707ee9e30ec",
     "events/tech_events/trench_warfare.txt": "d859e625e0843d5d56d515b647e7833a0cb5eb3e5d85b233d4d1be697be1a93e",
 }
+_PARAMETER_115_SOURCE = engine_scope.REPO / "research/situated/1.15.0/inventory-parameters.json"
+_PARAMETER_115_SHA256 = "23d3f599515b08e1defda6f6e3abafbf644b8a0e1881afb403b2ee260c4bbb75"
+
+
+def _parameter_evidence_contract() -> dict[str, str]:
+    if version_contracts.active_version() == "1.14.5":
+        return _PARAMETER_EVIDENCE_HASHES
+    raw = _PARAMETER_115_SOURCE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _PARAMETER_115_SHA256:
+        raise ValueError("1.15 参数原版来源合同漂移")
+    data = json.loads(raw)
+    if (
+        set(data) != {"schema", "version", "evidence_kind", "runtime", "sources"}
+        or data["schema"] != 1
+        or data["version"] != "1.15.0"
+        or data["evidence_kind"] != "native_static"
+        or data["runtime"] != "unknown"
+        or set(data["sources"]) != set(_PARAMETER_EVIDENCE_HASHES)
+    ):
+        raise ValueError("1.15 参数原版来源集合或证据边界漂移")
+    return cast("dict[str, str]", data["sources"])
+
+
 _MAP_FIELDS = frozenset(
     {
         "building_group_weights",
@@ -2669,7 +2692,7 @@ def parameter_evidence_hashes(game: Path) -> dict[str, str]:
     replace their identity or grant a getter permission.
     """
     hashes = {}
-    for name, expected in _PARAMETER_EVIDENCE_HASHES.items():
+    for name, expected in _parameter_evidence_contract().items():
         path = game / name
         if not path.is_file():
             continue
@@ -2687,9 +2710,10 @@ def parameter_evidence_hashes(game: Path) -> dict[str, str]:
 def discover(*, game: Path | None = None) -> VanillaInventory:
     """现读原版完整相关 common 定义；解析不完整或版本漂移均显式失败。"""
     root = game if game is not None else config.GAME
+    locked_version = version_contracts.active_version()
     version = config.game_version(root.parent)
-    if version["caligula_branch"] != f"release/{LOCKED_VERSION}":
-        raise ValueError(f"原版版本必须锁定 {LOCKED_VERSION}：{version['caligula_branch']!r}")
+    if version["caligula_branch"] != f"release/{locked_version}":
+        raise ValueError(f"原版版本必须锁定 {locked_version}：{version['caligula_branch']!r}")
     missing_version = [name for name, value in version.items() if not value]
     if missing_version:
         raise ValueError(f"原版版本指纹缺失：{', '.join(missing_version)}")
@@ -2914,7 +2938,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
         }
     )
     return VanillaInventory(
-        f"victoria3-{LOCKED_VERSION}:{_digest(hashes)}",
+        f"victoria3-{locked_version}:{_digest(hashes)}",
         dict(sorted(hashes.items())),
         scope_hash,
         surfaces_tuple,

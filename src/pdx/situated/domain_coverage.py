@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from pdx import decision_adapters, decision_rules
+from pdx import decision_adapters, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.textio import normalized_text
@@ -28,6 +28,13 @@ if TYPE_CHECKING:
 
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_SOURCE = REPO / "mod" / "decisions" / "domain_actions.toml"
+
+
+def source_path() -> Path:
+    """Use the current generated count ledger with unchanged domain contracts."""
+    if version_contracts.active_version() == "1.15.0":
+        return DEFAULT_SOURCE.parent / "1.15.0" / DEFAULT_SOURCE.name
+    return DEFAULT_SOURCE
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,37 +193,20 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
     ):
         return "continuous_writer_contract_mismatch"
     context = writer.evaluation_context
-    source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+    from .compiler import support_evaluation_context  # noqa: PLC0415
+
+    try:
+        expected_context = support_evaluation_context()
+    except (OSError, ValueError):
+        return "evaluation_context_unproven"
     if context is None or context.status != "observed" or context.actor_scope is None:
         return "evaluation_context_unproven"
-    if asdict(context.actor_scope) != {
-        "name": "root",
-        "kind": "country",
-        "role": "actor",
-        "source": source,
-        "line": 183,
-    }:
+    if context.actor_scope != expected_context.actor_scope:
         return "actor_type_mismatch"
-    expected_targets = (
-        {
-            "name": "target_country",
-            "kind": "country",
-            "role": "target",
-            "source": source,
-            "line": 184,
-        },
-        {
-            "name": "enemy_country",
-            "kind": "country",
-            "role": "target",
-            "source": source,
-            "line": 185,
-        },
-    )
     if (
-        tuple(asdict(row) for row in context.targets) != expected_targets
+        context.targets != expected_context.targets
         or context.auxiliary_scopes
-        or context.evidence != tuple(f"{source}:{line}" for line in (183, 184, 185))
+        or context.evidence != expected_context.evidence
     ):
         return "target_type_mismatch"
     return None
@@ -367,7 +357,12 @@ def _native_context_issue(
         "diplomatic_play_boldness": ("native_randomized_additive_boldness", {"add"}),
         "min_law_chance_to_pass": ("override_pass_chance_threshold", {"add"}),
         "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
-        "change_law_chance": ("additive_percentage_chance", {"add"}),
+        "change_law_chance": (
+            "first_nonzero_active_change_law_chance_else_default"
+            if version_contracts.active_version() == "1.15.0"
+            else "additive_percentage_chance",
+            {"add"},
+        ),
         "max_progressiveness": ("override_progressiveness_limit", {"add"}),
         "max_regressiveness": ("override_regressiveness_limit", {"add"}),
         "recklessness": ("additive_strength_estimate_multiplier", {"add"}),
@@ -819,7 +814,7 @@ class _NativeBindingProofs:
             "default": row["define_field"],
             "default_value": row["default_value"],
             "evidence": [
-                engine_scope.COMPANY_DEFAULT_MANIFEST_ID,
+                engine_scope._company_manifest(default=True)[1],
                 f"{row['define_source']}:{row['define_line']}",
                 f"{binding.source}:{definition.line}",
             ],
@@ -850,12 +845,12 @@ class _NativeBindingProofs:
             and context.actor_scope is not None
             and context.actor_scope.name == "root"
             and context.actor_scope.kind == "country"
-            and context.actor_scope.source == engine_scope.COMPANY_MANIFEST_ID
+            and context.actor_scope.source == engine_scope._company_manifest()[1]
             and not context.targets
             and not context.auxiliary_scopes
-            and f"{engine_scope.COMPANY_MANIFEST_ID}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}"
+            and f"{engine_scope._company_manifest()[1]}:sha256={engine_scope._company_manifest()[2]}"
             in context.evidence
-            and f"{engine_scope.COMPANY_MANIFEST_ID}:definition_only:company_type"
+            and f"{engine_scope._company_manifest()[1]}:definition_only:company_type"
             in context.evidence
         )
 
@@ -1322,9 +1317,10 @@ CHAINS: tuple[JointChain, ...] = (
 )
 
 
-def render_counts(path: Path = DEFAULT_SOURCE) -> str:
+def render_counts(path: Path | None = None) -> str:
     """Update only generated per-domain instance counts in the source ledger."""
 
+    path = source_path() if path is None else path
     text = path.read_text(encoding="utf-8")
     data = tomllib.loads(text)
     if data.get("schema") != 1 or not isinstance(data.get("domains"), dict):
@@ -1355,9 +1351,10 @@ def render_counts(path: Path = DEFAULT_SOURCE) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
-def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
+def check_counts(path: Path | None = None) -> list[str]:
     """Return a clear error when checked-in generated counts are stale."""
 
+    path = source_path() if path is None else path
     try:
         actual = path.read_text(encoding="utf-8")
         expected = render_counts(path)
@@ -1371,11 +1368,12 @@ def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
 
 
 def load(
-    path: Path = DEFAULT_SOURCE,
+    path: Path | None = None,
     *,
     information: decision_rules.RuleSet | None = None,
     adapters: decision_adapters.AdapterSet | None = None,
 ) -> dict[str, DomainCoverage]:
+    path = source_path() if path is None else path
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if data.get("schema") != 1 or set(data) != {"schema", "domains", "chains"}:
         raise ValueError("domain_actions.toml schema 无效")

@@ -29,6 +29,7 @@ from . import (
     decision_interfaces,
     decision_rules,
     decision_security,
+    version_contracts,
 )
 from .localization_languages import (
     DEFAULT_LANGUAGES,
@@ -47,7 +48,7 @@ from .situated import pdx_eval as situated_pdx_eval
 from .situated import support_program
 from .situated.compiler import load_model as load_situated_model
 from .situated.compiler import strategy_overlay as compile_situated_overlay
-from .situated.decision_ir import ContextBinding, EvaluationContext, WriterDecisionIR
+from .situated.decision_ir import WriterDecisionIR
 from .textio import normalized_text
 from .vanilla_index import (
     KEY_DIRS,
@@ -69,7 +70,26 @@ def _country_state_module():
 
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
 PRODUCT = config.REPO / "mod"
+_HISTORICAL_PRODUCT = PRODUCT
 BASELINE = config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+_HISTORICAL_BASELINE = BASELINE
+
+
+def baseline_path() -> Path:
+    return (
+        situated_compiler.baseline_path()
+        if version_contracts.active_version() == "1.15.0" and BASELINE == _HISTORICAL_BASELINE
+        else BASELINE
+    )
+
+
+def product_path() -> Path:
+    """The complete compatibility tree is isolated from historical and R2 output."""
+    if version_contracts.active_version() == "1.15.0" and PRODUCT == _HISTORICAL_PRODUCT:
+        return config.REPO / "tools/out/compatibility/1.15.0"
+    return PRODUCT
+
+
 RISK_VAR = "sitai_fiscal_risk"
 ACTIVE_TRIGGER = "sitai_fiscal_external_risk"
 TOOL_VERSION = __version__
@@ -830,6 +850,20 @@ def load(source: Path = SOURCE) -> Policy:
         or not -1 <= policy.aggression <= 0
     ):
         raise ValueError("外交偏置必须为有限数且位于声明方向的保守范围内")
+    if version_contracts.active_version() == "1.15.0" and source.resolve() == SOURCE.resolve():
+        from .situated import compatibility_115, engine_scope  # noqa: PLC0415
+
+        authority = compatibility_115.snapshot()
+        current = json.loads(authority)
+        policy = replace(
+            policy,
+            game_version="1.15.0",
+            baseline_sha256=current["baseline_sha256"],
+            package=replace(policy.package, status="candidate", parent="vanilla-1.15.0"),
+            source_sha256=hashlib.sha256(
+                raw + authority + engine_scope.strategy_snapshot()
+            ).hexdigest(),
+        )
     return policy
 
 
@@ -1167,7 +1201,7 @@ def metadata_payload(
         "source_fingerprint": source_fingerprint(
             policy,
             extensions,
-            baseline if baseline is not None else BASELINE.read_text(encoding="utf-8"),
+            baseline if baseline is not None else baseline_path().read_text(encoding="utf-8"),
             country_policy,
             situated_model=situated_model,
         ),
@@ -1214,8 +1248,12 @@ def build(
     consumer_adapters: decision_adapters.AdapterSet | None = None,
     country_policy: CountryPolicy | None = None,
 ) -> dict[str, str]:
+    if version_contracts.active_version() == "1.15.0":
+        from .situated import compatibility_115  # noqa: PLC0415
+
+        compatibility_115.verify_game(config.GAME)
     policy = policy or load()
-    baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
+    baseline = baseline if baseline is not None else baseline_path().read_text(encoding="utf-8")
     extensions = extensions or load_extensions()
     situated_model = load_situated_model(baseline=baseline)
     supply_enabled = (
@@ -1290,7 +1328,6 @@ def build(
         bundle = situated_model.consumer_ir
         if bundle is None:
             raise ValueError("支持程序缺少统一消费者IR")
-        source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
         support_writer = WriterDecisionIR(
             writer_id=support.writer_id,
             kind="support_program",
@@ -1304,14 +1341,7 @@ def build(
             vanilla_tail="preserve",
             owner="situated_kernel",
             program=support,
-            evaluation_context=EvaluationContext(
-                actor_scope=ContextBinding("root", "country", "actor", source, 183),
-                targets=(
-                    ContextBinding("target_country", "country", "target", source, 184),
-                    ContextBinding("enemy_country", "country", "target", source, 185),
-                ),
-                evidence=tuple(f"{source}:{line}" for line in (183, 184, 185)),
-            ),
+            evaluation_context=situated_compiler.support_evaluation_context(),
         )
         situated_model = replace(
             situated_model,
@@ -1814,7 +1844,7 @@ def validate(
     if extensions.diplomacy_enabled:
         interfaces |= {"recklessness", "in_default", "taking_loans"}
     # 财政值属于独立的原版 script value 参考，而不是四个通用词汇目录。
-    fiscal_words = vocabulary_dir(BASELINE.parent) if policy.enabled else set()
+    fiscal_words = vocabulary_dir(baseline_path().parent) if policy.enabled else set()
     if policy.enabled:
         fiscal_words |= {"credit", "weeks_until_bankruptcy"}
     if vocabulary is None:
@@ -1823,7 +1853,7 @@ def validate(
     else:
         vocabulary_words = vocabulary
         vocabulary_uncovered = False
-    key_words = vocabulary_dir(BASELINE.parent)
+    key_words = vocabulary_dir(baseline_path().parent)
     variable_words: set[str] = set()
     variable_uncovered = False
     script_value_interfaces = interfaces & {"economic_dependence"}
@@ -1927,11 +1957,11 @@ def validate(
         path = game / "common/ai_strategies/00_default_strategy.txt"
         if not path.is_file() or normalized_text(
             path.read_text(encoding="utf-8-sig")
-        ) != BASELINE.read_text(encoding="utf-8"):
+        ) != baseline_path().read_text(encoding="utf-8"):
             issues.append("本机默认策略与锁定底本不一致，需重审版本")
     if game is not None and policy.enabled:
         path = game / "common/script_values/war_support_values.txt"
-        reference = BASELINE.parent / "war_support_values.txt"
+        reference = baseline_path().parent / "war_support_values.txt"
         if not path.is_file() or normalized_text(
             path.read_text(encoding="utf-8-sig")
         ) != reference.read_text(encoding="utf-8"):

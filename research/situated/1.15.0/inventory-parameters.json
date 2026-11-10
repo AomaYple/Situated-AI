@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "version": "1.15.0",
+  "evidence_kind": "native_static",
+  "runtime": "unknown",
+  "sources": {
+    "common/achievements/base_achievements.txt": "276ed2057159ccc2c2b6ebe874e4e97a935300b9707d9b110e553f3c9c68602e",
+    "common/achievements/ep1_sphere_of_influence_achievements.txt": "323263f0483c14145c79b2a054bc7dd04aee5783731e5204604861d602cd4969",
+    "common/achievements/ip2_pivot_of_empire_achievements.txt": "bf84a18412b573a3e141b42c192de3c4bfaa203bd3e95f843abcbcd81c79aba4",
+    "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
+    "common/alert_types/00_alert_types.txt": "ca60cb0f7425744d2695560d905f4ec58bbeb9dd3e6f1aedfcc891ceb23a55e3",
+    "common/combat_unit_types/00_land_combat_unit_types.txt": "ad3ed3d68533cbe6ef05ce014cd88b920b58dc4a42b3e566077cdccee072d86c",
+    "common/goods/00_goods.txt": "5ef25e76d498cd4a8603732712a8248e03cb782d9e41bb95daba6dfd87feb0ab",
+    "common/ideologies/00_ig_ideologies.txt": "c2ef71fe0b3f880e84be534bcaee21335902a23747105365544a8c210c2f3e00",
+    "common/journal_entries/00_urbanization.txt": "dff544be003ef9c6283132b38696bf2b765f170aa0a06771a6ce4afc820fd622",
+    "common/objective_subgoals/00_subgoals_tutorial.txt": "68267cce9b75ec0a54b0b2d1d5aa08e20966a7b313f091d54484d8490d38ed36",
+    "common/political_movements/00_ideological_movements.txt": "6c1c4ae0a9b3d3f65165093fc3f52b32beb20cfebfd955e797053de8db119d8c",
+    "common/political_movements/05_slave_revolt_movements.txt": "69114fd9f15b4861239e665a80a70ffdc2a2183566b2e55ab64d1bee0554dcd4",
+    "common/pop_types/laborers.txt": "3b136e31556cd483ea213c82eef47c93f9774490775870622331f6139160d9f2",
+    "common/pop_types/machinists.txt": "5960f8b6cc15e67b1305bf5d0d74368d2004572099b87ce4c6c827818497c39f",
+    "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
+    "events/french_pretenders_pulse.txt": "b1d254844b314f0c7f171bd61527b3775c5e97807896f49a6dfcf34ef5720e6b",
+    "events/law_events/children_rights_events.txt": "bdb5ea9473b80f219f95b339a3a86cd59eb19bc57b03a21aea6d8f17a0383a49",
+    "events/law_events/state_atheism.txt": "8fbd174607585f541ffa30a5ad9233aa148fbb499de63d227b38312bb7249d44",
+    "events/tech_events/trench_warfare.txt": "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d"
+  }
+}

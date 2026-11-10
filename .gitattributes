@@ -34,6 +34,10 @@ research/situated/a2-evidence/**/*.whl binary
 # 历史归档对象保留压缩前精确原始字节，不做文本规范化。
 docs/design/archive/objects/**/*.gz binary
 research/official-docs/** -diff linguist-vendored
+# Compatibility baselines normalize only UTF-8 BOM/LF at capture. Upstream
+# whitespace remains part of the separately pinned native text contract.
+research/vanilla-ai/1.15.0/00_default_strategy.txt whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+research/vanilla-ai/1.15.0/war_support_values.txt whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
 # Only the ten locked 1.15 upstream inputs preserve their original bytes.
 research/vanilla-ai/1.15.0/native/launcher/launcher-settings.json binary
 research/vanilla-ai/1.15.0/native/caligula_branch.txt binary

@@ -7,6 +7,7 @@ import codecs
 import hashlib
 import json
 import re
+import stat
 import struct
 import tempfile
 import zipfile
@@ -23,7 +24,9 @@ from pdx import (
     decisions,
     equipment_opportunities,
     mobilization_opportunities,
+    observation_queries,
     treaty_opportunities,
+    version_contracts,
 )
 from pdx.generation_transaction import GenerationTransaction
 from pdx.localization import parse_loc_entries
@@ -68,13 +71,16 @@ def generation_contract() -> dict[str, object]:
     目录名是用户可见的交付接口；``MOD_ID`` 才是稳定的引擎/元数据身份。
     当前生成链只输出标准 Mod，长期行为验收由用户完成。
     """
+    compatibility = version_contracts.active_version() == "1.15.0"
     return {
         "schema": "sitai-distribution-v2",
         "mod_id": MOD_ID,
         "install_directory": INSTALL_DIRECTORY_NAME,
         "variant": RELEASE_VARIANT,
-        "publication_channel": "stable",
-        "artifact_kind": "production_release",
+        "publication_channel": "unpublished" if compatibility else "stable",
+        "artifact_kind": "engineering_compatibility_candidate"
+        if compatibility
+        else "production_release",
         "delivery_kind": "standard_mod",
         "with_explanation_probe": False,
         "behavior_quality": "not_evaluated",
@@ -247,7 +253,7 @@ def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object])
     if (
         metadata.get("id") != MOD_ID
         or metadata.get("version") != RELEASE_VERSION
-        or metadata.get("supported_game_version") != "1.14.5"
+        or metadata.get("supported_game_version") != version_contracts.active_version()
         or metadata.get("picture") != THUMBNAIL_NAME
     ):
         raise ValueError("正式包版本与锁定游戏不符")
@@ -523,20 +529,25 @@ def production_configuration(
         policy,
         enabled=True,
         aggression=0,
-        package=replace(policy.package, product_version=RELEASE_VERSION, status="released"),
+        package=replace(
+            policy.package,
+            product_version=RELEASE_VERSION,
+            status="candidate" if version_contracts.active_version() == "1.15.0" else "released",
+        ),
     )
     return policy, extensions
 
 
 def read_production_files() -> dict[str, str | bytes]:
     """读取受控生成物原始 UTF-8 字节，不折叠 CRLF 或移除 BOM。"""
+    product = decisions.product_path()
     files: dict[str, str | bytes] = {
-        path.relative_to(decisions.PRODUCT).as_posix(): path.read_bytes().decode("utf-8")
+        path.relative_to(product).as_posix(): path.read_bytes().decode("utf-8")
         for directory in ("common", "localization", ".metadata")
-        for path in sorted((decisions.PRODUCT / directory).rglob("*"))
+        for path in sorted((product / directory).rglob("*"))
         if path.is_file()
     }
-    thumbnail = decisions.PRODUCT / THUMBNAIL_NAME
+    thumbnail = product / THUMBNAIL_NAME
     if thumbnail.is_file():
         files[THUMBNAIL_NAME] = thumbnail.read_bytes()
     return files
@@ -548,10 +559,13 @@ def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     sources = [
         *sorted((root / "src/pdx").rglob("*.py")),
         *sorted((root / "mod/decisions").glob("*.toml")),
-        *sorted(decisions.BASELINE.parent.glob("*.txt")),
-        *sorted(decisions.BASELINE.parent.glob("*.json")),
+        *sorted(decisions.baseline_path().parent.glob("*.txt")),
+        *sorted(decisions.baseline_path().parent.glob("*.json")),
         *sorted((root / "research/situated").glob("*.json")),
     ]
+    if version_contracts.active_version() == "1.15.0":
+        sources.extend(sorted((root / "mod/decisions/1.15.0").glob("*.toml")))
+        sources.extend(sorted((root / "research/situated/1.15.0").glob("*.json")))
     if files is None:
         files = read_production_files()
     return (
@@ -580,9 +594,56 @@ def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
 
 def check_generation_lock() -> None:
     """拒绝未冻结的源码或产物漂移；原版 SHA 仍由有游戏生成链核验。"""
-    path = decisions.PRODUCT / "generation-lock.json"
+    path = decisions.product_path() / "generation-lock.json"
     if path.read_bytes() != generation_lock().encode("utf-8"):
         raise ValueError("生产源码或产物与冻结记录不一致：用锁定原版运行 modgen --write")
+
+
+def verify_compatibility_installation() -> None:
+    """Recheck the complete legacy read/write closure at every materialization boundary."""
+    try:
+        engine_scope.verify_strategy_game(config.GAME)
+        engine_scope.verify_company_game(config.GAME)
+        decision_interfaces.verify_scripted_trigger_game(config.GAME)
+        if version_contracts.active_version() == "1.15.0":
+            from .situated import (  # noqa: PLC0415
+                compatibility_115,
+                engine_building_115,
+                engine_reader_115,
+            )
+
+            compatibility_115.verify_game(config.GAME)
+            engine_building_115.verify_game(config.GAME)
+            engine_reader_115.verify_game(config.GAME)
+        engine_scope.verify_company_defaults_game(config.GAME)
+        company_sectors.verify_game(config.GAME)
+        equipment_opportunities.verify_game(config.GAME)
+        treaty_opportunities.verify_game(config.GAME)
+        mobilization_opportunities.verify_game(config.GAME)
+        # read_inputs validates every current adapter baseline and its full
+        # native source closure rather than trusting metadata from the build.
+        adapters = decisions.decision_adapters.load()
+        inputs = decisions.decision_adapters.read_inputs(adapters)
+        information = decisions.decision_rules.load()
+        baseline = (config.GAME / "common/ai_strategies/00_default_strategy.txt").read_text(
+            encoding="utf-8-sig"
+        )
+        if hashlib.sha256(decisions.normalized_text(baseline).encode()).hexdigest() != (
+            information.baseline_sha256
+        ):
+            raise ValueError("全域规则底本漂移，拒绝生成")
+        for rules in (information, *(rules for _, rules in adapters.policies)):
+            for reader in rules.readers:
+                if reader.engine not in observation_queries.QUERY_ENGINES:
+                    continue
+                query = observation_queries.from_reader(reader.engine, dict(reader.parameters))
+                for source in observation_queries.required_sources(query):
+                    if source not in inputs:
+                        inputs[source] = (config.GAME / source).read_text(encoding="utf-8-sig")
+                observation_queries.compile_query(query, inputs)
+        country_state.validate(country_state.load(), config.GAME)
+    except FileNotFoundError as exc:
+        raise ValueError(f"缺少锁定游戏原件：{exc.filename}") from exc
 
 
 def package_inputs(
@@ -592,18 +653,8 @@ def package_inputs(
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
     policy, extensions = production_configuration(profile=profile)
-    try:
-        engine_scope.verify_strategy_game(config.GAME)
-        decision_interfaces.verify_scripted_trigger_game(config.GAME)
-        engine_scope.verify_company_defaults_game(config.GAME)
-        company_sectors.verify_game(config.GAME)
-        equipment_opportunities.verify_game(config.GAME)
-        treaty_opportunities.verify_game(config.GAME)
-        mobilization_opportunities.verify_game(config.GAME)
-    except FileNotFoundError as exc:
-        raise ValueError(f"缺少锁定游戏原件：{exc.filename}") from exc
+    verify_compatibility_installation()
     country_policy = country_state.load()
-    country_state.validate(country_policy, config.GAME)
     if not country_policy.enabled:
         raise ValueError("正式包必须启用 country_state")
     strategy = decision_intents.load()
@@ -643,6 +694,7 @@ def package_inputs(
         files[METADATA_NAME] = (
             json.dumps(launcher_metadata(metadata), ensure_ascii=False, indent=2) + "\n"
         )
+    verify_compatibility_installation()
     return policy, extensions, files
 
 
@@ -697,21 +749,88 @@ def package(
     profile: production_profile.ProductionProfile | None = None,
 ) -> Path:
     """核对仓库生成物后，生成唯一正式包。"""
+    source_lock = generation_lock({})
     policy, extensions, internal_files = package_inputs(
         include_engineering_metadata=True, profile=profile
     )
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
     production_files = {name: text for name, text in files.items() if name != "README.md"}
-    issues = decisions.check(decisions.PRODUCT, production_files)
+    if version_contracts.active_version() == "1.15.0":
+        _profile_directory_files(decisions.product_path())
+    issues = decisions.check(decisions.product_path(), production_files)
     if issues:
         raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
+
+    def verify_before_replace() -> None:
+        verify_compatibility_installation()
+        if generation_lock({}) != source_lock:
+            raise ValueError("完整兼容打包期间源码发生漂移")
+        issues = decisions.check(decisions.product_path(), production_files)
+        if issues:
+            raise ValueError("完整兼容打包期间产物发生漂移：" + "; ".join(issues))
+        if version_contracts.active_version() == "1.15.0":
+            actual = _profile_directory_files(decisions.product_path())
+            if set(actual) != set(production_files) | {"generation-lock.json"}:
+                raise ValueError("完整兼容打包期间产物文件集合发生漂移")
+            check_generation_lock()
+
     return write_zip(
         files,
         destination,
         generation=_release_generation(policy, extensions, metadata),
         release=True,
+        before_replace=verify_before_replace,
     )
+
+
+def write_compatibility_outputs() -> dict[str, str | bytes]:
+    """Freeze complete 1.15 compatibility witnesses in their own checked tree.
+
+    This explicit engineering operation preserves both the historical mod lock
+    and the separately configured R2 candidate. Unknown output files fail closed.
+    """
+    if version_contracts.active_version() != "1.15.0":
+        raise ValueError("完整兼容生成只接受显式 1.15.0 合同")
+    source_lock = generation_lock({})
+    _, _, internal = package_inputs(include_engineering_metadata=True)
+    if generation_lock({}) != source_lock:
+        raise ValueError("完整兼容生成期间源码发生漂移")
+    files = {name: raw for name, raw in _release_files(internal).items() if name != "README.md"}
+    target = decisions.product_path()
+    if target.resolve() == decisions._HISTORICAL_PRODUCT.resolve():
+        raise ValueError("完整兼容生成拒绝覆盖历史正式 Mod")
+    _validate_paths(list(files))
+    lock = generation_lock(files)
+    expected = {
+        name: raw if isinstance(raw, bytes) else raw.encode("utf-8") for name, raw in files.items()
+    }
+    expected["generation-lock.json"] = lock.encode("utf-8")
+    actual = _profile_directory_files(target)
+    extras = sorted(set(actual) - set(expected))
+    if extras:
+        raise ValueError("完整兼容隔离产物包含额外文件，拒绝覆盖：" + ", ".join(extras))
+    with GenerationTransaction() as transaction:
+        transaction.replace({target / name: raw for name, raw in expected.items()})
+        if set(_profile_directory_files(target)) != set(expected):
+            raise ValueError("完整兼容生成期间产物文件集合发生漂移")
+        if generation_lock(files) != lock:
+            raise ValueError("完整兼容生成期间源码发生漂移")
+        issues = decisions.check(target, files)
+        if issues:
+            raise ValueError("完整兼容生成产物漂移：" + "; ".join(issues))
+        check_generation_lock()
+        verify_compatibility_installation()
+        # Live verification itself reads the full installation and can overlap
+        # a source/output change. Keep final repository checks inside rollback.
+        if generation_lock(files) != lock:
+            raise ValueError("完整兼容最终原件核验期间源码发生漂移")
+        final_paths = _profile_directory_files(target)
+        if set(final_paths) != set(expected) or any(
+            final_paths[name].read_bytes() != raw for name, raw in expected.items()
+        ):
+            raise ValueError("完整兼容最终原件核验期间产物发生漂移")
+    return files
 
 
 def profile_outputs(
@@ -835,14 +954,32 @@ def profile_output_root() -> Path:
 
 
 def _profile_directory_files(root: Path) -> dict[str, Path]:
-    if any(path.is_symlink() for path in (root, *root.parents)):
-        raise ValueError(f"1.15.0 隔离产物路径不能包含符号链接：{root}")
+    def reject_redirect(path: Path) -> None:
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            return
+        if (
+            stat.S_ISLNK(info.st_mode)
+            or (getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+            or path.resolve() != path.absolute()
+        ):
+            raise ValueError(f"1.15.0 隔离产物路径不能包含符号链接或重解析点：{path}")
+
+    for path in (root, *root.parents):
+        reject_redirect(path)
     if root.exists() and not root.is_dir():
         raise ValueError(f"1.15.0 隔离产物路径必须是目录：{root}")
-    paths = tuple(root.rglob("*"))
-    if any(path.is_symlink() for path in paths):
-        raise ValueError("1.15.0 隔离产物不能包含符号链接")
-    return {path.relative_to(root).as_posix(): path for path in paths if path.is_file()}
+    files = {}
+    pending = [root] if root.exists() else []
+    while pending:
+        for path in pending.pop().iterdir():
+            reject_redirect(path)
+            if path.is_dir():
+                pending.append(path)
+            elif path.is_file():
+                files[path.relative_to(root).as_posix()] = path
+    return files
 
 
 def check_profile_installation(
@@ -873,7 +1010,10 @@ def write_profile_outputs(
     the transaction, before original backups are discarded.
     """
     check_profile_installation(profile)
+    source_lock = profile_generation_lock(profile, {})
     files: dict[str, str | bytes] = dict(profile_outputs(profile, configuration=configuration))
+    if profile_generation_lock(profile, {}) != source_lock:
+        raise ValueError("1.15.0 构建期间源码发生漂移，已拒绝提交产物")
     _validate_paths(list(files))
     lock = profile_generation_lock(profile, files)
     expected = {
@@ -890,6 +1030,10 @@ def write_profile_outputs(
         if profile_generation_lock(profile, files) != lock:
             raise ValueError("1.15.0 生成期间源码发生漂移，已拒绝提交产物")
         check_profile_installation(profile)
+        if profile_generation_lock(profile, files) != lock:
+            raise ValueError("1.15.0 最终原件核验期间源码发生漂移，已拒绝提交产物")
+        if set(_profile_directory_files(target)) != set(expected):
+            raise ValueError("1.15.0 最终原件核验期间产物文件集合发生漂移")
         for name, raw in expected.items():
             if (target / name).read_bytes() != raw:
                 raise ValueError(f"1.15.0 生成期间产物发生漂移：{name}")

@@ -33,6 +33,8 @@ from . import (
     commitment,
     decision_ir,
     domain_coverage,
+    engine_building_115,
+    engine_reader_115,
     engine_scope,
     families,
     ir,
@@ -84,6 +86,76 @@ SUPPORTING_SOURCES = (
     "action_bindings.toml",
     "domain_actions.toml",
 )
+
+
+def baseline_path() -> Path:
+    """The full default strategy of the selected native version."""
+    if version_contracts.active_version() == "1.15.0":
+        return REPO / "research/vanilla-ai/1.15.0/00_default_strategy.txt"
+    return BASELINE
+
+
+def support_evaluation_context() -> decision_ir.EvaluationContext:
+    """Locate the exact native support tuple in its own ordinary field comments."""
+    path = baseline_path()
+    raw = path.read_bytes()
+    data = json.loads(engine_scope.strategy_snapshot())
+    native_hash = data["script_hashes"]["common/ai_strategies/00_default_strategy.txt"]
+    if native_hash not in {
+        hashlib.sha256(raw).hexdigest(),
+        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
+    }:
+        raise ValueError("支持程序原版底本与引擎证据不一致")
+    parsed = parse_text(raw.decode("utf-8-sig"))
+    definitions = parsed.root.all("ai_strategy_default")
+    if parsed.errors or len(definitions) != 1 or not isinstance(definitions[0].value, Block):
+        raise ValueError("支持程序原版定义不唯一或无法解析")
+    fields = definitions[0].value.all("diplomatic_play_support")
+    if (
+        len(fields) != 1
+        or fields[0].op != "="
+        or fields[0].prefix is not None
+        or not isinstance(fields[0].value, Block)
+    ):
+        raise ValueError("支持程序原版字段不是唯一普通块")
+    lines = raw.decode("utf-8-sig").splitlines()
+    comments: dict[str, list[int]] = {}
+    for index in range(fields[0].line - 2, definitions[0].line - 1, -1):
+        line = lines[index].strip()
+        if line and not line.startswith("#"):
+            break
+        if line.startswith("#"):
+            comments.setdefault(line[1:].strip(), []).append(index + 1)
+    markers = (
+        "root = supporting country doing the AI evaluation",
+        "scope:country = country we're evaluating support for (either initiator or target)",
+        "scope:enemy_country = the opposing side's leader",
+        "scope:diplomatic_play_type = the type of diplomatic play",
+        "scope:is_initiator = bool, set to true if evaluating support for initiator, false if target",
+    )
+    if any(len(comments.get(marker, ())) != 1 for marker in markers) or any(
+        re.search(r"\broot\s*=|\bscope\s*:", marker) and marker not in markers
+        for marker in comments
+    ):
+        raise ValueError("支持程序原版字段缺少精确独立上下文")
+    source = path.relative_to(REPO).as_posix()
+    actor, target, enemy = (comments[marker][0] for marker in markers[:3])
+    return decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, actor),
+        targets=(
+            decision_ir.ContextBinding("target_country", "country", "target", source, target),
+            decision_ir.ContextBinding("enemy_country", "country", "target", source, enemy),
+        ),
+        evidence=tuple(f"{source}:{line}" for line in (actor, target, enemy)),
+    )
+
+
+def _supporting_path(name: str) -> Path:
+    if name == "action_bindings.toml":
+        return bindings.source_path()
+    if name == "domain_actions.toml":
+        return domain_coverage.source_path()
+    return DECISIONS / name
 
 
 def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
@@ -294,7 +366,15 @@ def _frozen_law_context() -> decision_ir.EvaluationContext:
     # Only the three documentary context lines are versioned. Blank lines keep
     # their original positions; the ignored full mirror is never an offline input.
     raw = _LAW_DOC.read_bytes()
-    manifest = json.loads(_LAW_DOC_MANIFEST.read_text(encoding="utf-8"))
+    manifest_path = (
+        REPO / "research/official-docs-1.15.0.manifest.json"
+        if version_contracts.active_version() == "1.15.0"
+        else _LAW_DOC_MANIFEST
+    )
+    # The three documentary lines and full native README are byte-identical
+    # in 1.15. The current manifest and live bytes establish that equality;
+    # the historical excerpt is retained verbatim rather than re-pinned.
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     entry = manifest["文档"]["game/common/laws/readme.md"]
     if (
         hashlib.sha256(raw).hexdigest() != _LAW_DOC_SHA256
@@ -457,8 +537,15 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         }
     )
     result = {}
-    source = engine_scope.STRATEGY_MANIFEST_ID
-    for field, (target, operation, unit, address) in specs.items():
+    _, source, manifest_sha256 = engine_scope._strategy_manifest()
+    for field, (target, operation, unit, historical_address) in specs.items():
+        # strategy_snapshot already verifies the selected version's complete,
+        # independently pinned parser/consumer/member and merge contracts.
+        address = (
+            data["consumers"][field]["consumer_va"]
+            if version_contracts.active_version() == "1.15.0"
+            else historical_address
+        )
         expected = {
             "actor_scope": "country",
             "target_scope": (
@@ -484,7 +571,8 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         actual = data.get("consumers", {}).get(field, {})
         if (
             actual != expected
-            if field in {"recklessness", "wargoal_maneuvers_fraction"}
+            if version_contracts.active_version() == "1.14.5"
+            and field in {"recklessness", "wargoal_maneuvers_fraction"}
             else any(actual.get(key) != value for key, value in expected.items())
         ):
             raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
@@ -559,7 +647,7 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             evidence=(
                 f"{source}:{actor.line}",
                 f"{source}:{locations['target_scope']}",
-                f"{source}:sha256={engine_scope.STRATEGY_MANIFEST_SHA256}",
+                f"{source}:sha256={manifest_sha256}",
                 f"{source}:consumer={field}:va={address}",
                 f"{source}:evidence=frozen_engine_snapshot",
                 *(
@@ -577,7 +665,7 @@ def _frozen_institution_contexts(
 ) -> dict[str, decision_ir.EvaluationContext]:
     """Project only exact numeric children of the pinned original ordinary map."""
     data = json.loads(engine_scope.strategy_snapshot())
-    raw = BASELINE.read_bytes()
+    raw = baseline_path().read_bytes()
     source = "common/ai_strategies/00_default_strategy.txt"
     # Repository snapshots omit the native UTF-8 BOM by the text contract.
     if data["script_hashes"][source] not in {
@@ -604,7 +692,7 @@ def _frozen_strategy_score_contexts(
 ) -> dict[str, decision_ir.EvaluationContext]:
     """Project pinned enum numeric children without authorizing the map or trigger."""
     data = json.loads(engine_scope.strategy_snapshot())
-    raw = BASELINE.read_bytes()
+    raw = baseline_path().read_bytes()
     source = "common/ai_strategies/00_default_strategy.txt"
     if data["script_hashes"][source] not in {
         hashlib.sha256(raw).hexdigest(),
@@ -650,31 +738,36 @@ def _frozen_company_context() -> decision_ir.EvaluationContext:
     if len(matches) != 1:
         raise ValueError("公司基础评分缺少唯一作用域合同")
     row = matches[0]
-    if any(
-        row[key] != value
-        for key, value in {
-            "actor": "country",
-            "target": "definition_only:company_type",
-            "operation": "base_candidate_score",
-            "capability": "direct",
-            "consumer": "0x14169a3b0",
-            "actual_call": "0x1415c9855",
-            "numeric_member": "0x390",
-            "parser": "0x141698300",
-            "parser_receiver": "0x598",
-            "nonpositive_rejection": "0x141510b30",
-        }.items()
-    ):
+    expected = {
+        "actor": "country",
+        "target": "definition_only:company_type",
+        "operation": "base_candidate_score",
+        "capability": "direct",
+    }
+    if version_contracts.active_version() == "1.14.5":
+        expected.update(
+            {
+                "consumer": "0x14169a3b0",
+                "actual_call": "0x1415c9855",
+                "numeric_member": "0x390",
+                "parser": "0x141698300",
+                "parser_receiver": "0x598",
+                "nonpositive_rejection": "0x141510b30",
+            }
+        )
+    # company_snapshot validates every current-version coordinate before
+    # projecting its semantic country-only context here.
+    if any(row[key] != value for key, value in expected.items()):
         raise ValueError("公司基础评分作用域合同漂移")
     text = raw.decode("utf-8")
     section = text.index('"field": "ai_weight"')
     line = text.count("\n", 0, text.index('"actor": "country"', section)) + 1
-    source = engine_scope.COMPANY_MANIFEST_ID
+    _, source, manifest_sha256 = engine_scope._company_manifest()
     return decision_ir.EvaluationContext(
         actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
         evidence=(
             f"{source}:{line}",
-            f"{source}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}",
+            f"{source}:sha256={manifest_sha256}",
             f"{source}:evidence=frozen_engine_snapshot",
             f"{source}:definition_only:company_type",
         ),
@@ -1196,7 +1289,7 @@ class SituatedModel:
             "definitions": supporting.get("action_families.toml", {}).get("families", {}),
             "classifier": "source_and_field_deterministic",
         }
-        coverage = domain_coverage.load(DECISIONS / "domain_actions.toml")
+        coverage = domain_coverage.load()
         result["domain_coverage"] = domain_coverage.contract(coverage, self.action_instances)
         layer_model = self.layer_model
         if layer_model is not None:
@@ -1289,7 +1382,7 @@ class SituatedModel:
 def _load_supporting_sources() -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
     for name in SUPPORTING_SOURCES:
-        path = DECISIONS / name
+        path = _supporting_path(name)
         data = tomllib.loads(path.read_text(encoding="utf-8"))
         if data.get("schema") != 1:
             raise ValueError(f"辅助合同 {name} schema 必须为 1")
@@ -1595,10 +1688,8 @@ def _validate_supporting_sources(
         raise ValueError("本地化合同必须覆盖锁定本体的 11 种语言且不允许回退")
     families.load_contract(DECISIONS / "action_families.toml")
     layers.load(DECISIONS / "action_layers.toml")
-    bindings.load(DECISIONS / "action_bindings.toml", information=information, adapters=adapters)
-    domain_coverage.load(
-        DECISIONS / "domain_actions.toml", information=information, adapters=adapters
-    )
+    bindings.load(information=information, adapters=adapters)
+    domain_coverage.load(information=information, adapters=adapters)
 
 
 def load_model(
@@ -1611,7 +1702,7 @@ def load_model(
     adapters = decision_adapters.load()
     facts = _reader_facts(declared_facts, information=information, adapters=adapters)
     layer_model = layers.load(LAYERS)
-    binding_rows = bindings.load(BINDINGS, information=information, adapters=adapters)
+    binding_rows = bindings.load(information=information, adapters=adapters)
     consumers, actions = action_source.load(actions_path)
     tool_ids = {item.id for item in layer_model.tools}
     action_ids = {item.id for item in actions}
@@ -1655,7 +1746,9 @@ def load_model(
         if missing:
             raise ValueError(f"行动 {action.id} 引用了未知事实：{missing}")
         _validate_action_costs(action, {item.id: item for item in facts})
-    baseline_text = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
+    baseline_text = (
+        baseline if baseline is not None else baseline_path().read_text(encoding="utf-8")
+    )
     parsed = parse_text(baseline_text)
     if parsed.errors:
         raise ValueError("默认策略底本无法解析")
@@ -1856,8 +1949,8 @@ def load_model(
     goals = tuple((item.id, item.priority) for item in goal_specs)
     hashes = {
         "law_enact_context_document": _LAW_DOC_SHA256,
-        "strategy_context_snapshot": engine_scope.STRATEGY_MANIFEST_SHA256,
-        "company_context_snapshot": engine_scope.COMPANY_MANIFEST_SHA256,
+        "strategy_context_snapshot": engine_scope._strategy_manifest()[2],
+        "company_context_snapshot": engine_scope._company_manifest()[2],
         "migration_baseline": hashlib.sha256(
             migration_baseline.DEFAULT_SOURCE.read_bytes()
         ).hexdigest(),
@@ -1870,13 +1963,27 @@ def load_model(
         "facts": hashlib.sha256(facts_path.read_bytes()).hexdigest(),
         "actions": hashlib.sha256(actions_path.read_bytes()).hexdigest(),
         "action_layers": hashlib.sha256(LAYERS.read_bytes()).hexdigest(),
-        "action_bindings": hashlib.sha256(BINDINGS.read_bytes()).hexdigest(),
+        "action_bindings": hashlib.sha256(bindings.source_path().read_bytes()).hexdigest(),
         **production_hashes,
         **{
-            name.removesuffix(".toml"): hashlib.sha256((DECISIONS / name).read_bytes()).hexdigest()
+            name.removesuffix(".toml"): hashlib.sha256(
+                _supporting_path(name).read_bytes()
+            ).hexdigest()
             for name in SUPPORTING_SOURCES
         },
     }
+    if version_contracts.active_version() == "1.15.0":
+        from . import compatibility_115  # noqa: PLC0415
+
+        hashes.update(
+            compatibility_production_snapshot=hashlib.sha256(
+                compatibility_115.snapshot()
+            ).hexdigest(),
+            building_default_context_snapshot=hashlib.sha256(
+                engine_building_115.snapshot()
+            ).hexdigest(),
+            defensive_pact_reader_snapshot=hashlib.sha256(engine_reader_115.snapshot()).hexdigest(),
+        )
     return SituatedModel(
         facts,
         consumers,

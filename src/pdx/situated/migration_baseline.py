@@ -11,7 +11,9 @@ import ast
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
+
+from pdx import version_contracts
 
 if TYPE_CHECKING:
     from .decision_ir import ConsumerIRBundle, WriterDecisionIR
@@ -25,6 +27,26 @@ _FIELDS = ("source", "definition", "field", "actor", "target", "operation")
 _TAIL = "retain_original_qualification_cost_random_execution"
 _DEFAULT_NATIVE_SOURCE = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
 _DEFAULT_NATIVE_SHA256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+_VERSION_115_SOURCE = DEFAULT_SOURCE.parent / "1.15.0/migration-retentions.json"
+_VERSION_115_SHA256 = "23eafb2070c1ab4aa3508e5258516a21ec6c54040b68490f28f58785b9c3ed29"
+
+
+def _versioned_contract() -> dict[str, Any] | None:
+    if version_contracts.active_version() == "1.14.5":
+        return None
+    raw = _VERSION_115_SOURCE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _VERSION_115_SHA256:
+        raise ValueError("1.15 历史迁移延续合同字节漂移")
+    data = json.loads(raw, object_pairs_hook=_unique_json_object)
+    if (
+        data["schema"] != 1
+        or data["version"] != "1.15.0"
+        or data["evidence_kind"] != "native_static"
+        or data["runtime"] != "unknown"
+        or data["historical_retirements_sha256"] != _RETIREMENTS_SHA256
+    ):
+        raise ValueError("1.15 历史迁移延续合同身份漂移")
+    return cast("dict[str, Any]", data)
 
 
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -148,6 +170,33 @@ def _validate_native_retention(row: dict[str, Any], writers: tuple[WriterDecisio
         block = matches[0].value
     if _digest(block) != evidence["ast_sha256"]:
         raise ValueError("历史规则退役原版恢复AST漂移")
+    current = _versioned_contract()
+    if current is not None:
+        # Historical restoration remains independently pinned above. A new
+        # version must additionally retain that physical field in its actual
+        # default AST; selecting a version cannot imply continued equivalence.
+        current_path = DEFAULT_SOURCE.parents[2] / current["source"]
+        current_raw = current_path.read_bytes()
+        if hashlib.sha256(current_raw).hexdigest() != current["source_sha256"]:
+            raise ValueError("1.15 原版恢复来源字节漂移")
+        parsed_current = parse_bytes(current_raw, path=current["source"])
+        definitions = parsed_current.root.all(current["definition"])
+        if parsed_current.errors or len(definitions) != 1:
+            raise ValueError("1.15 原版恢复定义不唯一或无法解析")
+        node = definitions[0]
+        for part in native_field.split("."):
+            if not isinstance(node.value, Block):
+                raise ValueError("1.15 原版恢复字段不是普通块")
+            children = node.value.all(part)
+            if len(children) != 1 or children[0].op != "=" or children[0].prefix is not None:
+                raise ValueError("1.15 原版恢复字段缺失或不唯一")
+            node = children[0]
+        if (
+            not isinstance(node.value, Block)
+            or _digest(node.value) != current["retentions"].get(native_field)
+            or current["retentions"][native_field] != evidence["ast_sha256"]
+        ):
+            raise ValueError("1.15 原版恢复AST与历史保留字段不一致")
     if any(
         writer.field == prefix or writer.field.startswith(prefix + ".")
         for writer in writers
@@ -217,8 +266,25 @@ def _retired_identities(
             replacements = []
         else:
             replacements = _string_list(row["replacements"], "replacements")
+        versioned = _versioned_contract()
         for definition in replacements:
-            replacement = current.get((row["source"], definition))
+            current_definition = definition
+            if versioned is not None:
+                redirects = [
+                    item
+                    for item in versioned["replacement_redirects"]
+                    if item["source"] == row["source"]
+                    and item["definition"] == row["definition"]
+                    and item["historical_replacement"] == definition
+                ]
+                if len(redirects) > 1:
+                    raise ValueError("1.15 历史替代身份映射重复")
+                if redirects:
+                    redirect = redirects[0]
+                    if any(redirect[key] != row[key] for key in _FIELDS if key != "definition"):
+                        raise ValueError("1.15 历史替代物理消费者合同漂移")
+                    current_definition = redirect["current_replacement"]
+            replacement = current.get((row["source"], current_definition))
             if replacement is None:
                 raise ValueError(f"历史规则退役替代身份缺失：{identity} -> {definition}")
             if (

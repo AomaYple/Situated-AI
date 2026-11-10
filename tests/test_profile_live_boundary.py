@@ -190,23 +190,22 @@ def test_installed_drift_during_generation_rolls_back_previous_candidate(install
     distribution.write_profile_outputs(profile)
     root = distribution.profile_output_root()
     before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
-    original_lock = distribution.profile_generation_lock
-    calls = 0
+    original_replace = distribution.GenerationTransaction.replace
+    staged = False
 
-    def drift_after_staging(*args, **kwargs):
-        nonlocal calls
-        calls += 1
-        value = original_lock(*args, **kwargs)
-        if calls == 2:
-            (installation / "game/common/diplomatic_actions/01_expel_diplomats.txt").write_bytes(
-                b"installed reader changed during generation"
-            )
+    def drift_after_staging(transaction, files):
+        nonlocal staged
+        value = original_replace(transaction, files)
+        staged = True
+        (installation / "game/common/diplomatic_actions/01_expel_diplomats.txt").write_bytes(
+            b"installed reader changed during generation"
+        )
         return value
 
-    monkeypatch.setattr(distribution, "profile_generation_lock", drift_after_staging)
+    monkeypatch.setattr(distribution.GenerationTransaction, "replace", drift_after_staging)
     with pytest.raises(ValueError, match="R2 reader authority: source drift"):
         distribution.write_profile_outputs(profile)
-    assert calls == 2
+    assert staged
     assert {path: path.read_bytes() for path in before} == before
 
 
@@ -247,3 +246,77 @@ def test_drift_after_zip_validation_preserves_previous_package_and_removes_tempo
         distribution.profile_package(destination, profile)
     assert destination.read_bytes() == b"previous complete ZIP"
     assert list(destination.parent.iterdir()) == [destination]
+
+
+@pytest.mark.parametrize("damage", ["source", "extra-output"])
+def test_change_during_final_profile_live_verification_refuses_transaction(
+    installation, tmp_path, monkeypatch, damage
+):
+    profile = native.load_profile(native.BASELINE_ROOT)
+    distribution.write_profile_outputs(profile)
+    root = distribution.profile_output_root()
+    before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
+    source = config.REPO / "src/pdx/situated/network_profile.py"
+    view = tmp_path / "changed-source.py"
+    view.write_bytes(b"changed during final installation verification\n")
+    extra = root / "common/unexpected.txt"
+    opened = Path.open
+    changed = False
+
+    def open_view(path, *args, **kwargs):
+        return opened(view if changed and path == source else path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_view)
+    verify_installation = distribution.check_profile_installation
+    calls = 0
+
+    def drift_during_final_verification(selected):
+        nonlocal calls, changed
+        result = verify_installation(selected)
+        calls += 1
+        if calls == 2:
+            if damage == "source":
+                changed = True
+            else:
+                extra.write_bytes(b"unrelated concurrent output\n")
+        return result
+
+    monkeypatch.setattr(distribution, "check_profile_installation", drift_during_final_verification)
+    with pytest.raises(ValueError, match="漂移"):
+        distribution.write_profile_outputs(profile)
+    changed = False
+    assert {path: path.read_bytes() for path in before} == before
+    # The transaction restores its owned files. Unknown concurrent files must
+    # be reported and preserved, not silently deleted to manufacture a match.
+    if damage == "extra-output":
+        assert extra.read_bytes() == b"unrelated concurrent output\n"
+
+
+def test_profile_generation_binds_source_before_compilation(installation, tmp_path, monkeypatch):
+    profile = native.load_profile(native.BASELINE_ROOT)
+    distribution.write_profile_outputs(profile)
+    root = distribution.profile_output_root()
+    before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
+    source = config.REPO / "src/pdx/situated/network_profile.py"
+    view = tmp_path / "changed-source.py"
+    view.write_bytes(b"changed immediately after compilation\n")
+    opened = Path.open
+    changed = False
+
+    def open_view(path, *args, **kwargs):
+        return opened(view if changed and path == source else path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_view)
+    build = distribution.profile_outputs
+
+    def drift_after_build(*args, **kwargs):
+        nonlocal changed
+        result = build(*args, **kwargs)
+        changed = True
+        return result
+
+    monkeypatch.setattr(distribution, "profile_outputs", drift_after_build)
+    with pytest.raises(ValueError, match="构建期间源码发生漂移"):
+        distribution.write_profile_outputs(profile)
+    changed = False
+    assert {path: path.read_bytes() for path in before} == before

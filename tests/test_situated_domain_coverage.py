@@ -92,7 +92,7 @@ def test_领域覆盖逐目标保留消费者作用域成本和回退责任():
 
 def test_联合链字段被篡改时合同拒绝(tmp_path):
     source = tmp_path / "domain_actions.toml"
-    text = domain_coverage.DEFAULT_SOURCE.read_text(encoding="utf-8")
+    text = domain_coverage.source_path().read_text(encoding="utf-8")
     source.write_text(
         text.replace(
             'description = "raw_material_to_industry"',

@@ -11,7 +11,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import decisions, distribution, vanilla_index
+from pdx import decisions, distribution, vanilla_index, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 
@@ -41,7 +41,9 @@ def policy():
 def test_财政开关显式开启且交付契约来自数据源(policy):
     assert policy.enabled
     assert policy.package.product_version == distribution.RELEASE_VERSION
-    assert policy.package.status == "released"
+    assert policy.package.status == (
+        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+    )
     payload = decisions.metadata_payload(policy)
     assert payload["version"] == policy.package.product_version
     assert payload["tool_version"] == "0.3.0"
@@ -58,9 +60,9 @@ def test_财政开关关闭不生成财政脚本且保留原版策略(policy):
         "common/ai_strategies/00_default_strategy.txt",
         ".metadata/metadata.json",
     }
-    assert files["common/ai_strategies/00_default_strategy.txt"] == decisions.BASELINE.read_text(
-        encoding="utf-8"
-    )
+    assert files[
+        "common/ai_strategies/00_default_strategy.txt"
+    ] == decisions.baseline_path().read_text(encoding="utf-8")
     assert decisions.triggers(disabled) == ""
     assert decisions.effects(disabled) == ""
     assert decisions.on_actions(disabled) == ""
@@ -132,7 +134,7 @@ def test_偿债不会继续维持借款危机(weeks, active):
 
 
 def test_默认策略原文只增加两个声明偏置(policy):
-    original = decisions.BASELINE.read_text(encoding="utf-8")
+    original = decisions.baseline_path().read_text(encoding="utf-8")
     patched = decisions.patch_default(original, policy)
     restored = re.sub(
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n",
@@ -150,20 +152,20 @@ def test_默认策略原文只增加两个声明偏置(policy):
 
 
 def test_底本任何漂移均拒绝生成(policy):
-    original = decisions.BASELINE.read_text(encoding="utf-8")
+    original = decisions.baseline_path().read_text(encoding="utf-8")
     with pytest.raises(ValueError, match="哈希"):
         decisions.patch_default(original + "\n", policy)
 
 
 def test_零偏置对照逐字保留底本并且不调用国家条件(policy):
-    original = decisions.BASELINE.read_text(encoding="utf-8")
+    original = decisions.baseline_path().read_text(encoding="utf-8")
     assert (
         decisions.patch_default(original, replace(policy, neutrality=0, aggression=0)) == original
     )
 
 
 def test_财政字段仅在有效root存在时调用国家触发器(policy):
-    patched = decisions.patch_default(decisions.BASELINE.read_text(encoding="utf-8"), policy)
+    patched = decisions.patch_default(decisions.baseline_path().read_text(encoding="utf-8"), policy)
     tree = parse_text(patched)
     strategy = tree.top_assignments[0].value
     assert isinstance(strategy, Block)
@@ -388,12 +390,15 @@ def test_新接口缺证据和本机底本漂移均拒绝(tmp_path):
 
 
 def test_扩展开启时新增接口必须有原版证据(monkeypatch, tmp_path):
+    baseline = tmp_path / "default.txt"
+    baseline.write_bytes(b"ai_strategy_default = {}\n")
+    monkeypatch.setattr(decisions, "BASELINE", baseline)
     monkeypatch.setattr(
         decisions,
         "load_extensions",
         lambda: decisions.Extensions(reform_enabled=True, market_enabled=True),
     )
-    issues = decisions.validate(set())
+    issues = decisions.validate(set(), policy=replace(decisions.load(), enabled=False))
     assert any("legitimacy" in issue for issue in issues)
     # 脚本值接口需要专用原版快照域，由下方的合同测试覆盖。
 
@@ -481,11 +486,14 @@ def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
     assert manifest["install_directory"] == distribution.INSTALL_DIRECTORY_NAME
     assert manifest["generation"]["install_directory"] == distribution.INSTALL_DIRECTORY_NAME
     assert manifest["generation"]["schema"] == "sitai-distribution-v2"
-    assert manifest["generation"]["publication_channel"] == "stable"
-    assert manifest["generation"]["artifact_kind"] == "production_release"
+    current = version_contracts.active_version() == "1.15.0"
+    assert manifest["generation"]["publication_channel"] == ("unpublished" if current else "stable")
+    assert manifest["generation"]["artifact_kind"] == (
+        "engineering_compatibility_candidate" if current else "production_release"
+    )
     assert manifest["generation"]["behavior_quality"] == "not_evaluated"
     assert "candidate_kind" not in manifest["generation"]
-    assert manifest["contract"]["status"] == "released"
+    assert manifest["contract"]["status"] == ("candidate" if current else "released")
     assert manifest["generation"]["delivery_kind"] == "standard_mod"
 
 
@@ -583,8 +591,11 @@ def test_指纹绑定实际替代源和生成器(tmp_path):
     fiscal, extensions = tmp_path / "fiscal.toml", tmp_path / "extensions.toml"
     fiscal.write_bytes(decisions.SOURCE.read_bytes() + b"\n# alternative fiscal\n")
     extensions.write_bytes(decisions.EXTENSIONS.read_bytes() + b"\n# alternative extensions\n")
-    policy, extra = decisions.load(fiscal), decisions.load_extensions(extensions)
-    metadata = json.loads(decisions.build(policy, extensions=extra)[".metadata/metadata.json"])
+    # Alternative fiscal declarations in this test are historical raw bytes;
+    # current compatibility authority is intentionally restricted to SOURCE.
+    with version_contracts.select_version("1.14.5"):
+        policy, extra = decisions.load(fiscal), decisions.load_extensions(extensions)
+        metadata = json.loads(decisions.build(policy, extensions=extra)[".metadata/metadata.json"])
     fingerprint = metadata["source_fingerprint"]
     assert fingerprint["fiscal_source_sha256"] == hashlib.sha256(fiscal.read_bytes()).hexdigest()
     assert (

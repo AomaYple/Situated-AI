@@ -6,16 +6,17 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, config, decisions, distribution
+from pdx import cli, config, decisions, distribution, version_contracts
 
 
 @pytest.fixture
 def frozen_product(tmp_path, monkeypatch):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
     product = tmp_path / "mod"
     for name, raw in {
         "src/pdx/generator.py": b"SOURCE = 1\n",
         "mod/decisions/policy.toml": b"enabled = true\n",
-        "research/vanilla-ai/1.14.5/default.txt": b"default = {}\n",
+        "research/vanilla-ai/1.14.5/default.txt": decisions._HISTORICAL_BASELINE.read_bytes(),
         "mod/common/values.txt": b"value = 1\n",
         "mod/localization/english/l_english.yml": b"l_english:\n",
         "mod/.metadata/metadata.json": b"{}\n",
@@ -113,7 +114,7 @@ def test_lock_tracks_independent_historical_migration_manifest(frozen_product, o
         distribution.check_generation_lock()
 
 
-def test_no_game_offline_guard_uses_frozen_snapshot_contract(tmp_path, monkeypatch):
+def test_no_game_offline_guard_uses_frozen_snapshot_contract(frozen_product, tmp_path, monkeypatch):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
     result = CliRunner().invoke(cli.app, ["modguard", "--offline"])
     assert result.exit_code == 0, result.output
@@ -121,13 +122,37 @@ def test_no_game_offline_guard_uses_frozen_snapshot_contract(tmp_path, monkeypat
     assert "不证明当前游戏内容" in result.output
 
 
+def test_current_lock_tracks_versioned_sources_and_uses_isolated_tree(frozen_product, monkeypatch):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
+    selected = frozen_product / "compatibility"
+    selected.mkdir()
+    (selected / "common").mkdir()
+    (selected / "common/current.txt").write_bytes(b"current = yes\n")
+    monkeypatch.setattr(decisions, "product_path", lambda: selected)
+    source = frozen_product.parent / "mod/decisions/1.15.0/action_bindings.toml"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"version = '1.15.0'\n")
+    lock = distribution.generation_lock()
+    (selected / "generation-lock.json").write_text(lock, encoding="utf-8", newline="\n")
+    distribution.check_generation_lock()
+    assert version_contracts.active_version() == "1.15.0"
+    assert "mod/decisions/1.15.0/action_bindings.toml" in json.loads(lock)["sources"]
+    source.write_bytes(b"version = 'unreviewed'\n")
+    with pytest.raises(ValueError, match="冻结记录不一致"):
+        distribution.check_generation_lock()
+
+
 def test_no_game_production_generation_refuses_and_preserves_existing(tmp_path, monkeypatch):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
     product = tmp_path / "mod"
     product.mkdir()
     sentinel = product / "existing.txt"
     sentinel.write_bytes(b"previous production\n")
     monkeypatch.setattr(decisions, "PRODUCT", product)
+    baseline = tmp_path / "baseline.txt"
+    baseline.write_bytes(decisions._HISTORICAL_BASELINE.read_bytes())
+    monkeypatch.setattr(decisions, "BASELINE", baseline)
     target = tmp_path / "existing.zip"
     target.write_bytes(b"previous zip")
     with pytest.raises(ValueError, match="缺少锁定游戏原件"):
