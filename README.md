@@ -2,7 +2,7 @@
 
 当前实施状态见[当前工作清单](docs/design/当前工作清单.md)和[拓展结果](docs/design/exec/广度深度拓展-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
-1.15新架构设计与未来实施顺序见[架构主计划](docs/design/架构主计划.md)；领域目标见[架构子计划](docs/design/架构子计划.md)。本轮仅完成设计与计划，当前正式产品仍为3.2.0 / 游戏1.14.5。
+1.15 架构已深化为 R2 设计与实施基准，见[架构主计划](docs/design/架构主计划.md)和[架构设计](docs/design/1.15架构设计.md)；已有候选实现仍需按新合同补齐与验收。领域目标见[架构子计划](docs/design/架构子计划.md)，当前正式交付仍为 3.2.0 / 游戏 1.14.5。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
