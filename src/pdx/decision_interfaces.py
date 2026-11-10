@@ -183,12 +183,16 @@ def verify_scripted_trigger_game(game: Path) -> tuple[tuple[str, str], ...]:
 
 
 def proven_reader_words() -> frozenset[str]:
-    """Pinned 1.14.5 static reader evidence; current game identity is a separate gate.
+    """Version-selected static reader evidence; installed identity is a separate gate.
 
     The manifest contains verified executable observations and original script
     hashes. It extends token discovery only; reader_scope still enforces exact
     own-Country signatures and does not grant arbitrary foreign-scope access.
     """
+    if version_contracts.active_version() == "1.15.0":
+        from .situated import engine_reader_115  # noqa: PLC0415
+
+        return engine_reader_115.proven_words()
     raw = _LJ10_EVIDENCE.read_bytes()
     if hashlib.sha256(raw).hexdigest() != _LJ10_EVIDENCE_SHA256:
         raise ValueError("LJ10 读取器冻结证据字节漂移")
@@ -485,8 +489,8 @@ def reader_scope(
         or reader.minimum != (None if reader.engine == "authority" else 0)
     ):
         raise ValueError(f"公司容量与权威余额仅支持已证明的国家 ROOT 数值合同：{reader.key}")
-    # 1.14.5 Windows reader/consumer证据只授权本国根；条款数量不是履约或军力。
-    # 固定依据见 research/situated/victoria3-1.14.5-defensive-pact-reader.json。
+    # Each version has its own reader/consumer proof. Counts witness articles,
+    # never treaty fulfilment or military strength; only own Country root.
     if reader.engine == "num_defensive_pacts" and (
         reader.scope != "root"
         or actor_path
@@ -561,7 +565,13 @@ def reader_scope(
             raise ValueError(f"读取器没有已审计的作用域转换：{reader.key}/{part}")
     if _INPUTS.get(reader.engine) != (scope, reader.kind):
         raise ValueError(f"读取器类型或作用域与静态接口签名不一致：{reader.key}")
-    if reader.unit != _UNITS.get(reader.engine, "boolean"):
+    expected_unit = _UNITS.get(reader.engine, "boolean")
+    if version_contracts.active_version() == "1.15.0" and reader.engine in {
+        "wanted_army_size_script_value",
+        "wanted_marines_size_script_value",
+    }:
+        expected_unit = "barracks_levels"
+    if reader.unit != expected_unit:
         raise ValueError(f"读取器单位与静态接口签名不一致：{reader.key}")
     return scope
 
@@ -727,6 +737,13 @@ def placement_contract(field: tuple[str, ...]) -> str:
 
 def _retained_reason(field: str) -> dict[str, str]:
     """保留原版是明确设计选择，既不是新增实现也不是接口不支持。"""
+    if field == "cossack_host_scores" and version_contracts.active_version() == "1.15.0":
+        return {
+            "disposition": "native_cossack_host_policy",
+            "reason": "完整保留原版哥萨克军团州目标评分、零分拒绝及COSSACK_HOST_STICKYNESS惯性；未新增Mod写入",
+            "alternative_and_limit": "原版注释的country/target_state上下文只描述保留字段，不授予新增读取、写入或任意作用域转换",
+            "verification": "static_native_placement; user_behavior_review_pending",
+        }
     policies = (
         (("icon",), "presentation", "保留原版策略图标，不把显示资源作为决策输入", "无行为影响"),
         (

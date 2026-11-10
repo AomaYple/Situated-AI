@@ -194,6 +194,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     """严格解析版本锁定的规则；不接受自由脚本、隐式数值或重复优先级。"""
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
+    source_digest = hashlib.sha256(raw).hexdigest()
     if source == SOURCE and version_contracts.active_version() == "1.15.0":
         # Keep the historical TOML identity intact. The new complete native AST
         # authority supplies this version's reviewed default-strategy input.
@@ -202,9 +203,15 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         data["baseline_sha256"] = native_authority_115()["sources"][
             "common/ai_strategies/00_default_strategy.txt"
         ]
+        from .situated import engine_reader_115  # noqa: PLC0415
+
+        engine_reader_115.project_information_readers(data["readers"])
+        source_digest = hashlib.sha256(
+            raw + b"\0current_reader:" + engine_reader_115.snapshot()
+        ).hexdigest()
     if source == SOURCE and strategy is None:
         strategy = decision_intents.load()
-    return from_data(data, source_sha256=hashlib.sha256(raw).hexdigest(), strategy=strategy)
+    return from_data(data, source_sha256=source_digest, strategy=strategy)
 
 
 def from_data(

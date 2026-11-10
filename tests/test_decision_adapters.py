@@ -22,6 +22,7 @@ from pdx import (
     decision_intents,
     decision_rules,
     decisions,
+    version_contracts,
 )
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
@@ -2353,6 +2354,10 @@ def test_supply_cannot_replace_existing_stance_or_reference_unknown_good(supply_
 
 def _relative_data():
     baseline = "ai_strategy_default = { subject_value = { value = 50 if = { limit = { OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } } } add = 0 } gdp = 0 } }\n"
+    if version_contracts.active_version() == "1.15.0":
+        baseline = baseline.replace(
+            "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
+        )
     return baseline, {
         "schema": 1,
         "baseline_sha256": hashlib.sha256(baseline.encode()).hexdigest(),

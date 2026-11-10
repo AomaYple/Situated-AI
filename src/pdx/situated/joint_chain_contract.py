@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
-from pdx import decision_adapters, decision_rules
+from pdx import decision_adapters, decision_rules, version_contracts
 
 if TYPE_CHECKING:
     from .decision_ir import ConsumerIRBundle
@@ -795,6 +795,9 @@ def _reader_copy(reader: Any) -> ChainReaderSpec:
 
 def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
     """Frozen field-level contract for the observed local writer links."""
+    native_target_unit = (
+        "barracks_levels" if version_contracts.active_version() == "1.15.0" else "battalions"
+    )
     if key == "country_goods_paper_balance":
         return (
             "market_goods_delta",
@@ -841,7 +844,7 @@ def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
             None,
             (),
             None,
-            "battalions",
+            native_target_unit,
             None,
             None,
         ),
@@ -853,7 +856,7 @@ def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
             None,
             (),
             None,
-            "battalions",
+            native_target_unit,
             None,
             None,
         ),

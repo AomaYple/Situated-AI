@@ -12,6 +12,18 @@ ROOT = Path(__file__).resolve().parents[3]
 EXE_SHA256 = "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa"
 EXE_BYTES = 99_988_600
 MANIFESTS = {
+    "defensive-pact-reader": (
+        "research/situated/victoria3-1.15.0-defensive-pact-reader.json",
+        "c0dfcd185bd8186faa9d74ea17b86a04e5fafb396f03c1e20564dfcd1f6a816b",
+    ),
+    "building-default": (
+        "research/situated/victoria3-1.15.0-building-default-scope.json",
+        "ad217c35af0a2ea1fd601a51fb3fc76c1e3a410e1bb9e01a4bb636a4bbd14a73",
+    ),
+    "strategy": (
+        "research/situated/victoria3-1.15.0-strategy-scope.json",
+        "6ef7e8ed915c54fa3bc71443fd637d54e9e5b61e710cfc28b033e27057d1fd50",
+    ),
     "country-definition": (
         "research/situated/victoria3-1.15.0-country-definition-scope.json",
         "9986e4f17edf86fa4a529041fd31a9282ec7fc89c084908cc0e774511d82d3fa",

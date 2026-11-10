@@ -1,0 +1,698 @@
+{
+  "schema": 1,
+  "evidence": "static_vanilla_examples_not_engine_execution",
+  "baseline_sha256": "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431",
+  "snapshot_sections_sha256": "34584da986fd77cc7d87b6c4fd8bd6fab655e43337bd8f08b8e8e874e7cfdc1b",
+  "sources": {
+    "common/achievements/base_achievements.txt": "276ed2057159ccc2c2b6ebe874e4e97a935300b9707d9b110e553f3c9c68602e",
+    "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
+    "common/ai_regional_objectives/00_ai_regional_objectives.txt": "93edd49b2b648c914d0e8c2df8ad0c92d51732b51a0b6dbca35a062641196f1d",
+    "common/ai_ship_categories/00_ai_ship_categories.txt": "6ab66ae0cf181e3bec27f5f3a9fc7f84fc0f27339f58f8c150bab5a06db4806e",
+    "common/ai_strategies/00_default_strategy.txt": "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73",
+    "common/ai_strategies/01_admin_strategies.txt": "dd95f5586a9fb105adddf890612aa5b4f3970314855ba8a8cee42247db7ed741",
+    "common/ai_strategies/02_diplomatic_strategies.txt": "59da0f8446088e090e426f75032b271af7624f02dc4b06a292bb7d8a44f0b9b9",
+    "common/amendments/00_amendments_content_04.txt": "1c445abca6c91c2d13019544f975147161879595a40d275084b4ebe2f31c0953",
+    "common/decisions/france_savoy.txt": "91a24a2bcb05551e397ea53311c4cebc3da9fc9efb75f18050288be6b035bef6",
+    "common/decisions/india_decisions.txt": "0ca6a821e543bc43a7304517d705d9c6cef0319ae940ffafd439ea252a8bc7aa",
+    "common/journal_entries/06_portugal_politics.txt": "6b985f022065b56cca0ee6cb4bb238b662a0edb3ff7fb124b50154d0274788da",
+    "common/on_actions/00_code_on_actions.txt": "ff43a0689abeec36d65076f4fc020f90172cbd60ac1a1d03a233d292edf6dc5b",
+    "common/scripted_triggers/00_victoria_scripted_triggers.txt": "cfed3a88a33dcdfd645b44ce9887e53a5909682f9c68b0eb4057a4cea59b951d",
+    "common/technology/technologies/20_military.txt": "3bd80ae43e8e209b122d714578b5be840d1c80b3be2cc9908409f1f0cc2d916e",
+    "common/decisions/00_decisions.txt": "553c0e2d849bca1567accf6cbe1424b309c54e8b20b66a3d6ee3503fe611b71b"
+  },
+  "interfaces": {
+    "has_variable": {
+      "source": "common/achievements/base_achievements.txt",
+      "line": 6,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "peccavi",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "possible",
+            "line": 5,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "has_variable",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "8c71149c8ae484e9678fffaa75f60238de9f54a0a102e1c6536906f0cfd65620",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "literacy_rate": {
+      "source": "common/achievements/base_achievements.txt",
+      "line": 523,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "reading_campaign",
+            "line": 518,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "happened",
+            "line": 522,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "literacy_rate",
+        "operator": ">=",
+        "prefix": null,
+        "assignment_ast_sha256": "a3cb1b3526093d13d41d2002f118e809485d4de7bfea862c02cf0062a417126a",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "is_at_war": {
+      "source": "common/achievements/ip4_iberian_twilight_achievements.txt",
+      "line": 50,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "achievement_a_las_barricadas",
+            "line": 34,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "happened",
+            "line": 41,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "is_at_war",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "31f2d45303ca3bebc48b77423d409d173a5bf189edc536115bf4eb8c4738b15f",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "is_subject": {
+      "source": "common/ai_regional_objectives/00_ai_regional_objectives.txt",
+      "line": 153,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_regional_objective_subjugate_country",
+            "line": 146,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "possible",
+            "line": 149,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "scope:target_region",
+            "line": 150,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "any_scope_country",
+            "line": 151,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "is_subject",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "2d2842015d2d5664a25c61a2622cd10d5c39e0013ccbb2618ba336310bbba14b",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "has_technology_researched": {
+      "source": "common/ai_ship_categories/00_ai_ship_categories.txt",
+      "line": 6,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_ship_category_coastal_defense",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "can_build",
+            "line": 5,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "has_technology_researched",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "90d4afe82320713522fd92b627031bddfdfa16230cefafeb4d83089e98e8d033",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "fixed_income": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 5567,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_strategy_default",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "wanted_construction_output",
+            "line": 5533,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "add",
+            "line": 5566,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "value",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "e3883d96b91653294eb1d88cea39c935b57a042e1902852db1255046a0ea3060",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "has_strategy": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 1526,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_strategy_default",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "wargoal_maneuvers_fraction",
+            "line": 1471,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 1522,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "limit",
+            "line": 1523,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "OR",
+            "line": 1525,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "has_strategy",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "ed839f452732335124575b06b81ad8c28e9aa208fbb4eacb43789f573bdbff38",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "in_default": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 9433,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_strategy_default",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "secret_goal_scores",
+            "line": 7241,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "dominate",
+            "line": 9011,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "score",
+            "line": 9044,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 9430,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "limit",
+            "line": 9431,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "scope:target_country",
+            "line": 9432,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "in_default",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "dfec99ca547f32c99911a6c4916f9526bfb57f39a958d549fa27b8d77c6b3d4e",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "is_ai": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 5540,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_strategy_default",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "wanted_construction_output",
+            "line": 5533,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 5535,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "limit",
+            "line": 5536,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "OR",
+            "line": 5537,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "AND",
+            "line": 5539,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "is_ai",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "ec4c55117b8ab33b95f73c3b888de5c763e0bed9c1bdb5a1570140f3da50c123",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "navy_size": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 2040,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_strategy_default",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "state_value",
+            "line": 1773,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "else",
+            "line": 2007,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 2037,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "limit",
+            "line": 2038,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "navy_size",
+        "operator": ">=",
+        "prefix": null,
+        "assignment_ast_sha256": "19d1da7fcb723ed8d3283b5644380460628860662ee725873c932ae222794cd2",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "total_population": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 5576,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "ai_strategy_default",
+            "line": 4,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "wanted_construction_output",
+            "line": 5533,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "add",
+            "line": 5575,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "value",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "a7a2333d7098309f0bf1d7a873d5a16ea4700a6aae46e0e0b04eb22cf43751a4",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "legitimacy": {
+      "source": "common/amendments/00_amendments_content_04.txt",
+      "line": 36,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "amendment_geheime_staatskonferenz_metternich",
+            "line": 1,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "can_repeal",
+            "line": 35,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "legitimacy",
+        "operator": ">=",
+        "prefix": null,
+        "assignment_ast_sha256": "33998f398015cdde99a329640193c8a3e82149bea56393a0c92bed8e51e5f312",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "bureaucracy": {
+      "source": "common/decisions/00_decisions.txt",
+      "line": 32,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "revive_olympic_games_decision",
+            "line": 1,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "ai_chance",
+            "line": 29,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 31,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "limit",
+            "line": 32,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "bureaucracy",
+        "operator": ">",
+        "prefix": null,
+        "assignment_ast_sha256": "4a0ca97f0d21262016b445a8852426b2d8852c7ba92a541a859c5720d809f420",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "taking_loans": {
+      "source": "common/decisions/france_savoy.txt",
+      "line": 180,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "france_annex_luxembourg",
+            "line": 158,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "possible",
+            "line": 177,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "taking_loans",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "13005e82ba3a364d11c1fb04809c444e090fd750cd327b88decf90736ccec2fb",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "scaled_debt": {
+      "source": "common/decisions/india_decisions.txt",
+      "line": 503,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "bht_end_privy_purse_payments",
+            "line": 442,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "ai_chance",
+            "line": 487,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 501,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "limit",
+            "line": 502,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "scaled_debt",
+        "operator": ">=",
+        "prefix": null,
+        "assignment_ast_sha256": "51f4f19934fee5f6ef833e039cf4909c17ae5ae1c2cbc85f72aa47bfb6653874",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "net_total_income": {
+      "source": "common/journal_entries/06_portugal_politics.txt",
+      "line": 414,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "je_portugal_regeneration",
+            "line": 344,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "on_monthly_pulse",
+            "line": 409,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "effect",
+            "line": 410,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 412,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "limit",
+            "line": 413,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "net_total_income",
+        "operator": ">",
+        "prefix": null,
+        "assignment_ast_sha256": "3740a7b0f5b2aa500905c685ee7fe827f2c7f3a12638aff1cac1da61dc47161e",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    "has_insurrectionary_interest_groups": {
+      "source": "common/scripted_triggers/00_victoria_scripted_triggers.txt",
+      "line": 603,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "meiji_completion_trigger",
+            "line": 594,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "AND",
+            "line": 595,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "has_insurrectionary_interest_groups",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "5c2e0355e448d653fb7ff758d7cb2067e65e4330bb6869b5faf966009511de53",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    }
+  },
+  "arguments": [
+    {
+      "engine": "has_strategy",
+      "argument": "ai_strategy_industrial_expansion",
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "line": 404,
+      "ast_context": {
+        "ancestor_path": [],
+        "assignment_key": "ai_strategy_industrial_expansion",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "8fcec8956240b9455614b0da7834b5fd4a19cc4c3ed00bbf00e1867586e04782",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    {
+      "engine": "has_strategy",
+      "argument": "ai_strategy_resource_expansion",
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "line": 200,
+      "ast_context": {
+        "ancestor_path": [],
+        "assignment_key": "ai_strategy_resource_expansion",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "c30df8880b9192894a257f1b04f051dcfdfa19a28a02f479bc4e4903aaefafcb",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    {
+      "engine": "has_strategy",
+      "argument": "ai_strategy_territorial_expansion",
+      "source": "common/ai_strategies/02_diplomatic_strategies.txt",
+      "line": 259,
+      "ast_context": {
+        "ancestor_path": [],
+        "assignment_key": "ai_strategy_territorial_expansion",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "cbe19dda4cb63357f079a434cef12381344aee2e9d7954fe50751f8ebb8ef0b8",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    {
+      "engine": "has_technology_researched",
+      "argument": "artillery",
+      "source": "common/technology/technologies/20_military.txt",
+      "line": 84,
+      "ast_context": {
+        "ancestor_path": [],
+        "assignment_key": "artillery",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "a6be92781a77bf92b086d23b2a4bdff6036786d697c2e1ee9cb064b084b2618d",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    },
+    {
+      "engine": "has_variable",
+      "argument": "recently_lost_war",
+      "source": "common/on_actions/00_code_on_actions.txt",
+      "line": 3777,
+      "ast_context": {
+        "ancestor_path": [
+          {
+            "key": "on_lost_war",
+            "line": 3773,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "effect",
+            "line": 3774,
+            "operator": "=",
+            "prefix": null
+          },
+          {
+            "key": "if",
+            "line": 3775,
+            "operator": "=",
+            "prefix": null
+          }
+        ],
+        "assignment_key": "set_variable",
+        "operator": "=",
+        "prefix": null,
+        "assignment_ast_sha256": "96e53b18a15596fc9ca27c71faafb1a2e27168a23becb5ffe9207a9cd358e64d",
+        "scope_authorization": "none_lexical_context_only"
+      }
+    }
+  ],
+  "baseline_version": "1.15.0"
+}

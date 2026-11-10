@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from pdx import version_contracts
 
-from . import engine_scope_115
+from . import engine_scope_115, engine_strategy_115
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -140,6 +140,9 @@ def _verified_manifest(
 
 def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
     """Keep each additional exact consumer and dynamic object identity pinned."""
+    if version_contracts.active_version() == "1.15.0":
+        engine_strategy_115.validate(data)
+        return
     expected = {
         "wanted_construction_output": {
             "actor_scope": "country",
@@ -577,20 +580,26 @@ def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
         raise ValueError("锁定策略同字段默认及活动策略合并证据不一致")
 
 
+def _strategy_manifest() -> tuple[Path, str, str]:
+    if version_contracts.active_version() == "1.15.0":
+        return engine_scope_115.manifest("strategy")
+    return STRATEGY_MANIFEST, STRATEGY_MANIFEST_ID, STRATEGY_MANIFEST_SHA256
+
+
 def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeEvidence:
     """逐字段核对策略成员、真实消费者及原字节，不能从容器推导其他字段。"""
+    manifest, manifest_id, manifest_hash = _strategy_manifest()
     data, hashes, verified = _verified_manifest(
         game,
         inputs,
-        STRATEGY_MANIFEST,
-        STRATEGY_MANIFEST_ID,
-        STRATEGY_MANIFEST_SHA256,
+        manifest,
+        manifest_id,
+        manifest_hash,
         "锁定策略作用域证据",
     )
     _validate_strategy_contracts(data)
     if not verified:
         return StrategyScopeEvidence(False, hashes)
-    manifest_hash = STRATEGY_MANIFEST_SHA256
     return StrategyScopeEvidence(
         True,
         hashes,
@@ -603,7 +612,7 @@ def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeE
                 contract["operation"],
                 contract["capability"],
                 (
-                    f"{STRATEGY_MANIFEST_ID}:sha256={manifest_hash}",
+                    f"{manifest_id}:sha256={manifest_hash}",
                     f"@engine/binaries/victoria3.exe:{contract['consumer_va']}",
                 ),
             )
@@ -613,9 +622,10 @@ def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeE
 
 
 def strategy_snapshot() -> bytes:
-    """Read pinned historical evidence, without claiming current EXE verification."""
-    raw = STRATEGY_MANIFEST.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != STRATEGY_MANIFEST_SHA256:
+    """Read the selected version's evidence without claiming EXE verification."""
+    manifest, _, expected_hash = _strategy_manifest()
+    raw = manifest.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != expected_hash:
         raise ValueError("锁定策略作用域证据已变化，必须重新独立复核")
     _validate_strategy_contracts(json.loads(raw))
     return raw

@@ -1,0 +1,480 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.0-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+    "bytes": 99988600,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.0",
+    "caligula_rev": "6338547985dbc271523e149f362a6fd93dc62975",
+    "clausewitz_branch": "caligula/release/1.15.0",
+    "clausewitz_rev": "a65fc88f3e604839357cb5b2aaf3b123e9d7434e"
+  },
+  "runtime": "unknown",
+  "derivation": "Independently located current PE RTTI/vftables and literal atom entries; current disassembly reviewed from parser members through actual AI caller. Historical addresses are not authority.",
+  "contracts": [
+    {
+      "field": "ai_value",
+      "actor": "state",
+      "actor_owner": "country",
+      "target": "definition_only:building_type",
+      "operation": "missing_base_candidate_score",
+      "capability": "exact_default_initializer",
+      "consumer": "0x1418361b0",
+      "parser": "0x141832b30",
+      "parser_subobject": "0x870",
+      "numeric_member": "0x560",
+      "parser_atom": "0x53c8",
+      "parser_field_branch": "0x14183332a",
+      "selected_definition_member": "0x158",
+      "selection": "valid_template_else_self",
+      "selection_branch": "0x1418361e7",
+      "selected_numeric_address": "0x1418361f5",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x141836203",
+      "nonempty_evaluator": "0x1408582c0",
+      "evaluation_call": "0x141836298",
+      "scope_tag": "0x4c",
+      "scope_identity_member": "state+0x8",
+      "scope_tag_rtti": ".?AV?$CJominiScriptScopeObject@VCState@@@@",
+      "actual_call": "0x14164a8cc",
+      "actual_state_owner_check": "0x14164a6d0",
+      "result_store": "0x14183621f",
+      "result_return": "0x141836364",
+      "default_value": 1000,
+      "define_source": "common/defines/00_ai.txt",
+      "default_branches": [
+        {
+          "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+          "line": 806,
+          "value": 1000,
+          "global": "0x145bda950",
+          "setter": "0x141134b60",
+          "write": "0x141134b96",
+          "binding": "0x141134bb0",
+          "registration": "0x141134bd0",
+          "load": "0x141836210"
+        },
+        {
+          "define": "NAI.GOVERNMENT_BUILDING_BASE_VALUE",
+          "line": 750,
+          "value": 1000,
+          "global": "0x145bdb060",
+          "setter": "0x141124130",
+          "write": "0x141124166",
+          "binding": "0x141124180",
+          "registration": "0x1411241a0",
+          "load": "0x141836217"
+        }
+      ],
+      "source_requirement": "exactly_missing_ai_value_in_eleven_frozen_native_definitions_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_numeric_requirement": "preserve_complete_native_expression",
+      "selection_invariant": "Selection uses only template validity before examining selected ai_value; the ai_value parser touches only self+0x560, so adding a numeric expression cannot change template selection.",
+      "template_invariant": "The observed dynamic HQ and regional HQ generators create a separate named database definition, store its template at +0x158, and copy ordinary metadata. Scoring evaluates exactly one selected definition, never recursively scores the template or adds both numeric fields. If selected template is one of the eleven, its initialized score is evaluated once; otherwise that path retains its original expression or default. The dynamic definition itself is not an initializer target.",
+      "default_equivalence": "Both native empty-expression branches load exactly 1000, independently of building-group flags. An initialized selected field therefore replaces its native 1000 with value=1000 before any allowed overlay. This grants no claim that an unselected field can influence an actual score."
+    }
+  ],
+  "script_hashes": {
+    "common/buildings/01_industry.txt": "a8513a22f17b76d119adc1c56de6fe4d4aa0c09ecaaa0c76b6ccf9841f9c7a3b",
+    "common/buildings/02_agro.txt": "beb46c80cdbf75d91eec7f9078508657894ab1db6be6f07aff324dd20a231c23",
+    "common/buildings/04_plantations.txt": "fa57b7a2ffc59b4074a7ec425f8626f407062c7c05079b396d7caef9d2034046",
+    "common/buildings/09_misc_resource.txt": "35cd32a26048973da45b79c00c30fb473dcbf4e57591a436dc769ec6d8f2f6b7",
+    "common/defines/00_ai.txt": "c5f7b5f493a4e00a20539eea423d39e1463d3047f5aef49175ea9e3966cd732d"
+  },
+  "native_authority": {
+    "path": "research/situated/1.15.0/consumer-adapters.json",
+    "sha256": "405667f37790d5b593b2e7453d0f89283f11c751e2cfe382c586bf6fe33de108"
+  },
+  "implicit_buildings": [
+    {
+      "source": "common/buildings/01_industry.txt",
+      "field": "building_arms_industry.ai_value",
+      "parent": {
+        "ast_sha256": "09d4a5c3ab81555f96691c1db134ef0e1fa7a237fa05805784f888c2f1af77f0",
+        "line": 665,
+        "path": "building_arms_industry"
+      }
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "field": "building_artillery_foundry.ai_value",
+      "parent": {
+        "ast_sha256": "d13936362e0d26cb39b0fc2520d385c164664fce98bdad7ab23b7359fe153eb2",
+        "line": 689,
+        "path": "building_artillery_foundry"
+      }
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "field": "building_livestock_ranch.ai_value",
+      "parent": {
+        "ast_sha256": "34bd6ff92f3df2a68d8ed08606f257b4523846781014be13485e374c752e939c",
+        "line": 218,
+        "path": "building_livestock_ranch"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_banana_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "2b8cf1a35ef97e4c6767455125616ae5529f34257d70e158aa09ffebc77bdc97",
+        "line": 280,
+        "path": "building_banana_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_coffee_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "e5c4b8850987716fe367065f2a4587ab7898a08100b3288ade7a8396295b87bf",
+        "line": 3,
+        "path": "building_coffee_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_sugar_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "dff9fee1898e55a158b76023c44ae2a3c3d0912ef14f0873aa447dc5431d72a2",
+        "line": 257,
+        "path": "building_sugar_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_fishing_wharf.ai_value",
+      "parent": {
+        "ast_sha256": "78f2972fe44fee015bbfce032b2b5c2de7ebe7c44317e0a488e9b6d01492287c",
+        "line": 44,
+        "path": "building_fishing_wharf"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_logging_camp.ai_value",
+      "parent": {
+        "ast_sha256": "15c4d8424cd2d76065f3d3223dbd8e9e6e6b23845abc90db06c15426e9ac9a66",
+        "line": 1,
+        "path": "building_logging_camp"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_oil_rig.ai_value",
+      "parent": {
+        "ast_sha256": "2075accd204879a7283c4e61e82c4fab853f99812163bb03f0a42ab8e164c9a3",
+        "line": 89,
+        "path": "building_oil_rig"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_rubber_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "eb5644d6df40893d85336e92b6d66aa3d8b8ea07585d559c3211999420a528ae",
+        "line": 20,
+        "path": "building_rubber_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_whaling_station.ai_value",
+      "parent": {
+        "ast_sha256": "3254d4b5f6975efb37294ee6f8912b9b334fe537c8cc4cc2bca45705be8d2094",
+        "line": 64,
+        "path": "building_whaling_station"
+      }
+    }
+  ],
+  "dynamic_templates": [
+    {
+      "kind": "headquarters",
+      "factory": "0x14183c980",
+      "functor_vtable": "0x144760d38",
+      "functor_thunk": "0x14185e260",
+      "builder": "0x14183cb50",
+      "template_write": "0x14183cba3",
+      "rtti": "0x14546ee20",
+      "type_name": ".?AV<lambda_1>@?1??FindOrCreateDynamicHQBuildingType@CBuildingDatabase@@QEAAAEBVCBuildingType@@AEBVCCompanyType@@@Z@"
+    },
+    {
+      "kind": "regional_headquarters",
+      "builder": "0x14183d290",
+      "template_write": "0x14183d2e3"
+    }
+  ],
+  "limits": [
+    "Static binary and exact source evidence only; runtime remains unknown.",
+    "No script building target or arbitrary foreign country scope permission.",
+    "No initializer permission for explicit empty, scalar or block ai_value, new definitions, or dynamic HQ definitions.",
+    "The proof preserves selection and adds at most one overlay to the selected field; it does not promise that every initialized field is selected for every candidate."
+  ],
+  "reviewed_chain": "Current CBuildingType parser atom -> self numeric member -> template/self choice independent of score emptiness -> both exact native defaults -> actual state tuple and AI consumer; dynamic HQ template writes identified independently by RTTI.",
+  "observations": [
+    {
+      "label": "building_type_rtti_name",
+      "va": "0x145652e58",
+      "rva": "0x5652e58",
+      "file_offset": "0x5651858",
+      "bytes": "2e3f4156434275696c64696e675479706540400000000000e0"
+    },
+    {
+      "label": "building_parser_locator",
+      "va": "0x144c97c08",
+      "rva": "0x4c97c08",
+      "file_offset": "0x4c97008",
+      "bytes": "010000007008000004000000482e6505701cb404087cc904"
+    },
+    {
+      "label": "building_parser_vtable",
+      "va": "0x14475fbf8",
+      "rva": "0x475fbf8",
+      "file_offset": "0x475eff8",
+      "bytes": "087cc94401000000906b8741010000000c1f844001000000f04867400100000040dddf4301000000e016844001000000"
+    },
+    {
+      "label": "building_parser_thunk",
+      "va": "0x1408416e0",
+      "rva": "0x8416e0",
+      "file_offset": "0x840ae0",
+      "bytes": "486341fc482bc8e94414ff00"
+    },
+    {
+      "label": "building_constructor_identity",
+      "va": "0x141832167",
+      "rva": "0x1832167",
+      "file_offset": "0x1831567",
+      "bytes": "488d055af5f202488907488b470848634804488d0580daf2024889443908"
+    },
+    {
+      "label": "building_constructor_invalid_template_sentinel",
+      "va": "0x1418322c5",
+      "rva": "0x18322c5",
+      "file_offset": "0x18316c5",
+      "bytes": "488b05fcc74004488987580100004889bf60010000"
+    },
+    {
+      "label": "building_constructor_numeric",
+      "va": "0x141832450",
+      "rva": "0x1832450",
+      "file_offset": "0x1831850",
+      "bytes": "488d1d1936e90248899f98040000488d8fa0040000e816ad69ff90c787580500000000803f48899f60050000488d8f68050000e8f8ac69ff"
+    },
+    {
+      "label": "ai_value_literal",
+      "va": "0x14493f348",
+      "rva": "0x493f348",
+      "file_offset": "0x493e748",
+      "bytes": "61695f76616c756500"
+    },
+    {
+      "label": "ai_value_atom_entry",
+      "va": "0x144975a10",
+      "rva": "0x4975a10",
+      "file_offset": "0x4974e10",
+      "bytes": "c85300000000000048f3934401000000"
+    },
+    {
+      "label": "ai_value_parser_dispatch",
+      "va": "0x1418330c5",
+      "rva": "0x18330c5",
+      "file_offset": "0x18324c5",
+      "bytes": "4181f8c85300000f8f6a0200000f8452020000"
+    },
+    {
+      "label": "ai_value_parser_member",
+      "va": "0x14183332a",
+      "rva": "0x183332a",
+      "file_offset": "0x183272a",
+      "bytes": "4881c1f0fcffff488b01ff5018e9000c0000"
+    },
+    {
+      "label": "template_then_self_selection",
+      "va": "0x1418361d0",
+      "rva": "0x18361d0",
+      "file_offset": "0x18355d0",
+      "bytes": "4d8bf0488bfa488bd9488b8958010000488b01ff1084c07409488b8358010000eb03488bc3488db060050000"
+    },
+    {
+      "label": "empty_score_both_defaults",
+      "va": "0x1418361fc",
+      "rva": "0x18361fc",
+      "file_offset": "0x18355fc",
+      "bytes": "83bea8000000007522488b8368010000f6404010488b0539473a04480f4505414e3a04488907e93d010000"
+    },
+    {
+      "label": "actual_state_tuple",
+      "va": "0x141836264",
+      "rva": "0x1836264",
+      "file_offset": "0x1835664",
+      "bytes": "b84c0000006689442430418b460848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcee8232002ff"
+    },
+    {
+      "label": "state_scope_rtti",
+      "va": "0x1457ca590",
+      "rva": "0x57ca590",
+      "file_offset": "0x57c8f90",
+      "bytes": "2e3f41563f24434a6f6d696e6953637269707453636f70654f626a656374405643537461746540404040000000000000e0"
+    },
+    {
+      "label": "state_scope_vtable",
+      "va": "0x14478d9a8",
+      "rva": "0x478d9a8",
+      "file_offset": "0x478cda8",
+      "bytes": "00a5cb4401000000f0e5ca4001000000f0337b4101000000"
+    },
+    {
+      "label": "state_scope_tag",
+      "va": "0x1417b33f0",
+      "rva": "0x17b33f0",
+      "file_offset": "0x17b27f0",
+      "bytes": "b84c000000c3"
+    },
+    {
+      "label": "production_define_literal",
+      "va": "0x1446dd610",
+      "rva": "0x46dd610",
+      "file_offset": "0x46dca10",
+      "bytes": "50524f44554354494f4e5f4255494c44494e475f424153455f56414c554500"
+    },
+    {
+      "label": "government_define_literal",
+      "va": "0x1446dcc58",
+      "rva": "0x46dcc58",
+      "file_offset": "0x46dc058",
+      "bytes": "474f5645524e4d454e545f4255494c44494e475f424153455f56414c5545"
+    },
+    {
+      "label": "nai_namespace_literal",
+      "va": "0x1446d6d5c",
+      "rva": "0x46d6d5c",
+      "file_offset": "0x46d615c",
+      "bytes": "4e414900"
+    },
+    {
+      "label": "production_define_setter",
+      "va": "0x141134b60",
+      "rva": "0x1134b60",
+      "file_offset": "0x1133f60",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee8f7a06cff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c2430488905b35daa044883c4205fc3"
+    },
+    {
+      "label": "production_define_binding",
+      "va": "0x141134bb0",
+      "rva": "0x1134bb0",
+      "file_offset": "0x1133fb0",
+      "bytes": "488bca4c8d0d965daa04488d159b215a034c8d05488a5a03e9f36e3500"
+    },
+    {
+      "label": "production_define_registration",
+      "va": "0x141134bd0",
+      "rva": "0x1134bd0",
+      "file_offset": "0x1133fd0",
+      "bytes": "4c8d0d795daa044c8d05328a5a03488d1577215a03e9c6273400"
+    },
+    {
+      "label": "government_define_setter",
+      "va": "0x141124130",
+      "rva": "0x1124130",
+      "file_offset": "0x1123530",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee827ab6dff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c2430488905f36eab044883c4205fc3"
+    },
+    {
+      "label": "government_define_binding",
+      "va": "0x141124180",
+      "rva": "0x1124180",
+      "file_offset": "0x1123580",
+      "bytes": "488bca4c8d0dd66eab04488d15cb2b5b034c8d05c08a5b03e923793600"
+    },
+    {
+      "label": "government_define_registration",
+      "va": "0x1411241a0",
+      "rva": "0x11241a0",
+      "file_offset": "0x11235a0",
+      "bytes": "4c8d0db96eab044c8d05aa8a5b03488d15a72b5b03e9f6313500"
+    },
+    {
+      "label": "actual_candidate_state_owner",
+      "va": "0x14164a6b7",
+      "rva": "0x164a6b7",
+      "file_offset": "0x1649ab7",
+      "bytes": "4d8bf14d8bf88bfa488bf1418b80d80e0000894548488d4d48e8cb270eff"
+    },
+    {
+      "label": "actual_candidate_score_call",
+      "va": "0x14164a8c6",
+      "rva": "0x164a8c6",
+      "file_offset": "0x1649cc6",
+      "bytes": "4d8bc7498bcee8dfb81e00488b0848894d70"
+    },
+    {
+      "label": "dynamic_hq_factory_name",
+      "va": "0x144763bc8",
+      "rva": "0x4763bc8",
+      "file_offset": "0x4762fc8",
+      "bytes": "6275696c64696e675f7b7d00"
+    },
+    {
+      "label": "dynamic_hq_factory_create",
+      "va": "0x14183ca40",
+      "rva": "0x183ca40",
+      "file_offset": "0x183be40",
+      "bytes": "488d05f142f2024889442460488974246848897c2470488d4424404889442478488d44246048894598488d44244048837c24580f480f4744244048894424308b44245089442438c644243c00488d542430488bcfe827800100488bd8488985c8000000488b4d984885c90f849a000000488b01488d95c8000000ff5010"
+    },
+    {
+      "label": "dynamic_hq_functor_vtable",
+      "va": "0x144760d38",
+      "rva": "0x4760d38",
+      "file_offset": "0x4760138",
+      "bytes": "70e285410100000070e285410100000060e285410100000050e2854101000000f07f7b4001000000"
+    },
+    {
+      "label": "dynamic_hq_functor_thunk",
+      "va": "0x14185e260",
+      "rva": "0x185e260",
+      "file_offset": "0x185d660",
+      "bytes": "488b124883c108e9e4e8fdff"
+    },
+    {
+      "label": "dynamic_hq_rtti",
+      "va": "0x14546ee20",
+      "rva": "0x546ee20",
+      "file_offset": "0x546d820",
+      "bytes": "2e3f41563c6c616d6264615f313e403f313f3f46696e644f7243726561746544796e616d696348514275696c64696e675479706540434275696c64696e67446174616261736540405145414141454256434275696c64696e675479706540404145425643436f6d70616e79547970654040405a400000000000"
+    },
+    {
+      "label": "dynamic_hq_template_write",
+      "va": "0x14183cb71",
+      "rva": "0x183cb71",
+      "file_offset": "0x183bf71",
+      "bytes": "4c8bea4c8bf133db899d40030000488b01488b4868488b01ff1084c07409498b06488b5068eb0b498b4608488b905010000049899558010000498bcde8de8affff"
+    },
+    {
+      "label": "dynamic_regional_hq_template_write",
+      "va": "0x14183d2b1",
+      "rva": "0x183d2b1",
+      "file_offset": "0x183c6b1",
+      "bytes": "4c8bea4c8bf133db899d40030000488b01488b4878488b01ff1084c07409498b06488b5078eb0b498b4608488b906010000049899558010000498bcde89e83ffff"
+    },
+    {
+      "label": "score_returns_selected_result",
+      "va": "0x141836364",
+      "rva": "0x1836364",
+      "file_offset": "0x1835764",
+      "bytes": "488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "complete_selected_score_function",
+      "va": "0x1418361b0",
+      "rva": "0x18361b0",
+      "file_offset": "0x18355b0",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec700100004d8bf0488bfa488bd9488b8958010000488b01ff1084c07409488b8358010000eb03488bc3488db06005000083bea8000000007522488b8368010000f6404010488b0539473a04480f4505414e3a04488907e93d0100004533ff44897c24304c897c243844897c2440488d4c2448e82d18e7fe488d4d30e8e4e6e3fe488d1d0594200348895d48c5f9efc0c5fa7f45504c897d60b84c0000006689442430418b460848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcee8232002ff9048895d48488b5d604885db74334c393b7426448b430c33d2488bcbe8a2ecd70144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe822beb702488b5d584885db742a48833b00741c488bcbe8ab43f6fe488b4b10488b01488b13ff50104c893b44897b08488bcbe8efbdb702488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e86c43f6fe488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    }
+  ]
+}

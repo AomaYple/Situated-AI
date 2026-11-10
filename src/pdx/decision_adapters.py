@@ -316,8 +316,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     } or (type(data["schema"]) is not int or data["schema"] != 1):
         raise ValueError("消费者适配 schema 无效")
     authority_digest = None
+    building_default_digest = None
     if source == SOURCE and version_contracts.active_version() == "1.15.0":
+        from .situated import engine_building_115  # noqa: PLC0415
+
         authority = native_authority_115()
+        building_default_digest = hashlib.sha256(engine_building_115.snapshot()).hexdigest()
         if set(data["sources"]) != set(authority["sources"]):
             raise ValueError("1.15 adapter authority: source denominator drift")
         data["sources"] = dict(authority["sources"])
@@ -491,6 +495,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     digest = hashlib.sha256(
         raw
         + (b"\0native_authority:" + authority_digest.encode("ascii") if authority_digest else b"")
+        + (
+            b"\0building_default_engine:" + building_default_digest.encode("ascii")
+            if building_default_digest
+            else b""
+        )
         + (b"\0company_sectors:" + sector_digest.encode("ascii") if sector_digest else b"")
         + (
             b"\0building_opportunities:" + opportunity_digest.encode("ascii")
@@ -658,6 +667,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             proof = json.loads(engine_scope.company_default_snapshot())
             if field_path[0] not in {row["id"] for row in proof["implicit_companies"]}:
                 raise ValueError("公司缺省评分不在精确引擎证据集合中")
+        elif authority_digest is not None:
+            from .situated import engine_building_115  # noqa: PLC0415
+
+            if (native_source, field) not in engine_building_115.authorized_fields():
+                raise ValueError("1.15 building default: initializer outside exact engine proof")
         building_policy = dict(policies)[native_source]
         if field_path not in {rule.field for rule in building_policy.rules}:
             raise ValueError("建筑缺省评分缺少实际规则消费者")
@@ -1015,6 +1029,11 @@ def read_inputs(
             != native_authority_115()
         ):
             raise ValueError("1.15 adapter authority: native parent/field/default AST drift")
+        from .situated import engine_building_115  # noqa: PLC0415
+
+        engine_building_115.snapshot()
+        if texts is None:
+            engine_building_115.verify_game(game)
     return inputs
 
 
