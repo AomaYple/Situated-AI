@@ -87,6 +87,7 @@ import re
 from typing import TYPE_CHECKING
 
 from pdx import config, docgen
+from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -505,6 +506,17 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     ("06-本地化与界面资源.md", 743): "§5.1 / 附录 A 语料计数：`fonts.font` 的实际行数"
     "（四种独立口径一致）—— 随版本变的本机语料事实，同 11 / 44 那一类",
 }
+
+
+if active_version() == "1.15.0":
+    # 1.15 页首不再携带旧安装树采集值；其历史登记仍保留给 1.14 默认文档。
+    del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27723)]
+    del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27725)]
+    # 下列值在当前同页已有精确 claim，已不属于未看守散文数字。
+    del PROSE_NOT_COMPUTED[("04-脚本系统.md", 98)]  # script.events_md_doc04
+    del PROSE_NOT_COMPUTED[("06-本地化与界面资源.md", 5)]  # loc.je_widgets_doc06
+    # 该页已移除旧版本提示；正文「0 命中」和表格中的 0 不再落入散文扫描口径。
+    del PROSE_NOT_COMPUTED[("15-政治人口与社会.md", 0)]
 
 
 def _unguarded_prose() -> dict[str, set[int]]:

@@ -53,7 +53,7 @@
 
 > ⚠️ **§2.1 / §2.2 / §2.5 / §2.6 与 §1.6 的表格已按 1.14.3 重算。**
 > 这几张表原先由那批 PowerShell 脚本产出，数值停留在 1.14.2：
-> 1.14.3 给 `NMilitary` 增加了 1<!--claim:def.file_ai--> 个参数、给 `NDiplomacy` 增加了 39 个，
+> 1.14.3 给 `NMilitary` 增加了 1 个参数、给 `NDiplomacy` 增加了 39 个，
 > 于是 `00_defines.txt` 之后所有块的**起始行号整体后移 40 行**、
 > 参数总数从 3434 涨到 **3589**<!--claim:def.param_total-->。现在这些数字由仓库内的解析器
 > （`pdx.parser`，口径见 §0.3）重新生成，并由 `v3 verify` 的
@@ -76,7 +76,7 @@
 > 而**不是**「是否写在同一行」。早先按行数区分，于是把跨行书写的
 > `KEY = { a b c }`（值仍是纯列表）记成了嵌套块 —— 那是排版差异，不是语义差异；
 > `jomini/00_tooltips.txt` 的 `NTooltip` 正是这种写法。
-> 现在这条界线由 `pdx.defines._classify` 单点决定，且下面 5<!--claim:def.file_shaders--> 张表全部由
+> 现在这条界线由 `pdx.defines._classify` 单点决定，且下面 5 张表全部由
 > **`v3 tables --write`** 生成，不再手抄（它们此前因为无人重跑，
 > 整整落后了一个游戏版本）。
 
@@ -98,7 +98,7 @@
 
 ---
 
-## 1<!--claim:def.file_audio-->. defines 系统
+## 1. defines 系统
 
 ### 1.1 用途
 
@@ -120,7 +120,7 @@ defines 是**引擎侧（C++）读取的全局静态常量**，用于调节那�
 | **jomini** | `...\Victoria 3\jomini\common\defines\` | 18（含 `jomini\`、`graphic\` 两处子目录） |
 | clausewitz | `...\Victoria 3\clausewitz\` | 0（该目录下无 `common\defines`）【提取】 |
 
-`jomini\common\defines\` 的完整文件清单（19<!--claim:defines.00_defines_namespaces--> 个）：`00_adaptive_music.txt`、`00_audio_persistent_objects.txt`、`music_player_defines.txt`、`graphic\00_coa.txt`、`jomini\00_tooltips.txt`、`jomini\adjacencies.txt`、`jomini\camera.txt`、`jomini\fog_of_war.txt`、`jomini\icons.txt`、`jomini\mapeditor.txt`、`jomini\modifiers.txt`、`jomini\multiplayer.txt`、`jomini\portraits.txt`、`jomini\rivers.txt`、`jomini\settings.txt`、`jomini\social.txt`、`jomini\text_coloring.txt`、`jomini\text_formatting.txt`。【提取】
+`jomini\common\defines\` 的完整文件清单（18 个）：`00_adaptive_music.txt`、`00_audio_persistent_objects.txt`、`music_player_defines.txt`、`graphic\00_coa.txt`、`jomini\00_tooltips.txt`、`jomini\adjacencies.txt`、`jomini\camera.txt`、`jomini\fog_of_war.txt`、`jomini\icons.txt`、`jomini\mapeditor.txt`、`jomini\modifiers.txt`、`jomini\multiplayer.txt`、`jomini\portraits.txt`、`jomini\rivers.txt`、`jomini\settings.txt`、`jomini\social.txt`、`jomini\text_coloring.txt`、`jomini\text_formatting.txt`。【提取】
 
 **子目录会被递归加载**——这是覆盖机制的关键，见 §1.7。
 
@@ -552,11 +552,13 @@ NCountry = {
 
 ### 2.3 `00_ai.txt` —— AI 专用 defines（详见 §3）
 
-整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1017**<!--claim:def.nai_count--> 个参数，全部为标量，无内联列表、无嵌套块。文件共 1316<!--claim:def.ai_file_lines--> 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
+整个文件只有 1<!--claim:def.file_ai--> 个顶层命名空间块 `NAI`，起始于第 1 行，包含 **1017**<!--claim:def.nai_count--> 个参数，全部为标量，无内联列表、无嵌套块。文件共 1316<!--claim:def.ai_file_lines--> 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
 
 结构明细见 §3.1，全部 1017 个参数名见 §3.3。
 
 ### 2.4 `00_audio.txt`
+
+该文件有 1<!--claim:def.file_audio--> 个顶层命名空间块 `NAudio`。
 
 | 命名空间块 | 起始行 | 条目数 |
 |---|---|---|
@@ -570,7 +572,7 @@ NCountry = {
 
 ### 2.5 `00_defines.txt` —— 主 defines 文件
 
-20<!--claim:def.file_graphics--> 个顶层块，但只有 **18 个不同命名空间**——`NPops` 在同一文件内出现了 **2 次**（第 1404 行、第 1773 行），这是 §1.7 证据 2 的来源之一。
+1.15.0 文件有 42<!--claim:def.file_defines--> 个顶层赋值（包含 `@` 变量），其中不同命名空间为 19<!--claim:defines.00_defines_namespaces--> 个。`NPops` 命名空间块在第 1424 行和第 1798 行各出现一次；顶层赋值数、块数和去重命名空间数不可混用。
 
 | # | 命名空间 | 块起始行 | 该命名空间的块数 | 参数合计 |
 |---|---|---|---|---|
@@ -601,7 +603,7 @@ NCountry = {
 
 ### 2.6 `00_graphics.txt`
 
-19 个块，492 个条目（其中 123 条是 `KEY = { r g b a }` 形式的纯值列表；**0 条嵌套块** —— defines 层是完全扁平的，这也是它与其他 `common\` 数据目录最大的结构差别）。
+1.15.0 中有 20<!--claim:def.file_graphics--> 个顶层块，567 个条目（其中 139 条是 `KEY = { r g b a }` 形式的纯值列表；**0 条嵌套块** —— defines 层是完全扁平的，这也是它与其他 `common\` 数据目录最大的结构差别）。
 
 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |
 |---|---|---|---|---|---|
@@ -649,7 +651,7 @@ NCountry = {
 
 > 📌 本节的「起始行」同 §1.7 的说明：行号列是快照，其余列由 `v3 tables` 重算。
 
-5 个块，40 个条目。
+5<!--claim:def.file_shaders--> 个块，40 个条目。
 
 | 命名空间块 | 起始行 | 标量 | 内联列表 | 合计 |
 |---|---|---|---|---|
@@ -4715,7 +4717,7 @@ country_soldiers_voting_power_add
 | 目录内 `.md` 说明文件 | **0**（`static_modifiers` 不像 `modifier_type_definitions` / `game_rules` 那样带说明文档） |
 | 文件结构一致性 | **68 / 68 个文件都以 `key = {` 开头**（脚本逐文件校验首行） |
 
-> **计数口径说明（三次复核记录）**
+> **计数口径说明（历史 1.14.5 三次复核记录，另列当前值）**
 >
 > 本节先后写过 **6125** 与 **6121**，**两个都是错的**。正确值是 **6479**<!--claim:def.static-->。
 >
@@ -4735,14 +4737,14 @@ country_soldiers_voting_power_add
 > | `content_1_modifiers.txt:1215` | `modifier_objectors_conscription_bad_law` | 1 空格 |
 > | `00_ip3_04_modifiers.txt:62` | `negotiation_pushing_for_law` | 1 空格 |
 >
-> 6121 + 7 = **6128**。反向为空 —— 顶格但非顶层的键一个也没有，
+> 历史 1.14.5 的算式是 6121 + 7 = 6128；当前总量为 6479<!--claim:def.static-->，不沿用该历史算式。历史对照中反向为空 —— 顶格但非顶层的键一个也没有，
 > 说明「缩进口径」是「深度口径」的真子集，只会少不会多。
 >
-> 四种口径对照：
+> 以下是历史 1.14.5 的四种口径对照：
 >
 > | 口径 | 数量 | 判定 |
 > |---|---:|---|
-> | **花括号深度为 0** | **6128** | ✅ 正确 |
+> | **花括号深度为 0** | 6128 | 当时的正确值（当前值见上文） |
 > | 行首无缩进 | 6121 | ❌ 漏掉上表 7 个 |
 > | 不限缩进、不数深度 | 6129 | ❌ 混入 1 个嵌套键 |
 > | 用 `^[A-Za-z_]` 开头 | 6118 | ❌ 另漏 3 个数字开头的键 |

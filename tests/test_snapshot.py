@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pdx import config, snapshot
+from pdx import config, snapshot, version_contracts
 from pdx.input_profile import InputAction, ProfileCheck
 
 
@@ -177,7 +177,10 @@ class TestSnapshotShape(unittest.TestCase):
 
     def test_common_entries_covers_all_dirs(self):
         """必须覆盖全部数据目录（1.14.4 是 138 个）—— 曾经因路径口径错误变成 0。"""
-        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
+        self.assertEqual(
+            len(self.snap.sections["common_entries"]),
+            {"1.14.5": 138, "1.15.0": 140}[version_contracts.active_version()],
+        )
 
     def test_common_entries_not_empty(self):
         total = sum(len(v) for v in self.snap.sections["common_entries"].values())
@@ -190,13 +193,19 @@ class TestSnapshotShape(unittest.TestCase):
         """NGUI 在 24 个块里出现，必须合并成一个键而非坍缩。
         实测唯一命名空间 50（game）+ 17（jomini）= 67。
         """
-        self.assertEqual(len(self.snap.sections["defines"]), 67)
+        self.assertEqual(
+            len(self.snap.sections["defines"]),
+            {"1.14.5": 67, "1.15.0": 69}[version_contracts.active_version()],
+        )
 
     def test_localization_has_11_languages(self):
         self.assertEqual(len(self.snap.sections["localization"]), 11)
 
     def test_dlc_count_is_17(self):
-        self.assertEqual(len(self.snap.sections["dlc"]), 17)
+        self.assertEqual(
+            len(self.snap.sections["dlc"]),
+            {"1.14.5": 17, "1.15.0": 18}[version_contracts.active_version()],
+        )
 
 
 class TestDeterminism(unittest.TestCase):
@@ -427,7 +436,10 @@ class TestCompactSnapshot(unittest.TestCase):
             for suffix in ("entries", "fields"):
                 with self.subTest(section=f"{top}_{suffix}"):
                     self.assertIn(f"{top}_{suffix}", self.snap.sections)
-        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
+        self.assertEqual(
+            len(self.snap.sections["common_entries"]),
+            {"1.14.5": 138, "1.15.0": 140}[version_contracts.active_version()],
+        )
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 
     def test_与完整快照的结构域一致(self):

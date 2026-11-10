@@ -20,7 +20,7 @@ from .textio import normalized_text
 
 EVIDENCE = config.REPO / "research/vanilla-ai/1.14.5/country-interfaces.json"
 BASELINE = EVIDENCE.parent / "00_default_strategy.txt"
-EVIDENCE_115_SHA256 = "4bf377f91ae32deaf78782d26fb11176eadb258e932c1fa75c121f31a1f6b2c5"
+EVIDENCE_115_SHA256 = "c2e1eec0205efaa2e4c04ff770db418a4d7bd5ebe2649301eabca3e9a861e006"
 
 
 def evidence_file() -> Path:

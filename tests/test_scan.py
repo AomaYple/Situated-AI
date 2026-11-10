@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pdx import scan
+from pdx import scan, version_contracts
 from pdx.scan import (
     TEXT_SUFFIXES,
     count_files,
@@ -181,7 +181,7 @@ class TestRealGameTree(unittest.TestCase):
 
         common = GAME / "common"
         n = sum(1 for p in common.iterdir() if p.is_dir())
-        self.assertEqual(n, 138)
+        self.assertEqual(n, {"1.14.5": 138, "1.15.0": 140}[version_contracts.active_version()])
 
     def test_common_txt_count(self):
         """common 下 .txt 数。
@@ -195,17 +195,23 @@ class TestRealGameTree(unittest.TestCase):
         from pdx.config import GAME
 
         n = count_files(GAME / "common", ".txt")
-        self.assertEqual(n, 3030)
+        self.assertEqual(n, {"1.14.5": 3030, "1.15.0": 3191}[version_contracts.active_version()])
 
     def test_common_total_file_count(self):
         from pdx.config import GAME
 
-        self.assertEqual(count_files(GAME / "common"), 3107)
+        self.assertEqual(
+            count_files(GAME / "common"),
+            {"1.14.5": 3107, "1.15.0": 3271}[version_contracts.active_version()],
+        )
 
     def test_common_md_count_is_77(self):
         from pdx.config import GAME
 
-        self.assertEqual(count_files(GAME / "common", ".md"), 77)
+        self.assertEqual(
+            count_files(GAME / "common", ".md"),
+            {"1.14.5": 77, "1.15.0": 80}[version_contracts.active_version()],
+        )
 
     def test_game_root_files_present(self):
         from pdx.config import GAME

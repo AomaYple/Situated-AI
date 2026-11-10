@@ -29,9 +29,9 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import config, defines
+from . import config, defines, version_contracts
 from .cache import parse_cached
-from .doc_tables import KeyedTableSpec
+from .doc_tables import KeyedTableSpec, TableSpec
 from .model import Block, Scalar
 from .usage import ai_script_values_key_stats, ai_script_values_referenced
 
@@ -69,6 +69,41 @@ _NAI_PREFIXES: tuple[str, ...] = (
     "BLOCKADE",
 )
 
+_NAI_PREFIX_DOMAINS = dict(
+    zip(
+        _NAI_PREFIXES,
+        (
+            "外交",
+            "生产/建造",
+            "财政",
+            "通用 AI",
+            "国家目标",
+            "舰队",
+            "自治投资",
+            "统一",
+            "变更判定",
+            "动员",
+            "政府",
+            "列强",
+            "海军",
+            "所有权",
+            "公司",
+            "外交",
+            "战线",
+            "下限",
+            "建造",
+            "袭击",
+            "舰船",
+            "条约",
+            "防御",
+            "保护",
+            "封锁",
+        ),
+        strict=True,
+    )
+)
+_NAI_PREFIX_DOMAINS.update(NUM="数量", MILITARY="军事", SUPPLY="补给", TRADE="贸易", PIRACY="海盗")
+
 #: 字段字段（60 个）所在的包装块。
 _AI_STRATEGY_FILE = "common/ai_strategies/00_default_strategy.txt"
 
@@ -105,7 +140,30 @@ def nai_prefix_counts() -> Counter[str]:
 
 def nai_prefix_rows() -> list[tuple[str, dict[int, str]]]:
     counts = nai_prefix_counts()
-    return [(f"`{p}`", {1: str(counts[p])}) for p in _NAI_PREFIXES]
+    prefixes = (
+        sorted(counts, key=lambda name: (-counts[name], name))[:25]
+        if version_contracts.active_version() == "1.15.0"
+        else _NAI_PREFIXES
+    )
+    return [(f"`{p}`", {1: str(counts[p])}) for p in prefixes]
+
+
+def _nai_prefix_table() -> TableSpec | KeyedTableSpec:
+    if version_contracts.active_version() == "1.14.5":
+        return KeyedTableSpec(
+            name="doc03 NAI 参数前缀 Top25",
+            header="| 前缀 | 数量 | 领域 |",
+            cells=nai_prefix_rows,
+            append_new=False,
+        )
+    return TableSpec(
+        name="doc03 NAI 参数前缀 Top25",
+        header="| 前缀 | 数量 | 领域 |",
+        rows=lambda: [
+            f"| {key} | {cells[1]} | {_NAI_PREFIX_DOMAINS.get(key.strip('`'), '参数名前缀')} |"
+            for key, cells in nai_prefix_rows()
+        ],
+    )
 
 
 def _strategy_fields() -> list[tuple[str, str, object]]:
@@ -226,15 +284,10 @@ def doc09_field_rows() -> list[tuple[str, dict[int, str]]]:
     ]
 
 
-def doc_table_specs() -> list[KeyedTableSpec]:
+def doc_table_specs() -> list[KeyedTableSpec | TableSpec]:
     """doc 03 一张 + doc 09 一张 + doc 10 两张（名字前缀区分归属，由 docgen 分发）。"""
     return [
-        KeyedTableSpec(
-            name="doc03 NAI 参数前缀 Top25",
-            header="| 前缀 | 数量 | 领域 |",
-            cells=nai_prefix_rows,
-            append_new=False,
-        ),
+        _nai_prefix_table(),
         KeyedTableSpec(
             name="doc09 领域对应字段",
             header=FIELD_MAP_TABLE,

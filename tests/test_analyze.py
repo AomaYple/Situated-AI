@@ -19,13 +19,42 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 
 import pytest
 from conftest import NEEDS_GAME
 
-from pdx import analyze
+from pdx import analyze, config, version_contracts
+from pdx.parser import parse_bytes
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(scope="module")
+def installed_mod_inputs():
+    """Enumerate installed roots and reread their raw metadata without the Mod analyzer."""
+    result = {}
+    for parent, local in ((config.WORKSHOP, False), (config.LOCAL_MODS, True)):
+        if not parent.is_dir():
+            continue
+        for root in parent.iterdir():
+            if not root.is_dir() or (local and root.name.startswith(".")):
+                continue
+            metadata_path = root / ".metadata/metadata.json"
+            metadata = {}
+            if metadata_path.is_file():
+                data = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
+                if isinstance(data, dict):
+                    metadata = data
+            ident = metadata.get("id")
+            if (
+                local
+                and isinstance(ident, str)
+                and (ident == config.MOD_ID or ident.startswith("sitai."))
+            ):
+                continue
+            result[root.resolve()] = metadata
+    return result
 
 
 # ── 游戏本体 ────────────────────────────────────────────────
@@ -35,13 +64,14 @@ class TestGameAnalysis:
         assert ga.version["caligula_branch"]
         assert ga.version["caligula_rev"]
         assert ga.version["clausewitz_branch"]
+        assert ga.version["caligula_branch"] == f"release/{version_contracts.active_version()}"
 
     def test_all_three_content_roots(self, ga):
         assert set(ga.roots) == {"game", "jomini", "clausewitz"}
 
     def test_common_has_138_dirs(self, ga):
         """空目录也必须收录 —— scripted_modifiers 只有 .md 没有 .txt。"""
-        assert len(ga.common) == 138
+        assert len(ga.common) == {"1.14.5": 138, "1.15.0": 140}[version_contracts.active_version()]
 
     def test_scripted_modifiers_present_but_empty(self, ga):
         res = ga.common["scripted_modifiers"]
@@ -64,6 +94,17 @@ class TestGameAnalysis:
             "production_methods": 436,
             "on_actions": 268,
         }
+        if version_contracts.active_version() == "1.15.0":
+            known = {
+                "buildings": 122,
+                "laws": 148,
+                "interest_groups": 8,
+                "modifier_type_definitions": 2474,
+                "static_modifiers": 6479,
+                "character_templates": 2072,
+                "production_methods": 450,
+                "on_actions": 287,
+            }
         for name, want in known.items():
             assert ga.common[name].unique_entries == want, name
 
@@ -85,10 +126,13 @@ class TestGameAnalysis:
         assert total > 1_000_000
 
     def test_official_docs_94(self, ga):
-        assert len(ga.official_docs) == 94
+        assert (
+            len(ga.official_docs)
+            == {"1.14.5": 94, "1.15.0": 99}[version_contracts.active_version()]
+        )
 
     def test_dlc_count(self, ga):
-        assert len(ga.dlcs) == 17
+        assert len(ga.dlcs) == {"1.14.5": 17, "1.15.0": 18}[version_contracts.active_version()]
 
     def test_dlc_have_no_script_dirs(self, ga):
         """实测全部 DLC 只装资产，脚本内容都在主体 game/common 里。"""
@@ -133,16 +177,22 @@ class TestGameViews:
 # ── mod ─────────────────────────────────────────────────────
 @NEEDS_GAME
 class TestModsAnalysis:
-    def test_mods_found(self, ma):
-        assert len(ma.mods) >= 20
+    def test_mods_found(self, ma, installed_mod_inputs):
+        actual = [mod.root.resolve() for mod in ma.mods]
+        assert len(actual) == len(set(actual))
+        assert set(actual) == set(installed_mod_inputs)
 
     def test_each_mod_has_target(self, ma):
         for m in ma.mods:
             assert m.target
 
-    def test_metadata_parsed(self, ma):
-        named = [m for m in ma.mods if m.name]
-        assert len(named) >= 15
+    def test_metadata_parsed(self, ma, installed_mod_inputs):
+        expected = {
+            root: (metadata, str(metadata.get("name", "")))
+            for root, metadata in installed_mod_inputs.items()
+        }
+        observed = {mod.root.resolve(): (mod.metadata, mod.name) for mod in ma.mods}
+        assert observed == expected
 
     def test_override_and_addition_partition(self, ma):
         """覆盖 + 新增 必须等于文件总数（跳过 .metadata）。"""
@@ -154,8 +204,26 @@ class TestModsAnalysis:
             for rel in m.overrides + m.additions:
                 assert not rel.startswith(".metadata"), m.target
 
-    def test_prefix_total(self, ma):
-        assert sum(ma.prefixes.values()) > 2000
+    def test_prefix_total(self, ma, installed_mod_inputs):
+        expected_by_root = {}
+        for root in installed_mod_inputs:
+            counts: Counter[str] = Counter()
+            for path in root.rglob("*"):
+                if not path.is_file():
+                    continue
+                relative = path.relative_to(root)
+                if relative.parts[0] == ".metadata" or not config.is_scriptable(
+                    relative.parts, path.suffix.lower()
+                ):
+                    continue
+                parsed = parse_bytes(path.read_bytes(), path=relative.as_posix())
+                counts.update(node.prefix for node in parsed.top_assignments if node.prefix)
+            expected_by_root[root] = counts
+        assert {mod.root.resolve(): mod.prefixes for mod in ma.mods} == expected_by_root
+        expected: Counter[str] = Counter()
+        for counts in expected_by_root.values():
+            expected.update(counts)
+        assert ma.prefixes == expected
 
     def test_prefix_names_are_known(self, ma):
         from pdx.parser import PREFIXES
@@ -197,7 +265,11 @@ class TestSerialization:
         text = json.dumps(d, ensure_ascii=False)
         assert len(text) > 1000
         back = json.loads(text)
-        assert back["概览"]["common 目录数"] == 138
+        installed_directories = {
+            path.name for path in (config.GAME / "common").iterdir() if path.is_dir()
+        }
+        assert set(back["common"]) == installed_directories
+        assert back["概览"]["common 目录数"] == len(installed_directories)
 
     def test_mods_dict_is_jsonable(self, ma):
         d = analyze.to_mods_dict(ma)
