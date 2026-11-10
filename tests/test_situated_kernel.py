@@ -69,7 +69,7 @@ def test_行动降低为有限原版消费者条件块():
         assert _max_exclusive_writes(parsed.root) == 1
     assert all("is_ai = yes" in text for text in overlay.values())
     patched = decisions.patch_default(
-        decisions.BASELINE.read_text(encoding="utf-8"),
+        decisions.baseline_path().read_text(encoding="utf-8"),
         decisions.load(),
         decisions.load_extensions(profile="release"),
         action_overlay=overlay,

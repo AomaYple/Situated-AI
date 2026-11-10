@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from pdx import config
+from pdx import config, version_contracts
 from pdx.defines import (
     INLINE_LIST,
     NESTED_BLOCK,
@@ -244,10 +244,11 @@ def test_覆盖预览_空输入() -> None:
 @_needs_game
 @pytest.mark.integration
 def test_真实defines的规模符合已核实的数字() -> None:
-    """75 个命名空间块 / 50 个去重名 —— verify.py 的断言表钉着同一组数。"""
+    """核对各版本独立审查的命名空间块和去重名，不混用历史计数。"""
     r = extract_defines()
-    assert len(r.namespaces) == 75
-    assert len(r.unique_namespaces) == 50
+    blocks, names = (77, 52) if version_contracts.active_version() == "1.15.0" else (75, 50)
+    assert len(r.namespaces) == blocks
+    assert len(r.unique_namespaces) == names
     files = r.summary()["涉及文件"]
     assert isinstance(files, int)
     assert files > 0

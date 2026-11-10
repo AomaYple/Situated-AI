@@ -62,7 +62,7 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
         assert result.operation == "add"
         assert result.delta == pytest.approx(expected)
     patched = decisions.patch_default(
-        decisions.BASELINE.read_text(encoding="utf-8"),
+        decisions.baseline_path().read_text(encoding="utf-8"),
         decisions.load(),
         decisions.load_extensions(profile="release"),
         action_overlay=overlay,

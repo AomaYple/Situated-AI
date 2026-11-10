@@ -8,7 +8,14 @@ from test_situated_building_joint import _generate
 from test_situated_joint_witnesses import _facts
 from test_situated_local_foundations import _overlay
 
-from pdx import building_opportunities, company_sectors, config, decision_rules
+from pdx import (
+    building_opportunities,
+    company_sectors,
+    config,
+    decision_adapters,
+    decision_rules,
+    version_contracts,
+)
 from pdx.situated import pdx_eval
 
 pytestmark = pytest.mark.integration
@@ -95,6 +102,10 @@ def test_full_pmg_labor_lower_bound_and_invalidated_recipe():
             if candidate["id"] == "building_textile_mill":
                 candidate.update(deepcopy(changed))
     raw = tomllib.loads((config.REPO / "mod/decisions/adapters.toml").read_text(encoding="utf-8"))
+    if version_contracts.active_version() == "1.15.0":
+        authority = decision_adapters.native_authority_115()
+        assert set(raw["sources"]) == set(authority["sources"])
+        raw["sources"] = dict(authority["sources"])
     with pytest.raises(ValueError, match="正劳动就业下界"):
         building_opportunities.derive(raw, baseline)
 

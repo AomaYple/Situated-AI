@@ -55,7 +55,7 @@ def test_启用扩展只追加声明字段且原版逐字保留():
     restored = re.sub(
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n", "", patched, flags=re.DOTALL
     )
-    assert restored == decisions.BASELINE.read_text(encoding="utf-8")
+    assert restored == decisions.baseline_path().read_text(encoding="utf-8")
     assert patched.count("# SITAI BEGIN") == 5
     for name, text in files.items():
         assert "\r" not in text

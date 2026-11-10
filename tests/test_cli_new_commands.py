@@ -11,13 +11,14 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 import pytest
 from _helpers import run_cli as _run
 from conftest import NEEDS_GAME
 
-from pdx import config
+from pdx import config, mods
 
 pytestmark = pytest.mark.unit
 
@@ -143,11 +144,21 @@ def test_prefixes列出目录用量() -> None:
     assert "功能前缀" in result.output
 
 
-@NEEDS_GAME
-def test_prefixes可以只看一个目录() -> None:
+def test_prefixes可以只看一个目录(monkeypatch, tmp_path) -> None:
+    # Workshop 目录随本机订阅变化；固定输入，仍经过实际目录聚合与 CLI 筛选。
+    example = mods.ModInfo(
+        root=tmp_path,
+        prefix_dirs={
+            "common/scripted_triggers": Counter({"REPLACE": 3}),
+            "common/scripted_effects": Counter({"INJECT": 7}),
+        },
+    )
+    monkeypatch.setattr(mods, "analyse_all", lambda: [example])
     result = _run("prefixes", "common/scripted_triggers")
     assert result.exit_code == 0
     assert "REPLACE" in result.output
+    assert "3" in result.output
+    assert "INJECT" not in result.output
 
 
 @NEEDS_GAME
