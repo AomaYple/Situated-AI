@@ -8,6 +8,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from pdx import version_contracts
+
+from . import engine_scope_115
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -30,6 +34,18 @@ COMPANY_DEFAULT_MANIFEST_SHA256 = "3295f597b36c531ca9ae671240bae0f0fa6a698ca9a67
 LAW_MANIFEST_ID = "research/situated/victoria3-1.14.5-law-scope.json"
 LAW_MANIFEST = REPO / LAW_MANIFEST_ID
 LAW_MANIFEST_SHA256 = "eb96a222582705af59147adc6da9e6f2b11533e05a73eb9583e55171f79b0ba9"
+
+
+def _company_manifest(*, default: bool = False) -> tuple[Path, str, str]:
+    if version_contracts.active_version() == "1.15.0":
+        return engine_scope_115.manifest("company-default" if default else "company")
+    if default:
+        return (
+            COMPANY_DEFAULT_MANIFEST,
+            COMPANY_DEFAULT_MANIFEST_ID,
+            COMPANY_DEFAULT_MANIFEST_SHA256,
+        )
+    return COMPANY_MANIFEST, COMPANY_MANIFEST_ID, COMPANY_MANIFEST_SHA256
 
 
 @dataclass(frozen=True, slots=True)
@@ -645,8 +661,9 @@ def verify_strategy_game(game: Path) -> StrategyScopeEvidence:
 
 def company_snapshot() -> bytes:
     """固定公司候选证据；不把定义身份当作脚本 company 目标。"""
-    raw = COMPANY_MANIFEST.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != COMPANY_MANIFEST_SHA256:
+    manifest, _, digest = _company_manifest()
+    raw = manifest.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("锁定公司作用域证据已变化，必须重新独立复核")
     return raw
 
@@ -671,8 +688,9 @@ def verify_company_game(game: Path) -> CompanyScopeEvidence:
 
 def company_default_snapshot() -> bytes:
     """Authorize only exactly missing company scores, never empty/nonpositive replacements."""
-    raw = COMPANY_DEFAULT_MANIFEST.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != COMPANY_DEFAULT_MANIFEST_SHA256:
+    manifest, _, digest = _company_manifest(default=True)
+    raw = manifest.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("锁定公司缺省权重证据已变化，必须重新独立复核")
     data = json.loads(raw)
     expected = {
@@ -734,6 +752,56 @@ def company_default_snapshot() -> bytes:
         ("company_basic_weapons", 1473),
         ("company_construction_power_bloc", 1543),
     )
+    if version_contracts.active_version() == "1.15.0":
+        # Independently decoded current consumer, define bridge and exact
+        # source sites. No historical address authorizes the current EXE.
+        expected.update(
+            consumer="0x141732900",
+            empty_expression_branch="0x14173292d",
+            nonempty_expression_branch="0x141732945",
+            default_load="0x141732936",
+            default_global="0x145bdb710",
+            result_store="0x14173293d",
+            result_return="0x141732a81",
+            define_line=1137,
+            define_setter="0x141182140",
+            define_global_write="0x141182176",
+            define_binding="0x141182190",
+            define_registration="0x1411821b0",
+            actual_call="0x141632075",
+            nonpositive_rejection="0x141641350",
+        )
+        reviewed_lines = (
+            1,
+            68,
+            139,
+            207,
+            273,
+            343,
+            400,
+            456,
+            524,
+            583,
+            631,
+            680,
+            740,
+            796,
+            860,
+            921,
+            990,
+            1052,
+            1114,
+            1181,
+            1231,
+            1300,
+            1358,
+            1427,
+            1477,
+            1547,
+        )
+        identities = tuple(
+            (key, line) for (key, _), line in zip(identities, reviewed_lines, strict=True)
+        )
     if data.get("contracts") != [expected] or data.get("implicit_companies") != [
         {"id": key, "line": line} for key, line in identities
     ]:
@@ -743,10 +811,8 @@ def company_default_snapshot() -> bytes:
         "common/company_types/99_basic_companies.txt",
     }:
         raise ValueError("锁定公司缺省权重的精确原件来源不一致")
-    if data.get("parent_scope_manifest") != {
-        "path": COMPANY_MANIFEST_ID,
-        "sha256": COMPANY_MANIFEST_SHA256,
-    }:
+    _, parent_id, parent_digest = _company_manifest()
+    if data.get("parent_scope_manifest") != {"path": parent_id, "sha256": parent_digest}:
         raise ValueError("锁定公司缺省权重的父作用域证据身份不一致")
     company_snapshot()
     return raw
@@ -759,24 +825,25 @@ def verify_company_defaults_game(game: Path) -> CompanyScopeEvidence:
     _, hashes, verified = _verified_manifest(
         game,
         inputs,
-        COMPANY_DEFAULT_MANIFEST,
-        COMPANY_DEFAULT_MANIFEST_ID,
-        COMPANY_DEFAULT_MANIFEST_SHA256,
+        *_company_manifest(default=True),
         "锁定公司缺省权重证据",
     )
     if not verified:
         raise ValueError("当前公司缺省权重来源或 EXE 与锁定证据不一致")
     parent = verify_company_game(game)
+    _, manifest_id, digest = _company_manifest(default=True)
+    contract = data["contracts"][0]
     return CompanyScopeEvidence(
         True,
         tuple(sorted({**dict(parent.source_hashes), **dict(hashes)}.items())),
         tuple(sorted(set(parent.sources) | set(data["script_hashes"]))),
         (
             *parent.references,
-            f"{COMPANY_DEFAULT_MANIFEST_ID}:sha256={COMPANY_DEFAULT_MANIFEST_SHA256}",
-            "@engine/binaries/victoria3.exe:0x14169a3dd",
-            "@engine/binaries/victoria3.exe:0x14169a3e6",
-            "@engine/binaries/victoria3.exe:0x140975a56",
+            f"{manifest_id}:sha256={digest}",
+            *(
+                f"@engine/binaries/victoria3.exe:{contract[key]}"
+                for key in ("empty_expression_branch", "default_load", "define_global_write")
+            ),
         ),
     )
 
@@ -787,9 +854,7 @@ def company_default_evidence(game: Path, inputs: Mapping[str, bytes]) -> Company
     data, hashes, verified = _verified_manifest(
         game,
         inputs,
-        COMPANY_DEFAULT_MANIFEST,
-        COMPANY_DEFAULT_MANIFEST_ID,
-        COMPANY_DEFAULT_MANIFEST_SHA256,
+        *_company_manifest(default=True),
         "锁定公司缺省权重证据",
     )
     parent = company_evidence(game, inputs)
@@ -808,28 +873,36 @@ def company_default_evidence(game: Path, inputs: Mapping[str, bytes]) -> Company
     )
     if not verified or not parent.verified or actual != set(parent_data["script_hashes"]):
         return CompanyScopeEvidence(False, merged_hashes)
+    _, manifest_id, digest = _company_manifest(default=True)
+    contract = data["contracts"][0]
     return CompanyScopeEvidence(
         True,
         merged_hashes,
         tuple(sorted(sources)),
         (
             *parent.references,
-            f"{COMPANY_DEFAULT_MANIFEST_ID}:sha256={COMPANY_DEFAULT_MANIFEST_SHA256}",
-            "@engine/binaries/victoria3.exe:0x14169a3dd",
-            "@engine/binaries/victoria3.exe:0x14169a3e6",
-            "@engine/binaries/victoria3.exe:0x140975a56",
+            f"{manifest_id}:sha256={digest}",
+            *(
+                f"@engine/binaries/victoria3.exe:{contract[key]}"
+                for key in ("empty_expression_branch", "default_load", "define_global_write")
+            ),
         ),
     )
 
 
 def country_evidence(game: Path, inputs: Mapping[str, bytes]) -> CountryScopeEvidence:
     """固定两类国家定义的实际消费者和全部来源。"""
+    path, identity, digest = (
+        engine_scope_115.manifest("country-definition")
+        if version_contracts.active_version() == "1.15.0"
+        else (COUNTRY_MANIFEST, COUNTRY_MANIFEST_ID, COUNTRY_MANIFEST_SHA256)
+    )
     data, hashes, verified = _verified_manifest(
         game,
         inputs,
-        COUNTRY_MANIFEST,
-        COUNTRY_MANIFEST_ID,
-        COUNTRY_MANIFEST_SHA256,
+        path,
+        identity,
+        digest,
         "锁定国家定义作用域证据",
     )
     if not verified:
@@ -838,7 +911,7 @@ def country_evidence(game: Path, inputs: Mapping[str, bytes]) -> CountryScopeEvi
         True,
         hashes,
         tuple(sorted(data["script_hashes"])),
-        (f"{COUNTRY_MANIFEST_ID}:sha256={COUNTRY_MANIFEST_SHA256}",),
+        (f"{identity}:sha256={digest}",),
     )
 
 
@@ -847,29 +920,34 @@ def company_evidence(game: Path, inputs: Mapping[str, bytes]) -> CompanyScopeEvi
     data, hashes, verified = _verified_manifest(
         game,
         inputs,
-        COMPANY_MANIFEST,
-        COMPANY_MANIFEST_ID,
-        COMPANY_MANIFEST_SHA256,
+        *_company_manifest(),
         "锁定公司作用域证据",
     )
     if not verified:
         return CompanyScopeEvidence(False, hashes)
+    _, manifest_id, digest = _company_manifest()
     return CompanyScopeEvidence(
         True,
         hashes,
         tuple(sorted(data["script_hashes"])),
-        (f"{COMPANY_MANIFEST_ID}:sha256={COMPANY_MANIFEST_SHA256}",),
+        (f"{manifest_id}:sha256={digest}",),
     )
 
 
 def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
     """仅证明法律候选的国家资格门与定义身份，不授予脚本 law 目标。"""
+    current = version_contracts.active_version() == "1.15.0"
+    path, identity, digest = (
+        engine_scope_115.manifest("law")
+        if current
+        else (LAW_MANIFEST, LAW_MANIFEST_ID, LAW_MANIFEST_SHA256)
+    )
     data, hashes, verified = _verified_manifest(
         game,
         inputs,
-        LAW_MANIFEST,
-        LAW_MANIFEST_ID,
-        LAW_MANIFEST_SHA256,
+        path,
+        identity,
+        digest,
         "锁定法律作用域证据",
     )
     if data.get("contract") != {
@@ -884,15 +962,18 @@ def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
         raise ValueError("锁定法律作用域证据的字段合同不一致")
     if not verified:
         return LawScopeEvidence(False, hashes)
+    references = (
+        ("0x1415e1449", "0x1417ef9b0", "0x1417ed034")
+        if current
+        else ("0x141548e39", "0x14170c2a0", "0x141709d64")
+    )
     return LawScopeEvidence(
         True,
         hashes,
         tuple(sorted(data["script_hashes"])),
         (
-            f"{LAW_MANIFEST_ID}:sha256={LAW_MANIFEST_SHA256}",
-            "@engine/binaries/victoria3.exe:0x141548e39",  # 实际候选资格门
-            "@engine/binaries/victoria3.exe:0x14170c2a0",  # 国家触发器包装器
-            "@engine/binaries/victoria3.exe:0x141709d64",  # ai_will_do 精确解析分支
+            f"{identity}:sha256={digest}",
+            *(f"@engine/binaries/victoria3.exe:{address}" for address in references),
         ),
     )
 
@@ -903,20 +984,28 @@ def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologySc
     证据只覆盖已观察的科技候选调用点及定义身份，不将本地 candidate
     指针当作脚本可寻址 saved scope。公式下游成本、随机及命令仍归原版。
     """
+    current = version_contracts.active_version() == "1.15.0"
+    path, identity, manifest_hash = (
+        engine_scope_115.manifest("technology")
+        if current
+        else (MANIFEST, MANIFEST_ID, MANIFEST_SHA256)
+    )
     data, hashes, verified = _verified_manifest(
-        game, inputs, MANIFEST, MANIFEST_ID, MANIFEST_SHA256, "锁定引擎作用域证据"
+        game, inputs, path, identity, manifest_hash, "锁定引擎作用域证据"
     )
     if not verified:
         return TechnologyScopeEvidence(False, hashes)
-    manifest_hash = MANIFEST_SHA256
+    references = (
+        ("0x141902e89", "0x141791890", "0x1415d0690")
+        if current
+        else ("0x141783e29", "0x14161a8c0", "0x141538b90")
+    )
     return TechnologyScopeEvidence(
         True,
         hashes,
         (
-            f"{MANIFEST_ID}:sha256={manifest_hash}",
-            "@engine/binaries/victoria3.exe:0x141783e29",  # exact technology parser
-            "@engine/binaries/victoria3.exe:0x14161a8c0",  # Country scope tag
-            "@engine/binaries/victoria3.exe:0x141538b90",  # base formula evaluation
+            f"{identity}:sha256={manifest_hash}",
+            *(f"@engine/binaries/victoria3.exe:{address}" for address in references),
         ),
         tuple(
             sorted(

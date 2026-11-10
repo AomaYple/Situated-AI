@@ -5,10 +5,18 @@ import json
 
 import pytest
 
+from pdx import version_contracts
 from pdx.parser import parse_text
 from pdx.situated import engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def historical_engine_contract():
+    """Synthetic historical fixtures must not borrow the current EXE identity."""
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 @pytest.fixture

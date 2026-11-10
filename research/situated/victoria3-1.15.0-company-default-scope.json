@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.0-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+    "bytes": 99988600,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.0",
+    "caligula_rev": "6338547985dbc271523e149f362a6fd93dc62975",
+    "clausewitz_branch": "caligula/release/1.15.0",
+    "clausewitz_rev": "a65fc88f3e604839357cb5b2aaf3b123e9d7434e"
+  },
+  "runtime": "unknown",
+  "derivation": "Independently located current PE RTTI/vftables and literal atom entries; current disassembly reviewed from parser members through actual AI caller. Historical addresses are not authority.",
+  "contracts": [
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "missing_base_candidate_score",
+      "capability": "exact_default_initializer",
+      "consumer": "0x141732900",
+      "numeric_member": "0x390",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x14173292d",
+      "nonempty_expression_branch": "0x141732945",
+      "default_load": "0x141732936",
+      "default_global": "0x145bdb710",
+      "result_store": "0x14173293d",
+      "result_return": "0x141732a81",
+      "define_namespace": "NAI",
+      "define_key": "COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_field": "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_source": "common/defines/00_ai.txt",
+      "define_line": 1137,
+      "default_value": 1,
+      "define_setter": "0x141182140",
+      "define_global_write": "0x141182176",
+      "define_binding": "0x141182190",
+      "define_registration": "0x1411821b0",
+      "actual_call": "0x141632075",
+      "nonpositive_rejection": "0x141641350",
+      "source_requirement": "exactly_missing_ai_weight_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_nonpositive_requirement": "preserve_native_score_and_rejection"
+    }
+  ],
+  "script_hashes": {
+    "common/company_types/99_basic_companies.txt": "d29d1d16891c3ca58ee82b80da08ad9605e50eb0cf253b897af658459245671f",
+    "common/defines/00_ai.txt": "c5f7b5f493a4e00a20539eea423d39e1463d3047f5aef49175ea9e3966cd732d"
+  },
+  "parent_scope_manifest": {
+    "path": "research/situated/victoria3-1.15.0-company-scope.json",
+    "sha256": "010637d4ad43500679ff81c3ce0f7ec50fbf038398cf39d20863a88c72398aec"
+  },
+  "implicit_companies": [
+    {
+      "id": "company_basic_agriculture_1",
+      "line": 1
+    },
+    {
+      "id": "company_basic_agriculture_2",
+      "line": 68
+    },
+    {
+      "id": "company_basic_fabrics",
+      "line": 139
+    },
+    {
+      "id": "company_basic_colonial_plantations_1",
+      "line": 207
+    },
+    {
+      "id": "company_basic_colonial_plantations_2",
+      "line": 273
+    },
+    {
+      "id": "company_basic_silk_and_dye",
+      "line": 343
+    },
+    {
+      "id": "company_basic_wine_and_fruit",
+      "line": 400
+    },
+    {
+      "id": "company_basic_fishing",
+      "line": 456
+    },
+    {
+      "id": "company_basic_forestry",
+      "line": 524
+    },
+    {
+      "id": "company_basic_oil",
+      "line": 583
+    },
+    {
+      "id": "company_basic_gold_mining",
+      "line": 631
+    },
+    {
+      "id": "company_basic_metal_mining",
+      "line": 680
+    },
+    {
+      "id": "company_basic_mineral_mining",
+      "line": 740
+    },
+    {
+      "id": "company_basic_food",
+      "line": 796
+    },
+    {
+      "id": "company_basic_paper",
+      "line": 860
+    },
+    {
+      "id": "company_basic_home_goods",
+      "line": 921
+    },
+    {
+      "id": "company_basic_textiles",
+      "line": 990
+    },
+    {
+      "id": "company_basic_steel",
+      "line": 1052
+    },
+    {
+      "id": "company_basic_metalworks",
+      "line": 1114
+    },
+    {
+      "id": "company_basic_shipyards",
+      "line": 1181
+    },
+    {
+      "id": "company_basic_chemicals",
+      "line": 1231
+    },
+    {
+      "id": "company_basic_motors",
+      "line": 1300
+    },
+    {
+      "id": "company_basic_munitions",
+      "line": 1358
+    },
+    {
+      "id": "company_basic_electrics",
+      "line": 1427
+    },
+    {
+      "id": "company_basic_weapons",
+      "line": 1477
+    },
+    {
+      "id": "company_construction_power_bloc",
+      "line": 1547
+    }
+  ],
+  "observations": [
+    {
+      "label": "company empty expression branch and default load",
+      "va": "0x141732926",
+      "rva": "0x1732926",
+      "file_offset": "0x1731d26",
+      "bytes": "488d999003000083bba800000000750f488b05d38d4a04488902e93c010000"
+    },
+    {
+      "label": "company numeric evaluator",
+      "va": "0x141732900",
+      "rva": "0x1732900",
+      "file_offset": "0x1731d00",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bf0488bfa488d999003000083bba800000000750f488b05d38d4a04488902e93c0100004533ff44897c24304c897c243844897c2440488d4c2448e80f51f7fe488d4d30e8c61ff4fe4c8d35e7cc30034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b461848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcbe8065912ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe88525e80144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe805f7c702488b5d584885db742a48833b00741c488bcbe88e7c06ff488b4b10488b01488b13ff50104c893b44897b08488bcbe8d2f6c702488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e84f7c06ff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "define typed setter and exact global write",
+      "va": "0x141182140",
+      "rva": "0x1182140",
+      "file_offset": "0x1181540",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee817cb67ff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c24304889059395a5044883c4205fc3"
+    },
+    {
+      "label": "define namespace/key/global bridge",
+      "va": "0x141182190",
+      "rva": "0x1182190",
+      "file_offset": "0x1181590",
+      "bytes": "488bca4c8d0d7695a504488d15bb4b55034c8d05e8e45503e913993000"
+    },
+    {
+      "label": "define namespace/key/global registration",
+      "va": "0x1411821b0",
+      "rva": "0x11821b0",
+      "file_offset": "0x11815b0",
+      "bytes": "4c8d0d5995a5044c8d05d2e45503488d15974b5503e9e6512f00"
+    },
+    {
+      "label": "NAI namespace NUL literal",
+      "va": "0x1446d6d5c",
+      "rva": "0x46d6d5c",
+      "file_offset": "0x46d615c",
+      "bytes": "4e414900"
+    },
+    {
+      "label": "company default key NUL literal",
+      "va": "0x1446e0690",
+      "rva": "0x46e0690",
+      "file_offset": "0x46dfa90",
+      "bytes": "434f4d50414e595f545950455f44454641554c545f424153455f57454947485400"
+    }
+  ],
+  "limits": [
+    "The executable empty-expression fallback is authorized for exactly absent ai_weight only; explicit empty definitions must remain rejected.",
+    "Define native value must match pinned 1; nonpositive explicit scores keep native rejection.",
+    "Static binary/native-source evidence is not runtime observation."
+  ]
+}

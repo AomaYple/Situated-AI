@@ -1,0 +1,224 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.0-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa",
+    "bytes": 99988600,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.0",
+    "caligula_rev": "6338547985dbc271523e149f362a6fd93dc62975",
+    "clausewitz_branch": "caligula/release/1.15.0",
+    "clausewitz_rev": "a65fc88f3e604839357cb5b2aaf3b123e9d7434e"
+  },
+  "runtime": "unknown",
+  "derivation": "Independently located current PE RTTI/vftables and literal atom entries; current disassembly reviewed from parser members through actual AI caller. Historical addresses are not authority.",
+  "reviewed_chain": [
+    "The independently located CTechnologyType RTTI parser subobject is +0x1a8; token0x53ce ai_weight dispatch subtracts0x140 to the numeric member+0x68. The constructor installs the numeric vtable at that member.",
+    "The current AI function calls checked CCountry lookup and stores tag5 plus its ID in a scope tuple; the country wrapper RTTI vtable getter independently returns tag5.",
+    "The observed technology candidate pointer is passed to eligibility and cost routines and its +0x70 expression is evaluated with three references to that country tuple. Cost-adjusted score is randomized and then compared with the current maximum; no terminal zero-score rejection is inferred.",
+    "The exact NAI TECH_COST_PENALTY_FACTOR and TECH_RANDOM_FACTOR registrations bind the same globals read by the observed AI function."
+  ],
+  "consumer": {
+    "directory": "technology",
+    "field": "ai_weight",
+    "actor_scope": "country",
+    "target_scope": "definition_only:technology",
+    "operation": "base_candidate_score",
+    "capability": "direct"
+  },
+  "contract": {
+    "parser": "0x141902b30",
+    "parser_receiver": "0x1a8",
+    "numeric_member": "0x68",
+    "numeric_expression": "0x70",
+    "ai_consumer": "0x1415d03f0",
+    "country_lookup": "0x14072cea0",
+    "country_tag": 5,
+    "evaluation": "0x1415d0690",
+    "eligibility": "0x1415d05e2",
+    "cost": "0x1415d0774",
+    "randomizer": "0x14160cdf0",
+    "max_update": "0x1415d0a86",
+    "cost_define_global": "0x145bdb600",
+    "random_define_global": "0x145bdbef8"
+  },
+  "script_hashes": {
+    "common/technology/technologies/10_production.txt": "8de32b3b3b3a93454ea04833c1f9e169ff0fa5492fa109d9b8484700c44d4e39",
+    "common/technology/technologies/20_military.txt": "3bd80ae43e8e209b122d714578b5be840d1c80b3be2cc9908409f1f0cc2d916e",
+    "common/technology/technologies/30_society.txt": "204340e2ff81f31d5bceddb36824566d57fa2be941dc2ba90407d56be75176dc",
+    "common/defines/00_ai.txt": "c5f7b5f493a4e00a20539eea423d39e1463d3047f5aef49175ea9e3966cd732d"
+  },
+  "observations": [
+    {
+      "label": "technology parser RTTI",
+      "va": "0x144caa170",
+      "rva": "0x4caa170",
+      "file_offset": "0x4ca9570",
+      "bytes": "01000000a80100000400000070b742050819b50470a1ca04"
+    },
+    {
+      "label": "technology type name",
+      "va": "0x14542b780",
+      "rva": "0x542b780",
+      "file_offset": "0x542a180",
+      "bytes": "2e3f415643546563686e6f6c6f6779547970654040000000"
+    },
+    {
+      "label": "technology parser vtable",
+      "va": "0x144786690",
+      "rva": "0x4786690",
+      "file_offset": "0x4785a90",
+      "bytes": "1caa924101000000b01e844001000000f04867400100000040dddf4301000000140c844001000000f048674001000000"
+    },
+    {
+      "label": "technology adjustor thunk",
+      "va": "0x140840c14",
+      "rva": "0x840c14",
+      "file_offset": "0x840014",
+      "bytes": "486341fc482bc8e9101f0c01"
+    },
+    {
+      "label": "ai_weight atom",
+      "va": "0x144975a70",
+      "rva": "0x4975a70",
+      "file_offset": "0x4974e70",
+      "bytes": "ce5300000000000098f2934401000000"
+    },
+    {
+      "label": "ai_weight literal",
+      "va": "0x14493f298",
+      "rva": "0x493f298",
+      "file_offset": "0x493e698",
+      "bytes": "61695f77656967687400"
+    },
+    {
+      "label": "technology constructor",
+      "va": "0x141902950",
+      "rva": "0x1902950",
+      "file_offset": "0x1901d50",
+      "bytes": "48894c24085355565741564883ec204d8bf0488bf933ed4585c9740d488d054525d60248894108eb04488b410849637010498bde498378180f7603498b18488d0dfb03d60248890f48634004488d0dfd37d70248894c3808895710448bc6488bd3e88a695502894714488d4f18c5f9efc0c5f8110148896910488969184c8bc6488bd3e8f821d7fe48896f38488d056d3fe802488907488b470848634804488d059b3ce8024889443908488b4708486348048d9160feffff89543904488b052d392d0448894740beffffffff89774833c048894750896f58488b4750a801750b4883c80148894750ff4758488d4f60e8dcf6dfff90488d052430dc0248894768488d4f70e827a75cff90488d8f28010000e8ca1ed7fe90488d8f40010000e8bd1ed7fe90488d8f58010000488d05aeffd5024889014883c108e8d2acc20190488b5f60498bd6488d4c2460e880c31fff488b10488928488b4b30488953304885c974138bc6f00fc1410883f8017507488b01ff502090488b4c24604885c97411f00fc1710883fe017507488b01ff502090488bc74883c420415e5f5e5d5bc3"
+    },
+    {
+      "label": "technology parser ai_weight comparison",
+      "va": "0x141902e89",
+      "rva": "0x1902e89",
+      "file_offset": "0x1902289",
+      "bytes": "4181f8ce5300000f84d90000004181f8305d0000740d488b"
+    },
+    {
+      "label": "technology parser numeric receiver",
+      "va": "0x141902f6f",
+      "rva": "0x1902f6f",
+      "file_offset": "0x190236f",
+      "bytes": "4881c1c0feffff488b01ff5018e988000000488d5198488b"
+    },
+    {
+      "label": "country wrapper RTTI",
+      "va": "0x144cbd3f0",
+      "rva": "0x4cbd3f0",
+      "file_offset": "0x4cbc7f0",
+      "bytes": "010000000000000000000000b8e07c05905bcb04f0d3cb04"
+    },
+    {
+      "label": "country wrapper name",
+      "va": "0x1457ce0c8",
+      "rva": "0x57ce0c8",
+      "file_offset": "0x57ccac8",
+      "bytes": "2e3f41563f24434a6f6d696e6953637269707453636f70654f626a656374405643436f756e7472794040404000000000e08d63"
+    },
+    {
+      "label": "country wrapper vtable",
+      "va": "0x1447898f0",
+      "rva": "0x47898f0",
+      "file_offset": "0x4788cf0",
+      "bytes": "f0e5ca40010000009018794101000000e05e554301000000c05c5543010000007061554301000000e062554301000000e0e5ca4001000000"
+    },
+    {
+      "label": "country tag getter",
+      "va": "0x141791890",
+      "rva": "0x1791890",
+      "file_offset": "0x1790c90",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "country checked lookup",
+      "va": "0x14072cea0",
+      "rva": "0x72cea0",
+      "file_offset": "0x72c2a0",
+      "bytes": "4883ec58488b05755d51058b114885c0756783faff0f848b000000488d15ee6f4a05488d0d9fb9cf04e8b2c0c9034889442468488d055682f4034889442440488d4424684889442430488d4424404889442428488d05c0a14a05488944242048c74424482f000000e803a50100488b053c2e51054883c458c38bca81e1ffffff003b482c7320448bc149c1e0044c034020498b40084885c0740c81e2000000ff413950047407488b05032e51054883c458c3"
+    },
+    {
+      "label": "country lookup name",
+      "va": "0x145428868",
+      "rva": "0x5428868",
+      "file_offset": "0x5427268",
+      "bytes": "00000000000000002e3f415643436f"
+    },
+    {
+      "label": "technology actual AI scoring caller",
+      "va": "0x1415d03f0",
+      "rva": "0x15d03f0",
+      "file_offset": "0x15cf7f0",
+      "bytes": "488bc4488958204c894018488950105556574154415541564157488da8b8faffff4881ec10060000c5f82970b8c5f82978a8c5782940984d8be94d8bf033ff488b41108b4850898d58050000488d8d58050000e858ca15ff488bf0488945c0393df342e3037518488d05905d67044889442428488d0d56921203e821817d028b4e18898d58050000488d8d58050000e81cca15ff8b88e0030000898d58050000488d8d58050000e8e4f481ff488bd8488b08488b5108488bc8ffd2488b0d7ef8660484c0480f45cb488b4918488b01ff1084c00f85570700004c8b25686d6004488bdf897d0048897d08897d10488d4d18e88a750dff488d8d00010000e83e440aff488d055ff1460348898518010000c5f9efc0c5fa7f85200100004889bd30010000b805000000668945008b461848894508e848af1fff488b384885ff752b488d05814e0a034889442430c74424381e00000040887c243c4533c94c8d442430ba04000000e8754083024c8bbf800000004863878c000000498d04c7488945d04c3bf80f8427050000c4413957c0c5fb103d51c45003660f1f8400000000004d8b378b4618898558050000488d8d58050000e8f8c815ff8b88e0030000898d58050000488d8d58050000e8c0f381ff488bf8488b08488b5108488bc8ffd2488b0d5af7660484c0480f45cf4533c0498bd6e8993680ff84c00f849d04000033f64889b558050000c7458843090000498dbe18010000488b0748894590418b86200100008945984088759c488975a0c57b1145a8c645b001488d4d88e8ef4227ff90488db5580500004883bd5805000000480f44f7488d5500488d8d40010000e83bf6f60190488d4500488945d8488d4500488945e0488d4500488945e8488d8540010000488945f0498d4e7048897424204533c94c8d45d8488d9550050000e8eb543eff904883bd6802000000743e448b8574020000488d8d68020000e85dfa3fff33ff89bd74020000488b8d78020000488b01488b9568020000ff50104889bd6802000089bd70020000eb0233ff488b95400100004885d2741489bd4c010000488b8d50010000488b01ff501090807d9c00745bc5fb1075a8807db0007522488d4db8e8369f0aff488b45b8482b45a0c5f857c0c4e1fb2ac0c5fb5ecfc5f358f6c5fb1175a8c645b001c5fb11742420448b4d984c8d45908b5588488b0d14756304488b8940070000e870fd39019048897c24204d8bce488b75c04c8bc6488d55c8e8576880ff488b4dc84885c90f8e7d020000498b46408b5040b8010000003bd00f4fc248984c69d8a086010048bfa38d23d6e25300004d85db757eb9ffffffff4c8b0d45ae60044d8bc14c3bc94c0f4cc14c0f4fc949ba09e1d1c6116bf129498bc249f7e8488bca48c1f90e488bc148c1e83f4803c84869c1a08601004c2bc04d0fafc1498bc249f7e848c1fa0e488bc248c1e83f4803d0490fafc94803d14c8d9aa08601004d85db0f851d010000b9ffffffffe9cf010000488d043948ba461b47acc5a70000483bc277144869c1a0860100489949f7fb488bc8e995000000498bc348f7d8490f48c348ba00e40b5402000000483bc248b809e1d1c6116bf1297c2149f7eb4c8bc249c1f80e498bc048c1e83f4c03c0488bc1489949f7f8488bc8eb5148f7e948c1fa0e488bc248c1e83f4803d04c69c2a0860100498bc0489949f7fb4c8bca4c8bd0492bc84869c1a0860100489949f7fb488bc84969c1a0860100489949f7fb4803c84969c2a08601004803c84c8b0d10ad6004ba33f304b5488d041149b866e6096a01000000493bc00f87affeffff498d0411493bc00f87a2feffff4c0fafc949ba09e1d1c6116bf129498bc249f7e948c1fa0e488bc248c1e83f4803d0e9d3feffff488b8d50050000488d043948ba461b47acc5a70000483bc277144869c1a0860100489949f7fb488bc8e98e000000498bc348f7d8490f48c348ba00e40b5402000000483bc2498bc27c2149f7eb4c8bc249c1f80e498bc048c1e83f4c03c0488bc1489949f7f8488bc8eb5148f7e948c1fa0e488bc248c1e83f4803d04c69c2a0860100498bc0489949f7fb4c8bca4c8bd0492bc84869c1a0860100489949f7fb488bc84969c1a0860100489949f7fb4803c84969c2a08601004803c848898d500500004d8bcd4c8b05ebb46004488d9550050000488d4c2430e8d2c30300498b0424498bccff10488b8d5005000084c07454483bcb7f4f7553458b4d004169c1b385d64a418b55042bd08bc2c1e80833c205a41de3688bd0c1e20833d069c2e9c4561b8bd0c1ea0833d04469c2a28cd692418d410141894500418bc0c1e8084133c0a80174064d8be6488bd94983c7084c3b7dd00f85f6faffff4c8bb560050000498b0424498bccff1084c00f84130100008b4618c64424580033f6488974245c8974246433c989442470488d3de66c0e0348897c24504c8d3d3a7c0e034c897c24684c89642478884d8089742430488d4c2438e8373e0aff90488b4424684533c0488d9558050000488d4c2468ff50288b184839742438741a488d4c2438e88cb71cff488b4c2448488b01488b542438ff501085db757fb938000000e8ce16de024c8bc04885c00f84ff0000000fb64c24588848088b4c245c89480c8b4c24608948108b4c24648948148b4c24708948204889384c897818488b442478498940280fb64580418840304c898558050000488d9558050000498bcee8b08febff488b8d580500004885c9740b488b01ba01000000ff1090488d052a240a034889442450eb0233f6488d8d18010000e8bd0bf8014883bd0001000000742d488d8d00010000e8b79a1cff488b8d10010000488b01488b9500010000ff50104889b50001000089b508010000488b55184885d2740d897524488b4d28488b01ff50104c8d9c2410060000498b5b58c4c1782873f0c4c178287be0c441782843d0498be3415f415e415d415c5f5e5dc3488d4c2430e839fa7b02488d15f23cdd03488d4c2430e81490df02cc"
+    },
+    {
+      "label": "cost define key",
+      "va": "0x1446dba70",
+      "rva": "0x46dba70",
+      "file_offset": "0x46dae70",
+      "bytes": "544543485f434f53545f50454e414c54595f464143544f5200"
+    },
+    {
+      "label": "cost define registration",
+      "va": "0x1410f0d10",
+      "rva": "0x10f0d10",
+      "file_offset": "0x10f0110",
+      "bytes": "4c8d0de9a8ae044c8d0552ad5e03488d1537605e03e986663800"
+    },
+    {
+      "label": "random define key",
+      "va": "0x1446db960",
+      "rva": "0x46db960",
+      "file_offset": "0x46dad60",
+      "bytes": "544543485f52414e444f4d5f464143544f5200"
+    },
+    {
+      "label": "random define registration",
+      "va": "0x1410f07e0",
+      "rva": "0x10f07e0",
+      "file_offset": "0x10efbe0",
+      "bytes": "4c8d0d11b7ae044c8d0572b15e03488d1567655e03e9b66b3800"
+    },
+    {
+      "label": "NAI literal",
+      "va": "0x1446d6d5c",
+      "rva": "0x46d6d5c",
+      "file_offset": "0x46d615c",
+      "bytes": "4e414900"
+    },
+    {
+      "label": "randomizer positive checks",
+      "va": "0x14160cdf0",
+      "rva": "0x160cdf0",
+      "file_offset": "0x160c1f0",
+      "bytes": "48895c24205641564d8bf1488bda488bf14d85c00f8e0504000048833a000f8efb030000"
+    },
+    {
+      "label": "randomizer nonpositive result",
+      "va": "0x14160d20f",
+      "rva": "0x160d20f",
+      "file_offset": "0x160c60f",
+      "bytes": "488b5c2430488bc648c701a0860100415e5ec3cccccc"
+    }
+  ],
+  "limits": [
+    "Runtime is unknown. Static evidence authorizes only the observed technology definition candidate formula with country actor.",
+    "No technology saved scope, generic getter, balance, performance or long-run behavior is authorized.",
+    "Bounded static inspection does not claim all possible indirect callers or arbitrary inlined paths."
+  ]
+}

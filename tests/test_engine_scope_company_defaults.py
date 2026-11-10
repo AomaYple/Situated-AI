@@ -7,9 +7,17 @@ import json
 
 import pytest
 
+from pdx import version_contracts
 from pdx.situated import engine_scope
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def historical_engine_contract():
+    """Synthetic historical fixtures must not borrow the current EXE identity."""
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 def test_company_default_snapshot_requires_exact_missing_score_contract():
