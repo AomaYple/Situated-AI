@@ -242,7 +242,7 @@ def _accept_test_source(monkeypatch, source: str, replacement: str) -> None:
     # Permit a deliberately edited test fingerprint to prove the independent
     # AST checks still reject a matching file with an unproved consumer shape.
     monkeypatch.setitem(
-        queries.SOURCE_HASHES,
+        queries.source_hashes(),
         source,
         hashlib.sha256(normalized_text(replacement).encode()).hexdigest(),
     )
@@ -319,6 +319,8 @@ def test_law_parameter_must_have_one_actual_definition_even_after_shape_validati
 def test_repinning_cannot_turn_conditional_or_prefixed_blocks_into_ordinary_evidence(
     native_texts, monkeypatch, query, source, key, operation
 ):
+    if key == "complete" and queries.version_contracts.active_version() == "1.15.0":
+        key = "outcome"
     original = native_texts[source]
     replacement = "INJECT:" + key + " = {" if operation == "prefix" else key + " ?= {"
     changed, count = re.subn(
@@ -430,6 +432,36 @@ def test_interest_group_query_requires_actual_parameter_law_definition(native_te
     _accept_test_source(monkeypatch, source, changed)
     with pytest.raises(ValueError, match="唯一块"):
         queries.compile_query(IG, {**native_texts, source: changed})
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_interest_group_native_branch_is_selected_by_full_predicate_and_effect(
+    native_texts, monkeypatch, duplicate
+):
+    source = "common/journal_entries/00_communism.txt"
+    original = native_texts[source]
+    anchor = "else = { # Mirrors effects of communism.1, skips je_communism_2"
+    assert original.count(anchor) == 1
+    extra = (
+        "if = { limit = { any_interest_group = { law_stance = { "
+        "law = law_type:law_council_republic value > neutral } } } "
+        "random_interest_group = { limit = { law_stance = { "
+        "law = law_type:law_council_republic value > neutral } } "
+        "set_variable = communist_ig_var } }"
+        if duplicate
+        else "if = { limit = { always = no } set_variable = unrelated }"
+    )
+    changed = original.replace(anchor, anchor + "\n" + extra)
+    _accept_test_source(monkeypatch, source, changed)
+    if duplicate or queries.version_contracts.active_version() != "1.15.0":
+        with pytest.raises(ValueError):
+            queries.compile_query(IG, {**native_texts, source: changed})
+    else:
+        # An adjacent first if cannot steal the proof or change its meaning.
+        result = queries.compile_query(IG, {**native_texts, source: changed})
+        assert result.expression == queries.render(IG)
+        assert result.local_collections == ("owned_interest_groups",)
 
 
 @pytest.mark.integration

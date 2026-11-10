@@ -337,7 +337,7 @@ def test_missing_or_rehashed_broken_native_type_chains_cannot_authorize_query(
         assert old in texts[source]
         texts[source] = texts[source].replace(old, new)
         monkeypatch.setitem(
-            queries.SOURCE_HASHES,
+            queries.source_hashes(),
             source,
             hashlib.sha256(normalized_text(texts[source]).encode()).hexdigest(),
         )
@@ -361,7 +361,7 @@ def test_rail_group_cannot_pass_vacuously_or_with_missing_or_duplicate_methods(
     )
     assert count == 1
     monkeypatch.setitem(
-        queries.SOURCE_HASHES,
+        queries.source_hashes(),
         source,
         hashlib.sha256(normalized_text(texts[source]).encode()).hexdigest(),
     )
@@ -544,7 +544,7 @@ def test_rehashed_broken_gold_minting_inputs_and_trade_service_cannot_authorize_
     assert old in texts[source]
     texts[source] = texts[source].replace(old, new)
     monkeypatch.setitem(
-        queries.SOURCE_HASHES,
+        queries.source_hashes(),
         source,
         hashlib.sha256(normalized_text(texts[source]).encode()).hexdigest(),
     )
