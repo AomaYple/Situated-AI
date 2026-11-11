@@ -22,8 +22,8 @@ _DISPOSITIONS = {"migrate", "merge", "remove", "retain_vanilla"}
 
 def source_path() -> Path:
     """Select the generated ledger without rewriting historical identities."""
-    if version_contracts.active_version() == "1.15.0":
-        return DEFAULT_SOURCE.parent / "1.15.0" / DEFAULT_SOURCE.name
+    if version_contracts.is_115():
+        return DEFAULT_SOURCE.parent / version_contracts.active_version() / DEFAULT_SOURCE.name
     return DEFAULT_SOURCE
 
 

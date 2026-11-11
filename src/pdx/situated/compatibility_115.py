@@ -10,6 +10,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any, cast
 
+from pdx import version_contracts
 from pdx.model import Block
 from pdx.parser import parse_bytes
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 
 SOURCE = engine_scope.REPO / "research/situated/1.15.0/compatibility-production.json"
 SHA256 = "f979697ed4bc2750a130f605d60cf2de0b4d2e6123b7a4e9eda0dd39b570e562"
+SHA256_1151 = "8f73b4f6ffb5cde8accb8e272b6c62c312afd132f5f19b381ee7ac35675683f4"
 FIELDS = frozenset(
     {
         "diplomatic_play_neutrality",
@@ -56,13 +58,20 @@ def _ordinary_digest(root: Block, name: str, row: dict[str, Any]) -> None:
 
 def snapshot() -> bytes:
     """Verify the current native fields and separately proven binary scope."""
-    raw = SOURCE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != SHA256:
+    source = (
+        version_contracts.research_path("situated", "compatibility-production.json")
+        if version_contracts.active_version() == "1.15.1"
+        else SOURCE
+    )
+    raw = source.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != (
+        SHA256_1151 if version_contracts.active_version() == "1.15.1" else SHA256
+    ):
         raise ValueError("1.15 完整兼容生成来源合同漂移")
     data = json.loads(raw)
     if (
         data["schema"] != 1
-        or data["version"] != "1.15.0"
+        or data["version"] != version_contracts.active_version()
         or data["purpose"] != "complete_historical_compatibility_build_only"
         or data["evidence_kind"] != "native_static"
         or data["runtime"] != "unknown"

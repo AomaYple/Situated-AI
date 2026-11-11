@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any
 
 from . import (
@@ -19,7 +20,9 @@ from . import (
     decision_intents,
     decision_rules,
     decisions,
+    version_contracts,
 )
+from .situated import network_profile, production_profile, profile_configuration
 
 DOMAINS = (
     "political",
@@ -293,7 +296,9 @@ HISTORICAL_SHOCKS_WITHOUT_LOCKED_READER = (
 )
 
 
-def source_metadata() -> dict[str, Any]:
+def source_metadata(
+    configuration: profile_configuration.ProfileConfiguration | None = None,
+) -> dict[str, Any]:
     """从入库源和锁定底本构造不依赖本机游戏目录的合同。
 
     该路径只用于静态合同审计和无游戏 CI。生产生成仍必须经过
@@ -301,17 +306,48 @@ def source_metadata() -> dict[str, Any]:
     作用域和消费者原件；这里绝不把源合同冒充当前游戏内容或行为验证。
     """
 
-    policy = decisions.load()
+    from . import distribution  # noqa: PLC0415
+
+    if configuration is None and version_contracts.active_version() == "1.15.1":
+        configuration = profile_configuration.ProfileConfiguration()
+    policy, extensions = distribution.production_configuration(configuration=configuration)
     country_policy = country_state.load()
-    extensions = decisions.load_extensions(profile="release")
+    if configuration is not None and not configuration.enabled_domains:
+        country_policy = replace(country_policy, enabled=False)
     strategy = decision_intents.load()
     information = decision_rules.load(strategy=strategy)
     adapters = decision_adapters.load(strategy=strategy)
+    if configuration is not None:
+        profile_configuration.validate_coverage(
+            frozenset(
+                rule.domain
+                for rules in (information, *(item for _, item in adapters.policies))
+                for rule in rules.rules
+            ),
+            decisions.EXTENSION_PROFILE_MODULES,
+        )
+        information = replace(
+            information, enabled_domains=information.enabled_domains & configuration.legacy_domains
+        )
+        adapters = replace(
+            adapters,
+            policies=tuple(
+                (
+                    source,
+                    replace(
+                        rules, enabled_domains=rules.enabled_domains & configuration.legacy_domains
+                    ),
+                )
+                for source, rules in adapters.policies
+            ),
+        )
 
     information_contract = decision_rules.contract(information)
 
     consumers: list[dict[str, object]] = []
     for source, rules in adapters.policies:
+        if not rules.enabled_domains:
+            continue
         contract = decision_rules.contract(rules, owner="consumer_adapters", source=source)
         contract["source"] = source
         consumers.append(contract)
@@ -326,7 +362,10 @@ def source_metadata() -> dict[str, Any]:
     enabled_modules = metadata["enabled_modules"]
     if not isinstance(enabled_modules, list):
         raise TypeError("元数据的 enabled_modules 必须是列表")
-    enabled_modules.extend(("information_rules", "consumer_adapters"))
+    if information.groups():
+        enabled_modules.append("information_rules")
+    if consumers:
+        enabled_modules.append("consumer_adapters")
     metadata["decision_rules"] = information_contract
     metadata["consumer_adapters"] = {
         "schema": 1,
@@ -345,6 +384,10 @@ def source_metadata() -> dict[str, Any]:
         "behavior_verified": False,
         "evidence": "static_check",
     }
+    if version_contracts.active_version() == "1.15.1":
+        profile = production_profile.load_profile(production_profile.baseline_root())
+        metadata["action_network"] = network_profile.audit(profile, configuration=configuration)
+        metadata["configuration"] = configuration.identity() if configuration is not None else None
     return metadata
 
 
@@ -607,8 +650,10 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
     )
 
     modules = metadata.get("enabled_modules")
-    if not isinstance(modules, list) or not {"information_rules", "consumer_adapters"} <= set(
-        modules
+    configured = metadata.get("configuration")
+    configured_disabled = isinstance(configured, Mapping) and not configured.get("enabled_domains")
+    if not isinstance(modules, list) or (
+        not configured_disabled and not {"information_rules", "consumer_adapters"} <= set(modules)
     ):
         issues.append("必须同时启用 information_rules 和 consumer_adapters")
 
@@ -875,6 +920,17 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
     taxonomy = _taxonomy_rows(facts, consumer_fields, country_state.load())
     return {
         "schema": 3,
+        **(
+            {
+                "action_network": metadata["action_network"],
+                "configuration": metadata.get("configuration"),
+                "legacy_field_count": len(consumer_fields),
+                "r2_consumer_count": len(metadata["action_network"]["programs"]),
+                "coverage_boundary": "legacy public IR bridge plus three explicitly mapped R2 consumers; future domain depth is not claimed",
+            }
+            if "action_network" in metadata
+            else {}
+        ),
         "goal": GOAL,
         "evidence": "static_generated_contract_only",
         "behavior_verified": False,

@@ -11,7 +11,7 @@ import pytest
 from pdx import config, decisions, distribution, version_contracts
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def selected_version():
     with version_contracts.select_version("1.15.0"):
         yield

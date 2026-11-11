@@ -90,8 +90,8 @@ SUPPORTING_SOURCES = (
 
 def baseline_path() -> Path:
     """The full default strategy of the selected native version."""
-    if version_contracts.active_version() == "1.15.0":
-        return REPO / "research/vanilla-ai/1.15.0/00_default_strategy.txt"
+    if version_contracts.is_115():
+        return version_contracts.research_path("vanilla-ai", "00_default_strategy.txt")
     return BASELINE
 
 
@@ -367,8 +367,8 @@ def _frozen_law_context() -> decision_ir.EvaluationContext:
     # their original positions; the ignored full mirror is never an offline input.
     raw = _LAW_DOC.read_bytes()
     manifest_path = (
-        REPO / "research/official-docs-1.15.0.manifest.json"
-        if version_contracts.active_version() == "1.15.0"
+        REPO / "research" / version_contracts.contract().official_manifest_name
+        if version_contracts.is_115()
         else _LAW_DOC_MANIFEST
     )
     # The three documentary lines and full native README are byte-identical
@@ -543,7 +543,7 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         # independently pinned parser/consumer/member and merge contracts.
         address = (
             data["consumers"][field]["consumer_va"]
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else historical_address
         )
         expected = {
@@ -1908,7 +1908,7 @@ def load_model(
                         field=program.field,
                         actor="root",
                         target="market_goods",
-                        operation="append",
+                        operation=program.operation,
                         vanilla_tail="preserve",
                         owner="supply_plan",
                         supply_program=program,
@@ -1948,7 +1948,7 @@ def load_model(
             for name in SUPPORTING_SOURCES
         },
     }
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         from . import compatibility_115  # noqa: PLC0415
 
         hashes.update(

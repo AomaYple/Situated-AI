@@ -86,20 +86,29 @@ _PARAMETER_EVIDENCE_HASHES = {
     "events/tech_events/trench_warfare.txt": "d859e625e0843d5d56d515b647e7833a0cb5eb3e5d85b233d4d1be697be1a93e",
 }
 _PARAMETER_115_SOURCE = engine_scope.REPO / "research/situated/1.15.0/inventory-parameters.json"
+_PARAMETER_1151_SHA256 = "bda817a819da75d5d8cb7843b2b1bfdba92979a711cbde9eb7bd03930ddeb7ec"
 _PARAMETER_115_SHA256 = "23d3f599515b08e1defda6f6e3abafbf644b8a0e1881afb403b2ee260c4bbb75"
 
 
 def _parameter_evidence_contract() -> dict[str, str]:
     if version_contracts.active_version() == "1.14.5":
         return _PARAMETER_EVIDENCE_HASHES
-    raw = _PARAMETER_115_SOURCE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != _PARAMETER_115_SHA256:
+    raw = (
+        version_contracts.research_path("situated", "inventory-parameters.json")
+        if version_contracts.active_version() == "1.15.1"
+        else _PARAMETER_115_SOURCE
+    ).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != (
+        _PARAMETER_1151_SHA256
+        if version_contracts.active_version() == "1.15.1"
+        else _PARAMETER_115_SHA256
+    ):
         raise ValueError("1.15 参数原版来源合同漂移")
     data = json.loads(raw)
     if (
         set(data) != {"schema", "version", "evidence_kind", "runtime", "sources"}
         or data["schema"] != 1
-        or data["version"] != "1.15.0"
+        or data["version"] != version_contracts.active_version()
         or data["evidence_kind"] != "native_static"
         or data["runtime"] != "unknown"
         or set(data["sources"]) != set(_PARAMETER_EVIDENCE_HASHES)

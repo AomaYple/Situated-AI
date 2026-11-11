@@ -97,7 +97,7 @@ def scripted_guis_rows() -> list[tuple[str, dict[int, str]]]:
 def _field_rows(dir_rel: str, col: int) -> Callable[[], list[tuple[str, dict[int, str]]]]:
     def rows() -> list[tuple[str, dict[int, str]]]:
         result = _rows_plain(field_occurrences(dir_rel), col)
-        if version_contracts.active_version() == "1.15.0" and dir_rel in {
+        if version_contracts.is_115() and dir_rel in {
             "events",
             "common/scripted_progress_bars",
         }:
@@ -134,9 +134,9 @@ def _doc04_field_specs() -> list[KeyedTableSpec]:
                 header=header,
                 cells=_field_rows(d, col),
                 occurrence=occ,
-                append_new=version_contracts.active_version() == "1.15.0"
+                append_new=version_contracts.is_115()
                 and d in {"events", "common/scripted_progress_bars"},
-                allow_drop=version_contracts.active_version() == "1.15.0"
+                allow_drop=version_contracts.is_115()
                 and d in {"events", "common/scripted_progress_bars"},
             )
             for n, (header, occ, col, d) in enumerate(_DOC04_FIELD_TABLES, start=1)

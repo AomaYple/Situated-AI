@@ -102,7 +102,7 @@ def test_full_pmg_labor_lower_bound_and_invalidated_recipe():
             if candidate["id"] == "building_textile_mill":
                 candidate.update(deepcopy(changed))
     raw = tomllib.loads((config.REPO / "mod/decisions/adapters.toml").read_text(encoding="utf-8"))
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         authority = decision_adapters.native_authority_115()
         assert set(raw["sources"]) == set(authority["sources"])
         raw["sources"] = dict(authority["sources"])

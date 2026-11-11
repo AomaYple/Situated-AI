@@ -2988,12 +2988,16 @@ def claims_for_version(version: str | None = None) -> list[Claim]:
     """The full registry for one native version; historical checks retain their meaning."""
     if active_version(version) == "1.14.5":
         return HISTORICAL_CLAIMS
+    if active_version(version) == "1.15.1":
+        from .verify_claims_1151 import CLAIMS as CLAIMS_1151  # noqa: PLC0415
+
+        return CLAIMS_1151
     from .verify_claims_115 import CLAIMS as CLAIMS_115  # noqa: PLC0415
 
     return CLAIMS_115
 
 
-CLAIMS = claims_for_version("1.15.0" if config.DOCS == config.DOCS_115 else "1.14.5")
+CLAIMS = claims_for_version(config.STARTUP_CONTRACT.version)
 _STARTUP_CLAIMS = CLAIMS
 
 
@@ -3124,7 +3128,11 @@ def fix_claims(
     因此第二遍的"改动"是假的（CLI 每次是新进程，实际使用不受影响；
     测试要重载断言表再断言幂等）。
     """
-    filename = "verify_claims_115.py" if active_version() == "1.15.0" else "verify.py"
+    filename = {
+        "1.14.5": "verify.py",
+        "1.15.0": "verify_claims_115.py",
+        "1.15.1": "verify_claims_1151.py",
+    }[active_version()]
     path = source or (config.REPO / "src" / "pdx" / filename)
     text = path.read_text(encoding="utf-8")
     slots = claim_value_slots(text)

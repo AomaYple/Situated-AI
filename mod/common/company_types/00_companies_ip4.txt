@@ -34,13 +34,11 @@ company_douro_wine_company = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_ENTRE_DOURO_E_MINHO
+		has_building_levels_in_state_region = {
+			region = STATE_ENTRE_DOURO_E_MINHO
+			building = building_vineyard
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_vineyard
-				level >= 5
-			}
 		}
 	}
 
@@ -76,7 +74,7 @@ company_douro_wine_company = {
 			# GROUP program_ff77c57c61391eae_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_douro_wine_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_ff77c57c61391eae_company_mandatory_input_grain_negative
 			add = { value = 0
@@ -203,7 +201,7 @@ company_secn = {
 			# GROUP program_840509642ee9696f_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_secn_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_840509642ee9696f_company_mandatory_input_coal_negative
 			add = { value = 0
@@ -336,7 +334,7 @@ company_gran_azucarera = {
 			# GROUP program_a2fb34678fd0d6e3_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_gran_azucarera_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_a2fb34678fd0d6e3_company_output_demand_positive
 			add = { value = 0
@@ -467,7 +465,7 @@ company_rodriguez_arguelles_y_cia = {
 			# GROUP program_7169526524cf5cce_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_rodriguez_arguelles_y_cia_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_7169526524cf5cce_company_output_demand_positive
 			add = { value = 0
@@ -607,7 +605,7 @@ company_ynchausti_y_compania = {
 			# GROUP program_72bb8278fa0ac8fc_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_ynchausti_y_compania_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_72bb8278fa0ac8fc_company_mandatory_input_clippers_negative
 			add = { value = 0
@@ -646,6 +644,8 @@ company_ynchausti_y_compania = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_ynchausti_y_compania_sugar_pressure [market]; sugar缺口且相对基价高，升档同一主业需求，不能重复奖励
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_ynchausti_y_compania_merchant_marine_pressure [market]; merchant_marine缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_ynchausti_y_compania_groceries_pressure [market]; groceries缺口且相对基价高，升档同一主业需求，不能重复奖励
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_ynchausti_y_compania_port_modern_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
@@ -656,6 +656,8 @@ company_ynchausti_y_compania = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_ynchausti_y_compania_sugar_need [market]; 主业基础配方可能产出sugar；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_ynchausti_y_compania_merchant_marine_need [market]; 主业基础配方可能产出merchant_marine；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_ynchausti_y_compania_groceries_need [market]; 主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
@@ -713,12 +715,10 @@ company_office_cherifien_des_phosphates = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_MARRAKECH
-			any_scope_building = {
-				is_building_type = building_sulfur_mine
-				level >= 5
-			}
+		has_building_levels_in_state_region = {
+			region = STATE_MARRAKECH
+			building = building_sulfur_mine
+			levels >= 5
 		}
 	}
 
@@ -753,7 +753,7 @@ company_office_cherifien_des_phosphates = {
 			# GROUP program_945bb2a35a38148f_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_office_cherifien_des_phosphates_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_945bb2a35a38148f_company_mandatory_input_iron_negative
 			add = { value = 0
@@ -911,7 +911,7 @@ company_uniao_fabril = {
 			# GROUP program_345851d52465bd2c_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_uniao_fabril_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_345851d52465bd2c_company_mandatory_input_iron_negative
 			add = { value = 0
@@ -987,12 +987,10 @@ company_pedro_domecq = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_LOWER_ANDALUSIA
-			any_scope_building = {
-				is_building_type = building_vineyard
-				level >= 5
-			}
+		has_building_levels_in_state_region = {
+			region = STATE_LOWER_ANDALUSIA
+			building = building_vineyard
+			levels >= 5
 		}
 	}
 
@@ -1026,7 +1024,7 @@ company_pedro_domecq = {
 			# GROUP program_9b93dc48c09481eb_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_pedro_domecq_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_9b93dc48c09481eb_company_mandatory_input_grain_negative
 			add = { value = 0
@@ -1090,12 +1088,10 @@ company_bacardi = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_EASTERN_CUBA
-			any_scope_building = {
-				is_building_type = building_food_industry
-				level >= 5
-			}
+		has_building_levels_in_state_region = {
+			region = STATE_EASTERN_CUBA
+			building = building_food_industry
+			levels >= 5
 		}
 	}
 
@@ -1129,7 +1125,7 @@ company_bacardi = {
 			# GROUP program_3be34d419ee88fa2_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_bacardi_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_3be34d419ee88fa2_company_mandatory_input_grain_negative
 			add = { value = 0
@@ -1189,12 +1185,10 @@ company_hispano_suiza = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_CATALONIA
-			any_scope_building = {
-				is_building_type = building_automotive_industry
-				level >= 5
-			}
+		has_building_levels_in_state_region = {
+			region = STATE_CATALONIA
+			building = building_automotive_industry
+			levels >= 5
 		}
 	}
 
@@ -1228,7 +1222,7 @@ company_hispano_suiza = {
 			# GROUP program_5a5776e07d6e9c1e_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_hispano_suiza_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_5a5776e07d6e9c1e_company_mandatory_input_engines_negative
 			add = { value = 0

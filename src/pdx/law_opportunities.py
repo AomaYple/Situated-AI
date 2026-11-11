@@ -43,7 +43,7 @@ _NATIVE_RETAINED_115 = {
 
 def native_retained_candidates() -> dict[str, str]:
     """Additional 1.15 consumers are counted and retain their entire native policy."""
-    return dict(_NATIVE_RETAINED_115) if version_contracts.active_version() == "1.15.0" else {}
+    return dict(_NATIVE_RETAINED_115) if version_contracts.is_115() else {}
 
 
 # Exact modifier values in the complete hash-locked labour source. Omitted
@@ -129,7 +129,7 @@ def load() -> dict[str, Any]:
         raise ValueError("具体法律候选与锁定原版来源不一致")
     if any(not re.fullmatch(r"law_[a-z_]+", law) for law in data["candidates"]):
         raise ValueError("具体法律候选身份无效")
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         data["sources"] = dict(SOURCE_HASHES_115)
     return data
 

@@ -435,9 +435,7 @@ def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monk
         and row["scope_status"] == "direct"
         and row["ordinary_goods"]
     }
-    expected_goods, expected_writers = (
-        (426, 1541) if version_contracts.active_version() == "1.15.0" else (418, 1517)
-    )
+    expected_goods, expected_writers = (426, 1541) if version_contracts.is_115() else (418, 1517)
     assert len(materials) == 263
     assert sum(map(len, materials.values())) == expected_goods
     # Each actual material has opportunity, scarcity and high-price pressure;

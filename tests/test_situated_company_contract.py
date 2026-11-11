@@ -357,3 +357,10 @@ def test_missing_explicit_native_score_cannot_be_initialized_implicitly(tmp_path
     selected = replace(adapters, sources=tuple(row for row in adapters.sources if row[0] == SOURCE))
     with pytest.raises(ValueError):
         decision_adapters.build(selected, texts={SOURCE: native})
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

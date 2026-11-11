@@ -11,6 +11,7 @@ strait_access = {
 	icon = "gfx/interface/icons/diplomatic_treaties_articles_icons/strait_access_treaties.dds"
 
 	flags = {
+		show_in_lens
 		is_strait_access
 		can_be_enforced
 		ai_consider_threaten_naval_hostilities
@@ -27,11 +28,11 @@ strait_access = {
     }
 
 	visible = {
-		has_any_strait_province = yes
+		has_any_strait_province_in_hierarchy = yes
 	}
 
 	possible = {
-		has_any_strait_province = yes
+		has_any_strait_province_in_hierarchy = yes
 		has_any_strait_control = yes
 	}
 
@@ -100,9 +101,12 @@ strait_access = {
 			}
 
 			# Any country a strait controller is hurting looks for relief, whatever its rank
-			add = {
-				value = worst_strait_access_grievance
-				multiply = 0.005
+			if = {
+				limit = { NOT = { has_law_or_variant = law_type:law_free_trade } }
+				add = {
+					value = worst_strait_access_grievance
+					multiply = 0.005
+				}
 			}
 		}
 
@@ -113,6 +117,19 @@ strait_access = {
 
 		proposal_weight = {
 			value = 1
+
+			if = { # Russia wants passage through the Bosporus
+				limit = {
+					c:RUS ?= this
+					root = scope:target_country
+					scope:source_country = {
+						any_scope_state = {
+							state_region = s:STATE_EASTERN_THRACE
+						}
+					}
+				}
+				add = 3
+			}
 
 			# Pursued harder the more the strait controller is hurting us
 			add = {

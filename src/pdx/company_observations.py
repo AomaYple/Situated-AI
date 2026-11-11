@@ -68,8 +68,16 @@ SOURCE_HASHES_115 = {
 }
 
 
+SOURCE_HASHES_1151 = {
+    **SOURCE_HASHES_115,
+    "common/production_methods/11_private_infrastructure.txt": "6e7ad9c84c77cdc26af04c7c5a2037b49f96f8c06107a89a4db88b84d2150942",
+}
+
+
 def source_hashes() -> dict[str, str]:
-    return SOURCE_HASHES_115 if version_contracts.active_version() == "1.15.0" else SOURCE_HASHES
+    if version_contracts.active_version() == "1.15.1":
+        return SOURCE_HASHES_1151
+    return SOURCE_HASHES_115 if version_contracts.is_115() else SOURCE_HASHES
 
 
 PORT_METHODS = frozenset({"pm_basic_port", "pm_industrial_port", "pm_modern_port"})
@@ -411,7 +419,7 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
         journal = reference(_OPIUM, "je_opium")
         native = (
             version_contracts.journal_completion(journal)
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else _child(journal, "complete")
         )
         line = _exact(
@@ -496,7 +504,7 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
         journal = reference(_ART, "je_romanticism")
         native = (
             version_contracts.journal_completion(journal)
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else _child(journal, "complete")
         )
         line = _exact(

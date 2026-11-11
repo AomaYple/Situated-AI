@@ -11,9 +11,10 @@ import hashlib
 import math
 import tomllib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from pathlib import Path
+from typing import Any, cast
 
-from pdx import decision_rules
+from pdx import decision_rules, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 
@@ -24,9 +25,6 @@ from . import network_support
 from . import production_profile as native
 from . import r2_reader_authority as authority
 from .profile_configuration import ProfileConfiguration
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 SOURCE = native.ROOT / "mod/decisions/action_network_115.toml"
 PROOF = "docs/design/exec/1.15-R2-A0-结果.md"
@@ -185,6 +183,41 @@ READERS = {
 }
 
 
+READERS_1151 = {
+    **READERS,
+    "population": _reader(
+        "a0-pol-schools",
+        "total_population",
+        "number",
+        "people",
+        "game/common/ai_strategies/00_default_strategy.txt",
+        5576,
+        minimum=0,
+    ),
+    "net-surplus": _reader(
+        "a0-pol-schools",
+        "net_total_income",
+        "number",
+        "currency_per_week",
+        "game/common/journal_entries/06_portugal_politics.txt",
+        414,
+    ),
+}
+
+
+def readers() -> dict[str, ReaderCapability]:
+    return READERS_1151 if native.expected_version() == "1.15.1" else READERS
+
+
+def source_path(version: str | None = None) -> Path:
+    selected = (
+        native.expected_version() if version is None else version_contracts.active_version(version)
+    )
+    if selected not in {"1.15.0", "1.15.1"}:
+        raise ValueError("R2 declaration 仅支持 1.15.0 与 1.15.1")
+    return SOURCE if selected == "1.15.0" else SOURCE.with_name("action_network_1151.toml")
+
+
 def _fields(
     row: object, required: set[str], optional: set[str] | frozenset[str] = frozenset()
 ) -> dict[str, Any]:
@@ -262,14 +295,15 @@ def _conditions(rows: object) -> tuple[ex.Expression, tuple[str, ...]]:
 def compile_profile(
     profile: native.ProductionProfile,
     *,
-    source: Path = SOURCE,
+    source: Path | None = None,
     configuration: ProfileConfiguration | None = None,
 ) -> tuple[net.NetworkProgram, ...]:
     """Create one symbolic program per physical consumer, with one policy source."""
+    source = source_path(profile.game_version) if source is None else Path(source)
     authority.verify_frozen()
     if {
-        name: capability.source for name, capability in READERS.items()
-    } != authority.READER_SOURCES:
+        name: capability.source for name, capability in readers().items()
+    } != authority.reader_sources():
         raise ValueError("R2 reader authority coverage differs from adapter capabilities")
     configuration = ProfileConfiguration() if configuration is None else configuration
     if type(configuration) is not ProfileConfiguration:
@@ -300,7 +334,7 @@ def compile_profile(
         if action_id in seen_actions:
             raise ValueError("R2 duplicate action definition")
         seen_actions.add(action_id)
-        if not set(required_facts) <= READERS.keys():
+        if not set(required_facts) <= readers().keys():
             raise ValueError("R2 required_facts must name canonical raw readers")
         row = next((item for item in profile.declarations if item.id == consumer_id), None)
         if row is None or row.id in seen:
@@ -379,7 +413,7 @@ def compile_profile(
                     "all",
                     "rationale",
                 },
-                {"variant_group", "rank"},
+                {"variant_group", "rank", "required"},
             )
             bridge_id = _ident(item["id"], "bridge.id")
             effect_id = _ident(item["effect"], "bridge.effect")
@@ -404,9 +438,17 @@ def compile_profile(
             rank = item.get("rank", 0)
             if type(rank) is not int or rank < 0:
                 raise ValueError("R2 variant rank must be a nonnegative integer, never bool")
+            required = item.get("required", True)
+            if type(required) is not bool:
+                raise ValueError("R2 bridge.required must be boolean")
             condition, roots = _conditions(item["all"])
+            source_label = (
+                source.relative_to(native.ROOT).as_posix()
+                if source.is_relative_to(native.ROOT)
+                else source.name
+            )
             proof = (
-                f"mod/decisions/action_network_115.toml#{bridge_id}: {rationale}",
+                f"{source_label}#{bridge_id}: {rationale}",
                 PROOF,
             )
             account = net.EffectAccount(
@@ -429,6 +471,7 @@ def compile_profile(
                 role,
                 net.Constant(value),
                 action_id + (".interaction" if path == "interaction" else ".complete"),
+                required=required,
                 variant_group=variant,
                 variant_rank=rank,
                 variant_review=proof if "variant_group" in item else (),
@@ -452,9 +495,9 @@ def compile_profile(
         fact_ids.update(required_facts)
         fact_ids.update(name for objective in objectives for name in objective.source_fact_ids)
         fact_ids -= {item.id for item in predicates}
-        if any(name not in READERS or READERS[name].consumer != row.id for name in fact_ids):
+        if any(name not in readers() or readers()[name].consumer != row.id for name in fact_ids):
             raise ValueError("R2 reader has no authority in this native consumer")
-        facts = tuple(READERS[name].fact(name) for name in sorted(fact_ids))
+        facts = tuple(readers()[name].fact(name) for name in sorted(fact_ids))
         groups = tuple(
             net.AssessmentGroup(
                 group_id,
@@ -583,7 +626,7 @@ def _render_condition(
     if isinstance(condition, ex.BooleanLiteral) and type(condition.value) is bool:
         return "always = yes" if condition.value else "always = no"
     if isinstance(condition, ex.Compare):
-        capability = READERS.get(condition.fact_id)
+        capability = readers().get(condition.fact_id)
         if capability is None or capability.consumer != consumer:
             raise ValueError("R2 predicate reader has no authority in this consumer")
         operators = {"eq": "=", "ne": "!=", "lt": "<", "le": "<=", "gt": ">", "ge": ">="}
@@ -637,7 +680,7 @@ def render_program(program: net.NetworkProgram, *, available: tuple[str, ...] | 
     ):
         raise ValueError("R2 renderer has no native authority for this candidate context")
     for fact in program.network.facts:
-        capability = READERS.get(fact.id)
+        capability = readers().get(fact.id)
         if (
             capability is None
             or capability.consumer != consumer
@@ -744,9 +787,10 @@ def audit(
     profile: native.ProductionProfile,
     *,
     configuration: ProfileConfiguration | None = None,
-    source: Path = SOURCE,
+    source: Path | None = None,
 ) -> dict[str, object]:
     """Describe the actual lowered programs, never the old neutral contract bounds."""
+    source = source_path(profile.game_version) if source is None else Path(source)
     programs = compile_profile(profile, configuration=configuration, source=source)
     return {
         "architecture": "R2/action-network-v2",
@@ -768,8 +812,8 @@ def audit(
                     {
                         "id": fact.id,
                         "binding": fact.binding,
-                        "source": READERS[fact.id].source,
-                        "line": READERS[fact.id].line,
+                        "source": readers()[fact.id].source,
+                        "line": readers()[fact.id].line,
                     }
                     for fact in program.network.facts
                 ],
@@ -847,9 +891,12 @@ def build(
     profile: native.ProductionProfile,
     *,
     configuration: ProfileConfiguration | None = None,
-    baseline_root: Path = native.BASELINE_ROOT,
-    source: Path = SOURCE,
+    baseline_root: Path | None = None,
+    source: Path | None = None,
 ) -> dict[str, str]:
+    baseline_root = (
+        native.baseline_root(profile.game_version) if baseline_root is None else Path(baseline_root)
+    )
     native.verify_baseline(baseline_root)
     if profile != native.load_profile(baseline_root):
         raise ValueError("R2 profile differs from frozen native contract")
@@ -879,3 +926,96 @@ def build(
             )
         files[row.source.removeprefix("game/")] = text
     return files
+
+
+SCHOOL_MIGRATION = {
+    "remaining_school_catchup_need": "school-need: literacy < 0.5 and population > 0; +2",
+    "remaining_school_fiscal": "school-capacity-fiscal: positive net weekly income and nondefault; +0.5 complement",
+    "remaining_school_administrative": "school-capacity-administrative: positive bureaucracy; +0.25 complement",
+    "remaining_school_capacity": "school-capacity-administrative + school-capacity-fiscal: independent .25 + .5; no extra joint score",
+    "school_default_pressure": "school-default: known default; -2",
+    "school_administrative_pressure": "school-administration: negative bureaucracy; -2",
+}
+SCHOOL_NUMERIC_POLICY = {
+    "scale": "intentional additive migration; historical multipliers are not retained or reapplied",
+    "capacity_effects": {
+        "administrative": "spare administrative points reduce the administrative opportunity cost of education; +0.25 only when education is needed",
+        "fiscal": "known nondefault and positive current net weekly income support financing; +0.5 only when education is needed",
+        "joint": "both independently observed capacities add .25 + .5 = .75; historical 1.25 multiplier is replaced, not translated arithmetically or added again",
+    },
+    "default_with_administrative_capacity": "spare bureaucracy remains observed during default; keep +0.25 administrative complement and the full -2 default risk, while disabling +0.5 financing complement",
+    "unknown_auxiliary_income": "omit only the unproved +0.5 financing complement; preserve need, observed administrative capacity and all known costs",
+    "required_group_inputs": "unknown literacy, population, bureaucracy or default exits the complete assessment; no optimistic benefit survives an unknown required cost",
+    "numeric_limit": "bounded local preference weights, not a monetary quote, resource allocation or runtime balance claim",
+}
+
+
+def compose(
+    files: dict[str, str],
+    profile: native.ProductionProfile,
+    *,
+    configuration: ProfileConfiguration | None = None,
+) -> dict[str, object]:
+    """Attach one reviewed writer to each native field in the complete pipeline.
+
+    Existing files may contain other legacy consumers. Their exact target
+    subtrees must still be native; a previous author at this physical field is
+    rejected before any insertion. Each insertion is independently reversible.
+    This function never joins independently built package dictionaries.
+    """
+    from .native_treatments import _digest  # noqa: PLC0415
+
+    baseline = native.baseline_root(profile.game_version)
+    native.verify_baseline(baseline)
+    programs = compile_profile(profile, configuration=configuration)
+    by_consumer = {item.network.actions[0].definition.consumer_id: item for item in programs}
+    if len(by_consumer) != len(programs):
+        raise ValueError("R2 complete production has duplicate consumer writers")
+    ownership = []
+    for row in profile.declarations:
+        name = row.source.removeprefix("game/")
+        original = (baseline / row.source).read_bytes().decode("utf-8-sig")
+        current = files.get(name, original)
+        expected = parse_text(original, row.source)
+        actual = parse_text(current, name)
+        if expected.errors or actual.errors:
+            raise ValueError(f"{row.id}: complete production source is not valid PDX")
+        path = (row.definition, *row.field)
+        native_field = native._select(expected.root, path, row.source)
+        actual_field = native._select(actual.root, path, name)
+        if not isinstance(native_field.value, Block) or not isinstance(actual_field.value, Block):
+            raise ValueError(f"{row.id}: complete production field is not a block")
+        if _digest(native_field.value) != _digest(actual_field.value):
+            raise ValueError(f"{row.id}: another writer already changed this physical field")
+        program = by_consumer.get(row.id)
+        rendered = (
+            current
+            if program is None
+            else native._insert_policy(current, row, render_program(program))
+        )
+        if program is not None and native.strip_policy(rendered, row) != current:
+            raise ValueError(f"{row.id}: complete production insertion changed protected content")
+        if (
+            _consumer_block_depth(rendered, row)
+            > _consumer_block_depth(original, row) + _ADDITIONAL_BLOCK_DEPTH
+        ):
+            raise ValueError(f"{row.id}: complete production depth exceeds reviewed budget")
+        files[name] = rendered
+        ownership.append(
+            {
+                "id": row.id,
+                "source": name,
+                "definition": row.definition,
+                "field": list(row.field),
+                "writer": "R2/action-network-v2",
+                "enabled": program is not None,
+            }
+        )
+    return {
+        **audit(profile, configuration=configuration),
+        "integration": "complete-production-single-writer",
+        "writers": ownership,
+        "legacy_school_migration": SCHOOL_MIGRATION,
+        "school_numeric_policy": SCHOOL_NUMERIC_POLICY,
+        "future_domain_depth": "not_claimed",
+    }

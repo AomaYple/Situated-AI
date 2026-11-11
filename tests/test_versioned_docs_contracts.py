@@ -10,7 +10,7 @@ import sys
 import pytest
 
 from pdx import config, docgen, docs_mirror, snapshot, tables_offline, vanilla_index, verify
-from pdx.version_contracts import active_version, select_version
+from pdx.version_contracts import active_version, is_115, select_version
 
 
 def test_documentation_and_complete_claim_registry_switch_at_call_time():
@@ -169,7 +169,7 @@ def test_selected_committed_evidence_binds_the_actual_version():
     assert snap is not None
     snap.require_version()
     assert snap.version_label == f"release/{active_version()}"
-    if active_version() == "1.15.0":
+    if is_115():
         assert snap.sections["source_identity"]["installation/caligula_rev.txt"]
         assert len(snap.sections["doc_tables"]) == sum(len(t.specs) for t in docgen.targets())
 

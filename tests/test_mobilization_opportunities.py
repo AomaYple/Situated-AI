@@ -48,9 +48,7 @@ def test_context_reuse_preserves_identity_isolation_and_rechecks_pin(monkeypatch
     assert sum(raw is not None for raw in reads) == 1
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_115"
-        if mobilization.version_contracts.active_version() == "1.15.0"
-        else "BASELINE_SHA256",
+        "BASELINE_SHA256_115" if mobilization.version_contracts.is_115() else "BASELINE_SHA256",
         "0" * 64,
     )
     with pytest.raises(ValueError, match="身份漂移"):
@@ -96,7 +94,7 @@ def test_frozen_raw_hashes_reconstruct_complete_originals(baseline):
         COUNTRY: "d859e625e0843d5d56d515b647e7833a0cb5eb3e5d85b233d4d1be697be1a93e",
         MODIFIER: "bb5a8d750d0bbcf6f778b85e6f3fdc7467b95391164e9413b8a8a2895cfb09ef",
     }
-    if mobilization.version_contracts.active_version() == "1.15.0":
+    if mobilization.version_contracts.is_115():
         expected = {
             SOURCE: "954cf50dc677fd61b0aa7da0d5cb9a32f870f2530d78d01cd56e544cdf511c97",
             DOC: "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
@@ -114,7 +112,7 @@ def test_frozen_raw_hashes_reconstruct_complete_originals(baseline):
         )
     assert baseline["sources"][SOURCE] == (
         "4dce33c917b2f2a323de96b7e51602d5d52262207af5f2736de3f17008537296"
-        if mobilization.version_contracts.active_version() == "1.15.0"
+        if mobilization.version_contracts.is_115()
         else "5b69e5c13fe0278122fc34b256838c5ae76c7db893404184b855accc34672a09"
     )
 
@@ -389,16 +387,12 @@ def test_repin_cannot_hide_frozen_raw_ast_metadata_key_quantity_or_guard_tamperi
     path.write_text(mobilization._canonical(data), encoding="utf-8", newline="\n")
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_115"
-        if mobilization.version_contracts.active_version() == "1.15.0"
-        else "BASELINE",
+        "BASELINE_115" if mobilization.version_contracts.is_115() else "BASELINE",
         path,
     )
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_115"
-        if mobilization.version_contracts.active_version() == "1.15.0"
-        else "BASELINE_SHA256",
+        "BASELINE_SHA256_115" if mobilization.version_contracts.is_115() else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError):
@@ -410,18 +404,14 @@ def test_hash_pin_and_canonical_bytes_are_independent_guards(baseline, tmp_path,
     path.write_text(mobilization._canonical(baseline) + " ", encoding="utf-8", newline="\n")
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_115"
-        if mobilization.version_contracts.active_version() == "1.15.0"
-        else "BASELINE",
+        "BASELINE_115" if mobilization.version_contracts.is_115() else "BASELINE",
         path,
     )
     with pytest.raises(ValueError, match="身份漂移"):
         mobilization.load_baseline()
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_115"
-        if mobilization.version_contracts.active_version() == "1.15.0"
-        else "BASELINE_SHA256",
+        "BASELINE_SHA256_115" if mobilization.version_contracts.is_115() else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError, match="规范JSON"):

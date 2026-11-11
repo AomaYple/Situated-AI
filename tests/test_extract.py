@@ -247,9 +247,9 @@ class TestRealGameCounts(unittest.TestCase):
         cls.common = GAME / "common"
 
     def test_known_entry_counts(self):
-        from pdx.version_contracts import active_version
+        from pdx.version_contracts import is_115
 
-        expected = self.KNOWN_115 if active_version() == "1.15.0" else self.KNOWN
+        expected = self.KNOWN_115 if is_115() else self.KNOWN
         for name, want in expected.items():
             with self.subTest(directory=name):
                 res = extract_dir(self.common / name)
@@ -266,9 +266,9 @@ class TestRealGameCounts(unittest.TestCase):
 
     def test_bom_ratio_reported(self):
         res = extract_dir(self.common / "static_modifiers")
-        from pdx.version_contracts import active_version
+        from pdx.version_contracts import is_115
 
-        expected = 77 if active_version() == "1.15.0" else 68
+        expected = 77 if is_115() else 68
         self.assertEqual(res.files, expected)
         self.assertEqual(res.bom_files, expected, "独立原始字节检查：全部源文件带 BOM")
 

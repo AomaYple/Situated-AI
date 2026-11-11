@@ -374,7 +374,7 @@ def current_game_fixture(monkeypatch, tmp_path):
         raw = json.dumps(data, indent=2).encode()
         manifest.write_bytes(raw)
         digest = hashlib.sha256(raw).hexdigest()
-        if version_contracts.active_version() == "1.15.0":
+        if version_contracts.is_115():
             monkeypatch.setitem(engine_scope_115.MANIFESTS, "strategy", (str(manifest), digest))
         else:
             monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)

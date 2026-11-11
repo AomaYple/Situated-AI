@@ -59,23 +59,29 @@ def test_baseline_stops_at_first_failure(monkeypatch):
     assert all(call[1]["env"]["PYTHONDONTWRITEBYTECODE"] == "1" for call in calls)
 
 
-def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(monkeypatch):
+@pytest.mark.parametrize("profile", ["1.15.0", "1.15.1", None])
+def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
+    monkeypatch, profile
+):
+    selected = profile or "1.15.1"
     calls = []
 
     def run(argv, **kwargs):
-        assert kwargs["env"]["V3_CONTRACT_PROFILE"] == "1.15.0"
+        assert kwargs["env"]["V3_CONTRACT_PROFILE"] == selected
         calls.append(argv[argv.index("-m") + 1 :])
         return SimpleNamespace(returncode=0)
 
-    monkeypatch.setattr(sys, "argv", ["run_check.py", "baseline", "--profile", "1.15.0"])
+    monkeypatch.setattr(
+        sys, "argv", ["run_check.py", "baseline", *(["--profile", profile] if profile else [])]
+    )
     monkeypatch.setattr(run_check.subprocess, "run", run)
     assert run_check.main() == 0
     original = [command for _, command in run_check.BASELINE_COMMANDS]
     assert calls[: len(original)] == original
     assert calls[len(original) :] == [
-        ["pdx.cli", "modgen", "--profile", "1.15.0", "--check"],
-        ["pdx.cli", "modguard", "--profile", "1.15.0", "--offline"],
-        ["pdx.cli", "decision-audit", "--profile", "1.15.0", "--offline"],
+        ["pdx.cli", "modgen", "--profile", selected, "--check"],
+        ["pdx.cli", "modguard", "--profile", selected, "--offline"],
+        ["pdx.cli", "decision-audit", "--profile", selected, "--offline"],
     ]
 
 

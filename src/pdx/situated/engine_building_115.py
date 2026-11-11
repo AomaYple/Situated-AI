@@ -25,6 +25,7 @@ def snapshot() -> bytes:
     if hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("1.15 building default: frozen engine evidence drift")
     data = json.loads(raw)
+    exe_sha256, exe_bytes = engine_scope_115.executable_identity()
     native = decision_adapters.native_authority_115()
     expected_fields = [
         {"source": row["source"], "field": row["field"], "parent": row["parents"][0]}
@@ -33,15 +34,15 @@ def snapshot() -> bytes:
     ]
     contract = data["contracts"][0]
     if (
-        data["exe"]["sha256"] != engine_scope_115.EXE_SHA256
-        or data["exe"]["bytes"] != engine_scope_115.EXE_BYTES
+        data["exe"]["sha256"] != exe_sha256
+        or data["exe"]["bytes"] != exe_bytes
         or data["runtime"] != "unknown"
         or data["native_authority"]
         != {
-            "path": decision_adapters.NATIVE_AUTHORITY_115.relative_to(
-                engine_scope_115.ROOT
-            ).as_posix(),
-            "sha256": decision_adapters.NATIVE_AUTHORITY_115_SHA256,
+            "path": decision_adapters.native_authority_path()
+            .relative_to(engine_scope_115.ROOT)
+            .as_posix(),
+            "sha256": decision_adapters.native_authority_sha256(),
         }
         or data["implicit_buildings"] != expected_fields
         or len(expected_fields) != 11

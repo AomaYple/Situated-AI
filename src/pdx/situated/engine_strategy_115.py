@@ -865,7 +865,14 @@ _CONTRACTS = {
 
 def validate(data: Mapping[str, Any]) -> None:
     """Reject permission, exact member, target identity and merge-contract drift."""
-    for name, expected in _CONTRACTS.items():
+    from pdx import version_contracts  # noqa: PLC0415
+
+    contracts = _CONTRACTS
+    if version_contracts.active_version() == "1.15.1":
+        from .engine_strategy_1151 import CONTRACTS  # noqa: PLC0415
+
+        contracts = CONTRACTS
+    for name, expected in contracts.items():
         if data.get(name) != expected:
             raise ValueError(f"1.15 策略独立字段合同不一致：{name}")
     if data.get("evidence_kind") != "binary_static" or data.get("runtime") != "unknown":

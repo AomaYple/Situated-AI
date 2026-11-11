@@ -186,7 +186,7 @@ _NO_ANCHOR_CLAIMS: dict[str, str] = {
 
 
 # 1.15 的列表数已在正文逐值绑定；历史页面仍由生成表维护。
-if version_contracts.active_version() == "1.15.0":
+if version_contracts.is_115():
     _NO_ANCHOR_CLAIMS.pop("script.lists_doc04")
 
 

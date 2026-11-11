@@ -2,7 +2,7 @@
 
 当前实施状态见[当前工作清单](docs/design/当前工作清单.md)和[拓展结果](docs/design/exec/广度深度拓展-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
-1.15 架构已深化为 R2 设计与实施基准，见[架构主计划](docs/design/架构主计划.md)和[架构设计](docs/design/1.15架构设计.md)；已有候选实现仍需按新合同补齐与验收。领域目标见[架构子计划](docs/design/架构子计划.md)，当前正式交付仍为 3.2.0 / 游戏 1.14.5。
+当前执行 [1.15.1 全仓迁移与正式发布计划](docs/design/exec/1.15.1-迁移发布计划.md)，统一工程合同、完整 Mod 与 R2 三消费者的生产入口。R2 架构与 1.15.0 三消费者静态验收见[架构主计划](docs/design/架构主计划.md)和[架构设计](docs/design/1.15架构设计.md)；领域目标见[架构子计划](docs/design/架构子计划.md)。迁移候选的目标版本为 3.3.0 / 游戏 1.15.1，实际正式交付身份仍以版本交付索引为准。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
@@ -15,7 +15,9 @@ Mod ID 为 `situated-ai`，锁定的 Victoria 3 底本版本见[工程交付基�
 
 ## 当前决策方式
 
-当前3.2.0生产决策链、国家协调及排他路线退役见[拓展结果](docs/design/exec/广度深度拓展-结果.md)，联合决策合同见[工程交付基线](docs/design/exec/工程基线-1.0.md)。调整只影响原版 AI 的局部倾向，资格、实际成本、政治支持、随机、拒绝、终结零分与执行继续由原版决定。
+已发布3.2.0的生产决策链、国家协调及排他路线退役见[拓展结果](docs/design/exec/广度深度拓展-结果.md)，联合决策合同见[工程交付基线](docs/design/exec/工程基线-1.0.md)。调整只影响原版 AI 的局部倾向，资格、实际成本、政治支持、随机、拒绝、终结零分与执行继续由原版决定。
+
+1.15.1 / 3.3.0 迁移候选已将完整生产链与 R2 道路、学校、改善关系消费者统一接线，当前静态整合及完整三配置构造见[Mod 静态复核结果](docs/design/exec/1.15.1-Mod静态复核-结果.md)；完整工程 E、标准包和正式交付尚未完成。学校六条旧乘法规则由 R2 加法评价有意替代，不宣称新旧数值等价；贸易供给立场与原版已有同名定义合并，有意扩展对应立场激活条件，具体边界见[迁移发布计划](docs/design/exec/1.15.1-迁移发布计划.md)。25 个未来领域仍仅目标与接口、未启动；17 项原始异常继续使全局 catalog 不完整，运行执行 R 与长期体验 U 保持 `unknown`。
 
 跨域反馈依赖已发生的世界事实。例如，当前公校法律、实际学校制度与识字状态可以改变教育和生产配置的相关增量；候选行动评分较高不代表行动已经执行，也不证明后续变化由 Mod 导致。完整领域范围和阶段验收仍以[当前工作清单](docs/design/当前工作清单.md)及对应收据为准。
 

@@ -20,7 +20,7 @@ law_no_schools = {
 
 	# AI will never abolish institutions entirely
 	ai_will_do = {
-		always = no
+		has_journal_entry = je_tp_tsar_gendarme_of_europe
 	}
 
 	ai_enact_weight_modifier = { #Petitions
@@ -135,7 +135,7 @@ law_religious_schools = {
 			# GROUP program_a1e8e1a7a5d70541_school_access_positive
 			add = { value = 0
 				# social_reform_religious_schools_from_private_access_peasant [political]; 普通私校转宗教学校增加固定教育access；低SoL与农民份额仅代理财富教育覆盖不足，不把conversion或IG强化当普遍收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 14 }
 				# social_reform_religious_schools_new_access [political]; 当前确无学校与制度，低识字形成启用该原版教育机制的直接需要；私校财富机制与宗教普遍access区别保留
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 12 }
 				# social_reform_religious_schools_from_private_access_low_sol [political]; 普通私校转宗教学校增加固定教育access；低SoL与农民份额仅代理财富教育覆盖不足，不把conversion或IG强化当普遍收益
@@ -296,9 +296,9 @@ law_private_schools = {
 			# GROUP program_383c2b7f87d62f01_school_access_negative
 			add = { value = 0
 				# social_reform_private_schools_from_public_access_loss_peasant [political]; 退出公校普遍教育access与识字机制转财富教育，低SoL覆盖风险不能被行政折扣奖励屏蔽
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = -16 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = -16 }
 				# social_reform_private_schools_from_religious_access_loss_peasant [political]; 退出宗教学校固定教育access转财富教育，低SoL下覆盖损失独立于行政折扣节约
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_religious_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = -14 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_religious_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = -14 }
 				# social_reform_private_schools_from_public_access_loss_low_sol [political]; 退出公校普遍教育access与识字机制转财富教育，低SoL覆盖风险不能被行政折扣奖励屏蔽
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 } } add = -12 }
 				# social_reform_private_schools_from_religious_access_loss_low_sol [political]; 退出宗教学校固定教育access转财富教育，低SoL下覆盖损失独立于行政折扣节约
@@ -489,7 +489,7 @@ law_public_schools = {
 				# public_school_no_schools_access [political]; 当前没有学校制度且识字偏低时，为引入公校普遍教育接入形成具体需求；原版已有无学校法律请愿加值完整保留
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 14 }
 				# public_school_private_peasant_access [political]; 低识字、当前私校且农民比例高时提高同一普遍教育接入需求档；农民比例只作覆盖压力代理，不是个人财富或政治支持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 12 }
 				# structural_school_access [political]; 当前私校按财富提供教育接入，低识字时有限关注公校普遍教育接入的具体改革需求，不把全国均值冒充个人财富
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 10 }
 				# structural_school_secularization [political]; 当前宗教学校每级普遍教育接入0.10，公校0.125；低识字时形成较小教育接入改善需求，不强制世俗路线或假定政治支持

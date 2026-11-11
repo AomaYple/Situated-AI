@@ -200,7 +200,7 @@ def test_complete_parameter_identity_handles_arguments_and_numeric_value_fields(
     assert condition(boolean, facts) is True
     assert condition(boolean, {}) is None
 
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     body = "target = pop_type:laborers value" if current else "pop_type = laborers percent"
     numeric = _condition_block("limit = { pop_type_percent_country = { " + body + " >= 0.2 } }")
     parameter = "target" if current else "pop_type"

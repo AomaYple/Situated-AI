@@ -36,13 +36,11 @@ company_misr = {
 
 	possible = {
 		has_technology_researched = corporate_charters
-		any_scope_state = {
-			state_region = s:STATE_LOWER_EGYPT
+		has_building_levels_in_state_region = {
+			region = STATE_LOWER_EGYPT
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -78,7 +76,7 @@ company_misr = {
 			# GROUP program_5a27f3d58b5d71de_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_misr_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_5a27f3d58b5d71de_company_mandatory_input_fabric_negative
 			add = { value = 0
@@ -175,7 +173,7 @@ company_egyptian_rail = {
 			# GROUP program_3fefbf42f1db78fe_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_egyptian_rail_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_3fefbf42f1db78fe_company_mandatory_input_engines_negative
 			add = { value = 0
@@ -300,6 +298,11 @@ company_suez_company = {
 		# ACTION program_685673e8146eeab1 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
+			# GROUP program_685673e8146eeab1_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_suez_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
+			}
 			# GROUP program_685673e8146eeab1_company_mandatory_input_clippers_negative
 			add = { value = 0
 				# company_sector_company_suez_company_port_basic_clippers_input [market]; 已观察basic港口active方式实际需要clippers，国家市场高价为该生产方式的独立机会成本
@@ -332,6 +335,8 @@ company_suez_company = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_suez_company_building_trade_center_pressure [market]; 本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
+				# company_sector_company_suez_company_merchant_marine_pressure [market]; merchant_marine缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_suez_company_port_modern_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_suez_company_port_industrial_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
@@ -340,6 +345,8 @@ company_suez_company = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_suez_company_building_trade_center_need [market]; 本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
+				# company_sector_company_suez_company_merchant_marine_need [market]; 主业基础配方可能产出merchant_marine；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_685673e8146eeab1_company_solvency_negative
 			add = { value = 0
@@ -354,7 +361,7 @@ company_suez_company = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0 } } } add = -0.05 }
 			}
 			min = 0.5
-			max = 1.2
+			max = 1.24
 		} }
 		# SITAI END information:company_suez_company.ai_weight
 	}

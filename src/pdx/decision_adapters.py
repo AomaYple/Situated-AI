@@ -48,6 +48,7 @@ if TYPE_CHECKING:
 
 SOURCE = config.REPO / "mod/decisions/adapters.toml"
 NATIVE_AUTHORITY_115 = config.REPO / "research/situated/1.15.0/consumer-adapters.json"
+NATIVE_AUTHORITY_1151_SHA256 = "31f9c0c6edf633af3706d0aefca39de5aa8c5ffc4c2f0d4de43ce037d2d6ae9e"
 NATIVE_AUTHORITY_115_SHA256 = "405667f37790d5b593b2e7453d0f89283f11c751e2cfe382c586bf6fe33de108"
 _FLEET_SOURCE = "common/ai_strategies/00_default_strategy.txt"
 _FLEET_FIELD = (
@@ -73,11 +74,12 @@ class InitialValue:
 
 @dataclass(frozen=True, slots=True)
 class SupplyPlan:
-    """对原版尚未声明立场的商品追加有条件的生产/贸易供给偏好。"""
+    """追加供给偏好；精确1.15.1三商品合成原生或AI稀缺的同一枚举。"""
 
     source: str
     goods: tuple[str, ...]
     price_threshold: float
+    native_stances: tuple[supply_program.NativeSupplyStance, ...] = ()
 
     def actions(self) -> tuple[SupplyProgram, ...]:
         if (
@@ -86,8 +88,11 @@ class SupplyPlan:
             or len(set(self.goods)) != len(self.goods)
         ):
             raise ValueError("商品供给计划商品身份缺失或重复")
+        native = {item.good: item for item in self.native_stances}
+        if len(native) != len(self.native_stances) or not native.keys() <= set(self.goods):
+            raise ValueError("供给计划原版合成商品身份重复或缺失")
         return tuple(
-            SupplyProgram(SupplyAction(self.source, good, self.price_threshold))
+            SupplyProgram(SupplyAction(self.source, good, self.price_threshold), native.get(good))
             for good in self.goods
         )
 
@@ -104,6 +109,22 @@ class AdapterSet:
     law_opportunities_sha256: str | None = None
     technology_opportunities_sha256: str | None = None
     native_authority_sha256: str | None = None
+
+
+def native_authority_path() -> Path:
+    return (
+        version_contracts.research_path("situated", "consumer-adapters.json")
+        if version_contracts.active_version() == "1.15.1"
+        else NATIVE_AUTHORITY_115
+    )
+
+
+def native_authority_sha256() -> str:
+    return (
+        NATIVE_AUTHORITY_1151_SHA256
+        if version_contracts.active_version() == "1.15.1"
+        else NATIVE_AUTHORITY_115_SHA256
+    )
 
 
 def native_contract_data(
@@ -218,7 +239,7 @@ def native_contract_data(
         )
     return {
         "schema": 1,
-        "game_version": "1.15.0",
+        "game_version": version_contracts.active_version(),
         "evidence": "static_native_ast",
         "builder": {
             "path": "src/pdx/decision_adapters.py",
@@ -236,7 +257,7 @@ def write_native_authority_115(game: Path) -> Path:
     """Explicit recapture command; loading never rewrites reviewed evidence."""
     from .situated import r2_reader_authority  # noqa: PLC0415
 
-    if NATIVE_AUTHORITY_115.exists():
+    if native_authority_path().exists():
         native_authority_115()
     r2_reader_authority.verify_installation(game.parent)
     declaration = tomllib.loads(SOURCE.read_text(encoding="utf-8"))
@@ -245,19 +266,19 @@ def write_native_authority_115(game: Path) -> Path:
         name: (game / name).read_text(encoding="utf-8-sig") for name in declaration["sources"]
     }
     data = native_contract_data(declaration, inputs, information=information)
-    NATIVE_AUTHORITY_115.parent.mkdir(parents=True, exist_ok=True)
-    NATIVE_AUTHORITY_115.write_text(
+    native_authority_path().parent.mkdir(parents=True, exist_ok=True)
+    native_authority_path().write_text(
         json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
         newline="\n",
     )
-    return NATIVE_AUTHORITY_115
+    return native_authority_path()
 
 
 def native_authority_115() -> dict[str, Any]:
     """Load the independently reviewed input/AST declaration without live reads."""
-    raw = NATIVE_AUTHORITY_115.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != NATIVE_AUTHORITY_115_SHA256:
+    raw = native_authority_path().read_bytes()
+    if hashlib.sha256(raw).hexdigest() != native_authority_sha256():
         raise ValueError("1.15 adapter authority: frozen declaration drift")
     return cast("dict[str, Any]", json.loads(raw))
 
@@ -317,7 +338,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         raise ValueError("消费者适配 schema 无效")
     authority_digest = None
     building_default_digest = None
-    if source == SOURCE and version_contracts.active_version() == "1.15.0":
+    if source == SOURCE and version_contracts.is_115():
         from .situated import engine_building_115  # noqa: PLC0415
 
         authority = native_authority_115()
@@ -345,7 +366,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         data["scalar_values"] = [
             item for item in data["scalar_values"] if (item["source"], item["field"]) in scalar
         ]
-        authority_digest = NATIVE_AUTHORITY_115_SHA256
+        authority_digest = native_authority_sha256()
     sector_digest = None
     opportunity_digest = None
     equipment_digest = None
@@ -432,7 +453,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + Path(technology_opportunities.__file__).read_bytes()
         ).hexdigest()
     population_reader_digest = None
-    if source == SOURCE and version_contracts.active_version() == "1.15.0":
+    if source == SOURCE and version_contracts.is_115():
         from .situated import engine_reader_115  # noqa: PLC0415
 
         engine_reader_115.project_population_readers(data["readers"])
@@ -714,7 +735,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ):
             raise ValueError("商品供给计划必须是锁定默认策略上的有界追加")
         supply = SupplyPlan(
-            item["source"], tuple(sorted(item["goods"])), float(item["price_threshold"])
+            item["source"],
+            tuple(sorted(item["goods"])),
+            float(item["price_threshold"]),
+            supply_program.native_stances_1151()
+            if source == SOURCE and version_contracts.active_version() == "1.15.1"
+            else (),
         )
     scalar_values = []
     if not isinstance(data.get("scalar_values", []), list):
@@ -857,7 +883,14 @@ def _supply_patch(
     words: frozenset[str],
     programs: tuple[SupplyProgram, ...],
 ) -> str:
-    """保留已有商品立场与资格，只追加缺省的、按市场稀缺激活的立场。"""
+    """Compose reviewed stance activation; retain real action execution rules.
+
+    1.15.1 default source lines 6493-6494 describe production/trade planning
+    and active-strategy override. Only its three pinned enum conditions may be
+    extended; this is not a general permission to OR native eligibility gates.
+    """
+    if programs != plan.actions():
+        raise ValueError("供给渲染必须消费完整、唯一的已登记有类型程序")
     parsed = parse_text(text)
     if parsed.errors:
         raise ValueError("供给计划原件无法解析")
@@ -888,14 +921,52 @@ def _supply_patch(
         <= words
     ):
         raise ValueError("商品供给计划缺少锁定的原版读取或立场依据")
-    for good in plan.goods:
-        if goods_stances.value.first(good) is not None or len(definitions.root.all(good)) != 1:
+    native = {
+        program.good: program.native_stance
+        for program in programs
+        if program.native_stance is not None
+    }
+    if native:
+        from .situated.native_treatments import _ast  # noqa: PLC0415
+
+        baseline = parse_text(inputs[plan.source])
+        parent = baseline.root.first("ai_strategy_default")
+        before = (
+            parent.value.first("goods_stances")
+            if parent is not None and isinstance(parent.value, Block)
+            else None
+        )
+        if (
+            baseline.errors
+            or before is None
+            or not isinstance(before.value, Block)
+            or _ast(before.value) != _ast(goods_stances.value)
+        ):
+            raise ValueError("供给合成前原版立场或兄弟字段已漂移")
+        overlap = set(goods_stances.value.keys()) & set(plan.goods)
+        if overlap != native.keys():
+            raise ValueError("供给合成只允许精确已复核的三商品交集")
+    replacements = []
+    for program in programs:
+        good = program.good
+        if len(definitions.root.all(good)) != 1:
             raise ValueError(f"商品供给计划不能覆写原版立场或引用未知商品：{good}")
+        if program.native_stance is not None:
+            start, end = supply_program.block_span(
+                text, ("ai_strategy_default", "goods_stances", good)
+            )
+            if text[start:end] != program.native_stance.body:
+                raise ValueError(f"供给合成原版立场精确字节漂移：{good}")
+            replacements.append((start, end, program.composed_body()))
+        elif goods_stances.value.first(good) is not None:
+            raise ValueError(f"商品供给计划不能覆写原版立场或引用未知商品：{good}")
+    for start, end, replacement in sorted(replacements, reverse=True):
+        text = text[:start] + replacement + text[end:]
     position = decision_rules._offsets(text, {("ai_strategy_default", "goods_stances")})[
         ("ai_strategy_default", "goods_stances")
     ]
     rows = ["\n\t\t# SITAI BEGIN supply:goods_stances\n"]
-    rows.extend(program.render() for program in programs)
+    rows.extend(program.render() for program in programs if program.native_stance is None)
     rows.append("\t\t# SITAI END supply:goods_stances\n\t")
     result = text[:position] + "".join(rows) + text[position:]
     if parse_text(result).errors:
@@ -1033,7 +1104,7 @@ def read_inputs(
             raise ValueError(f"消费者适配原件漂移：{name}")
         inputs[name] = text
     if adapters.native_authority_sha256 is not None:
-        if adapters.native_authority_sha256 != NATIVE_AUTHORITY_115_SHA256:
+        if adapters.native_authority_sha256 != native_authority_sha256():
             raise ValueError("1.15 adapter authority: adapter identity drift")
         declaration = tomllib.loads(SOURCE.read_text(encoding="utf-8"))
         information = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))

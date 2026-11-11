@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from pdx import version_contracts
 from pdx.situated import r2_reader_authority as authority
 
 if TYPE_CHECKING:
@@ -121,3 +122,10 @@ def test_live_identity_drift_is_rejected(snapshot: Path):
     path.write_text(json.dumps(document), encoding="utf-8")
     with pytest.raises(ValueError, match="source drift"):
         authority.verify_installation(snapshot)
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

@@ -65,7 +65,7 @@ def main() -> int:
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     if sys.argv[1] == "baseline":
         parser = argparse.ArgumentParser(description="完整静态基线；版本门追加到现有门禁之后。")
-        parser.add_argument("--profile", choices=("1.15.0",))
+        parser.add_argument("--profile", choices=("1.15.0", "1.15.1"), default="1.15.1")
         args = parser.parse_args(sys.argv[2:])
         commands = list(BASELINE_COMMANDS)
         if args.profile:

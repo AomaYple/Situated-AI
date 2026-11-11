@@ -54,7 +54,7 @@ _SYNTHETIC_READER_EVIDENCE = (
 def _source_data():
     """Current test mutations start from the same exact declaration projection."""
     data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         data["baseline_sha256"] = decision_adapters.native_authority_115()["sources"][
             "common/ai_strategies/00_default_strategy.txt"
         ]
@@ -1201,7 +1201,7 @@ def standard_release_package(tmp_path_factory):
     if not (config.GAME / "common/laws/readme.md").is_file():
         pytest.skip("需要锁定版本的游戏原件")
     root = tmp_path_factory.mktemp("standard-release")
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         # Build a complete current witness through the live production boundary.
         # The output directory is private to this module's worker; the actual
         # source root and every executable/source check stay unchanged.
@@ -1243,9 +1243,7 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
         assert metadata["version"] == distribution.RELEASE_VERSION
-        assert contract["status"] == (
-            "candidate" if version_contracts.active_version() == "1.15.0" else "released"
-        )
+        assert contract["status"] == ("candidate" if version_contracts.is_115() else "released")
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False
         assert engineering_metadata["consumer_adapters"]["behavior_verified"] is False
@@ -1260,7 +1258,7 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         )
         # The 1.15 native company definitions add the reviewed IP5 source to
         # the 74 physical consumer files retained by the historical contract.
-        current = version_contracts.active_version() == "1.15.0"
+        current = version_contracts.is_115()
         assert contract["consumer_count"] == (75 if current else 74)
         consumer_sources = {
             row["source"] for row in engineering_metadata["consumer_adapters"]["consumers"]

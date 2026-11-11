@@ -30,7 +30,7 @@ def scripted_source(tmp_path, monkeypatch):
     def freeze():
         raw = json.dumps(data).encode()
         manifest.write_bytes(raw)
-        current = version_contracts.active_version() == "1.15.0"
+        current = version_contracts.is_115()
         monkeypatch.setattr(
             decision_interfaces,
             "SCRIPTED_PREDICATE_115" if current else "SCRIPTED_PREDICATE_SOURCE",

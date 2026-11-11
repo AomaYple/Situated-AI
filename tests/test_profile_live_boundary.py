@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, config, distribution
+from pdx import cli, config, distribution, version_contracts
 from pdx.situated import production_profile as native
 from pdx.situated import r2_reader_authority as authority
 
@@ -359,3 +359,10 @@ def test_profile_generation_binds_source_before_compilation(installation, tmp_pa
     assert changed
     changed = False
     assert {path: path.read_bytes() for path in before} == before
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

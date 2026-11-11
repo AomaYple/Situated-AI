@@ -11,6 +11,7 @@ from typing import Any, cast
 import pytest
 from test_network_profile import _parsed, _score
 
+from pdx import version_contracts
 from pdx.situated import action_network as net
 from pdx.situated import core_contracts as core
 from pdx.situated import expressions as ex
@@ -393,3 +394,10 @@ def test_audit_native_tail_envelope_tracks_the_actual_compiled_bounds(
         assert program["insertion_bounds"] == [-2, 5]
         expected = [-4.5, 11.25] if program["consumer"] == "a0-econ-road" else [-2, 5]
         assert program["native_tail"]["conservative_delta_envelope"] == expected
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

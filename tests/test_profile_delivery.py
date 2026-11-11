@@ -9,7 +9,7 @@ from typing import cast
 
 import pytest
 
-from pdx import config, distribution
+from pdx import config, distribution, version_contracts
 from pdx.situated import production_profile, r2_reader_authority
 
 
@@ -188,3 +188,10 @@ def test_profile_write_rolls_back_when_generation_lock_drifts(profile, tmp_path,
         path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
     }
     assert after == before
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

@@ -519,7 +519,7 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
         return (
             "dynamic_numeric"
             if (
-                version_contracts.active_version() == "1.15.0"
+                version_contracts.is_115()
                 and surface.source == "common/ai_strategies/00_default_strategy.txt"
                 and surface.definition == "ai_strategy_default"
                 and surface.field == "change_law_chance"
@@ -1503,7 +1503,7 @@ class _Dependencies:
                 source: hashlib.sha256(self.native_bytes[source]).hexdigest() for source in sources
             }
 
-        current = version_contracts.active_version() == "1.15.0"
+        current = version_contracts.is_115()
         parameter = "target" if current else "pop_type"
         if (
             reader.engine != "pop_type_percent_country"
@@ -2105,11 +2105,11 @@ class _Dependencies:
             evidence_raw = country_interfaces.evidence_file().read_bytes()
             evidence = json.loads(evidence_raw)
             if evidence.get("schema") != 1 or (
-                version_contracts.active_version() == "1.15.0"
+                version_contracts.is_115()
                 and (
                     hashlib.sha256(evidence_raw).hexdigest()
                     != country_interfaces.EVIDENCE_115_SHA256
-                    or evidence.get("baseline_version") != "1.15.0"
+                    or evidence.get("baseline_version") != version_contracts.active_version()
                 )
             ):
                 return {}
@@ -2774,10 +2774,11 @@ def _implicit_numeric_projections(
 
 
 def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int, dict[str, Any]]]:
-    """Bind complete optional stance additions without granting numeric control.
+    """Prove complete enum additions and the three pinned idempotent unions.
 
-    Every original stance remains outside this projection. Only the registered
-    complete enum/trigger blocks may disappear from the source-boundary comparison.
+    Appends disappear from the boundary comparison; each reviewed union restores
+    its exact native AST. No other native stance or sibling may change, and this
+    projection grants no numeric control or action execution eligibility.
     """
     from .. import decision_adapters, decision_interfaces, decision_rules  # noqa: PLC0415, TID252
     from . import engine_scope, supply_program  # noqa: PLC0415
@@ -2931,14 +2932,21 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
             or not contains(tutorial)
         ):
             return {}
+        native_stances = {stance.good: stance for stance in plan.native_stances}
+        if native_stances:
+            reviewed = supply_program.native_stances_1151()
+            if (
+                plan.native_stances != reviewed
+                or (set(before.value.keys()) & set(plan.goods)) != native_stances.keys()
+            ):
+                return {}
         result = {}
+        restored: dict[int, Assignment] = {}
         for good in plan.goods:
             goods_source = "common/goods/00_goods.txt"
-            if (
-                before.value.all(good)
-                or native.owners["goods", good] != [goods_source]
-                or effective.owners["goods", good] != [goods_source]
-            ):
+            if native.owners["goods", good] != [goods_source] or effective.owners[
+                "goods", good
+            ] != [goods_source]:
                 return {}
             for engine, unit in (
                 ("market_goods_pricier", "price_above_base_ratio"),
@@ -2953,12 +2961,43 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
                 ):
                     return {}
             nodes = after.value.all(good)
+            if len(nodes) != 1:
+                return {}
+            scarcity = (
+                f"is_ai=yes exists=market market={{exists=mg:{good} "
+                f"mg:{good}={{market_goods_pricier>{plan.price_threshold!r} "
+                "market_goods_delta<0}}"
+            )
+            original = before.value.all(good)
+            if good in native_stances:
+                stance = native_stances[good]
+                native_text = dependencies.native_bytes[source].decode("utf-8-sig")
+                start, end = supply_program.block_span(
+                    native_text, ("ai_strategy_default", "goods_stances", good)
+                )
+                if len(original) != 1 or native_text[start:end] != stance.body:
+                    return {}
+                trigger_start, trigger_end = supply_program.block_span(
+                    stance.body, ("<anonymous>", "trigger")
+                )
+                native_trigger = stance.body[trigger_start:trigger_end]
+                # Independent expected shape: exactly one value, complete native
+                # trigger as the first AND, and the independently scoped scarcity
+                # trigger as the second. Do not call the production compose/render.
+                expected_text = (
+                    f"{good}={{stance=wants_high_supply trigger={{OR={{AND="
+                    + native_trigger
+                    + " AND={"
+                    + scarcity
+                    + "}}}}"
+                )
+                restored[id(nodes[0])] = original[0]
+            else:
+                if original:
+                    return {}
+                expected_text = f"{good}={{stance=wants_high_supply trigger={{{scarcity}}}}}"
             expected = parse_bytes(
-                (
-                    f"{good}={{stance=wants_high_supply trigger={{is_ai=yes exists=market "
-                    f"market={{exists=mg:{good} mg:{good}={{market_goods_pricier>{plan.price_threshold!r} "
-                    "market_goods_delta<0}}}}"
-                ).encode(),
+                expected_text.encode(),
                 path="registered-supply-stance",
             )
             if expected.errors or len(nodes) != 1 or _ast(nodes[0]) != _ast(expected.root.items[0]):
@@ -2967,8 +3006,15 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
                 "source": source,
                 "definition": "ai_strategy_default",
                 "field": f"goods_stances.{good}",
-                "kind": "registered_enum_addition",
+                "kind": "registered_enum_idempotent_or"
+                if good in native_stances
+                else "registered_enum_addition",
                 "effective_ast_sha256": _digest(nodes[0]),
+                **(
+                    {"restored_native_ast_sha256": _digest(original[0])}
+                    if good in native_stances
+                    else {}
+                ),
                 "native_sources": pins,
                 "contract_sha256": hashlib.sha256(
                     json.dumps(expected_metadata, sort_keys=True).encode()
@@ -2976,9 +3022,14 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
                 "interface_authorized": True,
                 "business_complete": False,
             }
-        if _ast(Block([item for item in after.value.items if id(item) not in result])) != _ast(
-            before.value
-        ):
+        restored_table = Block(
+            [
+                restored.get(id(item), item)
+                for item in after.value.items
+                if id(item) not in result or id(item) in restored
+            ]
+        )
+        if _ast(restored_table) != _ast(before.value):
             return {}
         return {source: result}
     except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
@@ -3025,8 +3076,19 @@ def _responsibility_axes(
             value: Assignment | Block | Scalar | None,
             masks: Mapping[int, str],
             additions: Mapping[int, dict[str, Any]] = additions,
+            enums: Mapping[int, dict[str, Any]] = enums,
+            before: Block | None = before,
         ) -> object:
             if isinstance(value, Assignment):
+                projection = enums.get(id(value))
+                if projection is not None and projection["kind"] == "registered_enum_idempotent_or":
+                    assert before is not None
+                    original, state = _resolve(
+                        before, projection["definition"], projection["field"]
+                    )
+                    assert original is not None
+                    assert state == "found"
+                    return _ast(original)
                 if id(value) in masks:
                     return [
                         "typed_numeric_change",
@@ -3045,7 +3107,12 @@ def _responsibility_axes(
             if isinstance(value, Block):
                 return [
                     "block",
-                    [boundary(item, masks) for item in value.items if id(item) not in additions],
+                    [
+                        boundary(item, masks)
+                        for item in value.items
+                        if id(item) not in additions
+                        or additions[id(item)].get("kind") == "registered_enum_idempotent_or"
+                    ],
                 ]
             return _ast(value)
 

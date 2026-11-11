@@ -21,6 +21,7 @@ from pdx.localization_languages import LANGUAGE_HEADER_RE
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.scan import TEXT_SUFFIXES
+from pdx.version_contracts import CURRENT_VERSION, active_version
 
 SCHEMA = "situated-ai.native-inventory/1"
 CONTENT_ROOTS = ("game", "clausewitz", "jomini")
@@ -369,13 +370,14 @@ def _finish_languages(result: dict[str, Any]) -> None:
 
 
 def inventory_installation(
-    installation: Path, *, expected_version: str = "1.15.0"
+    installation: Path, *, expected_version: str = CURRENT_VERSION
 ) -> dict[str, Any]:
     """只读盘点完整安装根；不存在/失败均写入结果，结果不完整时不颁发能力。
 
     输入必须是包含 game/、launcher/ 的安装根。没有旧锁、旧快照或固定国家/
     语言列表回退。DLC 是磁盘内容，不推断所有权、启用状态或引擎覆盖顺序。
     """
+    expected_version = active_version(expected_version)
     installation = installation.resolve()
     result: dict[str, Any] = {
         "schema": SCHEMA,
@@ -615,7 +617,7 @@ def main() -> int:
     """独立命令入口；失败报告仍可导出，退出码为 1。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("installation", type=Path)
-    parser.add_argument("--expected-version", default="1.15.0")
+    parser.add_argument("--expected-version", default=CURRENT_VERSION)
     parser.add_argument("--output", type=Path)
     arguments = parser.parse_args()
     if arguments.output and arguments.output.resolve().is_relative_to(

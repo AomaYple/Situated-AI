@@ -451,7 +451,7 @@ def test_explicit_causal_groups_and_actual_country_reader_identities(production)
         ("industrial_workforce", "laborers"),
     ):
         reader = readers[key]
-        current = version_contracts.active_version() == "1.15.0"
+        current = version_contracts.is_115()
         assert (
             reader.engine,
             reader.value_field,
@@ -503,7 +503,7 @@ def test_another_population_query_cannot_supply_the_required_observation(
     observations.pop(tuple(reader.parameters))
     other_population = (
         (("target", "pop_type:" + wrong_pop_type),)
-        if version_contracts.active_version() == "1.15.0"
+        if version_contracts.is_115()
         else (("pop_type", wrong_pop_type),)
     )
     observations[other_population] = 0.2

@@ -11,6 +11,7 @@ toll_exemption = {
 	icon = "gfx/interface/icons/diplomatic_treaties_articles_icons/toll_exemption_treaties.dds"
 
 	flags = {
+		show_in_lens
 		is_toll_exemption
 		can_be_enforced
 		ai_consider_threaten_naval_hostilities
@@ -27,11 +28,11 @@ toll_exemption = {
     }
 
 	visible = {
-		has_any_strait_province = yes
+		has_any_strait_province_in_hierarchy = yes
 	}
 
 	possible = {
-		has_any_strait_province = yes
+		has_any_strait_province_in_hierarchy = yes
 		has_any_strait_control = yes
 	}
 
@@ -100,9 +101,12 @@ toll_exemption = {
 			}
 
 			# Any country a strait controller is hurting looks for relief, whatever its rank
-			add = {
-				value = worst_strait_toll_grievance
-				multiply = 0.005
+			if = {
+				limit = { NOT = { has_law_or_variant = law_type:law_free_trade } }
+				add = {
+					value = worst_strait_toll_grievance
+					multiply = 0.005
+				}
 			}
 		}
 

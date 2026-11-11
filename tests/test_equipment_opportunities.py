@@ -87,16 +87,14 @@ def game(tmp_path):
 def baseline(game, tmp_path, monkeypatch):
     monkeypatch.setattr(
         equipment_opportunities,
-        "BASELINE_115"
-        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
-        else "BASELINE",
+        "BASELINE_115" if equipment_opportunities.version_contracts.is_115() else "BASELINE",
         tmp_path / "baseline.json",
     )
     path = equipment_opportunities.write_baseline(game)
     monkeypatch.setattr(
         equipment_opportunities,
         "BASELINE_SHA256_115"
-        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
+        if equipment_opportunities.version_contracts.is_115()
         else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
@@ -515,7 +513,7 @@ def test_repinning_source_hash_does_not_hide_changed_ast_materials(game, baselin
     monkeypatch.setattr(
         equipment_opportunities,
         "BASELINE_SHA256_115"
-        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
+        if equipment_opportunities.version_contracts.is_115()
         else "BASELINE_SHA256",
         hashlib.sha256(frozen.read_bytes()).hexdigest(),
     )
@@ -551,7 +549,7 @@ def test_offline_identity_and_structural_faults_fail_closed(baseline, monkeypatc
     monkeypatch.setattr(
         equipment_opportunities,
         "BASELINE_SHA256_115"
-        if equipment_opportunities.version_contracts.active_version() == "1.15.0"
+        if equipment_opportunities.version_contracts.is_115()
         else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
@@ -605,10 +603,10 @@ def test_actual_frozen_denominator_and_budgets_are_explicit():
     assert baseline["contract"]["documented_type"] == "fixed_point"
     assert baseline["contract"]["supported_shape"] == "block"
     assert len(derived["rules"]) == (
-        1541 if equipment_opportunities.version_contracts.active_version() == "1.15.0" else 1517
+        1541 if equipment_opportunities.version_contracts.is_115() else 1517
     )
     assert len(derived["readers"]) == (
-        41 if equipment_opportunities.version_contracts.active_version() == "1.15.0" else 39
+        41 if equipment_opportunities.version_contracts.is_115() else 39
     )
     for field in {rule["field"] for rule in derived["rules"]}:
         rules = [rule for rule in derived["rules"] if rule["field"] == field]

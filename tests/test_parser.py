@@ -202,9 +202,9 @@ class TestKnownCounts(unittest.TestCase):
             self.skipTest("游戏目录不可用")
 
         from pdx import parse_file
-        from pdx.version_contracts import active_version
+        from pdx.version_contracts import is_115
 
-        expected = self.EXPECTED_115 if active_version() == "1.15.0" else self.EXPECTED
+        expected = self.EXPECTED_115 if is_115() else self.EXPECTED
         for name, want in expected.items():
             with self.subTest(directory=name):
                 keys: set[str] = set()

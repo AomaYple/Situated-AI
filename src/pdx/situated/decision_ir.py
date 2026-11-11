@@ -272,7 +272,7 @@ class WriterDecisionIR:
                 program.field,
                 "root",
                 "market_goods",
-                "append",
+                program.operation,
                 "supply_plan",
                 "preserve",
             )

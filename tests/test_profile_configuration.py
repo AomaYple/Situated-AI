@@ -8,7 +8,7 @@ import sys
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, config, distribution
+from pdx import cli, config, distribution, version_contracts
 from pdx.situated import production_profile, r2_reader_authority
 from pdx.situated.profile_configuration import ProfileConfiguration, load
 
@@ -131,3 +131,10 @@ def test_disabled_policy_has_no_nonzero_overlay(selected):
                 encoding="utf-8-sig"
             )
             assert files[row.source.removeprefix("game/")] == original
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

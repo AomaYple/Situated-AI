@@ -32,8 +32,8 @@ DEFAULT_SOURCE = REPO / "mod" / "decisions" / "domain_actions.toml"
 
 def source_path() -> Path:
     """Use the current generated count ledger with unchanged domain contracts."""
-    if version_contracts.active_version() == "1.15.0":
-        return DEFAULT_SOURCE.parent / "1.15.0" / DEFAULT_SOURCE.name
+    if version_contracts.is_115():
+        return DEFAULT_SOURCE.parent / version_contracts.active_version() / DEFAULT_SOURCE.name
     return DEFAULT_SOURCE
 
 
@@ -359,7 +359,7 @@ def _native_context_issue(
         "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
         "change_law_chance": (
             "first_nonzero_active_change_law_chance_else_default"
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else "additive_percentage_chance",
             {"add"},
         ),

@@ -41,7 +41,7 @@ import typer
 from conftest import NEEDS_GAME
 
 from pdx import config, docs_mirror
-from pdx.version_contracts import active_version
+from pdx.version_contracts import is_115
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.unit
 
 #: 官方 .md 的篇数。1.14.3 实测 92（game 91 + jomini 1）；1.14.4 实测 94（game 93 + jomini 1）。
-EXPECTED_DOCS = 99 if active_version() == "1.15.0" else 94
+EXPECTED_DOCS = 99 if is_115() else 94
 
 
 def test_清单存在且可读() -> None:

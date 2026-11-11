@@ -246,7 +246,7 @@ def test_覆盖预览_空输入() -> None:
 def test_真实defines的规模符合已核实的数字() -> None:
     """核对各版本独立审查的命名空间块和去重名，不混用历史计数。"""
     r = extract_defines()
-    blocks, names = (77, 52) if version_contracts.active_version() == "1.15.0" else (75, 50)
+    blocks, names = (77, 52) if version_contracts.is_115() else (75, 50)
     assert len(r.namespaces) == blocks
     assert len(r.unique_namespaces) == names
     files = r.summary()["涉及文件"]

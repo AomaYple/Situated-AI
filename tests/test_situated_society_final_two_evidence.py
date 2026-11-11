@@ -125,7 +125,7 @@ def test_new_ig_evidence_sources_match_actual_locked_original_bytes(
             "dd11f29ac662a390d0ddeafe5de5e6e63ef91fd7b885892670fa6b3c89896201",
         ),
     }
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         raw_hash, normalized_hash = current_hashes[source]
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
@@ -137,7 +137,7 @@ def test_new_ig_evidence_sources_match_actual_locked_original_bytes(
 
 def test_country_has_complete_exact_law_stance_interest_group_collection_consumer(roots):
     country = _child(roots[COMMUNISM], "je_communism_1")
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         outcomes = [
             item.value
             for item in country.all("outcome")
@@ -175,7 +175,7 @@ def test_trade_unions_exist_before_anarchism_and_populist_stance_is_versioned(ro
     populist = _child(
         _child(roots[IDEOLOGIES], "ideology_populist"), "lawgroup_distribution_of_power"
     )
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     assert _scalar(populist, "law_anarchy") == ("neutral" if current else "approve")
     # The current neutral anarchy stance also disproves using an ideology
     # label as positive support. Read actual law_stance rather than inferring

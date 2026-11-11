@@ -795,9 +795,7 @@ def _reader_copy(reader: Any) -> ChainReaderSpec:
 
 def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
     """Frozen field-level contract for the observed local writer links."""
-    native_target_unit = (
-        "barracks_levels" if version_contracts.active_version() == "1.15.0" else "battalions"
-    )
+    native_target_unit = "barracks_levels" if version_contracts.is_115() else "battalions"
     if key == "country_goods_paper_balance":
         return (
             "market_goods_delta",

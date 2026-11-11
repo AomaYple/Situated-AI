@@ -23,7 +23,7 @@ urbanization = {
 			# GROUP program_9bbe3ab00bd4d6a1_observed_urban_absorption_positive
 			add = { value = 0
 				# s2_urbanization_observed_absorption [political]; 原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
 			}
 			# GROUP program_9bbe3ab00bd4d6a1_population_urban_capacity_positive
 			add = { value = 0
@@ -63,7 +63,7 @@ urban_planning = {
 			# GROUP program_36bccecef4292ce1_observed_urban_absorption_positive
 			add = { value = 0
 				# s2_urban_planning_observed_absorption [political]; 原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
 			}
 			# GROUP program_36bccecef4292ce1_population_urban_capacity_positive
 			add = { value = 0
@@ -625,6 +625,18 @@ mass_communication = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+		if = {
+			limit = {
+				is_in_geographic_region = geographic_region_italy_old
+			}
+			add = 2
+		}
+		if = {
+			limit = {
+				c:RUS ?= this
+			}
+			add = 5
+		}
 
 		# SITAI BEGIN information:mass_communication.ai_weight
 		# ACTION program_39c900909d71c34f [joint]; signed-envelope consumer action
@@ -720,11 +732,17 @@ egalitarianism = {
 				add_involved_country = ROOT
 			}
 		}
+		forest_of_bayonets_involve_country_effect = yes
 	}
 
 	ai_weight = {
 		value = 1
-
+		if = {
+			limit = {
+				is_in_geographic_region = geographic_region_italy_old
+			}
+			add = 2
+		}
 		if = {
 			limit = {
 				has_strategy = ai_strategy_progressive_agenda
@@ -991,6 +1009,24 @@ central_archives = {
 	ai_weight = {
 		value = 1.5 # Important in general
 
+		if = {
+			limit = {
+				OR = {
+					has_journal_entry = je_tp_pool_secret_police
+					AND = {
+						has_journal_entry = je_tp_tsar_unshakable_autocracy
+						NOT = { has_variable = je_tp_tsar_unshakable_autocracy_button_1_complete }
+					}
+					AND = {
+						has_journal_entry = je_tp_tsar_great_reform
+						NOT = { has_variable = je_great_reforms_bureaucratic_complete }
+						has_law = law_type:law_third_section
+					}
+				}
+			}
+			add = 5
+		}
+
 		# SITAI BEGIN information:central_archives.ai_weight
 		# ACTION program_9730b1fc1374f41a [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
@@ -1223,6 +1259,13 @@ nationalism = {
 	ai_weight = {
 		value = 2 # Important in general
 
+		if = {
+			limit = {
+				c:RUS ?= this
+			}
+			add = 10
+		}
+
 		# Extra-important for major unifications
 		if = {
 			limit = {
@@ -1339,7 +1382,7 @@ labor_movement = {
 			# GROUP program_2a1231d34149f960_workplace_protection_positive
 			add = { value = 0
 				# s2_labor_movement_workplace_protection [political]; 原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
 			}
 			min = 0.92
 			max = 1.27
@@ -1376,9 +1419,9 @@ postal_savings = {
 			# GROUP program_bf4653c91bd233b9_machinist_savings_positive
 			add = { value = 0
 				# s2_postal_savings_machinist_pressure [political]; 原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.05 } } } add = 0.12 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:machinists value >= 0 } pop_type_percent_country = { target = pop_type:machinists value <= 1 } pop_type_percent_country = { target = pop_type:machinists value >= 0.05 } } } add = 0.12 }
 				# s2_postal_savings_machinist_foundation [political]; 原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.02 } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:machinists value >= 0 } pop_type_percent_country = { target = pop_type:machinists value <= 1 } pop_type_percent_country = { target = pop_type:machinists value >= 0.02 } } } add = 0.08 }
 			}
 			min = 1
 			max = 1.12
@@ -1446,7 +1489,7 @@ human_rights = {
 			# GROUP program_bb6616ee860c8a01_workplace_protection_positive
 			add = { value = 0
 				# s2_human_rights_workplace_protection [political]; 原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
 			}
 			min = 1
 			max = 1.27
@@ -1482,6 +1525,13 @@ feminism = {
 					}
 					remove_ideology = ideology_egalitarian
 					add_ideology = ideology_egalitarian_modern
+				}
+				every_interest_group = {
+					limit = {
+						has_ideology = ideology:ideology_universalist
+					}
+					remove_ideology = ideology_universalist
+					add_ideology = ideology_universalist_modern
 				}
 			}
 		}
@@ -1560,7 +1610,7 @@ steel_frame_buildings = {
 			# GROUP program_dfd3a65f5100e04d_observed_urban_absorption_positive
 			add = { value = 0
 				# s2_next_steel_frame_buildings_observed_absorption [political]; 已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
 			}
 			# GROUP program_dfd3a65f5100e04d_population_urban_capacity_positive
 			add = { value = 0
@@ -1696,9 +1746,6 @@ socialism = {
 				NOT = { has_variable = socialism_researched }
 			}
 			set_variable = socialism_researched
-			ig:ig_trade_unions ?= {
-				add_ideology = ideology_socialist
-			}
 		}
 	}
 
@@ -1738,7 +1785,7 @@ socialism = {
 			# GROUP program_ca72ef8189d9d752_workplace_protection_positive
 			add = { value = 0
 				# s2_next_socialism_workplace_protection [political]; 原版工作安全制度容量增加二级，实际劳工比例与低生活水平共同支持劳动保护研究需求代理；不假定法律支持、事故发生、制度投资或实际容量饱和
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
 			}
 			min = 0.92
 			max = 1.15
@@ -1830,7 +1877,7 @@ corporatism = {
 
 	unlocking_technologies = {
 		labor_movement
-		nationalism
+		pan-nationalism
 	}
 
 	ai_weight = {
@@ -1904,6 +1951,14 @@ pan-nationalism = {
 					country_has_primary_culture = cu:slovene
 					country_has_primary_culture = cu:bosniak
 				}
+			}
+			add = 5
+		}
+
+		if = {
+			limit = {
+				has_journal_entry = je_tp_tsar_unshakable_autocracy
+				NOT = { has_variable = je_tp_tsar_unshakable_autocracy_button_2_complete }
 			}
 			add = 5
 		}
@@ -2140,7 +2195,7 @@ elevator = {
 			# GROUP program_8bc267ba16e88ca8_observed_urban_absorption_positive
 			add = { value = 0
 				# s2_next_elevator_observed_absorption [political]; 已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
 			}
 			# GROUP program_8bc267ba16e88ca8_population_urban_capacity_positive
 			add = { value = 0

@@ -94,7 +94,7 @@ class TestGameAnalysis:
             "production_methods": 436,
             "on_actions": 268,
         }
-        if version_contracts.active_version() == "1.15.0":
+        if version_contracts.is_115():
             known = {
                 "buildings": 122,
                 "laws": 148,

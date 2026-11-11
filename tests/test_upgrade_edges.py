@@ -328,7 +328,7 @@ def test_package_cli_success_and_refusal(tmp_path, monkeypatch):
     assert runner.invoke(cli.app, ["package", "--output", str(target)]).exit_code == 0
     assert target.is_file()
     before = target.read_bytes()
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     checked = False
 
     def drift(*_args, **_kwargs):

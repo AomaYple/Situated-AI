@@ -166,7 +166,7 @@ class SupportProgram:
 
     def as_dict(self) -> dict[str, object]:
         native_source = "research/vanilla-ai/1.14.5/00_default_strategy.txt:180-188"
-        if version_contracts.active_version() == "1.15.0":
+        if version_contracts.is_115():
             from .compiler import support_evaluation_context  # noqa: PLC0415
 
             native_source = ";".join(support_evaluation_context().evidence)

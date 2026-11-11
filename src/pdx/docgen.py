@@ -148,7 +148,7 @@ def targets() -> tuple[DocTarget, ...]:
             )
         ),
     )
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         return (*base, *_native_file_table_targets())
     return base
 

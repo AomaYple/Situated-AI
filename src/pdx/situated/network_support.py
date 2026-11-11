@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import is_dataclass
 from typing import TYPE_CHECKING, get_args, get_type_hints
 
+from pdx import version_contracts
+
 from . import action_network as net
 from . import core_contracts as core
 from . import expressions as ex
@@ -236,7 +238,13 @@ _BASE_PROVEN = frozenset(
 _PROVEN = {
     "a0-econ-road": _BASE_PROVEN | {"operator.not", "operator.compare.ge", "relation.variant"},
     "a0-pol-schools": _BASE_PROVEN
-    | {"path.interaction", "relation.residual", "relation.overlap.residual", "role.risk"},
+    | {
+        "path.interaction",
+        "relation.residual",
+        "relation.overlap.residual",
+        "role.risk",
+        "operator.compare.gt",
+    },
     "a0-dip-relations": _BASE_PROVEN
     | {"path.interaction", "relation.residual", "relation.overlap.residual", "role.risk"},
 }
@@ -378,6 +386,11 @@ def matrix(
     rows: list[dict[str, object]] = []
     for consumer in CONSUMERS:
         declaration = declarations[consumer]
+        witness = (
+            "tests/test_release_1151_integration.py::test_school_additive_policy_has_literal_independent_pdx_witness"
+            if consumer == "a0-pol-schools" and version_contracts.active_version() == "1.15.1"
+            else _WITNESS[consumer]
+        )
         for feature in FEATURES:
             identities = active.get(consumer, {}).get(feature, ())
             lowered = feature in _LOWERABLE[consumer]
@@ -389,7 +402,7 @@ def matrix(
                 if feature.startswith("operator.compare.")
                 else "tests/test_network_profile.py::test_lowerable_path_does_not_authorize_production_policy"
                 if consumer == "a0-econ-road" and feature == "path.interaction"
-                else _WITNESS[consumer]
+                else witness
             )
             rows.append(
                 {
@@ -406,12 +419,12 @@ def matrix(
                         "source": declaration.source,
                     },
                     "source_maps": list(identities),
-                    "witnesses": list(dict.fromkeys((_WITNESS[consumer], proof)))
+                    "witnesses": list(dict.fromkeys((witness, proof)))
                     if lowered
                     else ["tests/test_core_contracts.py"]
                     if feature == "reference.selection"
                     else ["tests/test_action_network.py"],
-                    "production_eligible": feature in _PROVEN[consumer],
+                    "production_eligible": bool(identities),
                     "boundary": "Current additive native adapter only; erased nodes map to guards, net contributions or retained context. Lowerable never grants a writer."
                     if lowered
                     else "Reference core only; no reviewed production operation or declaration-to-native binding.",

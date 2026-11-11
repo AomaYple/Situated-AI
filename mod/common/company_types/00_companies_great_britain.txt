@@ -40,13 +40,11 @@ company_j_p_coats = {
 
 	possible = {
 		has_technology_researched = cotton_gin
-		any_scope_state = {
-			state_region = s:STATE_LOWLANDS
+		has_building_levels_in_state_region = {
+			region = STATE_LOWLANDS
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -82,7 +80,7 @@ company_j_p_coats = {
 			# GROUP program_5dbb2e334b748df8_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_j_p_coats_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_5dbb2e334b748df8_company_mandatory_input_fabric_negative
 			add = { value = 0
@@ -144,13 +142,11 @@ company_armstrong_whitworth = {
 	possible = {
 		has_technology_researched = ironclad_tech
 		has_technology_researched = gantry_cranes
-		any_scope_state = {
-			state_region = s:STATE_YORKSHIRE
+		has_building_levels_in_state_region = {
+			region = STATE_YORKSHIRE
+			building = building_shipyard
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_shipyard
-				level >= 5
-			}
 		}
 	}
 
@@ -187,7 +183,12 @@ company_armstrong_whitworth = {
 			# GROUP program_932e5e2d256803bb_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_armstrong_whitworth_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_932e5e2d256803bb_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_armstrong_whitworth_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_932e5e2d256803bb_company_mandatory_input_explosives_negative
 			add = { value = 0
@@ -272,13 +273,11 @@ company_john_brown = {
 	possible = {
 		has_technology_researched = steelworking
 		has_technology_researched = hydraulic_cranes
-		any_scope_state = {
-			state_region = s:STATE_LOWLANDS
+		has_building_levels_in_state_region = {
+			region = STATE_LOWLANDS
+			building = building_shipyard
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_shipyard
-				level >= 5
-			}
 		}
 	}
 
@@ -315,7 +314,7 @@ company_john_brown = {
 			# GROUP program_bcc51d468f585348_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_john_brown_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_bcc51d468f585348_company_mandatory_input_coal_negative
 			add = { value = 0
@@ -428,7 +427,7 @@ company_gwr = {
 			# GROUP program_d255eca7d8a5648c_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_gwr_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_d255eca7d8a5648c_company_mandatory_input_engines_negative
 			add = { value = 0
@@ -548,7 +547,7 @@ company_bolckow_vaughan = {
 			# GROUP program_f1dee700dc5e7889_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_bolckow_vaughan_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_f1dee700dc5e7889_company_mandatory_input_coal_negative
 			add = { value = 0

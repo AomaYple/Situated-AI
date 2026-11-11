@@ -251,3 +251,10 @@ def test_current_ordered_score_keys_reject_repin(current_strategy_image, field, 
     freeze()
     with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

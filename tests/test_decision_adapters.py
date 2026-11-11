@@ -1644,8 +1644,7 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
                 and any(item.key == "pop_type" for item in values)
             ):
                 current_population = (
-                    key == "pop_type_percent_country"
-                    and version_contracts.active_version() == "1.15.0"
+                    key == "pop_type_percent_country" and version_contracts.is_115()
                 )
                 parameter_key = "target" if current_population else "pop_type"
                 parameter_items = [item for item in values if item.key == parameter_key]
@@ -1883,7 +1882,7 @@ def test_wartime_defense_intent_survives_insolvency_in_generated_script(real_gen
 @pytest.fixture(scope="module")
 def population_candidate():
     source = "law_demo = { ai_enact_weight_modifier = { value = 0 } }\n"
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     policy = decision_rules.from_data(
         {
             "schema": 1,
@@ -1940,7 +1939,7 @@ def test_population_selector_matches_independent_generated_ast(population_candid
     policy, block = population_candidate
     population_identity = (
         (("target", "pop_type:peasants"),)
-        if version_contracts.active_version() == "1.15.0"
+        if version_contracts.is_115()
         else (("pop_type", "peasants"),)
     )
     scopes = {"ROOT": {"is_ai": is_ai, ("pop_type_percent_country", population_identity): share}}
@@ -2417,7 +2416,7 @@ def test_supply_cannot_replace_existing_stance_or_reference_unknown_good(supply_
 
 def _relative_data():
     baseline = "ai_strategy_default = { subject_value = { value = 50 if = { limit = { OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } } } add = 0 } gdp = 0 } }\n"
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         baseline = baseline.replace(
             "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
         )

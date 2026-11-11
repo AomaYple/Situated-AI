@@ -1,0 +1,250 @@
+{
+  "schema": 1,
+  "version": "1.15.1",
+  "evidence_kind": "native_static",
+  "runtime": "unknown",
+  "historical_retirements_sha256": "ff40ad701d19c16d08b5c246a4b9f34c3b3a21bf2199e0d4ab2e95f972d7c77b",
+  "source": "research/vanilla-ai/1.15.1/00_default_strategy.txt",
+  "source_sha256": "e0e2cc9762f2d1e07deeb45091ca2e317e3771038851b840232d5f80538210c0",
+  "definition": "ai_strategy_default",
+  "retentions": {
+    "colonial_interest_ratio": "4a4a4342151af33b74989498b00e2bd840da9e60862680b47ecbf17e7a4564ba",
+    "combat_unit_group_weights.combat_unit_group_infantry": "952a0f1e065f5d0039a9e3ecfc1a436709c864b1ac6a09e47dbb462a8164c73e",
+    "combat_unit_group_weights.combat_unit_group_cavalry": "556ab8030f168b16693024685112ceee831dd6cbd483d0d09e6c05cd7d6c1fe1",
+    "strategic_region_stance_type_scores.stance_colonize_region": "f2ded48a421957145fd2fd241f40abea2aa0767ef70e2cff26e0c7f50d942d75"
+  },
+  "replacement_redirects": [
+    {
+      "source": "common/technology/technologies/10_production.txt",
+      "definition": "dough_rollers_ai_weight",
+      "historical_replacement": "technology_dough_rollers_labor_ready",
+      "current_replacement": "technology_dough_rollers_labor",
+      "field": "dough_rollers.ai_weight",
+      "actor": "root",
+      "target": "none",
+      "operation": "multiply"
+    }
+  ],
+  "school_policy_migration": {
+    "historical_contract": {
+      "source": "mod/decisions/information.toml",
+      "field": "institution_scores.institution_schools",
+      "actor": "root",
+      "target": "none",
+      "operation": "multiply"
+    },
+    "retired_definitions": [
+      "coordinated_layered_information_education_foundation",
+      "coordinated_layered_information_education_stable",
+      "decisive_school_investment",
+      "education_catchup_capacity",
+      "route_education_schools",
+      "social_school_priority"
+    ],
+    "replacement_bridge_ids": {
+      "remaining_school_catchup_need": [
+        "school-need"
+      ],
+      "remaining_school_fiscal": [
+        "school-capacity-fiscal"
+      ],
+      "remaining_school_administrative": [
+        "school-capacity-administrative"
+      ],
+      "remaining_school_capacity": [
+        "school-capacity-administrative",
+        "school-capacity-fiscal"
+      ],
+      "school_default_pressure": [
+        "school-default"
+      ],
+      "school_administrative_pressure": [
+        "school-administration"
+      ]
+    },
+    "successor": {
+      "consumer": "a0-pol-schools",
+      "action": "school-investment",
+      "source": "game/common/ai_strategies/00_default_strategy.txt",
+      "definition": "ai_strategy_default",
+      "field": [
+        "institution_scores",
+        "institution_schools"
+      ],
+      "actor": "root",
+      "actor_scope": "country",
+      "target": "institution_schools",
+      "operation": "add"
+    },
+    "policy_source": "mod/decisions/action_network_1151.toml",
+    "policy_sha256": "f95433e1082bb9eca075ec96afa33e3a0063274b281e5d335a7bc81b236f653f",
+    "program": {
+      "consumer": "a0-pol-schools",
+      "action": "school-investment",
+      "insertion_bounds": [
+        -4.0,
+        4.0
+      ],
+      "native_tail": {
+        "evidence": "static_native_source_arithmetic",
+        "runtime": "unknown",
+        "comparison": "generated minus native consumer value at the same observations",
+        "selection_and_execution_effect": "unknown",
+        "insertion_position": "end of the complete native consumer numeric body",
+        "delta_formula": "insertion_delta",
+        "conservative_delta_envelope": [
+          -4.0,
+          4.0
+        ],
+        "envelope_kind": "physical consumer only; not a final AI decision bound",
+        "following_numeric_operations": [],
+        "native_context": "The default school score starts at 10; other strategies contribute additively. Their active values and subsequent engine selection are unknown."
+      },
+      "readers": [
+        {
+          "id": "bureaucracy",
+          "binding": "actor",
+          "source": "game/common/scripted_buttons/scripted_buttons.md",
+          "line": 85
+        },
+        {
+          "id": "default",
+          "binding": "actor",
+          "source": "game/common/alert_types/00_alert_types.txt",
+          "line": 40
+        },
+        {
+          "id": "literacy",
+          "binding": "actor",
+          "source": "game/common/ai_strategies/01_admin_strategies.txt",
+          "line": 79
+        },
+        {
+          "id": "net-surplus",
+          "binding": "actor",
+          "source": "game/common/journal_entries/06_portugal_politics.txt",
+          "line": 414
+        },
+        {
+          "id": "population",
+          "binding": "actor",
+          "source": "game/common/ai_strategies/00_default_strategy.txt",
+          "line": 5576
+        },
+        {
+          "id": "school-agenda",
+          "binding": "actor",
+          "source": "game/common/ai_strategies/03_political_strategies.txt",
+          "line": 135
+        }
+      ],
+      "bridges": [
+        {
+          "id": "school-need",
+          "path": "derived",
+          "effect": "school-literacy",
+          "group": "school-investment.complete"
+        },
+        {
+          "id": "school-administration",
+          "path": "direct",
+          "effect": "school-admin-pressure",
+          "group": "school-investment.complete"
+        },
+        {
+          "id": "school-default",
+          "path": "direct",
+          "effect": "school-fiscal-pressure",
+          "group": "school-investment.complete"
+        },
+        {
+          "id": "school-agenda-complement",
+          "path": "interaction",
+          "effect": "school-agenda-residual",
+          "group": "school-investment.interaction"
+        },
+        {
+          "id": "school-capacity-administrative",
+          "path": "derived",
+          "effect": "school-administrative-capacity",
+          "group": "school-investment.complete"
+        },
+        {
+          "id": "school-capacity-fiscal",
+          "path": "derived",
+          "effect": "school-financing-capacity",
+          "group": "school-investment.complete"
+        }
+      ],
+      "objectives": [
+        {
+          "id": "education-capacity",
+          "actor": {
+            "kind": "country",
+            "id": "actor"
+          },
+          "target": {
+            "kind": "scalar",
+            "id": "institution_schools"
+          },
+          "sources": [
+            "literacy"
+          ],
+          "baseline_fact": "literacy",
+          "baseline_value": "read from the same evaluation; never sampled at generation",
+          "horizon": "current",
+          "lifetime": "evaluation",
+          "score_comparison_baseline": "retained-native"
+        }
+      ],
+      "effects": [
+        {
+          "account": "school-admin-pressure",
+          "value": -2.0,
+          "bridges": [
+            "school-administration"
+          ]
+        },
+        {
+          "account": "school-agenda-residual",
+          "value": 1.0,
+          "bridges": [
+            "school-agenda-complement"
+          ]
+        },
+        {
+          "account": "school-administrative-capacity",
+          "value": 0.25,
+          "bridges": [
+            "school-capacity-administrative"
+          ]
+        },
+        {
+          "account": "school-financing-capacity",
+          "value": 0.5,
+          "bridges": [
+            "school-capacity-fiscal"
+          ]
+        },
+        {
+          "account": "school-fiscal-pressure",
+          "value": -2.0,
+          "bridges": [
+            "school-default"
+          ]
+        },
+        {
+          "account": "school-literacy",
+          "value": 2.0,
+          "bridges": [
+            "school-need"
+          ]
+        }
+      ]
+    },
+    "native_output_sha256": "163e359aea9f0b3e4cc57a3e681783ec44389b65aae2a2e3f4dc1d8e75fd090c",
+    "native_full_source_recovery": true,
+    "semantic_change": "intentional_multiply_to_bounded_add; no_arithmetic_equivalence_or_runtime_claim",
+    "composition_boundary": "This proof verifies the successor and full native recovery; final complete production composition must independently prove actual writer ownership and PDX witnesses."
+  }
+}

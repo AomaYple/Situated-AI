@@ -693,7 +693,7 @@ def test_secret_goal_projection_cannot_guess_ambiguous_or_adjacent_structure(goa
 def test_exact_evidenced_numeric_contracts_preserve_field_operation_actor_and_target(
     field, native_operation, writer_operation, target, context
 ):
-    if field == "change_law_chance" and version_contracts.active_version() == "1.15.0":
+    if field == "change_law_chance" and version_contracts.is_115():
         native_operation = "first_nonzero_active_change_law_chance_else_default"
     surface = _surface(field=field, operation=native_operation, target_scope=target)
     instance = _instance(
@@ -702,7 +702,7 @@ def test_exact_evidenced_numeric_contracts_preserve_field_operation_actor_and_ta
     if field == "change_law_chance":
         other_operation = (
             "additive_percentage_chance"
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else "first_nonzero_active_change_law_chance_else_default"
         )
         incompatible = native_coverage(

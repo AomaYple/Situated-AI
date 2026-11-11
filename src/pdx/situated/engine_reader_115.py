@@ -21,14 +21,15 @@ def snapshot() -> bytes:
     if hashlib.sha256(raw).hexdigest() != digest:
         raise ValueError("1.15 LJ10 reader: frozen engine evidence drift")
     data = json.loads(raw)
+    exe_sha256, exe_bytes = engine_scope_115.executable_identity()
     strategy, identity, strategy_digest = engine_scope_115.manifest("strategy")
     if (
         hashlib.sha256(strategy.read_bytes()).hexdigest() != strategy_digest
         or data["parent_scope_manifest"]["path"] != identity
         or data["parent_scope_manifest"]["sha256"] != strategy_digest
-        or data["exe"]["sha256"] != engine_scope_115.EXE_SHA256
+        or data["exe"]["sha256"] != exe_sha256
         or type(data["exe"]["bytes"]) is not int
-        or data["exe"]["bytes"] != engine_scope_115.EXE_BYTES
+        or data["exe"]["bytes"] != exe_bytes
         or data["runtime"] != "unknown"
         or data["reader"]
         != {
@@ -111,8 +112,6 @@ def project_population_readers(readers: dict) -> None:
 
 def verify_game(game: Path) -> tuple[tuple[str, str], ...]:
     """Revalidate this broad compatibility reader closure against installed bytes."""
-    from pdx import version_contracts  # noqa: PLC0415
-
     from . import engine_scope  # noqa: PLC0415
 
     data = json.loads(snapshot())
@@ -128,8 +127,7 @@ def verify_game(game: Path) -> tuple[tuple[str, str], ...]:
     )
     if not verified:
         raise ValueError("1.15 LJ10 reader: installed source or executable drift")
-    with version_contracts.select_version("1.15.0"):
-        parent = engine_scope.verify_strategy_game(game)
+    parent = engine_scope.verify_strategy_game(game)
     return tuple(
         sorted({**dict(parent.source_hashes), **dict(hashes), **data["script_hashes"]}.items())
     )

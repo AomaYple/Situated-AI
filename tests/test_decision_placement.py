@@ -127,7 +127,7 @@ def test_complete_subject_result_keeps_reachability_refusal_and_native_clamp(
     if = { limit = { scope:target_country = { is_subject_of = root } } min = 100 max = 1000 }
     else = { min = 0 max = 200 }
     """
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         body = body.replace("can_reach_target_country =", "can_reach_target_country_to_subjugate =")
     generated = _generate("subject_value", body, "add", 3)
     value = _number(

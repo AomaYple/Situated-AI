@@ -1,0 +1,3803 @@
+{
+  "builder": {
+    "function": "native_contract_data",
+    "path": "src/pdx/decision_adapters.py",
+    "source_sha256": "ca62aa9a456c60322467cc6a692ab081107802faf1561a6ca3189657b8848ed1"
+  },
+  "evidence": "static_native_ast",
+  "fields": [
+    {
+      "default": null,
+      "field": "ai_strategy_default.ai_ship_category_weights.ai_ship_category_battle_line",
+      "field_ast_sha256": "a165e99984e57d6331113475ba8c862d7950b65f5852b340e0d823b023cdfe95",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "988cdf90ed1188f44a012ef89e0834cd5e96d1bf845b431b62ff835d34ac87a8",
+          "line": 6108,
+          "path": "ai_strategy_default.ai_ship_category_weights"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.ai_ship_category_weights.ai_ship_category_carriers",
+      "field_ast_sha256": "08a7705ab1127c2be6138759712de6de2b8fdf0351cfa44d26960e1cf868d3d2",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "988cdf90ed1188f44a012ef89e0834cd5e96d1bf845b431b62ff835d34ac87a8",
+          "line": 6108,
+          "path": "ai_strategy_default.ai_ship_category_weights"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.become_subject_value",
+      "field_ast_sha256": "89215b9c859d9fbe7cb61528b0a0f8cb8d41935c1ab76278415483134a580f8c",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.combat_unit_group_weights.combat_unit_group_artillery",
+      "field_ast_sha256": "d3e6689eca6d46bf05b08c249adb1379f89c57b10ed45a0bec32596b17709b97",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "66bfa992c000403d9df64a22e2f05014f09dfa4aa123b8c69d7f354d1eddf1a2",
+          "line": 6348,
+          "path": "ai_strategy_default.combat_unit_group_weights"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.conscript_battalion_ratio",
+      "field_ast_sha256": "df0096077a7b23fd1368dc1eb408469877950fee7ae6c4eb5b9d01b18bcf08cf",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply",
+      "field_ast_sha256": "cd16fad16084eb47de260f2c7fcdebcec85988d803b9dcb9da891a4d94fb0677",
+      "kind": "declared_scalar",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "c768a588d17b507f1b9c10dbacb65d3e83bdc407a43d4e4f52c855bf93ae3957",
+          "line": 11155,
+          "path": "ai_strategy_default.fleet_compositions"
+        },
+        {
+          "ast_sha256": "c5aab151b2fabb863450608ec6d3addcf8960e9c6f6d1b5ac5335d6edb6d7b6a",
+          "line": 11187,
+          "path": "ai_strategy_default.fleet_compositions.secondary_fleet"
+        },
+        {
+          "ast_sha256": "c85ad91397a084ef0511d9a51ba269993e21c6edfe4b4fcd172d9137222730de",
+          "line": 11195,
+          "path": "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.institution_scores.institution_colonial_affairs",
+      "field_ast_sha256": "c702cd799873d96a0ce3e50b389e884fe2fcbf1d144fdabc16743e7b6d883d3a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9fc56fdd816a1aab43206bcdd8786a4f21ce855f2a710061e6d69d9a92b2ce7b",
+          "line": 1588,
+          "path": "ai_strategy_default.institution_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.institution_scores.institution_health_system",
+      "field_ast_sha256": "aa12f9676481c5950e5d9a4c314d8be8effbe1e54b8a8db24d7af1625d236dbf",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9fc56fdd816a1aab43206bcdd8786a4f21ce855f2a710061e6d69d9a92b2ce7b",
+          "line": 1588,
+          "path": "ai_strategy_default.institution_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.institution_scores.institution_home_affairs",
+      "field_ast_sha256": "bbceb7a2e4c935ef1e1b4e8c740e4d4a5f753a28c59e23bc1f19c4960faf246b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9fc56fdd816a1aab43206bcdd8786a4f21ce855f2a710061e6d69d9a92b2ce7b",
+          "line": 1588,
+          "path": "ai_strategy_default.institution_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.institution_scores.institution_police",
+      "field_ast_sha256": "129a11ae322b37ada025ff18bdbd685ad771ea152b3bf449f6871c600515096f",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9fc56fdd816a1aab43206bcdd8786a4f21ce855f2a710061e6d69d9a92b2ce7b",
+          "line": 1588,
+          "path": "ai_strategy_default.institution_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.institution_scores.institution_schools",
+      "field_ast_sha256": "9594bdf42e18c7d7919f06e6b891eceb10bc7f7ea8cb2568dc0656cdcb4c2326",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9fc56fdd816a1aab43206bcdd8786a4f21ce855f2a710061e6d69d9a92b2ce7b",
+          "line": 1588,
+          "path": "ai_strategy_default.institution_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.institution_scores.institution_social_security",
+      "field_ast_sha256": "4f786d7d86060a68d0a942b32a243d454fb4450329dec3f8018c90ea260d1361",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9fc56fdd816a1aab43206bcdd8786a4f21ce855f2a710061e6d69d9a92b2ce7b",
+          "line": 1588,
+          "path": "ai_strategy_default.institution_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.institution_scores.institution_workplace_safety",
+      "field_ast_sha256": "388b76874ad7fc4f54a006d4da3ed03543f621de0f4639a6e37b3e36ec7ce40e",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9fc56fdd816a1aab43206bcdd8786a4f21ce855f2a710061e6d69d9a92b2ce7b",
+          "line": 1588,
+          "path": "ai_strategy_default.institution_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.interest_group_government_weight",
+      "field_ast_sha256": "a71dd3113bcbb8837163e9a6e125a6ffd17457b3f22f901eff5641a092fc8b93",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.max_active_stances",
+      "field_ast_sha256": "e1543e5291e3b559a9fd8f87f2386536fde9ebe2b32c1c5667081105e8aced84",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.max_ship_design_complexity",
+      "field_ast_sha256": "164191bc628935e9abe4ab11d5e49adf721b386b8efc19736cf9a237d219ee10",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.min_law_chance_to_pass",
+      "field_ast_sha256": "566388e1be53f42a5e511c73697de37ed95dcd9311e8555ec6ea109b58628f32",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.nationalization_desire",
+      "field_ast_sha256": "f09a6c4e7bfd400905f896aa82811593785b6cd8b66dcb99cc34f0eeb896aad0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.negotiation_chance",
+      "field_ast_sha256": "bc5b5902f6ffcf89a760952f1c743d7d188973bfc018f91cbc8fe84c8214adf8",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.revolution_aversion",
+      "field_ast_sha256": "f5d3d7f3a8d1ba04786c76a46dd788c35ac1118016e1fc8bfbeff53ac42d112b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.secret_goal_scores.antagonize.score",
+      "field_ast_sha256": "b49c51aed4eb608c22fa914225a434390f87a7134b28d6d4a793284514ff1657",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "62483ecc215f68ccce84282a08cd8cefc4754ac1649d813d02ba2cbf2cc38688",
+          "line": 7268,
+          "path": "ai_strategy_default.secret_goal_scores"
+        },
+        {
+          "ast_sha256": "70fdb916ab5259c587ec0b491a21ab72b4176938991d8026d5847c6d4fffb321",
+          "line": 8242,
+          "path": "ai_strategy_default.secret_goal_scores.antagonize"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.secret_goal_scores.conquer.score",
+      "field_ast_sha256": "cc5b9445f0fef009546fbf3168e6a1af9db110516220518986675df681da1930",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "62483ecc215f68ccce84282a08cd8cefc4754ac1649d813d02ba2cbf2cc38688",
+          "line": 7268,
+          "path": "ai_strategy_default.secret_goal_scores"
+        },
+        {
+          "ast_sha256": "b535448913f9604c0f6b9233aab866a0ed52cb7802ceef9f0fcbfff854e05ef4",
+          "line": 8509,
+          "path": "ai_strategy_default.secret_goal_scores.conquer"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.secret_goal_scores.dominate.score",
+      "field_ast_sha256": "73f743471532f6e2582e232dceb6e079ee771cdd66adebb4b3a7ac76cddbf800",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "62483ecc215f68ccce84282a08cd8cefc4754ac1649d813d02ba2cbf2cc38688",
+          "line": 7268,
+          "path": "ai_strategy_default.secret_goal_scores"
+        },
+        {
+          "ast_sha256": "173dedb4555793182795c5e8f56aa16b013fbf9e0ff29ab921ad7d2c8a3f1ef6",
+          "line": 9038,
+          "path": "ai_strategy_default.secret_goal_scores.dominate"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.ship_construction_output_multiplier",
+      "field_ast_sha256": "ee3f347b78bf73dba10c9066d977cb234cb1c18940e2c99b929a59d919bc6267",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.state_value",
+      "field_ast_sha256": "ce02dc31d0737f59a24dc81efb8e878fdcf0bfeb7fd1f5cab37c147c6f42c669",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region",
+      "field_ast_sha256": "8237628da6668ee69f3f64b38da6fdbdf0e9ed92a31dbf1fcecf98cab4f3ffa5",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "9056ebe720b225ba7265d8758eae812e7cbfed6c63605c43af07a9051493dad7",
+          "line": 5671,
+          "path": "ai_strategy_default.strategic_region_stance_type_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.subject_value",
+      "field_ast_sha256": "d56e36a0a63376823725a52c6e010651d41013f9e3e04b58dc4e5d4484efa719",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.target_marine_formation_size",
+      "field_ast_sha256": "dec2e12f280c95c24fe1a3a35a1320b4a1a8532fb502be0696741a683f1e5286",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.treaty_category_scores.economy",
+      "field_ast_sha256": "a6fa32ddaf355f3fa02eb719a36c4e30f70efe26b564c04d12f6dd244ab2fb47",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "8769fc2c068324cb0f87534735a568723475f95f32852d03cc4041993654c035",
+          "line": 9533,
+          "path": "ai_strategy_default.treaty_category_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.treaty_category_scores.military_defense",
+      "field_ast_sha256": "f0088b6d672bc33fbd54e5ba935e1d99dedb83610a788562c34d20c29ac82962",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "8769fc2c068324cb0f87534735a568723475f95f32852d03cc4041993654c035",
+          "line": 9533,
+          "path": "ai_strategy_default.treaty_category_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.treaty_category_scores.trade",
+      "field_ast_sha256": "8474de2242a36520753721930e2d203d81feb5f152c77b5478dc6775f835f1b2",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "8769fc2c068324cb0f87534735a568723475f95f32852d03cc4041993654c035",
+          "line": 9533,
+          "path": "ai_strategy_default.treaty_category_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.treaty_port_value",
+      "field_ast_sha256": "5dab064eff647ffd88a89ee825ba449515317877a04dc3f2a89e1d720a7ef9aa",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.unacceptable_infamy_level",
+      "field_ast_sha256": "edc6ea4ff753d57278b491c728d562d27c9bd16b14f6f25511eef3dfe29e6771",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.undesirable_infamy_level",
+      "field_ast_sha256": "264c0c14a6d8c38a8b823118d6fe0d00773f8e7a82f2dfa60666364327d917e6",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wanted_army_size",
+      "field_ast_sha256": "65e00c3c3da48508cf48d82862492b790491f1d7430b17ce9e8f929b7959159d",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wanted_construction_output",
+      "field_ast_sha256": "2586b0f50a73a16de1fe800af0301956f6942570d3a2fb139594962c7fa6f91f",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wanted_marines",
+      "field_ast_sha256": "7656a2d408b7800f16825c13c01f8eb4dfc8a203747bdcbcf568b1cfeb8906d8",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wanted_navy_size",
+      "field_ast_sha256": "58e9fa661a6a131245f8a84ab88daf0e3394510aa7f7c9f2755e1884f59198f5",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wanted_num_supply_ships",
+      "field_ast_sha256": "d3e710e777194edc1e9ad8f6f4fab2ea48588ca6529cdc0a70ded7f1682d35c6",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_maneuvers_fraction",
+      "field_ast_sha256": "f536a57cecdb8ee27de877467456fa21d13104d954b60272bbf198d0e5e59d6c",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.annex_country",
+      "field_ast_sha256": "3c609883850d6aa951898ae1b8c386c9fa8eaa9d4cb6e4f9ce60df7ca6a34fb8",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.colonization_rights",
+      "field_ast_sha256": "9acc8851bea533518ca27e583158357a6534d5c49fed86a888d95e1221220d4e",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.conquer_state",
+      "field_ast_sha256": "2be13dde6cea81d36b48c67684861ceedce98712a150a15c6e8e297c9cd8e00f",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.increase_autonomy",
+      "field_ast_sha256": "fd2b01d71f201b65b63006a3c809c37cdedea0d5bae47e0dfe46e66140c8c0e0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.independence",
+      "field_ast_sha256": "fe3c460138e5840b7aab0419a55ee57324ff75e8d6c64cda2751c0ef105abddf",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.liberate_subject",
+      "field_ast_sha256": "975c8e4a10ac1f424bcd6a58288f0c8d67bd554a6381449cd498ad5157bb6a6b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.make_subject",
+      "field_ast_sha256": "8f0ef27faf3a75be090a702641aeeedff3a9974d9a6af1907a03bd049a91924d",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.reduce_autonomy",
+      "field_ast_sha256": "8d1b9f424cdb3e31a92957954578f9c96ddda7e187d8eed7d83d0ddf1b0e6263",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.regime_change",
+      "field_ast_sha256": "edd1e8974970f309124b41d442201cfe891ae138e71bf694aaf00e040c4f373a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_default.wargoal_scores.transfer_subject",
+      "field_ast_sha256": "18741ae4131befa70c05eb739636d0bdb1a3e05b630603168a3f6303dadef8e5",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "189f5f8c0bed115e5762b8ee88e958943f42ed25a7f165dc0df84098b876647f",
+          "line": 4,
+          "path": "ai_strategy_default"
+        },
+        {
+          "ast_sha256": "7fb6d1efc7b32e5ee089e62312f3f79f3f9b69c92dfd4b5cb441a2e47799229e",
+          "line": 9584,
+          "path": "ai_strategy_default.wargoal_scores"
+        }
+      ],
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_agricultural_expansion.weight",
+      "field_ast_sha256": "4240e3cde54e9c21089aa1cf596f6166d24393d20af89fd971792a8c85b6b305",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0810bd1b9a7f4d3bfaf48afe30410ac223c9d46db728cdc507f8e336b8e8170b",
+          "line": 1,
+          "path": "ai_strategy_agricultural_expansion"
+        }
+      ],
+      "source": "common/ai_strategies/01_admin_strategies.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_industrial_expansion.weight",
+      "field_ast_sha256": "ac53ac1aa4045cda352ed5ede0538adc410c04a62eae9c818e62f0dcd2723e06",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "246f925b446e7087c6597e3877d6320e4dca1e1432b884590ea1b85102c453a9",
+          "line": 404,
+          "path": "ai_strategy_industrial_expansion"
+        }
+      ],
+      "source": "common/ai_strategies/01_admin_strategies.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_resource_expansion.weight",
+      "field_ast_sha256": "fe2bc64227c38f7f412f528fc18343a4fdf70bb5ef66aad4c2c4da47ce9c10b0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "880ffcc7ecbeeeb7285a29525632beb63cf5d274293bd64dc67dcc5d7f1685c3",
+          "line": 200,
+          "path": "ai_strategy_resource_expansion"
+        }
+      ],
+      "source": "common/ai_strategies/01_admin_strategies.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_subject_maintain_autonomy.weight",
+      "field_ast_sha256": "ae5df49ca692c7273b04e35e3c8169d668564e4630179b862d761f7bd9802b67",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f35ae213896bfe74423a3be2db9cac65deb5fcee0ca6c97ae1805dcadd588983",
+          "line": 383,
+          "path": "ai_strategy_subject_maintain_autonomy"
+        }
+      ],
+      "source": "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_subject_overlord_compliance.weight",
+      "field_ast_sha256": "7d7c1a2b1d8b65c2b328acaf043f9a496178d1cfc9ef1c41e3c120ef918926e8",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e701cdc85fa3816aed4ca0bbe097c69edae24a0e500481126ba710df089ae831",
+          "line": 498,
+          "path": "ai_strategy_subject_overlord_compliance"
+        }
+      ],
+      "source": "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+    },
+    {
+      "default": null,
+      "field": "ai_strategy_subject_strengthen_self.weight",
+      "field_ast_sha256": "275bab33db35b4532470bead7d65003adeb2fa63b7f623100ac7c190390edef6",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "3b1edb81e8259972d5eb6c8c15d94124ec4c4d087c63010bd23563bf270d657c",
+          "line": 191,
+          "path": "ai_strategy_subject_strengthen_self"
+        }
+      ],
+      "source": "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_arms_industry.ai_value",
+        "line": 812,
+        "source": "common/buildings/01_industry.txt",
+        "value": "1000"
+      },
+      "field": "building_arms_industry.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "09d4a5c3ab81555f96691c1db134ef0e1fa7a237fa05805784f888c2f1af77f0",
+          "line": 665,
+          "path": "building_arms_industry"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_artillery_foundry.ai_value",
+        "line": 812,
+        "source": "common/buildings/01_industry.txt",
+        "value": "1000"
+      },
+      "field": "building_artillery_foundry.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "d13936362e0d26cb39b0fc2520d385c164664fce98bdad7ab23b7359fe153eb2",
+          "line": 689,
+          "path": "building_artillery_foundry"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_automotive_industry.ai_value",
+      "field_ast_sha256": "fd76f6d9bbc69b5eb9552a24f26bcbd72dc86b22d788506887608f34c69bfc9a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a13c15f0b7d447f3b30ba67f5304ec65d5b33dc7a51b393b4d4d71efc8d29066",
+          "line": 565,
+          "path": "building_automotive_industry"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_chemical_plant.ai_value",
+      "field_ast_sha256": "fd76f6d9bbc69b5eb9552a24f26bcbd72dc86b22d788506887608f34c69bfc9a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f5fffa61e32a818279906809b676c948a756b75f9d0fdc0b3c851d3343d88e53",
+          "line": 270,
+          "path": "building_chemical_plant"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_electrics_industry.ai_value",
+      "field_ast_sha256": "fd76f6d9bbc69b5eb9552a24f26bcbd72dc86b22d788506887608f34c69bfc9a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a534ddaa2ba2d1041dcf5e6c5298c73a4a170a6114d8adf8b84fda1060605cfd",
+          "line": 616,
+          "path": "building_electrics_industry"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_explosives_factory.ai_value",
+      "field_ast_sha256": "fd76f6d9bbc69b5eb9552a24f26bcbd72dc86b22d788506887608f34c69bfc9a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "05941fd39cda80bd22f1b63dce74b5c4d1c282f40dd7bfff80e41c956253e56c",
+          "line": 321,
+          "path": "building_explosives_factory"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_food_industry.ai_value",
+      "field_ast_sha256": "f0bdcaf36e23cb3624e462665d72e11779a76db941136af21fd8fca2ca94d7da",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "fbb05bf5a4710ee4d71aceda8a1956cf172e682b6bcadd57f217ffb790d22b20",
+          "line": 3,
+          "path": "building_food_industry"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_furniture_manufactory.ai_value",
+      "field_ast_sha256": "f0bdcaf36e23cb3624e462665d72e11779a76db941136af21fd8fca2ca94d7da",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c9b0eee2fc9f386d7f946efa33c36961517ef3bffcaf794ebe6174725a656224",
+          "line": 89,
+          "path": "building_furniture_manufactory"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_glassworks.ai_value",
+      "field_ast_sha256": "f0bdcaf36e23cb3624e462665d72e11779a76db941136af21fd8fca2ca94d7da",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "cd9ef4f5b140cd51eb9cad4b738c3c0eac4330f54a78db07999f8ff42bcb9434",
+          "line": 132,
+          "path": "building_glassworks"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_motor_industry.ai_value",
+      "field_ast_sha256": "fd76f6d9bbc69b5eb9552a24f26bcbd72dc86b22d788506887608f34c69bfc9a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0ee068b8bcc325054574e475d4963f19e07ff0c313e22846a75db54d0f58c836",
+          "line": 472,
+          "path": "building_motor_industry"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_munition_plant.ai_value",
+      "field_ast_sha256": "63256b6d4d4bd44abeb1aba9063878fc624c935b61fe5c68d4fdad1deb4c566a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "40e139779cc029a54ffddc9f8e16bc4c98c7121a4254b5505cb93a41c0972195",
+          "line": 712,
+          "path": "building_munition_plant"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_paper_mill.ai_value",
+      "field_ast_sha256": "3cba8988c32274ba56e41ad97fe45a9320bdd8ccdf51ec8e7b168fb2f6225311",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "49d5e4c07970f11270d2ac9c31c9d79bffabc51dd1f4666307e67b117f0ffbae",
+          "line": 214,
+          "path": "building_paper_mill"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_shipyard.ai_value",
+      "field_ast_sha256": "f0bdcaf36e23cb3624e462665d72e11779a76db941136af21fd8fca2ca94d7da",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "349c50de4ab4861c57c46844ef1aecfeb6d6fb71e40cafb310c52d5109642b4a",
+          "line": 521,
+          "path": "building_shipyard"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_steel_mill.ai_value",
+      "field_ast_sha256": "fd76f6d9bbc69b5eb9552a24f26bcbd72dc86b22d788506887608f34c69bfc9a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "30917d4d322d6300b9d3f71ed1d60a1da3cf9996a64da599aed1cb1187bb7223",
+          "line": 420,
+          "path": "building_steel_mill"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_synthetics_plant.ai_value",
+      "field_ast_sha256": "fd76f6d9bbc69b5eb9552a24f26bcbd72dc86b22d788506887608f34c69bfc9a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1381a8e17de11744c3a485e8c27c460707493f8106edb761f37a915558360824",
+          "line": 370,
+          "path": "building_synthetics_plant"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_textile_mill.ai_value",
+      "field_ast_sha256": "f0bdcaf36e23cb3624e462665d72e11779a76db941136af21fd8fca2ca94d7da",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "da647f105b7792832cfec555abf881764597c2494f590b0cbd870370854d831d",
+          "line": 46,
+          "path": "building_textile_mill"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": null,
+      "field": "building_tooling_workshop.ai_value",
+      "field_ast_sha256": "8935ff1c17a93644d5fedfb3ba534126638ddf99f0a670c7950f1f360e878579",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "21898fd7613d104b35087f293d100ab99627de46cc65902435b98c317f1b555c",
+          "line": 172,
+          "path": "building_tooling_workshop"
+        }
+      ],
+      "source": "common/buildings/01_industry.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_livestock_ranch.ai_value",
+        "line": 812,
+        "source": "common/buildings/02_agro.txt",
+        "value": "1000"
+      },
+      "field": "building_livestock_ranch.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "34bd6ff92f3df2a68d8ed08606f257b4523846781014be13485e374c752e939c",
+          "line": 218,
+          "path": "building_livestock_ranch"
+        }
+      ],
+      "source": "common/buildings/02_agro.txt"
+    },
+    {
+      "default": null,
+      "field": "building_maize_farm.ai_value",
+      "field_ast_sha256": "a79b922a175848abbd4e3f8011b8ac4de187ac8790a4b4c23024be50529b4336",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e2df7d08ad341485a2309fda898128cd52656eeb88f04eda9b31390508b131b9",
+          "line": 132,
+          "path": "building_maize_farm"
+        }
+      ],
+      "source": "common/buildings/02_agro.txt"
+    },
+    {
+      "default": null,
+      "field": "building_millet_farm.ai_value",
+      "field_ast_sha256": "a79b922a175848abbd4e3f8011b8ac4de187ac8790a4b4c23024be50529b4336",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "773e7010a445367a58b32f1b91f192b6e632e481c0fcc8d0aa3581cc07256b9a",
+          "line": 175,
+          "path": "building_millet_farm"
+        }
+      ],
+      "source": "common/buildings/02_agro.txt"
+    },
+    {
+      "default": null,
+      "field": "building_rice_farm.ai_value",
+      "field_ast_sha256": "a79b922a175848abbd4e3f8011b8ac4de187ac8790a4b4c23024be50529b4336",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1d7bfcdbb031a977a5c9b34f6bbb152129afc7a83ea50e17ad84cb8a76a32dde",
+          "line": 89,
+          "path": "building_rice_farm"
+        }
+      ],
+      "source": "common/buildings/02_agro.txt"
+    },
+    {
+      "default": null,
+      "field": "building_rye_farm.ai_value",
+      "field_ast_sha256": "a79b922a175848abbd4e3f8011b8ac4de187ac8790a4b4c23024be50529b4336",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e10cd7a7de1c9af28b8126e60ccc131c99d9a4151b392eeced110d36d8587cdb",
+          "line": 3,
+          "path": "building_rye_farm"
+        }
+      ],
+      "source": "common/buildings/02_agro.txt"
+    },
+    {
+      "default": null,
+      "field": "building_vineyard.ai_value",
+      "field_ast_sha256": "a79b922a175848abbd4e3f8011b8ac4de187ac8790a4b4c23024be50529b4336",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1c3c17cc4aa193a8d7f250ba970de69e3dcdd0bd7508c04ee139528444f41ed5",
+          "line": 246,
+          "path": "building_vineyard"
+        }
+      ],
+      "source": "common/buildings/02_agro.txt"
+    },
+    {
+      "default": null,
+      "field": "building_wheat_farm.ai_value",
+      "field_ast_sha256": "a79b922a175848abbd4e3f8011b8ac4de187ac8790a4b4c23024be50529b4336",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0d1a415700fac3f5a396d253a8ff67cab74b16084eb3399948a993bdcadc53a0",
+          "line": 46,
+          "path": "building_wheat_farm"
+        }
+      ],
+      "source": "common/buildings/02_agro.txt"
+    },
+    {
+      "default": null,
+      "field": "building_coal_mine.ai_value",
+      "field_ast_sha256": "9505543b296c5216aaf9d2e83aac56aee885070316ffb4e553990fa91784ccd4",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f12017c2566e3487d55b3d0b59d37fe7ea64536a656b9e5a8e16c3656187ffd6",
+          "line": 1,
+          "path": "building_coal_mine"
+        }
+      ],
+      "source": "common/buildings/03_mines.txt"
+    },
+    {
+      "default": null,
+      "field": "building_gold_mine.ai_value",
+      "field_ast_sha256": "3ca04681af623a02e02bfeffe64a459c99d4d9a6336caf18901a71855988b63b",
+      "kind": "declared_scalar",
+      "parents": [
+        {
+          "ast_sha256": "8e815c9ff97de3f126b3ada90a50e05f57e7043007d1e58fd07e6c67ffe5d289",
+          "line": 150,
+          "path": "building_gold_mine"
+        }
+      ],
+      "source": "common/buildings/03_mines.txt"
+    },
+    {
+      "default": null,
+      "field": "building_iron_mine.ai_value",
+      "field_ast_sha256": "9505543b296c5216aaf9d2e83aac56aee885070316ffb4e553990fa91784ccd4",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "2a5e33661c469b15f9fca10a29ac4b172f72465ad4be0c1bf79b406ec9158422",
+          "line": 38,
+          "path": "building_iron_mine"
+        }
+      ],
+      "source": "common/buildings/03_mines.txt"
+    },
+    {
+      "default": null,
+      "field": "building_lead_mine.ai_value",
+      "field_ast_sha256": "9505543b296c5216aaf9d2e83aac56aee885070316ffb4e553990fa91784ccd4",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f7a3db9ff74c2370db5a7a200c9fbe15f6623a8f1fd42feb49cc78a33b97c97a",
+          "line": 76,
+          "path": "building_lead_mine"
+        }
+      ],
+      "source": "common/buildings/03_mines.txt"
+    },
+    {
+      "default": null,
+      "field": "building_sulfur_mine.ai_value",
+      "field_ast_sha256": "9505543b296c5216aaf9d2e83aac56aee885070316ffb4e553990fa91784ccd4",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "3b7d273f220c4ce7e1202fe4cd4f9fc8eaca3a9249e7f06676c8395fb4bbed7a",
+          "line": 113,
+          "path": "building_sulfur_mine"
+        }
+      ],
+      "source": "common/buildings/03_mines.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_banana_plantation.ai_value",
+        "line": 812,
+        "source": "common/buildings/04_plantations.txt",
+        "value": "1000"
+      },
+      "field": "building_banana_plantation.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "2b8cf1a35ef97e4c6767455125616ae5529f34257d70e158aa09ffebc77bdc97",
+          "line": 280,
+          "path": "building_banana_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_coffee_plantation.ai_value",
+        "line": 812,
+        "source": "common/buildings/04_plantations.txt",
+        "value": "1000"
+      },
+      "field": "building_coffee_plantation.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "e5c4b8850987716fe367065f2a4587ab7898a08100b3288ade7a8396295b87bf",
+          "line": 3,
+          "path": "building_coffee_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": null,
+      "field": "building_cotton_plantation.ai_value",
+      "field_ast_sha256": "6eaca28ac7f78f06dfda21e7222422b36b06ed121e5d63d72331e8df5b224318",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "660ad15a1119ab194ebb05edfe866146b1a0493529cfc4ae458fb395bcab88ce",
+          "line": 26,
+          "path": "building_cotton_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": null,
+      "field": "building_dye_plantation.ai_value",
+      "field_ast_sha256": "e447b4b9d739f13bee0a9e9337ea0226196100cb01b95876cae28a1e48aa6774",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "567bd3dc43fb04e54d42081103302fb23c2e982303625fe63814bd402d26b7d5",
+          "line": 73,
+          "path": "building_dye_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": null,
+      "field": "building_opium_plantation.ai_value",
+      "field_ast_sha256": "c66935c74074417fe416a38f0d7f1149297a427c2694b6dfc9c24c091224de0b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c4b2f5eba6efb8db11556d3640b4457e8ef56b2181e46a19d14a06d57e564ed2",
+          "line": 109,
+          "path": "building_opium_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": null,
+      "field": "building_silk_plantation.ai_value",
+      "field_ast_sha256": "9505543b296c5216aaf9d2e83aac56aee885070316ffb4e553990fa91784ccd4",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "35b9cf53932f478dd95a51d29a00acee6f58fc07bf4f6a922f9f16f38980ce42",
+          "line": 302,
+          "path": "building_silk_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_sugar_plantation.ai_value",
+        "line": 812,
+        "source": "common/buildings/04_plantations.txt",
+        "value": "1000"
+      },
+      "field": "building_sugar_plantation.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "dff9fee1898e55a158b76023c44ae2a3c3d0912ef14f0873aa447dc5431d72a2",
+          "line": 257,
+          "path": "building_sugar_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": null,
+      "field": "building_tea_plantation.ai_value",
+      "field_ast_sha256": "40b0629515595e97294d49533924b58f88edd55d139d18a1e121bfdfc56c784b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "8c5b87c09fbdbe23cbcd488e0652313bfcb874cb0713eee2089662c62011ae6c",
+          "line": 162,
+          "path": "building_tea_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": null,
+      "field": "building_tobacco_plantation.ai_value",
+      "field_ast_sha256": "097d520461164248d4ccf224ca98282cd68f9a124f486257c2912498d387f3d7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "08acf6bc8bd2be64847ec0db26da80ecaa4164be0112b830d8171987f84ae1dc",
+          "line": 209,
+          "path": "building_tobacco_plantation"
+        }
+      ],
+      "source": "common/buildings/04_plantations.txt"
+    },
+    {
+      "default": null,
+      "field": "building_power_plant.ai_value",
+      "field_ast_sha256": "fb637444af8912fedb05489483b3fbe27708326f71d9eb92d0c44964fdcbf9d9",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0366c037bbdc1addefd79abcff53435f4281b23fd2496e3fdff174f4894b1985",
+          "line": 96,
+          "path": "building_power_plant"
+        }
+      ],
+      "source": "common/buildings/06_urban_center.txt"
+    },
+    {
+      "default": null,
+      "field": "building_government_administration.ai_value",
+      "field_ast_sha256": "fa5bed72befd628635c28ddf6c32c491294d35fabe952c9ffebe713176be5c99",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f502081dfe81e805f4a4bea7166f0e4b5166f2b26f2ef9946b7a105137090d70",
+          "line": 2,
+          "path": "building_government_administration"
+        }
+      ],
+      "source": "common/buildings/07_government.txt"
+    },
+    {
+      "default": null,
+      "field": "building_university.ai_value",
+      "field_ast_sha256": "3fc571c33c272257ba72372864322083811d97df55a25a07a631298782ea3189",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5459b3e32536195dc3dff31a6b9a0da394088a6ca0f518c250ec11c4b3d89193",
+          "line": 53,
+          "path": "building_university"
+        }
+      ],
+      "source": "common/buildings/07_government.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_fishing_wharf.ai_value",
+        "line": 812,
+        "source": "common/buildings/09_misc_resource.txt",
+        "value": "1000"
+      },
+      "field": "building_fishing_wharf.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "78f2972fe44fee015bbfce032b2b5c2de7ebe7c44317e0a488e9b6d01492287c",
+          "line": 44,
+          "path": "building_fishing_wharf"
+        }
+      ],
+      "source": "common/buildings/09_misc_resource.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_logging_camp.ai_value",
+        "line": 812,
+        "source": "common/buildings/09_misc_resource.txt",
+        "value": "1000"
+      },
+      "field": "building_logging_camp.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "15c4d8424cd2d76065f3d3223dbd8e9e6e6b23845abc90db06c15426e9ac9a66",
+          "line": 1,
+          "path": "building_logging_camp"
+        }
+      ],
+      "source": "common/buildings/09_misc_resource.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_oil_rig.ai_value",
+        "line": 812,
+        "source": "common/buildings/09_misc_resource.txt",
+        "value": "1000"
+      },
+      "field": "building_oil_rig.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "2075accd204879a7283c4e61e82c4fab853f99812163bb03f0a42ab8e164c9a3",
+          "line": 89,
+          "path": "building_oil_rig"
+        }
+      ],
+      "source": "common/buildings/09_misc_resource.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_rubber_plantation.ai_value",
+        "line": 812,
+        "source": "common/buildings/09_misc_resource.txt",
+        "value": "1000"
+      },
+      "field": "building_rubber_plantation.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "eb5644d6df40893d85336e92b6d66aa3d8b8ea07585d559c3211999420a528ae",
+          "line": 20,
+          "path": "building_rubber_plantation"
+        }
+      ],
+      "source": "common/buildings/09_misc_resource.txt"
+    },
+    {
+      "default": {
+        "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+        "define_source": "common/defines/00_ai.txt",
+        "field": "building_whaling_station.ai_value",
+        "line": 812,
+        "source": "common/buildings/09_misc_resource.txt",
+        "value": "1000"
+      },
+      "field": "building_whaling_station.ai_value",
+      "field_ast_sha256": null,
+      "kind": "missing_declared_default",
+      "parents": [
+        {
+          "ast_sha256": "3254d4b5f6975efb37294ee6f8912b9b334fe537c8cc4cc2bca45705be8d2094",
+          "line": 64,
+          "path": "building_whaling_station"
+        }
+      ],
+      "source": "common/buildings/09_misc_resource.txt"
+    },
+    {
+      "default": null,
+      "field": "building_railway.ai_value",
+      "field_ast_sha256": "b6455c1c446dfd80d393725f55e9fd7b7b1e9b87c8ffb5b0c5d2c8b1ce78be7e",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "ad773208470603a03b2d6d4d7658add4f815f184f90e74d569a919b2ec1d7d3a",
+          "line": 47,
+          "path": "building_railway"
+        }
+      ],
+      "source": "common/buildings/11_private_infrastructure.txt"
+    },
+    {
+      "default": null,
+      "field": "law_mass_conscription.ai_enact_weight_modifier",
+      "field_ast_sha256": "83d3ded166a1836fd67dbe2d46e9e7582e03dfde38f06b8ffb379b4c97afee98",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "9eb756f595b34ebb7b2784f7ab9da22c1a238d049ff0c1f1d5f5b4e00caa12ba",
+          "line": 267,
+          "path": "law_mass_conscription"
+        }
+      ],
+      "source": "common/laws/00_army_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_national_militia.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1aa7e13ef0ecb0b2b13f7a57f883b0a232083c22716e919391c67e94cd8afb89",
+          "line": 203,
+          "path": "law_national_militia"
+        }
+      ],
+      "source": "common/laws/00_army_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_peasant_levies.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "d3c0525adbab915a719444835f828700c4845e4c2a7e9a520723d536607f878b",
+          "line": 1,
+          "path": "law_peasant_levies"
+        }
+      ],
+      "source": "common/laws/00_army_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_professional_army.ai_enact_weight_modifier",
+      "field_ast_sha256": "93bf780383ddc02ba89f79aa85f2dc051225e6bf310eb591b0c8dc688614e892",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a23aed5253963c93bcdbca0c0ce7e24abd8a26528c6e87e2813096541ef0fa3b",
+          "line": 112,
+          "path": "law_professional_army"
+        }
+      ],
+      "source": "common/laws/00_army_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_warrior_caste.ai_enact_weight_modifier",
+      "field_ast_sha256": "6b5a2836ba854d3e97a12cc6a5dad71c3d0a660260307a4c4f39cdfb86e538a1",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "ae4cded8b75f8f6f9b9d8275a206e552294455b1d0639181e818dc38666a0566",
+          "line": 71,
+          "path": "law_warrior_caste"
+        }
+      ],
+      "source": "common/laws/00_army_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_appointed_bureaucrats.ai_enact_weight_modifier",
+      "field_ast_sha256": "0ecc81ea91012b6492bb114b9b8f391a441b1b1d02bfbde66aae343ee387324a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "6310b0bf800116c7a3d9190f3b8655030637dfd8033d35fc0516ad605b462dea",
+          "line": 152,
+          "path": "law_appointed_bureaucrats"
+        }
+      ],
+      "source": "common/laws/00_bureaucracy.txt"
+    },
+    {
+      "default": null,
+      "field": "law_crownland_diets.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "b182e2f3d88c668906ab15eeb3766efb40aef04f33d6c9e4cc302affcb9beeb0",
+          "line": 54,
+          "path": "law_crownland_diets"
+        }
+      ],
+      "source": "common/laws/00_bureaucracy.txt"
+    },
+    {
+      "default": null,
+      "field": "law_elected_bureaucrats.ai_enact_weight_modifier",
+      "field_ast_sha256": "7e630823f4e2c6a197497dfad65d30f04456872a255d5cd98bd04d33819528e7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c02b1afead7bc678932e73d08180bccd40bd1d24252b32a0e56cabb88bb06ca3",
+          "line": 208,
+          "path": "law_elected_bureaucrats"
+        }
+      ],
+      "source": "common/laws/00_bureaucracy.txt"
+    },
+    {
+      "default": null,
+      "field": "law_hereditary_bureaucrats.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "d10db72344ecac9cf08f429ab6fffadc8f5c9126cb7fb90ff00796f812d93b01",
+          "line": 1,
+          "path": "law_hereditary_bureaucrats"
+        }
+      ],
+      "source": "common/laws/00_bureaucracy.txt"
+    },
+    {
+      "default": null,
+      "field": "law_affirmative_action.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "9010644b02c736f6492220fe3cdadc5fd40bf60edfada98d6edc816fa20e4833",
+          "line": 129,
+          "path": "law_affirmative_action"
+        }
+      ],
+      "source": "common/laws/00_caste_hegemony.txt"
+    },
+    {
+      "default": null,
+      "field": "law_hindu_caste_codified.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e4448360b86843970ae72a203c59666528ca581981285a5a322ef24e614c414a",
+          "line": 53,
+          "path": "law_hindu_caste_codified"
+        }
+      ],
+      "source": "common/laws/00_caste_hegemony.txt"
+    },
+    {
+      "default": null,
+      "field": "law_hindu_caste_enforced.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "3ef42c4b6deff01555ca110bd27ba3b65e54ccae2a150bceb0c15f34f0838886",
+          "line": 7,
+          "path": "law_hindu_caste_enforced"
+        }
+      ],
+      "source": "common/laws/00_caste_hegemony.txt"
+    },
+    {
+      "default": null,
+      "field": "law_hindu_caste_not_enforced.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "fd072570a758c7cd87c7a7a7418579fe3900df3387864c768fd3d71a78b6404b",
+          "line": 98,
+          "path": "law_hindu_caste_not_enforced"
+        }
+      ],
+      "source": "common/laws/00_caste_hegemony.txt"
+    },
+    {
+      "default": null,
+      "field": "law_intermediate_edo_system.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "ea2cdf7dd066a2b340bdcbf1d125567600f7e35701d0bfa32194d5365f62b948",
+          "line": 230,
+          "path": "law_intermediate_edo_system"
+        }
+      ],
+      "source": "common/laws/00_caste_hegemony.txt"
+    },
+    {
+      "default": null,
+      "field": "law_lax_edo_system.ai_enact_weight_modifier",
+      "field_ast_sha256": "7e630823f4e2c6a197497dfad65d30f04456872a255d5cd98bd04d33819528e7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "615dfc522072f9245b092235582f2f5fd3a740698a225978025f93709746419e",
+          "line": 273,
+          "path": "law_lax_edo_system"
+        }
+      ],
+      "source": "common/laws/00_caste_hegemony.txt"
+    },
+    {
+      "default": null,
+      "field": "law_strict_edo_system.ai_enact_weight_modifier",
+      "field_ast_sha256": "a5239d97a2c9e4c22d69da96b987344f4fb2881bc00ae6b3708b4e9886d3f121",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a1ea6aa17163da235c24b29bf37047b1f7b8705387a1e7cee47593fc0df3a4f9",
+          "line": 177,
+          "path": "law_strict_edo_system"
+        }
+      ],
+      "source": "common/laws/00_caste_hegemony.txt"
+    },
+    {
+      "default": null,
+      "field": "law_freedom_of_conscience.ai_enact_weight_modifier",
+      "field_ast_sha256": "62c5bca06585b6866cbd13cb055bcfca115dcfa5925c7aa86295764939092b12",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "090ea6e7d556944d59e602c32dd80175ef5f24568d49bc4709495c1a1478bfc7",
+          "line": 473,
+          "path": "law_freedom_of_conscience"
+        }
+      ],
+      "source": "common/laws/00_church_and_state.txt"
+    },
+    {
+      "default": null,
+      "field": "law_millet_system.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "4802f7c0f352fb0782de072ae218947fe2be8777381cca58618aa8f02300241c",
+          "line": 255,
+          "path": "law_millet_system"
+        }
+      ],
+      "source": "common/laws/00_church_and_state.txt"
+    },
+    {
+      "default": null,
+      "field": "law_people_of_the_book.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "346e4f084e3b424d15e03e2d1582485da3d828af3c6c2aa5854a72dfdb45504e",
+          "line": 363,
+          "path": "law_people_of_the_book"
+        }
+      ],
+      "source": "common/laws/00_church_and_state.txt"
+    },
+    {
+      "default": null,
+      "field": "law_state_atheism.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "11b4c013b7ebd1e148e3862ad3e4c031bb15c54048221b8cd8067f22610ef663",
+          "line": 639,
+          "path": "law_state_atheism"
+        }
+      ],
+      "source": "common/laws/00_church_and_state.txt"
+    },
+    {
+      "default": null,
+      "field": "law_state_religion.ai_enact_weight_modifier",
+      "field_ast_sha256": "7906b9ae145e167c878da54e4de70c90f35cba6723585bdb620acf0dee5aa486",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "777c53c7061fef45865e287f858b836b15f7ac7a9afafbf7a33cb01d78c84a24",
+          "line": 5,
+          "path": "law_state_religion"
+        }
+      ],
+      "source": "common/laws/00_church_and_state.txt"
+    },
+    {
+      "default": null,
+      "field": "law_total_separation.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "90209df8bbe56778a4050f7004bcf78c467431a5c2fb064bdc7a1f0de4bdbf24",
+          "line": 563,
+          "path": "law_total_separation"
+        }
+      ],
+      "source": "common/laws/00_church_and_state.txt"
+    },
+    {
+      "default": null,
+      "field": "law_cultural_exclusion.ai_enact_weight_modifier",
+      "field_ast_sha256": "b869970c683fdfd358fba8272d897de3086604fc7152bba623ca00f60860653d",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "fcf745116a81f24b86443395bd3d49e241403200ddec6afd173e7ec0972a96fa",
+          "line": 604,
+          "path": "law_cultural_exclusion"
+        }
+      ],
+      "source": "common/laws/00_citizenship.txt"
+    },
+    {
+      "default": null,
+      "field": "law_ethnostate.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "270657d9f8b96c11609e7de370fd3ac75714368d796cc8a94eb5180f185c5ce1",
+          "line": 232,
+          "path": "law_ethnostate"
+        }
+      ],
+      "source": "common/laws/00_citizenship.txt"
+    },
+    {
+      "default": null,
+      "field": "law_multicultural.ai_enact_weight_modifier",
+      "field_ast_sha256": "ab73d75b79de55490a0fc3444d0c5b938acfc61c1ab6e3d911eb92b0402d4811",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "275d88b7c0c48ad60de91ff23042ec9eade32da9741eaf45ca6551bb7cdce4bc",
+          "line": 737,
+          "path": "law_multicultural"
+        }
+      ],
+      "source": "common/laws/00_citizenship.txt"
+    },
+    {
+      "default": null,
+      "field": "law_national_supremacy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f12fbac12c95d31667fa4dca541f2ac0f9eb9fed0c749e6c2d31b96f42d9b9c4",
+          "line": 357,
+          "path": "law_national_supremacy"
+        }
+      ],
+      "source": "common/laws/00_citizenship.txt"
+    },
+    {
+      "default": null,
+      "field": "law_racial_segregation.ai_enact_weight_modifier",
+      "field_ast_sha256": "b869970c683fdfd358fba8272d897de3086604fc7152bba623ca00f60860653d",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "b4f805941be4fb677c2730c33cb4008b7d0508e33197cb70622805bbe1cf1a95",
+          "line": 478,
+          "path": "law_racial_segregation"
+        }
+      ],
+      "source": "common/laws/00_citizenship.txt"
+    },
+    {
+      "default": null,
+      "field": "law_anarchy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "24b88064846295bbde946c5a653e190652f13304c9144cfc9efa2256d99271f6",
+          "line": 1154,
+          "path": "law_anarchy"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_autocracy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "49eeba6ce1148732945f6c4a1d4369fbab66b33f103214a4c702d346094cd8b8",
+          "line": 5,
+          "path": "law_autocracy"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_bakufu.ai_enact_weight_modifier",
+      "field_ast_sha256": "6b5a2836ba854d3e97a12cc6a5dad71c3d0a660260307a4c4f39cdfb86e538a1",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "769c4b560f7d8ba2e4a056e049eea252343e83f19bc5872138d75f611b753315",
+          "line": 114,
+          "path": "law_bakufu"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_census_voting.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "cc438206663d8d8427fbd4e832c5f60bb317d21907103eaae0cd5aa810fa3498",
+          "line": 886,
+          "path": "law_census_voting"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_elder_council.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "591913da6ffadef52cd0cb5f7aa9d26c6b2b00fb92515fc93708d1ec6dcb2801",
+          "line": 547,
+          "path": "law_elder_council"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_landed_voting.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a5845037b9b1c06eb9f9abaa6e0b119bb4c23ef9a79dd0160b026e0a6a976a33",
+          "line": 606,
+          "path": "law_landed_voting"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_neo_absolutism.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "070bd8cd0db3474d9878eb4fe6d42ecaf62fac349af13c2a077f6b15e1bceb8d",
+          "line": 196,
+          "path": "law_neo_absolutism"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_oligarchy.ai_enact_weight_modifier",
+      "field_ast_sha256": "ca34e28b360a79ac696f470cee0a7d35624d9944bd8529c69a9ae7ede2011ba6",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1caf20dc9d8aa495740114b709323f5dafdb3b6a279ade3e45195bf7735bfb2f",
+          "line": 344,
+          "path": "law_oligarchy"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_organic_regulation.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5e029c3e1b0e034bfb907d99868fc2fddf1862d18708954e0173cdfdf1966690",
+          "line": 463,
+          "path": "law_organic_regulation"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_single_party_state.ai_enact_weight_modifier",
+      "field_ast_sha256": "a092712ce704ddb1b092aa4faf29aff9e69c030b4bbb3a36a031f7822a7abea5",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "8054080d967edb2a762caa6ca8e8e1987400ad6b7745010bb1d366bc1537d681",
+          "line": 1262,
+          "path": "law_single_party_state"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_technocracy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "b19aa157809b20d0eee4ae077f0d946d5477abfb8524ed7e0a52d71049c79737",
+          "line": 240,
+          "path": "law_technocracy"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_universal_suffrage.ai_enact_weight_modifier",
+      "field_ast_sha256": "982d0a8e5fc051b34e81f023df965e612dc5f361267fe8baac290cc4a65871b0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1585b2fc2e32d669afa02ae328331831a0313f4b7244c691afc654b4b111354b",
+          "line": 1017,
+          "path": "law_universal_suffrage"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_wealth_voting.ai_enact_weight_modifier",
+      "field_ast_sha256": "ca34e28b360a79ac696f470cee0a7d35624d9944bd8529c69a9ae7ede2011ba6",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "119a75adadb9d458fbc63e6a13dbd6c5b516a23c26feb292f3b02983baf83a86",
+          "line": 745,
+          "path": "law_wealth_voting"
+        }
+      ],
+      "source": "common/laws/00_distribution_of_power.txt"
+    },
+    {
+      "default": null,
+      "field": "law_chiefdom.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c5035aa424648b1ccaed04d64affb654c966c6b292bb5ff131a82e4dfa3759c0",
+          "line": 5,
+          "path": "law_chiefdom"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_corporate_state.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "91a3e3a5bdc11c244ea1319ff3184a7443066b27286226445e5073b82cf6926f",
+          "line": 1067,
+          "path": "law_corporate_state"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_council_republic.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5210a84d2ef4d207c68595ee918e3bf5255d4e5639ab7c21b9ce72e70dacca20",
+          "line": 819,
+          "path": "law_council_republic"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_monarchy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "4049adb0ecfed143c8733b64e6324db8452145ee4eae3c0421e877b73d5ae4b0",
+          "line": 35,
+          "path": "law_monarchy"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_parliamentary_republic.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f925668baddaa0717c7a545858492a34b17b9a118c3b0e1f2d02ce464fbaf89d",
+          "line": 487,
+          "path": "law_parliamentary_republic"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_presidential_republic.ai_enact_weight_modifier",
+      "field_ast_sha256": "1c7321feebfbbf4f7af413266722d416e52f4b65b4ca78a408741c1dd7a1fa94",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a2b74e1f7cc03f5d629b3f6e7c38ca68732c546efa8a4df110ea628177057949",
+          "line": 337,
+          "path": "law_presidential_republic"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_social_monarchy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "dd8b3938dd7c7e9325f3dd51682876135548dd8c2f5d4e297a39dd06602f8756",
+          "line": 1186,
+          "path": "law_social_monarchy"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_theocracy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "85c5261184588859c679e85832e854a0f29168c4a6b3ca4dc7386f4baba0961a",
+          "line": 635,
+          "path": "law_theocracy"
+        }
+      ],
+      "source": "common/laws/00_governance_principles.txt"
+    },
+    {
+      "default": null,
+      "field": "law_guaranteed_liberties.ai_enact_weight_modifier",
+      "field_ast_sha256": "38f01f3c406994a6aaa40f6a90df8985a53f821761eb9a3d770586e367f9baeb",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "7f4ad7304580d5a28976e45cfe359bef1b5cb9c85f5f24c272ef8fa5cfabab76",
+          "line": 290,
+          "path": "law_guaranteed_liberties"
+        }
+      ],
+      "source": "common/laws/00_internal_security.txt"
+    },
+    {
+      "default": null,
+      "field": "law_national_guard.ai_enact_weight_modifier",
+      "field_ast_sha256": "8191b84bfa0e4310c22fc84e786054e7b0c455b92e14e15c66a8097c5e0d1b0a",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "3647bafb4ab9c3bec939873a3ccbb39cb78220624c4dae96c01078777d3d3044",
+          "line": 22,
+          "path": "law_national_guard"
+        }
+      ],
+      "source": "common/laws/00_internal_security.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_home_affairs.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "45567f53b9835507b7938ffb04bf52d06e2365456d05b2b6f123b15a7d1bd964",
+          "line": 1,
+          "path": "law_no_home_affairs"
+        }
+      ],
+      "source": "common/laws/00_internal_security.txt"
+    },
+    {
+      "default": null,
+      "field": "law_secret_police.ai_enact_weight_modifier",
+      "field_ast_sha256": "7142199fdbbf3d8edd6067a08f615e52220bd790bbc765e25350eb635457c61c",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "4afcc3abd17af9604f10901c68c4cf041736442f906a00f6d5480d33b559da72",
+          "line": 82,
+          "path": "law_secret_police"
+        }
+      ],
+      "source": "common/laws/00_internal_security.txt"
+    },
+    {
+      "default": null,
+      "field": "law_shinsengumi.ai_enact_weight_modifier",
+      "field_ast_sha256": "73e2714e98f1086796fd2a209aa0bd2fe4628fded2c0674d8341b43bba66ebd5",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5504356c5267507775296725293b2ce485bfb570cac5b962234ff10d082430ee",
+          "line": 139,
+          "path": "law_shinsengumi"
+        }
+      ],
+      "source": "common/laws/00_internal_security.txt"
+    },
+    {
+      "default": null,
+      "field": "law_diplomatic_navy.ai_enact_weight_modifier",
+      "field_ast_sha256": "acbc91ef7de34fe33c3ec248a4890df536a78537e4ebd336b34eeb9bc804e406",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "167921dad2fd056b6824eb69b59334387c0cd35745fd2607f8dd4712a6ff0068",
+          "line": 140,
+          "path": "law_diplomatic_navy"
+        }
+      ],
+      "source": "common/laws/00_navy_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_jeune_ecole.ai_enact_weight_modifier",
+      "field_ast_sha256": "acbc91ef7de34fe33c3ec248a4890df536a78537e4ebd336b34eeb9bc804e406",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e73773b7751b527015382cb2efdd23c9721d82aaec626286adf6be90edded03d",
+          "line": 39,
+          "path": "law_jeune_ecole"
+        }
+      ],
+      "source": "common/laws/00_navy_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_merchant_navy.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "251a368bf09e90a186535ae8397f41a4c898d7f72111a0ef071ae907f4465811",
+          "line": 1,
+          "path": "law_merchant_navy"
+        }
+      ],
+      "source": "common/laws/00_navy_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_professional_navy.ai_enact_weight_modifier",
+      "field_ast_sha256": "acbc91ef7de34fe33c3ec248a4890df536a78537e4ebd336b34eeb9bc804e406",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "85769712f0b6f818da0db76decf6065f82c7926999e941b94a4acf0686071c3e",
+          "line": 91,
+          "path": "law_professional_navy"
+        }
+      ],
+      "source": "common/laws/00_navy_model.txt"
+    },
+    {
+      "default": null,
+      "field": "law_colonial_exploitation.ai_enact_weight_modifier",
+      "field_ast_sha256": "bfe36f08550cdb773363fcd8d8dd25898af225d0bc50d9b7b2eae770f5f0a990",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "69ed91a9169227cc475f5f5811dbc4ffd6daab385da6da1f96ead7b5e36f4635",
+          "line": 383,
+          "path": "law_colonial_exploitation"
+        }
+      ],
+      "source": "common/laws/01_colonial_affairs.txt"
+    },
+    {
+      "default": null,
+      "field": "law_colonial_resettlement.ai_enact_weight_modifier",
+      "field_ast_sha256": "bfe36f08550cdb773363fcd8d8dd25898af225d0bc50d9b7b2eae770f5f0a990",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "7025649e5efd0fb55e98f94effabef7d3854f38551d68e0b026adc765ef677a1",
+          "line": 276,
+          "path": "law_colonial_resettlement"
+        }
+      ],
+      "source": "common/laws/01_colonial_affairs.txt"
+    },
+    {
+      "default": null,
+      "field": "law_frontier_colonization.ai_enact_weight_modifier",
+      "field_ast_sha256": "6fa57b0bbed9ab714f95b33ef69ce28604e393a94ac3ea66304ac39a81f75a70",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1ed39d6eb4a0fe329785a123f7327d97058e6f701eea40706780285957770709",
+          "line": 160,
+          "path": "law_frontier_colonization"
+        }
+      ],
+      "source": "common/laws/01_colonial_affairs.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_colonial_affairs.ai_enact_weight_modifier",
+      "field_ast_sha256": "cbede1b142d8dfb8281a1214b5fa50e57cdfac28ad7f1ce4505cf81e24cbeb47",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "41893fe6932a820882d50cce122e7023751176950f0e267d92430016a536f1a4",
+          "line": 1,
+          "path": "law_no_colonial_affairs"
+        }
+      ],
+      "source": "common/laws/01_colonial_affairs.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_schools.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "fc576733ed5a21cee1c2021cd3817f26b909bddf3a45fe6af8b776253fce550c",
+          "line": 1,
+          "path": "law_no_schools"
+        }
+      ],
+      "source": "common/laws/01_education_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_private_schools.ai_enact_weight_modifier",
+      "field_ast_sha256": "e81d725f55ffd5439dd923e9aea286bef0828d13e7272fa3c135a34a6b266ed1",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e7eb57a17bb8a2b98b3e2e46513920b9f009d830ecb4bb11e65040a035267f74",
+          "line": 156,
+          "path": "law_private_schools"
+        }
+      ],
+      "source": "common/laws/01_education_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_public_schools.ai_enact_weight_modifier",
+      "field_ast_sha256": "e81d725f55ffd5439dd923e9aea286bef0828d13e7272fa3c135a34a6b266ed1",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "87c4dbb8cea7b8f688439881e8356812d42e5f6a5411cd2d46b53c2bf8e4fe4c",
+          "line": 299,
+          "path": "law_public_schools"
+        }
+      ],
+      "source": "common/laws/01_education_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_religious_schools.ai_enact_weight_modifier",
+      "field_ast_sha256": "bd0e88101de93c32983e8630bd2510539d329cd2dccd34a2f74cd2897d412efb",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "3d97cfe874a43b3f7c0a53e78f41d67b144bd0c50bc8e465cd4c314ab4f6a68a",
+          "line": 36,
+          "path": "law_religious_schools"
+        }
+      ],
+      "source": "common/laws/01_education_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_terakoya.ai_enact_weight_modifier",
+      "field_ast_sha256": "6b5a2836ba854d3e97a12cc6a5dad71c3d0a660260307a4c4f39cdfb86e538a1",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "4aa0c070eb265b1202e54658903add1e1af30927bc9d0b497d355086524f6149",
+          "line": 265,
+          "path": "law_terakoya"
+        }
+      ],
+      "source": "common/laws/01_education_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_charitable_health_system.ai_enact_weight_modifier",
+      "field_ast_sha256": "7d06eb534f342cf34d7ed763cd0dcbfa5cd4fb7b728f2d350226e5fd7c1ec8a7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "185d50f6c22c1347083dff67694c9047f79f0f1292c34c0e2dde4adb60064eab",
+          "line": 25,
+          "path": "law_charitable_health_system"
+        }
+      ],
+      "source": "common/laws/01_health_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_health_system.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "ac0b981b96230121ebed28b6163dbaff303d00ead58184d073ce8e4c5c7930da",
+          "line": 1,
+          "path": "law_no_health_system"
+        }
+      ],
+      "source": "common/laws/01_health_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_private_health_insurance.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a961489d0702d3317cfcb3342d8ace1ede3876ac0c58949e3dcbd62f57515f51",
+          "line": 73,
+          "path": "law_private_health_insurance"
+        }
+      ],
+      "source": "common/laws/01_health_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_public_health_insurance.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "d708375289b61c11c19ef4c68b7e00ec8f1fd1c17cba4302cd43ef6ee80d5783",
+          "line": 105,
+          "path": "law_public_health_insurance"
+        }
+      ],
+      "source": "common/laws/01_health_system.txt"
+    },
+    {
+      "default": null,
+      "field": "law_dedicated_police.ai_enact_weight_modifier",
+      "field_ast_sha256": "5a534edd62c0d85c7091335ccc0a37b9a3edef1348c0e56ec616524075a761d3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "2bdeaed280aeaae6ca90d36a1f256f969af48fc77281e755f9758c43174189ac",
+          "line": 129,
+          "path": "law_dedicated_police"
+        }
+      ],
+      "source": "common/laws/01_policing.txt"
+    },
+    {
+      "default": null,
+      "field": "law_local_police.ai_enact_weight_modifier",
+      "field_ast_sha256": "5a534edd62c0d85c7091335ccc0a37b9a3edef1348c0e56ec616524075a761d3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "da389d47b2c3aba7bf5e7090fe6214f47018720c609ca164ad18db3c63695f03",
+          "line": 30,
+          "path": "law_local_police"
+        }
+      ],
+      "source": "common/laws/01_policing.txt"
+    },
+    {
+      "default": null,
+      "field": "law_militarized_police.ai_enact_weight_modifier",
+      "field_ast_sha256": "09013dffea4089f47aede679152dc77ef18f7fab0562a87a9e2eb790bb98498b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "83c58e447def999df3712e282b994d1d3bbf5583f3bd79dda457156df974af9a",
+          "line": 223,
+          "path": "law_militarized_police"
+        }
+      ],
+      "source": "common/laws/01_policing.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_police.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "ecff2fa6bb909437c25576587168ae6ec7e6a157676082e5d740ee9d4aa51f15",
+          "line": 1,
+          "path": "law_no_police"
+        }
+      ],
+      "source": "common/laws/01_policing.txt"
+    },
+    {
+      "default": null,
+      "field": "law_child_labor_allowed.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5608135504f2e47fc23c58d0cdfb26f49225ea30d732322e36d4e0cd0656911d",
+          "line": 5,
+          "path": "law_child_labor_allowed"
+        }
+      ],
+      "source": "common/laws/02_childrens_rights.txt"
+    },
+    {
+      "default": null,
+      "field": "law_compulsory_primary_school.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "71161a458b47539e236f5750ef585bfba36b8ee01d7bff0458320f57dd3b225b",
+          "line": 81,
+          "path": "law_compulsory_primary_school"
+        }
+      ],
+      "source": "common/laws/02_childrens_rights.txt"
+    },
+    {
+      "default": null,
+      "field": "law_restricted_child_labor.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "2fb79da71a162c135ed02e55cf3f97aceb326c44014f76ac7b2bee4b567983c9",
+          "line": 38,
+          "path": "law_restricted_child_labor"
+        }
+      ],
+      "source": "common/laws/02_childrens_rights.txt"
+    },
+    {
+      "default": null,
+      "field": "law_censorship.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "2cdf28b6c09629c592647d60193ee4b5800804981229cfa149096b8d8b686b41",
+          "line": 42,
+          "path": "law_censorship"
+        }
+      ],
+      "source": "common/laws/02_free_speech.txt"
+    },
+    {
+      "default": null,
+      "field": "law_outlawed_dissent.ai_enact_weight_modifier",
+      "field_ast_sha256": "40ab0157e4ad6a848d9828adc67a7fb2d58797334866dea51ab2cf16c031c998",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "dd147c3803e1885c8fe6c57e199e1094ac71fa727b7dd17c35bbc9d9375cfae4",
+          "line": 5,
+          "path": "law_outlawed_dissent"
+        }
+      ],
+      "source": "common/laws/02_free_speech.txt"
+    },
+    {
+      "default": null,
+      "field": "law_protected_speech.ai_enact_weight_modifier",
+      "field_ast_sha256": "38f01f3c406994a6aaa40f6a90df8985a53f821761eb9a3d770586e367f9baeb",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "cf33a9bc711dbee7d448ad47ca7b744f5817d52169964921570cd05257a81797",
+          "line": 105,
+          "path": "law_protected_speech"
+        }
+      ],
+      "source": "common/laws/02_free_speech.txt"
+    },
+    {
+      "default": null,
+      "field": "law_right_of_assembly.ai_enact_weight_modifier",
+      "field_ast_sha256": "38f01f3c406994a6aaa40f6a90df8985a53f821761eb9a3d770586e367f9baeb",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a5b54527ff719aa6a04b00a1227bb581d2a3548cfc2c774376af6bafd105c7a1",
+          "line": 74,
+          "path": "law_right_of_assembly"
+        }
+      ],
+      "source": "common/laws/02_free_speech.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_workers_rights.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "d82a447f34f4bd6426205f7965fa56c1a64d877f9153f9874fb95cad4c816d31",
+          "line": 5,
+          "path": "law_no_workers_rights"
+        }
+      ],
+      "source": "common/laws/02_labor_rights.txt"
+    },
+    {
+      "default": null,
+      "field": "law_regulatory_bodies.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "be81b9e68da56b48574ffce41664bc302025602da657dd4b2c86faa7c89f323e",
+          "line": 24,
+          "path": "law_regulatory_bodies"
+        }
+      ],
+      "source": "common/laws/02_labor_rights.txt"
+    },
+    {
+      "default": null,
+      "field": "law_worker_protections.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5547763700f2281f4db005af1e446dff139568b9544ac92f6cf549604f92f7c9",
+          "line": 47,
+          "path": "law_worker_protections"
+        }
+      ],
+      "source": "common/laws/02_labor_rights.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_womens_rights.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0250fd641ebd44b77e9e196182f9080bfb2a5dc1fc3b10765cf7e92928cf0ac4",
+          "line": 5,
+          "path": "law_no_womens_rights"
+        }
+      ],
+      "source": "common/laws/02_rights_of_women.txt"
+    },
+    {
+      "default": null,
+      "field": "law_women_in_the_fields.ai_enact_weight_modifier",
+      "field_ast_sha256": "6b5a2836ba854d3e97a12cc6a5dad71c3d0a660260307a4c4f39cdfb86e538a1",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "9f3d138231c102e9bed1e3fd7d0a646d6244c545ec7699223e8f363f3264328b",
+          "line": 43,
+          "path": "law_women_in_the_fields"
+        }
+      ],
+      "source": "common/laws/02_rights_of_women.txt"
+    },
+    {
+      "default": null,
+      "field": "law_women_in_the_workplace.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "6f72ba8aebaacdea5a765ea70d41a2f40010624477af8e3c0aaac313c8c4a1a8",
+          "line": 127,
+          "path": "law_women_in_the_workplace"
+        }
+      ],
+      "source": "common/laws/02_rights_of_women.txt"
+    },
+    {
+      "default": null,
+      "field": "law_women_own_property.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "acdc24ba3bb3df4286cb42a48c0df6472cde1e597af8c8170c6cdabb5c790dab",
+          "line": 91,
+          "path": "law_women_own_property"
+        }
+      ],
+      "source": "common/laws/02_rights_of_women.txt"
+    },
+    {
+      "default": null,
+      "field": "law_womens_suffrage.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "8c70987e20662c97e0c7531e24a13a3527282fd94865ce9b22f27bb30ecc81d7",
+          "line": 169,
+          "path": "law_womens_suffrage"
+        }
+      ],
+      "source": "common/laws/02_rights_of_women.txt"
+    },
+    {
+      "default": null,
+      "field": "law_colonial_slavery.ai_enact_weight_modifier",
+      "field_ast_sha256": "5fbfc76938948b491a79ac24bb284489c2e51cc353b2a0ea3a37e811b0fddf28",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "4d15d18d3fa4c732e1681890d262a18556cd3efeb58108394ebe8c3e99f23143",
+          "line": 144,
+          "path": "law_colonial_slavery"
+        }
+      ],
+      "source": "common/laws/02_slavery.txt"
+    },
+    {
+      "default": null,
+      "field": "law_debt_slavery.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "68ad26f2240d65806233301175634f54340e7491493cb303a55497c6e4ee4196",
+          "line": 223,
+          "path": "law_debt_slavery"
+        }
+      ],
+      "source": "common/laws/02_slavery.txt"
+    },
+    {
+      "default": null,
+      "field": "law_legacy_slavery.ai_enact_weight_modifier",
+      "field_ast_sha256": "759f5de98970fe41b522c8a5c240d8bc09b563257f978368571fe62fdac3439c",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c4c29fa8113f667459336c867a0bc9a92580936f6055a2ec20fb44ef56f16177",
+          "line": 390,
+          "path": "law_legacy_slavery"
+        }
+      ],
+      "source": "common/laws/02_slavery.txt"
+    },
+    {
+      "default": null,
+      "field": "law_slave_trade.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "06d16c30e403d3c3832deb67c90ba641282f5e64da19e79ec5dae0bbec42a71f",
+          "line": 297,
+          "path": "law_slave_trade"
+        }
+      ],
+      "source": "common/laws/02_slavery.txt"
+    },
+    {
+      "default": null,
+      "field": "law_slavery_banned.ai_enact_weight_modifier",
+      "field_ast_sha256": "92591363d72eda880eff6a6f0608b1ae6bac076a634693247d381a3cb3df1569",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "98a322cc8640734249fb271360de2c16d64316ef65afd69add20135365127cb2",
+          "line": 5,
+          "path": "law_slavery_banned"
+        }
+      ],
+      "source": "common/laws/02_slavery.txt"
+    },
+    {
+      "default": null,
+      "field": "law_chiefs_distribute_aid.ai_enact_weight_modifier",
+      "field_ast_sha256": "6b5a2836ba854d3e97a12cc6a5dad71c3d0a660260307a4c4f39cdfb86e538a1",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "658c9eb05f2487bfda74e2b3921b3139f61d8f90c535c22531f51702785829b4",
+          "line": 29,
+          "path": "law_chiefs_distribute_aid"
+        }
+      ],
+      "source": "common/laws/02_welfare.txt"
+    },
+    {
+      "default": null,
+      "field": "law_no_social_security.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e511f9dde26c7b4c6723753e9cffa8fb74d5829ed71b8929aadfe365b10b61c7",
+          "line": 1,
+          "path": "law_no_social_security"
+        }
+      ],
+      "source": "common/laws/02_welfare.txt"
+    },
+    {
+      "default": null,
+      "field": "law_old_age_pension.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "588d3a1d3434f59a95cd9b768e2c78e9949b74f3e422ca37e1ea5d332dca4fc6",
+          "line": 125,
+          "path": "law_old_age_pension"
+        }
+      ],
+      "source": "common/laws/02_welfare.txt"
+    },
+    {
+      "default": null,
+      "field": "law_poor_laws.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "b94385e9bd720dbd9b9e0af2781479eb12cd6601eeff607303507d3301b5b49f",
+          "line": 73,
+          "path": "law_poor_laws"
+        }
+      ],
+      "source": "common/laws/02_welfare.txt"
+    },
+    {
+      "default": null,
+      "field": "law_wage_subsidies.ai_enact_weight_modifier",
+      "field_ast_sha256": "e39862ffece3dadc0604450ff9a503aad7007d2708fe5ff56550787ebb689ea7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "cb0584e27c85294e251ac38144ada7a9bd4e7eb12d0be5d7c69b5f6fa926932e",
+          "line": 99,
+          "path": "law_wage_subsidies"
+        }
+      ],
+      "source": "common/laws/02_welfare.txt"
+    },
+    {
+      "default": null,
+      "field": "anarchism.ai_weight",
+      "field_ast_sha256": "1b6226c50f8a2b4695ac29c633314583de0db0d2e211f1a89d15e576f5e8eb94",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1436239e01fdc1468f708c03f28efd646673a942a70ef991568ac44ab3f8fdd3",
+          "line": 1043,
+          "path": "anarchism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "behaviorism.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c41a5e118e6bb8269e020d5c16d70f5e670eb9d5eda47e3c73f991201473c973",
+          "line": 1741,
+          "path": "behaviorism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "camera.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "3db27475d0f8a4ccfb0a2588da1610e8ed7db03a9da6f213172e5bdbab123762",
+          "line": 1321,
+          "path": "camera"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "civilizing_mission.ai_weight",
+      "field_ast_sha256": "ae105c6ed586d71c0f231ae920498e9c50a5d74f6bd8b255bfcb6da4713a3ee3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0dd847e5c2f3ccaf46a3b7ff17bdc9e0dc8f5ae887bee537fac76b2ae3f85b07",
+          "line": 1005,
+          "path": "civilizing_mission"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "colonization.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "ae402e7780848643702b16bc1690538ded98a28337affd7c5f673c82277a0ee6",
+          "line": 241,
+          "path": "colonization"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "corporate_charters.ai_weight",
+      "field_ast_sha256": "e45cf1dedcea3a62144b46d20b7deab9c6dc74ff45a5802ddfc841465db2d0c0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "f9595fa2a5753bdf07e6d2d7f65fbdb83fd6591d8328068cadc3b1f2973154a4",
+          "line": 183,
+          "path": "corporate_charters"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "corporate_management.ai_weight",
+      "field_ast_sha256": "94b09d1bbd0f80c2ef27e51f12405636b3039a8cf2c1ad620422a6d53eb1fb35",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "59528d5603d54067505b104a8ce7201f6d02c9db95a5c40d40e925d80b481401",
+          "line": 1547,
+          "path": "corporate_management"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "corporatism.ai_weight",
+      "field_ast_sha256": "d61bb0fab60b23951543dbae7b47474325bdfc34a1aeab9a742d7fd0cc7acd62",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "926aac84c4c638c9c0f51cf654fbb6e6140cab9b8fe4d4278cbfee1adf4cfb76",
+          "line": 1124,
+          "path": "corporatism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "democracy.ai_weight",
+      "field_ast_sha256": "e45cf1dedcea3a62144b46d20b7deab9c6dc74ff45a5802ddfc841465db2d0c0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c9612089021ea732c83a53932a0ec99075e286874b213cbba491c0106f5675b0",
+          "line": 100,
+          "path": "democracy"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "egalitarianism.ai_weight",
+      "field_ast_sha256": "53cd4a9df70ee985263b7e4245317052942af379ba1984f36a0e52d1f3f1cadb",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5450429897faf4d7fbd5df28cb78afb407817e086066c82064473a586077b188",
+          "line": 390,
+          "path": "egalitarianism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "elevator.ai_weight",
+      "field_ast_sha256": "1fabe3bd13807029227d8fa458cbb2fa7694ec1220f7664a4878381edb48255b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "78d66c36c3879fc8023a094c9e99401047c559d1fc2252d4b52bafd3b8e3c408",
+          "line": 1385,
+          "path": "elevator"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "feminism.ai_weight",
+      "field_ast_sha256": "1b6226c50f8a2b4695ac29c633314583de0db0d2e211f1a89d15e576f5e8eb94",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "2ffd6d7c4f119286a6fd74bcb99d1b740986ffb12f5f491facea8c0ba8eb6f84",
+          "line": 914,
+          "path": "feminism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "film.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "ed2f57fdfc6c2a808226543c2c1e354555607063987f430082d184a5364ec1d6",
+          "line": 1588,
+          "path": "film"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "human_rights.ai_weight",
+      "field_ast_sha256": "55ba06248507a14f557a8e8f493e0ee45205da335716e6c3f09c0aadab9b67fa",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5ff6acd60ab834bc0fba6aacc33410cc8ffe3617e2b80e474b63aee4e1735bd8",
+          "line": 867,
+          "path": "human_rights"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "international_exchange_standards.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "c5a83e5f6b43618a4d2fb44181edb7785d65e43ae235c4eea36bba4e2776d4a4",
+          "line": 1526,
+          "path": "international_exchange_standards"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "international_relations.ai_weight",
+      "field_ast_sha256": "1fabe3bd13807029227d8fa458cbb2fa7694ec1220f7664a4878381edb48255b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5903ac6539c1fa0307d3cc02270aeb35ee7c9c70c46233be5379b2dabaf90026",
+          "line": 263,
+          "path": "international_relations"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "international_trade.ai_weight",
+      "field_ast_sha256": "e45cf1dedcea3a62144b46d20b7deab9c6dc74ff45a5802ddfc841465db2d0c0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "e3d0d2abd21d4056a500019d728dddf8c9cb9f023dfcf31d5f3f69c969075284",
+          "line": 142,
+          "path": "international_trade"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "investment_banks.ai_weight",
+      "field_ast_sha256": "94b09d1bbd0f80c2ef27e51f12405636b3039a8cf2c1ad620422a6d53eb1fb35",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1245d1c9bc9abc87b34e135ece144944b27bb9b9d07efdb61d1d78a97a72b8b4",
+          "line": 1300,
+          "path": "investment_banks"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "joint_stock_companies.ai_weight",
+      "field_ast_sha256": "94b09d1bbd0f80c2ef27e51f12405636b3039a8cf2c1ad620422a6d53eb1fb35",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "034453448e8585402d014cc5ac706a39226d2af4ce69df1fc75f1dfd5640680c",
+          "line": 649,
+          "path": "joint_stock_companies"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "labor_movement.ai_weight",
+      "field_ast_sha256": "b90fe4ff0e86aeb113fb73ba1982b5eb5146732a1a65e553424628193f50464f",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "d998d8a4b71450860bf34463d0eb4af9a832fad472b069b509b9b20ad137e6c8",
+          "line": 796,
+          "path": "labor_movement"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "law_enforcement.ai_weight",
+      "field_ast_sha256": "1fabe3bd13807029227d8fa458cbb2fa7694ec1220f7664a4878381edb48255b",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "77a74666f71b0db2e29fbcfa3c4022ad5d602abac718e859df8d835d6cc4e256",
+          "line": 277,
+          "path": "law_enforcement"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "malaria_prevention.ai_weight",
+      "field_ast_sha256": "ae105c6ed586d71c0f231ae920498e9c50a5d74f6bd8b255bfcb6da4713a3ee3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0f1c09b2ff33df0dfdfe316250b96c2ff1b3d670838259eb92abb18b5bc18728",
+          "line": 1425,
+          "path": "malaria_prevention"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "mass_communication.ai_weight",
+      "field_ast_sha256": "a3475cd4499b6215bd469f3ac9f2edaff8d6ed4fb9e9035b0c24c8b51d4caca7",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "4032abfcc583b93296d48da0d0f97028d62fe9e8d88d7ba6504fd5d51ed0e887",
+          "line": 334,
+          "path": "mass_communication"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "mass_propaganda.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "8bab9e90c0ff14a5d0c6356ca9cf7c5005f736eafad094b8265e8edf081b1b77",
+          "line": 1676,
+          "path": "mass_propaganda"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "mass_surveillance.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "27b916f85eeb4d7ed59d3b3398392e50c63931014ca9966337f846fbd8763569",
+          "line": 1634,
+          "path": "mass_surveillance"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "multilateral_alliances.ai_weight",
+      "field_ast_sha256": "3856461dda2f539a011cc4a543d19bd42983797fac18b42af215c4b854aa876e",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "da2afe33a3c51886517543a031a6be93331b16aedaead144c9ca11e4a4e8d98a",
+          "line": 1607,
+          "path": "multilateral_alliances"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "mutual_funds.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "a0f29cc81f582509a4c180df45c74ab8968fa7080c59fb54174c32eb8d5cbc95",
+          "line": 1279,
+          "path": "mutual_funds"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "nationalism.ai_weight",
+      "field_ast_sha256": "7070bd462d80cc685a2b9a188caa9e778ec09c79ee330593aa481e8af94b7889",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "49ade0ff81dd713e29249256747bfab1f97495432ab742542b71743e05c90348",
+          "line": 729,
+          "path": "nationalism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "organized_sports.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "287dfe1fc203760ba566b7ba434dc1ab7d4d2afaa688f9315e05e425b36dc13b",
+          "line": 538,
+          "path": "organized_sports"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "pan-nationalism.ai_weight",
+      "field_ast_sha256": "caf4f964574061ff53b16060d90ac46ad61e35fd18494966677089dff06dc750",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "00734001caf3427e71daacd5f69ca26b66d32550646d67acb773b09776b8f0f5",
+          "line": 1231,
+          "path": "pan-nationalism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "paved_roads.ai_weight",
+      "field_ast_sha256": "94b09d1bbd0f80c2ef27e51f12405636b3039a8cf2c1ad620422a6d53eb1fb35",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "cf3d419df24ff32162a9e052db405b8717f65444ef4dc2e8391ec96a8d848e07",
+          "line": 1780,
+          "path": "paved_roads"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "political_agitation.ai_weight",
+      "field_ast_sha256": "0be4b35711a6b990d91eb9af9bfbde92fdcb2686234ff5414664d3a366343bcb",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "0403b65e7f752c69e8dcb46d9f73ef0ef1a77d8016472d3f56b163ad784b9cc1",
+          "line": 1484,
+          "path": "political_agitation"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "postal_savings.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "674b54c716e0e4507c5a5acc5ff079a78ce9224175299629753402ece33a1ca8",
+          "line": 842,
+          "path": "postal_savings"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "psychiatry.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "3a106b9a7f7e9104d6cce508960fd9495438fe5ac9c54e9ca153e1966982dc2a",
+          "line": 689,
+          "path": "psychiatry"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "psychoanalysis.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "d44ed2f6dbc59e8b5e949ae0b9af05e7ac5f3475015898719fef1a3a1b48f406",
+          "line": 1566,
+          "path": "psychoanalysis"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "quinine.ai_weight",
+      "field_ast_sha256": "a25742611ce56b9485d7e76aa4f274a6c65ae55e86e74dc401f6dcec14a22742",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "5b2b4369694e278f993e853d172a4aa058d4e59061e6f99d417aaf4d3a7ca4ff",
+          "line": 493,
+          "path": "quinine"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "realism.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "9af0efab9127c21833856244bbf157effb3ce9c47fff677c42dacdc625b2d740",
+          "line": 710,
+          "path": "realism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "romanticism.ai_weight",
+      "field_ast_sha256": "e45cf1dedcea3a62144b46d20b7deab9c6dc74ff45a5802ddfc841465db2d0c0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "1555419a28afecd8905c5789fd1da33379ce02efe1b92981d5669d078528285a",
+          "line": 121,
+          "path": "romanticism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "socialism.ai_weight",
+      "field_ast_sha256": "d6bcdbdb7d3ec42796474eb942703d98358291b2128efd7e64874919778ddc9c",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "45a5491e61b0bb3435dd46251a6fa53b3118448e5959693e33578521863df31c",
+          "line": 1076,
+          "path": "socialism"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "steel_frame_buildings.ai_weight",
+      "field_ast_sha256": "94b09d1bbd0f80c2ef27e51f12405636b3039a8cf2c1ad620422a6d53eb1fb35",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "44bc5ece8043073473810307a3a04ae8699ccc3d361bb696957f01e7cfb4e105",
+          "line": 983,
+          "path": "steel_frame_buildings"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "stock_exchange.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "b12d77080fe6dee2016ba0ee0bd30bc9c14635854de3f6caf9b9a6de84ababf0",
+          "line": 297,
+          "path": "stock_exchange"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "urban_planning.ai_weight",
+      "field_ast_sha256": "94b09d1bbd0f80c2ef27e51f12405636b3039a8cf2c1ad620422a6d53eb1fb35",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "10b60cbbd5a7d2277ddb150850c9369f847ce5907e20e08ecb9db6dca4070bba",
+          "line": 21,
+          "path": "urban_planning"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "urbanization.ai_weight",
+      "field_ast_sha256": "e45cf1dedcea3a62144b46d20b7deab9c6dc74ff45a5802ddfc841465db2d0c0",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "11a1899373ebc26dfc6640b5ba960b3cebfb9b6e4b736d4f7248ebc6e96a49df",
+          "line": 3,
+          "path": "urbanization"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    },
+    {
+      "default": null,
+      "field": "zeppelins.ai_weight",
+      "field_ast_sha256": "f84c122d65ac7e5465e7d9592812a7349ee69e5b51b3139572cc2d2d2c2c73e3",
+      "kind": "numeric_block",
+      "parents": [
+        {
+          "ast_sha256": "00834f91bd9def234838c710bbbc5453314ec5509555225c11b914030b53bec5",
+          "line": 1407,
+          "path": "zeppelins"
+        }
+      ],
+      "source": "common/technology/technologies/30_society.txt"
+    }
+  ],
+  "game_version": "1.15.1",
+  "schema": 1,
+  "sources": {
+    "common/achievements/base_achievements.txt": "d073f27521c4d459410b61dea9f82b785603748ebd1a133e067ac029ec450414",
+    "common/achievements/ip2_pivot_of_empire_achievements.txt": "a69d95c55fc6dbe0d558273325569266a82bfa628e1a38bb05cc18514d7c7460",
+    "common/ai_regional_objectives/00_ai_regional_objectives.txt": "ecf891e41a37209e388c576b2696410d70ceec1647db3a43ff2febe256776306",
+    "common/ai_strategies/00_default_strategy.txt": "e0e2cc9762f2d1e07deeb45091ca2e317e3771038851b840232d5f80538210c0",
+    "common/ai_strategies/01_admin_strategies.txt": "6c2836c8e362d8e44e9d43e229a7c09313a244456ea7bc6e21218f5bfbf3f21a",
+    "common/ai_strategies/02_diplomatic_strategies.txt": "989d701d573d934d8206ee639f4dc037ba3833f8c119feaf3511c3d067c72e66",
+    "common/ai_strategies/02_subject_diplomatic_strategies.txt": "bb958826ac9ac8c75064ed58771f82e55b0266fbd7b215a49a439ba718f67d18",
+    "common/alert_types/00_alert_types.txt": "06099e868214b521f615cac1b5cf1f0d410aff5c8809484e44e56f66213545da",
+    "common/buildings/01_industry.txt": "b7b8a4ba8ccf832869fb434cf287e0dc6e6463ab2d90a4781a6ca309888380a2",
+    "common/buildings/02_agro.txt": "271ccbd2e6d02e941a92553bddf70d08ab8b72154fe6b5e7cbbc3d6197bb554d",
+    "common/buildings/03_mines.txt": "122b78e126dec4044da5e78b86d5e8edd06d6581483efba9e7d0c9404091b655",
+    "common/buildings/04_plantations.txt": "785248f30a4c7fa6857ee1ea5f1cfae897a6ed27f6219d8c0a18ef6df46aacd8",
+    "common/buildings/06_urban_center.txt": "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9",
+    "common/buildings/07_government.txt": "8c2213c705a739c06eb34287e3632e2e9d42a06564237c0556d7468624e6b211",
+    "common/buildings/09_misc_resource.txt": "cdb01907f4e00fe2ce089ea2270dcd5954235df4671683fc74812e4debdfc8e7",
+    "common/buildings/11_private_infrastructure.txt": "b56e1c971a13604681bd11b374170eed0b4887f534b3f10f98fa875e7b67703b",
+    "common/buildings/buildings.md": "505a51262ae1b118a6d30f305b8ab4169e78666eadffd996a7d2524d614b9097",
+    "common/character_interactions/01_additional_interactions.txt": "1ae63b1785cc7df424b487192561c220d603d24ad8921c0b3d7759b4f75262e9",
+    "common/company_types/00_companies_europe.txt": "7e6094f94b24c56dfdb59eb80c8df7063f099a0aa467dabf292b13c6ab251696",
+    "common/company_types/00_companies_mp1.txt": "3036ef7e8d00a35798bfaa061f56455a8d773dd08100e8bc75cd22ad96cb5ec5",
+    "common/decisions/japan_decisions.txt": "a89f6851feff626669d1a4271a472a7f94f58d0a45dfc563946bd8768368c4db",
+    "common/defines/00_ai.txt": "b6b918453407cb6abc19387d7a00a925cf4c35462e72719cd93ce28f0169c48a",
+    "common/diplomatic_actions/25_colonization_rights.txt": "16fca6be8a75fc4de4c14171031b5039f0640a9a8b711cef8ce7df99cc0f35b1",
+    "common/goods/00_goods.txt": "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49",
+    "common/ideologies/00_ig_ideologies.txt": "9637ce7b900e671af5880f1876be7b086e913d9caf5031aae84e3bf080f2c660",
+    "common/ideologies/01_character_ideologies.txt": "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4",
+    "common/institutions/00_institutions.txt": "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f",
+    "common/interest_groups/00_trade_unions.txt": "dd11f29ac662a390d0ddeafe5de5e6e63ef91fd7b885892670fa6b3c89896201",
+    "common/journal_entries/00_acw_entries.txt": "3a3c170784d191f4c3835e3144e66546121f10eaadc7e1a62fd99af92d42f2a4",
+    "common/journal_entries/00_art_jes.txt": "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+    "common/journal_entries/00_communism.txt": "f38d15776d815e759e01b4d30db13510fa7f37437551063677cdaf0b336723ba",
+    "common/journal_entries/00_corn_laws.txt": "75b1ad344408c473cf8347e52eb811a1b751631e8a83b1375db0d20b0ce842da",
+    "common/journal_entries/00_greek_nationalism.txt": "7d422f0fb96786f69e8d114dff1f2d7aec1b6c978628f907f18b5db1ed404b3c",
+    "common/journal_entries/00_liberalism.txt": "6b6b5dcf8eb10ee36b42162e5ea941afee9f86478a44ebdbae6cbb4c8f1d3265",
+    "common/journal_entries/00_strike_je.txt": "bf6e6ddd8f50083d78fba5cef9d1694d9f132720f7fd7417a9a2ee171a2ca630",
+    "common/journal_entries/00_tutorial.txt": "0fb0757ac536ac0ef76f0b925ec8754056feaef14511de947028be2125ca541a",
+    "common/journal_entries/00_urbanization.txt": "b9e6531f86e816018fb1384b03fa864afcea8d894ece3205ccae076150e0451e",
+    "common/journal_entries/06_portugal_politics.txt": "5d0a31d587f9d2ce137a879a0992748c25dd738b958f83b0ca875d0ea6a51a5f",
+    "common/laws/00_army_model.txt": "4924234c33dc8bdd12e7317bd82de29532e2af28ca7bad4cc4a44d7130d995aa",
+    "common/laws/00_bureaucracy.txt": "2ed264b5112e3bbc8634b79d8287c4a28d25cc844f2c191667195047ddda113b",
+    "common/laws/00_caste_hegemony.txt": "13ed1a31acd63f9ccb2aea285d546e1bf7199a4a2911f07bda07513f39072ada",
+    "common/laws/00_church_and_state.txt": "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50",
+    "common/laws/00_citizenship.txt": "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76",
+    "common/laws/00_distribution_of_power.txt": "c99d7a71a1d6f75385a35afb3f5d1887f50604f47cc73cb6ca3752da8127c478",
+    "common/laws/00_governance_principles.txt": "c487020a20e305bf5a8c66b7ad45c429f4e67daa1cd6cdcf2208f421708365ed",
+    "common/laws/00_internal_security.txt": "d1faa617a0cd77c0ae0facac3c576b4019fe3b04d8e1e2b370852b1da91ac31e",
+    "common/laws/00_navy_model.txt": "acc050c5e250f76e3851dc2723bf43910e1fbd4b156ecd2c39edbcaefe218b32",
+    "common/laws/01_colonial_affairs.txt": "7785b477cd0aa1f2ec5c95b69733ee08b7cbf54982e1b57f24643c577ddb2a4f",
+    "common/laws/01_economic_system.txt": "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194",
+    "common/laws/01_education_system.txt": "8d89d5e97c2ba9bedca17ea234840af6f02cc90eb9acef0699e3296f3e25157f",
+    "common/laws/01_health_system.txt": "bcf990006c7545240604e1fab78091462ac86efcd505b8c03119af24018c58f9",
+    "common/laws/01_land_reform.txt": "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174",
+    "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
+    "common/laws/01_taxation.txt": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
+    "common/laws/01_trade_policy.txt": "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
+    "common/laws/02_childrens_rights.txt": "5b8bd22e27d7afea8dfd47d26c6a353275d10710335ebe37fcd46bd02390457e",
+    "common/laws/02_free_speech.txt": "4f684e9219d3ab1bedba83ab93f50b2ea3a436be854ecc37c77709bc4977808a",
+    "common/laws/02_labor_rights.txt": "70a05689bb667ecab63077332fbb952a498a9c5692aef3b98aa5c07a15e0e264",
+    "common/laws/02_labour_associations.txt": "5b50400f5e9be0d70a75f1b13c902ee817384473c64ab12bf52935ea98cf23b5",
+    "common/laws/02_migration.txt": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
+    "common/laws/02_rights_of_women.txt": "d8dc08bc6fbecad91d90c21ba31541b9c7ce9101c4da9b98a2a7ac37c90e145f",
+    "common/laws/02_slavery.txt": "9efc9dd2960fcae034765c88ba6ad7252724d5d91577f71bf70cc36745a205d0",
+    "common/laws/02_welfare.txt": "d1b78d84eec4bccd13166cbb3ef98eb8c41ad886856a4cde4c429f6164f5568b",
+    "common/laws/readme.md": "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076",
+    "common/mobilization_options/00_mobilization_option.txt": "4dce33c917b2f2a323de96b7e51602d5d52262207af5f2736de3f17008537296",
+    "common/objective_subgoals/00_subgoals_tutorial.txt": "48a239919488c1dd9cb1f010d40b20ced9b26710aec7e2961ac59e2076658b72",
+    "common/on_actions/00_code_on_actions.txt": "009ee327cfaf576635bf631ddf39f22750fd5d4798e7e0e421cd193254c1205b",
+    "common/political_movements/00_ideological_movements.txt": "17f682b4c10a64139c19230dbda69c212669319cb7e50e893e47bf2ea1f90dfb",
+    "common/production_method_groups/01_industry.txt": "69de9a696bf8e6e91e08f739008c8169cc67454c91abbc81956eb61d90cc5152",
+    "common/production_method_groups/02_agro.txt": "a4f21d31cb98eeb3caaff7cbc44a19007028fc66c824bcba8247b4b618b92bc7",
+    "common/production_method_groups/03_mines.txt": "3e9a26aec1edeb6d58a2ca9c62bab946ecb1c8a362d4c8bb18ee538229bb6425",
+    "common/production_method_groups/04_plantations.txt": "6add76a10c76b64b187e48e2323e6da776c7ded72872c46f5c400de7264c9259",
+    "common/production_method_groups/06_urban_center.txt": "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
+    "common/production_method_groups/07_government.txt": "6b257b5bde8d4e5b9728555c1510cbb111a2bfa74602f42a2d0f29f5057ff7cd",
+    "common/production_method_groups/09_misc_resource.txt": "29676d89f63d05d659b2cbb69eea2361b81e7eeecb016a35d4e7cd1c09c368a2",
+    "common/production_method_groups/11_private_infrastructure.txt": "188b1828634d7ec7e8673df9fea33799e67cbfe9abfcfe5fcb4ef93f765f2186",
+    "common/production_methods/01_industry.txt": "ee0cfada5a57e87ff4c0fd12d2e9c94202e1689573e6a7637058316db9e88164",
+    "common/production_methods/02_agro.txt": "9d2c9be74569e39a05896b618c3d843880f3ba9dc4958f418250139242eb134f",
+    "common/production_methods/03_mines.txt": "dd7ac9300a2b3c551894e186624984d5f3791bdf08462694fcaf3acda97ec276",
+    "common/production_methods/04_plantations.txt": "377e247f8ce334cc5c300ac27c91bffb25f3a84891fdbc678bfddf1bef022184",
+    "common/production_methods/06_urban_center.txt": "c1b86160eda21483015fc6e052bab2a038f06b060fb59e22ea97d7a08fab8759",
+    "common/production_methods/07_government.txt": "d9942ca514034b07a092f7f225861d823166511331c2745bff99d8eda3809389",
+    "common/production_methods/09_misc_resource.txt": "eda05c4f7df4101d48459c1b077bf9b2a40b3f5e71aaaa26699bbaa9ba5e985e",
+    "common/production_methods/11_private_infrastructure.txt": "6e7ad9c84c77cdc26af04c7c5a2037b49f96f8c06107a89a4db88b84d2150942",
+    "common/production_methods/production_methods.md": "7f1d3f42a7b62efa846ece45a9c58c408d7614219500d2a2d952c77e1ce5d892",
+    "common/script_values/cultural_community_values.txt": "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30",
+    "common/script_values/war_support_values.txt": "a75bd31a6062258065b13f245612487ad719757f2864afe289c03fffe5c2843b",
+    "common/scripted_buttons/05_struggle_for_the_highveld_buttons.txt": "1e8fba0619d496ef4c23c167931b656ab1b91771df2f3ccc400ea212183de449",
+    "common/scripted_triggers/00_ai_triggers.txt": "ffca2b8deef024a9d2703d1297a0bea3a3e931a0b1710e2daea74c48a9dd248b",
+    "common/scripted_triggers/00_diplomacy_triggers.txt": "0c8749e9187d200d67f4a73ebc4926100d9ff0476dfc5dea408cc6cb45654d49",
+    "common/scripted_triggers/00_gfx_route_graphics_triggers.txt": "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
+    "common/scripted_triggers/00_ip3_victoria_scripted_triggers.txt": "f08eb3dcfad10219ef5e00d470483f06cb2f6c0c844631c33fc49bdf14180952",
+    "common/scripted_triggers/00_scripted_triggers.txt": "7acfbbd20aaf19e8b6573f2dc2a1241c69b43d4abcdc2e2d0c39fe530d90acca",
+    "common/scripted_triggers/00_victoria_scripted_triggers.txt": "0eebd886a2d9f8bcc3b1f62881d54a84c3cf0944ffcac9914e71cf42862ab29b",
+    "common/technology/technologies/10_production.txt": "a850a26af479523e59bf8428e159d71502f8135413acc4cb18387f5541d6ecb5",
+    "common/technology/technologies/20_military.txt": "9ad7e099f0039593aac5081c9f56676cf15a97de263722be29e0368713adaca5",
+    "common/technology/technologies/30_society.txt": "9e4a9ec6b2df956da8104339460b87f2d78b8ae038e394f9dfaebb74e44052ad",
+    "common/treaty_articles/00_alliance.txt": "78d6a82a728271e6da09016f6fd6995df665d88a42e8c49feee1f63f7f02cad1",
+    "common/treaty_articles/04_take_on_debt.txt": "256aedaac47c67aaabb64c2ad2bd99db33d8e50a63bbb3581d1df3022cca78d4",
+    "common/treaty_articles/35_non_piracy_agreement.txt": "e7c1cd95f280a570ae2f885182524993739b701bb03480a7d4738a1b3a9440f4",
+    "events/french_pretenders_pulse.txt": "13201057f4b66190c4870ae7a9dc635fbcfacf3867532b9410051187212fc84c",
+    "events/law_events/children_rights_events.txt": "5f735e048c3da9e3bb1a362af1a0e2916e0e2461625c225f4d5e18b7b6f076b7",
+    "events/law_events/state_atheism.txt": "79e17bbdbe7e20a98a488baaefafe9978eee0329e042c09b1cfeac8bbf728e85"
+  }
+}

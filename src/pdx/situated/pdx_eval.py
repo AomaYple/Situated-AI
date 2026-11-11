@@ -177,7 +177,7 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
         if assignment.key == "pop_type_percent_country":
             block_shape = (
                 (frozenset({"target"}), "value")
-                if version_contracts.active_version() == "1.15.0"
+                if version_contracts.is_115()
                 else (frozenset({"pop_type"}), "percent")
             )
         if block_shape is None:
@@ -216,7 +216,7 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
         raise UnsupportedPdxError(f"参数化查询 {assignment.key} 参数必须是标量或块")
 
     if assignment.key == "pop_type_percent_country":
-        current = version_contracts.active_version() == "1.15.0"
+        current = version_contracts.is_115()
         parameter = "target" if current else "pop_type"
         values = {"peasants", "laborers", "machinists"}
         allowed_values = {f"pop_type:{name}" for name in values} if current else values

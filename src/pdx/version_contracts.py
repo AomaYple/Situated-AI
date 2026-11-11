@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .model import Block, Scalar
@@ -18,18 +20,90 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 ENVIRONMENT_VARIABLE = "V3_CONTRACT_PROFILE"
-SUPPORTED_VERSIONS = frozenset({"1.14.5", "1.15.0"})
+CURRENT_VERSION = "1.15.1"
+
+
+@dataclass(frozen=True, slots=True)
+class VersionContract:
+    """One explicitly reviewed native identity and its evidence locations."""
+
+    version: str
+    uses_115_native: bool
+    docs_subdir: str
+    official_manifest_name: str
+    snapshot_label: str
+    # Original installed bytes (including BOM/newlines), distinct from the normalized baseline.
+    default_strategy_sha256: str
+    baseline_strategy_sha256: str
+
+
+VERSION_SPECS = {
+    "1.14.5": VersionContract(
+        "1.14.5",
+        False,
+        "victoria3-modding",
+        "official-docs.manifest.json",
+        "release-1.14.5",
+        "fd4b531d39bcd85c3491c703ecb08ea739094f795b13a176765cf559ece3fbee",
+        "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
+    ),
+    "1.15.0": VersionContract(
+        "1.15.0",
+        True,
+        "victoria3-modding-1.15.0",
+        "official-docs-1.15.0.manifest.json",
+        "release-1.15.0",
+        "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73",
+        "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431",
+    ),
+    "1.15.1": VersionContract(
+        "1.15.1",
+        True,
+        "victoria3-modding-1.15.1",
+        "official-docs-1.15.1.manifest.json",
+        "release-1.15.1",
+        "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba",
+        "e0e2cc9762f2d1e07deeb45091ca2e317e3771038851b840232d5f80538210c0",
+    ),
+}
+SUPPORTED_VERSIONS = frozenset(VERSION_SPECS)
 _selected: ContextVar[str | None] = ContextVar("native_contract_version", default=None)
 
 
 def active_version(version: str | None = None) -> str:
-    """Resolve a strict version, retaining the historical default."""
+    """Resolve one supported exact identity, defaulting to the current release."""
     result = version if version is not None else _selected.get()
     if result is None:
-        result = os.environ.get(ENVIRONMENT_VARIABLE, "1.14.5")
+        result = os.environ.get(ENVIRONMENT_VARIABLE, CURRENT_VERSION)
     if result not in SUPPORTED_VERSIONS:
         raise ValueError(f"未支持的原版合同版本：{result!r}")
     return result
+
+
+def contract(version: str | None = None) -> VersionContract:
+    """Return the explicit specification; unknown future versions hard fail."""
+    return VERSION_SPECS[active_version(version)]
+
+
+def is_115(version: str | None = None) -> bool:
+    """Select reviewed 1.15 syntax without authorizing an unreviewed release."""
+    return contract(version).uses_115_native
+
+
+def research_path(category: str, filename: str, version: str | None = None) -> Path:
+    """Resolve a versioned evidence path, never reuse another release's identity."""
+    if category not in {"situated", "vanilla-ai"}:
+        raise ValueError(f"不支持的版本证据类别：{category!r}")
+    relative = Path(filename)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"版本证据路径越界：{filename!r}")
+    return (
+        Path(__file__).resolve().parents[2]
+        / "research"
+        / category
+        / active_version(version)
+        / relative
+    )
 
 
 @contextmanager

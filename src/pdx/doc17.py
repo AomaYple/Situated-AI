@@ -822,7 +822,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
                     append_new=False,
                 )
             ]
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else []
         ),
         *_doc17_field_specs(),
@@ -858,8 +858,8 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             name="doc17 messages 逐文件",
             header="| 文件 | 定义数 | 内容 |",
             cells=definition_rows("common/messages", 1),
-            append_new=version_contracts.active_version() == "1.15.0",
-            allow_drop=version_contracts.active_version() == "1.15.0",
+            append_new=version_contracts.is_115(),
+            allow_drop=version_contracts.is_115(),
         ),
         # 取值分布（口径 3）
         *_doc17_dist_specs(),

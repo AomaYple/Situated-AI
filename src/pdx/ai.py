@@ -142,7 +142,7 @@ def nai_prefix_rows() -> list[tuple[str, dict[int, str]]]:
     counts = nai_prefix_counts()
     prefixes = (
         sorted(counts, key=lambda name: (-counts[name], name))[:25]
-        if version_contracts.active_version() == "1.15.0"
+        if version_contracts.is_115()
         else _NAI_PREFIXES
     )
     return [(f"`{p}`", {1: str(counts[p])}) for p in prefixes]

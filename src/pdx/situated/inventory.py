@@ -111,7 +111,7 @@ def _baseline_id(path: Path) -> str:
 
 
 def _selected_baseline() -> Path:
-    return compiler_baseline_path() if version_contracts.active_version() == "1.15.0" else BASELINE
+    return compiler_baseline_path() if version_contracts.is_115() else BASELINE
 
 
 def _scope_hash(surfaces: tuple[Surface, ...], source_hashes: dict[str, str]) -> str:

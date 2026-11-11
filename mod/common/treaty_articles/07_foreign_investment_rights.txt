@@ -11,6 +11,7 @@ foreign_investment_rights = {
 	icon = "gfx/interface/icons/diplomatic_treaties_articles_icons/foreign_investment_agreement_treaties.dds"
 
 	flags = {
+		show_in_lens
 		is_investment_rights
 		can_be_enforced
 		can_be_renegotiated
@@ -140,6 +141,22 @@ foreign_investment_rights = {
 				multiply = 0.05
 			}
 
+			if = {
+				limit = {
+					c:RUS ?= this
+					has_variable = ai_russia_client_bloc_pending
+				}
+				add = 0.15
+			}
+
+			if = {
+				limit = {
+					has_journal_entry = je_tp_tsar_heir_of_alexander
+					NOT = { has_variable = je_tp_tsar_heir_of_alexander_button_2_complete }
+				}
+				add = 0.5
+			}
+
 		# SITAI BEGIN information:foreign_investment_rights.ai.evaluation_chance
 		# ACTION program_2b097c765a56f42f [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
@@ -156,6 +173,18 @@ foreign_investment_rights = {
 		} }
 		# SITAI END information:foreign_investment_rights.ai.evaluation_chance
 	}
+
+		proposal_weight = {
+			value = 1
+
+			if = {
+				limit = {
+					c:RUS ?= this
+					ai_russia_article_partner_is_pending_client = yes
+				}
+				add = 5
+			}
+		}
 
 		article_ai_usage = {
             request
@@ -202,6 +231,20 @@ foreign_investment_rights = {
 					add = {
 						desc = "catalyst_declared_bankruptcy"
 						add = 25
+					}
+				}
+
+				if = {
+					limit = {
+						c:CHI ?= this
+						scope:target_country ?= {
+							has_journal_entry = je_tp_tsar_heir_of_alexander
+							NOT = { has_variable = je_tp_tsar_heir_of_alexander_button_2_complete }
+						}
+					}
+					add = {
+						desc = "DIPLOMATIC_ACCEPTANCE_BASE_ADDITIONAL"
+						value = 50
 					}
 				}
 
@@ -500,7 +543,7 @@ foreign_investment_rights = {
 							type = embargo
 						}
 					}
-					can_reach_target_country = { TARGET_COUNTRY = scope:target_country }
+					can_reach_target_country_to_coerce = { TARGET_COUNTRY = scope:target_country }
 				}
 				add = 1
 			}

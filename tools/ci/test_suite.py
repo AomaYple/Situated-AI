@@ -47,6 +47,14 @@ def create_run_dir(root: Path) -> Path:
 
 
 def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
+    from pdx import version_contracts  # noqa: PLC0415
+
+    selected = version_contracts.active_version(profile)
+    with version_contracts.select_version(selected):
+        return _capture_selected_game_identity(out, selected)
+
+
+def _capture_selected_game_identity(out: Path, profile: str) -> dict[str, Any]:
     """记录实际测试输入；版本 profile 的静态输入核验不替代全仓测试。"""
     # 此模块也作为早期 pytest 插件加载，不能在模块导入期预载业务代码。
     from pdx import config  # noqa: PLC0415
@@ -70,7 +78,7 @@ def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
         if profile is not None:
             from pdx.situated import production_profile, r2_reader_authority  # noqa: PLC0415
 
-            if profile != production_profile.EXPECTED_VERSION:
+            if profile != production_profile.expected_version():
                 raise ValueError(f"不支持的完整验收 profile：{profile}")
             if not binary.is_file():
                 raise ValueError("完整版本验收缺少实际游戏 EXE")
@@ -82,7 +90,7 @@ def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
             identity["profile_source_hashes"] = dict(loaded.source_hashes)
             identity["build_id"] = loaded.build_id
             identity["baseline_manifest_sha256"] = hashlib.sha256(
-                production_profile.BASELINE_MANIFEST.read_bytes()
+                (production_profile.baseline_root() / "baseline-manifest.json").read_bytes()
             ).hexdigest()
             identity["verified"] = True
     except (ValueError, OSError) as exc:
@@ -686,7 +694,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--allow-concurrent", action="store_true")
     parser.add_argument("--reference", type=Path)
-    parser.add_argument("--profile", choices=("1.15.0",))
+    from pdx import version_contracts  # noqa: PLC0415
+
+    parser.add_argument(
+        "--profile", choices=("1.15.0", "1.15.1"), default=version_contracts.active_version()
+    )
     raw = list(sys.argv[1:] if argv is None else argv)
     split = raw.index("--") if "--" in raw else len(raw)
     args = parser.parse_args(raw[:split])

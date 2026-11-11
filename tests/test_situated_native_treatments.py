@@ -961,7 +961,7 @@ def test_full_first_batch_against_installed_native_declarations(installed_invent
         surface.declaration_id for surface in selected
     }
     counts = report["interface_counts"]
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     # Independent native AST counts retain the historical denominator too.
     assert counts["static_modifier_valuation"] == (2291 if current else 2197)
     assert counts["static_construction_cap"] == (271 if current else 261)

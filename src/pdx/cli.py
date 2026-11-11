@@ -2678,7 +2678,11 @@ def _modgen_output_changes(production: dict[str, str | bytes]) -> dict[Path, byt
 
 
 def _production_profile(
-    name: str | None, configuration: Path | None = None, *, offline: bool = False
+    name: str | None,
+    configuration: Path | None = None,
+    *,
+    offline: bool = False,
+    context: typer.Context | None = None,
 ):
     """Require reviewed installed originals for every online production entry.
 
@@ -2686,21 +2690,37 @@ def _production_profile(
     verify both that contract and the complete installed identity/reader closure;
     a missing installation never silently selects the frozen copy instead.
     """
-    if name is None:
-        selected_version = version_contracts.active_version()
-        if selected_version == "1.15.0":
-            name = selected_version
-    if name is None:
-        if configuration is not None:
-            raise ValueError("--configuration 必须同时指定 --profile 1.15.0")
-        return None
-    if name != "1.15.0":
-        raise ValueError(f"不支持的 production profile：{name}（仅支持 1.15.0）")
-    situated_production_profile.verify_baseline()
-    frozen = situated_production_profile.load_profile(situated_production_profile.BASELINE_ROOT)
-    if offline:
-        return frozen
-    return distribution.check_profile_installation(frozen)
+    selected = version_contracts.active_version(name)
+    if name is not None and context is not None:
+        scope = version_contracts.select_version(selected)
+        scope.__enter__()
+        context.call_on_close(lambda: scope.__exit__(None, None, None))
+    # A direct helper call has no command lifetime: select only while resolving,
+    # then restore its caller's context. Typer supplies the actual command's
+    # Context above; its vendored Click globals are distinct from click globals.
+    with version_contracts.select_version(selected):
+        if selected == "1.15.1":
+            situated_production_profile.verify_baseline()
+            if not offline:
+                frozen = situated_production_profile.load_profile(
+                    situated_production_profile.baseline_root()
+                )
+                distribution.check_profile_installation(frozen)
+            # The current profile uses the complete standard generation path.
+            return None
+        if name is None:
+            if configuration is not None:
+                raise ValueError("历史完整兼容入口不接受 --configuration；请显式选择 profile")
+            return None
+        if selected != "1.15.0":
+            if configuration is not None:
+                raise ValueError("历史版本不接受 --configuration")
+            return None
+        situated_production_profile.verify_baseline()
+        frozen = situated_production_profile.load_profile(
+            situated_production_profile.baseline_root()
+        )
+        return frozen if offline else distribution.check_profile_installation(frozen)
 
 
 def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutral"] = "policy"):
@@ -2712,10 +2732,11 @@ def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutra
 
 @app.command("modgen")
 def modgen_cmd(
+    context: typer.Context,
     write: Annotated[bool, typer.Option("--write", help="生成唯一正式 Mod 的仓库产物")] = False,
     check: Annotated[bool, typer.Option("--check", help="逐字节核对生成物，不写盘")] = False,
     profile: Annotated[
-        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
     ] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
@@ -2725,7 +2746,7 @@ def modgen_cmd(
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
-        selected_profile = _production_profile(profile, configuration)
+        selected_profile = _production_profile(profile, configuration, context=context)
         if selected_profile is not None:
             resolved = _profile_configuration(configuration)
             if write:
@@ -2743,11 +2764,9 @@ def modgen_cmd(
             _modgen_verify_sources()
             bindings = situated_bindings.build()
             ledgers = {
-                situated_bindings.DEFAULT_SOURCE: situated_bindings.render(bindings).encode(
-                    "utf-8"
-                ),
-                situated_domain_coverage.DEFAULT_SOURCE: situated_domain_coverage.render_counts(
-                    situated_domain_coverage.DEFAULT_SOURCE
+                situated_bindings.source_path(): situated_bindings.render(bindings).encode("utf-8"),
+                situated_domain_coverage.source_path(): situated_domain_coverage.render_counts(
+                    situated_domain_coverage.source_path()
                 ).encode("utf-8"),
             }
             # Strict production readers need the updated generated counts and
@@ -2755,7 +2774,9 @@ def modgen_cmd(
             # verification; any later error restores their original bytes.
             with GenerationTransaction() as transaction:
                 transaction.replace(ledgers)
-                _, _, files = distribution.package_inputs()
+                _, _, files = distribution.package_inputs(
+                    configuration=_profile_configuration(configuration)
+                )
                 production = {name: text for name, text in files.items() if name != "README.md"}
                 transaction.replace(_modgen_output_changes(production))
             console.print(
@@ -2771,7 +2792,9 @@ def modgen_cmd(
             ]
             if source_problems:
                 _fail("生成合同不一致：\n" + "\n".join(source_problems), EXIT_FAILED)
-        _, _, files = distribution.package_inputs()
+        _, _, files = distribution.package_inputs(
+            configuration=_profile_configuration(configuration)
+        )
         production = {name: text for name, text in files.items() if name != "README.md"}
         if check:
             problems = decisions.check(decisions.PRODUCT, production)
@@ -2789,11 +2812,12 @@ def modgen_cmd(
 
 @app.command("package")
 def package_cmd(
+    context: typer.Context,
     output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = (
         distribution.DEFAULT_PACKAGE_PATH
     ),
     profile: Annotated[
-        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
     ] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
@@ -2801,13 +2825,13 @@ def package_cmd(
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
     try:
-        selected_profile = _production_profile(profile, configuration)
+        selected_profile = _production_profile(profile, configuration, context=context)
         target = (
             distribution.profile_package(
                 output, selected_profile, configuration=_profile_configuration(configuration)
             )
             if selected_profile is not None
-            else distribution.package(output)
+            else distribution.package(output, configuration=_profile_configuration(configuration))
         )
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
@@ -2867,9 +2891,10 @@ def citations_cmd(
 
 @app.command("modguard")
 def modguard_cmd(
+    context: typer.Context,
     offline: Annotated[bool, typer.Option("--offline", help="从入库快照核对原版接口")] = False,
     profile: Annotated[
-        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
     ] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
@@ -2877,7 +2902,9 @@ def modguard_cmd(
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
-        selected_profile = _production_profile(profile, configuration, offline=offline)
+        selected_profile = _production_profile(
+            profile, configuration, offline=offline, context=context
+        )
         if selected_profile is not None:
             distribution.check_profile_outputs(
                 selected_profile, configuration=_profile_configuration(configuration)
@@ -2886,11 +2913,18 @@ def modguard_cmd(
             return
         if offline:
             distribution.check_generation_lock()
-            policy, extensions = distribution.production_configuration()
+            policy, extensions = distribution.production_configuration(
+                configuration=_profile_configuration(configuration)
+            )
             production = distribution.read_production_files()
+            distribution.check_configuration_identity(
+                production, _profile_configuration(configuration)
+            )
             problems = []
         else:
-            policy, extensions, files = distribution.package_inputs()
+            policy, extensions, files = distribution.package_inputs(
+                configuration=_profile_configuration(configuration)
+            )
             production = {name: text for name, text in files.items() if name != "README.md"}
             problems = decisions.check(decisions.PRODUCT, production)
         index = vanilla_index.load(offline=offline)
@@ -2924,6 +2958,7 @@ def modguard_cmd(
 
 @app.command("decision-audit")
 def decision_audit_cmd(
+    context: typer.Context,
     output: Annotated[
         Path | None,
         typer.Option("--output", help="情境决策报告 JSON 输出路径；默认写入 tools/out/ci/"),
@@ -2934,7 +2969,7 @@ def decision_audit_cmd(
         help="只使用入库源和锁定底本；适用于无游戏目录的 CI 静态合同检查",
     ),
     profile: Annotated[
-        str | None, typer.Option("--profile", help="显式 production profile，例如 1.15.0")
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
     ] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
@@ -2948,7 +2983,9 @@ def decision_audit_cmd(
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
-        selected_profile = _production_profile(profile, configuration, offline=offline)
+        selected_profile = _production_profile(
+            profile, configuration, offline=offline, context=context
+        )
         if selected_profile is not None:
             resolved = _profile_configuration(configuration)
             profile_files = distribution.check_profile_outputs(
@@ -2992,9 +3029,14 @@ def decision_audit_cmd(
             console.print("[green]1.15.0 profile 静态审计通过[/]")
             return
         if offline:
-            metadata = decision_report.source_metadata()
+            metadata = decision_report.source_metadata(
+                configuration=_profile_configuration(configuration)
+            )
         else:
-            _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+            _, _, files = distribution.package_inputs(
+                include_engineering_metadata=True,
+                configuration=_profile_configuration(configuration),
+            )
             metadata = json.loads(files[".metadata/metadata.json"])
             if not isinstance(metadata, dict):
                 raise ValueError("工程 metadata 顶层必须是对象")

@@ -1,13 +1,63 @@
 {
   "name": "Situated AI",
   "id": "situated-ai",
-  "version": "3.2.0",
-  "supported_game_version": "1.14.5",
+  "version": "3.3.0",
+  "supported_game_version": "1.15.1",
   "short_description": "依据国家处境综合调整政治、经济、外交与军事 AI 倾向，保留原版资格、成本和行动执行。",
   "picture": "thumbnail.png",
   "tags": [],
   "relationships": [],
   "game_custom_data": {
-    "multiplayer_synchronized": true
+    "multiplayer_synchronized": true,
+    "configuration": {
+      "core": true,
+      "domains": [
+        "diplomacy",
+        "economy",
+        "politics"
+      ],
+      "enabled_domains": [
+        "diplomacy",
+        "economy",
+        "politics"
+      ],
+      "mode": "policy",
+      "legacy_domains": [
+        "diplomacy",
+        "economy",
+        "fiscal",
+        "geography",
+        "identity",
+        "market",
+        "military",
+        "political",
+        "subjects"
+      ],
+      "extension_modules": [
+        "diplomacy",
+        "economy",
+        "market",
+        "reform",
+        "security"
+      ],
+      "domain_mapping": {
+        "diplomacy": [
+          "diplomacy",
+          "military",
+          "subjects"
+        ],
+        "economy": [
+          "economy",
+          "fiscal",
+          "geography",
+          "market"
+        ],
+        "politics": [
+          "identity",
+          "political"
+        ]
+      },
+      "cross_domain_policy": "observations do not re-enable disabled writers"
+    }
   }
 }

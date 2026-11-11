@@ -22,7 +22,7 @@ from pdx.situated import (
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def selected_115():
     with version_contracts.select_version("1.15.0"):
         yield

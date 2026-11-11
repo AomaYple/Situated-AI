@@ -61,9 +61,13 @@ law_national_guard = {
 
 	# Don't return to national guard we have something more advanced
 	ai_will_do = {
-		NOR = {
-			has_law_or_variant = law_type:law_secret_police
-			has_law_or_variant = law_type:law_guaranteed_liberties
+		OR = {
+			has_journal_entry = je_tp_tsar_crown_of_perfection
+			has_journal_entry = je_tp_tsar_great_reform
+			NOR = {
+				has_law_or_variant = law_type:law_secret_police
+				has_law_or_variant = law_type:law_guaranteed_liberties
+			}
 		}
 	}
 
@@ -80,6 +84,11 @@ law_national_guard = {
 				has_journal_entry = je_hawaii
 			}
 			add = 10000
+		}
+
+		if = {
+			limit = { congress_poland_ai_rejects_law = yes }
+			add = -750
 		}
 
 		# SITAI BEGIN information:law_national_guard.ai_enact_weight_modifier
@@ -108,6 +117,13 @@ law_secret_police = {
 	icon = "gfx/interface/icons/law_icons/secret_police.dds"
 
 	progressiveness = 0
+
+	is_visible = {
+		NAND = {
+			c:RUS ?= this
+			country_has_monarchy_law = yes
+		}
+	}
 
 	unlocking_technologies = {
 		central_archives
@@ -144,6 +160,11 @@ law_secret_police = {
 				has_journal_entry = je_hawaii
 			}
 			add = 10000
+		}
+
+		if = {
+			limit = { divided_monarchists_ai_rejects_law = yes }
+			add = -750
 		}
 
 		# SITAI BEGIN information:law_secret_police.ai_enact_weight_modifier
@@ -233,6 +254,100 @@ law_shinsengumi = {
 	}
 }
 
+law_third_section = {
+	group = lawgroup_internal_security
+	parent = law_secret_police # Inherits ideological stances from parent
+	icon = "gfx/interface/icons/law_icons/secret_police.dds"
+
+	progressiveness = -25
+
+	is_visible = {
+		c:RUS ?= this
+		country_has_monarchy_law = yes
+		NAND = {
+			has_technology_researched = central_archives # If has central archives, will not be available unless it's active
+			NOT = {
+				has_law = law_type:law_third_section
+			}
+		}
+	}
+
+	unlocking_technologies = {
+		law_enforcement
+	}
+
+	modifier = {
+		country_officers_pol_str_mult = 0.25
+		country_institution_home_affairs_max_investment_add = -2
+		country_institution_cost_institution_home_affairs_mult = -0.25
+	}
+
+	institution = institution_home_affairs
+	institution_modifier = {
+		country_suppression_attraction_factor = -0.03
+		political_movement_radicalism_add = -0.03
+		country_coup_resistance_add = 0.5
+	}
+
+	on_enact = {
+		custom_tooltip = unlock_arrange_accident_tt
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+	}
+}
+
+law_okhrana = {
+	group = lawgroup_internal_security
+	parent = law_secret_police # Inherits ideological stances from parent
+	icon = "gfx/interface/icons/law_icons/okhrana.dds"
+
+	progressiveness = -25
+
+	is_visible = {
+		c:RUS ?= this
+		country_has_monarchy_law = yes
+	}
+
+	unlocking_technologies = {
+		central_archives
+	}
+
+	modifier = {
+		country_officers_pol_str_mult = 0.25
+	}
+
+	institution = institution_home_affairs
+	institution_modifier = {
+		country_suppression_attraction_factor = 0.03 # Less effectiveness at suppressing, but better at bolstering
+		country_suppression_attraction_factor = -0.03
+		political_movement_radicalism_add = -0.05
+		country_support_separatism_resistance_mult = 0.05
+		country_support_separatism_strength_mult = 0.05
+		country_amenability_add = 3
+		country_coup_resistance_add = 0.75
+	}
+
+	on_enact = {
+		custom_tooltip = unlock_arrange_accident_tt
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+	}
+}
+
 law_guaranteed_liberties = {
 	group = lawgroup_internal_security
 	icon = "gfx/interface/icons/law_icons/guaranteed_liberties.dds"
@@ -259,6 +374,11 @@ law_guaranteed_liberties = {
 			add = 750
 		}
 
+		if = {
+			limit = { congress_poland_ai_rejects_law = yes }
+			add = -750
+		}
+
 		# SITAI BEGIN information:law_guaranteed_liberties.ai_enact_weight_modifier
 		# ACTION program_ab34a44a4fdbdf30 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
@@ -272,5 +392,55 @@ law_guaranteed_liberties = {
 			max = 0
 		} }
 		# SITAI END information:law_guaranteed_liberties.ai_enact_weight_modifier
+	}
+}
+
+law_extraordinary_commission = {
+	group = lawgroup_internal_security
+	icon = "gfx/interface/icons/law_icons/extraordinary_commission.dds"
+
+	progressiveness = 50
+
+	unlocking_technologies = {
+		political_agitation
+	}
+
+	modifier = {
+		country_soldiers_pol_str_mult = 0.15
+	}
+
+	institution = institution_home_affairs
+	institution_modifier = {
+		country_suppression_attraction_factor = -0.05
+		state_political_strength_from_wealth_mult = -0.10
+		state_mortality_wealth_mult = 0.001
+		political_movement_radicalism_add = -0.05
+		country_support_separatism_resistance_mult = 0.05
+		country_support_separatism_strength_mult = 0.05
+		country_amenability_add = 3
+		country_coup_resistance_add = 0.75
+	}
+
+	on_enact = {
+		custom_tooltip = unlock_arrange_accident_tt
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		if = {
+			limit = {
+				OR = {
+					any_revolution_ongoing = yes
+					any_secession_ongoing = yes
+				}
+			}
+			add = 500
+		}
 	}
 }

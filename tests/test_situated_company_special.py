@@ -182,7 +182,7 @@ def native():
 
 @pytest.mark.integration
 def test_current_exe_and_scripts_match_independent_default_witnesses(evidence):
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         from pdx.situated import engine_scope_115
 
         path, _identity, digest = engine_scope_115.manifest("company-default")
@@ -254,7 +254,7 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
     expected = set(MIXED_SPECIAL)
     for names in SPECIAL_GROUPS.values():
         expected.update(names)
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     migrated_shipyards = {"company_ap_moller", "company_sudamericana_de_vapores"}
     if current:
         expected -= migrated_shipyards

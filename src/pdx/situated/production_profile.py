@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
 
-from pdx import decision_rules
+from pdx import decision_rules, version_contracts
 from pdx.model import Assignment, Block
 from pdx.parser import parse_bytes
 
@@ -47,6 +47,31 @@ from .schema import UnknownPolicy  # noqa: TC001
 ROOT = Path(__file__).resolve().parents[3]
 DECLARATION = ROOT / "mod" / "decisions" / "architecture_115.toml"
 EXPECTED_VERSION = "1.15.0"
+
+
+def expected_version() -> str:
+    version = version_contracts.active_version()
+    return version if version_contracts.is_115(version) else EXPECTED_VERSION
+
+
+def declaration_path(version: str | None = None) -> Path:
+    selected = expected_version() if version is None else version_contracts.active_version(version)
+    if selected not in {"1.15.0", "1.15.1"}:
+        raise ValueError("production profile 仅支持 1.15.0 与 1.15.1")
+    return (
+        DECLARATION
+        if selected == EXPECTED_VERSION
+        else ROOT / "mod/decisions/architecture_1151.toml"
+    )
+
+
+def baseline_root(version: str | None = None) -> Path:
+    selected = expected_version() if version is None else version_contracts.active_version(version)
+    if selected not in {"1.15.0", "1.15.1"}:
+        raise ValueError("production baseline 仅支持 1.15.0 与 1.15.1")
+    return ROOT / "research/vanilla-ai" / selected / "native"
+
+
 _SCHEMA = 1
 _HEX = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -188,7 +213,7 @@ def _load_declaration(path: Path) -> tuple[dict[str, Any], tuple[ConsumerDeclara
         or data.get("profile") != "situated-ai/production/1.15"
     ):
         raise _fail("root", "schema/profile 不匹配")
-    if data.get("game_version") != EXPECTED_VERSION:
+    if data.get("game_version") not in {"1.15.0", "1.15.1"}:
         raise _fail("game_version", "必须锁定 1.15.0")
     identities = data.get("identity")
     inputs = data.get("input")
@@ -210,7 +235,7 @@ def _load_declaration(path: Path) -> tuple[dict[str, Any], tuple[ConsumerDeclara
         seen_paths.add(rel)
         _sha(row.get("sha256"), f"identity[{index}].sha256")
         if rel.endswith("launcher-settings.json"):
-            if row.get("raw_version") != EXPECTED_VERSION:
+            if row.get("raw_version") != data["game_version"]:
                 raise _fail(f"identity[{index}].raw_version", "必须为 1.15.0")
         elif "value" not in row:
             raise _fail(f"identity[{index}]", "非 launcher 身份必须声明 value")
@@ -253,7 +278,11 @@ def _load_declaration(path: Path) -> tuple[dict[str, Any], tuple[ConsumerDeclara
         "a0-dip-relations",
     ):
         raise _fail("consumer", "必须按固定顺序声明三个 A0 写点")
-    return {"identity": identities, "input": input_rows}, tuple(declarations)
+    return {
+        "game_version": data["game_version"],
+        "identity": identities,
+        "input": input_rows,
+    }, tuple(declarations)
 
 
 def _unique_assignment(block: Block, key: str, path: str) -> Assignment:
@@ -312,7 +341,10 @@ def _verify_native(
                 )
             except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                 raise _fail(rel, f"JSON 身份无效: {exc}") from exc
-            if type(document) is not dict or document.get("rawVersion") != EXPECTED_VERSION:
+            if (
+                type(document) is not dict
+                or document.get("rawVersion") != declaration_data["game_version"]
+            ):
                 raise _fail(rel, "rawVersion 不是 1.15.0")
         elif rel.endswith("_rev.txt") or rel == "binaries/checksum.txt":
             text = raw.decode("utf-8-sig").strip()
@@ -326,7 +358,7 @@ def _verify_native(
             expected = next(
                 item["value"] for item in declaration_data["identity"] if item["path"] == rel
             )
-            if text != expected or EXPECTED_VERSION not in text:
+            if text != expected or declaration_data["game_version"] not in text:
                 raise _fail(rel, "branch 身份与声明不一致")
     for row in rows:
         raw = (installation / Path(*row.source.split("/"))).read_bytes()
@@ -469,7 +501,7 @@ def _contracts(rows: tuple[ConsumerDeclaration, ...]) -> CoreContracts:
 
 
 def load_profile(installation: Path, declaration: Path | None = None) -> ProductionProfile:
-    declaration = DECLARATION if declaration is None else Path(declaration)
+    declaration = declaration_path() if declaration is None else Path(declaration)
     data, rows = _load_declaration(declaration)
     hashes = _verify_native(Path(installation), data, rows)
     values = {item["path"]: item.get("value", "") for item in data["identity"]}
@@ -478,7 +510,7 @@ def load_profile(installation: Path, declaration: Path | None = None) -> Product
         CapabilitySpec(f"consumer.{row.id}", "known", (EvidenceRef(row.source, row.baseline_line),))
         for row in rows
     )
-    capability = CapabilityProfile(EXPECTED_VERSION, build_id, hashes, (), capabilities)
+    capability = CapabilityProfile(data["game_version"], build_id, hashes, (), capabilities)
     contracts = _contracts(rows)
     manifests = tuple(
         DomainManifest(
@@ -499,7 +531,7 @@ def load_profile(installation: Path, declaration: Path | None = None) -> Product
     registry = domain_registry.validate(manifests, capability)
     return ProductionProfile(
         1,
-        EXPECTED_VERSION,
+        data["game_version"],
         build_id,
         hashes,
         rows,
@@ -1026,7 +1058,7 @@ def _validate_policy_semantic_contract(
 
 def compile_policy_115(
     profile: ProductionProfile,
-    baseline_root: Path = BASELINE_ROOT,
+    baseline_root: Path | None = None,
     *,
     declaration: Path | None = None,
     policy: Path | None = None,
@@ -1038,6 +1070,7 @@ def compile_policy_115(
     evaluates the untouched native consumer for those facts, which is the
     required fail-closed behaviour for literacy and hostile attitudes.
     """
+    baseline_root = globals()["baseline_root"]() if baseline_root is None else Path(baseline_root)
     verify_baseline(baseline_root, declaration=declaration)
     frozen = load_profile(baseline_root, declaration)
     if profile != frozen:
@@ -1115,9 +1148,9 @@ def compile_policy_115(
 
 def _policy_marker(row: ConsumerDeclaration, program_text: str) -> str:
     return (
-        f"\n\t# SITAI POLICY 1.15.0 BEGIN {row.id}\n"
+        f"\n\t# SITAI POLICY {expected_version()} BEGIN {row.id}\n"
         + program_text
-        + f"\t# SITAI POLICY 1.15.0 END {row.id}\n"
+        + f"\t# SITAI POLICY {expected_version()} END {row.id}\n"
     )
 
 
@@ -1142,9 +1175,9 @@ def _insert_policy(text: str, row: ConsumerDeclaration, program_text: str) -> st
 
 def strip_policy(text: str, row: ConsumerDeclaration) -> str:
     marker = re.compile(
-        rf"\n\t# SITAI POLICY 1\.15\.0 BEGIN {re.escape(row.id)}\n"
+        rf"\n\t# SITAI POLICY 1\.15\.[01] BEGIN {re.escape(row.id)}\n"
         r"[\s\S]*?"
-        rf"\t# SITAI POLICY 1\.15\.0 END {re.escape(row.id)}\n"
+        rf"\t# SITAI POLICY 1\.15\.[01] END {re.escape(row.id)}\n"
     )
     restored, count = marker.subn("", text)
     if count != 1:
@@ -1154,7 +1187,7 @@ def strip_policy(text: str, row: ConsumerDeclaration) -> str:
 
 def build_policy_115(
     profile: ProductionProfile,
-    baseline_root: Path = BASELINE_ROOT,
+    baseline_root: Path | None = None,
     *,
     declaration: Path | None = None,
     policy: Path | None = None,
@@ -1162,6 +1195,7 @@ def build_policy_115(
     enabled_domains: frozenset[str] | None = None,
 ) -> dict[str, str]:
     """Render the observed policy slice while preserving native tails."""
+    baseline_root = globals()["baseline_root"]() if baseline_root is None else Path(baseline_root)
     _, policies = compile_policy_115(
         profile,
         baseline_root,
@@ -1207,13 +1241,13 @@ def build_policy_115(
 
 
 def _declared_files(declaration: Path | None = None) -> tuple[str, ...]:
-    data, _ = _load_declaration(DECLARATION if declaration is None else Path(declaration))
+    data, _ = _load_declaration(declaration_path() if declaration is None else Path(declaration))
     return tuple(item["path"] for item in (*data["identity"], *data["input"]))
 
 
 def capture_baseline(
     installation: Path,
-    destination: Path = BASELINE_ROOT,
+    destination: Path | None = None,
     *,
     declaration: Path | None = None,
     overwrite: bool = False,
@@ -1227,9 +1261,9 @@ def capture_baseline(
     """
 
     profile = load_profile(installation, declaration)
-    declaration = DECLARATION if declaration is None else Path(declaration)
+    declaration = declaration_path() if declaration is None else Path(declaration)
     paths = _declared_files(declaration)
-    destination = Path(destination)
+    destination = baseline_root() if destination is None else Path(destination)
     if destination.exists() and not overwrite:
         if not BASELINE_MANIFEST.exists() or destination.resolve() != BASELINE_ROOT.resolve():
             raise ValueError("1.15 baseline 已存在；必须显式 overwrite 才能替换")
@@ -1251,7 +1285,7 @@ def capture_baseline(
         manifest = {
             "schema": 1,
             "profile": "situated-ai/production/1.15",
-            "game_version": EXPECTED_VERSION,
+            "game_version": profile.game_version,
             "build_id": profile.build_id,
             "files": records,
         }
@@ -1288,18 +1322,18 @@ def _insert_neutral(text: str, row: ConsumerDeclaration, program_text: str) -> s
         (row.definition, *row.field)
     ]
     marker = (
-        f"\n\t# SITAI PROFILE 1.15.0 BEGIN {row.id}\n"
+        f"\n\t# SITAI PROFILE {expected_version()} BEGIN {row.id}\n"
         + program_text
-        + f"\t# SITAI PROFILE 1.15.0 END {row.id}\n"
+        + f"\t# SITAI PROFILE {expected_version()} END {row.id}\n"
     )
     return text[:position] + marker + text[position:]
 
 
 def strip_neutral(text: str, row: ConsumerDeclaration) -> str:
     marker = re.compile(
-        rf"\n\t# SITAI PROFILE 1\.15\.0 BEGIN {re.escape(row.id)}\n"
+        rf"\n\t# SITAI PROFILE 1\.15\.[01] BEGIN {re.escape(row.id)}\n"
         r"[\s\S]*?"
-        rf"\t# SITAI PROFILE 1\.15\.0 END {re.escape(row.id)}\n"
+        rf"\t# SITAI PROFILE 1\.15\.[01] END {re.escape(row.id)}\n"
     )
     restored, count = marker.subn("", text)
     if count != 1:
@@ -1309,11 +1343,12 @@ def strip_neutral(text: str, row: ConsumerDeclaration) -> str:
 
 def compile_neutral(
     profile: ProductionProfile,
-    baseline_root: Path = BASELINE_ROOT,
+    baseline_root: Path | None = None,
     *,
     declaration: Path | None = None,
 ) -> tuple[ConsumerIRBundle, tuple[decision_rules.RuleSet, ...]]:
     """Lower the declared neutral policy through the existing RuleSet and IR."""
+    baseline_root = globals()["baseline_root"]() if baseline_root is None else Path(baseline_root)
     verify_baseline(baseline_root, declaration=declaration)
     frozen = load_profile(baseline_root, declaration)
     if profile != frozen:
@@ -1389,12 +1424,13 @@ def compile_neutral(
 
 def build_neutral(
     profile: ProductionProfile,
-    baseline_root: Path = BASELINE_ROOT,
+    baseline_root: Path | None = None,
     *,
     declaration: Path | None = None,
     core_enabled: bool = True,
 ) -> dict[str, str]:
     """Render real zero-bound programs, or restore native bytes with core off."""
+    baseline_root = globals()["baseline_root"]() if baseline_root is None else Path(baseline_root)
     _, policies = compile_neutral(profile, baseline_root, declaration=declaration)
     files: dict[str, str] = {}
     for row, policy in zip(profile.declarations, policies, strict=True):
@@ -1440,12 +1476,10 @@ __all__ += [
 ]
 
 
-def verify_baseline(
-    root: Path = BASELINE_ROOT, *, declaration: Path | None = None
-) -> dict[str, Any]:
+def verify_baseline(root: Path | None = None, *, declaration: Path | None = None) -> dict[str, Any]:
     """Verify a frozen baseline's exact path and byte hashes."""
 
-    root = Path(root)
+    root = baseline_root() if root is None else Path(root)
     manifest_path = root / "baseline-manifest.json"
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -1461,7 +1495,10 @@ def verify_baseline(
         raise ValueError("baseline manifest schema 不匹配")
     if (
         manifest.get("schema") != 1
-        or manifest.get("game_version") != EXPECTED_VERSION
+        or manifest.get("game_version")
+        != _load_declaration(declaration_path() if declaration is None else Path(declaration))[0][
+            "game_version"
+        ]
         or manifest.get("profile") != "situated-ai/production/1.15"
     ):
         raise ValueError("baseline manifest profile/version 不匹配")
@@ -1474,7 +1511,7 @@ def verify_baseline(
     ):
         raise ValueError("baseline manifest 路径集合或顺序与声明不一致")
     data, declarations = _load_declaration(
-        DECLARATION if declaration is None else Path(declaration)
+        declaration_path() if declaration is None else Path(declaration)
     )
     pinned = tuple((item["path"], item["sha256"]) for item in (*data["identity"], *data["input"]))
     if tuple((row["path"], row["sha256"]) for row in rows) != pinned:

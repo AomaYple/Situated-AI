@@ -109,7 +109,7 @@ art = { building_modifiers = { workforce_scaled = { goods_input_paper_add = 10 g
 
 def _policy_readers(readers):
     selected = copy.deepcopy(readers)
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         from pdx.situated.engine_reader_115 import project_population_readers
 
         project_population_readers(selected)

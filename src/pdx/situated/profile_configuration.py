@@ -10,12 +10,27 @@ import tomllib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+from pdx import version_contracts
+
 from .core_contracts import ConfigurationOption, ConfigurationSpec
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 DOMAINS = ("diplomacy", "economy", "politics")
+# Complete current production mapping; this does not claim the planned 25
+# domains have acquired R2 depth. Cross-domain observations remain facts and
+# cannot restore a disabled consumer writer.
+LEGACY_DOMAINS = {
+    "economy": frozenset({"fiscal", "economy", "market", "geography"}),
+    "politics": frozenset({"political", "identity"}),
+    "diplomacy": frozenset({"diplomacy", "subjects", "military"}),
+}
+EXTENSION_MODULES = {
+    "economy": frozenset({"economy", "market"}),
+    "politics": frozenset({"reform"}),
+    "diplomacy": frozenset({"security", "diplomacy"}),
+}
 
 
 def _switch(name: str) -> ConfigurationOption:
@@ -48,13 +63,40 @@ class ProfileConfiguration:
     def enabled_domains(self) -> frozenset[str]:
         return self.domains if self.core and self.mode == "policy" else frozenset()
 
+    @property
+    def legacy_domains(self) -> frozenset[str]:
+        return frozenset().union(*(LEGACY_DOMAINS[name] for name in self.enabled_domains))
+
+    @property
+    def extension_modules(self) -> frozenset[str]:
+        return frozenset().union(*(EXTENSION_MODULES[name] for name in self.enabled_domains))
+
     def identity(self) -> dict[str, object]:
-        return {
+        identity: dict[str, object] = {
             "core": self.core,
             "domains": sorted(self.domains),
             "enabled_domains": sorted(self.enabled_domains),
             "mode": self.mode,
         }
+        if version_contracts.active_version() == "1.15.1":
+            identity.update(
+                legacy_domains=sorted(self.legacy_domains),
+                extension_modules=sorted(self.extension_modules),
+                domain_mapping={name: sorted(LEGACY_DOMAINS[name]) for name in DOMAINS},
+                cross_domain_policy="observations do not re-enable disabled writers",
+            )
+        return identity
+
+
+def validate_coverage(domains: frozenset[str], modules: frozenset[str]) -> None:
+    mapped = frozenset().union(*LEGACY_DOMAINS.values())
+    mapped_modules = frozenset().union(*EXTENSION_MODULES.values())
+    if mapped != domains or mapped_modules != modules:
+        raise ValueError(
+            f"完整生产配置映射漂移：domains={sorted(domains ^ mapped)}, modules={sorted(modules ^ mapped_modules)}"
+        )
+    if sum(len(items) for items in LEGACY_DOMAINS.values()) != len(mapped):
+        raise ValueError("完整生产域只能有一个配置 owner")
 
 
 def load(path: Path | None = None) -> ProfileConfiguration:

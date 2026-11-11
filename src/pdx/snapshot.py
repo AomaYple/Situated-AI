@@ -357,9 +357,9 @@ def _doc_tables_snapshot() -> dict[str, list[str]]:
     from . import docgen  # noqa: PLC0415 - docgen 依赖各领域模块，导入期较重
 
     rows = docgen.render_all()
-    from .version_contracts import active_version  # noqa: PLC0415
+    from .version_contracts import is_115  # noqa: PLC0415
 
-    if active_version() == "1.15.0":
+    if is_115():
         failed = [
             key for key, values in rows.items() if any(v.startswith("<未取到：") for v in values)
         ]
@@ -490,7 +490,7 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     """
     snap = Snapshot(version=config.game_version(), compact=compact)
     snap.require_version()
-    if snap.version_label == "release/1.15.0":
+    if snap.version_label in {"release/1.15.0", "release/1.15.1"}:
         snap.sections["source_identity"] = _source_identity_snapshot()
     if verbose:
         print(f"  版本: {snap.version_label}  精简: {compact}")

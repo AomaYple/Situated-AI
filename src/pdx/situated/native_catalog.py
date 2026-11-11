@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.situated.version_inventory import CONTENT_ROOTS, TEXT_EXTENSIONS, canonical_json
+from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -659,11 +660,14 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
     if installation.is_symlink() or installation.resolve() != installation.absolute():
         raise ValueError(f"linked installation root: {installation}")
     installation = installation.absolute()
-    if inventory.get("expected_version") != "1.15.0":
-        raise ValueError("unsupported inventory version; expected 1.15.0")
+    if not isinstance(inventory.get("expected_version"), str):
+        raise ValueError("unsupported inventory version; missing exact identity")
+    expected_version = active_version(inventory["expected_version"])
+    if expected_version == "1.14.5":
+        raise ValueError("unsupported inventory version; expected a reviewed 1.15 identity")
     version_identity = inventory.get("version_identity")
     if not isinstance(version_identity, dict) or version_identity.get("version_match") is not True:
-        raise ValueError("version identity is not a verified 1.15.0 match")
+        raise ValueError("version identity is not a verified expected-version match")
     claimed = inventory.get("inventory_sha256")
     actual = _hash({key: value for key, value in inventory.items() if key != "inventory_sha256"})
     if claimed != actual or inventory.get("schema") != "situated-ai.native-inventory/1":

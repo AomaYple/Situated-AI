@@ -37,7 +37,7 @@ LAW_MANIFEST_SHA256 = "eb96a222582705af59147adc6da9e6f2b11533e05a73eb9583e55171f
 
 
 def _company_manifest(*, default: bool = False) -> tuple[Path, str, str]:
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         return engine_scope_115.manifest("company-default" if default else "company")
     if default:
         return (
@@ -140,7 +140,7 @@ def _verified_manifest(
 
 def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
     """Keep each additional exact consumer and dynamic object identity pinned."""
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         engine_strategy_115.validate(data)
         return
     expected = {
@@ -581,7 +581,7 @@ def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
 
 
 def _strategy_manifest() -> tuple[Path, str, str]:
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         return engine_scope_115.manifest("strategy")
     return STRATEGY_MANIFEST, STRATEGY_MANIFEST_ID, STRATEGY_MANIFEST_SHA256
 
@@ -687,6 +687,14 @@ def _company_score_contract() -> dict[str, str]:
             "parser": "0x141730850",
             "parser_receiver": "0x598",
             "nonpositive_rejection": "0x141641350",
+        },
+        "1.15.1": {
+            "consumer": "0x14174a9d0",
+            "actual_call": "0x141643f66",
+            "numeric_member": "0x390",
+            "parser": "0x141748920",
+            "parser_receiver": "0x598",
+            "nonpositive_rejection": "0x141653bb3",
         },
     }
     return {
@@ -804,7 +812,7 @@ def company_default_snapshot() -> bytes:
         ("company_basic_weapons", 1473),
         ("company_construction_power_bloc", 1543),
     )
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         # Independently decoded current consumer, define bridge and exact
         # source sites. No historical address authorizes the current EXE.
         expected.update(
@@ -850,6 +858,20 @@ def company_default_snapshot() -> bytes:
         )
         identities = tuple(
             (key, line) for (key, _), line in zip(identities, reviewed_lines, strict=True)
+        )
+    if version_contracts.active_version() == "1.15.1":
+        expected.update(
+            empty_expression_branch="0x14174a9fd",
+            nonempty_expression_branch="0x14174aa15",
+            default_load="0x14174aa06",
+            default_global="0x145c11a10",
+            result_store="0x14174aa0d",
+            result_return="0x14174ab51",
+            define_line=1145,
+            define_setter="0x141191a40",
+            define_global_write="0x141191a76",
+            define_binding="0x141191a90",
+            define_registration="0x141191ab0",
         )
     if data.get("contracts") != [expected] or data.get("implicit_companies") != [
         {"id": key, "line": line} for key, line in identities
@@ -943,7 +965,7 @@ def country_evidence(game: Path, inputs: Mapping[str, bytes]) -> CountryScopeEvi
     """固定两类国家定义的实际消费者和全部来源。"""
     path, identity, digest = (
         engine_scope_115.manifest("country-definition")
-        if version_contracts.active_version() == "1.15.0"
+        if version_contracts.is_115()
         else (COUNTRY_MANIFEST, COUNTRY_MANIFEST_ID, COUNTRY_MANIFEST_SHA256)
     )
     data, hashes, verified = _verified_manifest(
@@ -986,7 +1008,7 @@ def company_evidence(game: Path, inputs: Mapping[str, bytes]) -> CompanyScopeEvi
 
 def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
     """仅证明法律候选的国家资格门与定义身份，不授予脚本 law 目标。"""
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     path, identity, digest = (
         engine_scope_115.manifest("law")
         if current
@@ -1017,6 +1039,8 @@ def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
         if current
         else ("0x141548e39", "0x14170c2a0", "0x141709d64")
     )
+    if version_contracts.active_version() == "1.15.1":
+        references = ("0x1415f2729", "0x141807c10", "0x141805294")
     return LawScopeEvidence(
         True,
         hashes,
@@ -1034,7 +1058,7 @@ def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologySc
     证据只覆盖已观察的科技候选调用点及定义身份，不将本地 candidate
     指针当作脚本可寻址 saved scope。公式下游成本、随机及命令仍归原版。
     """
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     path, identity, manifest_hash = (
         engine_scope_115.manifest("technology")
         if current
@@ -1050,6 +1074,8 @@ def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologySc
         if current
         else ("0x141783e29", "0x14161a8c0", "0x141538b90")
     )
+    if version_contracts.active_version() == "1.15.1":
+        references = ("0x1418c9309", "0x1417a9cc0", "0x1415dfdf0")
     return TechnologyScopeEvidence(
         True,
         hashes,

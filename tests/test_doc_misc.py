@@ -85,7 +85,7 @@ def test_doc03_的_Top25_真的是前_25() -> None:
     outside = {p: n for p, n in counts.items() if p not in listed and n > smallest}
     assert not outside, f"这些前缀比表里最小的 {smallest} 还大，却没进 Top25：{outside}"
     assert len(listed) == 25
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         selected = set(listed)
         for chosen in selected:
             assert all(

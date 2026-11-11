@@ -20,12 +20,23 @@ building_food_industry = {
 	}
 
 	required_construction = construction_cost_high
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
+	ai_value = {
+		value = 1000
 
-	# SITAI BEGIN initialized:building_food_industry.ai_value
-	ai_value = { value = 1000
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_light_industry_var
+					}
+					five_year_plan_light_industry_goal_met = no
+				}
+			}
+			add = 2500
+		}
+
 		# SITAI BEGIN information:building_food_industry.ai_value
 		# ACTION program_269567cd9b7bd8c9 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -133,7 +144,10 @@ building_food_industry = {
 		} }
 		# SITAI END information:building_food_industry.ai_value
 	}
-	# SITAI END initialized:building_food_industry.ai_value
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
 }
 
 building_textile_mill = {
@@ -156,12 +170,23 @@ building_textile_mill = {
 	}
 
 	required_construction = construction_cost_high
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
+	ai_value = {
+		value = 1000
 
-	# SITAI BEGIN initialized:building_textile_mill.ai_value
-	ai_value = { value = 1000
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_light_industry_var
+					}
+					five_year_plan_light_industry_goal_met = no
+				}
+			}
+			add = 2500
+		}
+
 		# SITAI BEGIN information:building_textile_mill.ai_value
 		# ACTION program_95f7d56390ce74d4 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -269,7 +294,10 @@ building_textile_mill = {
 		} }
 		# SITAI END information:building_textile_mill.ai_value
 	}
-	# SITAI END initialized:building_textile_mill.ai_value
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
 }
 
 building_furniture_manufactory = {
@@ -292,12 +320,23 @@ building_furniture_manufactory = {
 	}
 
 	required_construction = construction_cost_high
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
+	ai_value = {
+		value = 1000
 
-	# SITAI BEGIN initialized:building_furniture_manufactory.ai_value
-	ai_value = { value = 1000
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_light_industry_var
+					}
+					five_year_plan_light_industry_goal_met = no
+				}
+			}
+			add = 2500
+		}
+
 		# SITAI BEGIN information:building_furniture_manufactory.ai_value
 		# ACTION program_bf1bc923b9455ba5 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -395,7 +434,10 @@ building_furniture_manufactory = {
 		} }
 		# SITAI END information:building_furniture_manufactory.ai_value
 	}
-	# SITAI END initialized:building_furniture_manufactory.ai_value
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
 }
 
 building_glassworks = {
@@ -415,12 +457,23 @@ building_glassworks = {
 	}
 
 	required_construction = construction_cost_high
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
+	ai_value = {
+		value = 1000
 
-	# SITAI BEGIN initialized:building_glassworks.ai_value
-	ai_value = { value = 1000
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_light_industry_var
+					}
+					five_year_plan_light_industry_goal_met = no
+				}
+			}
+			add = 2500
+		}
+
 		# SITAI BEGIN information:building_glassworks.ai_value
 		# ACTION program_9d5d2537885de75b [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -505,7 +558,10 @@ building_glassworks = {
 		} }
 		# SITAI END information:building_glassworks.ai_value
 	}
-	# SITAI END initialized:building_glassworks.ai_value
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
 }
 
 building_tooling_workshop = {
@@ -529,7 +585,21 @@ building_tooling_workshop = {
 
 	required_construction = construction_cost_high
 
-	ai_value = { value = 2000 # SITAI wrapped-scalar:building_tooling_workshop.ai_value
+	ai_value = {
+		value = 2000 # Tools are very important
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_light_industry_var
+					}
+					five_year_plan_light_industry_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
 		# SITAI BEGIN information:building_tooling_workshop.ai_value
 		# ACTION program_d876dfc9f8144e0b [joint]; signed-envelope consumer action
@@ -609,7 +679,7 @@ building_tooling_workshop = {
 			max = 1.2
 		} }
 		# SITAI END information:building_tooling_workshop.ai_value
-	} # Tools are very important
+	}
 	ownership_type = self
 
 	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
@@ -635,12 +705,36 @@ building_paper_mill = {
 	}
 
 	required_construction = construction_cost_high
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
+	ai_value = {
+		value = 1000
 
-	# SITAI BEGIN initialized:building_paper_mill.ai_value
-	ai_value = { value = 1000
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_light_industry_var
+					}
+					five_year_plan_light_industry_goal_met = no
+				}
+			}
+			add = 2500
+		}
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_tp_pool_bureaucratic_reform
+					is_target_in_variable_list = {
+						name = tp_bureaucratic_reform_states
+						target = prev
+					}
+				}
+			}
+			add = 250
+		}
+
 		# SITAI BEGIN information:building_paper_mill.ai_value
 		# ACTION program_b76e020651c95f09 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -716,7 +810,10 @@ building_paper_mill = {
 		} }
 		# SITAI END information:building_paper_mill.ai_value
 	}
-	# SITAI END initialized:building_paper_mill.ai_value
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
 }
 
 building_chemical_plant = {
@@ -737,23 +834,22 @@ building_chemical_plant = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_heavy_industry_var
+					}
+					five_year_plan_heavy_industry_goal_met = no
 				}
 			}
+			add = 2500
 		}
-	}
 
-	ownership_type = self
-
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_chemical_plant.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_chemical_plant.ai_value
 		# ACTION program_1fc7aa36b1f0ef0f [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -817,7 +913,21 @@ building_chemical_plant = {
 		} }
 		# SITAI END information:building_chemical_plant.ai_value
 	}
-	# SITAI END initialized:building_chemical_plant.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }
 
 building_explosives_factory = {
@@ -837,22 +947,22 @@ building_explosives_factory = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_heavy_industry_var
+					}
+					five_year_plan_heavy_industry_goal_met = no
 				}
 			}
+			add = 2500
 		}
-	}
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_explosives_factory.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_explosives_factory.ai_value
 		# ACTION program_e85af70b7978e2be [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -933,7 +1043,20 @@ building_explosives_factory = {
 		} }
 		# SITAI END information:building_explosives_factory.ai_value
 	}
-	# SITAI END initialized:building_explosives_factory.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }
 
 building_synthetics_plant = {
@@ -954,22 +1077,22 @@ building_synthetics_plant = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_heavy_industry_var
+					}
+					five_year_plan_heavy_industry_goal_met = no
 				}
 			}
+			add = 2500
 		}
-	}
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_synthetics_plant.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_synthetics_plant.ai_value
 		# ACTION program_985a06b85f2deb25 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -1017,7 +1140,20 @@ building_synthetics_plant = {
 		} }
 		# SITAI END information:building_synthetics_plant.ai_value
 	}
-	# SITAI END initialized:building_synthetics_plant.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }
 
 building_steel_mill = {
@@ -1040,22 +1176,22 @@ building_steel_mill = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_heavy_industry_var
+					}
+					five_year_plan_heavy_industry_goal_met = no
 				}
 			}
+			add = 2500
 		}
-	}
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_steel_mill.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_steel_mill.ai_value
 		# ACTION program_dd4a3cab41e1fc69 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -1138,7 +1274,20 @@ building_steel_mill = {
 		} }
 		# SITAI END information:building_steel_mill.ai_value
 	}
-	# SITAI END initialized:building_steel_mill.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }
 
 building_motor_industry = {
@@ -1158,22 +1307,22 @@ building_motor_industry = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_heavy_industry_var
+					}
+					five_year_plan_heavy_industry_goal_met = no
 				}
 			}
+			add = 2500
 		}
-	}
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_motor_industry.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_motor_industry.ai_value
 		# ACTION program_90b315d602be8f19 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -1253,7 +1402,20 @@ building_motor_industry = {
 		} }
 		# SITAI END information:building_motor_industry.ai_value
 	}
-	# SITAI END initialized:building_motor_industry.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }
 
 building_shipyard = {
@@ -1275,15 +1437,22 @@ building_shipyard = {
 
 	required_construction = construction_cost_high
 
-	potential = {
-		is_coastal = yes
-	}
-	ownership_type = self
+	ai_value = {
+		value = 1000
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_harbour.dds"
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_light_industry_var
+					}
+					five_year_plan_light_industry_goal_met = no
+				}
+			}
+			add = 2500
+		}
 
-	# SITAI BEGIN initialized:building_shipyard.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_shipyard.ai_value
 		# ACTION program_e488bc2f3157adff [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -1377,7 +1546,13 @@ building_shipyard = {
 		} }
 		# SITAI END information:building_shipyard.ai_value
 	}
-	# SITAI END initialized:building_shipyard.ai_value
+
+	potential = {
+		is_coastal = yes
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_harbour.dds"
 }
 
 building_automotive_industry = {
@@ -1399,22 +1574,22 @@ building_automotive_industry = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_heavy_industry_var
+					}
+					five_year_plan_heavy_industry_goal_met = no
 				}
 			}
+			add = 2500
 		}
-	}
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_automotive_industry.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_automotive_industry.ai_value
 		# ACTION program_15a8a2f86661c944 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -1499,7 +1674,20 @@ building_automotive_industry = {
 		} }
 		# SITAI END information:building_automotive_industry.ai_value
 	}
-	# SITAI END initialized:building_automotive_industry.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }
 
 building_electrics_industry = {
@@ -1519,22 +1707,22 @@ building_electrics_industry = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_heavy_industry_var
+					}
+					five_year_plan_heavy_industry_goal_met = no
 				}
 			}
+			add = 2500
 		}
-	}
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_electrics_industry.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_electrics_industry.ai_value
 		# ACTION program_a1d701126cce1809 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -1592,7 +1780,20 @@ building_electrics_industry = {
 		} }
 		# SITAI END information:building_electrics_industry.ai_value
 	}
-	# SITAI END initialized:building_electrics_industry.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }
 
 building_arms_industry = {
@@ -1856,22 +2057,35 @@ building_munition_plant = {
 
 	required_construction = construction_cost_very_high
 
-	possible = {
-		owner = {
-			NOT = {
-				OR = {
-					has_law_or_variant = law_type:law_industry_banned
-					has_law_or_variant = law_type:law_extraction_economy
+	ai_value = {
+		value = 1000
+
+		if = { # The Great Reforms - military modernization
+			limit = {
+				owner ?= {
+					has_journal_entry = je_tp_tsar_great_reform
+					NOT = { has_variable = je_great_reforms_military_complete }
+					NOT = {
+						any_scope_building = {
+							is_building_type = building_munition_plant
+							level >= 3
+						}
+					}
 				}
 			}
+			add = 2000
+
+			if = {
+				limit = {
+					any_scope_building = {
+						is_building_type = building_munition_plant
+						level >= 1
+					}
+				}
+				add = 3000
+			}
 		}
-	}
-	ownership_type = self
 
-	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
-
-	# SITAI BEGIN initialized:building_munition_plant.ai_value
-	ai_value = { value = 1000
 		# SITAI BEGIN information:building_munition_plant.ai_value
 		# ACTION program_2841406edbcf7f6a [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -1937,5 +2151,18 @@ building_munition_plant = {
 		} }
 		# SITAI END information:building_munition_plant.ai_value
 	}
-	# SITAI END initialized:building_munition_plant.ai_value
+
+	possible = {
+		owner = {
+			NOT = {
+				OR = {
+					has_law_or_variant = law_type:law_industry_banned
+					has_law_or_variant = law_type:law_extraction_economy
+				}
+			}
+		}
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_heavy_industry.dds"
 }

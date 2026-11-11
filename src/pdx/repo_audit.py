@@ -13,6 +13,7 @@ import tomllib
 from collections import Counter
 from pathlib import Path
 
+from pdx import version_contracts
 from pdx.situated import r2_reader_authority
 
 REPO = Path(__file__).resolve().parents[2]
@@ -91,37 +92,55 @@ NATIVE_EVIDENCE_PATHS = frozenset(
 
 def is_native_evidence_path(rel: str) -> bool:
     """Only individually pinned upstream files have an original-byte exception."""
-    return (
-        rel.startswith(NATIVE_EVIDENCE_ROOT)
-        and rel.removeprefix(NATIVE_EVIDENCE_ROOT) in NATIVE_EVIDENCE_PATHS
-    ) or (
-        rel.startswith(READER_EVIDENCE_ROOT)
-        and rel.removeprefix(READER_EVIDENCE_ROOT) in r2_reader_authority.SOURCE_SHA256
-    )
+    for version in ("1.15.0", "1.15.1"):
+        native_root = f"research/vanilla-ai/{version}/native/"
+        reader_root = f"research/vanilla-ai/{version}/r2-readers/"
+        with version_contracts.select_version(version):
+            if (
+                rel.startswith(native_root)
+                and rel.removeprefix(native_root) in NATIVE_EVIDENCE_PATHS
+            ) or (
+                rel.startswith(reader_root)
+                and rel.removeprefix(reader_root) in r2_reader_authority.source_hashes()
+            ):
+                return True
+    return False
 
 
 def reader_evidence_contract(root: Path) -> dict[str, str]:
-    """Grant byte exceptions only after the separate R2 closure verifies."""
-    evidence = root / READER_EVIDENCE_ROOT
-    if not evidence.exists() and not evidence.is_symlink():
-        return {}
-    r2_reader_authority.verify_frozen(evidence)
-    return {
-        READER_EVIDENCE_ROOT + name: digest
-        for name, digest in r2_reader_authority.SOURCE_SHA256.items()
-    }
+    """Grant byte exceptions only after each version's complete closure verifies."""
+    result: dict[str, str] = {}
+    for version in ("1.15.0", "1.15.1"):
+        relative = f"research/vanilla-ai/{version}/r2-readers/"
+        evidence = root / relative
+        if not evidence.exists() and not evidence.is_symlink():
+            continue
+        with version_contracts.select_version(version):
+            r2_reader_authority.verify_frozen(evidence)
+            result.update(
+                {
+                    relative + name: digest
+                    for name, digest in r2_reader_authority.source_hashes().items()
+                }
+            )
+    return result
 
 
-def native_evidence_contract(root: Path) -> dict[str, str]:
+def _native_evidence_contract(root: Path, version: str) -> dict[str, str]:
     """Bind the exact raw-byte set to its production declaration and manifest."""
-    native = root / NATIVE_EVIDENCE_ROOT
-    declaration = root / "mod/decisions/architecture_115.toml"
+    relative = f"research/vanilla-ai/{version}/native/"
+    native = root / relative
+    declaration = (
+        root
+        / "mod/decisions"
+        / ("architecture_1151.toml" if version == "1.15.1" else "architecture_115.toml")
+    )
     if not native.exists() and not native.is_symlink() and not declaration.exists():
         return {}
     manifest = native / "baseline-manifest.json"
 
     def fail(message: str) -> ValueError:
-        return ValueError(f"{NATIVE_EVIDENCE_ROOT}: {message}")
+        return ValueError(f"{relative}: {message}")
 
     if native.is_symlink() or native.resolve() != native.absolute() or not native.is_dir():
         raise fail("原版证据目录必须是仓库内的真实目录")
@@ -169,7 +188,16 @@ def native_evidence_contract(root: Path) -> dict[str, str]:
             raise fail(f"{name}: 缺少真实文件或检测到链接")
         if inspect_bytes(path)["sha256"] != digest:
             raise fail(f"{name}: 原始字节 SHA-256 漂移")
-    return {NATIVE_EVIDENCE_ROOT + name: digest for name, digest in hashes.items()}
+    return {relative + name: digest for name, digest in hashes.items()}
+
+
+def native_evidence_contract(root: Path) -> dict[str, str]:
+    """Verify all explicitly supported raw snapshots, including historical inputs."""
+    return {
+        name: digest
+        for version in ("1.15.0", "1.15.1")
+        for name, digest in _native_evidence_contract(root, version).items()
+    }
 
 
 def category(rel: str) -> str:

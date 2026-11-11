@@ -40,7 +40,7 @@ def local_case(request, tmp_path, monkeypatch):
         completion = (
             "outcome={header=je_standard_completion_header "
             "effect_header=je_standard_on_completion_header trigger={" + trigger + "}}"
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else "complete={" + trigger + "}"
         )
         native[PORTUGAL] = ("je_portugal_regeneration_public_works={" + completion + "}").encode()

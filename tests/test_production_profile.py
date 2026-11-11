@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from pdx import version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import production_profile as profile
@@ -584,3 +585,10 @@ def test_actual_installation_profile_smoke():
     assert loaded.game_version == "1.15.0"
     assert len(loaded.source_hashes) == 10
     assert len(loaded.registry.manifests) == 3
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

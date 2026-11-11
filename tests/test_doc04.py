@@ -77,10 +77,7 @@ def test_参数计数不数注释里的用法() -> None:
         ("common/scripted_triggers/ip4_negotiation_triggers.txt", 1),
     ):
         expected = (
-            9
-            if version_contracts.active_version() == "1.15.0"
-            and rel.endswith("00_scripted_effects.txt")
-            else counted
+            9 if version_contracts.is_115() and rel.endswith("00_scripted_effects.txt") else counted
         )
         path = config.GAME / rel
         text = path.read_text(encoding="utf-8-sig", errors="replace")
@@ -101,7 +98,7 @@ def test_JE_分组表声明的取值没有过期() -> None:
             for column in (0, 3)
             if row[column]
         }
-        if version_contracts.active_version() == "1.15.0"
+        if version_contracts.is_115()
         else set(doc04._JE_GROUP_LEFT) | set(doc04._JE_GROUP_RIGHT)
     )
     assert measured == declared, (

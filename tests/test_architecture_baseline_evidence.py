@@ -950,3 +950,10 @@ def test_s0_known_failures_migration(
         },
     )
     _known_failure_observations(baseline_capture, request, real_generated_branches)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

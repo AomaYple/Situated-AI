@@ -97,7 +97,7 @@ def parameter_case(tmp_path, monkeypatch):
         "interfaces": interfaces,
         "arguments": arguments,
     }
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         evidence["baseline_version"] = "1.15.0"
     evidence_path = tmp_path / "country-interfaces.json"
     evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
@@ -617,7 +617,7 @@ def _reader_case(kind, tmp_path, monkeypatch):
         body = (
             "outcome={header=je_standard_completion_header "
             "effect_header=je_standard_on_completion_header trigger={" + completion + "}}"
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else "complete={" + completion + "}"
         )
         sources[native_query] = ("je_portugal_regeneration_public_works={" + body + "}").encode()

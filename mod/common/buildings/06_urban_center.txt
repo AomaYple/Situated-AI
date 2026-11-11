@@ -65,6 +65,31 @@ building_art_academy = {
 			}
             add = 500
 		}
+		if = {
+			limit = {
+				OR = {
+					AND = {
+						owner ?= { has_variable = ai_ukraine_renaissance_accelerate }
+						state_region = { is_homeland = cu:ukrainian }
+					}
+					AND = {
+						owner ?= { has_variable = ai_belarus_renaissance_accelerate }
+						state_region = { is_homeland = cu:byelorussian }
+					}
+				}
+			}
+			add = 1000
+		}
+		if = { # Crown of Perfection agenda - patronage of the arts in the capital
+			limit = {
+				owner ?= {
+					has_journal_entry = je_tp_tsar_crown_of_perfection
+					NOT = { has_variable = je_tp_tsar_crown_of_perfection_button_1_complete }
+				}
+				is_capital = yes
+			}
+			add = 1000
+		}
 	}
 }
 
@@ -102,6 +127,19 @@ building_power_plant = {
 			add = 4000
 		}
 
+		if = {
+			limit = {
+				owner ?= {
+					has_journal_entry = je_five_year_plan
+					je:je_five_year_plan ?= {
+						has_variable = five_year_plan_electrification_var
+					}
+					five_year_plan_electrification_goal_met = no
+				}
+			}
+			add = 2500
+		}
+
 		# SITAI BEGIN information:building_power_plant.ai_value
 		# ACTION program_87fefb772d9b55ab [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
@@ -112,6 +150,15 @@ building_power_plant = {
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
 				# building_local_building_power_plant_pm_early_power_plant_coal_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+			}
+			# GROUP program_87fefb772d9b55ab_building_active_input_copper_negative
+			add = { value = 0
+				# building_local_building_power_plant_pm_oil_fired_plant_copper_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+				# building_local_building_power_plant_pm_coal_fired_plant_copper_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
+				# building_local_building_power_plant_pm_early_power_plant_copper_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
 			}
 			# GROUP program_87fefb772d9b55ab_building_active_input_engines_negative
 			add = { value = 0
@@ -127,11 +174,6 @@ building_power_plant = {
 				# building_local_building_power_plant_pm_oil_fired_plant_oil_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
 			}
-			# GROUP program_87fefb772d9b55ab_building_active_input_wood_negative
-			add = { value = 0
-				# building_local_building_power_plant_pm_early_power_plant_wood_cost [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0 market_goods_pricier > 0.5 } } } } } add = -0.1 }
-			}
 			# GROUP program_87fefb772d9b55ab_building_fiscal_default_negative
 			add = { value = 0
 				# local_power_plant_observed_default_cost [fiscal]; 电厂真实违约融资成本独立于同州电价供给需求
@@ -140,11 +182,11 @@ building_power_plant = {
 			# GROUP program_87fefb772d9b55ab_building_local_goods_demand_positive
 			add = { value = 0
 				# building_local_building_power_plant_pm_oil_fired_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_oil-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
 				# building_local_building_power_plant_pm_coal_fired_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_coal-fired_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
 				# building_local_building_power_plant_pm_early_power_plant_ready [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:wood mg:wood = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_power_plant production_method = pm_early_power_plant } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:copper mg:copper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.25 } } } add = 0.2 }
 				# building_local_building_power_plant_pressure [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } exists = sg:electricity sg:electricity = { state_goods_pricier > 0.5 } } } add = 0.15 }
 				# building_local_building_power_plant_demand [market]; 同州本地商品价格压力构成供给机会；精确实际PM与真实投入仅升准备档，独立材料成本联合

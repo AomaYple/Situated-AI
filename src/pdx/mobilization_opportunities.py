@@ -25,18 +25,25 @@ if TYPE_CHECKING:
 BASELINE = config.REPO / "research/situated/mobilization-opportunities.json"
 BASELINE_SHA256 = "b731aa77f0c58d5123b748978f825b1980572b988afa2e78ff8d23e62f0000eb"
 BASELINE_115 = config.REPO / "research/situated/1.15.0/mobilization-opportunities.json"
+BASELINE_SHA256_1151 = "8ad52353d98d0a38dd500ea30e0ca6c26281628ed18f9e55ebc1c6a2e9446681"
 BASELINE_SHA256_115 = "7085339294016d23d2e78d7cd85954f3a8328d71fdf599b05c13659f8591777d"
 
 
 def baseline_path() -> Path:
     """Select a reviewed artifact without rewriting the historical baseline."""
-    return BASELINE_115 if version_contracts.active_version() == "1.15.0" else BASELINE
+    return (
+        version_contracts.research_path("situated", BASELINE_115.name)
+        if version_contracts.active_version() == "1.15.1"
+        else BASELINE_115
+        if version_contracts.is_115()
+        else BASELINE
+    )
 
 
 def baseline_sha256() -> str:
-    return (
-        BASELINE_SHA256_115 if version_contracts.active_version() == "1.15.0" else BASELINE_SHA256
-    )
+    if version_contracts.active_version() == "1.15.1":
+        return BASELINE_SHA256_1151
+    return BASELINE_SHA256_115 if version_contracts.is_115() else BASELINE_SHA256
 
 
 PARAMETERS = config.REPO / "mod/decisions/mobilization_opportunities.toml"

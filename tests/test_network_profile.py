@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Literal
 
 import pytest
 
+from pdx import version_contracts
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import action_network as net
@@ -318,12 +319,21 @@ def _condition(block: Block, facts: dict[str, object], scope: str = "actor") -> 
             assert scope in {"actor", "owner"}
             ai = facts["ai"] if scope == "actor" else facts["owner_ai"]
             results.append(_comparison(ai, item.op, _scalar(item.value) == "yes"))
-        elif item.key in {"relative_infrastructure", "literacy_rate", "bureaucracy", "influence"}:
+        elif item.key in {
+            "relative_infrastructure",
+            "literacy_rate",
+            "bureaucracy",
+            "influence",
+            "total_population",
+            "net_total_income",
+        }:
             fact, expected_scope = {
                 "relative_infrastructure": ("infrastructure", "state"),
                 "literacy_rate": ("literacy", "actor"),
                 "bureaucracy": ("bureaucracy", "actor"),
                 "influence": ("influence", "actor"),
+                "total_population": ("population", "actor"),
+                "net_total_income": ("net-surplus", "actor"),
             }[item.key]
             assert scope == expected_scope
             results.append(_comparison(facts.get(fact), item.op, float(_scalar(item.value))))
@@ -900,3 +910,10 @@ def test_each_domain_switch_restores_its_native_consumer_only(profile, disabled)
             assert f"SITAI POLICY 1.15.0 BEGIN {row.id}" not in text
         else:
             assert len(re.findall(_marker(row.id), text)) == 1
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

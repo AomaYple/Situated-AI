@@ -87,7 +87,7 @@ import re
 from typing import TYPE_CHECKING
 
 from pdx import config, docgen
-from pdx.version_contracts import active_version
+from pdx.version_contracts import is_115
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -508,7 +508,7 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
 }
 
 
-if active_version() == "1.15.0":
+if is_115():
     # 1.15 页首不再携带旧安装树采集值；其历史登记仍保留给 1.14 默认文档。
     del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27723)]
     del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27725)]

@@ -272,9 +272,7 @@ def test_labor_query_keeps_actual_method_employment_and_reserve_pool_on_same_sta
     )
     monkeypatch.setattr(
         module,
-        "_QUERY_CATALOG_115"
-        if module.version_contracts.active_version() == "1.15.0"
-        else "_QUERY_CATALOG",
+        "_QUERY_CATALOG_115" if module.version_contracts.is_115() else "_QUERY_CATALOG",
         catalog,
     )
     query = module.query_from_reader(
@@ -363,9 +361,7 @@ def test_output_shortage_is_a_supply_opportunity_but_consuming_unit_is_not(monke
     )
     monkeypatch.setattr(
         module,
-        "_QUERY_CATALOG_115"
-        if module.version_contracts.active_version() == "1.15.0"
-        else "_QUERY_CATALOG",
+        "_QUERY_CATALOG_115" if module.version_contracts.is_115() else "_QUERY_CATALOG",
         catalog,
     )
     derived = module.derive({"sources": catalog["sources"], "readers": {}, "rules": []}, catalog)

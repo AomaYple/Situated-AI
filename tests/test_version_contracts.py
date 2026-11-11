@@ -11,7 +11,7 @@ from pdx.parser import parse_text
 
 def test_version_is_selected_at_call_time_and_restored_after_failure(monkeypatch):
     monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
-    assert version_contracts.active_version() == "1.14.5"
+    assert version_contracts.active_version() == "1.15.1"
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.0")
     assert version_contracts.active_version() == "1.15.0"
 
@@ -82,3 +82,15 @@ def test_matching_header_cannot_authorize_ambiguous_or_conditional_outcome(sourc
     journal = parse_text(source).root
     with pytest.raises(ValueError):
         version_contracts.journal_completion(journal, effect="effect ?=" in source)
+
+
+def test_default_and_explicit_current_contract_have_identical_identity(monkeypatch):
+    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
+    assert version_contracts.CURRENT_VERSION == "1.15.1"
+    assert version_contracts.contract() == version_contracts.contract("1.15.1")
+    assert {"1.14.5", "1.15.0", "1.15.1"} == version_contracts.SUPPORTED_VERSIONS
+    for historical in ("1.14.5", "1.15.0"):
+        with version_contracts.select_version(historical):
+            assert version_contracts.active_version() == historical
+            assert version_contracts.contract() != version_contracts.contract("1.15.1")
+    assert version_contracts.active_version() == "1.15.1"

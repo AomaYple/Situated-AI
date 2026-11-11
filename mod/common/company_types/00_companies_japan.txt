@@ -38,13 +38,11 @@ company_mitsui = {
 
 	possible = {
 		has_technology_researched = cotton_gin
-		any_scope_state = {
-			state_region = s:STATE_KANSAI
+		has_building_levels_in_state_region = {
+			region = STATE_KANSAI
+			building = building_textile_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_textile_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -85,7 +83,7 @@ company_mitsui = {
 			# GROUP program_14ae221f190f8e33_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_mitsui_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_14ae221f190f8e33_company_mandatory_input_fabric_negative
 			add = { value = 0
@@ -156,13 +154,11 @@ company_mitsubishi = {
 			text = is_meiji_japan
 			has_variable = japan_restoration_complete
 		}
-		any_scope_state = {
-			state_region = s:STATE_KYUSHU
+		has_building_levels_in_state_region = {
+			region = STATE_KYUSHU
+			building = building_shipyard
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_shipyard
-				level >= 5
-			}
 		}
 	}
 
@@ -202,7 +198,7 @@ company_mitsubishi = {
 			# GROUP program_b27579ffb30e8935_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_mitsubishi_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_b27579ffb30e8935_company_mandatory_input_tools_negative
 			add = { value = 0
@@ -344,7 +340,7 @@ company_mantetsu = {
 			# GROUP program_76f9c29dd897a891_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_mantetsu_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_76f9c29dd897a891_company_mandatory_input_engines_negative
 			add = { value = 0

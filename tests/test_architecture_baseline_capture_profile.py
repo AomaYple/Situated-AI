@@ -60,3 +60,10 @@ def test_current_s0_assertions_run_without_capture(tmp_path, monkeypatch):
     assert capture.output is None
     assert registered == []
     assert not (tmp_path / "tools/out").exists()
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

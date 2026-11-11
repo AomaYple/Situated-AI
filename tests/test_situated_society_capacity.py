@@ -465,7 +465,7 @@ def test_capacity_and_side_effect_claims_match_actual_native_modifiers(productio
 def test_reader_evidence_uses_exact_native_bytes_and_registered_normalization(
     source, raw_hash, normalized_hash
 ):
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash

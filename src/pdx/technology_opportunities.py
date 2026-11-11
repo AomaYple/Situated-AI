@@ -35,7 +35,9 @@ PARAMETERS_115 = config.REPO / "mod/decisions/technology_opportunities_115.toml"
 
 def parameter_path() -> Path:
     """Keep the migrated native catalog separate from the historical policy source."""
-    return PARAMETERS_115 if version_contracts.active_version() == "1.15.0" else PARAMETERS
+    if version_contracts.active_version() == "1.15.1":
+        return PARAMETERS.with_name("technology_opportunities_1151.toml")
+    return PARAMETERS_115 if version_contracts.is_115() else PARAMETERS
 
 
 _FAMILIES = frozenset(
@@ -556,6 +558,52 @@ def load_catalog(path: Path = PARAMETERS) -> dict[str, Any]:
     return catalog
 
 
+def write_catalog_1151(game: Path, *, output: Path) -> Path:
+    """Rebuild current native mechanisms while preserving reviewed policy parameters."""
+    from .native_authority_capture import (  # noqa: PLC0415
+        _prepare_capture,
+        _source_bytes,
+        _write_candidate,
+    )
+
+    game, output = _prepare_capture(game, output, suffix=".toml")
+    previous = load_catalog(PARAMETERS_115)
+    inputs = {
+        path.relative_to(game).as_posix(): _source_bytes(
+            game, path.relative_to(game).as_posix()
+        ).decode("utf-8-sig")
+        for path in sorted(game.rglob("*.txt"))
+        if _family(path.relative_to(game).as_posix()) is not None
+    }
+    consumers = {key: row["source"] for key, row in previous["technologies"].items()}
+    rebuilt = inventory(inputs, consumers)
+    discovered = {
+        item.key: source
+        for source, text in inputs.items()
+        if _family(source) == "technologies"
+        for item in parse_text(text, path=source).root.assignments()
+        if isinstance(item.value, Block) and item.value.all("ai_weight")
+    }
+    retained = previous.get("native_retained", {})
+    if discovered != {**consumers, **retained}:
+        raise ValueError("当前科技原生消费者集合变化，必须逐项审阅处置")
+    rebuilt["native_retained"] = retained
+    rebuilt["legacy_rules"] = previous["legacy_rules"]
+    _validate_catalog(rebuilt)
+    encoded = json.dumps(rebuilt, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    template = PARAMETERS_115.read_text(encoding="utf-8")
+    text, count = re.subn(
+        r"catalog_json = '''.*?'''",
+        lambda _: f"catalog_json = '''{encoded}'''",
+        template,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if count != 1:
+        raise ValueError("科技配置必须包含唯一 catalog_json 字面量")
+    return _write_candidate(output, text)
+
+
 def _validate_catalog(catalog: Mapping[str, Any]) -> None:
     """Reject malformed offline data before any reader or rule is derived.
 
@@ -774,8 +822,16 @@ with version_contracts.select_version("1.15.0"):
     _QUERY_CATALOG_115 = load_catalog()
 
 
+@cache
+def _query_catalog_1151() -> dict[str, Any]:
+    with version_contracts.select_version("1.15.1"):
+        return load_catalog()
+
+
 def _query_catalog() -> dict[str, Any]:
-    return _QUERY_CATALOG_115 if version_contracts.active_version() == "1.15.0" else _QUERY_CATALOG
+    if version_contracts.active_version() == "1.15.1":
+        return _query_catalog_1151()
+    return _QUERY_CATALOG_115 if version_contracts.is_115() else _QUERY_CATALOG
 
 
 _ART = "common/journal_entries/00_art_jes.txt"
@@ -799,12 +855,16 @@ QUERY_SOURCE_HASHES_115 = {
 }
 
 
+QUERY_SOURCE_HASHES_1151 = {
+    **QUERY_SOURCE_HASHES_115,
+    "common/political_movements/05_slave_revolt_movements.txt": "6eb96f3cefcde036790351c16b90197c763b1b5f0238a86d2a8020717a0a27fd",
+}
+
+
 def query_source_hashes() -> dict[str, str]:
-    return (
-        QUERY_SOURCE_HASHES_115
-        if version_contracts.active_version() == "1.15.0"
-        else QUERY_SOURCE_HASHES
-    )
+    if version_contracts.active_version() == "1.15.1":
+        return QUERY_SOURCE_HASHES_1151
+    return QUERY_SOURCE_HASHES_115 if version_contracts.is_115() else QUERY_SOURCE_HASHES
 
 
 UNKNOWN_POLICY = company_observations.UNKNOWN_POLICY
@@ -1391,7 +1451,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
     journal = company_observations._child(roots[_ART], "je_romanticism")
     native = (
         version_contracts.journal_completion(journal)
-        if version_contracts.active_version() == "1.15.0"
+        if version_contracts.is_115()
         else company_observations._child(journal, "complete")
     )
     line = company_observations._exact(

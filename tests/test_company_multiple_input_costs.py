@@ -52,7 +52,7 @@ def frozen_profiles():
     # Read the independent native recipe evidence, without accepting its old
     # derived rules as the oracle for the new aggregation behavior.
     raw = json.loads(company_sectors.baseline_path().read_text(encoding="utf-8"))
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         raw = raw["payload"]
     return company_sectors._thaw(raw)["profiles"]
 
@@ -62,7 +62,7 @@ def _policy(profile, native=None):
     source = profile["source"]
     native = native or f"{profile['id']} = {{ ai_weight = {{ value = 3 }} }}\n"
     readers = company_sectors._readers(rows, company_sectors.DEFAULTS)
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         from pdx.situated.engine_reader_115 import project_population_readers
 
         project_population_readers(readers)
@@ -209,7 +209,7 @@ def test_native_basf_overlay_preserves_player_and_disabled_domain(frozen_profile
     profile = frozen_profiles["company_basf"]
     native = (config.GAME / profile["source"]).read_text(encoding="utf-8-sig")
     frozen = json.loads(company_sectors.baseline_path().read_text(encoding="utf-8"))
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         frozen = frozen["payload"]
     assert (
         hashlib.sha256(normalized_text(native).encode()).hexdigest()

@@ -29,18 +29,25 @@ if TYPE_CHECKING:
 BASELINE = config.REPO / "research/situated/treaty-opportunities.json"
 BASELINE_SHA256 = "705c51d333ddde9f0f84791e885ad5ac67a7d0e21e32f993cccf231bbcc546cc"
 BASELINE_115 = config.REPO / "research/situated/1.15.0/treaty-opportunities.json"
+BASELINE_SHA256_1151 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
 BASELINE_SHA256_115 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
 
 
 def baseline_path() -> Path:
     """Select a reviewed artifact without rewriting the historical baseline."""
-    return BASELINE_115 if version_contracts.active_version() == "1.15.0" else BASELINE
+    return (
+        version_contracts.research_path("situated", BASELINE_115.name)
+        if version_contracts.active_version() == "1.15.1"
+        else BASELINE_115
+        if version_contracts.is_115()
+        else BASELINE
+    )
 
 
 def baseline_sha256() -> str:
-    return (
-        BASELINE_SHA256_115 if version_contracts.active_version() == "1.15.0" else BASELINE_SHA256
-    )
+    if version_contracts.active_version() == "1.15.1":
+        return BASELINE_SHA256_1151
+    return BASELINE_SHA256_115 if version_contracts.is_115() else BASELINE_SHA256
 
 
 PARAMETERS = config.REPO / "mod/decisions/treaty_opportunities.toml"

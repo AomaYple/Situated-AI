@@ -151,7 +151,7 @@ def source_texts(monkeypatch):
                 has_building = building_railway percent = 1 }
         } }""",
     }
-    if queries.version_contracts.active_version() == "1.15.0":
+    if queries.version_contracts.is_115():
         texts[PORTUGAL] = (
             texts[PORTUGAL].replace(
                 "complete = {",

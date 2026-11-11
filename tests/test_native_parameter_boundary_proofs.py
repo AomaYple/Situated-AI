@@ -567,7 +567,7 @@ def population_case(tmp_path, monkeypatch, request):
     getter = "common/journal_entries/00_urbanization.txt"
     pop_type = request.param
     definition = f"common/pop_types/{pop_type}.txt"
-    current = version_contracts.active_version() == "1.15.0"
+    current = version_contracts.is_115()
     parameters = (
         "target=pop_type:peasants value>0.6" if current else "pop_type=peasants percent>0.6"
     )

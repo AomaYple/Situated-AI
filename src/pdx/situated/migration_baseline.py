@@ -28,19 +28,28 @@ _TAIL = "retain_original_qualification_cost_random_execution"
 _DEFAULT_NATIVE_SOURCE = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
 _DEFAULT_NATIVE_SHA256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
 _VERSION_115_SOURCE = DEFAULT_SOURCE.parent / "1.15.0/migration-retentions.json"
+_VERSION_1151_SHA256 = "c6cc8f3ec838e3fff2f4f04a0958f4f32d2a665859f08445655a6945602fd0af"
 _VERSION_115_SHA256 = "23eafb2070c1ab4aa3508e5258516a21ec6c54040b68490f28f58785b9c3ed29"
 
 
 def _versioned_contract() -> dict[str, Any] | None:
     if version_contracts.active_version() == "1.14.5":
         return None
-    raw = _VERSION_115_SOURCE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != _VERSION_115_SHA256:
+    raw = (
+        version_contracts.research_path("situated", "migration-retentions.json")
+        if version_contracts.active_version() == "1.15.1"
+        else _VERSION_115_SOURCE
+    ).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != (
+        _VERSION_1151_SHA256
+        if version_contracts.active_version() == "1.15.1"
+        else _VERSION_115_SHA256
+    ):
         raise ValueError("1.15 历史迁移延续合同字节漂移")
     data = json.loads(raw, object_pairs_hook=_unique_json_object)
     if (
         data["schema"] != 1
-        or data["version"] != "1.15.0"
+        or data["version"] != version_contracts.active_version()
         or data["evidence_kind"] != "native_static"
         or data["runtime"] != "unknown"
         or data["historical_retirements_sha256"] != _RETIREMENTS_SHA256
@@ -205,6 +214,118 @@ def _validate_native_retention(row: dict[str, Any], writers: tuple[WriterDecisio
         raise ValueError("历史规则退役原版恢复字段仍有活跃作者")
 
 
+def _school_network_replacements(
+    versioned: dict[str, Any], writers: tuple[WriterDecisionIR, ...]
+) -> frozenset[tuple[str, str, str]]:
+    """Prove only the reviewed 1.15.1 school successor, without legacy writers.
+
+    The network proof precedes complete production composition. The complete
+    package boundary must still verify its actual composed writer and witnesses.
+    Historical multipliers are intentionally replaced by bounded additive policy.
+    """
+    from pdx import config  # noqa: PLC0415
+
+    from . import network_profile, production_profile  # noqa: PLC0415
+
+    if version_contracts.active_version() != "1.15.1":
+        raise ValueError("学校网络替代只允许精确1.15.1合同")
+    migration = versioned.get("school_policy_migration")
+    expected_contract = {
+        "source": "mod/decisions/information.toml",
+        "field": "institution_scores.institution_schools",
+        "actor": "root",
+        "target": "none",
+        "operation": "multiply",
+    }
+    retired = {
+        "coordinated_layered_information_education_foundation",
+        "coordinated_layered_information_education_stable",
+        "decisive_school_investment",
+        "education_catchup_capacity",
+        "route_education_schools",
+        "social_school_priority",
+    }
+    replacement_bridges = {
+        "remaining_school_catchup_need": ["school-need"],
+        "remaining_school_fiscal": ["school-capacity-fiscal"],
+        "remaining_school_administrative": ["school-capacity-administrative"],
+        "remaining_school_capacity": ["school-capacity-administrative", "school-capacity-fiscal"],
+        "school_default_pressure": ["school-default"],
+        "school_administrative_pressure": ["school-administration"],
+    }
+    successor = {
+        "consumer": "a0-pol-schools",
+        "action": "school-investment",
+        "source": "game/common/ai_strategies/00_default_strategy.txt",
+        "definition": "ai_strategy_default",
+        "field": ["institution_scores", "institution_schools"],
+        "actor": "root",
+        "actor_scope": "country",
+        "target": "institution_schools",
+        "operation": "add",
+    }
+    if (
+        not isinstance(migration, dict)
+        or migration.get("historical_contract") != expected_contract
+        or migration.get("retired_definitions") != sorted(retired)
+        or migration.get("replacement_bridge_ids") != replacement_bridges
+        or migration.get("successor") != successor
+        or migration.get("semantic_change")
+        != "intentional_multiply_to_bounded_add; no_arithmetic_equivalence_or_runtime_claim"
+    ):
+        raise ValueError("学校网络替代身份或有意语义变更合同漂移")
+    if any(
+        writer.source == expected_contract["source"]
+        and (writer.definition in replacement_bridges or writer.field == expected_contract["field"])
+        for writer in writers
+    ):
+        raise ValueError("学校网络替代不能保留旧学校writer或双重计分")
+    source = network_profile.source_path("1.15.1")
+    if source.relative_to(config.REPO).as_posix() != migration.get(
+        "policy_source"
+    ) or hashlib.sha256(source.read_bytes()).hexdigest() != migration.get("policy_sha256"):
+        raise ValueError("学校网络替代政策来源漂移")
+    profile = production_profile.load_profile(production_profile.baseline_root("1.15.1"))
+    rows = [item for item in profile.declarations if item.id == successor["consumer"]]
+    if len(rows) != 1:
+        raise ValueError("学校网络替代缺少唯一真实消费者")
+    row = rows[0]
+    if (row.source, row.definition, row.field, row.actor, row.target) != (
+        successor["source"],
+        successor["definition"],
+        tuple(successor["field"]),
+        successor["actor"],
+        successor["target"],
+    ):
+        raise ValueError("学校网络替代物理消费者漂移")
+    audit = network_profile.audit(profile)
+    programs = [
+        item
+        for item in cast("list[dict[str, Any]]", audit["programs"])
+        if item["consumer"] == row.id
+    ]
+    if len(programs) != 1 or programs[0] != migration.get("program"):
+        raise ValueError("学校网络替代实际桥或读取合同漂移")
+    if not set().union(*map(set, replacement_bridges.values())) <= {
+        item["id"] for item in programs[0]["bridges"]
+    }:
+        raise ValueError("学校网络替代缺少已审精确桥")
+    files = network_profile.build(profile)
+    text = files[row.source.removeprefix("game/")]
+    original = (
+        (production_profile.baseline_root("1.15.1") / row.source).read_bytes().decode("utf-8-sig")
+    )
+    if production_profile.strip_policy(text, row) != original or hashlib.sha256(
+        text.encode()
+    ).hexdigest() != migration.get("native_output_sha256"):
+        raise ValueError("学校网络替代原版资格成本或完整尾部保护漂移")
+    return frozenset(
+        (expected_contract["source"], definition, replacement)
+        for definition in retired
+        for replacement in replacement_bridges
+    )
+
+
 def _retired_identities(
     historical: dict[str, Any],
     current: dict[tuple[str, str], WriterDecisionIR],
@@ -240,6 +361,7 @@ def _retired_identities(
     published = {(row["source"], row["definition"]): row for row in historical["rules"]}
     retired: set[tuple[str, str]] = set()
     validated_tests: set[str] = set()
+    network_replacements: frozenset[tuple[str, str, str]] | None = None
     for row in data["retirements"]:
         if (
             not isinstance(row, dict)
@@ -286,6 +408,16 @@ def _retired_identities(
                     current_definition = redirect["current_replacement"]
             replacement = current.get((row["source"], current_definition))
             if replacement is None:
+                if (
+                    version_contracts.active_version() == "1.15.1"
+                    and versioned is not None
+                    and row["source"] == "mod/decisions/information.toml"
+                    and row["field"] == "institution_scores.institution_schools"
+                ):
+                    if network_replacements is None:
+                        network_replacements = _school_network_replacements(versioned, writers)
+                    if (*identity, definition) in network_replacements:
+                        continue
                 raise ValueError(f"历史规则退役替代身份缺失：{identity} -> {definition}")
             if (
                 any(

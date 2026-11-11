@@ -285,7 +285,7 @@ def test_company_program_bounds_and_exact_reader_identity(production):
                 unit,
             )
         worker = readers["industrial_workforce"]
-        current = version_contracts.active_version() == "1.15.0"
+        current = version_contracts.is_115()
         assert (worker.engine, worker.path, worker.value_field, worker.parameters) == (
             "pop_type_percent_country",
             (),
@@ -320,7 +320,7 @@ def test_another_goods_or_population_query_cannot_supply_a_required_fact(product
     facts["ROOT"]["market"]["mg:unrelated_good"] = facts["ROOT"]["market"].pop(f"mg:{good}")
     other_population = (
         (("target", "pop_type:peasants"),)
-        if version_contracts.active_version() == "1.15.0"
+        if version_contracts.is_115()
         else (("pop_type", "peasants"),)
     )
     facts["ROOT"]["pop_type_percent_country"] = {other_population: 0.9}

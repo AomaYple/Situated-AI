@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "3.2.0"
+RELEASE_VERSION = "3.3.0"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -514,10 +514,12 @@ def write_zip(
 
 
 def production_configuration(
-    *, profile: production_profile.ProductionProfile | None = None
+    *,
+    profile: production_profile.ProductionProfile | None = None,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions]:
     """读取唯一发布 profile；读取配置不需要本机原版。"""
-    if profile is not None:
+    if profile is not None and profile.game_version != "1.15.1":
         # The native profile is verified before any generated file is touched.
         # Policy lowering is intentionally fail-closed until the A4 rule source
         # has been reviewed and attached to the same ConsumerIR bundle.
@@ -525,6 +527,10 @@ def production_configuration(
         raise ValueError(
             "1.15.0 profile 已锁定原版写点，但政策 RuleSet 尚未完成统一 IR 接线；拒绝生成"
         )
+    if profile is not None and profile != production_profile.load_profile(
+        production_profile.baseline_root("1.15.1")
+    ):
+        raise ValueError("正式 profile 与锁定完整生产身份不一致")
     policy, extensions = decisions.load(), decisions.load_extensions(profile="release")
     policy = replace(
         policy,
@@ -536,6 +542,17 @@ def production_configuration(
             status="candidate" if version_contracts.active_version() == "1.15.0" else "released",
         ),
     )
+    if configuration is not None:
+        modules = configuration.extension_modules
+        policy = replace(policy, enabled="fiscal" in configuration.legacy_domains)
+        extensions = replace(
+            extensions,
+            reform_enabled="reform" in modules,
+            economy_enabled="economy" in modules,
+            market_enabled="market" in modules,
+            security_enabled="security" in modules,
+            diplomacy_enabled="diplomacy" in modules,
+        )
     return policy, extensions
 
 
@@ -554,6 +571,17 @@ def read_production_files() -> dict[str, str | bytes]:
     return files
 
 
+def check_configuration_identity(
+    files: Mapping[str, str | bytes],
+    configuration: profile_configuration.ProfileConfiguration,
+) -> None:
+    if version_contracts.active_version() != "1.15.1":
+        return
+    metadata = json.loads(files[METADATA_NAME])
+    if metadata.get("game_custom_data", {}).get("configuration") != configuration.identity():
+        raise ValueError("生成物的完整配置身份不一致；生成、检查和打包必须选择同一配置")
+
+
 def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     """冻结源码和产物字节；离线只能核对冻结一致性，不能重建原版。"""
     root = decisions.PRODUCT.parent
@@ -564,9 +592,14 @@ def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
         *sorted(decisions.baseline_path().parent.glob("*.json")),
         *sorted((root / "research/situated").glob("*.json")),
     ]
-    if version_contracts.active_version() == "1.15.0":
-        sources.extend(sorted((root / "mod/decisions/1.15.0").glob("*.toml")))
-        sources.extend(sorted((root / "research/situated/1.15.0").glob("*.json")))
+    if version_contracts.is_115():
+        version = version_contracts.active_version()
+        sources.extend(sorted((root / "mod/decisions" / version).glob("*.toml")))
+        sources.extend(sorted((root / "research/situated" / version).glob("*.json")))
+        if version == "1.15.1":
+            sources.extend(sorted((root / "research/vanilla-ai/1.15.1/native").rglob("*")))
+            sources.extend(sorted((root / "research/vanilla-ai/1.15.1/r2-readers").rglob("*")))
+            sources = [path for path in sources if path.is_file()]
     if files is None:
         files = read_production_files()
     return (
@@ -607,7 +640,7 @@ def verify_compatibility_installation() -> None:
         engine_scope.verify_strategy_game(config.GAME)
         engine_scope.verify_company_game(config.GAME)
         decision_interfaces.verify_scripted_trigger_game(config.GAME)
-        if version_contracts.active_version() == "1.15.0":
+        if version_contracts.is_115():
             from .situated import (  # noqa: PLC0415
                 compatibility_115,
                 engine_building_115,
@@ -652,16 +685,30 @@ def package_inputs(
     *,
     include_engineering_metadata: bool = False,
     profile: production_profile.ProductionProfile | None = None,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
-    policy, extensions = production_configuration(profile=profile)
+    if configuration is None and version_contracts.active_version() == "1.15.1":
+        configuration = profile_configuration.ProfileConfiguration()
+    policy, extensions = production_configuration(profile=profile, configuration=configuration)
     verify_compatibility_installation()
     country_policy = country_state.load()
     if not country_policy.enabled:
         raise ValueError("正式包必须启用 country_state")
+    if configuration is not None and not configuration.enabled_domains:
+        country_policy = replace(country_policy, enabled=False)
     strategy = decision_intents.load()
     information = decisions.decision_rules.load(strategy=strategy)
     adapters = decisions.decision_adapters.load(strategy=strategy)
+    if configuration is not None:
+        profile_configuration.validate_coverage(
+            frozenset(
+                rule.domain
+                for rules in (information, *(item for _, item in adapters.policies))
+                for rule in rules.rules
+            ),
+            decisions.EXTENSION_PROFILE_MODULES,
+        )
     consumed = {
         rule.intent
         for policy_rules in (information, *(row for _, row in adapters.policies))
@@ -680,6 +727,7 @@ def package_inputs(
             information_rules=information,
             consumer_adapters=adapters,
             country_policy=country_policy,
+            configuration=configuration,
         )
     )
     metadata = json.loads(files[".metadata/metadata.json"])
@@ -708,6 +756,7 @@ def _release_generation(
     """返回正式包的完整、可比较生成参数。"""
     return {
         **generation_contract(),
+        **({"configuration": metadata["configuration"]} if "configuration" in metadata else {}),
         "fiscal": {
             key: value
             for key, value in asdict(policy).items()
@@ -749,11 +798,12 @@ def package(
     destination: Path,
     *,
     profile: production_profile.ProductionProfile | None = None,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> Path:
     """核对仓库生成物后，生成唯一正式包。"""
     source_lock = generation_lock({})
     policy, extensions, internal_files = package_inputs(
-        include_engineering_metadata=True, profile=profile
+        include_engineering_metadata=True, profile=profile, configuration=configuration
     )
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
@@ -764,6 +814,9 @@ def package(
     if issues:
         raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
 
+    if version_contracts.active_version() == "1.15.1":
+        check_generation_lock()
+
     def verify_before_replace() -> None:
         verify_compatibility_installation()
         if generation_lock({}) != source_lock:
@@ -771,6 +824,8 @@ def package(
         issues = decisions.check(decisions.product_path(), production_files)
         if issues:
             raise ValueError("完整兼容打包期间产物发生漂移：" + "; ".join(issues))
+        if version_contracts.active_version() == "1.15.1":
+            check_generation_lock()
         if version_contracts.active_version() == "1.15.0":
             actual = _profile_directory_files(decisions.product_path())
             if set(actual) != set(production_files) | {"generation-lock.json"}:
@@ -848,6 +903,8 @@ def profile_outputs(
     remains an explicit diagnostic mode for proving reversibility of the native
     write points; the CLI can select it through the same resolved configuration.
     """
+    if profile.game_version != "1.15.0":
+        raise ValueError("当前正式 profile 必须通过完整 package_inputs / package 生成")
     if configuration is None:
         if policy not in (None, "policy", "neutral"):
             raise ValueError(f"未知 1.15 profile policy：{policy}")

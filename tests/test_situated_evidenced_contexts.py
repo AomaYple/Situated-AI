@@ -334,3 +334,10 @@ def test_documented_country_actor_cannot_be_rebased_through_reader_owner(offset)
 def test_context_contradictions_cannot_hide_behind_identifier_case(contradiction):
     text = _strategy("treaty_port_value", PORT_COMMENTS + "\n# " + contradiction)
     assert compiler.evaluation_contexts(text)["treaty_port_value"].status == "unknown"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

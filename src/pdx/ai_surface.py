@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING
 from pdx import config, vanilla_index
 from pdx.cache import parse_cached
 from pdx.model import Assignment, Block, Node, Scalar
-from pdx.version_contracts import active_version
+from pdx.version_contracts import active_version, is_115
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -57,8 +57,8 @@ DOC_REL = DOC_PATH.as_posix()
 
 def doc_path() -> Path:
     """Resolve the selected version without overwriting the historical surface."""
-    if active_version() == "1.15.0":
-        return DOC_PATH.with_name("02-可执行面-1.15.0.md")
+    if is_115():
+        return DOC_PATH.with_name(f"02-可执行面-{active_version()}.md")
     return DOC_PATH
 
 

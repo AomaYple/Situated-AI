@@ -87,9 +87,7 @@ class Reader:
     def expression(self, op: str, value: bool | float | FactReference) -> str:
         if self.engine == "pop_type_percent_country":
             parameter, value_field = (
-                ("target", "value")
-                if version_contracts.active_version() == "1.15.0"
-                else ("pop_type", "percent")
+                ("target", "value") if version_contracts.is_115() else ("pop_type", "percent")
             )
             if (
                 len(self.parameters) != 1
@@ -212,7 +210,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
     source_digest = hashlib.sha256(raw).hexdigest()
-    if source == SOURCE and version_contracts.active_version() == "1.15.0":
+    if source == SOURCE and version_contracts.is_115():
         # Keep the historical TOML identity intact. The new complete native AST
         # authority supplies this version's reviewed default-strategy input.
         from .decision_adapters import native_authority_115  # noqa: PLC0415
@@ -225,6 +223,30 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         engine_reader_115.project_information_readers(data["readers"])
         source_digest = hashlib.sha256(
             raw + b"\0current_reader:" + engine_reader_115.snapshot()
+        ).hexdigest()
+    if source == SOURCE and version_contracts.active_version() == "1.15.1":
+        # A single R2 consumer now owns schools. Its additive benefit/cost and
+        # capacity tiers explicitly replace these six historical multipliers.
+        # Keeping them in the legacy IR would double the same education and
+        # burden effects and retain a second physical writer.
+        school_rules = [
+            row for row in data["rules"] if row["field"] == "institution_scores.institution_schools"
+        ]
+        expected = {
+            "remaining_school_catchup_need",
+            "remaining_school_fiscal",
+            "remaining_school_administrative",
+            "remaining_school_capacity",
+            "school_default_pressure",
+            "school_administrative_pressure",
+        }
+        if {row["id"] for row in school_rules} != expected:
+            raise ValueError("1.15.1 学校迁移来源集合漂移")
+        data["rules"] = [row for row in data["rules"] if row not in school_rules]
+        data["readers"].pop("literacy")
+        migration = SOURCE.with_name("action_network_1151.toml").read_bytes()
+        source_digest = hashlib.sha256(
+            source_digest.encode() + b"\0school_migration:" + migration
         ).hexdigest()
     if source == SOURCE and strategy is None:
         strategy = decision_intents.load()
@@ -308,8 +330,8 @@ def from_data(
             (
                 "pop_type_percent_country",
                 "number",
-                "value" if version_contracts.active_version() == "1.15.0" else "percent",
-            ): {"target" if version_contracts.active_version() == "1.15.0" else "pop_type"},
+                "value" if version_contracts.is_115() else "percent",
+            ): {"target" if version_contracts.is_115() else "pop_type"},
             ("radical_fraction", "number", "value"): {"pop_type"},
             ("loyalist_fraction", "number", "value"): {"pop_type"},
             ("has_diplomatic_pact", "boolean", None): {"who", "type"},
@@ -356,7 +378,7 @@ def from_data(
                             )
                             or (
                                 item["engine"] == "pop_type_percent_country"
-                                and version_contracts.active_version() == "1.15.0"
+                                and version_contracts.is_115()
                                 and literal
                                 in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
                             )
@@ -376,13 +398,10 @@ def from_data(
         ):
             raise ValueError("复合数值读取器只支持已声明的 value 比较，不能混用布尔参数")
         if item["engine"] == "pop_type_percent_country" and (
-            value_field
-            != ("value" if version_contracts.active_version() == "1.15.0" else "percent")
+            value_field != ("value" if version_contracts.is_115() else "percent")
             or parameters
             not in [
-                {"target": f"pop_type:{name}"}
-                if version_contracts.active_version() == "1.15.0"
-                else {"pop_type": name}
+                {"target": f"pop_type:{name}"} if version_contracts.is_115() else {"pop_type": name}
                 for name in ("peasants", "laborers", "machinists")
             ]
         ):
@@ -851,7 +870,7 @@ def _protected_offsets(
             limit = branch.value.first("limit")
             # 除源 SHA 外逐字核对门的词法形状，禁止误选另一个 if。
             expected = "OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } }"
-            if version_contracts.active_version() == "1.15.0":
+            if version_contracts.is_115():
                 expected = expected.replace(
                     "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
                 )
@@ -1160,7 +1179,7 @@ def patch(
                     )
                     or (
                         reader.engine == "pop_type_percent_country"
-                        and version_contracts.active_version() == "1.15.0"
+                        and version_contracts.is_115()
                         and literal
                         in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
                         and literal.removeprefix("pop_type:") in words
@@ -1324,6 +1343,8 @@ def contract(
     """机器可读的实际生成覆盖；只列真实规则，实机全部保持待验。"""
     from .situated.programs import contract as program_contract  # noqa: PLC0415
 
+    active_rules = tuple(rule for ruleset in rules.groups().values() for rule in ruleset)
+    used_reader_keys = {key for rule in active_rules for key in rule.input_keys()}
     return {
         "schema": 1,
         "evidence": "static_vanilla_examples_and_generated_scripts",
@@ -1342,7 +1363,7 @@ def contract(
         "actor": "root_country" if not rules.actor_path else f"root_{rules.native_root}_owner",
         "native_root": rules.native_root,
         "world_scans": 0,
-        "strategy": rules.strategy.contract({rule.intent for rule in rules.rules if rule.intent})
+        "strategy": rules.strategy.contract({rule.intent for rule in active_rules if rule.intent})
         if rules.strategy is not None
         else None,
         "static_complexity_budget": dict(STATIC_BUDGET),
@@ -1389,6 +1410,7 @@ def contract(
                 "runtime_readability": "static_interface_signature; runtime_behavior_unverified",
             }
             for reader in rules.readers
+            if reader.key in used_reader_keys
         ],
         "rules": [
             {

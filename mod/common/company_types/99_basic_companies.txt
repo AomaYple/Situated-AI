@@ -73,7 +73,7 @@ company_basic_agriculture_1 = {
 			# GROUP program_0e0842c8bcb3a818_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_agriculture_1_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_0e0842c8bcb3a818_company_output_demand_positive
 			add = { value = 0
@@ -174,7 +174,7 @@ company_basic_agriculture_2 = {
 			# GROUP program_fb0114708bcf43fa_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_agriculture_2_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_fb0114708bcf43fa_company_output_demand_positive
 			add = { value = 0
@@ -272,7 +272,7 @@ company_basic_fabrics = {
 			# GROUP program_28c1807370301e77_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_fabrics_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_28c1807370301e77_company_output_demand_positive
 			add = { value = 0
@@ -376,7 +376,7 @@ company_basic_colonial_plantations_1 = {
 			# GROUP program_bd661814dfdfc587_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_colonial_plantations_1_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_bd661814dfdfc587_company_output_demand_positive
 			add = { value = 0
@@ -480,7 +480,7 @@ company_basic_colonial_plantations_2 = {
 			# GROUP program_013ef08a00272f6f_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_colonial_plantations_2_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_013ef08a00272f6f_company_output_demand_positive
 			add = { value = 0
@@ -575,7 +575,7 @@ company_basic_silk_and_dye = {
 			# GROUP program_bf783cfd42001be1_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_silk_and_dye_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_bf783cfd42001be1_company_output_demand_positive
 			add = { value = 0
@@ -665,7 +665,7 @@ company_basic_wine_and_fruit = {
 			# GROUP program_cb8827a10586d9e7_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_wine_and_fruit_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_cb8827a10586d9e7_company_output_demand_positive
 			add = { value = 0
@@ -767,7 +767,7 @@ company_basic_fishing = {
 			# GROUP program_0e10d25d263ceba7_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_fishing_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_0e10d25d263ceba7_company_output_demand_positive
 			add = { value = 0
@@ -864,7 +864,7 @@ company_basic_forestry = {
 			# GROUP program_45c54987aea4210f_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_forestry_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_45c54987aea4210f_company_output_demand_positive
 			add = { value = 0
@@ -946,7 +946,7 @@ company_basic_oil = {
 			# GROUP program_54620fe38acd5ff4_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_oil_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_54620fe38acd5ff4_company_mandatory_input_engines_negative
 			add = { value = 0
@@ -1030,7 +1030,7 @@ company_basic_gold_mining = {
 			# GROUP program_834f5316a9e80047_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_gold_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_834f5316a9e80047_company_mandatory_input_tools_negative
 			add = { value = 0
@@ -1078,6 +1078,7 @@ company_basic_metal_mining = {
 	building_types = {
 		building_iron_mine
 		building_lead_mine
+		building_copper_mine
 	}
 
 	extension_building_types = {
@@ -1090,6 +1091,7 @@ company_basic_metal_mining = {
 				OR = {
 					is_building_type = building_iron_mine
 					is_building_type = building_lead_mine
+					is_building_type = building_copper_mine
 				}
 				level >= 5
 			}
@@ -1107,6 +1109,7 @@ company_basic_metal_mining = {
 				OR = {
 					is_building_type = building_iron_mine
 					is_building_type = building_lead_mine
+					is_building_type = building_copper_mine
 				}
 				level >= 5
 			}
@@ -1122,7 +1125,7 @@ company_basic_metal_mining = {
 			# GROUP program_739de6d7f96ffef0_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_metal_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_739de6d7f96ffef0_company_mandatory_input_tools_negative
 			add = { value = 0
@@ -1135,10 +1138,14 @@ company_basic_metal_mining = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_basic_metal_mining_iron_pressure [market]; iron缺口且相对基价高，升档同一主业需求，不能重复奖励
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_basic_metal_mining_copper_pressure [market]; copper缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_basic_metal_mining_lead_need [market]; 主业基础配方可能产出lead；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_basic_metal_mining_iron_need [market]; 主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_basic_metal_mining_copper_need [market]; 主业基础配方可能产出copper；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
 			# GROUP program_739de6d7f96ffef0_company_solvency_negative
 			add = { value = 0
@@ -1217,7 +1224,7 @@ company_basic_mineral_mining = {
 			# GROUP program_1bac71b3ee997cfd_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_mineral_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_1bac71b3ee997cfd_company_mandatory_input_tools_negative
 			add = { value = 0
@@ -1320,7 +1327,7 @@ company_basic_food = {
 			# GROUP program_c01037a837e57e3c_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_food_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_c01037a837e57e3c_company_mandatory_input_grain_negative
 			add = { value = 0
@@ -1416,7 +1423,7 @@ company_basic_paper = {
 			# GROUP program_5d3afeb231c33776_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_paper_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_5d3afeb231c33776_company_mandatory_input_wood_negative
 			add = { value = 0
@@ -1520,7 +1527,7 @@ company_basic_home_goods = {
 			# GROUP program_db0c881ca6f3395f_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_home_goods_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_db0c881ca6f3395f_company_mandatory_input_fabric_negative
 			add = { value = 0
@@ -1626,7 +1633,7 @@ company_basic_textiles = {
 			# GROUP program_411b989443faecb5_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_textiles_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_411b989443faecb5_company_mandatory_input_fabric_negative
 			add = { value = 0
@@ -1723,7 +1730,7 @@ company_basic_steel = {
 			# GROUP program_6a42b188fb9dbb8b_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_steel_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_6a42b188fb9dbb8b_company_mandatory_input_coal_negative
 			add = { value = 0
@@ -1830,7 +1837,7 @@ company_basic_metalworks = {
 			# GROUP program_a54fea78ba77f07c_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_metalworks_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_a54fea78ba77f07c_company_output_demand_positive
 			add = { value = 0
@@ -1910,7 +1917,7 @@ company_basic_shipyards = {
 			# GROUP program_0fdc0610d9debbd5_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_shipyards_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_0fdc0610d9debbd5_company_output_demand_positive
 			add = { value = 0
@@ -2013,7 +2020,7 @@ company_basic_chemicals = {
 			# GROUP program_a99a3311a20fe02c_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_chemicals_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_a99a3311a20fe02c_company_mandatory_input_fertilizer_negative
 			add = { value = 0
@@ -2120,7 +2127,7 @@ company_basic_motors = {
 			# GROUP program_b296ea6374a62890_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_motors_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_b296ea6374a62890_company_mandatory_input_engines_negative
 			add = { value = 0
@@ -2243,7 +2250,12 @@ company_basic_munitions = {
 			# GROUP program_235fc28e619093f7_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_munitions_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_235fc28e619093f7_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_basic_munitions_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_235fc28e619093f7_company_mandatory_input_explosives_negative
 			add = { value = 0
@@ -2311,6 +2323,7 @@ company_basic_electrics = {
 	}
 
 	extension_building_types = {
+		building_copper_mine
 		building_iron_mine
 		building_rubber_plantation
 	}
@@ -2346,17 +2359,17 @@ company_basic_electrics = {
 			# GROUP program_9db6c5d3b93e207f_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_electrics_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_copper_negative
+			add = { value = 0
+				# company_sector_company_basic_electrics_copper_input [market]; 主业某必选基础配方组所有方法共同需要copper；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_iron_negative
 			add = { value = 0
 				# company_sector_company_basic_electrics_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-			}
-			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_lead_negative
-			add = { value = 0
-				# company_sector_company_basic_electrics_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_rubber_negative
 			add = { value = 0
@@ -2466,7 +2479,7 @@ company_basic_weapons = {
 			# GROUP program_f6a1e5c72e347672_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_basic_weapons_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_f6a1e5c72e347672_company_mandatory_input_hardwood_negative
 			add = { value = 0
@@ -2560,7 +2573,7 @@ company_construction_power_bloc = {
 			# GROUP program_4a51c3c74c88e93c_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_construction_power_bloc_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_4a51c3c74c88e93c_company_mandatory_input_coal_negative
 			add = { value = 0

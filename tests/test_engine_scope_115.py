@@ -81,3 +81,10 @@ def test_current_company_default_is_the_exact_new_initializer():
 def test_unknown_current_family_has_no_historical_permission():
     with pytest.raises(ValueError, match="尚无独立引擎"):
         engine_scope_115.manifest("unreviewed-field")
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

@@ -20,19 +20,20 @@ from .textio import normalized_text
 
 EVIDENCE = config.REPO / "research/vanilla-ai/1.14.5/country-interfaces.json"
 BASELINE = EVIDENCE.parent / "00_default_strategy.txt"
+EVIDENCE_1151_SHA256 = "3c75b27004b4c4ff0bc978dec70411fefe747ec75d66144b64e1abbf3e658165"
 EVIDENCE_115_SHA256 = "c2e1eec0205efaa2e4c04ff770db418a4d7bd5ebe2649301eabca3e9a861e006"
 
 
 def evidence_file() -> Path:
     """Choose current evidence at the call boundary, preserving historical overrides."""
-    if version_contracts.active_version() == "1.15.0":
-        return config.REPO / "research/vanilla-ai/1.15.0/country-interfaces.json"
+    if version_contracts.is_115():
+        return version_contracts.research_path("vanilla-ai", "country-interfaces.json")
     return EVIDENCE
 
 
 def baseline_path() -> Path:
-    if version_contracts.active_version() == "1.15.0":
-        return config.REPO / "research/vanilla-ai/1.15.0/00_default_strategy.txt"
+    if version_contracts.is_115():
+        return version_contracts.research_path("vanilla-ai", "00_default_strategy.txt")
     return BASELINE
 
 
@@ -201,7 +202,7 @@ def extract(policy, root, sections):
             for (engine, argument), row in sorted(args.items())
         ],
     }
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         # A building modifier with the same spelling is not a country reader example.
         relative = "common/decisions/00_decisions.txt"
         raw = (root / relative).read_bytes()
@@ -210,7 +211,7 @@ def extract(policy, root, sections):
         sources[relative] = hashlib.sha256(raw).hexdigest()
         used = {row["source"] for row in [*found.values(), *result["arguments"]]}
         result["sources"] = {key: value for key, value in sources.items() if key in used}
-        result["baseline_version"] = "1.15.0"
+        result["baseline_version"] = version_contracts.active_version()
         for token, row in found.items():
             row["ast_context"] = _ast_context(
                 (root / row["source"]).read_bytes(), row["source"], token, row["line"]
@@ -242,9 +243,10 @@ def extract(policy, root, sections):
 def validate(policy, *, root=None, snapshot=None, evidence_path=None):
     selected_path = evidence_file() if evidence_path is None else Path(evidence_path)
     raw = selected_path.read_bytes()
-    if (
-        version_contracts.active_version() == "1.15.0"
-        and hashlib.sha256(raw).hexdigest() != EVIDENCE_115_SHA256
+    if version_contracts.is_115() and hashlib.sha256(raw).hexdigest() != (
+        EVIDENCE_1151_SHA256
+        if version_contracts.active_version() == "1.15.1"
+        else EVIDENCE_115_SHA256
     ):
         raise ValueError("国家接口当前权威证据漂移")
     evidence = json.loads(raw)
@@ -294,8 +296,8 @@ def validate(policy, *, root=None, snapshot=None, evidence_path=None):
         for row in args
     ):
         raise ValueError("国家参数证据结构无效")
-    if version_contracts.active_version() == "1.15.0":
-        if evidence.get("baseline_version") != "1.15.0":
+    if version_contracts.is_115():
+        if evidence.get("baseline_version") != version_contracts.active_version():
             raise ValueError("国家接口当前版本身份无效")
         for row in [*interfaces.values(), *args]:
             context = row.get("ast_context")
@@ -349,14 +351,14 @@ def validate(policy, *, root=None, snapshot=None, evidence_path=None):
     for key, row in evidence["interfaces"].items():
         if observed[row["source"]][0].get(key) != row["line"]:
             raise ValueError(f"国家接口样例不匹配：{key}")
-        if version_contracts.active_version() == "1.15.0" and row["ast_context"] != _ast_context(
+        if version_contracts.is_115() and row["ast_context"] != _ast_context(
             (root / row["source"]).read_bytes(), row["source"], key, row["line"]
         ):
             raise ValueError(f"国家接口AST语境不匹配：{key}")
     for row in evidence["arguments"]:
         if observed[row["source"]][1].get((row["engine"], row["argument"])) != row["line"]:
             raise ValueError("国家参数样例不匹配")
-        if version_contracts.active_version() == "1.15.0" and row["ast_context"] != _ast_context(
+        if version_contracts.is_115() and row["ast_context"] != _ast_context(
             (root / row["source"]).read_bytes(), row["source"], row["argument"], row["line"]
         ):
             raise ValueError("国家参数AST语境不匹配")

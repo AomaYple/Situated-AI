@@ -544,3 +544,12 @@ def test_current_batch_responsibilities_share_one_complete_boundary_check(tmp_pa
             result = state.pytest_sessionfinish(SimpleNamespace(testscollected=6, exitstatus=0), 0)
             assert result["status"] == "passed"
     assert calls.count("discover_native") == 2
+
+
+@pytest.fixture(autouse=True)
+def _historical_1150_contract():
+    from pdx import version_contracts
+
+    """Keep the exact archived witness under its original version identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

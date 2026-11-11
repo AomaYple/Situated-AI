@@ -95,8 +95,16 @@ SOURCE_HASHES_115 = {
 }
 
 
+SOURCE_HASHES_1151 = {
+    **SOURCE_HASHES_115,
+    "common/journal_entries/00_communism.txt": "f38d15776d815e759e01b4d30db13510fa7f37437551063677cdaf0b336723ba",
+}
+
+
 def source_hashes() -> dict[str, str]:
-    return SOURCE_HASHES_115 if version_contracts.active_version() == "1.15.0" else SOURCE_HASHES
+    if version_contracts.active_version() == "1.15.1":
+        return SOURCE_HASHES_1151
+    return SOURCE_HASHES_115 if version_contracts.is_115() else SOURCE_HASHES
 
 
 LAW_SOURCES = {
@@ -423,7 +431,7 @@ def _verified_sources(
 
 
 def _completion(journal: Block) -> Block:
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         return version_contracts.journal_completion(journal)
     return _child(journal, "complete")
 
@@ -491,7 +499,7 @@ def compile_query(
         country = _child(roots[_COMMUNISM], "je_communism_1")
         outcome = (
             version_contracts.journal_completion(country, effect=True)
-            if version_contracts.active_version() == "1.15.0"
+            if version_contracts.is_115()
             else _child(country, "on_fail")
         )
         branch = _child(outcome, "else")
@@ -502,7 +510,7 @@ def compile_query(
                 (("law", "=", "law_type:law_council_republic"), ("value", ">", "neutral")),
             ),
         )
-        if version_contracts.active_version() == "1.15.0":
+        if version_contracts.is_115():
             branches = branch.all("if")
             matches: list[Block] = []
             full_branch = (

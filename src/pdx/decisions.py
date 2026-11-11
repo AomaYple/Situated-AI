@@ -62,6 +62,7 @@ from .vanilla_index import (
 
 if TYPE_CHECKING:
     from .country_state import CountryPolicy
+    from .situated.profile_configuration import ProfileConfiguration
 
 
 def _country_state_module():
@@ -78,7 +79,7 @@ _HISTORICAL_BASELINE = BASELINE
 def baseline_path() -> Path:
     return (
         situated_compiler.baseline_path()
-        if version_contracts.active_version() == "1.15.0" and BASELINE == _HISTORICAL_BASELINE
+        if version_contracts.is_115() and BASELINE == _HISTORICAL_BASELINE
         else BASELINE
     )
 
@@ -98,6 +99,16 @@ PACKAGE_STATUSES = frozenset({"experimental", "candidate", "accepted", "released
 SAVE_COMPATIBILITY = frozenset({"new-game-only", "same-version-new-game", "same-candidate-save"})
 SUPPORTED_PLATFORMS = frozenset({"windows", "macos", "linux"})
 EXTENSION_PROFILE_MODULES = frozenset({"reform", "market", "security", "economy", "diplomacy"})
+# Concrete builtin consumers shared by generation and configuration withdrawal
+# evidence. Rule-based consumers come from their own declarations.
+CONFIGURATION_CONSUMER_FIELDS = {
+    "fiscal": ("diplomatic_play_neutrality",),
+    "reform": ("change_law_chance", "max_progressiveness", "max_regressiveness"),
+    "economy": ("economic_vs_government_spending_balance",),
+    "diplomacy": ("aggression", "recklessness", "diplomatic_play_boldness"),
+    "market": ("diplomatic_play_support",),
+    "security": ("diplomatic_play_support",),
+}
 
 # 生产本地化集合跟随当前锁定的 Victoria 3 本体语言。
 LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
@@ -850,16 +861,22 @@ def load(source: Path = SOURCE) -> Policy:
         or not -1 <= policy.aggression <= 0
     ):
         raise ValueError("外交偏置必须为有限数且位于声明方向的保守范围内")
-    if version_contracts.active_version() == "1.15.0" and source.resolve() == SOURCE.resolve():
+    if version_contracts.is_115() and source.resolve() == SOURCE.resolve():
         from .situated import compatibility_115, engine_scope  # noqa: PLC0415
 
         authority = compatibility_115.snapshot()
         current = json.loads(authority)
         policy = replace(
             policy,
-            game_version="1.15.0",
+            game_version=version_contracts.active_version(),
             baseline_sha256=current["baseline_sha256"],
-            package=replace(policy.package, status="candidate", parent="vanilla-1.15.0"),
+            package=replace(
+                policy.package,
+                status="candidate"
+                if version_contracts.active_version() == "1.15.0"
+                else "released",
+                parent=f"vanilla-{version_contracts.active_version()}",
+            ),
             source_sha256=hashlib.sha256(
                 raw + authority + engine_scope.strategy_snapshot()
             ).hexdigest(),
@@ -1247,14 +1264,35 @@ def build(
     information_rules: decision_rules.RuleSet | None = None,
     consumer_adapters: decision_adapters.AdapterSet | None = None,
     country_policy: CountryPolicy | None = None,
+    configuration: ProfileConfiguration | None = None,
 ) -> dict[str, str]:
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         from .situated import compatibility_115  # noqa: PLC0415
 
         compatibility_115.verify_game(config.GAME)
     policy = policy or load()
     baseline = baseline if baseline is not None else baseline_path().read_text(encoding="utf-8")
     extensions = extensions or load_extensions()
+    if configuration is not None:
+        if information_rules is not None:
+            information_rules = replace(
+                information_rules,
+                enabled_domains=information_rules.enabled_domains & configuration.legacy_domains,
+            )
+        if consumer_adapters is not None:
+            consumer_adapters = replace(
+                consumer_adapters,
+                policies=tuple(
+                    (
+                        source,
+                        replace(
+                            rules,
+                            enabled_domains=rules.enabled_domains & configuration.legacy_domains,
+                        ),
+                    )
+                    for source, rules in consumer_adapters.policies
+                ),
+            )
     situated_model = load_situated_model(baseline=baseline)
     supply_enabled = (
         consumer_adapters is not None
@@ -1322,7 +1360,9 @@ def build(
                 for source, policy in consumer_adapters.policies
             ),
         )
-    enabled_action_fields = {"diplomatic_play_neutrality"} if policy.enabled else set()
+    enabled_action_fields = (
+        set(CONFIGURATION_CONSUMER_FIELDS["fiscal"]) if policy.enabled else set()
+    )
     support = support_program.SupportProgram.from_extensions(extensions)
     if support.enabled:
         bundle = situated_model.consumer_ir
@@ -1348,13 +1388,11 @@ def build(
             consumer_ir=replace(bundle, writers=(*bundle.writers, support_writer)),
         )
     if extensions.reform_enabled:
-        enabled_action_fields.update(
-            {"change_law_chance", "max_progressiveness", "max_regressiveness"}
-        )
+        enabled_action_fields.update(CONFIGURATION_CONSUMER_FIELDS["reform"])
     if extensions.economy_enabled:
-        enabled_action_fields.add("economic_vs_government_spending_balance")
+        enabled_action_fields.update(CONFIGURATION_CONSUMER_FIELDS["economy"])
     if extensions.diplomacy_enabled:
-        enabled_action_fields.update({"aggression", "recklessness", "diplomatic_play_boldness"})
+        enabled_action_fields.update(CONFIGURATION_CONSUMER_FIELDS["diplomacy"])
     action_overlay = {
         field: value
         for field, value in compile_situated_overlay(
@@ -1474,6 +1512,13 @@ def build(
                 "common/on_actions/sitai_fiscal_on_actions.txt": on_actions(policy),
             }
         )
+    if configuration is not None and not policy.enabled:
+        files["common/scripted_effects/sitai_fiscal_effects.txt"] = (
+            f"# Disabled fiscal module: clear its own historical state only.\nsitai_update_fiscal = {{ remove_variable = {RISK_VAR} }}\n"
+        )
+        files["common/on_actions/sitai_fiscal_on_actions.txt"] = on_actions(
+            replace(policy, enabled=True)
+        )
     if extensions.reform_enabled:
         files["common/scripted_triggers/sitai_reform_triggers.txt"] = extension_triggers(extensions)
         files["common/script_values/sitai_reform_values.txt"] = extension_values(extensions)
@@ -1572,7 +1617,9 @@ def build(
             ".".join(field): owner for field, owner in sorted(field_owners.items())
         }
     if information_rules is not None or consumer_adapters is not None:
-        metadata["vanilla_field_coverage"] = decision_interfaces.coverage(baseline, field_owners)
+        metadata["vanilla_field_coverage"] = decision_interfaces.coverage(
+            baseline, field_owners, configuration=configuration
+        )
     if information_rules is not None:
         rules_contract = decision_rules.contract(information_rules)
         metadata["decision_rules"] = rules_contract
@@ -1586,7 +1633,8 @@ def build(
             information_rules_source_sha256=information_rules.source_sha256,
             information_rules_generator_sha256=rules_contract["generator_sha256"],
         )
-        enabled_modules.append("information_rules")
+        if information_rules.groups():
+            enabled_modules.append("information_rules")
         lifecycle["information_rules"] = {
             "stateful": False,
             "direct_read": True,
@@ -1625,7 +1673,8 @@ def build(
                 Path(decision_interfaces.__file__).read_bytes()
             ).hexdigest(),
         )
-        enabled_modules.append("consumer_adapters")
+        if adapter_contract["consumers"]:
+            enabled_modules.append("consumer_adapters")
         lifecycle["consumer_adapters"] = {
             "stateful": False,
             "direct_read": True,
@@ -1666,6 +1715,25 @@ def build(
             strategic_source_sha256=strategy.source_sha256,
             strategic_generator_sha256=strategic_contract["generator_sha256"],
         )
+    if (
+        version_contracts.active_version() == "1.15.1"
+        and information_rules is not None
+        and consumer_adapters is not None
+    ):
+        from .situated import network_profile, production_profile  # noqa: PLC0415
+
+        profile = production_profile.load_profile(production_profile.baseline_root())
+        metadata["action_network"] = network_profile.compose(
+            files, profile, configuration=configuration
+        )
+        if configuration is None or "politics" in configuration.enabled_domains:
+            field_owners[("institution_scores", "institution_schools")] = "R2/action-network-v2"
+        metadata["default_field_owners"] = {
+            ".".join(field): owner for field, owner in sorted(field_owners.items())
+        }
+        metadata["vanilla_field_coverage"] = decision_interfaces.coverage(
+            baseline, field_owners, configuration=configuration
+        )
     # 所有生产消费者适配器在此之前已经写入 files；见证必须基于最终候选，
     # 不能只检查信息规则和行动 overlay 的中间状态。
     generated_texts = {
@@ -1673,29 +1741,60 @@ def build(
         for name, text in files.items()
         if name.endswith(".txt") and isinstance(text, str)
     }
+    expected_instances = situated_model.action_instances
+    expected_ir = situated_model.action_ir
+    if configuration is not None:
+        active_rule_keys = {
+            (source, rule.id)
+            for source, rules in (
+                (("mod/decisions/information.toml", information_rules),)
+                if information_rules is not None
+                else ()
+            )
+            + (consumer_adapters.policies if consumer_adapters is not None else ())
+            for field_rules in rules.groups().values()
+            for rule in field_rules
+        }
+        expected_instances = tuple(
+            item
+            for item in expected_instances
+            if (
+                (item.source, item.rule_id) in active_rule_keys
+                if item.kind == "rule_action"
+                else item.consumer_field in action_overlay
+            )
+        )
+        expected_ir = tuple(
+            item for item in expected_ir if (item.source, item.action_id) in active_rule_keys
+        )
+        action_contract["configuration_scope"] = {
+            "source_model": "complete_declared_catalog; disabled entries are not production writers",
+            "active_rule_count": len(active_rule_keys),
+            "active_explicit_fields": sorted(action_overlay),
+            "active_instance_ids": [item.action_id for item in expected_instances],
+            "disabled_instance_count": len(situated_model.action_instances)
+            - len(expected_instances),
+            "witness_scope": "only actual enabled writers; every actual writer remains required",
+        }
     action_contract["action_instance_witnesses"] = {
-        "missing": list(
-            situated_action_instances.missing_witnesses(situated_model.action_instances, files)
-        ),
+        "missing": list(situated_action_instances.missing_witnesses(expected_instances, files)),
         "witness_count": len(situated_action_instances.witness_ids(files)),
-        "required_rule_instances": sum(
-            item.kind == "rule_action" for item in situated_model.action_instances
-        ),
+        "required_rule_instances": sum(item.kind == "rule_action" for item in expected_instances),
     }
     action_contract["action_instance_witness_contract"] = (
-        situated_action_instances.witness_contract(situated_model.action_instances, files)
+        situated_action_instances.witness_contract(expected_instances, files)
     )
     action_contract["legacy_behavior_witness_contract"] = (
         situated_action_instances.behavior_witness_contract(
-            situated_model.action_instances,
+            expected_instances,
             generated_texts,
         )
     )
     action_contract["ir_lowering_witness"] = {
-        "missing": list(situated_lowering.missing(situated_model.action_ir, generated_texts)),
-        "mismatches": list(situated_lowering.mismatches(situated_model.action_ir, generated_texts)),
+        "missing": list(situated_lowering.missing(expected_ir, generated_texts)),
+        "mismatches": list(situated_lowering.mismatches(expected_ir, generated_texts)),
         "witness_count": len(situated_lowering.witnesses(generated_texts)),
-        "required_count": len(situated_model.action_ir),
+        "required_count": len(expected_ir),
         "evidence": "static_check",
     }
     ast_witnesses = situated_lowering.ast_witnesses(generated_texts)
@@ -1708,6 +1807,11 @@ def build(
         "evidence": "independent_pdx_ast_structure",
     }
     metadata["situated_actions"] = action_contract
+    if configuration is not None:
+        metadata["configuration"] = configuration.identity()
+        custom_data = metadata["game_custom_data"]
+        assert isinstance(custom_data, dict)
+        custom_data["configuration"] = configuration.identity()
     files[".metadata/metadata.json"] = (
         json.dumps(
             metadata,

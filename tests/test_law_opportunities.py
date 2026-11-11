@@ -24,7 +24,7 @@ def _policy(derived, source):
     rows = [rule for rule in derived["rules"] if rule["source"] == source]
     used = {clause["fact"] for rule in rows for clause in rule["conditions"]}
     readers = copy.deepcopy({key: derived["readers"][key] for key in sorted(used)})
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         from pdx.situated.engine_reader_115 import project_population_readers
 
         project_population_readers(readers)

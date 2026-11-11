@@ -158,7 +158,7 @@ def test_doc12_版本分布表与现场一致() -> None:
     「文档与**这台机器**一致」，没有 mod 就没有可比的东西，跳过而不是假装通过。
     """
     scanned = mods.analyse_all()
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         text = _DOC12.read_text(encoding="utf-8")
         _assert_current_summary(text, scanned)
         versions, _duplicated = _assert_raw_scan(scanned)
@@ -192,7 +192,7 @@ def test_doc12_重复路径结论与现场一致() -> None:
         rel: owners for rel, owners in duplicated.items() if rel.split("/", 1)[0] in content_roots
     }
     text = _DOC12.read_text(encoding="utf-8")
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         _assert_current_summary(text, live)
         _versions, raw_duplicates = _assert_raw_scan(live)
         assert {rel: len(owners) for rel, owners in duplicated.items()} == raw_duplicates

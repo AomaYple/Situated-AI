@@ -17,7 +17,7 @@ import pdx.ai_surface as surf
 import pdx.config
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
-from pdx.version_contracts import active_version, select_version
+from pdx.version_contracts import is_115, select_version
 
 if TYPE_CHECKING:
     from pdx.model import ParsedFile
@@ -209,7 +209,7 @@ def test_真实原版_三槽牌数与默认层() -> None:
         slots[card.slot] = slots.get(card.slot, 0) + 1
     assert slots.get("默认层") == 1
     assert slots.get("administrative") == 7
-    assert slots.get("political") == (11 if active_version() == "1.15.0" else 9)
+    assert slots.get("political") == (11 if is_115() else 9)
     assert slots.get("diplomatic") == 18
 
 
@@ -317,7 +317,7 @@ def test_真实原版_反IG块8处行号与归属() -> None:
         found = body.first("anti_interest_groups")
         if found is not None:
             got[name] = found.line
-    assert got == (_ANTI_IG_LINES_115 if active_version() == "1.15.0" else _ANTI_IG_LINES)
+    assert got == (_ANTI_IG_LINES_115 if is_115() else _ANTI_IG_LINES)
     assert _ANTI_IG_MISSING not in got
     # 括注里的另一条事实：`ai_strategy_default`（不在这九列里）也有这一块。
     default = _cards_of(_parsed("00_default_strategy.txt"))["ai_strategy_default"]
@@ -359,7 +359,7 @@ def test_真实原版_牌面门与权重复算() -> None:
                 hits = _has_modifier_lines(weight.value) if isinstance(weight.value, Block) else []
                 if hits:
                     hm_in_weight[card_name] = hits
-    current = active_version() == "1.15.0"
+    current = is_115()
     assert total == (37 if current else 35)
     assert with_possible == (36 if current else 34)
     assert with_weight == (37 if current else 35)
@@ -404,7 +404,7 @@ def test_真实原版_权重为0的牌只有默认牌() -> None:
             base = weight.value.first("value")
             if base is not None and isinstance(base.value, Scalar) and base.value.unquoted == "0":
                 zeros.append((name, card_name, weight.line))
-    current = active_version() == "1.15.0"
+    current = is_115()
     assert zeros == [("00_default_strategy.txt", "ai_strategy_default", 11273 if current else 9702)]
     default = _cards_of(_parsed("00_default_strategy.txt"))["ai_strategy_default"]
     possible = default.first("possible")

@@ -570,7 +570,7 @@ def test_existence_signature_has_country_owner_consumers_and_generic_institution
     entry = tutorial.root.first("je_tutorial_invest_into_an_institution")
     assert entry is not None
     assert isinstance(entry.value, Block)
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         invalid_outcomes = []
         for outcome in entry.value.all("outcome"):
             assert isinstance(outcome.value, Block)
@@ -624,7 +624,7 @@ def test_this_slice_registers_no_second_capacity_award_on_existing_institution_c
     ],
 )
 def test_new_source_evidence_is_locked_to_actual_original_bytes(source, raw_hash, normalized_hash):
-    if version_contracts.active_version() == "1.15.0":
+    if version_contracts.is_115():
         raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
