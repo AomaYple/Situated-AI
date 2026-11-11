@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from . import version_contracts
+from ._query_parse import parse_query_source
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
@@ -388,7 +389,7 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
         digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
         if digest != source_hashes()[source]:
             raise ValueError(f"公司查询原版来源漂移：{source}")
-        parsed = parse_text(normalized, path=source)
+        parsed = parse_query_source(normalized, source, digest)
         if parsed.errors:
             raise ValueError(f"公司查询原版来源无法解析：{source}")
         roots[source] = parsed.root

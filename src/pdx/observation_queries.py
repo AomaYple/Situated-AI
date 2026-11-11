@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from typing import Literal
 
 from . import company_observations, technology_opportunities, version_contracts
+from ._query_parse import parse_query_source
 from .model import Assignment, Block, Scalar
-from .parser import parse_text
 from .textio import normalized_text
 
 QUERY_ENGINES = frozenset(
@@ -414,7 +414,7 @@ def _verified_sources(
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         if digest != source_hashes()[source]:
             raise ValueError(f"国家观测原版来源漂移：{source}")
-        parsed = parse_text(text, path=source)
+        parsed = parse_query_source(text, source, digest)
         if parsed.errors:
             raise ValueError(f"国家观测原版无法解析：{source}")
         roots[source] = parsed.root

@@ -21,6 +21,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from . import company_observations, config, version_contracts
+from ._query_parse import parse_query_source
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
@@ -1381,7 +1382,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
         digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
         if digest != {**_query_catalog()["sources"], **query_source_hashes()}[source]:
             raise ValueError(f"科技查询原版来源漂移：{source}")
-        parsed = parse_text(normalized, path=source)
+        parsed = parse_query_source(normalized, source, digest)
         if parsed.errors:
             raise ValueError("科技查询原版来源解析失败")
         roots[source] = parsed.root

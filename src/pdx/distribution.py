@@ -28,6 +28,7 @@ from pdx import (
     treaty_opportunities,
     version_contracts,
 )
+from pdx._query_parse import query_parse_scope
 from pdx.generation_transaction import GenerationTransaction
 from pdx.localization import parse_loc_entries
 from pdx.situated import (
@@ -599,6 +600,7 @@ def check_generation_lock(files: Mapping[str, str | bytes] | None = None) -> Non
         raise ValueError("生产源码或产物与冻结记录不一致：用锁定原版运行 modgen --write")
 
 
+@query_parse_scope()
 def verify_compatibility_installation() -> None:
     """Recheck the complete legacy read/write closure at every materialization boundary."""
     try:
