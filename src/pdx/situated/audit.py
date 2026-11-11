@@ -20,6 +20,8 @@ from .receipts import AuditResult, CoverageRow, ReceiptStatus, StageReceipt, dig
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from .compiler import SituatedModel
+
 
 def _production_continuous_bindings(
     generated: Mapping[str, str | bytes],
@@ -218,8 +220,6 @@ def native_report() -> dict[str, object]:
     """
     from pdx import distribution  # noqa: PLC0415
 
-    from .architecture_receipts import source_snapshot  # noqa: PLC0415
-
     _policy, _extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
     # All later consumers accept bytes. Convert once and release the much larger
     # engineering Unicode payload before building the native/effective AST indexes.
@@ -228,10 +228,25 @@ def native_report() -> dict[str, object]:
         for name, text in generated.items()
     }
     del generated
+    model = load_model()
+    return _native_report_from_candidate(model, generated_bytes)
+
+
+def _native_report_from_candidate(
+    model: SituatedModel, generated_bytes: Mapping[str, bytes]
+) -> dict[str, object]:
+    """Evaluate one freshly generated, complete engineering candidate.
+
+    This private entry trusts its caller to supply every member directly
+    from package_inputs(include_engineering_metadata=True), together with
+    the current model. It cannot infer completeness from a partial mapping.
+    Installed originals are independently discovered and reread here.
+    """
+    from .architecture_receipts import source_snapshot  # noqa: PLC0415
+
     metadata = native_treatments._AuditMetadata(
         generated_bytes.get(".metadata/metadata.json", b"{}")
     )
-    model = load_model()
     scope = vanilla_inventory.discover()
     sources = {
         source: (config.GAME / source).read_bytes()

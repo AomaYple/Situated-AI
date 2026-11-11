@@ -279,3 +279,94 @@ def test_existing_cli_default_path_remains_explicitly_separate(tmp_path, monkeyp
         "mode": "legacy",
         "coverage": {"old_receipt": True},
     }
+
+
+def test_public_report_keeps_fresh_call_order_and_exact_candidate_evaluation(pipeline, monkeypatch):
+    calls = []
+    original_build = distribution.package_inputs
+    original_model = audit.load_model
+    original_discover = audit.vanilla_inventory.discover
+    original_policies = decision_adapters.load
+
+    def build(*, include_engineering_metadata=False):
+        calls.append("build")
+        return original_build(include_engineering_metadata=include_engineering_metadata)
+
+    def model():
+        calls.append("model")
+        return original_model()
+
+    def discover():
+        calls.append("discover")
+        return original_discover()
+
+    def policies():
+        calls.append("policies")
+        return original_policies()
+
+    monkeypatch.setattr(distribution, "package_inputs", build)
+    monkeypatch.setattr(audit, "load_model", model)
+    monkeypatch.setattr(audit.vanilla_inventory, "discover", discover)
+    monkeypatch.setattr(decision_adapters, "load", policies)
+    public = audit.native_report()
+    assert calls == ["build", "model", "discover", "policies"]
+    calls.clear()
+    generated = {
+        name: raw.encode("utf-8") if isinstance(raw, str) else raw
+        for name, raw in pipeline.generated.items()
+    }
+    reused = audit._native_report_from_candidate(pipeline.model, generated)
+    assert calls == ["discover", "policies"]
+    assert reused == public
+
+
+@pytest.mark.parametrize("change", ["production", "metadata", "model"])
+def test_candidate_report_uses_each_exact_supplied_candidate_without_reuse(pipeline, change):
+    generated = {
+        name: raw.encode("utf-8") if isinstance(raw, str) else raw
+        for name, raw in pipeline.generated.items()
+    }
+    before = cast("dict[str, Any]", audit._native_report_from_candidate(pipeline.model, generated))
+    model = pipeline.model
+    if change == "production":
+        generated[pipeline.source] += b"\n# another candidate\n"
+    elif change == "metadata":
+        generated[".metadata/metadata.json"] = b'{"id":"another-candidate"}\n'
+    else:
+        model = SimpleNamespace(
+            action_instances=(replace(pipeline.model.action_instances[0], actor_scope="state"),)
+        )
+    after = cast("dict[str, Any]", audit._native_report_from_candidate(model, generated))
+    assert after["scope"] == before["scope"]
+    assert after["native_treatments"]["production_hashes"] == {
+        name: hashlib.sha256(raw).hexdigest() for name, raw in generated.items()
+    }
+    if change == "model":
+        assert before["native_coverage"]["counts"]["actual_covered"] == 1
+        assert after["native_coverage"]["counts"]["actual_covered"] == 0
+        assert after["native_treatments"]["counts"]["implemented_numeric"] == 0
+    else:
+        assert (
+            after["native_treatments"]["production_hashes"]
+            != (before["native_treatments"]["production_hashes"])
+        )
+
+
+@pytest.mark.parametrize("fault", ["metadata", "native_drift", "missing_native", "unsafe_path"])
+def test_candidate_report_keeps_real_input_rejections(pipeline, fault):
+    generated = {
+        name: raw.encode("utf-8") if isinstance(raw, str) else raw
+        for name, raw in pipeline.generated.items()
+    }
+    error: type[Exception] = ValueError
+    if fault == "metadata":
+        generated[".metadata/metadata.json"] = b"not JSON"
+    elif fault == "native_drift":
+        (pipeline.game / pipeline.source).write_bytes(pipeline.native[pipeline.source] + b"# drift")
+    elif fault == "missing_native":
+        (pipeline.game / pipeline.source).unlink()
+        error = FileNotFoundError
+    else:
+        generated["../outside.txt"] = b"outside = {}"
+    with pytest.raises(error):
+        audit._native_report_from_candidate(pipeline.model, generated)

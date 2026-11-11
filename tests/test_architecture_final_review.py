@@ -133,7 +133,21 @@ def final_native(final_candidate):
         assert path.is_file(), f"explicit final native report missing: {path}"
         report = json.loads(path.read_bytes())
     else:
-        report = audit.native_report()
+        assert (
+            digest(architecture_receipts.source_snapshot(config.REPO))
+            == (final_candidate["snapshot"])
+        )
+        # Keep both full native closure checks from package_inputs while
+        # reusing this module's freshly generated complete candidate.
+        distribution.verify_compatibility_installation()
+        report = audit._native_report_from_candidate(
+            final_candidate["model"], final_candidate["files"]
+        )
+        distribution.verify_compatibility_installation()
+        assert (
+            digest(architecture_receipts.source_snapshot(config.REPO))
+            == (final_candidate["snapshot"])
+        )
     assert report["source_snapshot_sha256"] == final_candidate["snapshot"]
     assert report["plan_version"] == architecture_receipts.PLAN_VERSION
     # Re-discover the installed originals independently of the supplied/built
@@ -598,8 +612,12 @@ def final_reviews(final_candidate):
 @pytest.mark.parametrize(("stage", "requirement"), REQUIREMENTS)
 @pytest.mark.parametrize("role", ROLES)
 def test_requirement_specific_full_review_and_real_consumer_roles(
-    final_candidate, final_reviews, architecture_witness, request, stage, requirement, role
+    final_candidate, architecture_witness, request, stage, requirement, role
 ):
+    if requirement in {"legal_scope_disposition", "native_integration"}:
+        reviews = {}
+    else:
+        reviews = request.getfixturevalue("final_reviews")
     if requirement in {
         "legal_scope_disposition",
         "native_integration",
@@ -609,9 +627,9 @@ def test_requirement_specific_full_review_and_real_consumer_roles(
         integrated = _native_review(
             final_candidate, report, integration=requirement != "legal_scope_disposition"
         )
-        review = {**final_reviews.get(requirement, {}), "native_scope": integrated}
+        review = {**reviews.get(requirement, {}), "native_scope": integrated}
     else:
-        review = final_reviews[requirement]
+        review = reviews[requirement]
     assert review
     candidate = final_candidate["r8"]
 
