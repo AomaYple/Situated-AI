@@ -561,10 +561,19 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     }
 
 
-def test_whole_mod_review_reexecutes_the_exact_current_consumer_matrix(final_whole_review):
-    """Build-only verification; formal S5 capture occurs in its six role tests."""
-    review = final_whole_review["review"]
+@pytest.mark.parametrize("role", ROLES)
+def test_whole_mod_review_reexecutes_the_exact_current_consumer_matrix(
+    final_whole_review, architecture_witness, role
+):
+    """Capture every freshly executed consumer under this candidate's full matrix."""
+    whole = final_whole_review
+    review = whole["review"]
     assert review["executed_cases"] == review["expected_cases"]
+    for case in whole["rows"]:
+        if case["role"] == role:
+            architecture_witness(
+                **{**case, "input": {**case["input"], "whole_mod_review": whole["review"]}}
+            )
 
 
 @pytest.fixture(scope="module")
@@ -603,14 +612,6 @@ def test_requirement_specific_full_review_and_real_consumer_roles(
         review = {**final_reviews.get(requirement, {}), "native_scope": integrated}
     else:
         review = final_reviews[requirement]
-    if requirement == "whole_mod_functional_review":
-        whole = request.getfixturevalue("final_whole_review")
-        review = {**review, "whole_mod_matrix": whole["review"]}
-        for case in whole["rows"]:
-            if case["role"] == role:
-                architecture_witness(
-                    **{**case, "input": {**case["input"], "whole_mod_review": whole["review"]}}
-                )
     assert review
     candidate = final_candidate["r8"]
 
