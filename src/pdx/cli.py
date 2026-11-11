@@ -1044,6 +1044,20 @@ def snap_diff(
         )
 
 
+def _matches_json_text(expected: str, value: Any) -> bool:
+    """Compare the complete encoded text without retaining a second JSON copy."""
+    encoder = json.JSONEncoder(ensure_ascii=False, indent=1, sort_keys=True)
+    offset = 0
+    matches = True
+    for chunk in encoder.iterencode(value):
+        if not expected.startswith(chunk, offset):
+            matches = False
+        offset += len(chunk)
+    # Consume every chunk even after a mismatch so later encoding errors retain
+    # the same failure behavior as json.dumps of the complete second snapshot.
+    return matches and offset == len(expected)
+
+
 @snapshot_app.command("verify")
 def snap_verify() -> None:
     """自我一致性检查：同一环境重复生成的快照必须逐字节相同。
@@ -1055,9 +1069,8 @@ def snap_verify() -> None:
     first = snapshot.build()
     second = snapshot.build()
     da = json.dumps(first.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
-    db = json.dumps(second.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
 
-    if da == db:
+    if _matches_json_text(da, second.to_dict()):
         total = sum(len(names) for body in first.sections.values() for names in body.values())
         console.print("[green]✅ 两次构建结果完全一致 —— 快照是确定性的[/]")
         console.print(f"   域 {len(first.sections)} 个，条目总计 {total:,}")
