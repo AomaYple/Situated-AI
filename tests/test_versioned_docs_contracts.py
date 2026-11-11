@@ -209,14 +209,15 @@ def test_external_directory_junction_or_link_cannot_enter_snapshot_sources(tmp_p
     (external / "borrowed.txt").write_text("unreviewed = yes", encoding="utf-8")
     link = installation / "game/linked"
     if os.name == "nt":
+        # cmd follows the console code page; only its exit status is needed here.
         subprocess.run(
             ["cmd", "/c", "mklink", "/J", str(link), str(external)],
             check=True,
             capture_output=True,
-            text=True,
         )
         assert not link.is_symlink()  # Windows junctions bypass the old predicate.
     else:
         link.symlink_to(external, target_is_directory=True)
+    assert link.resolve() == external.resolve()
     with pytest.raises(ValueError, match="链接或越界"):
         snapshot._source_identity_snapshot()

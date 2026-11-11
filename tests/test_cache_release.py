@@ -243,7 +243,8 @@ def test_real_report_write_releases_memo_and_preserves_prior_json_on_serializati
     retained = cache.parse_cached(source)
     if fails:
         ga.resources = {"game": {"bad": [{"unserializable": object()}]}}
-        target = analyze.GAME_OUT / "游戏本体.json"
+        target = tmp_path / "game" / "游戏本体.json"
+        assert target == analyze.GAME_OUT / "游戏本体.json"
         target.parent.mkdir()
         target.write_bytes(b"previous complete output\n")
         with pytest.raises(TypeError):
