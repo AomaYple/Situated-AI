@@ -11,7 +11,9 @@ import hashlib
 import json
 import re
 from dataclasses import asdict, replace
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
+from weakref import ref
 
 import pytest
 from test_architecture_all_consumer_witnesses import _json_observation, _units
@@ -162,19 +164,24 @@ def _field(text, field):
     return _digest(node.value)
 
 
-@pytest.fixture(scope="module")
-def candidate():
+def _release_candidate_evidence():
     # This is the actual release-profile package builder and metadata, not a
     # test model whose program is silently substituted into production output.
     policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
     built = files[SOURCE]
     assert isinstance(built, str)
-    metadata = json.loads(files[".metadata/metadata.json"])
-    model = compiler.load_model()
+    # Audit the exact output before retaining a second decoded metadata tree.
     continuous = audit._production_continuous_bindings(files)
     assert len(continuous) == 1
     support = continuous[0].writer.program
     assert support is not None
+    metadata = json.loads(files[".metadata/metadata.json"])
+    # Returning only the existing fixture evidence releases the complete output
+    # mapping, including its large raw metadata, before another build starts.
+    return policy, extensions, built, metadata, support
+
+
+def _disabled_candidate_text(policy, extensions):
     disabled_extensions = replace(
         extensions,
         reform_enabled=False,
@@ -184,12 +191,19 @@ def candidate():
         diplomacy_enabled=False,
     )
     disabled = decisions.build(replace(policy, enabled=False), extensions=disabled_extensions)
+    return disabled[SOURCE]
+
+
+@pytest.fixture(scope="module")
+def candidate():
+    policy, extensions, built, metadata, support = _release_candidate_evidence()
+    disabled = _disabled_candidate_text(policy, extensions)
     return {
         "built": built,
-        "model": model,
+        "model": compiler.load_model(),
         "metadata": metadata,
         "support": support,
-        "disabled": disabled[SOURCE],
+        "disabled": disabled,
         "baseline": decisions.baseline_path().read_text(encoding="utf-8"),
     }
 
@@ -455,3 +469,85 @@ def test_release_build_has_the_expected_nine_actual_physical_fields(candidate):
         assert _field(_MARKED.sub("\n", candidate["built"]), field) == _field(
             candidate["baseline"], field
         )
+
+
+@pytest.mark.unit
+def test_candidate_releases_full_outputs_before_the_next_heavy_stage(monkeypatch, tmp_path):
+    """Keep complete evidence, but never overlap two full build output owners."""
+
+    class Output(dict):
+        pass
+
+    class MetadataText(str):
+        pass
+
+    package = decisions.PackageContract(
+        "3.3.0", "released", "vanilla-1.15.1", "new-game-only", ("windows",), "fixture"
+    )
+    policy = decisions.Policy(True, "1.15.1", "baseline", 1, 1, 1, 1, 1, package)
+    extensions = decisions.Extensions(
+        reform_enabled=True,
+        market_enabled=True,
+        security_enabled=True,
+        economy_enabled=True,
+        diplomacy_enabled=True,
+    )
+    metadata = {"situated_actions": {"consumer_ir": {"writers": ["actual-writer"]}}}
+    references: dict[str, Any] = {}
+    support = object()
+    baseline = tmp_path / "baseline.txt"
+    baseline.write_text("actual baseline", encoding="utf-8")
+
+    def release(**kwargs):
+        assert kwargs == {"include_engineering_metadata": True}
+        raw = MetadataText(json.dumps(metadata))
+        output = Output({SOURCE: "actual production", ".metadata/metadata.json": raw})
+        references["release"] = ref(output)
+        references["raw"] = ref(raw)
+        return policy, extensions, output
+
+    def continuous(output):
+        assert output is references["release"]()
+        assert json.loads(output[".metadata/metadata.json"]) == metadata
+        return (SimpleNamespace(writer=SimpleNamespace(program=support)),)
+
+    def disabled(selected, *, extensions):
+        assert references["release"]() is None, "full release output survives into disabled build"
+        assert references["raw"]() is None, "raw metadata survives into disabled build"
+        assert "model" not in references, "reference model is retained during another full build"
+        assert selected == replace(policy, enabled=False)
+        assert all(
+            getattr(extensions, name) is False
+            for name in (
+                "reform_enabled",
+                "market_enabled",
+                "security_enabled",
+                "economy_enabled",
+                "diplomacy_enabled",
+            )
+        )
+        output = Output({SOURCE: "actual disabled", ".metadata/metadata.json": "unused report"})
+        references["disabled"] = ref(output)
+        return output
+
+    def model():
+        if "disabled" in references:
+            assert references["disabled"]() is None, "full disabled output survives into model load"
+        value = Output({"reference": "actual model"})
+        references["model"] = ref(value)
+        return value
+
+    monkeypatch.setattr(distribution, "package_inputs", release)
+    monkeypatch.setattr(audit, "_production_continuous_bindings", continuous)
+    monkeypatch.setattr(decisions, "build", disabled)
+    monkeypatch.setattr(compiler, "load_model", model)
+    monkeypatch.setattr(decisions, "baseline_path", lambda: baseline)
+    result = cast("Any", candidate).__wrapped__()
+    assert result == {
+        "built": "actual production",
+        "model": {"reference": "actual model"},
+        "metadata": metadata,
+        "support": support,
+        "disabled": "actual disabled",
+        "baseline": "actual baseline",
+    }

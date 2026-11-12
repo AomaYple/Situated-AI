@@ -10,9 +10,14 @@ from pdx import decision_intents, distribution, version_contracts
 from pdx.situated import pdx_eval
 
 
+@pytest.fixture(scope="module")
+def release_inputs():
+    return distribution.package_inputs(include_engineering_metadata=True)
+
+
 @pytest.mark.integration
-def test_release_freezes_shared_strategy_and_actual_consumers():
-    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+def test_release_freezes_shared_strategy_and_actual_consumers(release_inputs):
+    _, _, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
     strategy = decision_intents.load()
     contract = metadata["strategic_coordination"]
@@ -65,8 +70,8 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
 
 
 @pytest.mark.integration
-def test_release_is_the_public_full_candidate():
-    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+def test_release_is_the_public_full_candidate(release_inputs):
+    _, _, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
     assert metadata["version"] == distribution.RELEASE_VERSION
     assert metadata["status"] == (

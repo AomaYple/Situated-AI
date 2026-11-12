@@ -23,10 +23,10 @@ Mod 内容，体积较大。把整份文本塞进 git 会让仓库迅速劣化�
 from __future__ import annotations
 
 import hashlib
-import json
 from typing import TYPE_CHECKING
 
 import pytest
+from _artifact_readback import assert_artifacts_readback
 
 from pdx import analyze, config, docs_mirror, verify
 from pdx.version_contracts import active_version
@@ -166,20 +166,14 @@ def test_产物之间不互相混杂(artifacts) -> None:
     assert len(roots) >= 3, f"产物应分属至少 3 个目录，实际 {roots}"
 
 
-def test_落盘后能被原样读回(artifacts) -> None:
+def test_落盘后能被原样读回(artifacts, pytestconfig) -> None:
     """JSON 产物必须能被 json 反序列化，Markdown 必须是文本。"""
-    for name, path in artifacts.items():
-        _assert_artifact_readback(name, path)
-
-
-def _assert_artifact_readback(name: str, path: Path) -> None:
-    """Complete deserialization per file, releasing the prior object before the next read."""
-    text = path.read_text(encoding="utf-8")
-    if path.suffix == ".json":
-        obj = json.loads(text)
-        assert isinstance(obj, dict), f"{name} 顶层应为对象"
-    else:
-        assert text.lstrip().startswith("#"), f"{name} 应是 Markdown"
+    # The full parse remains in the sampled process tree, without retaining the
+    # worker's session analysis objects in the process doing deserialization.
+    timeout = pytestconfig.getoption("timeout")
+    if timeout is None:
+        timeout = pytestconfig.getini("timeout")
+    assert_artifacts_readback(artifacts, timeout_s=float(timeout))
 
 
 def test_不污染正式产物目录(artifacts) -> None:
