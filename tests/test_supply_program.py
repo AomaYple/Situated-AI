@@ -5,7 +5,7 @@ from dataclasses import FrozenInstanceError, asdict, replace
 
 import pytest
 
-from pdx import country_state, decision_adapters, decision_rules, decisions
+from pdx import country_state, decision_adapters, decision_rules, decisions, version_contracts
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -214,7 +214,17 @@ def test_production_compiler_contains_each_configured_enum_once():
     assert all(
         writer.supply_program is program for writer, program in zip(rows, programs, strict=True)
     )
-    assert all(writer.operation == "append" and writer.owner == "supply_plan" for writer in rows)
+    assert all(writer.owner == "supply_plan" for writer in rows)
+    merged = (
+        {"radios", "telephones", "oil"} if version_contracts.active_version() == "1.15.1" else set()
+    )
+    operations = {}
+    for writer in rows:
+        assert writer.supply_program is not None
+        operations[writer.supply_program.good] = writer.operation
+    assert operations == {
+        good: "idempotent_or" if good in merged else "append" for good in plan.goods
+    }
 
 
 def _stance_ast(text):
@@ -253,11 +263,18 @@ def _assert_no_produced_supply(files):
     assert "supply_plan" not in metadata.get("default_field_owners", {}).values()
     actual = files[SOURCE]
     assert "# SITAI BEGIN supply:goods_stances" not in actual
-    assert _stance_ast(actual) == _stance_ast(decisions.BASELINE.read_text(encoding="utf-8"))
+    assert _stance_ast(actual) == _stance_ast(decisions.baseline_path().read_text(encoding="utf-8"))
     return metadata
 
 
-def test_real_build_without_adapters_has_no_supply_writer_or_stance():
+@pytest.fixture
+def historical_supply_assembly():
+    """The adapter exclusion assembly contract has frozen offline inputs."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+def test_real_build_without_adapters_has_no_supply_writer_or_stance(historical_supply_assembly):
     files = decisions.build()
     metadata = _assert_no_produced_supply(files)
     assert "consumer_adapters" not in metadata

@@ -14,14 +14,37 @@ import re
 import tomllib
 from typing import TYPE_CHECKING, Any
 
-from . import config
-from .model import Block
+from . import config, version_contracts
+from .model import Block, Scalar
 from .parser import parse_text
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/law_opportunities.toml"
+
+SOURCE_HASHES_115 = {
+    "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
+    "common/laws/00_citizenship.txt": "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76",
+    "common/laws/00_church_and_state.txt": "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50",
+    "common/laws/01_taxation.txt": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
+    "common/laws/01_trade_policy.txt": "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
+    "common/laws/02_labour_associations.txt": "5b50400f5e9be0d70a75f1b13c902ee817384473c64ab12bf52935ea98cf23b5",
+    "common/laws/02_migration.txt": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
+    "common/laws/01_land_reform.txt": "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174",
+    "common/laws/01_economic_system.txt": "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194",
+}
+
+_NATIVE_RETAINED_115 = {
+    "law_official_nationality": "common/laws/00_citizenship.txt",
+    "law_caesaropapism": "common/laws/00_church_and_state.txt",
+}
+
+
+def native_retained_candidates() -> dict[str, str]:
+    """Additional 1.15 consumers are counted and retain their entire native policy."""
+    return dict(_NATIVE_RETAINED_115) if version_contracts.is_115() else {}
+
 
 # Exact modifier values in the complete hash-locked labour source. Omitted
 # modifier keys have zero contribution; guild qualifications are not reused.
@@ -106,6 +129,8 @@ def load() -> dict[str, Any]:
         raise ValueError("具体法律候选与锁定原版来源不一致")
     if any(not re.fullmatch(r"law_[a-z_]+", law) for law in data["candidates"]):
         raise ValueError("具体法律候选身份无效")
+    if version_contracts.is_115():
+        data["sources"] = dict(SOURCE_HASHES_115)
     return data
 
 
@@ -113,6 +138,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
     """Prove complete native consumer identities, not just discovered words."""
     data = load()
     found = {}
+    roots = {}
     for source, digest in data["sources"].items():
         text = inputs.get(source)
         if text is None or hashlib.sha256(text.encode("utf-8")).hexdigest() != digest:
@@ -120,6 +146,7 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
         parsed = parse_text(text)
         if parsed.errors:
             raise ValueError(f"具体法律机会原版无法解析：{source}")
+        roots[source] = parsed.root
         for definition in parsed.root.assignments():
             if not isinstance(definition.value, Block):
                 continue
@@ -134,8 +161,77 @@ def verify_inputs(inputs: Mapping[str, str]) -> None:
             ):
                 raise ValueError("具体法律机会原版消费者重复或形状漂移")
             found[definition.key] = source
-    if found != data["candidates"]:
+    if found != {**data["candidates"], **native_retained_candidates()}:
         raise ValueError("具体法律机会原版独立候选分母漂移")
+    _verify_mechanisms(roots)
+
+
+def _verify_mechanisms(roots: Mapping[str, Block]) -> None:
+    """Reprove each numeric mechanism used by the migrated transition rules."""
+
+    def value(source: str, law: str, channel: str, key: str) -> float:
+        definitions = roots[source].all(law)
+        if (
+            len(definitions) != 1
+            or definitions[0].op != "="
+            or definitions[0].prefix is not None
+            or not isinstance(definitions[0].value, Block)
+        ):
+            raise ValueError(f"具体法律机会缺少唯一普通法律定义：{law}")
+        modifiers = definitions[0].value.all(channel)
+        if not modifiers:
+            return 0
+        if (
+            len(modifiers) != 1
+            or modifiers[0].op != "="
+            or modifiers[0].prefix is not None
+            or not isinstance(modifiers[0].value, Block)
+        ):
+            raise ValueError(f"具体法律机会修正块形状漂移：{law}/{channel}")
+        fields = modifiers[0].value.all(key)
+        if not fields:
+            return 0
+        if (
+            len(fields) != 1
+            or fields[0].op != "="
+            or fields[0].prefix is not None
+            or not isinstance(fields[0].value, Scalar)
+        ):
+            raise ValueError(f"具体法律机会机制缺少唯一普通数值：{law}/{key}")
+        try:
+            number = float(fields[0].value.unquoted)
+        except ValueError as error:
+            raise ValueError(f"具体法律机会机制不是有限数值：{law}/{key}") from error
+        if not math.isfinite(number):
+            raise ValueError(f"具体法律机会机制不是有限数值：{law}/{key}")
+        return number
+
+    for source, laws in AUTHORITY_EFFECTS.items():
+        for law, expected in laws.items():
+            if value(source, law, "modifier", "country_authority_add") != expected:
+                raise ValueError(f"具体法律机会权威机制漂移：{law}")
+    labour = "common/laws/02_labour_associations.txt"
+    for law, expected_pair in LABOUR_EFFECTS.items():
+        actual = tuple(
+            value(labour, law, "modifier", key)
+            for key in (
+                "state_radicals_from_political_movements_mult",
+                "interest_group_ig_trade_unions_pol_str_mult",
+            )
+        )
+        if actual != expected_pair:
+            raise ValueError(f"具体法律机会劳动机制漂移：{law}")
+    for law, expected_triple in POLICING_EFFECTS.items():
+        actual = tuple(
+            value(POLICING_SOURCE, law, "institution_modifier", key)
+            for key in (
+                "state_turmoil_effects_mult",
+                "state_radicals_from_political_movements_mult",
+                "state_mortality_turmoil_mult",
+            )
+        )
+        if actual != expected_triple:
+            raise ValueError(f"具体法律机会警务机制漂移：{law}")
 
 
 def _condition(fact: str, op: str, value: object) -> dict[str, object]:

@@ -18,18 +18,26 @@ from typing import Any
 
 import pytest
 
+from pdx import config as pdx_config
+from pdx import decisions, distribution, version_contracts
 from pdx.parser import parse_bytes
 from pdx.situated import architecture_receipts as receipts
+from pdx.situated import vanilla_inventory
 from pdx.situated.native_treatments import _digest, _resolve
 from pdx.situated.receipts import digest
 
 _STATE = "architecture-witness-capture-state"
+_CURRENT_ROOT = "tools/out/compatibility/1.15.0"
+_CURRENT_PROTOCOL = "architecture-current-pdx-witness-v1"
 
 
 def pytest_addoption(parser):
     group = parser.getgroup("architecture witness capture")
     for name in ("output", "stage", "requirement", "id", "scope", "plan"):
         group.addoption(f"--architecture-witness-{name}", default=None)
+    group.addoption(
+        "--architecture-witness-profile", choices=("1.14.5", "1.15.0"), default="1.14.5"
+    )
 
 
 def _json_value(value):
@@ -47,8 +55,98 @@ def _write(path: Path, value) -> dict[str, str]:
     return {"sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
+def _current_attestation(root: Path) -> dict[str, Any]:
+    """Bind current witnesses to the real complete compatibility materialization.
+
+    Both live native closure checks and the exact raw generation lock are
+    mandatory. A path name or caller-supplied scope hash grants no authority.
+    This tool-only protocol does not extend or re-sign historical A2 receipts.
+    """
+    if version_contracts.active_version() != "1.15.0":
+        raise ValueError("current witness capture requires an explicit 1.15.0 contract")
+    product = receipts._path(root, _CURRENT_ROOT)
+    if root != pdx_config.REPO.resolve() or decisions.product_path().resolve() != product.resolve():
+        raise ValueError("current witness capture requires the exact configured compatibility root")
+    source_lock = distribution.generation_lock({})
+    _, _, internal = distribution.package_inputs(include_engineering_metadata=True)
+    if distribution.generation_lock({}) != source_lock:
+        raise ValueError("current witness sources changed during compatibility build")
+    built = {
+        name: value if isinstance(value, bytes) else value.encode("utf-8")
+        for name, value in distribution._release_files(internal).items()
+        if name != "README.md"
+    }
+    paths = distribution._profile_directory_files(product)
+    raw = {name: path.read_bytes() for name, path in paths.items()}
+    lock_raw = raw.pop("generation-lock.json")
+    if raw != built:
+        raise ValueError("current compatibility tree differs from freshly built production bytes")
+    distribution.check_generation_lock(built)
+    scope = vanilla_inventory.discover()
+    # Scope discovery itself is a long native read boundary. Recheck all
+    # production dependencies and sources/outputs after it finishes.
+    distribution.verify_compatibility_installation()
+    distribution.check_generation_lock(built)
+    for name, expected_hash in scope.source_hashes.items():
+        if name.startswith("@evidence/"):
+            native_path = receipts._path(root, name.removeprefix("@evidence/"))
+        elif name.startswith("@engine/"):
+            native_path = receipts._path(pdx_config.GAME.parent, name.removeprefix("@engine/"))
+        elif name.startswith("@version/"):
+            native_path = receipts._path(pdx_config.GAME.parent, name.removeprefix("@version/"))
+        elif name.startswith("@"):
+            raise ValueError(f"unsupported current native source identity: {name}")
+        else:
+            native_path = receipts._path(pdx_config.GAME, name)
+        with native_path.open("rb") as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != expected_hash:
+                raise ValueError(f"current native discovery source changed: {name}")
+    final_paths = distribution._profile_directory_files(product)
+    expected = {**raw, "generation-lock.json": lock_raw}
+    if set(final_paths) != set(expected) or any(
+        final_paths[name].read_bytes() != value for name, value in expected.items()
+    ):
+        raise ValueError("current witness compatibility outputs changed during attestation")
+    lock = json.loads(lock_raw)
+    return {
+        "contract_version": "1.15.0",
+        "generated_root": _CURRENT_ROOT,
+        "generation_lock": {
+            "path": _CURRENT_ROOT + "/generation-lock.json",
+            "sha256": hashlib.sha256(lock_raw).hexdigest(),
+            "sources": lock["sources"],
+        },
+        "generated_files": {
+            name: hashlib.sha256(value).hexdigest() for name, value in sorted(expected.items())
+        },
+        "native_baseline_id": scope.baseline_id,
+        "native_scope_hash": scope.scope_hash,
+        "native_source_hashes": scope.source_hashes,
+        "native_discovered_count": scope.discovered_count,
+        "runtime": "unknown",
+    }
+
+
+class _CurrentBoundary:
+    def __init__(self, root: Path):
+        self.root = root
+        self.initial = _current_attestation(root)
+        self.final_issues: list[str] | None = None
+
+    def finish(self) -> list[str]:
+        # Batch rows share one initial/final physical boundary verification.
+        if self.final_issues is None:
+            self.final_issues = []
+            try:
+                if _current_attestation(self.root) != self.initial:
+                    self.final_issues.append("current_generation_or_native_identity_changed")
+            except (OSError, ValueError, KeyError) as exc:
+                self.final_issues.append(f"current_generation_or_native_boundary_failed:{exc}")
+        return self.final_issues
+
+
 class Capture:
-    def __init__(self, config, *, declaration=None, snapshot=None):
+    def __init__(self, config, *, declaration=None, snapshot=None, current_boundary=None):
         self.root = Path(config.rootpath).resolve()
         declaration = declaration or {
             "output": config.getoption("architecture_witness_output"),
@@ -78,6 +176,19 @@ class Capture:
             )
         if config.getoption("numprocesses", default=0) not in (0, None):
             raise pytest.UsageError("architecture witness capture requires -n0")
+        self.profile = config.getoption("architecture_witness_profile", default="1.14.5")
+        self.current_boundary = current_boundary
+        if self.profile == "1.15.0":
+            try:
+                self.current_boundary = current_boundary or _CurrentBoundary(self.root)
+                if self.scope != self.current_boundary.initial["native_scope_hash"]:
+                    raise ValueError(
+                        "current witness scope must match independently discovered native scope"
+                    )
+            except (OSError, ValueError, KeyError) as exc:
+                raise pytest.UsageError(
+                    f"invalid current architecture witness boundary: {exc}"
+                ) from exc
         self.snapshot = receipts.source_snapshot(self.root) if snapshot is None else snapshot
         self.external_issues: list[str] = []
         self.plan_ref: dict[str, str] | None = None
@@ -117,7 +228,12 @@ class Capture:
             self.production[name] = self.artifact(name)
         for item in consumers:
             name, definition, field = (item[key] for key in ("path", "definition", "field"))
-            if not name.startswith("mod/") or name.startswith("mod/decisions/"):
+            if self.profile == "1.15.0":
+                if not name.startswith(_CURRENT_ROOT + "/"):
+                    raise ValueError(
+                        "current generated consumer must use the exact compatibility output root"
+                    )
+            elif not name.startswith("mod/") or name.startswith("mod/decisions/"):
                 raise ValueError("generated consumer path outside mod output role")
             identity = name, definition, field
             if identity not in self.consumer_cache:
@@ -143,6 +259,8 @@ class Capture:
 
     def pytest_sessionfinish(self, session, exitstatus):
         issues = list(self.external_issues)
+        if self.current_boundary is not None:
+            issues.extend(self.current_boundary.finish())
         if exitstatus != 0:
             issues.append(f"pytest_exit_code:{int(exitstatus)}")
         if receipts.source_snapshot(self.root) != self.snapshot:
@@ -204,14 +322,36 @@ class Capture:
         }
         if self.plan_ref is not None:
             result["capture_plan"] = self.plan_ref
+        if self.current_boundary is not None:
+            result.update(
+                schema=2,
+                protocol=_CURRENT_PROTOCOL,
+                contract_version=self.profile,
+                current_boundary=self.current_boundary.initial,
+            )
         ref = _write(self.output, result)
         ref["path"] = self.output.relative_to(self.root).as_posix()
         row["result"] = ref
-        row_path = self.output.with_suffix(".row.json")
+        row_path = self.output.with_suffix(
+            ".current-row.json" if self.current_boundary is not None else ".row.json"
+        )
         if not issues:
-            errors = receipts._evidence(
-                self.root, self.stage, row, digest(self.snapshot), self.scope
-            )
+            if self.current_boundary is not None:
+                row = {
+                    "schema": 1,
+                    "protocol": _CURRENT_PROTOCOL,
+                    "contract_version": self.profile,
+                    "stage_id": self.stage,
+                    "source_snapshot_sha256": digest(self.snapshot),
+                    "scope_hash": self.scope,
+                    "current_boundary": self.current_boundary.initial,
+                    **row,
+                }
+                errors = []
+            else:
+                errors = receipts._evidence(
+                    self.root, self.stage, row, digest(self.snapshot), self.scope
+                )
             if errors:
                 result["status"] = "rejected"
                 result["open_items"] = errors
@@ -226,7 +366,7 @@ class Capture:
         return result
 
 
-def _plan(root: Path, name: str) -> list[dict[str, str]]:
+def _plan(root: Path, name: str, *, profile: str = "1.14.5") -> list[dict[str, str]]:
     """Read caller-owned row responsibility declarations, never infer coverage."""
     if not isinstance(name, str) or not name.startswith("tools/out/") or not name.endswith(".json"):
         raise pytest.UsageError("architecture witness plan must be tools/out/*.json")
@@ -265,7 +405,7 @@ def _plan(root: Path, name: str) -> list[dict[str, str]]:
             if not output.startswith("tools/out/") or not output.endswith(".json"):
                 raise ValueError("plan result must be tools/out/*.json")
             path = receipts._path(root, output)
-            row_path = path.with_suffix(".row.json")
+            row_path = path.with_suffix(".current-row.json" if profile == "1.15.0" else ".row.json")
             if path in paths or row_path in paths:
                 raise ValueError("plan and result/row output paths must not overlap")
             paths.update((path, row_path))
@@ -282,12 +422,21 @@ class BatchCapture:
         ):
             raise pytest.UsageError("architecture witness plan cannot mix with single-row options")
         root = Path(config.rootpath).resolve()
-        declarations = _plan(root, config.getoption("architecture_witness_plan"))
+        profile = config.getoption("architecture_witness_profile", default="1.14.5")
+        declarations = _plan(root, config.getoption("architecture_witness_plan"), profile=profile)
+        try:
+            current_boundary = _CurrentBoundary(root) if profile == "1.15.0" else None
+        except (OSError, ValueError, KeyError) as exc:
+            raise pytest.UsageError(
+                f"invalid current architecture witness boundary: {exc}"
+            ) from exc
         self.plan_path = receipts._path(root, config.getoption("architecture_witness_plan"))
         self.plan_sha256 = hashlib.sha256(self.plan_path.read_bytes()).hexdigest()
         snapshot = receipts.source_snapshot(root)
         self.captures = {
-            row["evidence_id"]: Capture(config, declaration=row, snapshot=snapshot)
+            row["evidence_id"]: Capture(
+                config, declaration=row, snapshot=snapshot, current_boundary=current_boundary
+            )
             for row in declarations
         }
         for capture in self.captures.values():

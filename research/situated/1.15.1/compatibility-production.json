@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "version": "1.15.1",
+  "purpose": "complete_historical_compatibility_build_only",
+  "evidence_kind": "native_static",
+  "runtime": "unknown",
+  "strategy_source": "common/ai_strategies/00_default_strategy.txt",
+  "strategy_source_sha256": "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba",
+  "baseline_sha256": "e0e2cc9762f2d1e07deeb45091ca2e317e3771038851b840232d5f80538210c0",
+  "definition": "ai_strategy_default",
+  "fields": {
+    "aggression": {
+      "line": 4381,
+      "ast_sha256": "442ffcc417542ad74453a173a7c68a2747fbef74c7567e28a94d9d3f47fdb445"
+    },
+    "change_law_chance": {
+      "line": 1574,
+      "ast_sha256": "9dfd1463a18102fa93ee1173046eb66c87514da6ef17dfc2bb173e432cd26668"
+    },
+    "diplomatic_play_neutrality": {
+      "line": 1244,
+      "ast_sha256": "93cb90073cee5f102be87362aec4534df1157c534e8c3deeb5074ff3213f397c"
+    },
+    "diplomatic_play_support": {
+      "line": 216,
+      "ast_sha256": "b91eb6e1a9ee671690bf79ea4b6f9a92932dbbf4adbaccf57f2c4b30527351aa"
+    },
+    "economic_vs_government_spending_balance": {
+      "line": 6026,
+      "ast_sha256": "264a396f361137440f1a59616cb75e21f6dfc512c0707c9523cf85aae1ad1644"
+    },
+    "recklessness": {
+      "line": 3926,
+      "ast_sha256": "55ad15b2cbb06fae39425d2f511149a4bab8fef888380a8d0866fecd8813cfe5"
+    }
+  },
+  "hooks_source": "common/on_actions/00_code_on_actions.txt",
+  "hooks_source_sha256": "0bbc933d54ea56f830850decafaf5034694eb2222e49d6c980f2c6122be777a9",
+  "hooks": {
+    "on_country_default": {
+      "line": 1659,
+      "ast_sha256": "50ae6090be7b1834a6e44764d667303dd9a69d5dfe81cfdfce8ca57f46259029",
+      "actor": "country",
+      "scope_line": 1658,
+      "scope_statement": "# Root = Country"
+    },
+    "on_country_no_longer_default": {
+      "line": 1678,
+      "ast_sha256": "46916a1227ceb3bc81fe280165191e4ef61e8215ecbc2428dd89c70d40734d92",
+      "actor": "country",
+      "scope_line": 1677,
+      "scope_statement": "# Root = Country"
+    },
+    "on_monthly_pulse_country": {
+      "line": 167,
+      "ast_sha256": "97baca76fdedce2b0c77561417f7954c43e67fa699428f2a44b5f0f5249b5a59",
+      "actor": "country",
+      "scope_line": 166,
+      "scope_statement": "# Root = Country"
+    }
+  },
+  "fiscal_reference_source": "common/script_values/war_support_values.txt",
+  "fiscal_reference_source_sha256": "8e1a3504ad54d7539f70f9932c88f5a287481a99def88cf39ec8abbf11a31243",
+  "fiscal_reference_sha256": "a75bd31a6062258065b13f245612487ad719757f2864afe289c03fffe5c2843b"
+}

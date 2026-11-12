@@ -6,13 +6,18 @@ from pathlib import Path
 
 import pytest
 
-from pdx import decision_intents, distribution
+from pdx import decision_intents, distribution, version_contracts
 from pdx.situated import pdx_eval
 
 
+@pytest.fixture(scope="module")
+def release_inputs():
+    return distribution.package_inputs(include_engineering_metadata=True)
+
+
 @pytest.mark.integration
-def test_release_freezes_shared_strategy_and_actual_consumers():
-    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+def test_release_freezes_shared_strategy_and_actual_consumers(release_inputs):
+    _, _, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
     strategy = decision_intents.load()
     contract = metadata["strategic_coordination"]
@@ -65,11 +70,13 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
 
 
 @pytest.mark.integration
-def test_release_is_the_public_full_candidate():
-    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+def test_release_is_the_public_full_candidate(release_inputs):
+    _, _, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
     assert metadata["version"] == distribution.RELEASE_VERSION
-    assert metadata["status"] == "released"
+    assert metadata["status"] == (
+        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+    )
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",
@@ -85,6 +92,7 @@ def test_release_is_the_public_full_candidate():
     assert all("probe" not in name.lower() for name in files)
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("key", ["fallback_languages", "production_fallback_languages"])
 def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch, key):
     metadata: dict[str, dict[str, list[str]]] = {
@@ -96,19 +104,6 @@ def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch
     metadata["localization"][key] = ["french"]
     files = {".metadata/metadata.json": json.dumps(metadata)}
     monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
-    monkeypatch.setattr(distribution.country_state, "validate", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
-    monkeypatch.setattr(
-        distribution.decision_interfaces, "verify_scripted_trigger_game", lambda *_args: ()
-    )
-    monkeypatch.setattr(distribution.engine_scope, "verify_company_game", lambda *_args: None)
-    monkeypatch.setattr(
-        distribution.engine_scope, "verify_company_defaults_game", lambda *_args: None
-    )
-    monkeypatch.setattr(distribution.company_sectors, "verify_game", lambda *_args: None)
-    monkeypatch.setattr(distribution.equipment_opportunities, "verify_game", lambda *_args: None)
-    monkeypatch.setattr(distribution.treaty_opportunities, "verify_game", lambda *_args: None)
-    monkeypatch.setattr(distribution.mobilization_opportunities, "verify_game", lambda *_args: None)
     with pytest.raises(ValueError, match="未翻译"):
         distribution.package_inputs()
     assert json.loads(files[".metadata/metadata.json"]) == metadata
@@ -134,7 +129,10 @@ def test_production_generation_rejects_drifted_scripted_predicate_before_build(m
     def must_not_build(*_args, **_kwargs):
         pytest.fail("unverified scripted predicate reached the production generator")
 
+    # Isolate the intended third guard: acceptance by earlier guards is synthetic,
+    # while the failing scripted-predicate guard must run before generation.
     monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
+    monkeypatch.setattr(distribution.engine_scope, "verify_company_game", lambda *_args: None)
     monkeypatch.setattr(distribution.decision_interfaces, "verify_scripted_trigger_game", reject)
     monkeypatch.setattr(distribution.decisions, "build", must_not_build)
     with pytest.raises(ValueError, match="来源SHA漂移"):

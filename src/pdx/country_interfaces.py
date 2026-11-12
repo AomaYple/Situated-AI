@@ -13,13 +13,28 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from . import config, country_state
+from . import config, country_state, version_contracts
 from .model import Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
 
 EVIDENCE = config.REPO / "research/vanilla-ai/1.14.5/country-interfaces.json"
 BASELINE = EVIDENCE.parent / "00_default_strategy.txt"
+EVIDENCE_1151_SHA256 = "2ac5941ca97be50f09220f3ac3765262aa5e7472b5434539d7658fae04b70ebb"
+EVIDENCE_115_SHA256 = "c2e1eec0205efaa2e4c04ff770db418a4d7bd5ebe2649301eabca3e9a861e006"
+
+
+def evidence_file() -> Path:
+    """Choose current evidence at the call boundary, preserving historical overrides."""
+    if version_contracts.is_115():
+        return version_contracts.research_path("vanilla-ai", "country-interfaces.json")
+    return EVIDENCE
+
+
+def baseline_path() -> Path:
+    if version_contracts.is_115():
+        return version_contracts.research_path("vanilla-ai", "00_default_strategy.txt")
+    return BASELINE
 
 
 def _digest(value):
@@ -79,6 +94,63 @@ def _observations(raw, relative):
     return words, arguments
 
 
+def _ast_context(raw, relative, token, line):
+    """Capture lexical ancestry and exact AST, without inferring reader permissions."""
+    parsed = parse_text(raw.decode("utf-8-sig"), relative)
+    if parsed.errors:
+        raise ValueError(f"原版接口样例解析失败：{relative}")
+
+    def shape(node):
+        if isinstance(node, Block):
+            return [shape(item) for item in node.items]
+        if isinstance(node, Scalar):
+            return [node.text, node.quoted]
+        return [node.key, node.op, node.prefix, shape(node.value)]
+
+    def walk(block, parents):
+        for item in block.assignments():
+            name = item.value.first("name") if isinstance(item.value, Block) else None
+            variable_name = name.value if name is not None else None
+            if item.line == line and (
+                item.key == token
+                or (isinstance(item.value, Scalar) and item.value.text == token)
+                or (
+                    item.key == "set_variable"
+                    and isinstance(variable_name, Scalar)
+                    and variable_name.unquoted == token
+                )
+            ):
+                return {
+                    "ancestor_path": parents,
+                    "assignment_key": item.key,
+                    "operator": item.op,
+                    "prefix": item.prefix,
+                    "assignment_ast_sha256": _digest(shape(item)),
+                    "scope_authorization": "none_lexical_context_only",
+                }
+            if isinstance(item.value, Block):
+                result = walk(
+                    item.value,
+                    [
+                        *parents,
+                        {
+                            "key": item.key,
+                            "line": item.line,
+                            "operator": item.op,
+                            "prefix": item.prefix,
+                        },
+                    ],
+                )
+                if result is not None:
+                    return result
+        return None
+
+    result = walk(parsed.root, [])
+    if result is None:
+        raise ValueError(f"国家接口AST语境缺失：{relative}:{line}:{token}")
+    return result
+
+
 def extract(policy, root, sections):
     """从真实原版建立有限样例，不改写既有快照或原版镜像。"""
     root = Path(root)
@@ -87,7 +159,7 @@ def extract(policy, root, sections):
         baseline_text = baseline.read_text(encoding="utf-8-sig")
     except FileNotFoundError as exc:
         raise ValueError("缺少锁定游戏原件") from exc
-    if normalized_text(baseline_text) != BASELINE.read_text(encoding="utf-8"):
+    if normalized_text(baseline_text) != baseline_path().read_text(encoding="utf-8"):
         raise ValueError("国家接口底本漂移")
     required, arguments = _required(policy), _arguments(policy)
     found: dict[str, dict[str, Any]] = {}
@@ -118,10 +190,10 @@ def extract(policy, root, sections):
         raise ValueError(
             f"国家接口/参数缺少原版证据：{required - found.keys()}, {arguments - args.keys()}"
         )
-    return {
+    result = {
         "schema": 1,
         "evidence": "static_vanilla_examples_not_engine_execution",
-        "baseline_sha256": hashlib.sha256(BASELINE.read_bytes()).hexdigest(),
+        "baseline_sha256": hashlib.sha256(baseline_path().read_bytes()).hexdigest(),
         "snapshot_sections_sha256": _digest(sections),
         "sources": sources,
         "interfaces": found,
@@ -130,14 +202,59 @@ def extract(policy, root, sections):
             for (engine, argument), row in sorted(args.items())
         ],
     }
+    if version_contracts.is_115():
+        # A building modifier with the same spelling is not a country reader example.
+        relative = "common/decisions/00_decisions.txt"
+        raw = (root / relative).read_bytes()
+        words, _ = _observations(raw, relative)
+        found["bureaucracy"] = {"source": relative, "line": words["bureaucracy"]}
+        sources[relative] = hashlib.sha256(raw).hexdigest()
+        used = {row["source"] for row in [*found.values(), *result["arguments"]]}
+        result["sources"] = {key: value for key, value in sources.items() if key in used}
+        result["baseline_version"] = version_contracts.active_version()
+        for token, row in found.items():
+            row["ast_context"] = _ast_context(
+                (root / row["source"]).read_bytes(), row["source"], token, row["line"]
+            )
+        bureaucracy = found["bureaucracy"]
+        context = bureaucracy["ast_context"]
+        if (
+            bureaucracy["line"] != 32
+            or [entry["key"] for entry in context["ancestor_path"]]
+            != ["revive_olympic_games_decision", "ai_chance", "if", "limit"]
+            or any(
+                entry["operator"] != "=" or entry["prefix"] is not None
+                for entry in context["ancestor_path"]
+            )
+            or context["assignment_key"] != "bureaucracy"
+            or context["operator"] != ">"
+            or context["prefix"] is not None
+            or context["assignment_ast_sha256"]
+            != "4a0ca97f0d21262016b445a8852426b2d8852c7ba92a541a859c5720d809f420"
+        ):
+            raise ValueError("国家bureaucracy原版country决议条件AST漂移")
+        for row in result["arguments"]:
+            row["ast_context"] = _ast_context(
+                (root / row["source"]).read_bytes(), row["source"], row["argument"], row["line"]
+            )
+    return result
 
 
-def validate(policy, *, root=None, snapshot=None, evidence_path=EVIDENCE):
-    evidence = json.loads(Path(evidence_path).read_text(encoding="utf-8"))
+def validate(policy, *, root=None, snapshot=None, evidence_path=None):
+    selected_path = evidence_file() if evidence_path is None else Path(evidence_path)
+    raw = selected_path.read_bytes()
+    if version_contracts.is_115() and hashlib.sha256(raw).hexdigest() != (
+        EVIDENCE_1151_SHA256
+        if version_contracts.active_version() == "1.15.1"
+        else EVIDENCE_115_SHA256
+    ):
+        raise ValueError("国家接口当前权威证据漂移")
+    evidence = json.loads(raw)
     if (
         not isinstance(evidence, dict)
         or evidence.get("schema") != 1
-        or evidence.get("baseline_sha256") != hashlib.sha256(BASELINE.read_bytes()).hexdigest()
+        or evidence.get("baseline_sha256")
+        != hashlib.sha256(baseline_path().read_bytes()).hexdigest()
     ):
         raise ValueError("国家接口冻结底本无效")
     sources, interfaces, args = (
@@ -179,6 +296,20 @@ def validate(policy, *, root=None, snapshot=None, evidence_path=EVIDENCE):
         for row in args
     ):
         raise ValueError("国家参数证据结构无效")
+    if version_contracts.is_115():
+        if evidence.get("baseline_version") != version_contracts.active_version():
+            raise ValueError("国家接口当前版本身份无效")
+        for row in [*interfaces.values(), *args]:
+            context = row.get("ast_context")
+            if (
+                not isinstance(context, dict)
+                or context.get("scope_authorization") != "none_lexical_context_only"
+                or not isinstance(context.get("ancestor_path"), list)
+                or not isinstance(context.get("assignment_key"), str)
+                or not isinstance(context.get("assignment_ast_sha256"), str)
+                or len(context["assignment_ast_sha256"]) != 64
+            ):
+                raise ValueError("国家接口当前AST语境无效")
     if not _required(policy) <= evidence["interfaces"].keys():
         raise ValueError("国家接口缺少冻结证据")
     arguments = {(r["engine"], r["argument"]) for r in evidence["arguments"]}
@@ -201,7 +332,7 @@ def validate(policy, *, root=None, snapshot=None, evidence_path=EVIDENCE):
         )
     except FileNotFoundError as exc:
         raise ValueError("缺少锁定游戏原件") from exc
-    if normalized_text(baseline_text) != BASELINE.read_text(encoding="utf-8"):
+    if normalized_text(baseline_text) != baseline_path().read_text(encoding="utf-8"):
         raise ValueError("国家接口底本漂移")
     observed = {}
     for relative, digest in evidence["sources"].items():
@@ -220,9 +351,17 @@ def validate(policy, *, root=None, snapshot=None, evidence_path=EVIDENCE):
     for key, row in evidence["interfaces"].items():
         if observed[row["source"]][0].get(key) != row["line"]:
             raise ValueError(f"国家接口样例不匹配：{key}")
+        if version_contracts.is_115() and row["ast_context"] != _ast_context(
+            (root / row["source"]).read_bytes(), row["source"], key, row["line"]
+        ):
+            raise ValueError(f"国家接口AST语境不匹配：{key}")
     for row in evidence["arguments"]:
         if observed[row["source"]][1].get((row["engine"], row["argument"])) != row["line"]:
             raise ValueError("国家参数样例不匹配")
+        if version_contracts.is_115() and row["ast_context"] != _ast_context(
+            (root / row["source"]).read_bytes(), row["source"], row["argument"], row["line"]
+        ):
+            raise ValueError("国家参数AST语境不匹配")
 
 
 def main():
@@ -235,7 +374,7 @@ def main():
     if index is None:
         raise ValueError("缺少冻结精简快照")
     evidence = extract(country_state.load(), config.GAME, index.sections)
-    EVIDENCE.write_text(
+    evidence_file().write_text(
         json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
 

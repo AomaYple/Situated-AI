@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "version": "1.15.0",
+  "evidence_kind": "native_static",
+  "runtime": "unknown",
+  "historical_retirements_sha256": "ff40ad701d19c16d08b5c246a4b9f34c3b3a21bf2199e0d4ab2e95f972d7c77b",
+  "source": "research/vanilla-ai/1.15.0/00_default_strategy.txt",
+  "source_sha256": "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431",
+  "definition": "ai_strategy_default",
+  "retentions": {
+    "colonial_interest_ratio": "4a4a4342151af33b74989498b00e2bd840da9e60862680b47ecbf17e7a4564ba",
+    "combat_unit_group_weights.combat_unit_group_infantry": "952a0f1e065f5d0039a9e3ecfc1a436709c864b1ac6a09e47dbb462a8164c73e",
+    "combat_unit_group_weights.combat_unit_group_cavalry": "556ab8030f168b16693024685112ceee831dd6cbd483d0d09e6c05cd7d6c1fe1",
+    "strategic_region_stance_type_scores.stance_colonize_region": "f2ded48a421957145fd2fd241f40abea2aa0767ef70e2cff26e0c7f50d942d75"
+  },
+  "replacement_redirects": [
+    {
+      "source": "common/technology/technologies/10_production.txt",
+      "definition": "dough_rollers_ai_weight",
+      "historical_replacement": "technology_dough_rollers_labor_ready",
+      "current_replacement": "technology_dough_rollers_labor",
+      "field": "dough_rollers.ai_weight",
+      "actor": "root",
+      "target": "none",
+      "operation": "multiply"
+    }
+  ]
+}

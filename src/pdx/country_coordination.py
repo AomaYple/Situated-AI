@@ -148,7 +148,7 @@ def evaluate_typed(policy: CountryPolicy, facts, *, is_ai=True):
     if not isinstance(facts, Mapping) or type(is_ai) is not bool:
         raise ValueError("协调事实和 is_ai 参数无效")
     if not policy.enabled or not is_ai:
-        return derive_typed({})
+        return derive_typed({}, policy=policy)
     values = {
         key: EvidenceValue(
             spec_id=key,
@@ -159,7 +159,7 @@ def evaluate_typed(policy: CountryPolicy, facts, *, is_ai=True):
         for key, value in facts.items()
         if key in policy.readers
     }
-    return derive_typed(values)
+    return derive_typed(values, policy=policy)
 
 
 def triggers(policy: CountryPolicy):

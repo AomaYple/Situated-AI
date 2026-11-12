@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pdx import config, snapshot
+from pdx import config, snapshot, version_contracts
 from pdx.input_profile import InputAction, ProfileCheck
 
 
@@ -177,7 +177,10 @@ class TestSnapshotShape(unittest.TestCase):
 
     def test_common_entries_covers_all_dirs(self):
         """必须覆盖全部数据目录（1.14.4 是 138 个）—— 曾经因路径口径错误变成 0。"""
-        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
+        self.assertEqual(
+            len(self.snap.sections["common_entries"]),
+            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141}[version_contracts.active_version()],
+        )
 
     def test_common_entries_not_empty(self):
         total = sum(len(v) for v in self.snap.sections["common_entries"].values())
@@ -190,13 +193,19 @@ class TestSnapshotShape(unittest.TestCase):
         """NGUI 在 24 个块里出现，必须合并成一个键而非坍缩。
         实测唯一命名空间 50（game）+ 17（jomini）= 67。
         """
-        self.assertEqual(len(self.snap.sections["defines"]), 67)
+        self.assertEqual(
+            len(self.snap.sections["defines"]),
+            {"1.14.5": 67, "1.15.0": 69, "1.15.1": 69}[version_contracts.active_version()],
+        )
 
     def test_localization_has_11_languages(self):
         self.assertEqual(len(self.snap.sections["localization"]), 11)
 
     def test_dlc_count_is_17(self):
-        self.assertEqual(len(self.snap.sections["dlc"]), 17)
+        self.assertEqual(
+            len(self.snap.sections["dlc"]),
+            {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18}[version_contracts.active_version()],
+        )
 
 
 class TestDeterminism(unittest.TestCase):
@@ -248,10 +257,13 @@ class TestDeterminism(unittest.TestCase):
     def test_serialization_roundtrip(self):
         s = self.first
         d = s.to_dict()
-        text = json.dumps(d, ensure_ascii=False, sort_keys=True)
-        back = json.loads(text)
-        self.assertEqual(back["格式版本"], snapshot.FORMAT)
-        self.assertEqual(back["版本"], s.version)
+        # Keep the complete roundtrip, without dumps' full Unicode document and
+        # temporary encoder chunks coexisting with both snapshot object trees.
+        with tempfile.TemporaryFile(mode="w+", encoding="utf-8", newline="\n") as stream:
+            json.dump(d, stream, ensure_ascii=False, sort_keys=True)
+            stream.seek(0)
+            back = json.load(stream)
+        self.assertEqual(back, d)
 
 
 class TestCompare(unittest.TestCase):
@@ -386,6 +398,44 @@ class TestSnapshotValidation(unittest.TestCase):
                 snapshot.Snapshot.load(p)
 
 
+def test_streamed_snapshot_write_preserves_exact_json_bytes(tmp_path):
+    value = snapshot.Snapshot(
+        version={"caligula_branch": "release/测试𐀀"},
+        sections={"乙": {"escaped": ['quote"', "back\\slash", "line\nfeed"], "甲": []}},
+    )
+    path = tmp_path / "snapshot.json"
+    value.write(path)
+    assert path.read_bytes() == json.dumps(
+        value.to_dict(), ensure_ascii=False, indent=1, sort_keys=True
+    ).encode("utf-8")
+    assert snapshot.Snapshot.load(path).to_dict() == value.to_dict()
+
+
+@pytest.mark.parametrize("failure", ["encoder", "fsync", "replace"])
+def test_streamed_snapshot_write_failure_preserves_previous_file(tmp_path, monkeypatch, failure):
+    path = tmp_path / "snapshot.json"
+    path.write_bytes(b"previous complete file\n")
+
+    def reject(*_args, **_kwargs):
+        raise OSError("injected write failure")
+
+    if failure == "encoder":
+
+        def partial(_obj, stream, **_kwargs):
+            stream.write('{"incomplete":')
+            reject()
+
+        monkeypatch.setattr(snapshot.json, "dump", partial)
+    elif failure == "fsync":
+        monkeypatch.setattr(snapshot.os, "fsync", reject)
+    else:
+        monkeypatch.setattr(Path, "replace", reject)
+    with pytest.raises(OSError, match="injected write failure"):
+        snapshot.Snapshot().write(path)
+    assert path.read_bytes() == b"previous complete file\n"
+    assert list(tmp_path.iterdir()) == [path]
+
+
 class TestCompactSnapshot(unittest.TestCase):
     """精简快照：体积小到可入库，但必须仍能回答「字段增删」这个核心问题。"""
 
@@ -427,7 +477,10 @@ class TestCompactSnapshot(unittest.TestCase):
             for suffix in ("entries", "fields"):
                 with self.subTest(section=f"{top}_{suffix}"):
                     self.assertIn(f"{top}_{suffix}", self.snap.sections)
-        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
+        self.assertEqual(
+            len(self.snap.sections["common_entries"]),
+            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141}[version_contracts.active_version()],
+        )
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 
     def test_与完整快照的结构域一致(self):

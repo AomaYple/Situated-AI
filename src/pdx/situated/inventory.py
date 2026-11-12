@@ -14,10 +14,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Any
 
-from .. import config  # noqa: TID252
+from .. import config, version_contracts  # noqa: TID252
 from . import bindings as binding_catalog
 from .action_instances import _output_source, witness_ids, witness_keys
 from .compiler import BASELINE, load_model
+from .compiler import baseline_path as compiler_baseline_path
 from .receipts import StageReceipt, digest
 
 if TYPE_CHECKING:
@@ -106,7 +107,11 @@ def _sha256(path: Path) -> str:
 
 
 def _baseline_id(path: Path) -> str:
-    return f"victoria3-1.14.5:{_sha256(path)}"
+    return f"victoria3-{version_contracts.active_version()}:{_sha256(path)}"
+
+
+def _selected_baseline() -> Path:
+    return compiler_baseline_path() if version_contracts.is_115() else BASELINE
 
 
 def _scope_hash(surfaces: tuple[Surface, ...], source_hashes: dict[str, str]) -> str:
@@ -141,10 +146,12 @@ def _field_name(field: object) -> str:
     raise TypeError(f"无效消费者字段：{field!r}")
 
 
-def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
+def discover(*, baseline: Path | None = None) -> SurfaceInventory:
     """从当前锁定生产源发现所有规则、行动和消费者面。"""
 
     from .. import decision_adapters, decision_rules  # noqa: PLC0415, TID252
+
+    baseline = _selected_baseline() if baseline is None else baseline
 
     source_hashes = {
         "baseline": _sha256(baseline),
@@ -169,7 +176,7 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
     unknown_scopes: set[str] = set()
 
     model = load_model(
-        baseline=None if baseline == BASELINE else baseline.read_text(encoding="utf-8")
+        baseline=None if baseline == _selected_baseline() else baseline.read_text(encoding="utf-8")
     )
     model_instances = {
         (item.source, item.rule_id): item
@@ -178,7 +185,7 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
     }
     production_witnesses: set[str] = set()
     production_witness_keys: set[tuple[str, str]] = set()
-    if baseline == BASELINE:
+    if baseline == _selected_baseline():
         # 生产盘点使用与正式包相同的生成入口；失败保持 pending，不能
         # 用 Python 规则数量替代真实 PDX 见证。
         try:
@@ -204,21 +211,9 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
             production_witness_keys = witness_keys(generated_texts)
         except (OSError, ValueError):
             production_witnesses = set()
-        if not production_witnesses:
-            # CI 和无游戏环境仍有仓库内的已生成生产树。它是 modgen --check
-            # 的输入，足以提供结构见证；没有原版消费者原件时，不能把生成
-            # 失败误报成所有行动 pending。
-            from .. import decisions  # noqa: PLC0415, TID252
-
-            generated_texts = {
-                name: path.read_text(encoding="utf-8-sig")
-                for directory in ("common", "localization")
-                for path in (decisions.PRODUCT / directory).rglob("*")
-                if path.is_file() and path.suffix.lower() == ".txt"
-                for name in (path.relative_to(decisions.PRODUCT).as_posix(),)
-            }
-            production_witnesses = witness_ids(generated_texts)
-            production_witness_keys = witness_keys(generated_texts)
+        # A repository Mod tree can belong to another release or generation.
+        # Without freshly generated PDX, keep pending rather than borrowing its
+        # unverified markers as evidence for the selected historical contract.
     for source, ruleset in (
         ("mod/decisions/information.toml", decision_rules.load()),
         *decision_adapters.load().policies,
@@ -344,12 +339,15 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
     )
 
 
-def migration(baseline: Path = BASELINE, inventory: SurfaceInventory | None = None) -> MigrationMap:
+def migration(
+    baseline: Path | None = None, inventory: SurfaceInventory | None = None
+) -> MigrationMap:
     """把旧规则逐条登记到行动/待迁移台账，禁止隐式吞规则。"""
 
+    baseline = _selected_baseline() if baseline is None else baseline
     inventory = inventory or discover(baseline=baseline)
     model = load_model(
-        baseline=None if baseline == BASELINE else baseline.read_text(encoding="utf-8")
+        baseline=None if baseline == _selected_baseline() else baseline.read_text(encoding="utf-8")
     )
     # D2 的迁移台账必须和编译器实际读取的精确绑定同源；不能仅凭
     # 规则数量或 domain 名称生成一张“看起来完整”的映射。

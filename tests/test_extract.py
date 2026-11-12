@@ -221,6 +221,21 @@ class TestRealGameCounts(unittest.TestCase):
         "character_templates": 2011,
     }
 
+    KNOWN_115 = {
+        "buildings": 122,
+        "production_methods": 450,
+        "production_method_groups": 203,
+        "goods": 54,
+        "company_types": 231,
+        "laws": 148,
+        "interest_groups": 8,
+        "technology": 184,
+        "character_traits": 127,
+        "modifier_type_definitions": 2474,
+        "static_modifiers": 6479,
+        "character_templates": 2072,
+    }
+
     common: Path
 
     @classmethod
@@ -232,7 +247,18 @@ class TestRealGameCounts(unittest.TestCase):
         cls.common = GAME / "common"
 
     def test_known_entry_counts(self):
-        for name, want in self.KNOWN.items():
+        from pdx.version_contracts import active_version
+
+        expected = {
+            "1.14.5": self.KNOWN,
+            "1.15.0": self.KNOWN_115,
+            "1.15.1": {
+                **self.KNOWN_115,
+                "modifier_type_definitions": 2476,
+                "static_modifiers": 6487,
+            },
+        }[active_version()]
+        for name, want in expected.items():
             with self.subTest(directory=name):
                 res = extract_dir(self.common / name)
                 self.assertEqual(
@@ -248,8 +274,11 @@ class TestRealGameCounts(unittest.TestCase):
 
     def test_bom_ratio_reported(self):
         res = extract_dir(self.common / "static_modifiers")
-        self.assertEqual(res.files, 68)
-        self.assertEqual(res.bom_files, 68, "实测该目录 68/68 全部带 BOM")
+        from pdx.version_contracts import is_115
+
+        expected = 77 if is_115() else 68
+        self.assertEqual(res.files, expected)
+        self.assertEqual(res.bom_files, expected, "独立原始字节检查：全部源文件带 BOM")
 
 
 if __name__ == "__main__":

@@ -14,6 +14,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from . import version_contracts
+from ._query_parse import parse_query_source
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
@@ -48,6 +50,36 @@ SOURCE_HASHES = {
     _MINES_GROUP: "995d2a9a19c99c5b64c3136c886be439c9a7e578d0a796980a1eebdbeddba0bd",
     _MINES_METHOD: "80eaa71892c2c6da5b5c4e1d954161ec7d4172386a35a6b4fd47603a0565fb39",
 }
+SOURCE_HASHES_115 = {
+    "common/company_types/00_companies_soi.txt": "5d96e85f5fb786240b201e98d900d9a1e88fff9287389a4a12886e874130f46f",
+    "common/buildings/11_private_infrastructure.txt": "b56e1c971a13604681bd11b374170eed0b4887f534b3f10f98fa875e7b67703b",
+    "common/buildings/06_urban_center.txt": "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9",
+    "common/production_method_groups/11_private_infrastructure.txt": "188b1828634d7ec7e8673df9fea33799e67cbfe9abfcfe5fcb4ef93f765f2186",
+    "common/production_method_groups/07_government.txt": "6b257b5bde8d4e5b9728555c1510cbb111a2bfa74602f42a2d0f29f5057ff7cd",
+    "common/production_method_groups/06_urban_center.txt": "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
+    "common/production_methods/11_private_infrastructure.txt": "b1be6179a07bc71150ec45fd5c7b7fd14b88d6cba8068775c5e29cd364ccbbec",
+    "common/production_methods/06_urban_center.txt": "c1b86160eda21483015fc6e052bab2a038f06b060fb59e22ea97d7a08fab8759",
+    "common/goods/00_goods.txt": "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49",
+    "common/journal_entries/00_art_jes.txt": "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+    "common/journal_entries/00_opium.txt": "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1",
+    "common/buildings/03_mines.txt": "122b78e126dec4044da5e78b86d5e8edd06d6581483efba9e7d0c9404091b655",
+    "common/production_method_groups/03_mines.txt": "3e9a26aec1edeb6d58a2ca9c62bab946ecb1c8a362d4c8bb18ee538229bb6425",
+    "common/production_methods/03_mines.txt": "dd7ac9300a2b3c551894e186624984d5f3791bdf08462694fcaf3acda97ec276",
+}
+
+
+SOURCE_HASHES_1151 = {
+    **SOURCE_HASHES_115,
+    "common/production_methods/11_private_infrastructure.txt": "6e7ad9c84c77cdc26af04c7c5a2037b49f96f8c06107a89a4db88b84d2150942",
+}
+
+
+def source_hashes() -> dict[str, str]:
+    if version_contracts.active_version() == "1.15.1":
+        return SOURCE_HASHES_1151
+    return SOURCE_HASHES_115 if version_contracts.is_115() else SOURCE_HASHES
+
+
 PORT_METHODS = frozenset({"pm_basic_port", "pm_industrial_port", "pm_modern_port"})
 QUERY_ENGINES = frozenset({"any_scope_state", "any_scope_building"})
 UNKNOWN_POLICY = (
@@ -363,9 +395,9 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
             raise ValueError(f"公司查询缺少必需原版来源：{source}")
         normalized = normalized_text(text)
         digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-        if digest != SOURCE_HASHES[source]:
+        if digest != source_hashes()[source]:
             raise ValueError(f"公司查询原版来源漂移：{source}")
-        parsed = parse_text(normalized, path=source)
+        parsed = parse_query_source(normalized, source, digest)
         if parsed.errors:
             raise ValueError(f"公司查询原版来源无法解析：{source}")
         roots[source] = parsed.root
@@ -384,7 +416,12 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
         building_id = (
             query.building_id if isinstance(query, ExistingBusiness) else "building_trade_center"
         )
-        native = _child(reference(_OPIUM, "je_opium"), "complete")
+        journal = reference(_OPIUM, "je_opium")
+        native = (
+            version_contracts.journal_completion(journal)
+            if version_contracts.is_115()
+            else _child(journal, "complete")
+        )
         line = _exact(
             native,
             "any_scope_building",
@@ -464,7 +501,12 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
                 "reverse_comparison:finite_numeric_ordering;cash_ratio_threshold=.25_design_parameter",
             )
     elif isinstance(query, PortMethod):
-        native = _child(reference(_ART, "je_romanticism"), "complete")
+        journal = reference(_ART, "je_romanticism")
+        native = (
+            version_contracts.journal_completion(journal)
+            if version_contracts.is_115()
+            else _child(journal, "complete")
+        )
         line = _exact(
             native,
             "any_scope_building",

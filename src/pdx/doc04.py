@@ -26,9 +26,9 @@ import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import config
+from . import config, version_contracts
 from .cache import parse_cached
-from .doc_tables import KeyedTableSpec
+from .doc_tables import KeyedTableSpec, TableSpec
 from .model import Block
 from .scan import subdir_stats
 from .usage import field_occurrences, field_value_counts, file_definition_counts
@@ -96,7 +96,26 @@ def scripted_guis_rows() -> list[tuple[str, dict[int, str]]]:
 
 def _field_rows(dir_rel: str, col: int) -> Callable[[], list[tuple[str, dict[int, str]]]]:
     def rows() -> list[tuple[str, dict[int, str]]]:
-        return _rows_plain(field_occurrences(dir_rel), col)
+        result = _rows_plain(field_occurrences(dir_rel), col)
+        if version_contracts.is_115() and dir_rel in {
+            "events",
+            "common/scripted_progress_bars",
+        }:
+            base = config.GAME / dir_rel
+            first: dict[str, str] = {}
+            for path in sorted(base.rglob("*.txt")):
+                for definition in parse_cached(path).top_assignments:
+                    if definition.is_variable or not isinstance(definition.value, Block):
+                        continue
+                    for field in definition.value.assignments():
+                        first.setdefault(
+                            field.key, f"`{path.relative_to(base).as_posix()}:{field.line}`"
+                        )
+            for key, cells in result:
+                cells[2] = first[key]
+                if dir_rel == "events" and key == "fire_only_once":
+                    cells[3] = "原版事件字段；具体引擎语义未在此验证"
+        return result
 
     return rows
 
@@ -115,7 +134,10 @@ def _doc04_field_specs() -> list[KeyedTableSpec]:
                 header=header,
                 cells=_field_rows(d, col),
                 occurrence=occ,
-                append_new=False,
+                append_new=version_contracts.is_115()
+                and d in {"events", "common/scripted_progress_bars"},
+                allow_drop=version_contracts.is_115()
+                and d in {"events", "common/scripted_progress_bars"},
             )
             for n, (header, occ, col, d) in enumerate(_DOC04_FIELD_TABLES, start=1)
         ],
@@ -168,6 +190,41 @@ def je_group_counts() -> Counter[str]:
 def _je_group_rows(keys: tuple[str, ...], col: int) -> list[tuple[str, dict[int, str]]]:
     counter = je_group_counts()
     return [(k, {col: f"{counter.get(k, 0)}"}) for k in keys]
+
+
+def _je_group_specs() -> list[TableSpec | KeyedTableSpec]:
+    header = "| 分组 | 使用次数 | | 分组 | 使用次数 |"
+    if version_contracts.active_version() == "1.14.5":
+        return [
+            KeyedTableSpec(
+                name="doc04 JE 分组左栏",
+                header=header,
+                cells=lambda: _je_group_rows(_JE_GROUP_LEFT, 1),
+                key_column=0,
+                append_new=False,
+            ),
+            KeyedTableSpec(
+                name="doc04 JE 分组右栏",
+                header=header,
+                cells=lambda: _je_group_rows(_JE_GROUP_RIGHT, 4),
+                key_column=3,
+                append_new=False,
+            ),
+        ]
+
+    def rows() -> list[str]:
+        counter = je_group_counts()
+        keys = sorted(counter, key=lambda key: (-counter[key], key))
+        middle = (len(keys) + 1) // 2
+        left, right = keys[:middle], keys[middle:]
+        return [
+            f"| {key} | {counter[key]} | | "
+            + (f"{right[i]} | {counter[right[i]]}" if i < len(right) else " | ")
+            + " |"
+            for i, key in enumerate(left)
+        ]
+
+    return [TableSpec(name="doc04 JE 分组完整集合", header=header, rows=rows)]
 
 
 def _event_type_rows() -> list[tuple[str, dict[int, str]]]:
@@ -430,7 +487,7 @@ def localization_count_rows() -> list[tuple[str, dict[int, str]]]:
     return [("条目数", {1: str(trigger), 2: str(effect)})]
 
 
-def doc_table_specs() -> list[KeyedTableSpec]:
+def doc_table_specs() -> list[KeyedTableSpec | TableSpec]:
     """doc 04 的 19 张表（21 条 spec）。"""
     return [
         KeyedTableSpec(
@@ -490,20 +547,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             append_new=False,
         ),
         *_doc04_field_specs(),
-        KeyedTableSpec(
-            name="doc04 JE 分组左栏",
-            header="| 分组 | 使用次数 | | 分组 | 使用次数 |",
-            cells=lambda: _je_group_rows(_JE_GROUP_LEFT, 1),
-            key_column=0,
-            append_new=False,
-        ),
-        KeyedTableSpec(
-            name="doc04 JE 分组右栏",
-            header="| 分组 | 使用次数 | | 分组 | 使用次数 |",
-            cells=lambda: _je_group_rows(_JE_GROUP_RIGHT, 4),
-            key_column=3,
-            append_new=False,
-        ),
+        *_je_group_specs(),
         KeyedTableSpec(
             name="doc04 events 子目录",
             header="| 子目录 | 文件数 | 其中的 namespace |",

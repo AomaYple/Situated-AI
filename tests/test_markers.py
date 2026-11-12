@@ -13,7 +13,7 @@
 
 from __future__ import annotations
 
-from pdx import config, markers, verify
+from pdx import config, markers, verify, version_contracts
 
 #: 标记覆盖率的下限（只许涨，不许跌）。
 #:
@@ -55,6 +55,11 @@ MARKER_NOT_NEEDED: dict[str, str] = {
     "tree.binaries_bytes": "同上（261.18 MB）",
     "tree.gfx_bytes": "同上（9,690.00 MB）",
 }
+
+
+# 当前版本的正文已绑定该数值；不改历史版本的生成表豁免。
+if version_contracts.is_115():
+    MARKER_NOT_NEEDED.pop("script.lists_doc04")
 
 
 def test_没有标记的断言都有理由() -> None:

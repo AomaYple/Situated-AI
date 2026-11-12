@@ -151,9 +151,18 @@ def source_texts(monkeypatch):
                 has_building = building_railway percent = 1 }
         } }""",
     }
+    if queries.version_contracts.is_115():
+        texts[PORTUGAL] = (
+            texts[PORTUGAL].replace(
+                "complete = {",
+                "outcome = { header = je_standard_completion_header "
+                "effect_header = je_standard_on_completion_header trigger = {",
+            )
+            + " }"
+        )
     for source, text in texts.items():
         monkeypatch.setitem(
-            queries.SOURCE_HASHES,
+            queries.source_hashes(),
             source,
             hashlib.sha256(normalized_text(text).encode()).hexdigest(),
         )
@@ -212,7 +221,9 @@ def test_repinned_wrong_complete_native_ast_never_grants_query(
     changed = source_texts[source].replace(old, new)
     assert changed != source_texts[source]
     monkeypatch.setitem(
-        queries.SOURCE_HASHES, source, hashlib.sha256(normalized_text(changed).encode()).hexdigest()
+        queries.source_hashes(),
+        source,
+        hashlib.sha256(normalized_text(changed).encode()).hexdigest(),
     )
     with pytest.raises(ValueError):
         queries.compile_query(_query(), {**source_texts, source: changed})
@@ -228,5 +239,6 @@ def test_installed_native_sources_authorize_exact_local_tax_query():
     assert compiled.expression == EXPECTED
     assert compiled.world_scans == 0
     assert set(dict(compiled.source_hashes)) == {GOVERNMENT, PORTUGAL}
-    assert f"{PORTUGAL}:530" in compiled.references
+    line = {"1.14.5": 530, "1.15.0": 580, "1.15.1": 580}[queries.version_contracts.active_version()]
+    assert f"{PORTUGAL}:{line}" in compiled.references
     assert f"{GOVERNMENT}:12" in compiled.references

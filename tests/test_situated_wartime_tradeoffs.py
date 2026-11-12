@@ -50,7 +50,7 @@ def production():
     )
     model = compiler.load_model()
     compiled = compiler.compile_policy(selected, INFO, model)[0]
-    native = compiler.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_path().read_text(encoding="utf-8")
     generated = decision_rules.patch(
         native,
         compiled,

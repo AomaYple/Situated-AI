@@ -6,7 +6,9 @@ import json
 
 import pytest
 
-from pdx import config, political_surface
+from pdx import config, political_surface, version_contracts
+from pdx.model import Assignment, Block, Scalar
+from pdx.parser import parse_bytes
 
 pytestmark = pytest.mark.unit
 
@@ -151,9 +153,88 @@ def test_默认层单独进入索引(tmp_path):
 def test_原版政治策略牌数量和关键策略字段():
     if not (config.GAME / political_surface.STRATEGY_DIR).is_dir():
         pytest.skip("没有游戏本体")
+    # Nine historical cards remain a separate contract. The two 1.15 cards
+    # are radical-leftist choices, not additional universally eligible cards.
+    historical_names = {
+        "ai_strategy_conservative_agenda",
+        "ai_strategy_reactionary_agenda",
+        "ai_strategy_progressive_agenda",
+        "ai_strategy_egalitarian_agenda",
+        "ai_strategy_nationalist_agenda",
+        "ai_strategy_maintain_mandate_of_heaven",
+        "ai_strategy_tanzimat_reforms",
+        "ai_strategy_meiji_restoration",
+        "ai_strategy_great_reforms",
+    }
+    current_names = historical_names | {
+        "ai_strategy_consolidation_agenda",
+        "ai_strategy_confrontation_agenda",
+    }
+    selected_version = version_contracts.active_version()
+    expected_names = {"1.14.5": historical_names, "1.15.0": current_names, "1.15.1": current_names}[
+        selected_version
+    ]
+    assert len(historical_names) == 9
+    assert len(current_names) == 11
+
+    # Independently enumerate the real native AST, without the production
+    # strategy-file selector or strategy extraction/summary implementation.
+    native_cards: dict[str, Block] = {}
+    native_sources: dict[str, str] = {}
+    for path in sorted((config.GAME / "common/ai_strategies").glob("*.txt")):
+        parsed = parse_bytes(path.read_bytes(), path=path.as_posix())
+        assert not parsed.errors, (path, parsed.errors)
+        for entry in parsed.root.assignments():
+            if not isinstance(entry.value, Block):
+                continue
+            type_fields = entry.value.all("type")
+            political_types = [
+                field
+                for field in type_fields
+                if isinstance(field.value, Scalar) and field.value.unquoted == "political"
+            ]
+            if not political_types:
+                continue
+            assert len(type_fields) == len(political_types) == 1
+            assert entry.op == "="
+            assert entry.prefix is None
+            assert political_types[0].op == "="
+            assert political_types[0].prefix is None
+            assert entry.key not in native_cards
+            native_cards[entry.key] = entry.value
+            native_sources[entry.key] = path.relative_to(config.GAME).as_posix()
+    assert set(native_cards) == expected_names
+    assert set(native_sources.values()) == {"common/ai_strategies/03_political_strategies.txt"}
+
     strategies = political_surface.read_strategies(config.GAME)
-    assert len(strategies) == 9
     by_name = {strategy.name: strategy for strategy in strategies}
+    assert len(strategies) == len(expected_names)
+    assert set(by_name) == expected_names == set(native_cards)
+    if selected_version in {"1.15.0", "1.15.1"}:
+        for name, chance, aversion in (
+            ("ai_strategy_consolidation_agenda", 10, 75),
+            ("ai_strategy_confrontation_agenda", 20, 25),
+        ):
+            possible = native_cards[name].all("possible")
+            assert len(possible) == 1
+            assert possible[0].op == "="
+            assert possible[0].prefix is None
+            assert isinstance(possible[0].value, Block)
+            clauses = possible[0].value.items
+            assert len(clauses) == 1
+            guard = clauses[0]
+            assert isinstance(guard, Assignment)
+            assert guard.key == "has_radical_leftist_government"
+            assert guard.op == "="
+            assert guard.prefix is None
+            assert isinstance(guard.value, Scalar)
+            assert guard.value.unquoted == "yes"
+            card = by_name[name]
+            assert card.possible_keys == ("has_radical_leftist_government",)
+            assert card.change_law_chance is not None
+            assert card.change_law_chance.base == chance
+            assert card.revolution_aversion is not None
+            assert card.revolution_aversion.base == aversion
     tanzimat = by_name["ai_strategy_tanzimat_reforms"]
     assert tanzimat.change_law_chance is not None
     assert tanzimat.change_law_chance.base == 100

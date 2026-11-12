@@ -10,7 +10,7 @@ from pdx import country_state, decision_adapters, decision_rules
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import pdx_eval
-from pdx.situated.compiler import BASELINE, load_model
+from pdx.situated.compiler import baseline_path, load_model
 from pdx.situated.domain_coverage import CHAINS, load
 from pdx.situated.families import FAMILIES
 
@@ -139,7 +139,7 @@ def test_welfare_foundation_preserves_player_and_disabled_paths(welfare_policy):
 
 @pytest.fixture(scope="module")
 def welfare_generated(welfare_policy):
-    baseline = BASELINE.read_text(encoding="utf-8")
+    baseline = baseline_path().read_text(encoding="utf-8")
     inputs = decision_adapters.read_inputs(decision_adapters.load())
     kwargs = {
         "baseline": baseline,

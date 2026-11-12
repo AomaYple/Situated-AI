@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from argparse import Namespace
@@ -13,8 +14,66 @@ from unittest.mock import Mock
 
 import pytest
 
-from pdx import covgate
+from pdx import covgate, version_contracts
 from tools.ci import test_suite
+
+
+def test_profile_identity_records_verified_live_inputs_and_binary(tmp_path, monkeypatch):
+    from pdx import config
+    from pdx.situated import production_profile, r2_reader_authority
+
+    with version_contracts.select_version("1.15.0"):
+        installation = tmp_path / "installation"
+        shutil.copytree(production_profile.BASELINE_ROOT, installation)
+        shutil.copytree(r2_reader_authority.FROZEN_ROOT, installation, dirs_exist_ok=True)
+        binary = installation / "binaries/victoria3.exe"
+        binary.write_bytes(b"identity only; not an engine scope proof")
+        monkeypatch.setattr(config, "ROOT", installation)
+        identity = test_suite.capture_game_identity(tmp_path, "1.15.0")
+        assert identity["profile"] == "1.15.0"
+        assert identity["version"]["caligula_branch"] == "release/1.15.0"
+        assert identity["profile_source_hashes"] == dict(
+            production_profile.load_profile(installation).source_hashes
+        )
+        assert identity["installation"] == str(installation.resolve())
+        assert identity["executable"]["bytes"] == binary.stat().st_size
+        assert identity["verified"] is True
+        assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
+        assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
+
+
+@pytest.mark.parametrize("broken", ["version", "input", "missing_binary"])
+def test_profile_identity_fails_closed_and_preserves_failure(tmp_path, monkeypatch, broken):
+    from pdx import config
+    from pdx.situated import production_profile
+
+    installation = tmp_path / "installation"
+    shutil.copytree(production_profile.BASELINE_ROOT, installation)
+    binary = installation / "binaries/victoria3.exe"
+    binary.write_bytes(b"identity only")
+    target = {
+        "version": installation / "caligula_branch.txt",
+        "input": installation / "game/common/decrees/00_decree.txt",
+        "missing_binary": binary,
+    }[broken]
+    if broken == "missing_binary":
+        target.unlink()
+    else:
+        target.write_bytes(b"drift")
+    monkeypatch.setattr(config, "ROOT", installation)
+    with pytest.raises(ValueError, match="完整验收输入身份核对失败"):
+        test_suite.capture_game_identity(tmp_path, "1.15.0")
+    report = json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8"))
+    assert report["verified"] is False
+    assert report["error"]
+
+
+def test_full_acceptance_rejects_unsupported_profile_before_launch(tmp_path, monkeypatch):
+    monkeypatch.setattr(test_suite, "execute", lambda *_args: pytest.fail("launch"))
+    with pytest.raises(SystemExit) as caught:
+        test_suite.main(["--output-root", str(tmp_path), "--profile", "1.14.5"])
+    assert caught.value.code == 2
+    assert not list(tmp_path.iterdir())
 
 
 def test_plugin_import_does_not_preload_business_modules_before_coverage():
@@ -250,35 +309,79 @@ def test_diagnostic_arguments_preserve_windows_argument_boundaries():
     assert test_suite.validate_pytest_args(args) == args
 
 
-@pytest.mark.parametrize("workers", [0, 2])
-@pytest.mark.parametrize("subtest_failure", [False, True])
-def test_real_pytest_records_collection_multiplicity_and_reports(
-    tmp_path, monkeypatch, workers, subtest_failure
+def test_real_xdist_workers_and_children_preserve_utf8_capture_with_encoding_overrides(
+    tmp_path, monkeypatch
 ):
+    project = tmp_path / "utf8-project"
+    project.mkdir()
+    (project / "pytest.ini").write_text("[pytest]\naddopts = -n 2 --dist load\n", encoding="utf-8")
+    (project / "test_roundtrip.py").write_text(
+        "import os, subprocess, sys\n"
+        "import pytest\n"
+        "@pytest.mark.parametrize('case', [0, 1])\n"
+        "def test_roundtrip(case):\n"
+        "    assert os.environ['PYTHONUTF8'] == '1'\n"
+        "    assert os.environ['PYTHONIOENCODING'] == 'utf-8'\n"
+        "    assert sys.flags.utf8_mode == 1\n"
+        "    text = '未支持的原版合同版本：人口比例' + str(case)\n"
+        "    command = [sys.executable, '-c', \"import sys; "
+        'data=sys.stdin.read(); print(data); print(data, file=sys.stderr); sys.exit(7)"]\n'
+        "    result = subprocess.run(command, input=text, capture_output=True, text=True, "
+        "check=False, timeout=15)\n"
+        "    assert result.returncode == 7\n"
+        "    assert result.stdout == result.stderr == text + '\\n'\n"
+        '    command[-1] = "import sys; print(sys.argv[1])"\n'
+        "    assert subprocess.check_output([*command, text], text=True, timeout=15) == text + '\\n'\n"
+        '    command[-1] = "import sys; data=sys.stdin.read(); print(data); '
+        'print(data, file=sys.stderr)"\n'
+        "    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, "
+        "stderr=subprocess.PIPE, text=True) as process:\n"
+        "        stdout, stderr = process.communicate(text, timeout=15)\n"
+        "        assert stdout == stderr == text + '\\n'\n"
+        "        assert process.returncode == 0\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(test_suite, "ROOT", project)
+    monkeypatch.setattr(
+        test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
+    )
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).resolve().parents[1]))
+    monkeypatch.setenv("PYTHONUTF8", "0")
+    monkeypatch.setenv("PYTHONIOENCODING", "cp936")
+    out = test_suite.create_run_dir(tmp_path / "reports")
+    summary = test_suite.execute(
+        out, Namespace(timeout_s=45, quiet=True, allow_concurrent=True, profile="1.15.0"), []
+    )
+    assert summary["exit_code"] == 0, (out / "pytest.log").read_text(encoding="utf-8")
+    reports = json.loads((out / "collection.json").read_text(encoding="utf-8"))["reports"]
+    calls = [row for row in reports if row["when"] == "call"]
+    assert len(calls) == 2
+    assert {row["worker"] for row in calls} == {"gw0", "gw1"}
+    assert all(row["outcome"] == "passed" for row in calls)
+    assert os.environ["PYTHONUTF8"] == "0"
+    assert os.environ["PYTHONIOENCODING"] == "cp936"
+
+
+@pytest.mark.parametrize("workers", [0, 2])
+@pytest.mark.parametrize("failure_kind", ["none", "subtest", "setup"])
+def test_real_pytest_records_collection_multiplicity_and_reports(
+    tmp_path, monkeypatch, workers, failure_kind
+):
+    subtest_failure = failure_kind == "subtest"
+    setup_failure = failure_kind == "setup"
     project = tmp_path / "project with 空格"
     project.mkdir()
     (project / "pytest.ini").write_text(f"[pytest]\naddopts = -n {workers}\n", encoding="utf-8")
     (project / "collect_probe.py").write_text("def test_probe():\n    pass\n", encoding="utf-8")
     (project / "test_example.py").write_text(
-        "import pytest\n@pytest.mark.parametrize('value',[1,2],ids=['a','a'])\n"
-        "def test_example(value, subtests):\n"
-        "    import os, subprocess, sys\n"
+        "import pytest\n"
+        "@pytest.fixture\n"
+        "def execution_ready():\n"
+        "    import os, time\n"
         "    from pathlib import Path\n"
         "    from pdx.console import enable_utf8_stdio\n"
         "    enable_utf8_stdio()\n"
-        "    assert 'SITAI_TEST_COLLECTION' not in os.environ\n"
-        "    assert 'MEMBASELINE_OUT' not in os.environ\n"
-        "    child = subprocess.run([sys.executable, '-c',\n"
-        "        \"import os; assert 'SITAI_TEST_COLLECTION' not in os.environ; \"\n"
-        "        \"assert 'MEMBASELINE_OUT' not in os.environ; assert 'COVERAGE_FILE' not in os.environ\"], check=False)\n"
-        "    assert child.returncode == 0\n"
-        "    if value == 1:\n"
-        "        child = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', '-n0',\n"
-        "            '-p', 'tools.ci.test_suite', '-p', 'tools.ci.mem_baseline', 'collect_probe.py'],\n"
-        "            capture_output=True, text=True, encoding='utf-8', check=False)\n"
-        "        assert child.returncode == 0, child.stdout + child.stderr\n"
         f"    if {workers!r}:\n"
-        "        import time\n"
         "        ready = Path('worker-ready')\n"
         "        ready.mkdir(exist_ok=True)\n"
         "        (ready / str(os.getpid())).touch()\n"
@@ -286,12 +389,39 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
         "        while not Path('workers-sampled').exists():\n"
         "            assert time.monotonic() < deadline, 'No simultaneous worker sample'\n"
         "            time.sleep(0.01)\n"
+        f"    if {setup_failure!r}:\n"
+        "        raise ValueError('actual fixture failure')\n"
+        "@pytest.mark.parametrize('value',[1,2],ids=['a','a'])\n"
+        "def test_example(value, subtests, execution_ready):\n"
+        "    import os, subprocess, sys\n"
+        "    from pathlib import Path\n"
+        "    from pdx.console import enable_utf8_stdio\n"
+        "    enable_utf8_stdio()\n"
+        "    assert 'SITAI_TEST_COLLECTION' not in os.environ\n"
+        "    assert 'MEMBASELINE_OUT' not in os.environ\n"
+        "    assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.0'\n"
+        "    child = subprocess.run([sys.executable, '-c',\n"
+        "        \"import os; assert 'SITAI_TEST_COLLECTION' not in os.environ; \"\n"
+        "        \"assert 'MEMBASELINE_OUT' not in os.environ; assert 'COVERAGE_FILE' not in os.environ\"], check=False)\n"
+        "    assert child.returncode == 0\n"
+        "    child = subprocess.run([sys.executable, '-c',\n"
+        "        \"import os; assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.0'\"], check=False)\n"
+        "    assert child.returncode == 0\n"
+        "    if value == 1:\n"
+        "        child = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', '-n0',\n"
+        "            '-p', 'tools.ci.test_suite', '-p', 'tools.ci.mem_baseline', 'collect_probe.py'],\n"
+        "            capture_output=True, text=True, encoding='utf-8', check=False)\n"
+        "        assert child.returncode == 0, child.stdout + child.stderr\n"
         "    for child in (1, 2):\n"
         "        with subtests.test(child=child):\n"
         f"            assert not {subtest_failure!r} or child != 2\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(test_suite, "ROOT", project)
+    monkeypatch.setattr(
+        test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
+    )
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
     monkeypatch.setenv("PYTEST_XDIST_WORKER", "gwInherited")
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).resolve().parents[1]))
     original_sample = test_suite.mem.TreeSampler.sample_once
@@ -311,7 +441,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     monkeypatch.setattr(test_suite.mem.TreeSampler, "sample_once", sample_and_release_workers)
     out = test_suite.create_run_dir(tmp_path / "reports")
     summary = test_suite.execute(
-        out, Namespace(timeout_s=30, quiet=True, allow_concurrent=True), []
+        out, Namespace(timeout_s=30, quiet=True, allow_concurrent=True, profile="1.15.0"), []
     )
     collection = json.loads((out / "collection.json").read_text(encoding="utf-8"))
     assert len(collection["nodeids"]) == 2
@@ -322,8 +452,8 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     assert collection["finished_counts"] == collection["counts"]
     primary = [row for row in collection["reports"] if not row["subtest"]]
     children = [row for row in collection["reports"] if row["subtest"]]
-    assert len(primary) == 6
-    assert len(children) == 4
+    assert len(primary) == (4 if setup_failure else 6)
+    assert len(children) == (0 if setup_failure else 4)
     assert any(row["outcome"] == "failed" for row in children) is subtest_failure
     failures = [
         json.loads(line)
@@ -338,6 +468,8 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     assert collection["effective"]["numprocesses"] == workers
     assert len(collection["workers"]) == workers
     assert "environment_sha256" in summary
+    assert summary["environment"]["V3_CONTRACT_PROFILE"]["present"]
+    assert summary["game_input"]["profile"] == "1.15.0"
     assert summary["versions"]["pytest-xdist"]
     assert len(list(out.glob("inproc-full-*.json"))) == workers + 1
     # 假装继承外层 worker 也必须创建独立 master 证据。
@@ -346,14 +478,17 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     assert (out / "coverage.json").is_file()
     assert (out / "junit.xml").is_file()
     assert (out / "samples.csv").is_file()
-    assert summary["exit_code"] == (1 if subtest_failure else 0)
+    assert summary["exit_code"] == (0 if failure_kind == "none" else 1)
     assert type(summary["controller_pid"]) is int
     assert len(summary["worker_pids"]) == workers
-    if not subtest_failure:
-        resources = test_suite._resource_evidence(out, summary)
-        assert len(resources["peak_pairs"]) == workers + 1
-        assert resources["execution_peak_mb"] > 0
+    resources = test_suite._resource_evidence(out, summary)
+    assert len(resources["peak_pairs"]) == workers + 1
+    assert resources["execution_peak_mb"] > 0
+    assert all(not row["errors"] for row in resources["inproc"])
+    assert any(row["test_errors"] for row in resources["inproc"]) is (failure_kind != "none")
     assert test_suite.finalize(out, summary) != 0  # 小项目不能冒充完整覆盖率验收。
+    finalized = json.loads((out / "full-acceptance.json").read_text(encoding="utf-8"))
+    assert not any("身份" in error or "采样失败" in error for error in finalized["errors"])
     assert not summary["timed_out"]
 
 
@@ -373,6 +508,10 @@ def test_collection_hook_retains_repeated_ids_and_worker_disagreement(tmp_path, 
 
 
 def test_silent_subprocess_timeout_is_reported(tmp_path, monkeypatch):
+    # Process-control unit fixture; game identity has its own strict tests.
+    monkeypatch.setattr(
+        test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
+    )
     project = tmp_path / "silent"
     project.mkdir()
     (project / "pytest.ini").write_text("[pytest]\naddopts = -n 0\n", encoding="utf-8")
@@ -499,7 +638,18 @@ def test_serial_executor_uses_per_process_budget_below_tree_budget(tmp_path, sou
 
 @pytest.mark.parametrize(
     "broken",
-    ["started", "finished", "setup", "call", "teardown", "worker", "each", "count", "selected"],
+    [
+        "started",
+        "finished",
+        "setup",
+        "call",
+        "missing_call",
+        "teardown",
+        "worker",
+        "each",
+        "count",
+        "selected",
+    ],
 )
 def test_actual_execution_identity_and_multiplicity_are_gated(tmp_path, broken):
     summary = _evidence(tmp_path)
@@ -509,6 +659,8 @@ def test_actual_execution_identity_and_multiplicity_are_gated(tmp_path, broken):
         data[broken] *= 2
     elif broken in {"setup", "call", "teardown"}:
         data["reports"] += [row for row in data["reports"] if row["when"] == broken]
+    elif broken == "missing_call":
+        data["reports"] = [row for row in data["reports"] if row["when"] != "call"]
     elif broken == "worker":
         data["reports"][0]["worker"] = "gwUnexpected"
     else:
@@ -525,6 +677,32 @@ def test_actual_execution_identity_and_multiplicity_are_gated(tmp_path, broken):
     assert report["tests"]["tests"] == 1
 
 
+@pytest.mark.parametrize("phase", ["call", "teardown", "subtest"])
+def test_report_cannot_move_between_two_legitimate_workers(tmp_path, phase):
+    summary = _evidence(tmp_path)
+    summary.update(n_workers=2, worker_pids=[124, 125])
+    path = tmp_path / "collection.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["workers"] = ["gw0", "gw1"]
+    data["effective"]["numprocesses"] = 2
+    for row in data["reports"]:
+        row["worker"] = "gw0"
+        if row["when"] == phase:
+            row["worker"] = "gw1"
+    if phase == "subtest":
+        data["reports"].append({**data["reports"][1], "worker": "gw1", "subtest": True})
+    path.write_text(json.dumps(data), encoding="utf-8")
+    master = json.loads((tmp_path / "inproc-full-master.json").read_text(encoding="utf-8"))
+    for pid, worker in [(124, "gw0"), (125, "gw1")]:
+        (tmp_path / f"inproc-full-{worker}.json").write_text(
+            json.dumps({**master, "worker": worker, "pid": pid}), encoding="utf-8"
+        )
+        summary["processes"].append({"pid": pid, "hwm_mb": 50, "role": "worker"})
+    assert test_suite.finalize(tmp_path, summary) != 0
+    errors = json.loads((tmp_path / "full-acceptance.json").read_text(encoding="utf-8"))["errors"]
+    assert errors == ["执行阶段 worker 身份/重复次数不一致"]
+
+
 @pytest.mark.parametrize(("option", "value"), [("dist", "each"), ("count", 2)])
 def test_effective_configuration_rejects_inherited_repetition(tmp_path, monkeypatch, option, value):
     monkeypatch.setenv("SITAI_TEST_COLLECTION", str(tmp_path / "collection.json"))
@@ -534,6 +712,10 @@ def test_effective_configuration_rejects_inherited_repetition(tmp_path, monkeypa
 
 
 def test_sampler_startup_failure_stops_started_child(tmp_path, monkeypatch):
+    # Process-control unit fixture; game identity has its own strict tests.
+    monkeypatch.setattr(
+        test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
+    )
     process = Mock(pid=123)
     sampler = Mock(ident=None)
     sampler.start.side_effect = OSError("sampler start failed")

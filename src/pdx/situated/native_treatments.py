@@ -19,11 +19,13 @@ import hashlib
 import json
 import re
 from collections import Counter, defaultdict
+from copy import deepcopy
 from dataclasses import asdict, replace
 from decimal import Decimal
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
+from .. import version_contracts  # noqa: TID252
 from ..model import Assignment, Block, Scalar  # noqa: TID252
 from ..parser import parse_bytes  # noqa: TID252
 from . import pdx_eval
@@ -32,6 +34,91 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .vanilla_inventory import VanillaInventory, VanillaSurface
+
+
+class _AuditMetadata:
+    """Own only the metadata fields used by one exact candidate audit.
+
+    Readers receive independent copies of this small projection, never the
+    authoritative parsed object. Another candidate must create its own owner;
+    neither decoded caller documents nor a global cache are used.
+    The continuous-writer entry keeps its stricter UTF-8 text decoding contract,
+    while the native byte readers retain json.loads(bytes) encoding semantics.
+    """
+
+    def __init__(self, raw: str | bytes) -> None:
+        self._raw = raw
+        self._loaded = False
+        self._text_loaded = False
+        self._document: Any = None
+
+    def _require(self, raw: str | bytes) -> None:
+        if raw != self._raw:
+            raise ValueError("audit metadata candidate bytes changed")
+
+    def document(self, raw: str | bytes, *, utf8_text: bool = False) -> Any:
+        self._require(raw)
+        if not self._loaded or (utf8_text and not self._text_loaded):
+            value = raw.decode("utf-8") if utf8_text and isinstance(raw, bytes) else raw
+            document = json.loads(value)
+            # Do not retain the full Unicode copy during later AST validation.
+            del value
+            if isinstance(document, dict):
+                projection = {
+                    key: document[key]
+                    for key in (
+                        "consumer_adapters",
+                        "decision_rules",
+                        "source_fingerprint",
+                        "enabled_modules",
+                        "default_field_owners",
+                        "country_state",
+                        "situated_actions",
+                        "action_network",
+                        "configuration",
+                    )
+                    if key in document
+                }
+                actions = projection.get("situated_actions")
+                if isinstance(actions, dict):
+                    projection["situated_actions"] = {
+                        key: actions[key] for key in ("consumer_ir",) if key in actions
+                    }
+                network = projection.get("action_network")
+                if isinstance(network, dict):
+                    # The support matrix contains large lowering witnesses.
+                    # Reconstruct actual typed programs from source below;
+                    # descriptive witness tables never authorize a writer.
+                    projection["action_network"] = {
+                        key: network[key]
+                        for key in (
+                            "architecture",
+                            "source",
+                            "source_sha256",
+                            "evidence",
+                            "runtime",
+                            "integration",
+                            "writers",
+                            "legacy_school_migration",
+                            "school_numeric_policy",
+                            "future_domain_depth",
+                        )
+                        if key in network
+                    }
+                self._document = projection
+            else:
+                # Preserve each consumer's original type failure for malformed roots.
+                self._document = document
+            self._loaded = True
+            self._text_loaded = utf8_text
+        # Keep the original independent-reader semantics without copying the
+        # discarded full lowering witnesses and other engineering-only metadata.
+        return deepcopy(self._document)
+
+    def sha256(self, raw: str | bytes) -> str:
+        self._require(raw)
+        return hashlib.sha256(raw if isinstance(raw, bytes) else raw.encode()).hexdigest()
+
 
 _NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)\Z")
 _STATUSES = (
@@ -451,6 +538,22 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
     if node.op != "=" or node.prefix is not None:
         return "needs_review"
     family, field, value = _family(surface.source), surface.field, node.value
+    if surface.operation == "first_nonzero_active_change_law_chance_else_default":
+        return (
+            "dynamic_numeric"
+            if (
+                version_contracts.is_115()
+                and surface.source == "common/ai_strategies/00_default_strategy.txt"
+                and surface.definition == "ai_strategy_default"
+                and surface.field == "change_law_chance"
+                and surface.actor_scope == "country"
+                and surface.target_scope == "none"
+                and surface.capability == "direct"
+                and surface.legal
+                and isinstance(value, (Block, Scalar))
+            )
+            else "needs_review"
+        )
     if surface.operation in _EXACT_DEFAULT_OPERATIONS.values():
         return (
             "dynamic_numeric"
@@ -502,6 +605,20 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
             return "eligibility"
         if field == "weight" and isinstance(value, (Scalar, Block)):
             return "dynamic_numeric"
+    elif family == "decrees":
+        if (
+            version_contracts.active_version() == "1.15.1"
+            and surface.source == "common/decrees/00_decree.txt"
+            and surface.definition == "decree_road_maintenance"
+            and field == "ai_weight"
+            and surface.actor_scope == "state"
+            and surface.target_scope == "scope:country=country"
+            and surface.operation == "relative_weight"
+            and surface.capability == "direct"
+            and surface.legal
+            and isinstance(value, Block)
+        ):
+            return "dynamic_numeric"
     elif family in _RUNTIME_FAMILIES:
         if surface.operation in _NUMERIC_OPERATIONS and isinstance(value, (Block, Scalar)):
             return "dynamic_numeric"
@@ -527,6 +644,8 @@ def _companion_fields(surface: VanillaSurface) -> list[str]:
         fields.update(
             {"states", "use_culture_states", "required_num_states", "required_states_fraction"}
         )
+    if family == "decrees":
+        fields.update({"cost", "country_trigger", "state_trigger", "unlocking_laws"})
     if family == "ai_regional_objectives":
         fields.update({"stances", "complete", "invalid", "on_create", "on_complete", "on_invalid"})
     fields.discard(surface.field)
@@ -588,9 +707,13 @@ class _Dependencies:
         source_hashes: Mapping[str, str],
         *,
         production_complete: bool = False,
+        _metadata: _AuditMetadata | None = None,
     ) -> None:
+        if _metadata is not None and type(_metadata) is not _AuditMetadata:
+            raise TypeError("audit metadata must be a byte-bound audit owner")
         self.native, self.effective = native, effective
         self.production_complete = production_complete
+        self._metadata = _metadata
         # Bytes are immutable; snapshot the mappings so every proof/cache in
         # this audit instance refers to the same supplied candidate inputs.
         self.native_bytes, self.effective_bytes = dict(native_bytes), dict(effective_bytes)
@@ -650,6 +773,16 @@ class _Dependencies:
                     "effective_ast_sha256": None,
                 }
             )
+
+    def metadata_scope(self) -> _AuditMetadata:
+        raw = self.effective_bytes[".metadata/metadata.json"]
+        if self._metadata is None:
+            self._metadata = _AuditMetadata(raw)
+        return self._metadata
+
+    def metadata_document(self) -> Any:
+        raw = self.effective_bytes[".metadata/metadata.json"]
+        return self.metadata_scope().document(raw)
 
     def references(self, node: Assignment, *, numeric: bool = False) -> set[tuple[str, str]]:
         found: set[tuple[str, str]] = set()
@@ -1233,7 +1366,7 @@ class _Dependencies:
                 self.parameter_adapters_loaded = True
                 self.parameter_adapters = decision_adapters.load()
             adapters = self.parameter_adapters
-            document = json.loads(self.effective_bytes[".metadata/metadata.json"])
+            document = self.metadata_document()
             metadata = document["consumer_adapters"]
             if (
                 metadata.get("schema") != 1
@@ -1349,8 +1482,9 @@ class _Dependencies:
 
     def population_parameter_sources(self, reader: Any) -> dict[str, str]:
         """Prove the exact scoped percentage getter and registered pop argument."""
-        from .vanilla_inventory import _PARAMETER_EVIDENCE_HASHES  # noqa: PLC0415
+        from .vanilla_inventory import _parameter_evidence_contract  # noqa: PLC0415
 
+        evidence_hashes = _parameter_evidence_contract()
         if reader.engine == "pop_type_percent_state":
             if (
                 reader.scope != "root"
@@ -1373,7 +1507,7 @@ class _Dependencies:
                 if (
                     raw is None
                     or source not in self.native.roots
-                    or hashlib.sha256(raw).hexdigest() != _PARAMETER_EVIDENCE_HASHES[source]
+                    or hashlib.sha256(raw).hexdigest() != evidence_hashes[source]
                     or self.effective_bytes.get(source) != raw
                 ):
                     return {}
@@ -1408,21 +1542,31 @@ class _Dependencies:
                 source: hashlib.sha256(self.native_bytes[source]).hexdigest() for source in sources
             }
 
+        current = version_contracts.is_115()
+        parameter = "target" if current else "pop_type"
         if (
             reader.engine != "pop_type_percent_country"
             or len(reader.parameters) != 1
-            or reader.parameters[0][0] != "pop_type"
+            or reader.parameters[0][0] != parameter
             or reader.kind != "number"
-            or reader.value_field != "percent"
+            or reader.unit != "ratio"
+            or reader.value_field != ("value" if current else "percent")
             or reader.argument is not None
+            or reader.minimum != 0
+            or reader.maximum != 1
         ):
             return {}
-        pop_type = reader.parameters[0][1]
+        argument = reader.parameters[0][1]
+        if current and not argument.startswith("pop_type:"):
+            return {}
+        pop_type = argument.removeprefix("pop_type:") if current else argument
+        if pop_type not in {"peasants", "laborers", "machinists"}:
+            return {}
         # The argument must have independent pinned definition bytes. The
         # complete consumer contract binds which argument is actually used;
         # this is not permission for other names or compound getter shapes.
         definition_source = f"common/pop_types/{pop_type}.txt"
-        if definition_source not in _PARAMETER_EVIDENCE_HASHES:
+        if definition_source not in evidence_hashes:
             return {}
         sources = (
             "common/journal_entries/00_urbanization.txt",
@@ -1433,7 +1577,7 @@ class _Dependencies:
             if (
                 raw is None
                 or source not in self.native.roots
-                or hashlib.sha256(raw).hexdigest() != _PARAMETER_EVIDENCE_HASHES[source]
+                or hashlib.sha256(raw).hexdigest() != evidence_hashes[source]
                 or self.effective_bytes.get(source) != raw
             ):
                 return {}
@@ -1443,7 +1587,11 @@ class _Dependencies:
             "possible.pop_type_percent_country",
         )
         expected = parse_bytes(
-            b"pop_type_percent_country={pop_type=peasants percent>0.6}",
+            (
+                b"pop_type_percent_country={target=pop_type:peasants value>0.6}"
+                if current
+                else b"pop_type_percent_country={pop_type=peasants percent>0.6}"
+            ),
             path="native-population-percentage-example",
         ).root.items[0]
         definition, definition_state = _resolve(self.native.roots[sources[1]], pop_type, "__body__")
@@ -1942,7 +2090,7 @@ class _Dependencies:
                 )
             self.country_parameter_helpers = parameter_helpers
             self.country_contract_checked = True
-            metadata = json.loads(self.effective_bytes[".metadata/metadata.json"])
+            metadata = self.metadata_document()
             self.country_contract_present = "country_state" in metadata
             fingerprint = metadata["source_fingerprint"]
             expected_contract = country_state.contract(policy)
@@ -1993,8 +2141,20 @@ class _Dependencies:
                 if source != "common/on_actions/00_code_on_actions.txt"
             ):
                 return {}
-            evidence = json.loads(country_interfaces.EVIDENCE.read_bytes())
-            if evidence.get("schema") != 1:
+            evidence_raw = country_interfaces.evidence_file().read_bytes()
+            evidence = json.loads(evidence_raw)
+            if evidence.get("schema") != 1 or (
+                version_contracts.is_115()
+                and (
+                    hashlib.sha256(evidence_raw).hexdigest()
+                    != (
+                        country_interfaces.EVIDENCE_1151_SHA256
+                        if version_contracts.active_version() == "1.15.1"
+                        else country_interfaces.EVIDENCE_115_SHA256
+                    )
+                    or evidence.get("baseline_version") != version_contracts.active_version()
+                )
+            ):
                 return {}
             observed = {}
             source_identities = {}
@@ -2285,7 +2445,9 @@ def _support_program_proof(
     from . import audit, domain_coverage, support_program  # noqa: PLC0415
 
     try:
-        bindings = audit._production_continuous_bindings(generated_sources)
+        bindings = audit._production_continuous_bindings(
+            generated_sources, _metadata=dependencies.metadata_scope()
+        )
         if len(bindings) != 1:
             return {}
         binding = bindings[0]
@@ -2299,7 +2461,7 @@ def _support_program_proof(
             return {}
         program = binding.writer.program
         assert isinstance(program, support_program.SupportProgram)
-        metadata = json.loads(generated_sources[".metadata/metadata.json"])
+        metadata = dependencies.metadata_document()
         fingerprint = metadata["source_fingerprint"]
         if (
             fingerprint.get("support_program_generator_sha256")
@@ -2655,14 +2817,15 @@ def _implicit_numeric_projections(
 
 
 def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int, dict[str, Any]]]:
-    """Bind complete optional stance additions without granting numeric control.
+    """Prove complete enum additions and the three pinned idempotent unions.
 
-    Every original stance remains outside this projection. Only the registered
-    complete enum/trigger blocks may disappear from the source-boundary comparison.
+    Appends disappear from the boundary comparison; each reviewed union restores
+    its exact native AST. No other native stance or sibling may change, and this
+    projection grants no numeric control or action execution eligibility.
     """
     from .. import decision_adapters, decision_interfaces, decision_rules  # noqa: PLC0415, TID252
     from . import engine_scope, supply_program  # noqa: PLC0415
-    from .vanilla_inventory import _PARAMETER_EVIDENCE_HASHES  # noqa: PLC0415
+    from .vanilla_inventory import _parameter_evidence_contract  # noqa: PLC0415
 
     source = "common/ai_strategies/00_default_strategy.txt"
     if (
@@ -2722,10 +2885,11 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
         ):
             return {}
         strategy = json.loads(engine_scope.strategy_snapshot())
+        evidence_hashes = _parameter_evidence_contract()
         pins = {
             source: strategy["script_hashes"][source],
             **{
-                name: _PARAMETER_EVIDENCE_HASHES[name]
+                name: evidence_hashes[name]
                 for name in (
                     "common/goods/00_goods.txt",
                     "common/alert_types/00_alert_types.txt",
@@ -2811,14 +2975,21 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
             or not contains(tutorial)
         ):
             return {}
+        native_stances = {stance.good: stance for stance in plan.native_stances}
+        if native_stances:
+            reviewed = supply_program.native_stances_1151()
+            if (
+                plan.native_stances != reviewed
+                or (set(before.value.keys()) & set(plan.goods)) != native_stances.keys()
+            ):
+                return {}
         result = {}
+        restored: dict[int, Assignment] = {}
         for good in plan.goods:
             goods_source = "common/goods/00_goods.txt"
-            if (
-                before.value.all(good)
-                or native.owners["goods", good] != [goods_source]
-                or effective.owners["goods", good] != [goods_source]
-            ):
+            if native.owners["goods", good] != [goods_source] or effective.owners[
+                "goods", good
+            ] != [goods_source]:
                 return {}
             for engine, unit in (
                 ("market_goods_pricier", "price_above_base_ratio"),
@@ -2833,22 +3004,88 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
                 ):
                     return {}
             nodes = after.value.all(good)
+            if len(nodes) != 1:
+                return {}
+            scarcity = (
+                f"is_ai=yes exists=market market={{exists=mg:{good} "
+                f"mg:{good}={{market_goods_pricier>{plan.price_threshold!r} "
+                "market_goods_delta<0}}"
+            )
+            original = before.value.all(good)
+            if good in native_stances:
+                stance = native_stances[good]
+                native_text = dependencies.native_bytes[source].decode("utf-8-sig")
+                start, end = supply_program.block_span(
+                    native_text, ("ai_strategy_default", "goods_stances", good)
+                )
+                if len(original) != 1 or native_text[start:end] != stance.body:
+                    return {}
+                trigger_start, trigger_end = supply_program.block_span(
+                    stance.body, ("<anonymous>", "trigger")
+                )
+                native_trigger = stance.body[trigger_start:trigger_end]
+                # Independent expected shape: exactly one value, complete native
+                # trigger as the first AND, and the independently scoped scarcity
+                # trigger as the second. Do not call the production compose/render.
+                expected_text = (
+                    f"{good}={{stance=wants_high_supply trigger={{OR={{AND="
+                    + native_trigger
+                    + " AND={"
+                    + scarcity
+                    + "}}}}"
+                )
+            else:
+                if original:
+                    return {}
+                expected_text = f"{good}={{stance=wants_high_supply trigger={{{scarcity}}}}}"
             expected = parse_bytes(
-                (
-                    f"{good}={{stance=wants_high_supply trigger={{is_ai=yes exists=market "
-                    f"market={{exists=mg:{good} mg:{good}={{market_goods_pricier>{plan.price_threshold!r} "
-                    "market_goods_delta<0}}}}"
-                ).encode(),
+                expected_text.encode(),
                 path="registered-supply-stance",
             )
             if expected.errors or len(nodes) != 1 or _ast(nodes[0]) != _ast(expected.root.items[0]):
                 return {}
+            if good in native_stances:
+                # Reconstruct from the actual emitted native arm and its actual
+                # stance/siblings. The expected full OR above proves the unique
+                # ordinary shape; inserting the baseline here would conceal a
+                # broken restoration implementation behind a trusted digest.
+                actual_body = nodes[0].value
+                assert isinstance(actual_body, Block)
+                actual_trigger = actual_body.first("trigger")
+                assert actual_trigger is not None
+                assert isinstance(actual_trigger.value, Block)
+                actual_union = actual_trigger.value.first("OR")
+                assert actual_union is not None
+                assert isinstance(actual_union.value, Block)
+                native_arm = actual_union.value.items[0]
+                assert isinstance(native_arm, Assignment)
+                restored_trigger = replace(actual_trigger, value=native_arm.value)
+                restored_node = replace(
+                    nodes[0],
+                    value=replace(
+                        actual_body,
+                        items=[
+                            restored_trigger if item is actual_trigger else item
+                            for item in actual_body.items
+                        ],
+                    ),
+                )
+                if _ast(restored_node) != _ast(original[0]):
+                    return {}
+                restored[id(nodes[0])] = restored_node
             result[id(nodes[0])] = {
                 "source": source,
                 "definition": "ai_strategy_default",
                 "field": f"goods_stances.{good}",
-                "kind": "registered_enum_addition",
+                "kind": "registered_enum_idempotent_or"
+                if good in native_stances
+                else "registered_enum_addition",
                 "effective_ast_sha256": _digest(nodes[0]),
+                **(
+                    {"restored_native_ast_sha256": _digest(restored[id(nodes[0])])}
+                    if good in native_stances
+                    else {}
+                ),
                 "native_sources": pins,
                 "contract_sha256": hashlib.sha256(
                     json.dumps(expected_metadata, sort_keys=True).encode()
@@ -2856,9 +3093,14 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
                 "interface_authorized": True,
                 "business_complete": False,
             }
-        if _ast(Block([item for item in after.value.items if id(item) not in result])) != _ast(
-            before.value
-        ):
+        restored_table = Block(
+            [
+                restored.get(id(item), item)
+                for item in after.value.items
+                if id(item) not in result or id(item) in restored
+            ]
+        )
+        if _ast(restored_table) != _ast(before.value):
             return {}
         return {source: result}
     except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
@@ -2905,8 +3147,19 @@ def _responsibility_axes(
             value: Assignment | Block | Scalar | None,
             masks: Mapping[int, str],
             additions: Mapping[int, dict[str, Any]] = additions,
+            enums: Mapping[int, dict[str, Any]] = enums,
+            before: Block | None = before,
         ) -> object:
             if isinstance(value, Assignment):
+                projection = enums.get(id(value))
+                if projection is not None and projection["kind"] == "registered_enum_idempotent_or":
+                    assert before is not None
+                    original, state = _resolve(
+                        before, projection["definition"], projection["field"]
+                    )
+                    assert original is not None
+                    assert state == "found"
+                    return _ast(original)
                 if id(value) in masks:
                     return [
                         "typed_numeric_change",
@@ -2925,7 +3178,12 @@ def _responsibility_axes(
             if isinstance(value, Block):
                 return [
                     "block",
-                    [boundary(item, masks) for item in value.items if id(item) not in additions],
+                    [
+                        boundary(item, masks)
+                        for item in value.items
+                        if id(item) not in additions
+                        or additions[id(item)].get("kind") == "registered_enum_idempotent_or"
+                    ],
                 ]
             return _ast(value)
 
@@ -2960,6 +3218,19 @@ def _responsibility_axes(
                 and anode is not None
                 and boundary(bnode, masks_before) == boundary(anode, masks_after)
             )
+            enum_binding = enums.get(id(anode)) if anode is not None else None
+            native_enum_projection = bool(
+                enum_binding is not None
+                and enum_binding["kind"] == "registered_enum_idempotent_or"
+                and (enum_binding["source"], enum_binding["definition"], enum_binding["field"])
+                == (surface.source, surface.definition, surface.field)
+                and row["ast_status"] == "changed"
+                and bnode is not None
+                and anode is not None
+                and row["native_ast_sha256"] == enum_binding["restored_native_ast_sha256"]
+                and row["effective_ast_sha256"] == enum_binding["effective_ast_sha256"]
+                and boundary(bnode, masks_before) == boundary(anode, masks_after)
+            )
             source_issues = []
             if not production_complete:
                 source_issues.append("production_manifest_incomplete")
@@ -2969,7 +3240,9 @@ def _responsibility_axes(
                 source_issues.append("source_dependency_closure_unproven")
             if row["native_ast_sha256"] is None or row["effective_ast_sha256"] is None:
                 source_issues.append("physical_declaration_unresolved")
-            if row["ast_status"] != "retained" and not structural_projection:
+            if row["ast_status"] != "retained" and not (
+                structural_projection or native_enum_projection
+            ):
                 source_issues.append("native_declaration_changed_or_unresolved")
             protected = not source_issues
             row["source_protection"] = {
@@ -2987,6 +3260,8 @@ def _responsibility_axes(
                 "dependencies_closed": closed,
                 "context_closed": context_closed,
                 "structural_projection": structural_projection,
+                "native_enum_projection": native_enum_projection,
+                "native_enum_binding": enum_binding if native_enum_projection else None,
                 "controlled_numeric_declarations": sorted(masks_before.values()),
                 "implicit_numeric_projections": list(implicit.values()),
                 "implicit_enum_projections": list(enums.values()),
@@ -3034,7 +3309,10 @@ def _responsibility_axes(
         row["active_unknown_usage"] = bool(
             not (
                 row["source_protection"]["proven"]
-                and row["source_protection"]["structural_projection"]
+                and (
+                    row["source_protection"]["structural_projection"]
+                    or row["source_protection"]["native_enum_projection"]
+                )
             )
             and (
                 changed_dependency
@@ -3066,6 +3344,7 @@ def native_treatments(
     *,
     coverage: Mapping[str, Any] | None = None,
     production_complete: bool = False,
+    _metadata: _AuditMetadata | None = None,
 ) -> dict[str, Any]:
     """Retain every declaration and independently check native protection duties.
 
@@ -3104,8 +3383,22 @@ def native_treatments(
         effective_bytes,
         inventory.source_hashes,
         production_complete=production_complete,
+        _metadata=_metadata,
     )
     covered, receipt_issues = _coverage_rows(inventory, coverage)
+    from . import r2_native  # noqa: PLC0415
+
+    try:
+        network_bindings = {
+            (item.source, item.definition, item.field): item
+            for item in r2_native.production_bindings(
+                generated_sources, native_sources, metadata=_metadata
+            )
+        }
+    except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+        # A forged/malformed declaration grants no dependency projection. The
+        # ordinary changed-source and unknown-usage checks still apply below.
+        network_bindings = {}
     unknown_scopes = set(inventory.unknown_scopes)
     rows: list[dict[str, Any]] = []
     for surface in inventory.surfaces:
@@ -3208,18 +3501,30 @@ def native_treatments(
         kind = row["interface_kind"]
         effective_consumer = enode
         continuous_proof = {}
+        network_binding = network_bindings.get((surface.source, surface.definition, surface.field))
+        network_proof = (
+            r2_native.dependency_proof(network_binding)
+            if network_binding is not None
+            and dependencies.production_complete
+            and not dependencies.source_gaps
+            and not dependencies.effective.failures
+            and r2_native.native_issue(network_binding, surface) is None
+            and network_binding.native_ast_sha256 == row["native_ast_sha256"]
+            and network_binding.effective_ast_sha256 == row["effective_ast_sha256"]
+            else {}
+        )
         if not same and kind == "dynamic_numeric":
             continuous_proof = _support_program_proof(
                 surface, inventory, dependencies, generated_sources
             )
-        if continuous_proof:
+        if continuous_proof or network_proof:
             # The complete typed program and restored native tail were already
             # checked as one overlay. Re-run dependency closure on the untouched
             # native node so generated program operands cannot borrow opaque names.
             main_proofs, dependencies_proven = dependencies.check(
                 node, node, numeric=True, surface=surface
             )
-            main_proofs.append(continuous_proof)
+            main_proofs.append(continuous_proof or network_proof)
         elif not same and kind == "dynamic_numeric" and not _numeric_shape(enode, node):
             row["resolved_numeric_value"] = _registered_numeric_value(
                 surface, enode, effective, generated_sources
@@ -3236,7 +3541,7 @@ def native_treatments(
                 # The new helper name has an exact registered source/consumer
                 # proof above. Its actual body still requires dependency audit.
                 effective_consumer = helper
-        if not continuous_proof:
+        if not (continuous_proof or network_proof):
             main_proofs, dependencies_proven = dependencies.check(
                 node,
                 effective_consumer,

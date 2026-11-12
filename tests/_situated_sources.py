@@ -14,6 +14,7 @@ tests retain their handwritten/native-input expectations.
 
 from __future__ import annotations
 
+import json
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -61,6 +62,38 @@ def production_sources(
                 raise ValueError(f"{path}: duplicate source/rule identity {identity}")
             seen.add(identity)
             identities.add((source, rule_id, field))
+    from pdx import version_contracts
+
+    if (
+        information == _ROOT / _INFORMATION_SOURCE
+        and version_contracts.active_version() == "1.15.1"
+    ):
+        # The authored file preserves historical bytes; the current consumer
+        # retires exactly these six multipliers in favor of one R2 school writer.
+        retired = {
+            "remaining_school_catchup_need",
+            "remaining_school_fiscal",
+            "remaining_school_administrative",
+            "remaining_school_capacity",
+            "school_default_pressure",
+            "school_administrative_pressure",
+        }
+        receipt = json.loads(
+            (_ROOT / "research/situated/1.15.1/migration-retentions.json").read_text(
+                encoding="utf-8"
+            )
+        )["school_policy_migration"]
+        assert set(receipt["replacement_bridge_ids"]) == retired
+        assert receipt["successor"]["consumer"] == "a0-pol-schools"
+        assert receipt["successor"]["operation"] == "add"
+        actual = {
+            identity
+            for identity in identities
+            if identity[0] == _INFORMATION_SOURCE
+            and identity[2] == "institution_scores.institution_schools"
+        }
+        assert {identity[1] for identity in actual} == retired
+        identities -= actual
     return ProductionSources(frozenset(identities))
 
 

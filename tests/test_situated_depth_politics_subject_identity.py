@@ -73,7 +73,7 @@ def production():
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
     )
-    baseline = compiler.BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     files[INFO] = decision_rules.patch(
         baseline,
         policies[INFO],

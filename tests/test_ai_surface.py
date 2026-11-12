@@ -17,6 +17,7 @@ import pdx.ai_surface as surf
 import pdx.config
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
+from pdx.version_contracts import active_version, is_115, select_version
 
 if TYPE_CHECKING:
     from pdx.model import ParsedFile
@@ -171,6 +172,30 @@ def test_核对缺文件时给出提示(tmp_path, monkeypatch) -> None:
     assert "--write" in msg
 
 
+def test_versioned_surface_path_resolves_context_before_environment(monkeypatch) -> None:
+    monkeypatch.delenv("V3_CONTRACT_PROFILE", raising=False)
+    assert surf.doc_path().name == "02-可执行面-1.15.1.md"
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
+    assert surf.doc_path().name == "02-可执行面-1.15.0.md"
+    with select_version("1.14.5"):
+        assert surf.doc_path() == surf.DOC_PATH
+    with select_version("1.15.0"):
+        assert surf.doc_path().name == "02-可执行面-1.15.0.md"
+
+
+def test_current_surface_write_preserves_historical_bytes(tmp_path, monkeypatch) -> None:
+    historical = tmp_path / surf.DOC_PATH
+    historical.parent.mkdir(parents=True)
+    historical.write_bytes(b"historical 35 cards\r\n")
+    monkeypatch.setattr(surf, "build", lambda *_args, **_kwargs: "current 37 cards\n")
+    with select_version("1.15.0"):
+        current = surf.write_doc(repo=tmp_path)
+        assert current != historical
+        assert current.read_bytes() == b"current 37 cards\n"
+        assert surf.check_doc(repo=tmp_path) == ""
+    assert historical.read_bytes() == b"historical 35 cards\r\n"
+
+
 # ── 真实文件（装了游戏才跑）────────────────────────────────────
 
 
@@ -184,7 +209,7 @@ def test_真实原版_三槽牌数与默认层() -> None:
         slots[card.slot] = slots.get(card.slot, 0) + 1
     assert slots.get("默认层") == 1
     assert slots.get("administrative") == 7
-    assert slots.get("political") == 9
+    assert slots.get("political") == (11 if is_115() else 9)
     assert slots.get("diplomatic") == 18
 
 
@@ -230,6 +255,19 @@ _ANTI_IG_LINES = {
     "ai_strategy_maintain_mandate_of_heaven": 1006,
     "ai_strategy_tanzimat_reforms": 1123,
     "ai_strategy_meiji_restoration": 1225,
+}
+
+_ANTI_IG_LINES_115 = {
+    "ai_strategy_conservative_agenda": 82,
+    "ai_strategy_reactionary_agenda": 312,
+    "ai_strategy_progressive_agenda": 584,
+    "ai_strategy_egalitarian_agenda": 819,
+    "ai_strategy_nationalist_agenda": 1020,
+    "ai_strategy_maintain_mandate_of_heaven": 1241,
+    "ai_strategy_tanzimat_reforms": 1358,
+    "ai_strategy_meiji_restoration": 1467,
+    "ai_strategy_consolidation_agenda": 1709,
+    "ai_strategy_confrontation_agenda": 1906,
 }
 
 #: 九张政治牌里**唯一**没有 `anti_interest_groups` 的那一张。
@@ -279,7 +317,7 @@ def test_真实原版_反IG块8处行号与归属() -> None:
         found = body.first("anti_interest_groups")
         if found is not None:
             got[name] = found.line
-    assert got == _ANTI_IG_LINES
+    assert got == (_ANTI_IG_LINES_115 if is_115() else _ANTI_IG_LINES)
     assert _ANTI_IG_MISSING not in got
     # 括注里的另一条事实：`ai_strategy_default`（不在这九列里）也有这一块。
     default = _cards_of(_parsed("00_default_strategy.txt"))["ai_strategy_default"]
@@ -321,17 +359,29 @@ def test_真实原版_牌面门与权重复算() -> None:
                 hits = _has_modifier_lines(weight.value) if isinstance(weight.value, Block) else []
                 if hits:
                     hm_in_weight[card_name] = hits
-    assert total == 35
-    assert with_possible == 34
-    assert with_weight == 35
+    current = is_115()
+    assert total == (37 if current else 35)
+    assert with_possible == (36 if current else 34)
+    assert with_weight == (37 if current else 35)
     assert missing_possible == ["ai_strategy_industrial_expansion"]
     assert hm_in_possible == {}
-    assert hm_in_weight == {
+    expected_weight = {
         "ai_strategy_reactionary_agenda": [355],
         "ai_strategy_progressive_agenda": [548],
         "ai_strategy_egalitarian_agenda": [738],
         "ai_strategy_nationalist_agenda": [927],
     }
+    if current:
+        expected_weight = {
+            "ai_strategy_socialism_in_one_country": [2877],
+            "ai_strategy_reactionary_agenda": [480],
+            "ai_strategy_progressive_agenda": [721],
+            "ai_strategy_egalitarian_agenda": [950],
+            "ai_strategy_nationalist_agenda": [1143],
+            "ai_strategy_consolidation_agenda": [1784],
+            "ai_strategy_confrontation_agenda": [2022],
+        }
+    assert hm_in_weight == expected_weight
 
 
 @pytest.mark.integration
@@ -354,11 +404,17 @@ def test_真实原版_权重为0的牌只有默认牌() -> None:
             base = weight.value.first("value")
             if base is not None and isinstance(base.value, Scalar) and base.value.unquoted == "0":
                 zeros.append((name, card_name, weight.line))
-    assert zeros == [("00_default_strategy.txt", "ai_strategy_default", 9702)]
+    assert zeros == [
+        (
+            "00_default_strategy.txt",
+            "ai_strategy_default",
+            {"1.14.5": 9702, "1.15.0": 11273, "1.15.1": 11300}[active_version()],
+        )
+    ]
     default = _cards_of(_parsed("00_default_strategy.txt"))["ai_strategy_default"]
     possible = default.first("possible")
     assert possible is not None
-    assert possible.line == 9697
+    assert possible.line == {"1.14.5": 9697, "1.15.0": 11268, "1.15.1": 11295}[active_version()]
     assert isinstance(possible.value, Block)
     always = possible.value.first("always")
     assert always is not None

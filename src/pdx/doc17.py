@@ -45,7 +45,7 @@ import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import config
+from . import config, version_contracts
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, norm_key
 from .extract import extract_dir
@@ -559,6 +559,35 @@ def _overview_counts() -> tuple[int, int]:
     return files, keys
 
 
+def _overview_table_rows() -> list[tuple[str, dict[int, str]]]:
+    """Own only the current overview's two mechanical columns."""
+    result = []
+    for name in OVERVIEW_DIRS:
+        paths = _overview_paths(name)
+        blocks = {
+            path: [
+                item.key
+                for item in parse_cached(path).top_assignments
+                if not item.is_variable and isinstance(item.value, Block)
+            ]
+            for path in paths
+        }
+        files, keys = str(len(paths)), f"{sum(map(len, blocks.values())):,}"
+        if name == "genes":
+            keys = f"{len({key for values in blocks.values() for key in values})} 个块名（{keys} 处定义）"
+        elif name == "technology":
+            eras = [
+                path
+                for path in paths
+                if path.is_relative_to(config.GAME / "common/technology/eras")
+            ]
+            files = f"{len(paths) - len(eras)} + `eras/`{len(eras)}"
+            era_keys = sum(len(blocks[path]) for path in eras)
+            keys = f"{sum(map(len, blocks.values())) - era_keys:,} + {era_keys}"
+        result.append((f"`{name}`", {2: files, 3: keys}))
+    return result
+
+
 def overview_txt_count() -> int:
     """doc 17 §0 与头条的 **955**：29 个目录的 `.txt` 数（**递归**）。
 
@@ -783,6 +812,19 @@ def doc_table_specs() -> list[KeyedTableSpec]:
     每条只碰自己那几行 —— 其余行原样保留。
     """
     return [
+        *(
+            [
+                KeyedTableSpec(
+                    name="doc17 §0 目录总览",
+                    header="| # | 目录 | .txt | 顶层定义键 |",
+                    cells=_overview_table_rows,
+                    key_column=1,
+                    append_new=False,
+                )
+            ]
+            if version_contracts.is_115()
+            else []
+        ),
         *_doc17_field_specs(),
         # `flag_definitions` 表的最后一行：`includes` 在 **TAG 顶层块**里（表里写着「列表级」），
         # 按块内字段数会得 0 —— 于是这一行永远显示「未使用」，而它其实有 2 处。
@@ -816,7 +858,8 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             name="doc17 messages 逐文件",
             header="| 文件 | 定义数 | 内容 |",
             cells=definition_rows("common/messages", 1),
-            append_new=False,
+            append_new=version_contracts.is_115(),
+            allow_drop=version_contracts.is_115(),
         ),
         # 取值分布（口径 3）
         *_doc17_dist_specs(),

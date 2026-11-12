@@ -10,12 +10,20 @@ import re
 from typing import Any
 
 import pytest
+from test_network_profile import _consumer, _parsed, _score
+from test_remaining_joint_consumers import _historical_school_blocks
 from test_situated_joint_witnesses import _facts
 
-from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx import (
+    country_state,
+    decision_adapters,
+    decision_interfaces,
+    decision_rules,
+    version_contracts,
+)
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
-from pdx.situated import compiler
+from pdx.situated import compiler, network_profile, production_profile
 from pdx.situated import pdx_eval as oracle
 
 pytestmark = pytest.mark.integration
@@ -33,7 +41,7 @@ def production():
     compiled, _ = compiler.compile_policy(source, INFO, model)
     adapters = decision_adapters.load()
     inputs = decision_adapters.read_inputs(adapters)
-    native = compiler.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_path().read_text(encoding="utf-8")
     words = (
         frozenset(decision_adapters.reader_evidence(inputs))
         | decision_interfaces.proven_reader_words()
@@ -52,6 +60,65 @@ def production():
         )
 
     return source, compiled, native, patch(), patch(frozenset()), model
+
+
+@pytest.fixture(scope="module")
+def current_school(production):
+    if version_contracts.active_version() != "1.15.1":
+        return None
+    profile = production_profile.load_profile(production_profile.baseline_root())
+    program = next(
+        row
+        for row in network_profile.compile_profile(profile)
+        if row.network.actions[0].definition.consumer_id == "a0-pol-schools"
+    )
+    generated = network_profile.build(profile)["common/ai_strategies/00_default_strategy.txt"]
+    declaration = next(row for row in profile.declarations if row.id == "a0-pol-schools")
+    assert production_profile.strip_policy(generated, declaration) == production[2]
+    return program, generated, declaration
+
+
+def _current_school_facts(values, *, is_ai=True):
+    return {
+        key: value
+        for key, value in {
+            "ai": is_ai,
+            "literacy": values.get("literacy"),
+            "population": values.get("population"),
+            "bureaucracy": values.get("bureaucracy"),
+            "default": values.get("default"),
+            "net-surplus": values.get("net_surplus"),
+            "school-agenda": False,
+        }.items()
+        if value is not None
+    }
+
+
+def _current_school_delta(values):
+    # Literal independent assessment for the declared migration. Required
+    # unknowns exit the complete assessment; auxiliary income only drops .5.
+    if any(values.get(key) is None for key in ("literacy", "population", "bureaucracy", "default")):
+        return 0
+    needed = values["literacy"] < 0.5 and values["population"] > 0
+    return (
+        (2 if needed else 0)
+        + (0.25 if needed and values["bureaucracy"] > 0 else 0)
+        + (
+            0.5
+            if needed and values["default"] is False and (values.get("net_surplus") or 0) > 0
+            else 0
+        )
+        - (2 if values["bureaucracy"] < 0 else 0)
+        - (2 if values["default"] is True else 0)
+    )
+
+
+def _current_school_observed(program, facts):
+    declared = {fact.id for fact in program.network.facts}
+    text = network_profile.render_program(
+        program, available=tuple(key for key in facts if key in declared)
+    )
+    return _score(_parsed(text), facts)
 
 
 def _values(changes):
@@ -145,12 +212,32 @@ def _overlay(text, field):
         ({"candidate_selected": True, "institution_expanding": True}, (1.0, 0.98)),
     ],
 )
-def test_complete_consumers_match_handwritten_joint_preferences(production, changes, expected):
+def test_complete_consumers_match_handwritten_joint_preferences(
+    production, current_school, changes, expected
+):
     _source, policy, _native, generated, _disabled, _model = production
+    # Preserve both historical multiplier contracts against their own frozen
+    # source/PDX bodies, independently of the installed current game version.
+    for version in ("1.14.5", "1.15.0"):
+        with version_contracts.select_version(version):
+            historical, blocks = _historical_school_blocks(version)
+            old_values = _values(changes)
+            reference = decision_rules.evaluate(historical, old_values, is_ai=True)
+            assert reference.get(SCHOOL, ("native", 1))[1] == pytest.approx(expected[0])
+            assert oracle.select(
+                blocks[SCHOOL], _facts(historical, old_values)
+            ).delta == pytest.approx(expected[0])
     values = _values(changes)
     reference = decision_rules.evaluate(policy, values, is_ai=True)
     facts = _facts(policy, values)
     for field, factor in zip(FIELDS, expected, strict=True):
+        if field == SCHOOL and current_school is not None:
+            assert field not in reference
+            program, _generated_school, _declaration = current_school
+            delta = _current_school_observed(program, _current_school_facts(values))
+            assert delta == pytest.approx(_current_school_delta(values))
+            assert 10 + delta == pytest.approx(10 + _current_school_delta(values))
+            continue
         observed = oracle.select(_overlay(generated, field), facts)
         assert reference.get(field, ("native", 1))[1] == pytest.approx(factor)
         assert (observed.delta if observed.operation == "multiply" else 1) == pytest.approx(factor)
@@ -158,11 +245,27 @@ def test_complete_consumers_match_handwritten_joint_preferences(production, chan
         assert 10 * factor == pytest.approx(10 * (observed.delta if observed.operation else 1))
 
 
-def test_same_demand_tiers_and_independent_costs_have_explicit_causes(production):
+def test_same_demand_tiers_and_independent_costs_have_explicit_causes(production, current_school):
     source, policy, _native, _generated, _disabled, model = production
     assert model.consumer_ir is not None
     for field, count in ((SCHOOL, 6), (SOCIAL, 9)):
         rules = tuple(rule for rule in source.rules if ".".join(rule.field) == field)
+        if field == SCHOOL and current_school is not None:
+            assert rules == ()
+            assert all(".".join(row.field) != SCHOOL for row in policy.consumer_programs)
+            program, generated, declaration = current_school
+            action = program.network.actions[0]
+            assert action.definition.operation == "add"
+            assert {row.id for row in program.network.bridges} == {
+                "school-need",
+                "school-administration",
+                "school-default",
+                "school-agenda-complement",
+                "school-capacity-administrative",
+                "school-capacity-fiscal",
+            }
+            assert production_profile.strip_policy(generated, declaration) == _native
+            continue
         assert len(rules) == count < 32
         assert len({rule.contribution_group for rule in rules if rule.value > 1}) == 1
         costs = {rule.contribution_group for rule in rules if rule.value < 1}
@@ -186,13 +289,28 @@ def _syntax(node: Any):
     return tuple(_syntax(item) for item in node.items)
 
 
-def test_players_disabled_missing_country_and_native_tail_are_preserved(production):
+def test_players_disabled_missing_country_and_native_tail_are_preserved(production, current_school):
     _source, policy, native, generated, disabled, _model = production
     values = _values({"default": True})
     assert decision_rules.evaluate(policy, values, is_ai=False) == {}
     assert decision_rules.evaluate(policy, values, is_ai=True, enabled_domains=frozenset()) == {}
     assert disabled == native
     for field in FIELDS:
+        if field == SCHOOL and current_school is not None:
+            program, school_text, declaration = current_school
+            assert (
+                _current_school_observed(program, _current_school_facts(values, is_ai=False)) == 0
+            )
+            assert _current_school_observed(program, {"ai": True, "foreign_literacy": 0.3}) == 0
+            assert production_profile.strip_policy(school_text, declaration) == native
+            native_body = _consumer(
+                native, "ai_strategy_default", "institution_scores", "institution_schools"
+            )
+            assert _score(native_body, {}) == 10
+            # The new local preference is additive after the original body;
+            # the historical multiplicative native-zero statement does not apply.
+            assert _current_school_observed(program, _current_school_facts(values)) == -2
+            continue
         overlay = _overlay(generated, field)
         assert oracle.select(overlay, _facts(policy, values, is_ai=False)).operation is None
         foreign = _facts(policy, values)["ROOT"]

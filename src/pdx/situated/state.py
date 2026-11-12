@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping  # noqa: TC003
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from .schema import EvidenceValue, StateVector
 from .signals import (
@@ -14,6 +14,9 @@ from .signals import (
     OpportunitySignal,
     TypedState,
 )
+
+if TYPE_CHECKING:
+    from pdx.country_state import CountryPolicy
 
 
 def derive(values: Mapping[str, EvidenceValue]) -> StateVector:
@@ -68,235 +71,156 @@ def _fact(values: Mapping[str, EvidenceValue], name: str) -> tuple[Any, bool, bo
     return item.value, True, False
 
 
-def _compare(
-    values: Mapping[str, EvidenceValue], name: str, op: str, expected: object
-) -> bool | None:
-    actual, known, _ = _fact(values, name)
-    if not known:
-        return None
-    if type(actual) is bool:
-        if op != "=" or type(expected) is not bool:
-            return None
-        return actual is expected
-    if isinstance(actual, bool) or not isinstance(actual, (int, float)):
-        return None
-    if isinstance(expected, bool) or not isinstance(expected, (int, float)):
-        return None
-    return {
-        "=": actual == expected,
-        "<": actual < expected,
-        "<=": actual <= expected,
-        ">": actual > expected,
-        ">=": actual >= expected,
-    }[op]
+def derive_typed(
+    values: Mapping[str, EvidenceValue], *, policy: CountryPolicy | None = None
+) -> TypedState:
+    """Derive the typed view from the one normalized country policy.
 
-
-def _all(values: tuple[bool | None, ...]) -> bool | None:
-    if any(item is False for item in values):
-        return False
-    return None if any(item is None for item in values) else True
-
-
-def _any(values: tuple[bool | None, ...]) -> bool | None:
-    if any(item is True for item in values):
-        return True
-    return None if any(item is None for item in values) else False
-
-
-def _signal(
-    cls,
-    *,
-    signal_id: str,
-    value: object | None,
-    known: bool,
-    stale: bool,
-    unit: str,
-    expression: str,
-    source_facts: tuple[str, ...],
-    scope: str = "country",
-    bindings: tuple[str, ...] = (),
-):
-    return cls(
-        id=signal_id,
-        source="mod/decisions/country_state.toml",
-        unit=unit,
-        scope=scope,
-        value=value if known else None,
-        known=known,
-        stale=stale,
-        quality="derived",
-        expression=expression,
-        source_facts=source_facts,
-        bindings=bindings,
-    )
-
-
-def derive_typed(values: Mapping[str, EvidenceValue]) -> TypedState:
-    """从已登记事实派生 K2 的四类类型化信号。
-
-    每个表达式采用三值逻辑：缺失或未知事实不会被当成 ``False``，而是
-    传播为未知；消费者可据此回退原版。表达式与源事实随信号导出，便于
-    K5 将参考语义与 PDX 生成逐项见证。
+    Capacities and selected layers use the coordinator's exact three-valued
+    priority and recovery rules. Compatibility aliases reference policy nodes;
+    the retired security capacity has no such node and remains explicitly
+    unsupported rather than retaining a second threshold table.
     """
+    from pdx import country_coordination, country_state  # noqa: PLC0415
 
-    def expr(signal_id: str, clauses: tuple[tuple[str, str, object], ...], *, unit="boolean"):
-        outcome = _all(tuple(_compare(values, *clause) for clause in clauses))
-        stale = any(_fact(values, name)[2] for name, _, _ in clauses)
-        expression = " AND ".join(f"{name} {op} {literal!r}" for name, op, literal in clauses)
-        return _signal(
-            CapacitySignal,
-            signal_id=signal_id,
+    selected_policy = country_state.load() if policy is None else policy
+    supplied = {name: _fact(values, name)[0] for name in selected_policy.readers}
+    raw = {
+        name: country_state._fact(supplied, name, reader)
+        for name, reader in selected_policy.readers.items()
+    }
+    outcomes = country_coordination.evaluate(selected_policy, raw)
+    if not selected_policy.enabled:
+        outcomes = dict.fromkeys(outcomes)
+    nodes = selected_policy.data["coordination"]
+
+    def node(section: str, name: str) -> tuple[tuple[str, ...], str]:
+        tree = nodes[section][name]["when"]
+        names = tuple(dict.fromkeys(item["fact"] for clause in tree for item in clause))
+        expression = " OR ".join(
+            "("
+            + " AND ".join(f"{item['fact']} {item['op']} {item['value']!r}" for item in clause)
+            + ")"
+            for clause in tree
+        )
+        return names, expression
+
+    def combined(*names: str) -> tuple[tuple[str, ...], str]:
+        references = tuple(node("capacities", name) for name in names)
+        facts = tuple(dict.fromkeys(fact for source, _ in references for fact in source))
+        return facts, "; ".join(
+            f"{name}: {text}" for name, (_, text) in zip(names, references, strict=True)
+        )
+
+    def signal(
+        cls,
+        signal_id: str,
+        outcome,
+        description: tuple[tuple[str, ...], str],
+        *,
+        unit="boolean",
+        quality="derived",
+    ):
+        names, expression = description
+        return cls(
+            id=signal_id,
+            source="mod/decisions/country_state.toml",
+            unit=unit,
+            scope="country",
             value=outcome,
             known=outcome is not None,
-            stale=stale,
-            unit=unit,
+            stale=any(_fact(values, name)[2] for name in names),
+            quality=quality,
             expression=expression,
-            source_facts=tuple(name for name, _, _ in clauses),
+            source_facts=names,
         )
 
-    capacities = (
-        expr("layer_recovery", (("default", "=", True),)),
-        expr(
-            "layer_expansion",
-            (
-                ("default", "=", False),
-                ("war", "=", False),
-                ("debt_ratio", "<", 0.2),
-                ("net_surplus", ">", 0),
-                ("bureaucracy", ">=", 100),
-                ("legitimacy", ">=", 60),
-                ("insurrection", "=", False),
-            ),
-        ),
-        expr(
-            "layer_stable",
-            (
-                ("default", "=", False),
-                ("war", "=", False),
-                ("debt_ratio", "<=", 0.5),
-                ("net_surplus", ">=", 0),
-                ("bureaucracy", ">=", 0),
-            ),
-        ),
-        expr(
-            "layer_foundation",
-            (
-                ("default", "=", False),
-                ("war", "=", False),
-                ("debt_ratio", "<", 0.75),
-                ("income", ">", 0),
-            ),
-        ),
-        expr("administrative_capacity", (("bureaucracy", ">=", 0),)),
-        expr("political_capacity", (("legitimacy", ">=", 35), ("insurrection", "=", False))),
-        expr("security_capacity", (("navy", ">", 0),)),
-    )
-
-    need_specs = {
-        "fiscal": (("default", "=", True),),
-        "administrative": (("bureaucracy", "<", 0),),
-        "political": (("legitimacy", "<", 35),),
-        "education": (("literacy", "<", 0.5), ("population", ">", 0)),
-        "industry": (("industrial_route", "=", True),),
-        "security": (("war", "=", True),),
-        "reconstruction": (("war_defeat", "=", True), ("war", "=", False)),
-        "overseas": (("expansion_route", "=", True), ("navy", ">=", 25), ("subject", "=", False)),
+    capacities = [
+        signal(CapacitySignal, name, outcomes[name], combined(name, "recovery"))
+        for name in country_coordination.CAPACITIES
+    ]
+    layer_nodes = {
+        "recovery": ("recovery",),
+        "expansion": ("expansion_capacity", "recovery"),
+        "stable": ("stable_capacity", "expansion_capacity", "recovery"),
+        "foundation": ("development", "stable_capacity", "expansion_capacity", "recovery"),
     }
-    needs: list[NeedSignal] = []
-    for name, clauses in need_specs.items():
-        # Alternative evidence is intentionally represented as a tuple of OR
-        # clauses for pressure/need domains where one of several facts suffices.
-        alternatives = {
-            "fiscal": (
-                (("default", "=", True),),
-                (("debt_ratio", ">=", 0.5),),
-                (("loans", "=", True), ("net_surplus", "<", 0)),
-            ),
-            "political": ((("legitimacy", "<", 35),), (("insurrection", "=", True),)),
-            "industry": (
-                (("industrial_route", "=", True),),
-                (("resource_route", "=", True),),
-                (("war_defeat", "=", True),),
-            ),
-        }.get(name, (clauses,))
-        results = tuple(
-            _all(tuple(_compare(values, *clause) for clause in alternative))
-            for alternative in alternatives
-        )
-        outcome = _any(results)
-        names = tuple(sorted({fact for alternative in alternatives for fact, _, _ in alternative}))
-        stale = any(_fact(values, fact)[2] for fact in names)
-        expression = " OR ".join(
-            " AND ".join(f"{fact} {op} {literal!r}" for fact, op, literal in alternative)
-            for alternative in alternatives
-        )
-        needs.append(
-            _signal(
-                NeedSignal,
-                signal_id=f"need_{name}",
-                value=outcome,
-                known=outcome is not None,
-                stale=stale,
-                unit="boolean",
-                expression=expression,
-                source_facts=names,
+    for name in country_coordination.LAYERS:
+        names, expression = combined(*layer_nodes[name])
+        capacities.append(
+            signal(
+                CapacitySignal,
+                f"layer_{name}",
+                outcomes[f"layer_{name}"],
+                (names, f"coordinator selected layer {name}; {expression}"),
             )
         )
-
-    opportunities: list[OpportunitySignal] = []
-    for signal_id, fact, expression in (
-        ("education", "literacy", "literacy < 0.5 AND population > 0"),
-        ("administrative_foundation", "bureaucracy", "bureaucracy >= 0"),
-    ):
-        _, _, stale = _fact(values, fact)
-        if signal_id == "education":
-            result = _all(
-                (_compare(values, "literacy", "<", 0.5), _compare(values, "population", ">", 0))
-            )
-        else:
-            result = _compare(values, "bureaucracy", ">=", 0)
-        opportunities.append(
-            _signal(
-                OpportunitySignal,
-                signal_id=f"opportunity_{signal_id}",
-                value=result,
-                known=result is not None,
-                stale=stale,
-                unit="boolean",
-                expression=expression,
-                source_facts=(fact, "population") if signal_id == "education" else (fact,),
-            )
-        )
-
-    commitments: list[CommitmentSignal] = []
-    for signal_id, fact, unit, expression in (
-        ("debt_service", "debt_ratio", "debt_to_credit_ratio", "debt_ratio"),
-        ("military", "war", "boolean", "war"),
-        ("diplomatic", "subject", "boolean", "subject"),
-    ):
-        source_value, known, stale = _fact(values, fact)
-        commitments.append(
-            _signal(
-                CommitmentSignal,
-                signal_id=f"commitment_{signal_id}",
-                value=source_value,
-                known=known,
-                stale=stale,
-                unit=unit,
-                expression=expression,
-                source_facts=(fact,),
-            )
-        )
-
-    return TypedState(
-        capacities=capacities,
-        needs=tuple(needs),
-        opportunities=tuple(opportunities),
-        commitments=tuple(commitments),
+    needs = tuple(
+        signal(NeedSignal, f"need_{name}", outcomes[f"need_{name}"], node("needs", name))
+        for name in country_coordination.NEEDS
     )
+    by_need = {item.id: item for item in needs}
+
+    def complement(name: str):
+        value = outcomes[f"need_{name}"]
+        return None if value is None else not value
+
+    for alias, need in (
+        ("administrative_capacity", "administrative"),
+        ("political_capacity", "political"),
+    ):
+        names, expression = node("needs", need)
+        capacities.append(
+            signal(CapacitySignal, alias, complement(need), (names, f"NOT ({expression})"))
+        )
+    capacities.append(
+        signal(
+            CapacitySignal,
+            "security_capacity",
+            None,
+            (("navy",), "unsupported: country policy declares no security capacity node"),
+            quality="unknown",
+        )
+    )
+    education = by_need["need_education"]
+    administrative = next(item for item in capacities if item.id == "administrative_capacity")
+    opportunities = (
+        signal(
+            OpportunitySignal,
+            "opportunity_education",
+            education.value,
+            (education.source_facts, f"policy alias need_education: {education.expression}"),
+        ),
+        signal(
+            OpportunitySignal,
+            "opportunity_administrative_foundation",
+            administrative.value,
+            (
+                administrative.source_facts,
+                f"policy alias administrative_capacity: {administrative.expression}",
+            ),
+        ),
+    )
+    commitments = []
+    for signal_id, fact in (
+        ("debt_service", "debt_ratio"),
+        ("military", "war"),
+        ("diplomatic", "subject"),
+    ):
+        value = raw[fact]
+        known = value is not None
+        commitments.append(
+            signal(
+                CommitmentSignal,
+                f"commitment_{signal_id}",
+                value if known and selected_policy.enabled else None,
+                ((fact,), f"policy reader {fact}"),
+                unit=selected_policy.readers[fact]["unit"],
+            )
+        )
+    return TypedState(tuple(capacities), needs, opportunities, tuple(commitments))
 
 
 def contract() -> dict[str, object]:
-    """导出不依赖具体事实值的状态表达式注册表。"""
-
+    """Export the typed registry from the current normalized policy."""
     return derive_typed({}).as_dict()

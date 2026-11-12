@@ -12,12 +12,19 @@ import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from pdx import decision_adapters, decision_rules
+from pdx import decision_adapters, decision_rules, version_contracts
 
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_SOURCE = REPO / "mod" / "decisions" / "action_bindings.toml"
 _SAFE = re.compile(r"[^a-z0-9_]+")
 _DISPOSITIONS = {"migrate", "merge", "remove", "retain_vanilla"}
+
+
+def source_path() -> Path:
+    """Select the generated ledger without rewriting historical identities."""
+    if version_contracts.is_115():
+        return DEFAULT_SOURCE.parent / version_contracts.active_version() / DEFAULT_SOURCE.name
+    return DEFAULT_SOURCE
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,11 +96,12 @@ def build(
 
 
 def load(
-    path: Path = DEFAULT_SOURCE,
+    path: Path | None = None,
     *,
     information: decision_rules.RuleSet | None = None,
     adapters: decision_adapters.AdapterSet | None = None,
 ) -> tuple[Binding, ...]:
+    path = source_path() if path is None else path
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if (
         data.get("schema") != 1
@@ -140,17 +148,20 @@ def render(rows: tuple[Binding, ...] | None = None) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write(path: Path = DEFAULT_SOURCE) -> int:
+def write(path: Path | None = None) -> int:
     """Write the generated binding ledger using repository text conventions."""
 
+    path = source_path() if path is None else path
     bindings = build()
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(render(bindings), encoding="utf-8", newline="\n")
     return len(bindings)
 
 
-def check(path: Path = DEFAULT_SOURCE) -> list[str]:
+def check(path: Path | None = None) -> list[str]:
     """Compare the checked-in ledger with the current deterministic source."""
 
+    path = source_path() if path is None else path
     try:
         actual = path.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -246,6 +257,7 @@ __all__ = [
     "contract",
     "load",
     "render",
+    "source_path",
     "validate",
     "validate_disposition",
     "write",

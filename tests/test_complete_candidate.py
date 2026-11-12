@@ -9,7 +9,7 @@ from typing import cast
 
 import pytest
 
-from pdx import decisions, distribution
+from pdx import decisions, distribution, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 
@@ -57,23 +57,44 @@ def test_外部配置超大整数按配置错误拒绝(tmp_path):
         decisions.load_extensions(source)
 
 
-def test_打包命令只生成唯一正式变体(tmp_path, monkeypatch):
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, version):
     from typer.testing import CliRunner
 
     from pdx.cli import app
 
     calls = []
 
-    def capture(destination):
-        calls.append(destination)
+    def capture(destination, **_kwargs):
+        calls.append(("historical", destination))
         return destination
 
+    def capture_profile(destination, profile, *, configuration=None):
+        from pdx.situated.profile_configuration import ProfileConfiguration
+
+        assert profile.game_version == "1.15.0"
+        assert configuration == ProfileConfiguration()
+        calls.append(("current", destination))
+        return destination
+
+    # This is a dispatch unit witness. Live installation validation is covered
+    # independently by test_profile_live_boundary; resolve frozen identity here.
+    from pdx import cli
+
+    resolve = cli._production_profile
+
+    def frozen_profile(name, configuration=None, *, context=None):
+        return resolve(name, configuration, offline=True, context=context)
+
+    monkeypatch.setattr(cli, "_production_profile", frozen_profile)
     monkeypatch.setattr(distribution, "package", capture)
+    monkeypatch.setattr(distribution, "profile_package", capture_profile)
     runner = CliRunner()
     output = tmp_path / "release.zip"
-    result = runner.invoke(app, ["package", "--output", str(output)])
+    with version_contracts.select_version(version):
+        result = runner.invoke(app, ["package", "--profile", version, "--output", str(output)])
     assert result.exit_code == 0, result.output
-    assert calls == [output]
+    assert calls == [("current" if version == "1.15.0" else "historical", output)]
 
 
 @pytest.mark.parametrize(
@@ -119,7 +140,9 @@ def test_正式候选包含所有生产模块且不修改生成源():
         "consumer_adapters",
         "country_state",
     }
-    assert metadata["status"] == "released"
+    assert metadata["status"] == (
+        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+    )
     assert policy.aggression == 0
     assert extra.security_enabled
     assert extra.economy_enabled
@@ -211,6 +234,12 @@ def test_实际外部生成分支防御对称不重复加分且有上下文保�
 
 
 def test_完整开关关闭清理外部文件且不删用户文件(tmp_path):
+    # This offline lifecycle witness retains the historical core build inputs.
+    with version_contracts.select_version("1.14.5"):
+        _assert_disabled_output_cleanup(tmp_path)
+
+
+def _assert_disabled_output_cleanup(tmp_path):
     extra = replace(decisions.load_extensions(), security_enabled=True, market_enabled=True)
     active = decisions.build(extensions=extra)
     disabled = decisions.build(

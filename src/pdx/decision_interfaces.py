@@ -7,17 +7,19 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import math
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import observation_queries
+from . import observation_queries, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 
 if TYPE_CHECKING:
     from .decision_rules import Reader, RuleSet
+    from .situated.profile_configuration import ProfileConfiguration
 
 
 _LJ10_EVIDENCE = Path(__file__).resolve().parents[2] / (
@@ -28,12 +30,36 @@ SCRIPTED_PREDICATE_SOURCE = Path(__file__).resolve().parents[2] / (
     "research/situated/victoria3-1.14.5-scripted-predicate.json"
 )
 SCRIPTED_PREDICATE_SHA256 = "128c85f83fdc007a42d19c97dad7bf8d61351be42121095e680ed1028a38918c"
+SCRIPTED_PREDICATE_115 = Path(__file__).resolve().parents[2] / (
+    "research/situated/1.15.0/scripted-predicate.json"
+)
+SCRIPTED_PREDICATE_115_SHA256 = "31dd68a463d5de5c7d1bf7e234be29db8850af011544c5bf6fa0702c49ef52fa"
+
+
+SCRIPTED_PREDICATE_1151_SHA256 = "ae30c39e5c282adb827f5121c4b283f3b96087e5634e894b19def7ca5e670ae3"
+
+
+def scripted_predicate_path() -> Path:
+    if version_contracts.active_version() == "1.15.1":
+        return version_contracts.research_path("situated", "scripted-predicate.json")
+    return SCRIPTED_PREDICATE_115 if version_contracts.is_115() else SCRIPTED_PREDICATE_SOURCE
+
+
+def scripted_predicate_sha256() -> str:
+    if version_contracts.active_version() == "1.15.1":
+        return SCRIPTED_PREDICATE_1151_SHA256
+    return (
+        SCRIPTED_PREDICATE_115_SHA256 if version_contracts.is_115() else SCRIPTED_PREDICATE_SHA256
+    )
 
 
 def scripted_trigger_snapshot() -> bytes:
     """Identify the exact historical scripted predicate, never a builtin getter."""
-    raw = SCRIPTED_PREDICATE_SOURCE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != SCRIPTED_PREDICATE_SHA256:
+    version = version_contracts.active_version()
+    source = scripted_predicate_path()
+    expected_hash = scripted_predicate_sha256()
+    raw = source.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != expected_hash:
         raise ValueError("原版脚本布尔谓词冻结证据漂移")
     data = json.loads(raw)
     if data.get("reader") != {
@@ -43,7 +69,7 @@ def scripted_trigger_snapshot() -> bytes:
         "result": "boolean",
         "unit": "boolean",
         "source": "common/scripted_triggers/00_scripted_triggers.txt",
-        "line": 1117,
+        "line": {"1.14.5": 1117, "1.15.0": 1243, "1.15.1": 1244}[version],
         "definition": (
             "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
         ),
@@ -77,6 +103,66 @@ def _insurrection_predicate_definition(item: Assignment) -> bool:
         and not predicate.value.quoted
         and predicate.value.text == "yes"
     )
+
+
+def write_scripted_trigger_authority_115(game: Path) -> Path:
+    """Recapture the complete native trigger namespace after exact AST proof."""
+    from .situated import r2_reader_authority  # noqa: PLC0415
+
+    if scripted_predicate_path().exists() and (
+        hashlib.sha256(scripted_predicate_path().read_bytes()).hexdigest()
+        != scripted_predicate_sha256()
+    ):
+        raise ValueError("1.15 scripted predicate: existing reviewed evidence drift")
+    r2_reader_authority.verify_installation(game.parent)
+    paths = sorted((game / "common/scripted_triggers").rglob("*.txt"))
+    sources = {
+        path.relative_to(game).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in paths
+    }
+    matches: list[tuple[Path, Assignment]] = []
+    for path in paths:
+        parsed = parse_text(path.read_text(encoding="utf-8-sig"))
+        if parsed.errors:
+            raise ValueError("1.15 scripted predicate: invalid source AST")
+        matches.extend((path, item) for item in parsed.root.all("any_insurrection_ongoing"))
+    if len(matches) != 1 or not _insurrection_predicate_definition(matches[0][1]):
+        raise ValueError("1.15 scripted predicate: missing exact unique definition")
+    data = {
+        "schema": 1,
+        "evidence_category": "static_check",
+        "baseline": f"victoria3-{version_contracts.active_version()}",
+        "builder": {
+            "path": "src/pdx/decision_interfaces.py",
+            "function": "write_scripted_trigger_authority_115",
+            "source_sha256": hashlib.sha256(
+                inspect.getsource(write_scripted_trigger_authority_115).encode()
+            ).hexdigest(),
+        },
+        "sources": sources,
+        "reader": {
+            "engine": "any_insurrection_ongoing",
+            "origin": "scripted_trigger",
+            "scope": "root",
+            "result": "boolean",
+            "unit": "boolean",
+            "source": matches[0][0].relative_to(game).as_posix(),
+            "line": matches[0][1].line,
+            "definition": (
+                "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
+            ),
+        },
+        "limits": [
+            "The exact current native scripted trigger is not a builtin getter.",
+            "Only exact country ROOT without arguments, paths or parameters is authorized.",
+            "The complete current trigger namespace and unique AST require live source verification; runtime remains unknown.",
+        ],
+    }
+    scripted_predicate_path().parent.mkdir(parents=True, exist_ok=True)
+    scripted_predicate_path().write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    return scripted_predicate_path()
 
 
 def verify_scripted_trigger_game(game: Path) -> tuple[tuple[str, str], ...]:
@@ -113,12 +199,16 @@ def verify_scripted_trigger_game(game: Path) -> tuple[tuple[str, str], ...]:
 
 
 def proven_reader_words() -> frozenset[str]:
-    """Pinned 1.14.5 static reader evidence; current game identity is a separate gate.
+    """Version-selected static reader evidence; installed identity is a separate gate.
 
     The manifest contains verified executable observations and original script
     hashes. It extends token discovery only; reader_scope still enforces exact
     own-Country signatures and does not grant arbitrary foreign-scope access.
     """
+    if version_contracts.is_115():
+        from .situated import engine_reader_115  # noqa: PLC0415
+
+        return engine_reader_115.proven_words()
     raw = _LJ10_EVIDENCE.read_bytes()
     if hashlib.sha256(raw).hexdigest() != _LJ10_EVIDENCE_SHA256:
         raise ValueError("LJ10 读取器冻结证据字节漂移")
@@ -269,6 +359,25 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine == "pop_type_percent_country":
+        current = version_contracts.is_115()
+        parameter = "target" if current else "pop_type"
+        values = {"peasants", "laborers", "machinists"}
+        if (
+            reader.scope != "root"
+            or reader.path != actor_path
+            or reader.argument is not None
+            or len(reader.parameters) != 1
+            or reader.parameters[0][0] != parameter
+            or reader.parameters[0][1]
+            not in ({f"pop_type:{name}" for name in values} if current else values)
+            or reader.value_field != ("value" if current else "percent")
+            or reader.kind != "number"
+            or reader.unit != "ratio"
+            or reader.minimum != 0
+            or reader.maximum != 1
+        ):
+            raise ValueError(f"人口比例必须保持所选版本的精确国家参数合同：{reader.key}")
     if reader.engine == "pop_type_percent_state" and (
         root != "state"
         or reader.scope != "root"
@@ -415,8 +524,8 @@ def reader_scope(
         or reader.minimum != (None if reader.engine == "authority" else 0)
     ):
         raise ValueError(f"公司容量与权威余额仅支持已证明的国家 ROOT 数值合同：{reader.key}")
-    # 1.14.5 Windows reader/consumer证据只授权本国根；条款数量不是履约或军力。
-    # 固定依据见 research/situated/victoria3-1.14.5-defensive-pact-reader.json。
+    # Each version has its own reader/consumer proof. Counts witness articles,
+    # never treaty fulfilment or military strength; only own Country root.
     if reader.engine == "num_defensive_pacts" and (
         reader.scope != "root"
         or actor_path
@@ -491,7 +600,13 @@ def reader_scope(
             raise ValueError(f"读取器没有已审计的作用域转换：{reader.key}/{part}")
     if _INPUTS.get(reader.engine) != (scope, reader.kind):
         raise ValueError(f"读取器类型或作用域与静态接口签名不一致：{reader.key}")
-    if reader.unit != _UNITS.get(reader.engine, "boolean"):
+    expected_unit = _UNITS.get(reader.engine, "boolean")
+    if version_contracts.is_115() and reader.engine in {
+        "wanted_army_size_script_value",
+        "wanted_marines_size_script_value",
+    }:
+        expected_unit = "barracks_levels"
+    if reader.unit != expected_unit:
         raise ValueError(f"读取器单位与静态接口签名不一致：{reader.key}")
     return scope
 
@@ -563,10 +678,10 @@ def consumer(
     if leaf == "ai_enact_weight_modifier":
         evidence, role = "common/laws/readme.md", "vanilla_law_candidate_weight"
     elif leaf == "ai_weight" and source is not None and source.startswith("common/company_types/"):
-        evidence, role = (
-            "research/situated/victoria3-1.14.5-company-scope.json",
-            "vanilla_company_base_candidate_weight",
-        )
+        from .situated import engine_scope  # noqa: PLC0415
+
+        _, evidence, _ = engine_scope._company_manifest()
+        role = "vanilla_company_base_candidate_weight"
     elif leaf == "ai_weight" and source == "common/mobilization_options/00_mobilization_option.txt":
         from .mobilization_opportunities import CANDIDATE_IDS  # noqa: PLC0415
 
@@ -657,6 +772,13 @@ def placement_contract(field: tuple[str, ...]) -> str:
 
 def _retained_reason(field: str) -> dict[str, str]:
     """保留原版是明确设计选择，既不是新增实现也不是接口不支持。"""
+    if field == "cossack_host_scores" and version_contracts.is_115():
+        return {
+            "disposition": "native_cossack_host_policy",
+            "reason": "完整保留原版哥萨克军团州目标评分、零分拒绝及COSSACK_HOST_STICKYNESS惯性；未新增Mod写入",
+            "alternative_and_limit": "原版注释的country/target_state上下文只描述保留字段，不授予新增读取、写入或任意作用域转换",
+            "verification": "static_native_placement; user_behavior_review_pending",
+        }
     policies = (
         (("icon",), "presentation", "保留原版策略图标，不把显示资源作为决策输入", "无行为影响"),
         (
@@ -737,23 +859,168 @@ def _retained_reason(field: str) -> dict[str, str]:
     raise ValueError(f"保留的原版字段缺少逐项处置：{field}")
 
 
-def coverage(baseline: str, owners: dict[tuple[str, ...], str]) -> list[dict[str, object]]:
+def _configuration_writers(
+    configuration: ProfileConfiguration,
+) -> tuple[dict[str, list[dict[str, str]]], dict[str, list[dict[str, str]]]]:
+    """Derive active and withdrawn writers from canonical declarations.
+
+    A disabled switch explains only actual declared writers in an excluded
+    domain. Active declarations remain required even when another writer for
+    the same native field is withdrawn. Caller paths confer no authority.
+    """
+    from . import decision_adapters, decision_rules, decisions, distribution  # noqa: PLC0415
+    from .situated.profile_configuration import LEGACY_DOMAINS  # noqa: PLC0415
+
+    known_domains = frozenset().union(*LEGACY_DOMAINS.values())
+    active: dict[str, list[dict[str, str]]] = {}
+    disabled: dict[str, list[dict[str, str]]] = {}
+    identities: set[tuple[str, str]] = set()
+
+    def register(
+        source: str, writer_id: str, field: tuple[str, ...], owner: str, domain: str
+    ) -> None:
+        identity = (source, writer_id)
+        if identity in identities:
+            raise ValueError("配置关闭台账含重复声明writer")
+        identities.add(identity)
+        if domain not in known_domains or not field:
+            raise ValueError("配置关闭台账含未知声明领域或字段")
+        writers = active if domain in configuration.legacy_domains else disabled
+        writers.setdefault(field[0], []).append(
+            {
+                "source": source,
+                "writer_id": writer_id,
+                "field": ".".join(field),
+                "owner": owner,
+                "domain": domain,
+            }
+        )
+
+    information = decision_rules.load()
+    adapters = decision_adapters.load()
+    for source, rules, owner in (
+        ("mod/decisions/information.toml", information, "information_rules"),
+        *((source, rules, "consumer_adapters") for source, rules in adapters.policies),
+    ):
+        for rule in rules.rules:
+            if (source, rule.id) in identities:
+                raise ValueError("配置关闭台账含重复声明writer")
+            if source not in {
+                "mod/decisions/information.toml",
+                "common/ai_strategies/00_default_strategy.txt",
+            }:
+                identities.add((source, rule.id))
+                continue
+            field = rule.field
+            if source != "mod/decisions/information.toml":
+                if field[:1] != ("ai_strategy_default",):
+                    raise ValueError("配置关闭台账默认策略声明路径无效")
+                field = field[1:]
+            if rule.domain in rules.enabled_domains:
+                register(source, rule.id, field, owner, rule.domain)
+            else:
+                identities.add((source, rule.id))
+    if adapters.supply is not None and any(
+        "market" in rules.enabled_domains for _, rules in adapters.policies
+    ):
+        for program in adapters.supply.actions():
+            register(
+                program.source,
+                program.writer_id,
+                ("goods_stances", program.good),
+                "supply_plan",
+                "market",
+            )
+
+    if version_contracts.active_version() == "1.15.1":
+        from .situated import network_profile, production_profile  # noqa: PLC0415
+
+        profile = production_profile.load_profile(production_profile.baseline_root())
+        # The native declaration alone is not a Mod writer. Confirm that the
+        # current policy actually compiles the consumer before recording its
+        # withdrawal; the six retired school rules never reappear as writers.
+        programs = network_profile.compile_profile(profile)
+        consumers = {program.network.actions[0].definition.consumer_id for program in programs}
+        for row in profile.declarations:
+            if (
+                row.id in consumers
+                and row.source == "game/common/ai_strategies/00_default_strategy.txt"
+            ):
+                if row.definition != "ai_strategy_default":
+                    raise ValueError("配置关闭台账R2默认策略声明路径无效")
+                register(
+                    network_profile.source_path(profile.game_version)
+                    .relative_to(decisions.config.REPO)
+                    .as_posix(),
+                    row.id,
+                    row.field,
+                    "R2/action-network-v2",
+                    {"economy": "economy", "politics": "political", "diplomacy": "diplomacy"}[
+                        row.domain
+                    ],
+                )
+
+    policy, extensions = distribution.production_configuration()
+    builtin_domains = {
+        "fiscal": "fiscal",
+        "reform": "political",
+        "economy": "economy",
+        "diplomacy": "diplomacy",
+        "market": "market",
+        "security": "military",
+    }
+    for module, fields in decisions.CONFIGURATION_CONSUMER_FIELDS.items():
+        enabled = policy.enabled if module == "fiscal" else getattr(extensions, f"{module}_enabled")
+        if enabled:
+            for field_name in fields:
+                register(
+                    "mod/decisions/fiscal.toml"
+                    if module == "fiscal"
+                    else "mod/decisions/extensions.toml",
+                    f"{module}:{field_name}",
+                    (field_name,),
+                    "situated_kernel",
+                    builtin_domains[module],
+                )
+
+    def sorted_writers(writers: dict[str, list[dict[str, str]]]) -> dict[str, list[dict[str, str]]]:
+        return {
+            field: sorted(rows, key=lambda row: (row["source"], row["writer_id"]))
+            for field, rows in writers.items()
+        }
+
+    return sorted_writers(active), sorted_writers(disabled)
+
+
+def coverage(
+    baseline: str,
+    owners: dict[tuple[str, ...], str],
+    *,
+    configuration: ProfileConfiguration | None = None,
+) -> list[dict[str, object]]:
     """逐件登记锁定默认策略的全部字段，包括明确保留给原版的字段。
 
     保留字段不算本 Mod 新实现，也不标成引擎不支持；字段不出现时不能
     通过一个笼统的“原版负责”隐藏新增目标。对应源行可直接复核完整语义。
     """
+    from .situated.profile_configuration import ProfileConfiguration  # noqa: PLC0415
+
+    if configuration is not None and type(configuration) is not ProfileConfiguration:
+        raise ValueError("覆盖台账需要已解析的配置")
+    active, disabled = ({}, {}) if configuration is None else _configuration_writers(configuration)
     parsed = parse_text(baseline)
     if parsed.errors or len(parsed.top_assignments) != 1:
         raise ValueError("覆盖台账需要唯一锁定默认策略")
     root = parsed.top_assignments[0].value
     if not isinstance(root, Block):
         raise ValueError("覆盖台账默认策略必须是块")
-    result = []
+    result: list[dict[str, object]] = []
     for assignment in root.assignments():
         writers = {
             ".".join(field): owner for field, owner in owners.items() if field[0] == assignment.key
         }
+        if not writers and assignment.key in active:
+            raise ValueError(f"覆盖台账缺少启用声明writer：{assignment.key}")
         value = assignment.value
         numeric = isinstance(value, Block) and any(
             value.first(op) is not None for op in ("value", "add", "multiply", "subtract")
@@ -772,7 +1039,25 @@ def coverage(baseline: str, owners: dict[tuple[str, ...], str]) -> list[dict[str
                 if writers
                 else "retained_vanilla_not_new_mod_implementation",
                 "writers": writers,
-                "retained_disposition": None if writers else _retained_reason(assignment.key),
+                "retained_disposition": None
+                if writers
+                else {
+                    "disposition": "configuration_disabled_writer",
+                    "reason": "resolved configuration excludes these exact declared writers; retain native field",
+                    "alternative_and_limit": "no new Mod implementation or unsupported-interface claim; native denominator retained",
+                    "verification": "static_declared_writer_configuration_selection; runtime_behavior_unverified",
+                    "configuration": configuration.identity()
+                    if configuration is not None
+                    else None,
+                    "disabled_writers": disabled[assignment.key],
+                }
+                if assignment.key in disabled
+                else _retained_reason(assignment.key),
+                **(
+                    {"configuration_disabled_writers": disabled[assignment.key]}
+                    if assignment.key in disabled
+                    else {}
+                ),
                 "native_qualification_costs_and_execution": "unchanged",
                 "behavior_verified": False,
             }
@@ -798,6 +1083,16 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
         STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
         "common/on_actions/00_code_on_actions.txt": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
     }
+    if version_contracts.is_115():
+        sources = {
+            STATE_DEVASTATION_SOURCE: "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4",
+            "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
+        }
+    if version_contracts.active_version() == "1.15.1":
+        from . import decision_adapters  # noqa: PLC0415
+
+        authority_sources = decision_adapters.native_authority_115()["sources"]
+        sources = {source: authority_sources[source] for source in sources}
     parsed = {}
     for source, expected in sources.items():
         text = texts.get(source)
@@ -821,8 +1116,15 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
         raise ValueError("州恢复原版AST含未知节点")
 
     ideology = parsed[STATE_DEVASTATION_SOURCE].first("ideology_pacifist")
+    # Current native owner ?= is an optional scope transition. It witnesses
+    # the state getter only inside that guarded owner branch; it grants no
+    # unguarded root/foreign-owner access. The produced state consumer retains
+    # its own proved state scope and does not copy or remove this native gate.
+    owner_operator = "?=" if version_contracts.is_115() else "="
     expected = shape(
-        parse_text("owner = { any_scope_state = { is_incorporated = yes devastation > 0.2 } }").root
+        parse_text(
+            f"owner {owner_operator} {{ any_scope_state = {{ is_incorporated = yes devastation > 0.2 }} }}"
+        ).root
     )
     references = []
     if ideology is None or not isinstance(ideology.value, Block):

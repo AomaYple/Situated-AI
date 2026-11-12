@@ -42,6 +42,11 @@ navigation = {
 		# ACTION program_6a5d12b658e0abff [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
+			# GROUP program_6a5d12b658e0abff_local_goods_supply_need_positive
+			add = { value = 0
+				# technology_navigation_local_supply [market]; 锁定真实local_supply机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { sg:services = { state_goods_pricier > 0.25 } } } } add = 0.2 }
+			}
 			# GROUP program_6a5d12b658e0abff_productive_option_need_positive
 			add = { value = 0
 				# technology_navigation_supply_oil_pressure [market]; oil缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
@@ -58,7 +63,7 @@ navigation = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0 } } } } add = 0.12 }
 			}
 			min = 1
-			max = 1.2
+			max = 1.4
 		} }
 		# SITAI END information:navigation.ai_weight
 	}
@@ -493,6 +498,13 @@ logistics = {
 
 		if = {
 			limit = {
+				has_variable = save_nixa_var
+			}
+			add = 100
+		}
+
+		if = {
+			limit = {
 				has_strategy = ai_strategy_unify_germany
 			}
 			add = 8
@@ -535,6 +547,13 @@ triage = {
 
 	ai_weight = {
 		value = 1
+
+		if = {
+			limit = {
+				has_variable = save_nixa_var
+			}
+			add = 100
+		}
 
 		if = {
 			limit = {
@@ -588,9 +607,9 @@ shell_gun = {
 			# GROUP program_d84c08370b619912_productive_option_need_positive
 			add = { value = 0
 				# technology_shell_gun_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } market = { mg:iron = { market_goods_delta >= 0 } } } } } } } add = 0.3 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:copper = { market_goods_delta >= 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:iron = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:copper = { market_goods_delta >= 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } market = { mg:iron = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
 				# technology_shell_gun_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } add = 0.25 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
 				# technology_shell_gun_supply_artillery_pressure [market]; artillery缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# technology_shell_gun_supply_artillery [market]; 真实新配方或建筑正产出artillery，当前市场缺口形成研究供给选项；不是实际已建造或已启用
@@ -616,6 +635,20 @@ percussion_cap = {
 
 	ai_weight = {
 		value = 2 # Important tech in general
+
+		if = {
+			limit = {
+				has_technology_researched = general_staff
+			}
+			add = 2
+		}
+
+		if = {
+			limit = {
+				has_technology_researched = power_of_the_purse
+			}
+			add = 2
+		}
 
 		# SITAI BEGIN information:percussion_cap.ai_weight
 		# ACTION program_4d69ddd4594c34da [joint]; signed-envelope consumer action
@@ -655,6 +688,14 @@ rifling = {
 			add = 8
 		}
 
+		if = {
+			limit = {
+				has_journal_entry = je_tp_tsar_great_reform
+				NOT = { has_variable = je_great_reforms_military_complete }
+			}
+			add = 5
+		}
+
 		# SITAI BEGIN information:rifling.ai_weight
 		# ACTION program_89ab7c197238b8d3 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
@@ -689,6 +730,21 @@ general_staff = {
 
 	ai_weight = {
 		value = 2 # Important tech in general
+
+		if = {
+			limit = {
+				has_journal_entry = je_tp_pool_build_army
+			}
+			add = 5
+		}
+
+		if = {
+			limit = {
+				has_journal_entry = je_tp_tsar_great_reform
+				NOT = { has_variable = je_great_reforms_military_complete }
+			}
+			add = 5
+		}
 
 		# SITAI BEGIN information:general_staff.ai_weight
 		# ACTION program_455736da26e8d37a [joint]; signed-envelope consumer action
@@ -845,6 +901,14 @@ modern_nursing = {
 
 	ai_weight = {
 		value = 1
+
+		if = {
+			limit = {
+				has_variable = save_nixa_var
+				game_date >= 1850.1.1
+			}
+			add = 100
+		}
 
 		# SITAI BEGIN information:modern_nursing.ai_weight
 		# ACTION program_6266f31d05371bf6 [joint]; signed-envelope consumer action
@@ -1063,9 +1127,9 @@ breech_loading_artillery = {
 			# GROUP program_2eb6baf30475f98e_productive_option_need_positive
 			add = { value = 0
 				# technology_breech_loading_artillery_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
 				# technology_breech_loading_artillery_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
 				# technology_breech_loading_artillery_supply_artillery_pressure [market]; artillery缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# technology_breech_loading_artillery_supply_artillery [market]; 真实新配方或建筑正产出artillery，当前市场缺口形成研究供给选项；不是实际已建造或已启用
@@ -1341,7 +1405,7 @@ gantry_cranes = {
 			# GROUP program_8cc222c11cb2e2a9_productive_option_need_positive
 			add = { value = 0
 				# technology_gantry_cranes_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_fishing_trawlers ROOT = { market = { mg:fish = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_simple_fishing ROOT = { market = { mg:fish = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_basic_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:engines = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:clippers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_complex_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:engines = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:clippers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_simple_whaling ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_wooden_whaling_ships ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_fishing_trawlers ROOT = { market = { mg:fish = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_simple_fishing ROOT = { market = { mg:fish = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_basic_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:engines = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:clippers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_complex_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:engines = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:clippers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_simple_whaling ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_wooden_whaling_ships ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
 				# technology_gantry_cranes_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_fishing_trawlers ROOT = { market = { mg:fish = { market_goods_delta < 0 } } } } AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_simple_fishing ROOT = { market = { mg:fish = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_basic_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_complex_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_simple_whaling ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_wooden_whaling_ships ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } } } } } } } add = 0.25 }
 				# technology_gantry_cranes_supply_steamers_pressure [market]; steamers缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
@@ -1464,6 +1528,14 @@ wargaming = {
 	ai_weight = {
 		value = 1
 
+		if = {
+			limit = {
+				has_journal_entry = je_tp_tsar_heir_of_alexander
+				NOT = { has_variable = je_tp_tsar_heir_of_alexander_button_3_complete }
+			}
+			add = 5
+		}
+
 		# SITAI BEGIN information:wargaming.ai_weight
 		# ACTION program_5ec18777ed3fe3cd [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
@@ -1585,9 +1657,9 @@ automatic_machine_guns = {
 			# GROUP program_21a3d65b7754de31_productive_option_need_positive
 			add = { value = 0
 				# technology_automatic_machine_guns_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_breech_loaders ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_breech_loaders ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
 				# technology_automatic_machine_guns_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_breech_loaders ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_breech_loaders ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_bronze_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
 				# technology_automatic_machine_guns_supply_artillery_pressure [market]; artillery缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# technology_automatic_machine_guns_supply_artillery [market]; 真实新配方或建筑正产出artillery，当前市场缺口形成研究供给选项；不是实际已建造或已启用
@@ -1857,7 +1929,7 @@ concrete_dockyards = {
 			# GROUP program_4ee411a6dd1da959_productive_option_need_positive
 			add = { value = 0
 				# technology_concrete_dockyards_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_industrial_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_industrial_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
 				# technology_concrete_dockyards_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_industrial_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
 				# technology_concrete_dockyards_supply_merchant_marine_pressure [market]; merchant_marine缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加

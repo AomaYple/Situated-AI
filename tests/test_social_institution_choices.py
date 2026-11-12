@@ -32,7 +32,7 @@ def production():
     compiled, _ = compiler.compile_policy(source, INFO, model)
     adapters = decision_adapters.load()
     inputs = decision_adapters.read_inputs(adapters)
-    native = compiler.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_path().read_text(encoding="utf-8")
     words = (
         frozenset(decision_adapters.reader_evidence(inputs))
         | decision_interfaces.proven_reader_words()

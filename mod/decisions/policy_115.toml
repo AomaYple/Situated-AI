@@ -1,0 +1,103 @@
+# Explicit opt-in non-zero A4 policy slice.  The architecture profile remains
+# mechanically neutral; this file owns only reviewed deltas and their guards.
+schema = 1
+profile = "situated-ai/production/1.15"
+game_version = "1.15.0"
+
+[[variant]]
+id = "road-deficit-moderate"
+consumer_id = "a0-econ-road"
+value = 2
+priority = 20
+contribution_group = "road-deficit"
+fact = "relative-infrastructure"
+operator = "<"
+predicate_value = 0.5
+guard = "relative_infrastructure < 0.5"
+evidence_source = "game/common/decrees/00_decree.txt"
+evidence_line = 42
+status = "observed"
+
+[[variant]]
+id = "road-deficit-severe"
+consumer_id = "a0-econ-road"
+value = 4
+priority = 30
+contribution_group = "road-deficit"
+fact = "relative-infrastructure"
+operator = "<"
+predicate_value = 0.25
+guard = "relative_infrastructure < 0.25"
+evidence_source = "game/common/decrees/00_decree.txt"
+evidence_line = 56
+status = "observed"
+
+[[variant]]
+id = "road-recovery"
+consumer_id = "a0-econ-road"
+value = -2
+priority = 10
+contribution_group = "road-recovery"
+fact = "road-decree-present"
+operator = "="
+predicate_value = true
+guard = "has_decree = decree_road_maintenance relative_infrastructure >= 0.75"
+evidence_source = "game/common/decrees/00_decree.txt"
+evidence_line = 58
+status = "observed"
+
+[[variant]]
+id = "schools-low-literacy"
+consumer_id = "a0-pol-schools"
+value = 2
+priority = 10
+contribution_group = "schools-need"
+fact = "literacy-rate"
+operator = "<"
+predicate_value = 0.5
+guard = "literacy_rate < 0.5"
+evidence_source = "game/common/ai_strategies/00_default_strategy.txt"
+evidence_line = 1598
+status = "pending_reproof"
+
+[[variant]]
+id = "schools-strategy"
+consumer_id = "a0-pol-schools"
+value = 2
+priority = 20
+contribution_group = "schools-agenda"
+fact = "school-agenda"
+operator = "="
+predicate_value = true
+guard = "has_journal_entry = je_tp_pool_educational_reform"
+evidence_source = "game/common/ai_strategies/03_political_strategies.txt"
+evidence_line = 135
+status = "observed"
+
+[[variant]]
+id = "relations-protective"
+consumer_id = "a0-dip-relations"
+value = 2
+priority = 20
+contribution_group = "relations-attitude"
+fact = "diplomatic-attitude-protective"
+operator = "="
+predicate_value = true
+guard = "has_attitude = { who = scope:target_country attitude = protective }"
+evidence_source = "game/common/diplomatic_actions/00_relations_actions.txt"
+evidence_line = 109
+status = "observed"
+
+[[variant]]
+id = "relations-hostile"
+consumer_id = "a0-dip-relations"
+value = -2
+priority = 10
+contribution_group = "relations-attitude"
+fact = "diplomatic-attitude-hostile"
+operator = "="
+predicate_value = true
+guard = "has_attitude = { who = scope:target_country attitude = belligerent }"
+evidence_source = "game/common/diplomatic_actions/00_relations_actions.txt"
+evidence_line = 299
+status = "pending_reproof"

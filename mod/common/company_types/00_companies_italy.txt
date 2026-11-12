@@ -41,13 +41,11 @@ company_ilva = {
 
 	possible = {
 		has_technology_researched = arc_welding
-		any_scope_state = {
-			state_region = s:STATE_PIEDMONT
+		has_building_levels_in_state_region = {
+			region = STATE_PIEDMONT
+			building = building_steel_mill
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_steel_mill
-				level >= 5
-			}
 		}
 	}
 
@@ -82,7 +80,7 @@ company_ilva = {
 			# GROUP program_ef08c5865fdd5aee_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_ilva_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_ef08c5865fdd5aee_company_mandatory_input_coal_negative
 			add = { value = 0
@@ -223,7 +221,7 @@ company_ansaldo = {
 			# GROUP program_fc617dc304522f99_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_ansaldo_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_fc617dc304522f99_company_mandatory_input_coal_negative
 			add = { value = 0
@@ -294,13 +292,11 @@ company_ricordi = {
 	}
 
 	possible = {
-		any_scope_state = {
-			state_region = s:STATE_LOMBARDY
+		has_building_levels_in_state_region = {
+			region = STATE_LOMBARDY
+			building = building_art_academy
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_art_academy
-				level >= 5
-			}
 		}
 	}
 
@@ -444,7 +440,7 @@ company_fiat = {
 			# GROUP program_62ff896401cb91a6_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_fiat_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_62ff896401cb91a6_company_mandatory_input_engines_negative
 			add = { value = 0
@@ -522,13 +518,11 @@ company_stt = {
 
 	possible = {
 		has_technology_researched = gantry_cranes
-		any_scope_state = {
-			state_region = s:STATE_ISTRIA
+		has_building_levels_in_state_region = {
+			region = STATE_ISTRIA
+			building = building_shipyard
+			levels >= 5
 			is_incorporated = yes
-			any_scope_building = {
-				is_building_type = building_shipyard
-				level >= 5
-			}
 		}
 	}
 
@@ -564,7 +558,7 @@ company_stt = {
 			# GROUP program_f5cc2d270e8832cd_company_labor_structure_positive
 			add = { value = 0
 				# company_sector_company_stt_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { target = pop_type:laborers value >= 0 } pop_type_percent_country = { target = pop_type:laborers value <= 1 } pop_type_percent_country = { target = pop_type:laborers value >= 0.15 } } } add = 0.04 }
 			}
 			# GROUP program_f5cc2d270e8832cd_company_output_demand_positive
 			add = { value = 0

@@ -30,10 +30,12 @@ from pdx import (
     decisions,
     distribution,
     information_catalog,
+    version_contracts,
 )
 from pdx.consumer_matrix import ConsumerMatrix
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
+from pdx.situated import engine_reader_115
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,9 +51,70 @@ _SYNTHETIC_READER_EVIDENCE = (
 )
 
 
+def _source_data():
+    """Current test mutations start from the same exact declaration projection."""
+    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    if version_contracts.is_115():
+        data["baseline_sha256"] = decision_adapters.native_authority_115()["sources"][
+            "common/ai_strategies/00_default_strategy.txt"
+        ]
+        engine_reader_115.project_information_readers(data["readers"])
+    if version_contracts.active_version() == "1.15.1":
+        # Independent declaration oracle: name the complete retired set here,
+        # rather than deriving expected rule identities from the production loader.
+        retired = {
+            "remaining_school_catchup_need",
+            "remaining_school_fiscal",
+            "remaining_school_administrative",
+            "remaining_school_capacity",
+            "school_default_pressure",
+            "school_administrative_pressure",
+        }
+        school_rules = {
+            row["id"]
+            for row in data["rules"]
+            if row["field"] == "institution_scores.institution_schools"
+        }
+        assert school_rules == retired
+        data["rules"] = [row for row in data["rules"] if row["id"] not in retired]
+        del data["readers"]["literacy"]
+    return data
+
+
+def test_current_information_projection_changes_only_reviewed_native_identity_and_two_units():
+    historical = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    with version_contracts.select_version("1.15.0"):
+        current = _source_data()
+        assert (
+            current["baseline_sha256"]
+            == hashlib.sha256(decisions.baseline_path().read_bytes()).hexdigest()
+        )
+        assert current["rules"] == historical["rules"]
+        assert current["domains"] == historical["domains"]
+        assert set(current["readers"]) == set(historical["readers"])
+        for key, row in current["readers"].items():
+            if key in {"native_army_capacity", "native_marine_capacity"}:
+                assert row == {**historical["readers"][key], "unit": "barracks_levels"}
+            else:
+                assert row == historical["readers"][key]
+        assert current["readers"]["army"]["unit"] == "battalions"
+    with version_contracts.select_version("1.14.5"):
+        assert _source_data() == historical
+
+
+@pytest.mark.parametrize("scope", ["target_country", "overlord", "enemy_country"])
+def test_current_native_target_units_do_not_authorize_foreign_country_context(scope):
+    with version_contracts.select_version("1.15.0"):
+        rules = decision_rules.load()
+        for key in ("native_army_capacity", "native_marine_capacity"):
+            reader = next(row for row in rules.readers if row.key == key)
+            with pytest.raises(ValueError, match="本国根"):
+                decision_interfaces.reader_scope(replace(reader, scope=scope), ())
+
+
 @pytest.mark.parametrize("excess", ["candidates", "field_predicates", "rule_predicates"])
 def test_configuration_growth_cannot_bypass_static_runtime_budget(excess):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     first = next(row for row in data["rules"] if row["field"] == "wanted_construction_output")
     count = 33 if excess == "candidates" else 28 if excess == "field_predicates" else 1
     predicates = 17 if excess == "rule_predicates" else 6 if excess == "field_predicates" else 1
@@ -89,7 +152,7 @@ def test_shared_information_readers_have_sha_locked_native_evidence(rules):
         or reader.engine in country_state.owned_triggers(country_state.load())
         for reader in rules.readers
     )
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     script = decision_rules.patch(
         baseline,
         rules,
@@ -176,7 +239,7 @@ def test_synthetic_values_cover_every_production_reader(rules):
 
 
 def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rules):
-    source = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    source = _source_data()
     assert {rule.id for rule in rules.rules} == {row["id"] for row in source["rules"]}
     assert {reader.key for reader in rules.readers} == set(source["readers"])
     assert {"state_value", "wanted_construction_output"} <= {
@@ -193,7 +256,7 @@ def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rule
         "geography",
         "identity",
     }
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     script = decision_rules.patch(
         baseline,
         rules,
@@ -226,7 +289,7 @@ def test_unknown_player_and_empty_switches_preserve_vanilla(rules):
         )
         is None
     )
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     assert (
         decision_rules.patch(
             baseline,
@@ -634,9 +697,13 @@ def _geography_branch_value(branch: Block, facts: dict[str, bool]) -> float:
 
 
 def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(rules):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
-    generated = (config.REPO / "mod/common/ai_strategies/00_default_strategy.txt").read_text(
-        encoding="utf-8"
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+    generated = decision_rules.patch(
+        baseline,
+        rules,
+        baseline=baseline,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        country_policy=country_state.load(),
     )
     vanilla_strategy = parse_text(baseline).root.first("ai_strategy_default")
     generated_strategy = parse_text(generated).root.first("ai_strategy_default")
@@ -697,7 +764,7 @@ def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(ru
 
 @pytest.mark.parametrize("high_uses_target", [True, False])
 def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_uses_target):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     original = next(rule for rule in rules.rules if rule.id == "geographic_port_continuity")
     top = replace(original, field=("state_value",), priority=100, value=1.1)
     lower = replace(original, id="lower", priority=50, value=0.9)
@@ -757,7 +824,23 @@ class GeneratedRuleBlocks(NamedTuple):
 
 @pytest.fixture(scope="module")
 def generated_rule_blocks(rules):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    return _generated_rule_blocks(rules)
+
+
+@pytest.fixture(params=("1.14.5", "1.15.0"))
+def historical_school_rules(request):
+    # Preserve the historical multiplier contract under its actual version.
+    with version_contracts.select_version(request.param):
+        yield decision_rules.load()
+
+
+@pytest.fixture
+def historical_school_blocks(historical_school_rules):
+    return _generated_rule_blocks(historical_school_rules)
+
+
+def _generated_rule_blocks(rules):
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     generated = decision_rules.patch(
         baseline,
         rules,
@@ -826,9 +909,9 @@ def test_development_tiers_and_crisis_priority_in_generated_script(
 
 
 def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
-    generated_rule_blocks,
+    historical_school_blocks,
 ):
-    rules, blocks = generated_rule_blocks
+    rules, blocks = historical_school_blocks
     for legitimacy in (60, 80, None):
         values = _values(legitimacy=legitimacy, literacy=0.4, tools_balance=-1, tools_price=0.6)
         result = decision_rules.evaluate(rules, values, is_ai=True)
@@ -855,7 +938,8 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
     assert "treaty_category_scores.economy" not in healthy
 
 
-def test_small_low_literacy_countries_can_enter_education_capacity_tiers(rules):
+def test_small_low_literacy_countries_can_enter_education_capacity_tiers(historical_school_rules):
+    rules = historical_school_rules
     values = _values(population=1_000_000, literacy=0.3)
     assert decision_rules.evaluate(rules, values, is_ai=True)[
         "institution_scores.institution_schools"
@@ -869,8 +953,8 @@ def test_small_low_literacy_countries_can_enter_education_capacity_tiers(rules):
     assert "institution_scores.institution_schools" not in unknown
 
 
-def test_multifactor_capacity_rules_require_complete_context(generated_rule_blocks):
-    rules, blocks = generated_rule_blocks
+def test_multifactor_capacity_rules_require_complete_context(historical_school_blocks):
+    rules, blocks = historical_school_blocks
 
     def evaluate(values, field):
         result = decision_rules.evaluate(rules, values, is_ai=True)
@@ -990,7 +1074,7 @@ def test_geographic_cost_precedes_reward_and_missing_state_preserves_vanilla(
 
 
 def test_drift_bad_path_and_unproven_reader_refuse_generation(rules):
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     with pytest.raises(ValueError, match="漂移"):
         decision_rules.patch(baseline, rules, baseline=baseline + "\n")
     broken = replace(
@@ -1045,14 +1129,14 @@ def test_invalid_configuration_fails_closed(tmp_path, before, after):
 
 @pytest.mark.parametrize("path", [["in_default"], ["market", "owner"], ["owner"]])
 def test_known_words_cannot_be_recombined_into_invented_scopes(path):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["readers"]["default"]["path"] = path
     with pytest.raises(ValueError, match="作用域"):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 def test_parent_and_child_fields_cannot_have_separate_authors():
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["rules"][0]["field"] = "institution_scores"
     with pytest.raises(ValueError, match="父子字段"):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
@@ -1068,7 +1152,7 @@ def test_parent_and_child_fields_cannot_have_separate_authors():
     ],
 )
 def test_compound_number_reader_rejects_ambiguous_shapes(overrides):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data = copy.deepcopy(data)
     data["readers"]["net_surplus"].update(overrides)
     with pytest.raises(ValueError, match="复合数值"):
@@ -1086,7 +1170,7 @@ def test_compound_number_reader_rejects_ambiguous_shapes(overrides):
     ],
 )
 def test_compound_boolean_reader_rejects_unsafe_parameters(parameters):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["readers"]["default"]["engine"] = "is_production_method_active"
     data["readers"]["default"]["parameters"] = parameters
     with pytest.raises(ValueError, match="复合布尔"):
@@ -1097,14 +1181,14 @@ def test_compound_boolean_reader_rejects_unsafe_parameters(parameters):
     "contexts", [[], {"unused": []}, {"unused": [{"fact": "default", "op": "=", "value": True}]}]
 )
 def test_unconsumed_or_invalid_shared_constraint_fails_closed(contexts):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     data["contexts"] = contexts
     with pytest.raises(ValueError, match="共享约束"):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 def test_shared_constraints_expand_into_real_fields_once(rules):
-    data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    data = _source_data()
     selected = next(row for row in data["rules"] if row["id"] == "fiscal_construction_guard")
     conditions = copy.deepcopy(selected["conditions"])
     data["contexts"] = {"shared_fiscal_risk": conditions}
@@ -1122,7 +1206,7 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
             assert decision_rules.evaluate(policy, values, is_ai=True) == decision_rules.evaluate(
                 rules, values, is_ai=True
             )
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     assert decision_rules.patch(
         baseline,
         policy,
@@ -1152,10 +1236,18 @@ def test_release_package_is_deterministic(standard_release_package, tmp_path):
 def standard_release_package(tmp_path_factory):
     if not (config.GAME / "common/laws/readme.md").is_file():
         pytest.skip("需要锁定版本的游戏原件")
-    return distribution.package(
-        tmp_path_factory.mktemp("standard-release")
-        / f"situated-ai-{distribution.RELEASE_VERSION}.zip"
-    )
+    root = tmp_path_factory.mktemp("standard-release")
+    if version_contracts.active_version() == "1.15.0":
+        # Only the historical 1.15.0 compatibility tree uses this generator.
+        # The current 1.15.1 standard package validates its checked generation lock.
+        # The output directory is private to this module's worker; the actual
+        # source root and every executable/source check stay unchanged.
+        with pytest.MonkeyPatch.context() as patches:
+            patches.setattr(decisions, "product_path", lambda: root / "compatibility")
+            distribution.write_compatibility_outputs()
+            yield distribution.package(root / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
+    else:
+        yield distribution.package(root / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
 
 
 @pytest.mark.integration
@@ -1188,7 +1280,9 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
         assert metadata["version"] == distribution.RELEASE_VERSION
-        assert contract["status"] == "released"
+        assert contract["status"] == (
+            "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+        )
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False
         assert engineering_metadata["consumer_adapters"]["behavior_verified"] is False
@@ -1201,9 +1295,15 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert b"# SITAI SUBJECTS BEGIN" not in archive.read(
             "common/ai_strategies/00_default_strategy.txt"
         )
-        # X1 adds the local power-plant source and three treaty sources
-        # to the 70-source A2 baseline; these are physical files, not cards.
-        assert contract["consumer_count"] == 74
+        # The 1.15 native company definitions add the reviewed IP5 source to
+        # the 74 physical consumer files retained by the historical contract.
+        current = version_contracts.is_115()
+        assert contract["consumer_count"] == (75 if current else 74)
+        consumer_sources = {
+            row["source"] for row in engineering_metadata["consumer_adapters"]["consumers"]
+        }
+        assert ("common/company_types/00_companies_ip5.txt" in consumer_sources) is current
+        assert len(consumer_sources) == contract["consumer_count"]
         assert "information_rules" in contract["enabled_modules"]
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt")
         assert strategy.startswith(codecs.BOM_UTF8)
@@ -1279,3 +1379,71 @@ def test_static_matrix_never_claims_execution_contract(tmp_path: Path):
     assert (
         json.loads(path.read_text(encoding="utf-8"))["evidence"] == "static_name_associations_only"
     )
+
+
+@pytest.fixture(scope="module")
+def current_school_program():
+    from pdx.situated import network_profile, production_profile
+
+    with version_contracts.select_version("1.15.1"):
+        legacy = decision_rules.load()
+        assert ("institution_scores", "institution_schools") not in legacy.groups()
+        assert "literacy" not in {reader.key for reader in legacy.readers}
+        profile = production_profile.load_profile(production_profile.baseline_root())
+        return next(
+            program
+            for program in network_profile.compile_profile(profile)
+            if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({}, 2.75),
+        ({"population": 1_000_000}, 2.75),
+        ({"legitimacy": 80}, 2.75),
+        ({"bureaucracy": 0}, 2.5),
+        ({"net-surplus": 0}, 2.25),
+        ({"bureaucracy": -1, "default": True}, -2),
+        ({"school-agenda": True}, 3.75),
+        ({"ai": False}, 0),
+        ({"population": 0}, 0),
+    ],
+)
+def test_current_school_capacity_uses_one_additive_successor(
+    current_school_program, changes, expected
+):
+    from test_network_profile import _parsed, _score
+
+    from pdx.situated import network_profile
+
+    facts = {
+        "ai": True,
+        "literacy": 0.3,
+        "population": 3_000_000,
+        "bureaucracy": 1,
+        "net-surplus": 1,
+        "default": False,
+        "school-agenda": False,
+        **changes,
+    }
+    # Literal policy expectations are evaluated from emitted PDX in source order;
+    # neither the producer evaluator nor the retired 1.25 multiplier is the oracle.
+    rendered = network_profile.render_program(current_school_program)
+    assert _score(_parsed(rendered), facts) == expected
+
+
+@pytest.mark.parametrize("missing", ["literacy", "population", "bureaucracy", "default"])
+def test_current_school_unknown_required_context_withdraws_successor(
+    current_school_program, missing
+):
+    from test_network_profile import _parsed, _score
+
+    from pdx.situated import network_profile
+
+    available = tuple(
+        fact.id for fact in current_school_program.network.facts if fact.id != missing
+    )
+    rendered = network_profile.render_program(current_school_program, available=available)
+    assert _score(_parsed(rendered), {"ai": True}) == 0

@@ -1,0 +1,87 @@
+{
+  "schema": "situated-ai.r2-reader-authority/1",
+  "game_version": "1.15.0",
+  "evidence_kind": "static_native_source",
+  "runtime": "unknown",
+  "files": [
+    {
+      "path": "binaries/checksum.txt",
+      "sha256": "7d1e8421e8f37c4cd71d3d6fa016e1f5730aef669c9eee786b1cfbce83a0a8d6"
+    },
+    {
+      "path": "caligula_branch.txt",
+      "sha256": "d63c818d818af02cdb1d59d338ca1b68420421ccdcf1b131193f58e191eb6ca8"
+    },
+    {
+      "path": "caligula_rev.txt",
+      "sha256": "41646ad1bb09180c7ce218ed46af8d9143c54dc3b69dfc0fba6254db65ad299d"
+    },
+    {
+      "path": "clausewitz_branch.txt",
+      "sha256": "673cffa83790df7106aa75435d0a8bee40d68c6cf5cfe6d47cd89df223ff2294"
+    },
+    {
+      "path": "clausewitz_rev.txt",
+      "sha256": "1085952c68b4ffa4ebab5d7ebd017e7a6492e22511494e0b371120a8f56a8107"
+    },
+    {
+      "path": "game/common/ai_strategies/00_default_strategy.txt",
+      "sha256": "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73"
+    },
+    {
+      "path": "game/common/ai_strategies/01_admin_strategies.txt",
+      "sha256": "dd95f5586a9fb105adddf890612aa5b4f3970314855ba8a8cee42247db7ed741"
+    },
+    {
+      "path": "game/common/ai_strategies/03_political_strategies.txt",
+      "sha256": "2b0b83d06cc4ef8fb1bc58902ca4f90cf0723838afef6d81854e301f5f7c62f4"
+    },
+    {
+      "path": "game/common/alert_types/00_alert_types.txt",
+      "sha256": "ca60cb0f7425744d2695560d905f4ec58bbeb9dd3e6f1aedfcc891ceb23a55e3"
+    },
+    {
+      "path": "game/common/decrees/00_decree.txt",
+      "sha256": "3d2427216709844f4233649208efad0056b8a09608eb078249aeb6ff855c2445"
+    },
+    {
+      "path": "game/common/diplomatic_actions/00_relations_actions.txt",
+      "sha256": "6cd5d572ae976a2e1f4f4af5c81fb577ed4804bace442e6fa31bace09881749b"
+    },
+    {
+      "path": "game/common/diplomatic_actions/01_expel_diplomats.txt",
+      "sha256": "634b87f8eb3a55d4742e5bf724d6b993c570736765898a97070cebea75893d4f"
+    },
+    {
+      "path": "game/common/diplomatic_actions/diplomatic_action.md",
+      "sha256": "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c"
+    },
+    {
+      "path": "game/common/journal_entries/08_tsarpoints.txt",
+      "sha256": "db66b50a602e3951102f20be863c43681587026fe71afa821c13fc7b8b93e636"
+    },
+    {
+      "path": "game/common/scripted_buttons/scripted_buttons.md",
+      "sha256": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26"
+    },
+    {
+      "path": "game/common/scripted_triggers/05_tsarpoints_scripted_triggers.txt",
+      "sha256": "4d22469ebc817d730a0c5789b6e5bdfb0edc3087f417beb4e06f3322e3b98868"
+    },
+    {
+      "path": "launcher/launcher-settings.json",
+      "sha256": "4b7032eeb5fc7f0f64b60690d5d2b1bbc4b7ca5119b44bb76eb2f7788a9fd91c"
+    }
+  ],
+  "readers": {
+    "bureaucracy": "game/common/scripted_buttons/scripted_buttons.md",
+    "default": "game/common/alert_types/00_alert_types.txt",
+    "influence": "game/common/diplomatic_actions/01_expel_diplomats.txt",
+    "infrastructure": "game/common/decrees/00_decree.txt",
+    "literacy": "game/common/ai_strategies/01_admin_strategies.txt",
+    "protective": "game/common/diplomatic_actions/00_relations_actions.txt",
+    "road-present": "game/common/decrees/00_decree.txt",
+    "school-agenda": "game/common/ai_strategies/03_political_strategies.txt",
+    "target-interference": "game/common/diplomatic_actions/01_expel_diplomats.txt"
+  }
+}

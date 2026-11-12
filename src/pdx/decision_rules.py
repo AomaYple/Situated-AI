@@ -19,9 +19,9 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import config, decision_intents, decision_interfaces, observation_queries
+from . import config, decision_intents, decision_interfaces, observation_queries, version_contracts
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
-from .model import Block, Scalar
+from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
 
@@ -85,6 +85,21 @@ class Reader:
         return ".".join((scope, *self.path, self.engine))
 
     def expression(self, op: str, value: bool | float | FactReference) -> str:
+        if self.engine == "pop_type_percent_country":
+            parameter, value_field = (
+                ("target", "value") if version_contracts.is_115() else ("pop_type", "percent")
+            )
+            if (
+                len(self.parameters) != 1
+                or self.parameters[0][0] != parameter
+                or self.value_field != value_field
+                or self.parameters[0][1]
+                not in {
+                    f"pop_type:{name}" if parameter == "target" else name
+                    for name in ("peasants", "laborers", "machinists")
+                }
+            ):
+                raise ValueError("人口比例读取器与所选版本参数签名不一致")
         if self.engine in observation_queries.QUERY_ENGINES:
             if self.kind != "boolean" or op != "=" or type(value) is not bool:
                 raise ValueError("本国聚合查询只接受布尔等值条件")
@@ -194,9 +209,48 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     """严格解析版本锁定的规则；不接受自由脚本、隐式数值或重复优先级。"""
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
+    source_digest = hashlib.sha256(raw).hexdigest()
+    if source == SOURCE and version_contracts.is_115():
+        # Keep the historical TOML identity intact. The new complete native AST
+        # authority supplies this version's reviewed default-strategy input.
+        from .decision_adapters import native_authority_115  # noqa: PLC0415
+
+        data["baseline_sha256"] = native_authority_115()["sources"][
+            "common/ai_strategies/00_default_strategy.txt"
+        ]
+        from .situated import engine_reader_115  # noqa: PLC0415
+
+        engine_reader_115.project_information_readers(data["readers"])
+        source_digest = hashlib.sha256(
+            raw + b"\0current_reader:" + engine_reader_115.snapshot()
+        ).hexdigest()
+    if source == SOURCE and version_contracts.active_version() == "1.15.1":
+        # A single R2 consumer now owns schools. Its additive benefit/cost and
+        # capacity tiers explicitly replace these six historical multipliers.
+        # Keeping them in the legacy IR would double the same education and
+        # burden effects and retain a second physical writer.
+        school_rules = [
+            row for row in data["rules"] if row["field"] == "institution_scores.institution_schools"
+        ]
+        expected = {
+            "remaining_school_catchup_need",
+            "remaining_school_fiscal",
+            "remaining_school_administrative",
+            "remaining_school_capacity",
+            "school_default_pressure",
+            "school_administrative_pressure",
+        }
+        if {row["id"] for row in school_rules} != expected:
+            raise ValueError("1.15.1 学校迁移来源集合漂移")
+        data["rules"] = [row for row in data["rules"] if row not in school_rules]
+        data["readers"].pop("literacy")
+        migration = SOURCE.with_name("action_network_1151.toml").read_bytes()
+        source_digest = hashlib.sha256(
+            source_digest.encode() + b"\0school_migration:" + migration
+        ).hexdigest()
     if source == SOURCE and strategy is None:
         strategy = decision_intents.load()
-    return from_data(data, source_sha256=hashlib.sha256(raw).hexdigest(), strategy=strategy)
+    return from_data(data, source_sha256=source_digest, strategy=strategy)
 
 
 def from_data(
@@ -273,7 +327,11 @@ def from_data(
                 "building_type",
                 "production_method",
             },
-            ("pop_type_percent_country", "number", "percent"): {"pop_type"},
+            (
+                "pop_type_percent_country",
+                "number",
+                "value" if version_contracts.is_115() else "percent",
+            ): {"target" if version_contracts.is_115() else "pop_type"},
             ("radical_fraction", "number", "value"): {"pop_type"},
             ("loyalist_fraction", "number", "value"): {"pop_type"},
             ("has_diplomatic_pact", "boolean", None): {"who", "type"},
@@ -314,8 +372,16 @@ def from_data(
                     or (
                         not re.fullmatch(r"[a-z][a-z0-9_-]*", literal)
                         and not (
-                            item["engine"] == "pop_type_percent_state"
-                            and literal == "pop_type:peasants"
+                            (
+                                item["engine"] == "pop_type_percent_state"
+                                and literal == "pop_type:peasants"
+                            )
+                            or (
+                                item["engine"] == "pop_type_percent_country"
+                                and version_contracts.is_115()
+                                and literal
+                                in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
+                            )
                         )
                     )
                     for literal in parameters.values()
@@ -332,9 +398,14 @@ def from_data(
         ):
             raise ValueError("复合数值读取器只支持已声明的 value 比较，不能混用布尔参数")
         if item["engine"] == "pop_type_percent_country" and (
-            value_field != "percent" or not parameters
+            value_field != ("value" if version_contracts.is_115() else "percent")
+            or parameters
+            not in [
+                {"target": f"pop_type:{name}"} if version_contracts.is_115() else {"pop_type": name}
+                for name in ("peasants", "laborers", "machinists")
+            ]
         ):
-            raise ValueError("人口比例读取器必须声明 percent 和 pop_type 参数")
+            raise ValueError("人口比例读取器必须声明所选版本的精确人口参数与比较字段")
         if item["engine"] == "is_production_method_active" and not parameters:
             raise ValueError("复合布尔生产方式读取器必须声明完整参数")
         if item["engine"] == "institution_investment_level" and (
@@ -799,20 +870,23 @@ def _protected_offsets(
             limit = branch.value.first("limit")
             # 除源 SHA 外逐字核对门的词法形状，禁止误选另一个 if。
             expected = "OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } }"
+            if version_contracts.is_115():
+                expected = expected.replace(
+                    "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
+                )
             if limit is None or not isinstance(limit.value, Block):
                 raise ValueError("属国消费者可达性保护形状漂移")
 
-            def signature(node: Block) -> tuple:
-                return tuple(
-                    (
-                        item.key,
-                        item.op,
-                        signature(item.value)
-                        if isinstance(item.value, Block)
-                        else getattr(item.value, "text", None),
-                    )
-                    for item in node.assignments()
-                )
+            def signature(node: Assignment | Block | Scalar | None) -> object:
+                if isinstance(node, Block):
+                    return tuple(signature(item) for item in node.items)
+                if isinstance(node, Assignment):
+                    return node.key, node.op, node.prefix, signature(node.value)
+                if isinstance(node, Scalar):
+                    return node.text, node.quoted
+                if node is None:
+                    return None
+                raise ValueError("属国消费者可达性保护包含未知AST节点")
 
             if signature(limit.value) != signature(parse_text(expected).root):
                 raise ValueError("属国消费者可达性保护形状漂移")
@@ -1097,10 +1171,20 @@ def patch(
             or any(
                 literal not in words
                 and not (
-                    reader.engine == "pop_type_percent_state"
-                    and literal == "pop_type:peasants"
-                    and "peasants" in words
-                    and "pop_type:slaves" in words
+                    (
+                        reader.engine == "pop_type_percent_state"
+                        and literal == "pop_type:peasants"
+                        and "peasants" in words
+                        and "pop_type:slaves" in words
+                    )
+                    or (
+                        reader.engine == "pop_type_percent_country"
+                        and version_contracts.is_115()
+                        and literal
+                        in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
+                        and literal.removeprefix("pop_type:") in words
+                        and "pop_type:peasants" in words
+                    )
                 )
                 for _, literal in reader.parameters
             )
@@ -1259,6 +1343,8 @@ def contract(
     """机器可读的实际生成覆盖；只列真实规则，实机全部保持待验。"""
     from .situated.programs import contract as program_contract  # noqa: PLC0415
 
+    active_rules = tuple(rule for ruleset in rules.groups().values() for rule in ruleset)
+    used_reader_keys = {key for rule in active_rules for key in rule.input_keys()}
     return {
         "schema": 1,
         "evidence": "static_vanilla_examples_and_generated_scripts",
@@ -1277,7 +1363,7 @@ def contract(
         "actor": "root_country" if not rules.actor_path else f"root_{rules.native_root}_owner",
         "native_root": rules.native_root,
         "world_scans": 0,
-        "strategy": rules.strategy.contract({rule.intent for rule in rules.rules if rule.intent})
+        "strategy": rules.strategy.contract({rule.intent for rule in active_rules if rule.intent})
         if rules.strategy is not None
         else None,
         "static_complexity_budget": dict(STATIC_BUDGET),
@@ -1324,6 +1410,7 @@ def contract(
                 "runtime_readability": "static_interface_signature; runtime_behavior_unverified",
             }
             for reader in rules.readers
+            if reader.key in used_reader_keys
         ],
         "rules": [
             {

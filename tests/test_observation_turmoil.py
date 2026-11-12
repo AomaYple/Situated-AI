@@ -123,7 +123,7 @@ def test_native_fingerprint_and_complete_parent_ast_are_independent_requirements
     changed = native_texts[ACW].replace("turmoil > 0.1", "turmoil > 0.2")
     with pytest.raises(ValueError, match="来源漂移"):
         queries.compile_query(_query(), {**native_texts, ACW: changed})
-    monkeypatch.setitem(queries.SOURCE_HASHES, ACW, hashlib.sha256(changed.encode()).hexdigest())
+    monkeypatch.setitem(queries.source_hashes(), ACW, hashlib.sha256(changed.encode()).hexdigest())
     with pytest.raises(ValueError, match="完整查询AST"):
         queries.compile_query(_query(), {**native_texts, ACW: changed})
 

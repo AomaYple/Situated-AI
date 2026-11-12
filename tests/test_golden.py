@@ -23,12 +23,14 @@ Mod 内容，体积较大。把整份文本塞进 git 会让仓库迅速劣化�
 from __future__ import annotations
 
 import hashlib
-import json
 from typing import TYPE_CHECKING
 
 import pytest
+from _artifact_readback import assert_artifacts_readback
+from _artifact_text import assert_utf8_no_bom
 
-from pdx import analyze, config
+from pdx import analyze, config, docs_mirror, verify
+from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -71,14 +73,44 @@ def artifacts(tmp_path_factory: pytest.TempPathFactory, ga, ma, ca) -> dict[str,
         return _write_to(out, ga, ma, ca, patch)
 
 
-def test_artifact_digests(artifacts, data_regression) -> None:
+def test_artifact_digests(artifacts, data_regression, ga) -> None:
     """每个产物的字节数与 sha256 必须与冻结值一致。"""
+    version = active_version()
+    if version in {"1.15.0", "1.15.1"}:
+        snap = verify.latest_compact_snapshot()
+        assert snap is not None
+        snap.require_version()
+        assert ga.version == snap.version
+        common = config.GAME / "common"
+        # Analysis includes every directory, including md-only empty buckets.
+        # The structural snapshot groups scriptable files and also includes
+        # loose root files. Verify both denominators against the installation.
+        assert set(ga.common) == {path.name for path in common.iterdir() if path.is_dir()}
+        buckets = {
+            path.relative_to(common).parts[0]
+            for path in common.rglob("*")
+            if path.is_file()
+            and config.is_scriptable(path.relative_to(config.GAME).parts, path.suffix.lower())
+        }
+        assert set(snap.sections["common_entries"]) == buckets
+        for name, extracted in ga.common.items():
+            assert set(extracted.entries) == set(snap.sections["common_entries"].get(name, [])), (
+                name
+            )
+        assert ga.official_docs == {
+            key: int(str(value["字节"])) for key, value in docs_mirror.entries().items()
+        }
     digests = {
         name: {"字节": p.stat().st_size, "sha256": _sha256(p)}
         for name, p in sorted(artifacts.items())
     }
     assert digests, "至少要有产物"
-    data_regression.check(digests)
+    basename = {
+        "1.14.5": None,
+        "1.15.0": "test_artifact_digests_115",
+        "1.15.1": "test_artifact_digests_1151",
+    }[version]
+    data_regression.check(digests, basename=basename)
 
 
 def test_全部产物都非空(artifacts) -> None:
@@ -104,9 +136,7 @@ def test_产物一律_LF_换行(artifacts) -> None:
 
 def test_报告是合法UTF8且无乱码(artifacts) -> None:
     for name, p in artifacts.items():
-        raw = p.read_bytes()
-        assert not raw.startswith(b"\xef\xbb\xbf"), f"{name} 不应带 BOM"
-        raw.decode("utf-8")  # 解码失败即失败
+        assert_utf8_no_bom(p, name=name)
 
 
 def test_重复分析结果逐字节一致(tmp_path, ga, ma, ca, monkeypatch) -> None:
@@ -135,15 +165,14 @@ def test_产物之间不互相混杂(artifacts) -> None:
     assert len(roots) >= 3, f"产物应分属至少 3 个目录，实际 {roots}"
 
 
-def test_落盘后能被原样读回(artifacts) -> None:
+def test_落盘后能被原样读回(artifacts, pytestconfig) -> None:
     """JSON 产物必须能被 json 反序列化，Markdown 必须是文本。"""
-    for name, p in artifacts.items():
-        text = p.read_text(encoding="utf-8")
-        if p.suffix == ".json":
-            obj = json.loads(text)
-            assert isinstance(obj, dict), f"{name} 顶层应为对象"
-        else:
-            assert text.lstrip().startswith("#"), f"{name} 应是 Markdown"
+    # The full parse remains in the sampled process tree, without retaining the
+    # worker's session analysis objects in the process doing deserialization.
+    timeout = pytestconfig.getoption("timeout")
+    if timeout is None:
+        timeout = pytestconfig.getini("timeout")
+    assert_artifacts_readback(artifacts, timeout_s=float(timeout))
 
 
 def test_不污染正式产物目录(artifacts) -> None:

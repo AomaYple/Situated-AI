@@ -1,0 +1,329 @@
+# R2 policy source. Reader authority belongs to the adapter, never this file.
+schema = 2
+game_version = "1.15.1"
+
+[[action]]
+id = "road-maintenance"
+consumer = "a0-econ-road"
+bounds = [-4.0, 4.0]
+required_facts = ["infrastructure"]
+
+[[action.objective]]
+id = "local-capacity"
+actor = "actor"
+target = "root"
+source_facts = ["infrastructure"]
+baseline_fact = "infrastructure"
+horizon = "current"
+lifetime = "evaluation"
+rationale = "Evaluate the current state's transport-capacity preference against its actual infrastructure observation; relief and held-authority opportunity remain distinct outcomes, with native qualification and costs retained. This is not a persistent capacity target or a predicted result."
+
+[[action.predicate]]
+id = "severe-shortage"
+all = [{fact="infrastructure", op="lt", value=0.25}]
+
+[[action.bridge]]
+id = "road-shortage"
+path = "direct"
+effect = "road-relief"
+mechanism = "infrastructure-relief"
+objective = "local-capacity"
+kind = "benefit"
+value = 2.0
+variant_group = "shortage-severity"
+rank = 1
+all = [{fact="infrastructure", op="lt", value=0.5}]
+rationale = "Intentionally reweight native shortage tiers; no new infrastructure or authority is created."
+
+[[action.bridge]]
+id = "road-severe-shortage"
+path = "derived"
+effect = "road-relief"
+mechanism = "infrastructure-relief"
+objective = "local-capacity"
+kind = "benefit"
+value = 4.0
+variant_group = "shortage-severity"
+rank = 2
+all = [{fact="severe-shortage", op="eq", value=true}]
+rationale = "Same relief effect, strongest complete tier only."
+
+[[action.bridge]]
+id = "road-recovery"
+path = "direct"
+effect = "road-held-authority"
+mechanism = "authority-opportunity"
+objective = "local-capacity"
+kind = "cost"
+value = -2.0
+all = [{fact="road-present", op="eq", value=true}, {fact="infrastructure", op="ge", value=0.75}]
+rationale = "Observed active decree retains native cost=100; recovery lowers its marginal preference, without pretending to read free authority."
+
+[[action.overlap]]
+left = "road-relief"
+right = "road-held-authority"
+relation = "independent"
+rationale = "Relief and held-resource opportunity have different consequences; their declared shortage/recovery conditions are disjoint."
+
+[[action]]
+id = "school-investment"
+consumer = "a0-pol-schools"
+bounds = [-4.0, 4.0]
+required_facts = ["literacy", "bureaucracy", "default", "population"]
+
+[[action.objective]]
+id = "education-capacity"
+actor = "actor"
+target = "institution_schools"
+source_facts = ["literacy"]
+baseline_fact = "literacy"
+horizon = "current"
+lifetime = "evaluation"
+rationale = "Assess current educational investment relative to observed literacy and nonzero population. One complete assessment balances education need, spare administrative points, current financing capacity, administrative deficit and default risk. The old 1.10/1.18/1.20/1.25 need multipliers become bounded additive policy weights: need 2, administrative capacity .25, financing capacity .5, joint capacity .75 with no extra joint term. These weights express local relative preference, not arithmetic equivalence to the multipliers, a monetary quote or proven runtime balance."
+
+[[action.predicate]]
+id = "education-need"
+all = [{fact="literacy", op="lt", value=0.5}, {fact="population", op="gt", value=0.0}]
+
+[[action.bridge]]
+id = "school-need"
+path = "derived"
+effect = "school-literacy"
+mechanism = "education-development"
+objective = "education-capacity"
+kind = "benefit"
+value = 2.0
+all = [{fact="education-need", op="eq", value=true}]
+rationale = "Low observed literacy supports long-run education; this consumer preference does not assert immediate literacy gains."
+
+[[action.bridge]]
+id = "school-administration"
+path = "direct"
+effect = "school-admin-pressure"
+mechanism = "administrative-opportunity"
+objective = "education-capacity"
+kind = "cost"
+value = -2.0
+all = [{fact="bureaucracy", op="lt", value=0.0}]
+rationale = "A negative actual bureaucracy balance raises marginal institutional burden; native capacity and execution costs remain authoritative."
+
+[[action.bridge]]
+id = "school-default"
+path = "direct"
+effect = "school-fiscal-pressure"
+mechanism = "default-opportunity"
+objective = "education-capacity"
+kind = "risk"
+value = -2.0
+all = [{fact="default", op="eq", value=true}]
+rationale = "Actual default opposes optional institutional expansion; no invented monetary quote and no duplicate debit."
+
+[[action.bridge]]
+id = "school-agenda-complement"
+path = "interaction"
+effect = "school-agenda-residual"
+mechanism = "education-agenda-complement"
+objective = "education-capacity"
+kind = "benefit"
+value = 1.0
+all = [{fact="education-need", op="eq", value=true}, {fact="school-agenda", op="eq", value=true}]
+rationale = "Observed domestic reform agenda complements low-literacy need; residual 3-2=1, never repeats the native agenda's full institution score."
+
+[[action.residual]]
+id = "school-complement-decomposition"
+bases = ["school-literacy"]
+effect = "school-agenda-residual"
+complete = 3.0
+rationale = "Mapped complete literacy-plus-agenda consideration=3, standalone literacy consideration=2; administrative/fiscal costs are separate."
+
+[[action.overlap]]
+left = "school-literacy"
+right = "school-agenda-residual"
+relation = "residual"
+rationale = "Only the extra complement 1 is added to the base 2; shared literacy evidence does not create a second base benefit."
+
+[[action.overlap]]
+left = "school-literacy"
+right = "school-admin-pressure"
+relation = "independent"
+rationale = "The shared current education objective does not merge future educational benefit with the separately observed present administrative burden."
+
+[[action.overlap]]
+left = "school-literacy"
+right = "school-fiscal-pressure"
+relation = "independent"
+rationale = "Educational benefit and observed default risk have different consequences despite the same objective baseline."
+
+[[action.overlap]]
+left = "school-admin-pressure"
+right = "school-fiscal-pressure"
+relation = "independent"
+rationale = "Administration balance and actual default are distinct constraints, not two names for the same debit."
+
+[[action.overlap]]
+left = "school-agenda-residual"
+right = "school-admin-pressure"
+relation = "independent"
+rationale = "The educational agenda complement excludes administrative burden; their shared goal baseline is not a duplicated effect."
+
+[[action.overlap]]
+left = "school-agenda-residual"
+right = "school-fiscal-pressure"
+relation = "independent"
+rationale = "The extra agenda benefit excludes default risk; both remain visible in the complete tradeoff."
+
+
+[[action.bridge]]
+id = "school-capacity-administrative"
+path = "derived"
+effect = "school-administrative-capacity"
+mechanism = "education-administrative-capacity"
+objective = "education-capacity"
+kind = "benefit"
+value = 0.25
+all = [{fact="education-need", op="eq", value=true}, {fact="bureaucracy", op="gt", value=0.0}]
+rationale = "Positive observed bureaucracy means spare administrative points for institutional management, a distinct opportunity from educational need and cash financing. The small .25 complement remains observed during default, alongside the full -2 default risk; it does not assert affordability, reserve points or duplicate the mutually exclusive negative-balance cost."
+
+[[action.bridge]]
+id = "school-capacity-fiscal"
+required = false
+path = "derived"
+effect = "school-financing-capacity"
+mechanism = "education-financing-capacity"
+objective = "education-capacity"
+kind = "benefit"
+value = 0.5
+all = [{fact="education-need", op="eq", value=true}, {fact="default", op="eq", value=false}, {fact="net-surplus", op="gt", value=0.0}]
+rationale = "Known nondefault and positive current net weekly income support a .5 financing complement, independent of spare administrative points. This describes current fiscal headroom without predicting future fees or allocating money. Default disables this complement; unknown auxiliary income omits only this unproved complement and preserves need, observed administrative capacity and complete known costs."
+
+[[action.overlap]]
+left = "school-administrative-capacity"
+right = "school-literacy"
+relation = "independent"
+rationale = "Low literacy with population establishes educational demand; positive bureaucracy establishes spare management capacity. The .25 capacity term contains no part of the base education benefit 2, and both require the same observed demand without counting that demand twice."
+
+[[action.overlap]]
+left = "school-administrative-capacity"
+right = "school-admin-pressure"
+relation = "independent"
+rationale = "Spare administrative points and an administrative deficit are mutually exclusive observations. The .25 spare-capacity preference cannot combine with the -2 deficit cost; neither term contains the other or changes the native point charge."
+
+[[action.overlap]]
+left = "school-administrative-capacity"
+right = "school-fiscal-pressure"
+relation = "independent"
+rationale = "Spare administrative points do not pay institutional fees or erase an observed default. Default therefore keeps its full -2 risk alongside the small .25 administrative complement, and separately prevents the financing complement."
+
+[[action.overlap]]
+left = "school-administrative-capacity"
+right = "school-agenda-residual"
+relation = "independent"
+rationale = "The .25 administrative complement assesses spare points; the agenda residual 1 assesses the extra priority of an observed reform agenda. Neither includes the base need 2 or the other's contribution."
+
+[[action.overlap]]
+left = "school-financing-capacity"
+right = "school-literacy"
+relation = "independent"
+rationale = "Observed net weekly income under known nondefault establishes present financing headroom; low literacy establishes educational demand. The .5 financing complement excludes the base need 2 and does not treat low literacy as proof of money."
+
+[[action.overlap]]
+left = "school-financing-capacity"
+right = "school-admin-pressure"
+relation = "independent"
+rationale = "A positive fiscal flow does not create administrative points. The .5 financing complement can coexist with the full -2 administrative-deficit cost; each uses a different observed constraint and preserves native charges."
+
+[[action.overlap]]
+left = "school-financing-capacity"
+right = "school-fiscal-pressure"
+relation = "independent"
+rationale = "Financing capacity requires known nondefault, while the -2 default risk requires actual default, so their guards are mutually exclusive. Nondefault alone grants no capacity score without positive observed income and educational demand."
+
+[[action.overlap]]
+left = "school-financing-capacity"
+right = "school-agenda-residual"
+relation = "independent"
+rationale = "The .5 financing complement assesses current net income; the agenda residual 1 assesses the extra priority of an observed reform agenda. The financing term contains neither the base need 2 nor the agenda's residual benefit."
+
+[[action.overlap]]
+left = "school-administrative-capacity"
+right = "school-financing-capacity"
+relation = "independent"
+rationale = "Administrative points permit management and net weekly income supports financing; one cannot substitute for the other. Their separate .25 and .5 local preferences combine to .75, smaller than either pressure cost 2. The historical joint 1.25 multiplier is deliberately replaced by this additive policy scale; it is not arithmetically converted, repeated as a third score or claimed equivalent."
+
+[[action]]
+id = "improve-relations"
+consumer = "a0-dip-relations"
+bounds = [-3.0, 3.0]
+required_facts = ["protective", "influence"]
+
+[[action.objective]]
+id = "external-security"
+actor = "actor"
+target = "target_country"
+source_facts = ["protective"]
+baseline_fact = "protective"
+horizon = "current"
+lifetime = "evaluation"
+rationale = "Assess current engagement toward this exact target against the observed actor-to-target protective attitude. Influence opportunity and observed target interference oppose benefits without changing native qualification or reserving resources; no future pact is asserted. A known false attitude remains a valid baseline, not a global veto of costs."
+
+[[action.predicate]]
+id = "influence-pressure"
+all = [{fact="influence", op="lt", value=200.0}]
+
+[[action.bridge]]
+id = "relations-protection"
+path = "direct"
+effect = "relations-protective-value"
+mechanism = "protective-engagement"
+objective = "external-security"
+kind = "benefit"
+value = 2.0
+all = [{fact="protective", op="eq", value=true}]
+rationale = "Intentional bounded reweight of protective engagement; native protective+5, probability, eligibility and pact costs remain intact."
+
+[[action.bridge]]
+id = "relations-resource-pressure"
+path = "derived"
+effect = "relations-influence-opportunity"
+mechanism = "influence-opportunity"
+objective = "external-security"
+kind = "cost"
+value = -2.0
+all = [{fact="influence-pressure", op="eq", value=true}]
+rationale = "Actual influence balance expresses scarce diplomatic capacity, separate from the native pact cost=150; no second resource charge."
+
+[[action.bridge]]
+id = "relations-observed-interference"
+path = "interaction"
+effect = "relations-interference-residual"
+mechanism = "observed-interference-risk"
+objective = "external-security"
+kind = "risk"
+value = -1.0
+all = [{fact="protective", op="eq", value=true}, {fact="target-interference", op="eq", value=true}]
+rationale = "The target's already existing support_separatism pact toward the actor qualifies protective engagement; no inferred future pact. Residual 1-2=-1."
+
+[[action.residual]]
+id = "relations-interference-decomposition"
+bases = ["relations-protective-value"]
+effect = "relations-interference-residual"
+complete = 1.0
+rationale = "Complete protective engagement under observed target interference=1, base=2; influence opportunity remains a separate cost."
+
+[[action.overlap]]
+left = "relations-protective-value"
+right = "relations-interference-residual"
+relation = "residual"
+rationale = "Observed interference contributes only the additional risk residual, not a repeated attitude score."
+
+[[action.overlap]]
+left = "relations-protective-value"
+right = "relations-influence-opportunity"
+relation = "independent"
+rationale = "A shared current security objective does not merge protective engagement value with scarce influence opportunity; no resource is debited twice."
+
+[[action.overlap]]
+left = "relations-interference-residual"
+right = "relations-influence-opportunity"
+relation = "independent"
+rationale = "Observed target interference risk and actor influence scarcity are separate consequences within the same complete security assessment."

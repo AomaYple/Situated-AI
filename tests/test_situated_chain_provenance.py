@@ -259,7 +259,7 @@ def test_real_pdx_contains_exact_chain_source_map_for_each_bound_writer(producti
     )
     info_source = joint_chain_contract.INFO_SOURCE
     information = compiler.compile_policy(dict(policies)[info_source], info_source, model)[0]
-    baseline = compiler.BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     files[info_source] = decision_rules.patch(
         baseline,
         information,

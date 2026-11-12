@@ -71,6 +71,35 @@ python -m pdx.cli package
 标准包只包含 Mod 安装所需内容，不含探针、Python、日志、缓存、本体资源或历史实验。ZIP 路径使用 POSIX 形式；
 游戏文本的 BOM 只在游戏安装或打包边界添加。完整包内合同和恢复边界见工程交付基线。
 
+当前迁移合同默认为 `1.15.1`，以上命令也可显式使用 `--profile 1.15.1`，两种方式均走完整 Mod 生产链。
+历史 R2 三消费者候选须显式使用 `--profile 1.15.0`；产物隔离在 `tools/out/production/1.15.0/`，不用于当前发布。
+同一组命令可用 `--configuration <TOML路径>` 选择构建配置（严格 schema、核心、领域和 policy/neutral 模式），
+检查与打包必须传入同一配置；具体字段见 `src/pdx/situated/profile_configuration.py`。
+候选静态通过及 ZIP 生成不代表完整工程门通过，也不构成发布或部署。
+
+`snapshot`、`tables`、`verify`、`index` 等没有 `--profile` 参数的分析与文档命令，通过
+`V3_CONTRACT_PROFILE=1.15.1` 选择同版本合同、文档、官方文档 manifest 和快照。例如在 PowerShell 中：
+
+```powershell
+$env:V3_CONTRACT_PROFILE = '1.15.1'
+.venv/Scripts/python.exe -B -X utf8 -m pdx.cli verify --from-snapshot
+.venv/Scripts/python.exe -B -X utf8 -m pdx.cli tables --offline
+```
+
+环境变量只选择版本合同，不把当前安装伪装成该版本；读取本机原版的命令仍核对实际安装身份。
+未显式选择时使用当前 `1.15.1` 合同；历史 `1.14.5`、`1.15.0` 必须显式选择，不能用旧门结果验收当前版本。
+
+原版权威候选通过专用入口显式捕获，例如：
+
+```text
+python -m pdx.native_authority_capture --profile 1.15.1 --installation <安装根目录> --kind parameters --output tools/out/version1151/authority-candidates/inventory-parameters.json
+```
+
+`--profile`、`--installation`、`--kind`、`--output` 均必填，不从环境推断本次授权。
+`--kind` 还可选 `retentions-native-subset`、`compatibility`、`technology-catalog`；前三类输出 `.json`，科技目录输出 `.toml`。
+入口核对实际安装身份，只向无链接的 `tools/out/` 写入候选；已有文件相同则幂等，不同则拒绝，不能自动改写历史或当前受控证据。
+retention 候选仅复核原版保留字段，不含学校等独立政策迁移收据，不是完整迁移合同；所有候选均只提供原版静态证据，运行行为仍为 `unknown`。
+
 ## 验证
 
 按风险选择检查。阶段开发运行改动域测试；冻结最终候选后运行一次完整回归。静态收口至少运行：
@@ -86,6 +115,15 @@ python tools/ci/run_check.py baseline
 
 `baseline` 已包含依赖一致性、离线断言、离线表格、`modguard --offline`、`decision-audit --offline`、`ai-surface --check`
 和死代码审计，无需另行重复运行。
+
+当前迁移候选必须运行版本门；这些入口向原有离线检查传递同一版本合同，并追加生成与生产合同检查：
+
+```text
+python tools/ci/run_check.py baseline --profile 1.15.1
+python tools/ci/run_check.py full-acceptance --profile 1.15.1 --quiet
+```
+
+它们保留完整的既有检查集合；不带 `--profile` 的命令默认同一当前版本。历史验收必须绑定其原输入与合同。
 
 涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目；构建不应在工作树留下 `build/` 或 egg-info：
 

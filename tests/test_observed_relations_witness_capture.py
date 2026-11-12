@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import decisions
+from pdx import config, decisions, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -15,7 +15,10 @@ from pdx.situated.native_treatments import _digest, _resolve
 pytest_plugins = ("tools.ci.architecture_witness_capture",)
 pytestmark = pytest.mark.unit
 FIELD = "economic_vs_government_spending_balance"
-GENERATED = "mod/common/ai_strategies/00_default_strategy.txt"
+GENERATED = (
+    decisions.product_path().relative_to(config.REPO)
+    / "common/ai_strategies/00_default_strategy.txt"
+).as_posix()
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION = [
     "mod/decisions/relations.toml",
@@ -105,7 +108,11 @@ def test_actual_observed_school_feedback_role(
     architecture_witness(
         case_id=f"r8.{role}",
         role=role,
-        input={**values, "output_unit": "balance_delta_thousandths"},
+        input={
+            **values,
+            "contract_version": version_contracts.active_version(),
+            "output_unit": "balance_delta_thousandths",
+        },
         expected={"delta_thousandths": round(expected_delta * 1000)},
         reference={"delta_thousandths": reference_units},
         generated={"delta_thousandths": generated_units},
@@ -121,7 +128,7 @@ def test_actual_observed_feedback_disabled_role(candidate, architecture_witness)
     overlay = compiler.strategy_overlay(model, enabled_consumer_fields=set())
     assert reference == {}
     assert overlay == {}
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     profile = decisions.load_extensions(profile="release")
     patched = decisions.patch_default(baseline, decisions.load(), profile, action_overlay=overlay)
     without = decisions.patch_default(baseline, decisions.load(), profile)
@@ -162,7 +169,7 @@ def test_actual_observed_feedback_player_role(candidate, architecture_witness):
 
 def test_actual_observed_feedback_native_tail_role(candidate, architecture_witness):
     model, _actual, raw = candidate
-    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     profile = decisions.load_extensions(profile="release")
     plain = baseline
     overlay = compiler.strategy_overlay(model)

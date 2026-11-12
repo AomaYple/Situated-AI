@@ -6,7 +6,14 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import country_state, decision_report, decision_rules, decisions, distribution
+from pdx import (
+    country_state,
+    decision_report,
+    decision_rules,
+    decisions,
+    distribution,
+    version_contracts,
+)
 
 
 def _route_rules() -> tuple[decision_rules.RuleSet, str]:
@@ -64,7 +71,14 @@ def test_retired_route_readers_are_rejected_even_with_country_policy(argument, e
             )
 
 
-def test_decisions_build_declares_stateless_country_module():
+@pytest.fixture
+def historical_assembly_contract():
+    """Module assembly is an offline historical contract, not a live release build."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+def test_decisions_build_declares_stateless_country_module(historical_assembly_contract):
     files = decisions.build(decisions.load(), country_policy=country_state.load())
     metadata = json.loads(files[".metadata/metadata.json"])
     assert "country_state" in metadata["enabled_modules"]

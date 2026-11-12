@@ -33,12 +33,16 @@ mod 本体
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from collections import Counter
+from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 from . import config
-from .cache import parse_cached
+from .cache import memo_lifetime, parse_cached
 from .extract import DirExtract, extract_file, global_usage
 from .localization import LocalizationReport, extract_localization
 
@@ -49,9 +53,6 @@ from .mods import ModInfo, aggregate_prefixes, analyse_all
 from .parser import TOLERATED_ERRORS
 from .scan import DirStats, stats_for, subdir_stats, walk_files
 from .tabular import extract_tables
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 #: 参与分析的内容根
 CONTENT_ROOTS: dict[str, Path] = {
@@ -922,6 +923,7 @@ MODS_OUT = config.OUT_MODS
 CROSS_OUT = config.OUT_CROSS
 
 
+@memo_lifetime()
 def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict[str, Path]:
     """落盘。游戏本体、mod、交叉三者**分别存放**。"""
     for d in (GAME_OUT, MODS_OUT, CROSS_OUT, config.REPORTS):
@@ -935,15 +937,27 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
         写盘还多花约 7 秒。它是给程序读的数据文件，不是给人读的报告；
         要看内容用 ``jq`` 或查询工具。其余产物仍用缩进，保留可读与可 diff。
         """
-        if compact:
-            text = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
-        else:
-            text = json.dumps(obj, ensure_ascii=False, indent=2)
         # newline="\n" 是**必须**的：不传时 Python 按平台翻译换行，Windows 上
         # 写出 CRLF、Linux 上写出 LF，于是同一份数据在两边的**字节数不同** ——
         # 而黄金回归冻结的正是逐字节 sha256。那会让「冻结值」变成
         # 「Windows 专属值」，CI（Linux）上根本对不上，还查不出来。
-        path.write_text(text, encoding="utf-8", newline="\n")
+        # Stream the identical tokens; the structured game data must not coexist
+        # with json.dumps' complete Unicode document and temporary chunk list.
+        # Keep the previous complete report if encoding or replacement fails.
+        fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+                if compact:
+                    json.dump(obj, stream, ensure_ascii=False, separators=(",", ":"))
+                else:
+                    json.dump(obj, stream, ensure_ascii=False, indent=2)
+                stream.flush()
+                os.fsync(stream.fileno())
+            Path(temporary).replace(path)
+        except BaseException:
+            with suppress(FileNotFoundError):
+                Path(temporary).unlink()
+            raise
 
     out: dict[str, Path] = {}
 

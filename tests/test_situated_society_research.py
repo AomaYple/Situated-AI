@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from pdx import country_state, decision_adapters, decision_rules
+from pdx import country_state, decision_adapters, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -451,6 +451,7 @@ def test_explicit_causal_groups_and_actual_country_reader_identities(production)
         ("industrial_workforce", "laborers"),
     ):
         reader = readers[key]
+        current = version_contracts.is_115()
         assert (
             reader.engine,
             reader.value_field,
@@ -458,7 +459,14 @@ def test_explicit_causal_groups_and_actual_country_reader_identities(production)
             reader.unit,
             reader.minimum,
             reader.maximum,
-        ) == ("pop_type_percent_country", "percent", {"pop_type": pop_type}, "ratio", 0, 1)
+        ) == (
+            "pop_type_percent_country",
+            "value" if current else "percent",
+            {"target": "pop_type:" + pop_type} if current else {"pop_type": pop_type},
+            "ratio",
+            0,
+            1,
+        )
     child = readers["current_child_labor"]
     assert (child.engine, child.argument) == (
         "has_law_or_variant",
@@ -493,7 +501,12 @@ def test_another_population_query_cannot_supply_the_required_observation(
     reader = next(reader for reader in policy.readers if reader.key == reader_key)
     observations = facts["ROOT"][reader.engine]
     observations.pop(tuple(reader.parameters))
-    observations[(("pop_type", wrong_pop_type),)] = 0.2
+    other_population = (
+        (("target", "pop_type:" + wrong_pop_type),)
+        if version_contracts.is_115()
+        else (("pop_type", wrong_pop_type),)
+    )
+    observations[other_population] = 0.2
     result = pdx_eval.select(_overlay(generated, technology), facts)
     assert result.delta == 1
 

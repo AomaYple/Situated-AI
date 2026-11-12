@@ -6,12 +6,22 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from pdx import version_contracts
 from pdx.situated.vanilla_inventory import discover
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def historical_discovery_contract():
+    # These synthetic fixtures declare release/1.14.5 and its documentation;
+    # installed 1.15 integrations keep their independently selected contract.
+    with version_contracts.select_version("1.14.5"):
+        yield
+
 
 PM_DOC = (
     "ai_selection = most_productive # Affects how the AI chooses between PMs. "

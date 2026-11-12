@@ -9,11 +9,18 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules
+from pdx import decision_rules, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture
+def historical_strategy_contract():
+    """Only synthetic revision attacks use the reviewed historical schema."""
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 @pytest.mark.parametrize(
@@ -44,7 +51,7 @@ def test_new_exact_strategy_consumers_have_proven_country_root(field):
 
 
 @pytest.fixture
-def goal_proof(tmp_path, monkeypatch):
+def goal_proof(tmp_path, monkeypatch, historical_strategy_contract):
     data = json.loads(engine_scope.strategy_snapshot())
     assert len(data["observations"]) >= 388
     points = data["observations"][169:325]

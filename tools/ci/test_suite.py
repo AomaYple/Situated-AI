@@ -46,6 +46,61 @@ def create_run_dir(root: Path) -> Path:
     return target
 
 
+def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
+    from pdx import version_contracts  # noqa: PLC0415
+
+    selected = version_contracts.active_version(profile)
+    with version_contracts.select_version(selected):
+        return _capture_selected_game_identity(out, selected)
+
+
+def _capture_selected_game_identity(out: Path, profile: str) -> dict[str, Any]:
+    """记录实际测试输入；版本 profile 的静态输入核验不替代全仓测试。"""
+    # 此模块也作为早期 pytest 插件加载，不能在模块导入期预载业务代码。
+    from pdx import config  # noqa: PLC0415
+
+    installation = config.ROOT.resolve()
+    identity: dict[str, Any] = {
+        "schema": 1,
+        "profile": profile,
+        "installation": str(installation),
+        "game_available": (installation / "game/common").is_dir(),
+        "version": config.game_version(installation),
+        "evidence": "test_input_identity_not_engine_scope_or_functional_acceptance",
+        "verified": False,
+    }
+    try:
+        binary = installation / "binaries/victoria3.exe"
+        if binary.is_file():
+            with binary.open("rb") as stream:
+                digest = hashlib.file_digest(stream, "sha256").hexdigest()
+            identity["executable"] = {"sha256": digest, "bytes": binary.stat().st_size}
+        if profile is not None:
+            from pdx.situated import production_profile, r2_reader_authority  # noqa: PLC0415
+
+            if profile != production_profile.expected_version():
+                raise ValueError(f"不支持的完整验收 profile：{profile}")
+            if not binary.is_file():
+                raise ValueError("完整版本验收缺少实际游戏 EXE")
+            loaded = production_profile.load_profile(installation)
+            production_profile.verify_baseline()
+            r2_reader_authority.verify_frozen()
+            authority = r2_reader_authority.verify_installation(installation)
+            identity["reader_authority"] = authority
+            identity["profile_source_hashes"] = dict(loaded.source_hashes)
+            identity["build_id"] = loaded.build_id
+            identity["baseline_manifest_sha256"] = hashlib.sha256(
+                (production_profile.baseline_root() / "baseline-manifest.json").read_bytes()
+            ).hexdigest()
+            identity["verified"] = True
+    except (ValueError, OSError) as exc:
+        identity["error"] = str(exc)
+        _write(out / "game-input.json", identity)
+        raise ValueError(f"完整验收输入身份核对失败：{exc}") from exc
+    _write(out / "game-input.json", identity)
+    return identity
+
+
 def validate_pytest_args(args: list[str]) -> list[str]:
     """只允许不会改变用例集合及执行次数的调度与种子参数。"""
     seen: set[str] = set()
@@ -236,8 +291,9 @@ def _resource_evidence(out: Path, summary: dict[str, Any]) -> dict[str, Any]:
         _number(row["final_ws_mb"])
         if row["peak_ws_mb"] < row["final_ws_mb"]:
             raise ValueError("进程内高水位小于最终 RSS")
-        if row["errors"] or type(row["exitstatus"]) is not int or row["exitstatus"] != 0:
+        if row["errors"]:
             raise ValueError(f"进程内采样失败：{worker}")
+        _number(row["exitstatus"], integer=True)
         by_worker[worker] = row
     master = by_worker.pop("master")
     _number(summary["controller_pid"], positive=True, integer=True)
@@ -286,6 +342,21 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
 
     errors: list[str] = []
     report: dict[str, Any] = {"groups": [summary], "errors": errors, "output": str(out)}
+    # 资源预算失败仍保留仪器身份；测试失败不能造成虚假的 worker 身份失配。
+    try:
+        report["resources"] = {
+            "inproc": [
+                json.loads(path.read_text(encoding="utf-8"))
+                for path in sorted(out.glob("inproc-full-*.json"))
+            ]
+        }
+        if any(
+            row["exitstatus"] != 0 or row.get("test_errors")
+            for row in report["resources"]["inproc"]
+        ):
+            errors.append("进程内 pytest 执行存在失败")
+    except Exception as exc:
+        errors.append(f"进程内采样身份无法读取：{exc}")
     try:
         for field in ("peak_total_mb", "per_worker_peak_mb", "n_workers", "samples"):
             value = summary[field]
@@ -345,13 +416,37 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
             for row in collection["reports"]
             if row["when"] == "call" and not row.get("subtest", False)
         )
-        skipped_setup = Counter(
+        terminal_setup = Counter(
             row["nodeid"]
             for row in collection["reports"]
-            if row["when"] == "setup" and row["outcome"] == "skipped"
+            if row["when"] == "setup" and row["outcome"] in {"skipped", "failed"}
         )
-        if calls + skipped_setup != expected:
+        if calls + terminal_setup != expected:
             errors.append("执行 call/skip 身份/重复次数不一致")
+        # 同一用例的所有主阶段必须由同一真实执行者负责；合法 worker 名单本身不足以证明。
+        phase_workers = {
+            phase: Counter(
+                (row["nodeid"], row["worker"])
+                for row in collection["reports"]
+                if row["when"] == phase and not row.get("subtest", False)
+            )
+            for phase in ("setup", "call", "teardown")
+        }
+        terminal_workers = Counter(
+            (row["nodeid"], row["worker"])
+            for row in collection["reports"]
+            if row["when"] == "setup" and row["outcome"] in {"skipped", "failed"}
+        )
+        if (
+            phase_workers["setup"] != phase_workers["teardown"]
+            or phase_workers["call"] + terminal_workers != phase_workers["setup"]
+            or any(
+                (row["nodeid"], row["worker"]) not in phase_workers["setup"]
+                for row in collection["reports"]
+                if row.get("subtest", False)
+            )
+        ):
+            errors.append("执行阶段 worker 身份/重复次数不一致")
         if report.get("tests", {}).get("tests") != sum(expected.values()):
             errors.append("JUnit 用例次数与收集集合不一致")
         effective = collection["effective"]
@@ -415,7 +510,12 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
 
 
 def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict[str, Any]:
+    profile = getattr(args, "profile", None)
+    game_input = capture_game_identity(out, profile)
     env = dict(os.environ)
+    if profile is not None:
+        # 版本合同贯穿全部用例及其普通子进程，不能只记录 profile 而仍执行旧默认。
+        env["V3_CONTRACT_PROFILE"] = profile
     # 子验收是独立 controller，不能继承外层 pytest worker 的身份。
     for variable in (
         "PYTEST_XDIST_WORKER",
@@ -428,6 +528,9 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
         {
             "COVERAGE_FILE": str(out / ".coverage"),
             "PYTHONIOENCODING": "utf-8",
+            # xdist and ordinary Python children do not inherit -X utf8.
+            # text=True uses the interpreter's locale mode, not stdio encoding.
+            "PYTHONUTF8": "1",
             _COLLECTION_ENV: str(out / "collection.json"),
             "MEMBASELINE_OUT": str(out),
             "MEMBASELINE_TAG": "full",
@@ -459,11 +562,16 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
             "PYTEST_DEBUG_TEMPROOT",
             "COVERAGE_FILE",
             "PYTHONIOENCODING",
+            "PYTHONUTF8",
             _COLLECTION_ENV,
             "MEMBASELINE_OUT",
             "MEMBASELINE_TAG",
             "SITAI_XDIST_WORKERS",
             "PYTEST_XDIST_AUTO_NUM_WORKERS",
+            "V3_ROOT",
+            "V3_USERDIR",
+            "V3_WORKSHOP",
+            "V3_CONTRACT_PROFILE",
         )
     }
     machine = mem.machine_info()
@@ -478,6 +586,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
         "cwd": str(ROOT),
         "machine": machine,
         "environment": environment,
+        "game_input": game_input,
         "environment_sha256": hashlib.sha256(
             json.dumps(environment, sort_keys=True).encode("utf-8")
         ).hexdigest(),
@@ -585,6 +694,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--allow-concurrent", action="store_true")
     parser.add_argument("--reference", type=Path)
+    from pdx import version_contracts  # noqa: PLC0415
+
+    parser.add_argument(
+        "--profile", choices=("1.15.0", "1.15.1"), default=version_contracts.active_version()
+    )
     raw = list(sys.argv[1:] if argv is None else argv)
     split = raw.index("--") if "--" in raw else len(raw)
     args = parser.parse_args(raw[:split])
@@ -609,6 +723,9 @@ def main(argv: list[str] | None = None) -> int:
         summary = execute(out, args, pytest_args)
     except (Exception, SystemExit) as exc:
         summary = {"tag": "full", "exit_code": 2, "execution_error": str(exc)}
+        identity_path = out / "game-input.json"
+        if identity_path.is_file():
+            summary["game_input"] = json.loads(identity_path.read_text(encoding="utf-8"))
     code = finalize(out, summary, reference=args.reference)
     print(f"[full-acceptance] exit={code}，报告：{out / 'full-acceptance.json'}", flush=True)
     return code

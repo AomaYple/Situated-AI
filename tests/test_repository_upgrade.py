@@ -8,8 +8,10 @@ import json
 import struct
 import subprocess
 import sys
+import tomllib
 import zipfile
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from hypothesis import given
@@ -114,6 +116,15 @@ def test_stream_inspection_matches_bytes(raw, chunk_size):
         (".agent-teams/state.json", "local_runtime"),
         ("tools/out/a.py", "raw_evidence"),
         ("tools/out/reports/a.json", "raw_evidence"),
+        (
+            "research/vanilla-ai/1.15.0/native/game/common/decrees/00_decree.txt",
+            "raw_evidence",
+        ),
+        (
+            "research/vanilla-ai/1.15.0/native/baseline-manifest.json",
+            "configuration_or_data",
+        ),
+        ("research/vanilla-ai/1.15.0/native/new.md", "documentation"),
         ("mod/gfx/a.png", "binary_asset"),
         ("tests/a.py", "test"),
         ("src/pdx/a.py", "source"),
@@ -137,7 +148,7 @@ def test_inventory_includes_ignored_and_python_errors(tmp_path):
         "import json\ndef foo():\n    return 1\n", encoding="utf-8", newline="\n"
     )
     result = repo_audit.inventory(tmp_path)
-    files = result["files"]
+    files = cast("list[dict[str, Any]]", result["files"])
     assert isinstance(files, list)
     records = {r["path"]: r for r in files}
     assert records["ignored/raw.txt"]["git"] == "ignored"
@@ -146,6 +157,89 @@ def test_inventory_includes_ignored_and_python_errors(tmp_path):
     assert records["good.py"]["python"]["functions"] == 1
     assert result["read_errors"] == []
     assert all(not p.startswith(".git/") for p in records)
+
+
+@pytest.fixture
+def native_evidence_repo(tmp_path):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    declaration = repo_audit.REPO / "mod/decisions/architecture_115.toml"
+    source = declaration.read_text(encoding="utf-8")
+    data = tomllib.loads(source)
+    rows = [*data["identity"], *data["input"]]
+    native = tmp_path / repo_audit.NATIVE_EVIDENCE_ROOT
+    files = []
+    for row in rows:
+        raw = codecs.BOM_UTF8 + row["path"].encode() + b"\r\n"
+        path = native / row["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+        digest = hashlib.sha256(raw).hexdigest()
+        source = source.replace(row["sha256"], digest)
+        files.append({"path": row["path"], "sha256": digest})
+    target = tmp_path / "mod/decisions/architecture_115.toml"
+    target.parent.mkdir(parents=True)
+    target.write_text(source, encoding="utf-8", newline="\n")
+    manifest = {
+        "schema": 1,
+        "profile": data["profile"],
+        "game_version": data["game_version"],
+        "files": files,
+    }
+    (native / "baseline-manifest.json").write_text(
+        json.dumps(manifest) + "\n", encoding="utf-8", newline="\n"
+    )
+    return tmp_path, native, target
+
+
+def test_native_raw_bytes_are_hash_bound_and_not_normalized(native_evidence_repo):
+    root, native, _ = native_evidence_repo
+    raw = {path: path.read_bytes() for path in native.rglob("*") if path.is_file()}
+    assert len(repo_audit.native_evidence_contract(root)) == 10
+    assert repo_audit.source_issues(root) == []
+    assert all(path.read_bytes() == before for path, before in raw.items())
+    inventory = repo_audit.inventory(root)
+    files = cast("list[dict[str, Any]]", inventory["files"])
+    rows = {row["path"]: row for row in files}
+    rel = repo_audit.NATIVE_EVIDENCE_ROOT + "caligula_branch.txt"
+    assert rows[rel]["category"] == "raw_evidence"
+    assert rows[rel]["sha256"] == hashlib.sha256(raw[native / "caligula_branch.txt"]).hexdigest()
+    assert rows[rel]["encoding_issues"] == ["bom", "cr"]
+
+
+@pytest.mark.parametrize("change", ["hash", "missing", "extra", "manifest", "declaration"])
+def test_native_evidence_contract_rejects_drift(native_evidence_repo, change):
+    root, native, declaration = native_evidence_repo
+    if change == "hash":
+        (native / "caligula_branch.txt").write_bytes(b"changed\n")
+    elif change == "missing":
+        (native / "caligula_branch.txt").unlink()
+    elif change == "extra":
+        (native / "new.txt").write_bytes(b"valid UTF-8 and LF\n")
+    elif change == "manifest":
+        path = native / "baseline-manifest.json"
+        contents = json.loads(path.read_text(encoding="utf-8"))
+        contents["files"][0]["sha256"] = "0" * 64
+        path.write_text(json.dumps(contents), encoding="utf-8", newline="\n")
+    else:
+        declaration.write_text(
+            declaration.read_text(encoding="utf-8").replace(
+                'path = "caligula_branch.txt"', 'path = "new.txt"'
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+    with pytest.raises(ValueError):
+        repo_audit.native_evidence_contract(root)
+    assert repo_audit.source_issues(root)
+
+
+@pytest.mark.parametrize("name", ["baseline-manifest.json", "notes.md"])
+def test_native_manifest_and_authored_text_keep_encoding_gate(native_evidence_repo, name):
+    root, native, _ = native_evidence_repo
+    target = native / name if name.endswith(".json") else root / name
+    original = target.read_bytes() if target.exists() else b"notes\n"
+    target.write_bytes(original.replace(b"\n", b"\r\n"))
+    assert any(f"{name}: cr" in issue for issue in repo_audit.source_issues(root))
 
 
 @pytest.mark.parametrize(
@@ -215,6 +309,9 @@ def test_performance_measurement_and_regression_contract():
     }
     assert len(performance.regressions(baseline, changed)) == 3
     assert performance.regressions(baseline, {"environment": {"different": True}})
+    assert performance.regressions(
+        baseline, {**baseline, "input_identity": {"profile": "1.15.1"}}
+    ) == ["输入身份不同，不可直接比较性能"]
     with pytest.raises(ValueError):
         performance.measure(lambda: None, rounds=0)
     with pytest.raises(ValueError):

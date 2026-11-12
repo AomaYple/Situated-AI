@@ -7,6 +7,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  # Frozen 1.15.1 inputs select the same contract on every offline runner.
+  V3_CONTRACT_PROFILE: "1.15.1"
+
 permissions:
   contents: read
 

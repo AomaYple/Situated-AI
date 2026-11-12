@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import country_interfaces, country_state
+from pdx import country_interfaces, country_state, version_contracts
 from pdx.situated.native_treatments import native_treatments
 from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface
 
@@ -27,7 +27,7 @@ def test_native_parameter_evidence_extends_hashes_without_discovering_consumers(
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
     expected = {name: hashlib.sha256(raw).hexdigest()}
-    monkeypatch.setattr(vanilla_inventory, "_PARAMETER_EVIDENCE_HASHES", expected)
+    monkeypatch.setattr(vanilla_inventory, "_parameter_evidence_contract", lambda: expected)
     assert vanilla_inventory.parameter_evidence_hashes(tmp_path) == expected
 
 
@@ -40,7 +40,9 @@ def test_native_parameter_evidence_never_licenses_missing_or_drifted_bytes(
     name = "common/goods/fixture.txt"
     raw = b"tools={}"
     monkeypatch.setattr(
-        vanilla_inventory, "_PARAMETER_EVIDENCE_HASHES", {name: hashlib.sha256(raw).hexdigest()}
+        vanilla_inventory,
+        "_parameter_evidence_contract",
+        lambda: {name: hashlib.sha256(raw).hexdigest()},
     )
     if fault == "missing":
         assert vanilla_inventory.parameter_evidence_hashes(tmp_path) == {}
@@ -95,9 +97,20 @@ def parameter_case(tmp_path, monkeypatch):
         "interfaces": interfaces,
         "arguments": arguments,
     }
+    if version_contracts.is_115():
+        evidence["baseline_version"] = version_contracts.active_version()
     evidence_path = tmp_path / "country-interfaces.json"
     evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
-    monkeypatch.setattr(country_interfaces, "EVIDENCE", evidence_path)
+    monkeypatch.setattr(country_interfaces, "evidence_file", lambda: evidence_path)
+    monkeypatch.setattr(
+        country_interfaces,
+        (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        ),
+        hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+    )
     generated = {name: text.encode() for name, text in country_state.files(policy).items()}
     generated[source] = (
         b"candidate={weight={value=10 if={limit={ROOT={sitai_context_need_industry=yes}} add=2}}}"
@@ -187,6 +200,78 @@ def test_exact_stateless_parameter_helpers_bind_native_arguments(parameter_case,
     assert proof["parameter_contract"]["native_sources"]
 
 
+@pytest.fixture(params=["1.15.0", "1.15.1"])
+def current_parameter_case(monkeypatch, request):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", request.param)
+    return request.getfixturevalue("parameter_case")
+
+
+def test_current_country_parameters_select_current_authority(
+    current_parameter_case, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(country_interfaces, "EVIDENCE", tmp_path / "unavailable-historical.json")
+    row = _report(current_parameter_case)
+    assert row["status"] == "implemented_numeric"
+    assert row["interface"]["control_authorized"]
+    proof = next(
+        proof
+        for proof in row["dependencies"]
+        if proof["definition"] == "sitai_context_need_industry"
+    )
+    assert proof["status"] == "proven_generated"
+    assert proof["parameter_contract"]["native_sources"]
+
+
+@pytest.mark.parametrize("fault", ["digest", "version", "missing_version", "other_release_pin"])
+def test_current_country_parameters_reject_authority_drift(
+    current_parameter_case, monkeypatch, fault
+):
+    _inventory, _sources, _generated, path = current_parameter_case
+    if fault == "other_release_pin":
+        selected_pin = (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        )
+        other_pin = (
+            "EVIDENCE_115_SHA256"
+            if selected_pin == "EVIDENCE_1151_SHA256"
+            else "EVIDENCE_1151_SHA256"
+        )
+        monkeypatch.setattr(country_interfaces, selected_pin, "0" * 64)
+        monkeypatch.setattr(
+            country_interfaces, other_pin, hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+    elif fault == "digest":
+        path.write_bytes(path.read_bytes() + b"\n")
+    else:
+        evidence = json.loads(path.read_bytes())
+        if fault == "version":
+            evidence["baseline_version"] = "1.14.5"
+        else:
+            evidence.pop("baseline_version")
+        path.write_text(json.dumps(evidence), encoding="utf-8")
+        monkeypatch.setattr(
+            country_interfaces,
+            (
+                "EVIDENCE_1151_SHA256"
+                if version_contracts.active_version() == "1.15.1"
+                else "EVIDENCE_115_SHA256"
+            ),
+            hashlib.sha256(path.read_bytes()).hexdigest(),
+        )
+    row = _report(current_parameter_case)
+    assert not row["interface"]["control_authorized"]
+    assert row["active_unknown_usage"]
+    proof = next(
+        proof
+        for proof in row["dependencies"]
+        if proof["definition"] == "sitai_context_need_industry"
+    )
+    assert proof["status"] == "unproven"
+    assert "authoritative_country_program_unproven" in proof["issues"]
+
+
 @pytest.mark.parametrize("helper", ["sitai_route_industry", "sitai_context_invented"])
 def test_unregistered_country_helpers_cannot_gain_parameter_authority(parameter_case, helper):
     inventory, _sources, generated, _path = parameter_case
@@ -261,7 +346,9 @@ def test_parameter_helper_proof_rejects_broken_identity_scope_or_lifecycle(param
 @pytest.mark.parametrize(
     "fault", ["wrong_days", "wrong_guard", "duplicate_write", "wrong_native_sha"]
 )
-def test_memory_parameter_requires_original_exact_1825_day_writes(parameter_case, fault):
+def test_memory_parameter_requires_original_exact_1825_day_writes(
+    parameter_case, monkeypatch, fault
+):
     inventory, sources, generated, evidence_path = parameter_case
     memory = "common/on_actions/00_code_on_actions.txt"
     if fault == "wrong_days":
@@ -291,11 +378,22 @@ def test_memory_parameter_requires_original_exact_1825_day_writes(parameter_case
         evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
         evidence["sources"][memory] = hashlib.sha256(sources[memory]).hexdigest()
         evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+    monkeypatch.setattr(
+        country_interfaces,
+        (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        ),
+        hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+    )
     row = _report(parameter_case)
     assert not row["interface"]["control_authorized"]
 
 
-def test_country_helper_at_building_owner_uses_the_exact_state_to_country_path(parameter_case):
+def test_country_helper_at_building_owner_uses_the_exact_state_to_country_path(
+    parameter_case, monkeypatch
+):
     inventory, sources, generated, path = parameter_case
     old = inventory.surfaces[0].source
     source = "common/buildings/fixture.txt"
@@ -312,6 +410,15 @@ def test_country_helper_at_building_owner_uses_the_exact_state_to_country_path(p
     evidence["sources"].pop(old)
     evidence["sources"][source] = hashlib.sha256(sources[source]).hexdigest()
     path.write_text(json.dumps(evidence), encoding="utf-8")
+    monkeypatch.setattr(
+        country_interfaces,
+        (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        ),
+        hashlib.sha256(path.read_bytes()).hexdigest(),
+    )
     surface = replace(inventory.surfaces[0], source=source, field="ai_value", actor_scope="state")
     inventory = replace(
         inventory,
@@ -336,11 +443,11 @@ def test_new_memory_writer_cannot_override_the_proven_native_ttl(parameter_case)
 @pytest.fixture
 def support_case():
     from pdx import config, decision_security, decisions
-    from pdx.situated import support_program
+    from pdx.model import Block
+    from pdx.parser import parse_bytes
+    from pdx.situated import compiler, support_program
     from pdx.situated.decision_ir import (
         ConsumerIRBundle,
-        ContextBinding,
-        EvaluationContext,
         WriterDecisionIR,
     )
     from pdx.situated.support_program import SupportProgram
@@ -355,10 +462,18 @@ def support_case():
             "common/scripted_triggers/00_spanish_new_world_triggers.txt",
         )
     }
-    baseline = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
     program = SupportProgram.from_extensions(
         replace(decisions.Extensions(), market_enabled=True, security_enabled=True)
     )
+    parsed = parse_bytes(sources[source], path=source)
+    definitions = parsed.root.all("ai_strategy_default")
+    assert not parsed.errors
+    assert len(definitions) == 1
+    assert isinstance(definitions[0].value, Block)
+    fields = definitions[0].value.all("diplomatic_play_support")
+    assert len(fields) == 1
+    assert isinstance(fields[0].value, Block)
+    source_line = fields[0].line
     writer = WriterDecisionIR(
         writer_id=program.writer_id,
         kind="support_program",
@@ -372,14 +487,7 @@ def support_case():
         vanilla_tail="preserve",
         owner="situated_kernel",
         program=program,
-        evaluation_context=EvaluationContext(
-            actor_scope=ContextBinding("root", "country", "actor", baseline, 183),
-            targets=(
-                ContextBinding("target_country", "country", "target", baseline, 184),
-                ContextBinding("enemy_country", "country", "target", baseline, 185),
-            ),
-            evidence=tuple(f"{baseline}:{line}" for line in (183, 184, 185)),
-        ),
+        evaluation_context=compiler.support_evaluation_context(),
     )
     surface = VanillaSurface(
         surface_id="support",
@@ -393,9 +501,9 @@ def support_case():
         status="pending",
         getter=None,
         getter_note="exact native consumer",
-        scope_evidence=(f"{source}:189",),
+        scope_evidence=(f"{source}:{source_line}",),
         responsibility_step="S3",
-        source_line=189,
+        source_line=source_line,
     )
     inventory = VanillaInventory(
         "support-fixture",
@@ -420,7 +528,7 @@ def support_case():
     }
     generated = {
         source: decisions.patch_default(
-            decisions.BASELINE.read_text(encoding="utf-8"),
+            decisions.baseline_path().read_text(encoding="utf-8"),
             replace(decisions.load(), enabled=False),
             replace(decisions.Extensions(), market_enabled=True, security_enabled=True),
         ).encode(),
@@ -497,7 +605,13 @@ def reader_case(request, tmp_path, monkeypatch):
 
 
 def _reader_case(kind, tmp_path, monkeypatch):
-    from pdx import decision_adapters, decision_rules, observation_queries, production_inputs
+    from pdx import (
+        decision_adapters,
+        decision_rules,
+        observation_queries,
+        production_inputs,
+        version_contracts,
+    )
     from pdx.textio import normalized_text
 
     production = kind in {"production", "resource"}
@@ -534,11 +648,16 @@ def _reader_case(kind, tmp_path, monkeypatch):
         )
     else:
         native_query = "common/journal_entries/06_portugal_politics.txt"
-        sources[native_query] = (
-            b"je_portugal_regeneration_public_works={complete={NOT={any_scope_state={market_access<1}}}}"
+        completion = "NOT={any_scope_state={market_access<1}}"
+        body = (
+            "outcome={header=je_standard_completion_header "
+            "effect_header=je_standard_on_completion_header trigger={" + completion + "}}"
+            if version_contracts.is_115()
+            else "complete={" + completion + "}"
         )
+        sources[native_query] = ("je_portugal_regeneration_public_works={" + body + "}").encode()
         monkeypatch.setitem(
-            observation_queries.SOURCE_HASHES,
+            observation_queries.source_hashes(),
             native_query,
             hashlib.sha256(sources[native_query]).hexdigest(),
         )

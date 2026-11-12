@@ -32,6 +32,11 @@ class GenerationTransaction:
     def __enter__(self) -> GenerationTransaction:
         return self
 
+    @property
+    def temporary_paths(self) -> frozenset[Path]:
+        """Exact currently owned staging/backup paths, never a filename pattern."""
+        return frozenset(self._temporary)
+
     def _stage(self, target: Path, content: bytes) -> Path:
         missing = []
         parent = target.parent
@@ -100,6 +105,7 @@ class GenerationTransaction:
         for temporary in self._temporary - protected:
             try:
                 temporary.unlink(missing_ok=True)
+                self._temporary.discard(temporary)
             except OSError as error:
                 cleanup_failures.append(f"{temporary}: {error}")
         for directory in reversed(self._directories):

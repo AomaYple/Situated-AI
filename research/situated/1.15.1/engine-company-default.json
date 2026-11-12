@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.1-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "fb4ec0698afd3d3b1a785926d57bd5d68c95a4afd04b56f6bd45abd7a5672b15",
+    "bytes": 100221048,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.1",
+    "caligula_rev": "7a630cdf29ed619463dc16695c1ac9dc655a6495",
+    "clausewitz_branch": "caligula/release/1.15.1",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current 1.15.1 PE exact RTTI descriptors, self-RVA-checked COLs and vtable slots independently anchor parsers and scope/link types; current own-name atom/literal registrations anchor field tokens and define bridges. Current token dispatch and actual direct-call xrefs anchor members, wrappers and default/active callers. Historical byte windows assisted structural candidate nomination only; reviewed current graph determines coordinates and fresh PE bytes determine observations. No global address translation and no runtime execution.",
+  "contracts": [
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "missing_base_candidate_score",
+      "capability": "exact_default_initializer",
+      "consumer": "0x14174a9d0",
+      "numeric_member": "0x390",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x14174a9fd",
+      "nonempty_expression_branch": "0x14174aa15",
+      "default_load": "0x14174aa06",
+      "default_global": "0x145c11a10",
+      "result_store": "0x14174aa0d",
+      "result_return": "0x14174ab51",
+      "define_namespace": "NAI",
+      "define_key": "COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_field": "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_source": "common/defines/00_ai.txt",
+      "define_line": 1145,
+      "default_value": 1,
+      "define_setter": "0x141191a40",
+      "define_global_write": "0x141191a76",
+      "define_binding": "0x141191a90",
+      "define_registration": "0x141191ab0",
+      "actual_call": "0x141643f66",
+      "nonpositive_rejection": "0x141653bb3",
+      "source_requirement": "exactly_missing_ai_weight_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_nonpositive_requirement": "preserve_native_score_and_rejection"
+    }
+  ],
+  "script_hashes": {
+    "common/company_types/99_basic_companies.txt": "d29d1d16891c3ca58ee82b80da08ad9605e50eb0cf253b897af658459245671f",
+    "common/defines/00_ai.txt": "9e18deb395bdd5d4cab50961ec3090beb44f2df91c1230ac8c1815c4b7f9e4c4"
+  },
+  "parent_scope_manifest": {
+    "path": "research/situated/1.15.1/engine-company.json",
+    "sha256": "c8dc4846d92318dddf2398b0b512908b8b69782cf198c49d374a4e7e81bdf82e"
+  },
+  "implicit_companies": [
+    {
+      "id": "company_basic_agriculture_1",
+      "line": 1
+    },
+    {
+      "id": "company_basic_agriculture_2",
+      "line": 68
+    },
+    {
+      "id": "company_basic_fabrics",
+      "line": 139
+    },
+    {
+      "id": "company_basic_colonial_plantations_1",
+      "line": 207
+    },
+    {
+      "id": "company_basic_colonial_plantations_2",
+      "line": 273
+    },
+    {
+      "id": "company_basic_silk_and_dye",
+      "line": 343
+    },
+    {
+      "id": "company_basic_wine_and_fruit",
+      "line": 400
+    },
+    {
+      "id": "company_basic_fishing",
+      "line": 456
+    },
+    {
+      "id": "company_basic_forestry",
+      "line": 524
+    },
+    {
+      "id": "company_basic_oil",
+      "line": 583
+    },
+    {
+      "id": "company_basic_gold_mining",
+      "line": 631
+    },
+    {
+      "id": "company_basic_metal_mining",
+      "line": 680
+    },
+    {
+      "id": "company_basic_mineral_mining",
+      "line": 740
+    },
+    {
+      "id": "company_basic_food",
+      "line": 796
+    },
+    {
+      "id": "company_basic_paper",
+      "line": 860
+    },
+    {
+      "id": "company_basic_home_goods",
+      "line": 921
+    },
+    {
+      "id": "company_basic_textiles",
+      "line": 990
+    },
+    {
+      "id": "company_basic_steel",
+      "line": 1052
+    },
+    {
+      "id": "company_basic_metalworks",
+      "line": 1114
+    },
+    {
+      "id": "company_basic_shipyards",
+      "line": 1181
+    },
+    {
+      "id": "company_basic_chemicals",
+      "line": 1231
+    },
+    {
+      "id": "company_basic_motors",
+      "line": 1300
+    },
+    {
+      "id": "company_basic_munitions",
+      "line": 1358
+    },
+    {
+      "id": "company_basic_electrics",
+      "line": 1427
+    },
+    {
+      "id": "company_basic_weapons",
+      "line": 1477
+    },
+    {
+      "id": "company_construction_power_bloc",
+      "line": 1547
+    }
+  ],
+  "limits": [
+    "The executable empty-expression fallback is authorized for exactly absent ai_weight only; explicit empty definitions must remain rejected.",
+    "Define native value must match pinned 1; nonpositive explicit scores keep native rejection.",
+    "Static binary/native-source evidence is not runtime observation."
+  ],
+  "observations": [
+    {
+      "label": "company empty expression branch and default load",
+      "va": "0x14174a9f6",
+      "rva": "0x174a9f6",
+      "file_offset": "0x1749df6",
+      "bytes": "488d999003000083bba800000000750f488b0503704c04488902e93c010000"
+    },
+    {
+      "label": "company numeric evaluator",
+      "va": "0x14174a9d0",
+      "rva": "0x174a9d0",
+      "file_offset": "0x1749dd0",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bf0488bfa488d999003000083bba800000000750f488b0503704c04488902e93c0100004533ff44897c24304c897c243844897c2440488d4c2448e80f09f6fe488d4d30e8c6d7f2fe4c8d35cfa432034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b461848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcbe8465511ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe88511e90144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe8e5e9c802488b5d584885db742a48833b00741c488bcbe8ae5a05ff488b4b10488b01488b13ff50104c893b44897b08488bcbe8b2e9c802488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e86f5a05ff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "define typed setter and exact global write",
+      "va": "0x141191a40",
+      "rva": "0x1191a40",
+      "file_offset": "0x1190e40",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee8b74267ff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c243048890593ffa7044883c4205fc3"
+    },
+    {
+      "label": "define namespace/key/global bridge",
+      "va": "0x141191a90",
+      "rva": "0x1191a90",
+      "file_offset": "0x1190e90",
+      "bytes": "488bca4c8d0d76ffa704488d151bdd56034c8d0530785703e9b3943000"
+    },
+    {
+      "label": "define namespace/key/global registration",
+      "va": "0x141191ab0",
+      "rva": "0x1191ab0",
+      "file_offset": "0x1190eb0",
+      "bytes": "4c8d0d59ffa7044c8d051a785703488d15f7dc5603e9864d2f00"
+    },
+    {
+      "label": "NAI namespace NUL literal",
+      "va": "0x1446ff7bc",
+      "rva": "0x46ff7bc",
+      "file_offset": "0x46fe5bc",
+      "bytes": "4e414900"
+    },
+    {
+      "label": "company default key NUL literal",
+      "va": "0x1447092d8",
+      "rva": "0x47092d8",
+      "file_offset": "0x47080d8",
+      "bytes": "434f4d50414e595f545950455f44454641554c545f424153455f57454947485400"
+    }
+  ]
+}

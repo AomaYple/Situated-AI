@@ -319,7 +319,7 @@ def generated():
         country_policy=country,
         consumer_ir=model.consumer_ir,
     )
-    baseline = compiler.BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     info_text = decision_rules.patch(
         baseline,
         by_source[INFO],

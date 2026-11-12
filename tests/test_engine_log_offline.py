@@ -147,7 +147,8 @@ class TestTokenClassification:
             for n, t in claims
         ]
         overrides = {"gui/panel.gui": mod / "gui" / "panel.gui"} if with_override else {}
-        return engine_log.cross_check(cs, root=root, overrides=overrides)
+        (tmp_path / "caligula_branch.txt").write_text("release/fixture", encoding="utf-8")
+        return engine_log.cross_check(cs, root=root, overrides=overrides, log_version="fixture")
 
     def test_命中就是命中(self, tmp_path: Path) -> None:
         rep = self._report(
@@ -377,3 +378,85 @@ class TestTokenClassification:
         assert [v.as_tuple for v in rep.token_verdicts()] == rep.tokens
         # 三态与三个分档属性同源：不一致数 = 真错配 + 不可核对
         assert len(rep.token_mismatches) == len(rep.misplaced_tokens) + len(rep.absent_tokens)
+
+
+def test_rotated_log_without_own_version_cannot_borrow_another_files_identity(tmp_path):
+    root = tmp_path / "game"
+    (root / "gui").mkdir(parents=True)
+    (root / "gui/panel.gui").write_text('a = "KEY_CURRENT"\nb = "KEY_OLD"\n', encoding="utf-8")
+    (tmp_path / "caligula_branch.txt").write_text("release/1.15.0", encoding="utf-8")
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "debug.log").write_text(
+        "Feeding game version into checksum: 1.15.0\n"
+        "Unlocalized text 'KEY_CURRENT' at gui/panel.gui:1\n",
+        encoding="utf-8",
+    )
+    (logs / "error.3.log").write_text(
+        "Unlocalized text 'KEY_OLD' at gui/panel.gui:2\nScript location: gui/panel.gui:2\n",
+        encoding="utf-8",
+    )
+    claims, version = engine_log.parse_logs(logs)
+    assert version == "1.15.0"
+    report = engine_log.cross_check(claims, root=root, overrides={}, log_version=version)
+    by_token = {v.token: v for v in report.token_verdicts()}
+    assert by_token["KEY_CURRENT"].state == engine_log.TOKEN_MATCH
+    assert by_token["KEY_OLD"].state == engine_log.TOKEN_UNVERIFIABLE
+    assert by_token["KEY_OLD"].kind == engine_log.KIND_VERSION_INCOMPARABLE
+    assert report.locations[0][2].startswith("版本不可比：")
+
+
+def test_missing_or_wrong_log_version_cannot_bless_even_an_exact_token_hit(tmp_path):
+    root = tmp_path / "game"
+    root.mkdir()
+    (root / "x.txt").write_text("value = 1", encoding="utf-8")
+    (tmp_path / "caligula_branch.txt").write_text("release/1.15.0", encoding="utf-8")
+    claim = engine_log.EngineClaim("token_at", "", file_rel="x.txt", line=1, token="value")
+    for version in ("", "1.14.5"):
+        report = engine_log.cross_check([claim], root=root, overrides={}, log_version=version)
+        assert report.tokens[0][3] == 1
+        assert not report.matched_tokens
+        assert report.token_verdicts()[0].kind == engine_log.KIND_VERSION_INCOMPARABLE
+
+
+def test_same_record_in_different_version_logs_is_preserved_in_both_orders(tmp_path):
+    root = tmp_path / "game"
+    (root / "gui").mkdir(parents=True)
+    (root / "gui/panel.gui").write_text('a = "SAME"\n', encoding="utf-8")
+    (tmp_path / "caligula_branch.txt").write_text("release/1.15.0", encoding="utf-8")
+    record = (
+        "Starting pre-enumerating 'gui'(.gui, , 0)\n"
+        "Script location: gui/panel.gui:1\n"
+        "Unlocalized text 'SAME' at gui/panel.gui:1\n"
+    )
+    current = "Feeding game version into checksum: 1.15.0\n" + record
+    for other_version in ("1.14.5", ""):
+        other = (
+            f"Feeding game version into checksum: {other_version}\n" if other_version else ""
+        ) + record
+        for reverse in (False, True):
+            logs = tmp_path / f"logs-{other_version}-{reverse}"
+            logs.mkdir()
+            (logs / "a.log").write_text(other if reverse else current, encoding="utf-8")
+            (logs / "b.log").write_text(current if reverse else other, encoding="utf-8")
+            claims, version = engine_log.parse_logs(logs)
+            assert len(claims) == 6
+            assert {c.log_version for c in claims} == {"1.15.0", other_version}
+            report = engine_log.cross_check(claims, root=root, overrides={}, log_version=version)
+            assert not report.version_comparable
+            assert len(report.tokens) == 2
+            assert not report.matched_tokens
+            assert all(
+                v.kind == engine_log.KIND_VERSION_INCOMPARABLE for v in report.token_verdicts()
+            )
+
+    # Deduplication of identical records from the same version remains intact.
+    logs = tmp_path / "logs-same-version"
+    logs.mkdir()
+    for name in ("a.log", "b.log"):
+        (logs / name).write_text(current, encoding="utf-8")
+    claims, version = engine_log.parse_logs(logs)
+    assert len(claims) == 3
+    report = engine_log.cross_check(claims, root=root, overrides={}, log_version=version)
+    assert report.version_comparable
+    assert len(report.matched_tokens) == 1

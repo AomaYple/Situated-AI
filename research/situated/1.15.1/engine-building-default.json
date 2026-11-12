@@ -1,0 +1,480 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.1-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "fb4ec0698afd3d3b1a785926d57bd5d68c95a4afd04b56f6bd45abd7a5672b15",
+    "bytes": 100221048,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.1",
+    "caligula_rev": "7a630cdf29ed619463dc16695c1ac9dc655a6495",
+    "clausewitz_branch": "caligula/release/1.15.1",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current 1.15.1 PE exact RTTI descriptors, self-RVA-checked COLs and vtable slots independently anchor parsers and scope/link types; current own-name atom/literal registrations anchor field tokens and define bridges. Current token dispatch and actual direct-call xrefs anchor members, wrappers and default/active callers. Historical byte windows assisted structural candidate nomination only; reviewed current graph determines coordinates and fresh PE bytes determine observations. No global address translation and no runtime execution.",
+  "contracts": [
+    {
+      "field": "ai_value",
+      "actor": "state",
+      "actor_owner": "country",
+      "target": "definition_only:building_type",
+      "operation": "missing_base_candidate_score",
+      "capability": "exact_default_initializer",
+      "consumer": "0x14184e320",
+      "parser": "0x14184aca0",
+      "parser_subobject": "0x870",
+      "numeric_member": "0x560",
+      "parser_atom": "0x53c8",
+      "parser_field_branch": "0x14184b49a",
+      "selected_definition_member": "0x158",
+      "selection": "valid_template_else_self",
+      "selection_branch": "0x14184e357",
+      "selected_numeric_address": "0x14184e365",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x14184e373",
+      "nonempty_evaluator": "0x14085ffd0",
+      "evaluation_call": "0x14184e408",
+      "scope_tag": "0x4c",
+      "scope_identity_member": "state+0x8",
+      "scope_tag_rtti": ".?AV?$CJominiScriptScopeObject@VCState@@@@",
+      "actual_call": "0x14165d1bc",
+      "actual_state_owner_check": "0x14165cf90",
+      "result_store": "0x14184e38f",
+      "result_return": "0x14184e4d4",
+      "default_value": 1000,
+      "define_source": "common/defines/00_ai.txt",
+      "default_branches": [
+        {
+          "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+          "line": 812,
+          "value": 1000,
+          "global": "0x145c10bd0",
+          "setter": "0x141143a60",
+          "write": "0x141143a96",
+          "binding": "0x141143ab0",
+          "registration": "0x141143ad0",
+          "load": "0x14184e380"
+        },
+        {
+          "define": "NAI.GOVERNMENT_BUILDING_BASE_VALUE",
+          "line": 755,
+          "value": 1000,
+          "global": "0x145c11340",
+          "setter": "0x141132b60",
+          "write": "0x141132b96",
+          "binding": "0x141132bb0",
+          "registration": "0x141132bd0",
+          "load": "0x14184e387"
+        }
+      ],
+      "source_requirement": "exactly_missing_ai_value_in_eleven_frozen_native_definitions_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_numeric_requirement": "preserve_complete_native_expression",
+      "selection_invariant": "Selection uses only template validity before examining selected ai_value; the ai_value parser touches only self+0x560, so adding a numeric expression cannot change template selection.",
+      "template_invariant": "The observed dynamic HQ and regional HQ generators create a separate named database definition, store its template at +0x158, and copy ordinary metadata. Scoring evaluates exactly one selected definition, never recursively scores the template or adds both numeric fields. If selected template is one of the eleven, its initialized score is evaluated once; otherwise that path retains its original expression or default. The dynamic definition itself is not an initializer target.",
+      "default_equivalence": "Both native empty-expression branches load exactly 1000, independently of building-group flags. An initialized selected field therefore replaces its native 1000 with value=1000 before any allowed overlay. This grants no claim that an unselected field can influence an actual score."
+    }
+  ],
+  "script_hashes": {
+    "common/buildings/01_industry.txt": "a8513a22f17b76d119adc1c56de6fe4d4aa0c09ecaaa0c76b6ccf9841f9c7a3b",
+    "common/buildings/02_agro.txt": "beb46c80cdbf75d91eec7f9078508657894ab1db6be6f07aff324dd20a231c23",
+    "common/buildings/04_plantations.txt": "fa57b7a2ffc59b4074a7ec425f8626f407062c7c05079b396d7caef9d2034046",
+    "common/buildings/09_misc_resource.txt": "35cd32a26048973da45b79c00c30fb473dcbf4e57591a436dc769ec6d8f2f6b7",
+    "common/defines/00_ai.txt": "9e18deb395bdd5d4cab50961ec3090beb44f2df91c1230ac8c1815c4b7f9e4c4"
+  },
+  "native_authority": {
+    "path": "research/situated/1.15.1/consumer-adapters.json",
+    "sha256": "31f9c0c6edf633af3706d0aefca39de5aa8c5ffc4c2f0d4de43ce037d2d6ae9e"
+  },
+  "implicit_buildings": [
+    {
+      "source": "common/buildings/01_industry.txt",
+      "field": "building_arms_industry.ai_value",
+      "parent": {
+        "ast_sha256": "09d4a5c3ab81555f96691c1db134ef0e1fa7a237fa05805784f888c2f1af77f0",
+        "line": 665,
+        "path": "building_arms_industry"
+      }
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "field": "building_artillery_foundry.ai_value",
+      "parent": {
+        "ast_sha256": "d13936362e0d26cb39b0fc2520d385c164664fce98bdad7ab23b7359fe153eb2",
+        "line": 689,
+        "path": "building_artillery_foundry"
+      }
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "field": "building_livestock_ranch.ai_value",
+      "parent": {
+        "ast_sha256": "34bd6ff92f3df2a68d8ed08606f257b4523846781014be13485e374c752e939c",
+        "line": 218,
+        "path": "building_livestock_ranch"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_banana_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "2b8cf1a35ef97e4c6767455125616ae5529f34257d70e158aa09ffebc77bdc97",
+        "line": 280,
+        "path": "building_banana_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_coffee_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "e5c4b8850987716fe367065f2a4587ab7898a08100b3288ade7a8396295b87bf",
+        "line": 3,
+        "path": "building_coffee_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_sugar_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "dff9fee1898e55a158b76023c44ae2a3c3d0912ef14f0873aa447dc5431d72a2",
+        "line": 257,
+        "path": "building_sugar_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_fishing_wharf.ai_value",
+      "parent": {
+        "ast_sha256": "78f2972fe44fee015bbfce032b2b5c2de7ebe7c44317e0a488e9b6d01492287c",
+        "line": 44,
+        "path": "building_fishing_wharf"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_logging_camp.ai_value",
+      "parent": {
+        "ast_sha256": "15c4d8424cd2d76065f3d3223dbd8e9e6e6b23845abc90db06c15426e9ac9a66",
+        "line": 1,
+        "path": "building_logging_camp"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_oil_rig.ai_value",
+      "parent": {
+        "ast_sha256": "2075accd204879a7283c4e61e82c4fab853f99812163bb03f0a42ab8e164c9a3",
+        "line": 89,
+        "path": "building_oil_rig"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_rubber_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "eb5644d6df40893d85336e92b6d66aa3d8b8ea07585d559c3211999420a528ae",
+        "line": 20,
+        "path": "building_rubber_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_whaling_station.ai_value",
+      "parent": {
+        "ast_sha256": "3254d4b5f6975efb37294ee6f8912b9b334fe537c8cc4cc2bca45705be8d2094",
+        "line": 64,
+        "path": "building_whaling_station"
+      }
+    }
+  ],
+  "dynamic_templates": [
+    {
+      "kind": "headquarters",
+      "factory": "0x141854af0",
+      "functor_vtable": "0x14479edb8",
+      "functor_thunk": "0x1418763d0",
+      "builder": "0x141854cc0",
+      "template_write": "0x141854d13",
+      "rtti": "0x1454a1fc0",
+      "type_name": ".?AV<lambda_1>@?1??FindOrCreateDynamicHQBuildingType@CBuildingDatabase@@QEAAAEBVCBuildingType@@AEBVCCompanyType@@@Z@"
+    },
+    {
+      "kind": "regional_headquarters",
+      "builder": "0x141855400",
+      "template_write": "0x141855453"
+    }
+  ],
+  "limits": [
+    "Static binary and exact source evidence only; runtime remains unknown.",
+    "No script building target or arbitrary foreign country scope permission.",
+    "No initializer permission for explicit empty, scalar or block ai_value, new definitions, or dynamic HQ definitions.",
+    "The proof preserves selection and adds at most one overlay to the selected field; it does not promise that every initialized field is selected for every candidate."
+  ],
+  "reviewed_chain": "Current CBuildingType parser atom -> self numeric member -> template/self choice independent of score emptiness -> both exact native defaults -> actual state tuple and AI consumer; dynamic HQ template writes identified independently by RTTI.",
+  "observations": [
+    {
+      "label": "building_type_rtti_name",
+      "va": "0x145686d48",
+      "rva": "0x5686d48",
+      "file_offset": "0x5685148",
+      "bytes": "2e3f4156434275696c64696e67547970654040000000000060"
+    },
+    {
+      "label": "building_parser_locator",
+      "va": "0x144cc8908",
+      "rva": "0x4cc8908",
+      "file_offset": "0x4cc7708",
+      "bytes": "010000007008000004000000386d680518eeb6040889cc04"
+    },
+    {
+      "label": "building_parser_vtable",
+      "va": "0x14479dd20",
+      "rva": "0x479dd20",
+      "file_offset": "0x479cb20",
+      "bytes": "0889cc440100000000ed884101000000689c844001000000c081674001000000f050e243010000003094844001000000"
+    },
+    {
+      "label": "building_parser_thunk",
+      "va": "0x140849430",
+      "rva": "0x849430",
+      "file_offset": "0x848830",
+      "bytes": "486341fc482bc8e964180001"
+    },
+    {
+      "label": "building_constructor_identity",
+      "va": "0x14184a2e9",
+      "rva": "0x184a2e9",
+      "file_offset": "0x18496e9",
+      "bytes": "488d05383af5024889443908488b4708486348048d9198f7ffff89543904"
+    },
+    {
+      "label": "building_constructor_invalid_template_sentinel",
+      "va": "0x14184a435",
+      "rva": "0x184a435",
+      "file_offset": "0x1849835",
+      "bytes": "488b053cba4204488987580100004889bf60010000"
+    },
+    {
+      "label": "building_constructor_numeric",
+      "va": "0x14184a5c0",
+      "rva": "0x184a5c0",
+      "file_offset": "0x18499c0",
+      "bytes": "488d1d992dea0248899f98040000488d8fa0040000e8a6f868ff90c787580500000000803f48899f60050000488d8f68050000e888f868ff"
+    },
+    {
+      "label": "ai_value_literal",
+      "va": "0x144969968",
+      "rva": "0x4969968",
+      "file_offset": "0x4968768",
+      "bytes": "61695f76616c756500"
+    },
+    {
+      "label": "ai_value_atom_entry",
+      "va": "0x1449a03c0",
+      "rva": "0x49a03c0",
+      "file_offset": "0x499f1c0",
+      "bytes": "c8530000000000006899964401000000"
+    },
+    {
+      "label": "ai_value_parser_dispatch",
+      "va": "0x14184b235",
+      "rva": "0x184b235",
+      "file_offset": "0x184a635",
+      "bytes": "4181f8c85300000f8f6a0200000f8452020000"
+    },
+    {
+      "label": "ai_value_parser_member",
+      "va": "0x14184b49a",
+      "rva": "0x184b49a",
+      "file_offset": "0x184a89a",
+      "bytes": "4881c1f0fcffff488b01ff5018e9000c0000"
+    },
+    {
+      "label": "template_then_self_selection",
+      "va": "0x14184e340",
+      "rva": "0x184e340",
+      "file_offset": "0x184d740",
+      "bytes": "4d8bf0488bfa488bd9488b8958010000488b01ff1084c07409488b8358010000eb03488bc3488db060050000"
+    },
+    {
+      "label": "empty_score_both_defaults",
+      "va": "0x14184e36c",
+      "rva": "0x184e36c",
+      "file_offset": "0x184d76c",
+      "bytes": "83bea8000000007522488b8368010000f6404010488b0549283c04480f4505b12f3c04488907e93d010000"
+    },
+    {
+      "label": "actual_state_tuple",
+      "va": "0x14184e3d4",
+      "rva": "0x184e3d4",
+      "file_offset": "0x184d7d4",
+      "bytes": "b84c0000006689442430418b460848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcee8c31b01ff"
+    },
+    {
+      "label": "state_scope_rtti",
+      "va": "0x1457faca8",
+      "rva": "0x57faca8",
+      "file_offset": "0x57f90a8",
+      "bytes": "2e3f41563f24434a6f6d696e6953637269707453636f70654f626a65637440564353746174654040404000000000000000"
+    },
+    {
+      "label": "state_scope_vtable",
+      "va": "0x1447d2570",
+      "rva": "0x47d2570",
+      "file_offset": "0x47d1370",
+      "bytes": "88e2cd4401000000708acb400100000000b67c4101000000"
+    },
+    {
+      "label": "state_scope_tag",
+      "va": "0x1417cb600",
+      "rva": "0x17cb600",
+      "file_offset": "0x17caa00",
+      "bytes": "b84c000000c3"
+    },
+    {
+      "label": "production_define_literal",
+      "va": "0x144706088",
+      "rva": "0x4706088",
+      "file_offset": "0x4704e88",
+      "bytes": "50524f44554354494f4e5f4255494c44494e475f424153455f56414c554500"
+    },
+    {
+      "label": "government_define_literal",
+      "va": "0x144705670",
+      "rva": "0x4705670",
+      "file_offset": "0x4704470",
+      "bytes": "474f5645524e4d454e545f4255494c44494e475f424153455f56414c5545"
+    },
+    {
+      "label": "nai_namespace_literal",
+      "va": "0x1446ff7bc",
+      "rva": "0x46ff7bc",
+      "file_offset": "0x46fe5bc",
+      "bytes": "4e414900"
+    },
+    {
+      "label": "production_define_setter",
+      "va": "0x141143a60",
+      "rva": "0x1143a60",
+      "file_offset": "0x1142e60",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee897226cff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c243048890533d1ac044883c4205fc3"
+    },
+    {
+      "label": "production_define_binding",
+      "va": "0x141143ab0",
+      "rva": "0x1143ab0",
+      "file_offset": "0x1142eb0",
+      "bytes": "488bca4c8d0d16d1ac04488d15fbbc5b034c8d05c0255c03e993743500"
+    },
+    {
+      "label": "production_define_registration",
+      "va": "0x141143ad0",
+      "rva": "0x1143ad0",
+      "file_offset": "0x1142ed0",
+      "bytes": "4c8d0df9d0ac044c8d05aa255c03488d15d7bc5b03e9662d3400"
+    },
+    {
+      "label": "government_define_setter",
+      "va": "0x141132b60",
+      "rva": "0x1132b60",
+      "file_offset": "0x1131f60",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee897316dff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c2430488905a3e7ad044883c4205fc3"
+    },
+    {
+      "label": "government_define_binding",
+      "va": "0x141132bb0",
+      "rva": "0x1132bb0",
+      "file_offset": "0x1131fb0",
+      "bytes": "488bca4c8d0d86e7ad04488d15fbcb5c034c8d05a82a5d03e993833600"
+    },
+    {
+      "label": "government_define_registration",
+      "va": "0x141132bd0",
+      "rva": "0x1132bd0",
+      "file_offset": "0x1131fd0",
+      "bytes": "4c8d0d69e7ad044c8d05922a5d03488d15d7cb5c03e9663c3500"
+    },
+    {
+      "label": "actual_candidate_state_owner",
+      "va": "0x14165cf77",
+      "rva": "0x165cf77",
+      "file_offset": "0x165c377",
+      "bytes": "4d8bf14d8bf88bfa488bf1418b80d80e0000894548488d4d48e80b4a0dff"
+    },
+    {
+      "label": "actual_candidate_score_call",
+      "va": "0x14165d1b6",
+      "rva": "0x165d1b6",
+      "file_offset": "0x165c5b6",
+      "bytes": "4d8bc7498bcee85f111f00488b0848894d70"
+    },
+    {
+      "label": "dynamic_hq_factory_name",
+      "va": "0x14478a0d8",
+      "rva": "0x478a0d8",
+      "file_offset": "0x4788ed8",
+      "bytes": "6275696c64696e675f7b7d00"
+    },
+    {
+      "label": "dynamic_hq_factory_create",
+      "va": "0x141854bb0",
+      "rva": "0x1854bb0",
+      "file_offset": "0x1853fb0",
+      "bytes": "488d0501a2f4024889442460488974246848897c2470488d4424404889442478488d44246048894598488d44244048837c24580f480f4744244048894424308b44245089442438c644243c00488d542430488bcfe827800100488bd8488985c8000000488b4d984885c90f849a000000488b01488d95c8000000ff5010"
+    },
+    {
+      "label": "dynamic_hq_functor_vtable",
+      "va": "0x14479edb8",
+      "rva": "0x479edb8",
+      "file_offset": "0x479dbb8",
+      "bytes": "e063874101000000e063874101000000d063874101000000c06387410100000060e47b4001000000"
+    },
+    {
+      "label": "dynamic_hq_functor_thunk",
+      "va": "0x1418763d0",
+      "rva": "0x18763d0",
+      "file_offset": "0x18757d0",
+      "bytes": "488b124883c108e9e4e8fdff"
+    },
+    {
+      "label": "dynamic_hq_rtti",
+      "va": "0x1454a1fc0",
+      "rva": "0x54a1fc0",
+      "file_offset": "0x54a03c0",
+      "bytes": "2e3f41563c6c616d6264615f313e403f313f3f46696e644f7243726561746544796e616d696348514275696c64696e675479706540434275696c64696e67446174616261736540405145414141454256434275696c64696e675479706540404145425643436f6d70616e79547970654040405a400000000000"
+    },
+    {
+      "label": "dynamic_hq_template_write",
+      "va": "0x141854ce1",
+      "rva": "0x1854ce1",
+      "file_offset": "0x18540e1",
+      "bytes": "4c8bea4c8bf133db899d40030000488b01488b4868488b01ff1084c07409498b06488b5068eb0b498b4608488b905010000049899558010000498bcde8de8affff"
+    },
+    {
+      "label": "dynamic_regional_hq_template_write",
+      "va": "0x141855421",
+      "rva": "0x1855421",
+      "file_offset": "0x1854821",
+      "bytes": "4c8bea4c8bf133db899d40030000488b01488b4878488b01ff1084c07409498b06488b5078eb0b498b4608488b906010000049899558010000498bcde89e83ffff"
+    },
+    {
+      "label": "score_returns_selected_result",
+      "va": "0x14184e4d4",
+      "rva": "0x184e4d4",
+      "file_offset": "0x184d8d4",
+      "bytes": "488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "complete_selected_score_function",
+      "va": "0x14184e320",
+      "rva": "0x184e320",
+      "file_offset": "0x184d720",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec700100004d8bf0488bfa488bd9488b8958010000488b01ff1084c07409488b8358010000eb03488bc3488db06005000083bea8000000007522488b8368010000f6404010488b0549283c04480f4505b12f3c04488907e93d0100004533ff44897c24304c897c243844897c2440488d4c2448e88dcfe5fe488d4d30e8449ee2fe488d1d4d6b220348895d48c5f9efc0c5fa7f45504c897d60b84c0000006689442430418b460848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcee8c31b01ff9048895d48488b5d604885db74334c393b7426448b430c33d2488bcbe802d8d80144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe862b0b802488b5d584885db742a48833b00741c488bcbe82b21f5fe488b4b10488b01488b13ff50104c893b44897b08488bcbe82fb0b802488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e8ec20f5fe488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from pdx import company_sectors, config, decision_rules
+from pdx import company_sectors, config, decision_rules, version_contracts
 from pdx.situated import pdx_eval, programs
 
 pytestmark = pytest.mark.unit
@@ -107,6 +107,15 @@ art = { building_modifiers = { workforce_scaled = { goods_input_paper_add = 10 g
     }
 
 
+def _policy_readers(readers):
+    selected = copy.deepcopy(readers)
+    if version_contracts.is_115():
+        from pdx.situated.engine_reader_115 import project_population_readers
+
+        project_population_readers(selected)
+    return selected
+
+
 def _policy(derived, company):
     source = derived["profiles"][company]["source"]
     rows = [row for row in derived["rules"] if row["field"] == f"{company}.ai_weight"]
@@ -116,7 +125,9 @@ def _policy(derived, company):
             "schema": 1,
             "baseline_sha256": derived["sources"][source],
             "domains": {"market": True},
-            "readers": {key: value for key, value in derived["readers"].items() if key in keys},
+            "readers": _policy_readers(
+                {key: value for key, value in derived["readers"].items() if key in keys}
+            ),
             "rules": [
                 {key: value for key, value in row.items() if key != "source"} for row in rows
             ],
@@ -169,6 +180,17 @@ def _assert_joint(derived, company, changes, expected, *, observations=None, is_
         assert result.fallback == "vanilla"
         assert result.action_id is None
         assert result.operation is None
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_company_fixture_binds_selected_population_without_mutating_derivation(
+    inputs, monkeypatch, version
+):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
+    derived = company_sectors.derive(inputs)
+    historical_readers = copy.deepcopy(derived["readers"])
+    _assert_joint(derived, "company_lkab", {"industrial_workforce": 0.15}, 1.04)
+    assert derived["readers"] == historical_readers
 
 
 @pytest.fixture
@@ -544,7 +566,7 @@ def test_all_companies_in_one_source_load_as_one_real_rule_set_with_unique_prior
             "schema": 1,
             "baseline_sha256": derived["sources"][COMPANY],
             "domains": {"market": True},
-            "readers": derived["readers"],
+            "readers": _policy_readers(derived["readers"]),
             "rules": [
                 {key: value for key, value in row.items() if key != "source"}
                 for row in derived["rules"]
@@ -577,6 +599,16 @@ def test_extensions_and_optional_recipe_outputs_never_become_current_primary(inp
     assert "country_goods_luxury_clothes_balance" not in derived["readers"]
 
 
+def test_hyphen_normalization_cannot_merge_two_native_company_identities(inputs):
+    changed = dict(inputs)
+    changed[COMPANY] += (
+        "\ncompany_russo-baltic = { building_types = { mine } ai_weight = { value = 3 } }"
+        "\ncompany_russo_baltic = { building_types = { mine } ai_weight = { value = 3 } }"
+    )
+    with pytest.raises(ValueError, match="规则ID后冲突"):
+        company_sectors.derive(changed)
+
+
 def test_no_company_tag_or_name_branch_and_input_order_does_not_matter(inputs):
     before = company_sectors.derive(inputs)
     assert company_sectors.derive(dict(reversed(list(inputs.items())))) == before
@@ -606,7 +638,9 @@ def test_unproven_synthetic_default_remains_registered_without_invented_score_or
 
 
 @pytest.fixture
-def authorized_default_inputs(inputs):
+def authorized_default_inputs(inputs, monkeypatch):
+    # This fixture deliberately preserves the historical reviewed line 1049.
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.14.5")
     inputs = dict(inputs)
     inputs.pop(COMPANY)
     inputs.pop(DEFINE)
@@ -796,6 +830,10 @@ def test_parameters_are_one_complete_finite_bounded_contract(inputs, key, value)
 
 
 def _freeze(tmp_path, monkeypatch, inputs):
+    # These mutation fixtures exercise the historical schema-2 reference
+    # representation. They are not a fake installed 1.15 game and must not
+    # bypass its live authority gate to manufacture a schema-3 attestation.
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.14.5")
     monkeypatch.setattr(company_sectors, "BASELINE", tmp_path / "baseline.json")
     game = tmp_path / "game"
     for source, text in inputs.items():
@@ -1034,13 +1072,32 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
         )
         for path in (config.GAME / "common" / family).glob("*.txt")
     }
-    derived = company_sectors.derive(inputs)
-    assert derived["counts"] == {
-        "companies": 221,
-        "explicit_weight": 195,
-        "implicit_weight": 26,
-        "primary_buildings": 48,
-    }
+    installed_version = config.game_version()["caligula_branch"].removeprefix("release/")
+    with version_contracts.select_version(installed_version):
+        derived = company_sectors.derive(inputs)
+    # Independent AST inventory of each exact installed release; these values
+    # are handwritten witnesses, never copied from derive() at assertion time.
+    expected_counts = {
+        "1.14.5": {
+            "companies": 221,
+            "explicit_weight": 195,
+            "implicit_weight": 26,
+            "primary_buildings": 48,
+        },
+        "1.15.0": {
+            "companies": 231,
+            "explicit_weight": 205,
+            "implicit_weight": 26,
+            "primary_buildings": 49,
+        },
+        "1.15.1": {
+            "companies": 231,
+            "explicit_weight": 205,
+            "implicit_weight": 26,
+            "primary_buildings": 49,
+        },
+    }[installed_version]
+    assert derived["counts"] == expected_counts
     for company, output, required in (
         ("company_lkab", "iron", "tools"),
         ("company_ursus", "engines", "steel"),
@@ -1053,14 +1110,16 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
     assert derived["profiles"]["company_basic_steel"]["common_inputs"] == ["coal", "iron"]
     assert derived["profiles"]["company_basic_metalworks"]["common_inputs"] == []
     assert any(row["field"] == "company_basic_steel.ai_weight" for row in derived["rules"])
-    initialized = company_sectors.initialized_fields(derived)
+    with version_contracts.select_version(installed_version):
+        initialized = company_sectors.initialized_fields(derived)
     assert len(initialized) == 26
     assert any(row["field"] == "company_basic_gold_mining.ai_weight" for row in initialized)
-    assert len({row["field"] for row in derived["rules"]}) == 221
+    assert len({row["field"] for row in derived["rules"]}) == expected_counts["companies"]
     assert any(row["field"] == "company_de_beers.ai_weight" for row in derived["rules"])
     gaps = company_sectors.unsupported_facets(derived)
     assert gaps == []
-    assert len(company_sectors.query_source_hashes(derived)) == 14
+    with version_contracts.select_version(installed_version):
+        assert len(company_sectors.query_source_hashes(derived)) == 14
 
 
 @pytest.mark.parametrize(

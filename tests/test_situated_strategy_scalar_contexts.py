@@ -8,11 +8,19 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_rules
+from pdx import config, decision_rules, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture
+def historical_strategy_contract():
+    """Only synthetic revision attacks use the reviewed historical schema."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
 
 FIELDS = (
     "aggression",
@@ -46,7 +54,7 @@ def test_r6_is_an_append_only_revision_with_ten_exact_consumers():
 
 
 @pytest.fixture
-def scalar_proof(tmp_path, monkeypatch):
+def scalar_proof(tmp_path, monkeypatch, historical_strategy_contract):
     data = json.loads(engine_scope.strategy_snapshot())
     points = data["observations"][325:388]
     assert len(points) == 63

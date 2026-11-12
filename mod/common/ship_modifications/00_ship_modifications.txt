@@ -10,8 +10,8 @@ ship_mod_frigate_armor_light = {
 		ship_hit_points_max_add = 70
 	}
 
-	construction_goods = { # 200
-		goods_input_hardwood_add = 5
+	construction_goods = { # 1400
+		goods_input_hardwood_add = 35
 	}
 
 	ai_weight = {
@@ -56,8 +56,9 @@ ship_mod_frigate_armor_medium = {
 		ship_hit_points_max_add = 150
 	}
 
-	construction_goods = { # 400
-		goods_input_hardwood_add = 10
+	construction_goods = { # 2800
+		goods_input_hardwood_add = 35
+		goods_input_copper_add = 35
 	}
 
 	ai_weight = {
@@ -77,6 +78,15 @@ ship_mod_frigate_armor_medium = {
 			add = { value = 0
 				# equipment_ship_mod_frigate_armor_medium_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_frigate_armor_medium_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_217c5607c76c00cb_equipment_material_pressure_copper_negative
+			add = { value = 0
+				# equipment_ship_mod_frigate_armor_medium_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_frigate_armor_medium_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_217c5607c76c00cb_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -85,7 +95,7 @@ ship_mod_frigate_armor_medium = {
 				# equipment_ship_mod_frigate_armor_medium_hardwood_scarcity [military]; 候选真实正投入hardwood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_frigate_armor_medium.ai_weight
@@ -102,9 +112,10 @@ ship_mod_frigate_armor_high = {
 		ship_hit_points_max_add = 350
 	}
 
-	construction_goods = { # 600
-		goods_input_hardwood_add = 10
-		goods_input_iron_add = 5
+	construction_goods = { # 4200
+		goods_input_hardwood_add = 35
+		goods_input_iron_add = 35
+		goods_input_copper_add = 35
 	}
 
 	ai_weight = {
@@ -126,6 +137,15 @@ ship_mod_frigate_armor_high = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_frigate_armor_high_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_frigate_armor_high_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_f8d81b46026f7fca_equipment_material_pressure_copper_negative
+			add = { value = 0
+				# equipment_ship_mod_frigate_armor_high_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_frigate_armor_high_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_f8d81b46026f7fca_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -159,9 +179,9 @@ ship_mod_frigate_guns_light = {
 		ship_critical_hit_chance_add = 0.1
 	}
 
-	construction_goods = { # 290
-		goods_input_artillery_add = 3
-		goods_input_iron_add = 2
+	construction_goods = { # 2140
+		goods_input_artillery_add = 22
+		goods_input_iron_add = 15
 	}
 
 	ai_weight = {
@@ -217,9 +237,9 @@ ship_mod_frigate_guns_medium = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 680
-		goods_input_artillery_add = 8
-		goods_input_iron_add = 3
+	construction_goods = { # 5080
+		goods_input_artillery_add = 60
+		goods_input_iron_add = 22
 	}
 
 	ai_weight = {
@@ -275,9 +295,9 @@ ship_mod_frigate_guns_high = {
 		ship_vulnerability_add = 2
 	}
 
-	construction_goods = { # 1040
-		goods_input_artillery_add = 12
-		goods_input_iron_add = 5
+	construction_goods = { # 7700
+		goods_input_artillery_add = 90
+		goods_input_iron_add = 35
 	}
 
 	ai_weight = {
@@ -333,9 +353,9 @@ ship_mod_frigate_propulsion_light = {
 		ship_movement_speed_add = 5.0
 	}
 
-	construction_goods = { # 360
-		goods_input_fabric_add = 8
-		goods_input_hardwood_add = 5
+	construction_goods = { # 2400
+		goods_input_fabric_add = 50
+		goods_input_hardwood_add = 35
 	}
 
 	ai_weight = {
@@ -388,11 +408,11 @@ ship_mod_frigate_propulsion_medium = {
 		ship_movement_speed_add = 7.5
 	}
 
-	construction_goods = { # 730
-		goods_input_fabric_add = 8
-		goods_input_hardwood_add = 5
-		goods_input_engines_add = 2
-		goods_input_coal_add = 2
+	construction_goods = { # 3950
+		goods_input_fabric_add = 35
+		goods_input_hardwood_add = 25
+		goods_input_engines_add = 15
+		goods_input_coal_add = 45
 	}
 
 	unlocking_technologies = { atmospheric_engine }
@@ -465,11 +485,11 @@ ship_mod_frigate_propulsion_high = {
 		ship_movement_speed_add = 10.0
 	}
 
-	construction_goods = { # 1020
-		goods_input_fabric_add = 8
-		goods_input_hardwood_add = 5
-		goods_input_engines_add = 4
-		goods_input_coal_add = 4
+	construction_goods = { # 5300
+		goods_input_fabric_add = 35
+		goods_input_hardwood_add = 25
+		goods_input_engines_add = 30
+		goods_input_coal_add = 60
 	}
 
 	unlocking_technologies = { watertube_boiler }
@@ -544,8 +564,8 @@ ship_mod_frigate_range_light = {
 		ship_supply_capacity_add = 6
 	}
 
-	construction_goods = { # 100
-		goods_input_grain_add = 5
+	construction_goods = { # 700
+		goods_input_grain_add = 35
 	}
 
 	ai_weight = {
@@ -594,8 +614,8 @@ ship_mod_frigate_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 200
-		goods_input_grain_add = 10
+	construction_goods = { # 1500
+		goods_input_grain_add = 75
 	}
 
 	ai_weight = {
@@ -644,8 +664,8 @@ ship_mod_frigate_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 300
-		goods_input_grain_add = 15
+	construction_goods = { # 2200
+		goods_input_grain_add = 110
 	}
 
 	ai_weight = {
@@ -693,8 +713,8 @@ ship_mod_ship_of_the_line_armor_light = {
 		ship_hit_points_max_add = 150
 	}
 
-	construction_goods = { # 320
-		goods_input_hardwood_add = 8
+	construction_goods = { # 2800
+		goods_input_hardwood_add = 70
 	}
 
 	ai_weight = {
@@ -739,8 +759,9 @@ ship_mod_ship_of_the_line_armor_medium = {
 		ship_hit_points_max_add = 400
 	}
 
-	construction_goods = { # 600
-		goods_input_hardwood_add = 15
+	construction_goods = { # 4800
+		goods_input_hardwood_add = 60
+		goods_input_copper_add = 60
 	}
 
 	ai_weight = {
@@ -760,6 +781,15 @@ ship_mod_ship_of_the_line_armor_medium = {
 			add = { value = 0
 				# equipment_ship_mod_ship_of_the_line_armor_medium_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_ship_of_the_line_armor_medium_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_7158dbc116aca422_equipment_material_pressure_copper_negative
+			add = { value = 0
+				# equipment_ship_mod_ship_of_the_line_armor_medium_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_ship_of_the_line_armor_medium_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_7158dbc116aca422_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -768,7 +798,7 @@ ship_mod_ship_of_the_line_armor_medium = {
 				# equipment_ship_mod_ship_of_the_line_armor_medium_hardwood_scarcity [military]; 候选真实正投入hardwood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_ship_of_the_line_armor_medium.ai_weight
@@ -785,9 +815,10 @@ ship_mod_ship_of_the_line_armor_high = {
 		ship_hit_points_max_add = 800
 	}
 
-	construction_goods = { # 800
-		goods_input_hardwood_add = 15
-		goods_input_iron_add = 5
+	construction_goods = { # 6600
+		goods_input_hardwood_add = 60
+		goods_input_iron_add = 45
+		goods_input_copper_add = 60
 	}
 
 	ai_weight = {
@@ -810,6 +841,15 @@ ship_mod_ship_of_the_line_armor_high = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_ship_of_the_line_armor_high_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_ship_of_the_line_armor_high_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_635b7664be9a6bf3_equipment_material_pressure_copper_negative
+			add = { value = 0
+				# equipment_ship_mod_ship_of_the_line_armor_high_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_ship_of_the_line_armor_high_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_635b7664be9a6bf3_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -844,9 +884,9 @@ ship_mod_ship_of_the_line_guns_light = {
 		ship_vulnerability_add = 5
 	}
 
-	construction_goods = { # 470
-		goods_input_artillery_add = 5
-		goods_input_iron_add = 3
+	construction_goods = { # 4150
+		goods_input_artillery_add = 45
+		goods_input_iron_add = 25
 	}
 
 	ai_weight = {
@@ -902,9 +942,9 @@ ship_mod_ship_of_the_line_guns_medium = {
 		ship_vulnerability_add = 12
 	}
 
-	construction_goods = { # 1040
-		goods_input_artillery_add = 12
-		goods_input_iron_add = 5
+	construction_goods = { # 8800
+		goods_input_artillery_add = 100
+		goods_input_iron_add = 45
 	}
 
 	ai_weight = {
@@ -960,9 +1000,9 @@ ship_mod_ship_of_the_line_guns_high = {
 		ship_vulnerability_add = 24
 	}
 
-	construction_goods = { # 1460
-		goods_input_artillery_add = 18
-		goods_input_iron_add = 5
+	construction_goods = { # 12300
+		goods_input_artillery_add = 150
+		goods_input_iron_add = 45
 	}
 
 	ai_weight = {
@@ -1019,9 +1059,9 @@ ship_mod_ship_of_the_line_propulsion_light = {
 		ship_movement_speed_add = 5.5
 	}
 
-	construction_goods = { # 560
-		goods_input_fabric_add = 12
-		goods_input_hardwood_add = 8
+	construction_goods = { # 4800
+		goods_input_fabric_add = 100
+		goods_input_hardwood_add = 70
 	}
 
 	ai_weight = {
@@ -1074,11 +1114,11 @@ ship_mod_ship_of_the_line_propulsion_medium = {
 		ship_movement_speed_add = 7.5
 	}
 
-	construction_goods = { # 910
-		goods_input_fabric_add = 12
-		goods_input_hardwood_add = 8
-		goods_input_engines_add = 3
-		goods_input_coal_add = 3
+	construction_goods = { # 7000
+		goods_input_fabric_add = 75
+		goods_input_hardwood_add = 55
+		goods_input_engines_add = 25
+		goods_input_coal_add = 60
 	}
 
 	unlocking_technologies = { atmospheric_engine }
@@ -1151,11 +1191,11 @@ ship_mod_ship_of_the_line_propulsion_high = {
 		ship_movement_speed_add = 11.0
 	}
 
-	construction_goods = { # 1300
-		goods_input_fabric_add = 12
-		goods_input_hardwood_add = 8
-		goods_input_engines_add = 6
-		goods_input_coal_add = 6
+	construction_goods = { # 9700
+		goods_input_fabric_add = 75
+		goods_input_hardwood_add = 55
+		goods_input_engines_add = 55
+		goods_input_coal_add = 90
 	}
 
 	unlocking_technologies = { watertube_boiler }
@@ -1230,8 +1270,8 @@ ship_mod_ship_of_the_line_range_light = {
 		ship_supply_capacity_add = 20
 	}
 
-	construction_goods = { # 200
-		goods_input_grain_add = 10
+	construction_goods = { # 1700
+		goods_input_grain_add = 85
 	}
 
 	ai_weight = {
@@ -1279,8 +1319,8 @@ ship_mod_ship_of_the_line_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 400
-		goods_input_grain_add = 20
+	construction_goods = { # 3400
+		goods_input_grain_add = 170
 	}
 
 	ai_weight = {
@@ -1328,8 +1368,8 @@ ship_mod_ship_of_the_line_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 600
-		goods_input_grain_add = 30
+	construction_goods = { # 5200
+		goods_input_grain_add = 260
 	}
 
 	ai_weight = {
@@ -1376,8 +1416,8 @@ ship_mod_monitor_armor_light = {
 		ship_hit_points_max_add = 150
 	}
 
-	construction_goods = { # 300
-		goods_input_iron_add = 6
+	construction_goods = { # 2400
+		goods_input_iron_add = 60
 	}
 
 	ai_weight = {
@@ -1423,8 +1463,8 @@ ship_mod_monitor_armor_medium = {
 		ship_hit_points_max_add = 475
 	}
 
-	construction_goods = { # 570
-		goods_input_iron_add = 12
+	construction_goods = { # 4400
+		goods_input_iron_add = 110
 	}
 
 	ai_weight = {
@@ -1470,8 +1510,8 @@ ship_mod_monitor_armor_high = {
 		ship_hit_points_max_add = 950
 	}
 
-	construction_goods = { # 950
-		goods_input_iron_add = 20
+	construction_goods = { # 7400
+		goods_input_iron_add = 185
 	}
 
 	ai_weight = {
@@ -1516,12 +1556,12 @@ ship_mod_monitor_guns_light = {
 		ship_hull_damage_add = 25
 		ship_crew_damage_add = 20
 		ship_critical_hit_chance_add = 0.1
-		ship_vulnerability_add = 3
+		ship_vulnerability_add = 2
 	}
 
-	construction_goods = { # 660
-		goods_input_artillery_add = 8
-		goods_input_ammunition_add = 2
+	construction_goods = { # 6150
+		goods_input_artillery_add = 75
+		goods_input_ammunition_add = 18
 	}
 
 	ai_weight = {
@@ -1575,12 +1615,12 @@ ship_mod_monitor_guns_medium = {
 		ship_hull_damage_add = 55
 		ship_crew_damage_add = 35
 		ship_critical_hit_chance_add = 0.15
-		ship_vulnerability_add = 8
+		ship_vulnerability_add = 4
 	}
 
-	construction_goods = { # 1250
-		goods_input_artillery_add = 15
-		goods_input_ammunition_add = 4
+	construction_goods = { # 11550
+		goods_input_artillery_add = 140
+		goods_input_ammunition_add = 35
 	}
 
 	ai_weight = {
@@ -1634,12 +1674,12 @@ ship_mod_monitor_guns_high = {
 		ship_hull_damage_add = 85
 		ship_crew_damage_add = 50
 		ship_critical_hit_chance_add = 0.2
-		ship_vulnerability_add = 17
+		ship_vulnerability_add = 8
 	}
 
-	construction_goods = { # 1740
-		goods_input_artillery_add = 22
-		goods_input_ammunition_add = 4
+	construction_goods = { # 16450
+		goods_input_artillery_add = 210
+		goods_input_ammunition_add = 35
 	}
 
 	ai_weight = {
@@ -1691,11 +1731,12 @@ ship_mod_monitor_propulsion_light = {
 
 	modifier = {
 		ship_movement_speed_add = 8
+		ship_screening_add = 2
 	}
 
-	construction_goods = { # 630
-		goods_input_engines_add = 8
-		goods_input_coal_add = 5
+	construction_goods = { # 6000
+		goods_input_engines_add = 45
+		goods_input_coal_add = 110
 	}
 
 	ai_weight = {
@@ -1747,11 +1788,12 @@ ship_mod_monitor_propulsion_medium = {
 
 	modifier = {
 		ship_movement_speed_add = 10
+		ship_screening_add = 4
 	}
 
-	construction_goods = { # 960
-		goods_input_engines_add = 12
-		goods_input_coal_add = 8
+	construction_goods = { # 9000
+		goods_input_engines_add = 65
+		goods_input_coal_add = 170
 	}
 
 	ai_weight = {
@@ -1803,11 +1845,12 @@ ship_mod_monitor_propulsion_high = {
 
 	modifier = {
 		ship_movement_speed_add = 12.5
+		ship_screening_add = 8
 	}
 
-	construction_goods = { # 1380
-		goods_input_engines_add = 18
-		goods_input_coal_add = 10
+	construction_goods = { # 12900
+		goods_input_engines_add = 95
+		goods_input_coal_add = 240
 	}
 
 	ai_weight = {
@@ -1861,8 +1904,8 @@ ship_mod_monitor_range_light = {
 		ship_supply_capacity_add = 25
 	}
 
-	construction_goods = { # 240
-		goods_input_groceries_add = 8
+	construction_goods = { # 2250
+		goods_input_groceries_add = 75
 	}
 
 	ai_weight = {
@@ -1908,8 +1951,8 @@ ship_mod_monitor_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 510
-		goods_input_groceries_add = 17
+	construction_goods = { # 4650
+		goods_input_groceries_add = 155
 	}
 
 	ai_weight = {
@@ -1956,8 +1999,8 @@ ship_mod_monitor_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 780
-		goods_input_groceries_add = 26
+	construction_goods = { # 7200
+		goods_input_groceries_add = 240
 	}
 
 	ai_weight = {
@@ -2005,8 +2048,8 @@ ship_mod_coastal_defense_ship_armor_light = {
 		ship_hit_points_max_add = 250
 	}
 
-	construction_goods = { # 320
-		goods_input_iron_add = 8
+	construction_goods = { # 8400
+		goods_input_iron_add = 210
 	}
 
 	ai_weight = {
@@ -2052,8 +2095,8 @@ ship_mod_coastal_defense_ship_armor_medium = {
 		ship_hit_points_max_add = 600
 	}
 
-	construction_goods = { # 800
-		goods_input_iron_add = 12
+	construction_goods = { # 12600
+		goods_input_iron_add = 315
 	}
 
 	ai_weight = {
@@ -2099,8 +2142,8 @@ ship_mod_coastal_defense_ship_armor_high = {
 		ship_hit_points_max_add = 1200
 	}
 
-	construction_goods = { # 1100
-		goods_input_iron_add = 20
+	construction_goods = { # 21000
+		goods_input_iron_add = 525
 	}
 
 	ai_weight = {
@@ -2148,9 +2191,9 @@ ship_mod_coastal_defense_ship_guns_light = {
 		ship_vulnerability_add = 4
 	}
 
-	construction_goods = { # 660
-		goods_input_artillery_add = 8
-		goods_input_ammunition_add = 2
+	construction_goods = { # 17450
+		goods_input_artillery_add = 210
+		goods_input_ammunition_add = 55
 	}
 
 	ai_weight = {
@@ -2207,9 +2250,9 @@ ship_mod_coastal_defense_ship_guns_medium = {
 		ship_vulnerability_add = 9
 	}
 
-	construction_goods = { # 1250
-		goods_input_artillery_add = 15
-		goods_input_ammunition_add = 4
+	construction_goods = { # 32550
+		goods_input_artillery_add = 390
+		goods_input_ammunition_add = 105
 	}
 
 	ai_weight = {
@@ -2266,9 +2309,9 @@ ship_mod_coastal_defense_ship_guns_high = {
 		ship_vulnerability_add = 18
 	}
 
-	construction_goods = { # 1740
-		goods_input_artillery_add = 22
-		goods_input_ammunition_add = 4
+	construction_goods = { # 46550
+		goods_input_artillery_add = 590
+		goods_input_ammunition_add = 105
 	}
 
 	ai_weight = {
@@ -2320,11 +2363,12 @@ ship_mod_coastal_defense_ship_propulsion_light = {
 
 	modifier = {
 		ship_movement_speed_add = 8
+		ship_screening_add = 4
 	}
 
-	construction_goods = { # 840
-		goods_input_engines_add = 10
-		goods_input_coal_add = 8
+	construction_goods = { # 22200
+		goods_input_engines_add = 145
+		goods_input_coal_add = 450
 	}
 
 	ai_weight = {
@@ -2376,11 +2420,12 @@ ship_mod_coastal_defense_ship_propulsion_medium = {
 
 	modifier = {
 		ship_movement_speed_add = 10
+		ship_screening_add = 9
 	}
 
-	construction_goods = { # 1200
-		goods_input_engines_add = 15
-		goods_input_coal_add = 10
+	construction_goods = { # 31650
+		goods_input_engines_add = 210
+		goods_input_coal_add = 635
 	}
 
 	ai_weight = {
@@ -2432,11 +2477,12 @@ ship_mod_coastal_defense_ship_propulsion_high = {
 
 	modifier = {
 		ship_movement_speed_add = 12.5
+		ship_screening_add = 18
 	}
 
-	construction_goods = { # 1560
-		goods_input_engines_add = 20
-		goods_input_coal_add = 12
+	construction_goods = { # 41550
+		goods_input_engines_add = 285
+		goods_input_coal_add = 815
 	}
 
 	ai_weight = {
@@ -2490,8 +2536,8 @@ ship_mod_coastal_defense_ship_range_light = {
 		ship_supply_capacity_add = 25
 	}
 
-	construction_goods = { # 240
-		goods_input_groceries_add = 8
+	construction_goods = { # 6300
+		goods_input_groceries_add = 210
 	}
 
 	ai_weight = {
@@ -2537,8 +2583,8 @@ ship_mod_coastal_defense_ship_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 510
-		goods_input_groceries_add = 17
+	construction_goods = { # 13500
+		goods_input_groceries_add = 450
 	}
 
 	ai_weight = {
@@ -2585,8 +2631,8 @@ ship_mod_coastal_defense_ship_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 780
-		goods_input_groceries_add = 26
+	construction_goods = { # 20850
+		goods_input_groceries_add = 695
 	}
 
 	ai_weight = {
@@ -2634,9 +2680,9 @@ ship_mod_early_ironclad_armor_light = {
 		ship_hit_points_max_add = 250
 	}
 
-	construction_goods = { # 440
-		goods_input_iron_add = 8
-		goods_input_hardwood_add = 3
+	construction_goods = { # 11600
+		goods_input_iron_add = 210
+		goods_input_hardwood_add = 80
 	}
 
 	ai_weight = {
@@ -2690,8 +2736,8 @@ ship_mod_early_ironclad_armor_medium = {
 		ship_hit_points_max_add = 675
 	}
 
-	construction_goods = { # 730
-		goods_input_iron_add = 15
+	construction_goods = { # 16000
+		goods_input_iron_add = 400
 	}
 
 	ai_weight = {
@@ -2736,8 +2782,8 @@ ship_mod_early_ironclad_armor_high = {
 		ship_hit_points_max_add = 1350
 	}
 
-	construction_goods = { # 920
-		goods_input_iron_add = 20
+	construction_goods = { # 20800
+		goods_input_iron_add = 520
 	}
 
 	ai_weight = {
@@ -2784,9 +2830,9 @@ ship_mod_early_ironclad_guns_light = {
 		ship_vulnerability_add = 4
 	}
 
-	construction_goods = { # 660
-		goods_input_artillery_add = 8
-		goods_input_ammunition_add = 2
+	construction_goods = { # 17200
+		goods_input_artillery_add = 210
+		goods_input_ammunition_add = 50
 	}
 
 	ai_weight = {
@@ -2842,9 +2888,9 @@ ship_mod_early_ironclad_guns_medium = {
 		ship_vulnerability_add = 10
 	}
 
-	construction_goods = { # 1250
-		goods_input_artillery_add = 15
-		goods_input_ammunition_add = 4
+	construction_goods = { # 33250
+		goods_input_artillery_add = 400
+		goods_input_ammunition_add = 105
 	}
 
 	ai_weight = {
@@ -2900,9 +2946,9 @@ ship_mod_early_ironclad_guns_high = {
 		ship_vulnerability_add = 20
 	}
 
-	construction_goods = { # 1740
-		goods_input_artillery_add = 22
-		goods_input_ammunition_add = 4
+	construction_goods = { # 45850
+		goods_input_artillery_add = 580
+		goods_input_ammunition_add = 105
 	}
 
 	ai_weight = {
@@ -2955,10 +3001,10 @@ ship_mod_early_ironclad_propulsion_light = {
 		ship_movement_speed_add = 9
 	}
 
-	construction_goods = { # 730
-		goods_input_fabric_add = 5
-		goods_input_engines_add = 8
-		goods_input_coal_add = 5
+	construction_goods = { # 19350
+		goods_input_fabric_add = 135
+		goods_input_engines_add = 105
+		goods_input_coal_add = 345
 	}
 
 	ai_weight = {
@@ -3020,10 +3066,10 @@ ship_mod_early_ironclad_propulsion_medium = {
 		ship_movement_speed_add = 10.5
 	}
 
-	construction_goods = { # 1020
-		goods_input_fabric_add = 5
-		goods_input_engines_add = 12
-		goods_input_coal_add = 6
+	construction_goods = { # 26250
+		goods_input_fabric_add = 135
+		goods_input_engines_add = 155
+		goods_input_coal_add = 475
 	}
 
 	ai_weight = {
@@ -3085,10 +3131,10 @@ ship_mod_early_ironclad_propulsion_high = {
 		ship_movement_speed_add = 12.5
 	}
 
-	construction_goods = { # 1380
-		goods_input_fabric_add = 3
-		goods_input_engines_add = 18
-		goods_input_coal_add = 8
+	construction_goods = { # 36550
+		goods_input_fabric_add = 80
+		goods_input_engines_add = 240
+		goods_input_coal_add = 685
 	}
 
 	ai_weight = {
@@ -3152,8 +3198,8 @@ ship_mod_early_ironclad_range_light = {
 		ship_supply_capacity_add = 30
 	}
 
-	construction_goods = { # 300
-		goods_input_groceries_add = 10
+	construction_goods = { # 7800
+		goods_input_groceries_add = 260
 	}
 
 	ai_weight = {
@@ -3201,8 +3247,8 @@ ship_mod_early_ironclad_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 570
-		goods_input_groceries_add = 19
+	construction_goods = { # 15150
+		goods_input_groceries_add = 505
 	}
 
 	ai_weight = {
@@ -3250,8 +3296,8 @@ ship_mod_early_ironclad_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 870
-		goods_input_groceries_add = 29
+	construction_goods = { # 22800
+		goods_input_groceries_add = 760
 	}
 
 	ai_weight = {
@@ -3298,9 +3344,9 @@ ship_mod_modern_ironclad_armor_light = {
 		ship_hit_points_max_add = 375
 	}
 
-	construction_goods = { # 600
-		goods_input_iron_add = 5
-		goods_input_steel_add = 8
+	construction_goods = { # 15450
+		goods_input_iron_add = 130
+		goods_input_steel_add = 205
 	}
 
 	ai_weight = {
@@ -3354,9 +3400,9 @@ ship_mod_modern_ironclad_armor_medium = {
 		ship_hit_points_max_add = 825
 	}
 
-	construction_goods = { # 870
-		goods_input_steel_add = 15
-		goods_input_iron_add = 3
+	construction_goods = { # 21750
+		goods_input_steel_add = 375
+		goods_input_iron_add = 75
 	}
 
 	ai_weight = {
@@ -3410,8 +3456,8 @@ ship_mod_modern_ironclad_armor_high = {
 		ship_hit_points_max_add = 1750
 	}
 
-	construction_goods = { # 1100
-		goods_input_steel_add = 22
+	construction_goods = { # 27750
+		goods_input_steel_add = 555
 	}
 
 	ai_weight = {
@@ -3459,9 +3505,9 @@ ship_mod_modern_ironclad_guns_light = {
 		ship_vulnerability_add = 4
 	}
 
-	construction_goods = { # 850
-		goods_input_artillery_add = 10
-		goods_input_ammunition_add = 3
+	construction_goods = { # 21600
+		goods_input_artillery_add = 255
+		goods_input_ammunition_add = 75
 	}
 
 	ai_weight = {
@@ -3517,9 +3563,9 @@ ship_mod_modern_ironclad_guns_medium = {
 		ship_vulnerability_add = 11
 	}
 
-	construction_goods = { # 1510
-		goods_input_artillery_add = 18
-		goods_input_ammunition_add = 5
+	construction_goods = { # 38000
+		goods_input_artillery_add = 450
+		goods_input_ammunition_add = 130
 	}
 
 	ai_weight = {
@@ -3575,9 +3621,9 @@ ship_mod_modern_ironclad_guns_high = {
 		ship_vulnerability_add = 22
 	}
 
-	construction_goods = { # 2000
-		goods_input_artillery_add = 25
-		goods_input_ammunition_add = 5
+	construction_goods = { # 50600
+		goods_input_artillery_add = 630
+		goods_input_ammunition_add = 130
 	}
 
 	ai_weight = {
@@ -3631,9 +3677,9 @@ ship_mod_modern_ironclad_propulsion_light = {
 		ship_movement_speed_add = 8.5
 	}
 
-	construction_goods = { # 840
-		goods_input_engines_add = 10
-		goods_input_coal_add = 8
+	construction_goods = { # 21300
+		goods_input_engines_add = 100
+		goods_input_coal_add = 510
 	}
 
 	ai_weight = {
@@ -3686,9 +3732,9 @@ ship_mod_modern_ironclad_propulsion_medium = {
 		ship_movement_speed_add = 11
 	}
 
-	construction_goods = { # 1440
-		goods_input_engines_add = 18
-		goods_input_coal_add = 12
+	construction_goods = { # 37050
+		goods_input_engines_add = 180
+		goods_input_coal_add = 875
 	}
 
 	ai_weight = {
@@ -3741,9 +3787,9 @@ ship_mod_modern_ironclad_propulsion_high = {
 		ship_movement_speed_add = 13
 	}
 
-	construction_goods = { # 1950
-		goods_input_engines_add = 25
-		goods_input_coal_add = 15
+	construction_goods = { # 49800
+		goods_input_engines_add = 250
+		goods_input_coal_add = 1160
 	}
 
 	ai_weight = {
@@ -3798,8 +3844,8 @@ ship_mod_modern_ironclad_range_light = {
 		ship_supply_capacity_add = 35
 	}
 
-	construction_goods = { # 420
-		goods_input_groceries_add = 14
+	construction_goods = { # 10800
+		goods_input_groceries_add = 360
 	}
 
 	ai_weight = {
@@ -3847,8 +3893,8 @@ ship_mod_modern_ironclad_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 780
-		goods_input_groceries_add = 26
+	construction_goods = { # 19950
+		goods_input_groceries_add = 665
 	}
 
 	ai_weight = {
@@ -3896,8 +3942,8 @@ ship_mod_modern_ironclad_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 1140
-		goods_input_groceries_add = 38
+	construction_goods = { # 28950
+		goods_input_groceries_add = 965
 	}
 
 	ai_weight = {
@@ -3944,8 +3990,8 @@ ship_mod_pre_dreadnought_armor_light = {
 		ship_hit_points_max_add = 375
 	}
 
-	construction_goods = { # 600
-		goods_input_steel_add = 12
+	construction_goods = { # 25500
+		goods_input_steel_add = 510
 	}
 
 	ai_weight = {
@@ -3990,8 +4036,8 @@ ship_mod_pre_dreadnought_armor_medium = {
 		ship_hit_points_max_add = 925
 	}
 
-	construction_goods = { # 900
-		goods_input_steel_add = 18
+	construction_goods = { # 38250
+		goods_input_steel_add = 765
 	}
 
 	ai_weight = {
@@ -4036,8 +4082,8 @@ ship_mod_pre_dreadnought_armor_high = {
 		ship_hit_points_max_add = 1950
 	}
 
-	construction_goods = { # 1250
-		goods_input_steel_add = 25
+	construction_goods = { # 53500
+		goods_input_steel_add = 1070
 	}
 
 	ai_weight = {
@@ -4085,9 +4131,9 @@ ship_mod_pre_dreadnought_guns_light = {
 		ship_vulnerability_add = 5
 	}
 
-	construction_goods = { # 1090
-		goods_input_artillery_add = 12
-		goods_input_ammunition_add = 5
+	construction_goods = { # 46700
+		goods_input_artillery_add = 510
+		goods_input_ammunition_add = 220
 	}
 
 	ai_weight = {
@@ -4143,9 +4189,9 @@ ship_mod_pre_dreadnought_guns_medium = {
 		ship_vulnerability_add = 10
 	}
 
-	construction_goods = { # 1650
-		goods_input_artillery_add = 20
-		goods_input_ammunition_add = 5
+	construction_goods = { # 70850
+		goods_input_artillery_add = 855
+		goods_input_ammunition_add = 220
 	}
 
 	ai_weight = {
@@ -4201,9 +4247,9 @@ ship_mod_pre_dreadnought_guns_high = {
 		ship_vulnerability_add = 22
 	}
 
-	construction_goods = { # 2360
-		goods_input_artillery_add = 28
-		goods_input_ammunition_add = 8
+	construction_goods = { # 101600
+		goods_input_artillery_add = 1205
+		goods_input_ammunition_add = 345
 	}
 
 	ai_weight = {
@@ -4257,9 +4303,9 @@ ship_mod_pre_dreadnought_propulsion_light = {
 		ship_movement_speed_add = 8.5
 	}
 
-	construction_goods = { # 1020
-		goods_input_engines_add = 12
-		goods_input_coal_add = 10
+	construction_goods = { # 43800
+		goods_input_engines_add = 210
+		goods_input_coal_add = 1040
 	}
 
 	ai_weight = {
@@ -4312,9 +4358,9 @@ ship_mod_pre_dreadnought_propulsion_medium = {
 		ship_movement_speed_add = 11
 	}
 
-	construction_goods = { # 1560
-		goods_input_engines_add = 20
-		goods_input_coal_add = 12
+	construction_goods = { # 66300
+		goods_input_engines_add = 345
+		goods_input_coal_add = 1520
 	}
 
 	ai_weight = {
@@ -4367,9 +4413,9 @@ ship_mod_pre_dreadnought_propulsion_high = {
 		ship_movement_speed_add = 13
 	}
 
-	construction_goods = { # 2130
-		goods_input_engines_add = 28
-		goods_input_coal_add = 15
+	construction_goods = { # 91500
+		goods_input_engines_add = 495
+		goods_input_coal_add = 2060
 	}
 
 	ai_weight = {
@@ -4424,8 +4470,8 @@ ship_mod_pre_dreadnought_range_light = {
 		ship_supply_capacity_add = 40
 	}
 
-	construction_goods = { # 510
-		goods_input_groceries_add = 17
+	construction_goods = { # 21600
+		goods_input_groceries_add = 720
 	}
 
 	ai_weight = {
@@ -4473,8 +4519,8 @@ ship_mod_pre_dreadnought_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 870
-		goods_input_groceries_add = 29
+	construction_goods = { # 37500
+		goods_input_groceries_add = 1250
 	}
 
 	ai_weight = {
@@ -4522,8 +4568,8 @@ ship_mod_pre_dreadnought_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 1200
-		goods_input_groceries_add = 40
+	construction_goods = { # 51450
+		goods_input_groceries_add = 1715
 	}
 
 	ai_weight = {
@@ -4570,8 +4616,8 @@ ship_mod_dreadnought_armor_light = {
 		ship_hit_points_max_add = 450
 	}
 
-	construction_goods = { # 750
-		goods_input_steel_add = 15
+	construction_goods = { # 36750
+		goods_input_steel_add = 735
 	}
 
 	ai_weight = {
@@ -4616,8 +4662,8 @@ ship_mod_dreadnought_armor_medium = {
 		ship_hit_points_max_add = 1000
 	}
 
-	construction_goods = { # 1000
-		goods_input_steel_add = 20
+	construction_goods = { # 49500
+		goods_input_steel_add = 990
 	}
 
 	ai_weight = {
@@ -4662,8 +4708,8 @@ ship_mod_dreadnought_armor_high = {
 		ship_hit_points_max_add = 2100
 	}
 
-	construction_goods = { # 1400
-		goods_input_steel_add = 28
+	construction_goods = { # 69000
+		goods_input_steel_add = 1380
 	}
 
 	ai_weight = {
@@ -4711,9 +4757,9 @@ ship_mod_dreadnought_guns_light = {
 		ship_vulnerability_add = 6
 	}
 
-	construction_goods = { # 1300
-		goods_input_artillery_add = 15
-		goods_input_ammunition_add = 5
+	construction_goods = { # 63950
+		goods_input_artillery_add = 735
+		goods_input_ammunition_add = 250
 	}
 
 	ai_weight = {
@@ -4769,9 +4815,9 @@ ship_mod_dreadnought_guns_medium = {
 		ship_vulnerability_add = 11
 	}
 
-	construction_goods = { # 1940
-		goods_input_artillery_add = 22
-		goods_input_ammunition_add = 8
+	construction_goods = { # 95100
+		goods_input_artillery_add = 1080
+		goods_input_ammunition_add = 390
 	}
 
 	ai_weight = {
@@ -4827,9 +4873,9 @@ ship_mod_dreadnought_guns_high = {
 		ship_vulnerability_add = 25
 	}
 
-	construction_goods = { # 2600
-		goods_input_artillery_add = 30
-		goods_input_ammunition_add = 10
+	construction_goods = { # 128700
+		goods_input_artillery_add = 1485
+		goods_input_ammunition_add = 495
 	}
 
 	ai_weight = {
@@ -4883,9 +4929,10 @@ ship_mod_dreadnought_propulsion_light = {
 		ship_movement_speed_add = 10
 	}
 
-	construction_goods = { # 1200
-		goods_input_engines_add = 15
-		goods_input_coal_add = 10
+	construction_goods = { # 59250
+		goods_input_engines_add = 330
+		goods_input_coal_add = 495
+		goods_input_oil_add = 615
 	}
 
 	ai_weight = {
@@ -4903,8 +4950,10 @@ ship_mod_dreadnought_propulsion_light = {
 			}
 			# GROUP program_bc910da728375722_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_dreadnought_propulsion_light_oil_opportunity [military]; 候选真实正投入oil已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_dreadnought_propulsion_light_engines_opportunity [military]; 候选真实正投入engines已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_dreadnought_propulsion_light_coal_opportunity [military]; 候选真实正投入coal已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
@@ -4922,6 +4971,13 @@ ship_mod_dreadnought_propulsion_light = {
 				# equipment_ship_mod_dreadnought_propulsion_light_engines_scarcity [military]; 候选真实正投入engines已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
+			# GROUP program_bc910da728375722_equipment_material_pressure_oil_negative
+			add = { value = 0
+				# equipment_ship_mod_dreadnought_propulsion_light_oil_pressure [military]; 候选真实正投入oil高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_dreadnought_propulsion_light_oil_scarcity [military]; 候选真实正投入oil已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
 			min = 0.5
 			max = 1.08
 		} }
@@ -4938,9 +4994,10 @@ ship_mod_dreadnought_propulsion_medium = {
 		ship_movement_speed_add = 12.5
 	}
 
-	construction_goods = { # 1680
-		goods_input_engines_add = 22
-		goods_input_coal_add = 12
+	construction_goods = { # 82350
+		goods_input_engines_add = 480
+		goods_input_coal_add = 585
+		goods_input_oil_add = 900
 	}
 
 	ai_weight = {
@@ -4958,8 +5015,10 @@ ship_mod_dreadnought_propulsion_medium = {
 			}
 			# GROUP program_6ccb5c06a595cb31_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_dreadnought_propulsion_medium_oil_opportunity [military]; 候选真实正投入oil已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_dreadnought_propulsion_medium_engines_opportunity [military]; 候选真实正投入engines已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_dreadnought_propulsion_medium_coal_opportunity [military]; 候选真实正投入coal已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
@@ -4977,6 +5036,13 @@ ship_mod_dreadnought_propulsion_medium = {
 				# equipment_ship_mod_dreadnought_propulsion_medium_engines_scarcity [military]; 候选真实正投入engines已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
+			# GROUP program_6ccb5c06a595cb31_equipment_material_pressure_oil_negative
+			add = { value = 0
+				# equipment_ship_mod_dreadnought_propulsion_medium_oil_pressure [military]; 候选真实正投入oil高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_dreadnought_propulsion_medium_oil_scarcity [military]; 候选真实正投入oil已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
 			min = 0.5
 			max = 1.08
 		} }
@@ -4993,10 +5059,10 @@ ship_mod_dreadnought_propulsion_high = {
 		ship_movement_speed_add = 15
 	}
 
-	construction_goods = { # 2400
-		goods_input_engines_add = 30
-		goods_input_coal_add = 10
-		goods_input_oil_add = 5
+	construction_goods = { # 113250
+		goods_input_engines_add = 660
+		goods_input_coal_add = 495
+		goods_input_oil_add = 1470
 	}
 
 	ai_weight = {
@@ -5060,8 +5126,8 @@ ship_mod_dreadnought_range_light = {
 		ship_supply_capacity_add = 45
 	}
 
-	construction_goods = { # 660
-		goods_input_groceries_add = 22
+	construction_goods = { # 32400
+		goods_input_groceries_add = 1080
 	}
 
 	ai_weight = {
@@ -5109,8 +5175,8 @@ ship_mod_dreadnought_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 1050
-		goods_input_groceries_add = 35
+	construction_goods = { # 51900
+		goods_input_groceries_add = 1730
 	}
 
 	ai_weight = {
@@ -5158,8 +5224,8 @@ ship_mod_dreadnought_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 1410
-		goods_input_groceries_add = 47
+	construction_goods = { # 69450
+		goods_input_groceries_add = 2315
 	}
 
 	ai_weight = {
@@ -5206,8 +5272,8 @@ ship_mod_super_dreadnought_armor_light = {
 		ship_hit_points_max_add = 475
 	}
 
-	construction_goods = { # 900
-		goods_input_steel_add = 18
+	construction_goods = { # 45000
+		goods_input_steel_add = 900
 	}
 
 	ai_weight = {
@@ -5252,8 +5318,8 @@ ship_mod_super_dreadnought_armor_medium = {
 		ship_hit_points_max_add = 1150
 	}
 
-	construction_goods = { # 1250
-		goods_input_steel_add = 25
+	construction_goods = { # 62250
+		goods_input_steel_add = 1245
 	}
 
 	ai_weight = {
@@ -5298,8 +5364,8 @@ ship_mod_super_dreadnought_armor_high = {
 		ship_hit_points_max_add = 2400
 	}
 
-	construction_goods = { # 1600
-		goods_input_steel_add = 32
+	construction_goods = { # 79250
+		goods_input_steel_add = 1585
 	}
 
 	ai_weight = {
@@ -5347,9 +5413,9 @@ ship_mod_super_dreadnought_guns_light = {
 		ship_vulnerability_add = 6
 	}
 
-	construction_goods = { # 1660
-		goods_input_artillery_add = 18
-		goods_input_ammunition_add = 8
+	construction_goods = { # 82500
+		goods_input_artillery_add = 900
+		goods_input_ammunition_add = 390
 	}
 
 	ai_weight = {
@@ -5405,9 +5471,9 @@ ship_mod_super_dreadnought_guns_medium = {
 		ship_vulnerability_add = 14
 	}
 
-	construction_goods = { # 2250
-		goods_input_artillery_add = 25
-		goods_input_ammunition_add = 10
+	construction_goods = { # 111900
+		goods_input_artillery_add = 1245
+		goods_input_ammunition_add = 495
 	}
 
 	ai_weight = {
@@ -5463,9 +5529,9 @@ ship_mod_super_dreadnought_guns_high = {
 		ship_vulnerability_add = 28
 	}
 
-	construction_goods = { # 3050
-		goods_input_artillery_add = 35
-		goods_input_ammunition_add = 12
+	construction_goods = { # 151450
+		goods_input_artillery_add = 1735
+		goods_input_ammunition_add = 600
 	}
 
 	ai_weight = {
@@ -5519,9 +5585,9 @@ ship_mod_super_dreadnought_propulsion_light = {
 		ship_movement_speed_add = 10
 	}
 
-	construction_goods = { # 1400
-		goods_input_engines_add = 18
-		goods_input_oil_add = 8
+	construction_goods = { # 69600
+		goods_input_engines_add = 360
+		goods_input_oil_add = 1200
 	}
 
 	ai_weight = {
@@ -5574,9 +5640,9 @@ ship_mod_super_dreadnought_propulsion_medium = {
 		ship_movement_speed_add = 12.5
 	}
 
-	construction_goods = { # 1720
-		goods_input_engines_add = 22
-		goods_input_oil_add = 10
+	construction_goods = { # 84900
+		goods_input_engines_add = 435
+		goods_input_oil_add = 1470
 	}
 
 	ai_weight = {
@@ -5629,9 +5695,9 @@ ship_mod_super_dreadnought_propulsion_high = {
 		ship_movement_speed_add = 15
 	}
 
-	construction_goods = { # 2400
-		goods_input_engines_add = 30
-		goods_input_oil_add = 15
+	construction_goods = { # 119200
+		goods_input_engines_add = 600
+		goods_input_oil_add = 2080
 	}
 
 	ai_weight = {
@@ -5686,8 +5752,8 @@ ship_mod_super_dreadnought_range_light = {
 		ship_supply_capacity_add = 45
 	}
 
-	construction_goods = { # 720
-		goods_input_groceries_add = 24
+	construction_goods = { # 35550
+		goods_input_groceries_add = 1185
 	}
 
 	ai_weight = {
@@ -5735,8 +5801,8 @@ ship_mod_super_dreadnought_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 1140
-		goods_input_groceries_add = 38
+	construction_goods = { # 56550
+		goods_input_groceries_add = 1885
 	}
 
 	ai_weight = {
@@ -5784,8 +5850,8 @@ ship_mod_super_dreadnought_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 1650
-		goods_input_groceries_add = 55
+	construction_goods = { # 81750
+		goods_input_groceries_add = 2725
 	}
 
 	ai_weight = {
@@ -5832,8 +5898,8 @@ ship_mod_iron_frigate_armor_light = {
 		ship_hit_points_max_add = 80
 	}
 
-	construction_goods = { # 200
-		goods_input_iron_add = 5
+	construction_goods = { # 2800
+		goods_input_iron_add = 70
 	}
 
 	ai_weight = {
@@ -5878,8 +5944,8 @@ ship_mod_iron_frigate_armor_medium = {
 		ship_hit_points_max_add = 325
 	}
 
-	construction_goods = { # 400
-		goods_input_iron_add = 10
+	construction_goods = { # 5200
+		goods_input_iron_add = 130
 	}
 
 	ai_weight = {
@@ -5924,9 +5990,9 @@ ship_mod_iron_frigate_armor_high = {
 		ship_hit_points_max_add = 550
 	}
 
-	construction_goods = { # 570
-		goods_input_iron_add = 8
-		goods_input_steel_add = 5
+	construction_goods = { # 7700
+		goods_input_iron_add = 105
+		goods_input_steel_add = 70
 	}
 
 	ai_weight = {
@@ -5981,9 +6047,8 @@ ship_mod_iron_frigate_guns_light = {
 		ship_critical_hit_chance_add = 0.1
 	}
 
-	construction_goods = { # 450
-		goods_input_artillery_add = 3
-		goods_input_iron_add = 3
+	construction_goods = { # 4200
+		goods_input_artillery_add = 60
 	}
 
 	ai_weight = {
@@ -6001,10 +6066,8 @@ ship_mod_iron_frigate_guns_light = {
 			}
 			# GROUP program_e7378f6e4227eaf8_equipment_material_opportunity_positive
 			add = { value = 0
-				# equipment_ship_mod_iron_frigate_guns_light_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_iron_frigate_guns_light_artillery_opportunity [military]; 候选真实正投入artillery已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_e7378f6e4227eaf8_equipment_material_pressure_artillery_negative
 			add = { value = 0
@@ -6013,14 +6076,7 @@ ship_mod_iron_frigate_guns_light = {
 				# equipment_ship_mod_iron_frigate_guns_light_artillery_scarcity [military]; 候选真实正投入artillery已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			# GROUP program_e7378f6e4227eaf8_equipment_material_pressure_iron_negative
-			add = { value = 0
-				# equipment_ship_mod_iron_frigate_guns_light_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_iron_frigate_guns_light_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
-			}
-			min = 0.5
+			min = 0.65
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_iron_frigate_guns_light.ai_weight
@@ -6039,9 +6095,8 @@ ship_mod_iron_frigate_guns_medium = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 900
-		goods_input_artillery_add = 10
-		goods_input_iron_add = 5
+	construction_goods = { # 11550
+		goods_input_artillery_add = 165
 	}
 
 	ai_weight = {
@@ -6059,10 +6114,8 @@ ship_mod_iron_frigate_guns_medium = {
 			}
 			# GROUP program_f3fb644a71cbcb25_equipment_material_opportunity_positive
 			add = { value = 0
-				# equipment_ship_mod_iron_frigate_guns_medium_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_iron_frigate_guns_medium_artillery_opportunity [military]; 候选真实正投入artillery已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_f3fb644a71cbcb25_equipment_material_pressure_artillery_negative
 			add = { value = 0
@@ -6071,14 +6124,7 @@ ship_mod_iron_frigate_guns_medium = {
 				# equipment_ship_mod_iron_frigate_guns_medium_artillery_scarcity [military]; 候选真实正投入artillery已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			# GROUP program_f3fb644a71cbcb25_equipment_material_pressure_iron_negative
-			add = { value = 0
-				# equipment_ship_mod_iron_frigate_guns_medium_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_iron_frigate_guns_medium_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
-			}
-			min = 0.5
+			min = 0.65
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_iron_frigate_guns_medium.ai_weight
@@ -6097,9 +6143,8 @@ ship_mod_iron_frigate_guns_high = {
 		ship_vulnerability_add = 2
 	}
 
-	construction_goods = { # 1250
-		goods_input_artillery_add = 15
-		goods_input_iron_add = 6
+	construction_goods = { # 16800
+		goods_input_artillery_add = 240
 	}
 
 	unlocking_technologies = { breech_loading_artillery }
@@ -6119,10 +6164,8 @@ ship_mod_iron_frigate_guns_high = {
 			}
 			# GROUP program_aabddfcd6296e04d_equipment_material_opportunity_positive
 			add = { value = 0
-				# equipment_ship_mod_iron_frigate_guns_high_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_iron_frigate_guns_high_artillery_opportunity [military]; 候选真实正投入artillery已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_aabddfcd6296e04d_equipment_material_pressure_artillery_negative
 			add = { value = 0
@@ -6131,14 +6174,7 @@ ship_mod_iron_frigate_guns_high = {
 				# equipment_ship_mod_iron_frigate_guns_high_artillery_scarcity [military]; 候选真实正投入artillery已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			# GROUP program_aabddfcd6296e04d_equipment_material_pressure_iron_negative
-			add = { value = 0
-				# equipment_ship_mod_iron_frigate_guns_high_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_iron_frigate_guns_high_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
-			}
-			min = 0.5
+			min = 0.65
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_iron_frigate_guns_high.ai_weight
@@ -6154,10 +6190,10 @@ ship_mod_iron_frigate_propulsion_light = {
 		ship_movement_speed_add = 8.5
 	}
 
-	construction_goods = { # 490
-		goods_input_fabric_add = 5
-		goods_input_engines_add = 5
-		goods_input_coal_add = 3
+	construction_goods = { # 6800
+		goods_input_fabric_add = 70
+		goods_input_engines_add = 70
+		goods_input_coal_add = 40
 	}
 
 	ai_weight = {
@@ -6219,10 +6255,10 @@ ship_mod_iron_frigate_propulsion_medium = {
 		ship_movement_speed_add = 11
 	}
 
-	construction_goods = { # 810
-		goods_input_fabric_add = 5
-		goods_input_engines_add = 10
-		goods_input_coal_add = 5
+	construction_goods = { # 11300
+		goods_input_fabric_add = 70
+		goods_input_engines_add = 130
+		goods_input_coal_add = 70
 	}
 
 	ai_weight = {
@@ -6284,10 +6320,10 @@ ship_mod_iron_frigate_propulsion_high = {
 		ship_movement_speed_add = 13
 	}
 
-	construction_goods = { # 1120
-		goods_input_fabric_add = 3
-		goods_input_engines_add = 14
-		goods_input_coal_add = 7
+	construction_goods = { # 14300
+		goods_input_fabric_add = 40
+		goods_input_engines_add = 180
+		goods_input_coal_add = 90
 	}
 
 	ai_weight = {
@@ -6351,9 +6387,9 @@ ship_mod_iron_frigate_range_light = {
 		ship_supply_capacity_add = 15
 	}
 
-	construction_goods = { # 120
-		goods_input_grain_add = 3
-		goods_input_groceries_add = 2
+	construction_goods = { # 1550
+		goods_input_grain_add = 40
+		goods_input_groceries_add = 25
 	}
 
 	ai_weight = {
@@ -6411,9 +6447,9 @@ ship_mod_iron_frigate_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 250
-		goods_input_grain_add = 5
-		goods_input_groceries_add = 5
+	construction_goods = { # 3500
+		goods_input_grain_add = 70
+		goods_input_groceries_add = 70
 	}
 
 	ai_weight = {
@@ -6471,9 +6507,9 @@ ship_mod_iron_frigate_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 440
-		goods_input_grain_add = 10
-		goods_input_groceries_add = 8
+	construction_goods = { # 5750
+		goods_input_grain_add = 130
+		goods_input_groceries_add = 105
 	}
 
 	ai_weight = {
@@ -6530,8 +6566,8 @@ ship_mod_light_cruiser_armor_light = {
 		ship_hit_points_max_add = 175
 	}
 
-	construction_goods = { # 400
-		goods_input_steel_add = 8
+	construction_goods = { # 8250
+		goods_input_steel_add = 165
 	}
 
 	ai_weight = {
@@ -6576,8 +6612,8 @@ ship_mod_light_cruiser_armor_medium = {
 		ship_hit_points_max_add = 475
 	}
 
-	construction_goods = { # 700
-		goods_input_steel_add = 14
+	construction_goods = { # 14750
+		goods_input_steel_add = 295
 	}
 
 	ai_weight = {
@@ -6622,8 +6658,8 @@ ship_mod_light_cruiser_armor_high = {
 		ship_hit_points_max_add = 925
 	}
 
-	construction_goods = { # 1000
-		goods_input_steel_add = 20
+	construction_goods = { # 21000
+		goods_input_steel_add = 420
 	}
 
 	ai_weight = {
@@ -6669,9 +6705,9 @@ ship_mod_light_cruiser_guns_light = {
 		ship_critical_hit_chance_add = 0.1
 	}
 
-	construction_goods = { # 710
-		goods_input_artillery_add = 8
-		goods_input_ammunition_add = 3
+	construction_goods = { # 14550
+		goods_input_artillery_add = 165
+		goods_input_ammunition_add = 60
 	}
 
 	ai_weight = {
@@ -6727,9 +6763,9 @@ ship_mod_light_cruiser_guns_medium = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 1230
-		goods_input_artillery_add = 14
-		goods_input_ammunition_add = 5
+	construction_goods = { # 25900
+		goods_input_artillery_add = 295
+		goods_input_ammunition_add = 105
 	}
 
 	ai_weight = {
@@ -6785,9 +6821,9 @@ ship_mod_light_cruiser_guns_high = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 1650
-		goods_input_artillery_add = 20
-		goods_input_ammunition_add = 5
+	construction_goods = { # 34650
+		goods_input_artillery_add = 420
+		goods_input_ammunition_add = 105
 	}
 
 	ai_weight = {
@@ -6840,9 +6876,10 @@ ship_mod_light_cruiser_propulsion_light = {
 		ship_movement_speed_add = 11
 	}
 
-	construction_goods = { # 1140
-		goods_input_engines_add = 15
-		goods_input_coal_add = 8
+	construction_goods = { # 23850
+		goods_input_engines_add = 105
+		goods_input_coal_add = 165
+		goods_input_oil_add = 315
 	}
 
 	ai_weight = {
@@ -6860,8 +6897,10 @@ ship_mod_light_cruiser_propulsion_light = {
 			}
 			# GROUP program_6a63a58d4b210bf2_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_light_cruiser_propulsion_light_oil_opportunity [military]; 候选真实正投入oil已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_light_cruiser_propulsion_light_engines_opportunity [military]; 候选真实正投入engines已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_light_cruiser_propulsion_light_coal_opportunity [military]; 候选真实正投入coal已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
@@ -6879,6 +6918,13 @@ ship_mod_light_cruiser_propulsion_light = {
 				# equipment_ship_mod_light_cruiser_propulsion_light_engines_scarcity [military]; 候选真实正投入engines已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
+			# GROUP program_6a63a58d4b210bf2_equipment_material_pressure_oil_negative
+			add = { value = 0
+				# equipment_ship_mod_light_cruiser_propulsion_light_oil_pressure [military]; 候选真实正投入oil高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_light_cruiser_propulsion_light_oil_scarcity [military]; 候选真实正投入oil已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
 			min = 0.5
 			max = 1.08
 		} }
@@ -6895,10 +6941,10 @@ ship_mod_light_cruiser_propulsion_medium = {
 		ship_movement_speed_add = 14
 	}
 
-	construction_goods = { # 1430
-		goods_input_engines_add = 20
-		goods_input_coal_add = 5
-		goods_input_oil_add = 2
+	construction_goods = { # 29250
+		goods_input_engines_add = 135
+		goods_input_coal_add = 105
+		goods_input_oil_add = 450
 	}
 
 	ai_weight = {
@@ -6960,9 +7006,9 @@ ship_mod_light_cruiser_propulsion_high = {
 		ship_movement_speed_add = 17
 	}
 
-	construction_goods = { # 1830
-		goods_input_engines_add = 25
-		goods_input_oil_add = 10
+	construction_goods = { # 39300
+		goods_input_engines_add = 175
+		goods_input_oil_add = 720
 	}
 
 	ai_weight = {
@@ -7017,8 +7063,8 @@ ship_mod_light_cruiser_range_light = {
 		ship_supply_capacity_add = 40
 	}
 
-	construction_goods = { # 300
-		goods_input_groceries_add = 10
+	construction_goods = { # 6300
+		goods_input_groceries_add = 210
 	}
 
 	ai_weight = {
@@ -7067,8 +7113,8 @@ ship_mod_light_cruiser_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 570
-		goods_input_groceries_add = 19
+	construction_goods = { # 11700
+		goods_input_groceries_add = 390
 	}
 
 	ai_weight = {
@@ -7117,8 +7163,8 @@ ship_mod_light_cruiser_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 960
-		goods_input_groceries_add = 32
+	construction_goods = { # 19800
+		goods_input_groceries_add = 660
 	}
 
 	ai_weight = {
@@ -7166,8 +7212,8 @@ ship_mod_protected_cruiser_armor_light = {
 		ship_hit_points_max_add = 175
 	}
 
-	construction_goods = { # 400
-		goods_input_steel_add = 8
+	construction_goods = { # 6000
+		goods_input_steel_add = 120
 	}
 
 	ai_weight = {
@@ -7212,8 +7258,8 @@ ship_mod_protected_cruiser_armor_medium = {
 		ship_hit_points_max_add = 550
 	}
 
-	construction_goods = { # 750
-		goods_input_steel_add = 15
+	construction_goods = { # 11250
+		goods_input_steel_add = 225
 	}
 
 	ai_weight = {
@@ -7258,8 +7304,8 @@ ship_mod_protected_cruiser_armor_high = {
 		ship_hit_points_max_add = 1100
 	}
 
-	construction_goods = { # 1100
-		goods_input_steel_add = 22
+	construction_goods = { # 16500
+		goods_input_steel_add = 330
 	}
 
 	ai_weight = {
@@ -7306,9 +7352,9 @@ ship_mod_protected_cruiser_guns_light = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 850
-		goods_input_artillery_add = 10
-		goods_input_ammunition_add = 3
+	construction_goods = { # 12750
+		goods_input_artillery_add = 150
+		goods_input_ammunition_add = 45
 	}
 
 	ai_weight = {
@@ -7364,9 +7410,9 @@ ship_mod_protected_cruiser_guns_medium = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 1510
-		goods_input_artillery_add = 18
-		goods_input_ammunition_add = 5
+	construction_goods = { # 22650
+		goods_input_artillery_add = 270
+		goods_input_ammunition_add = 75
 	}
 
 	ai_weight = {
@@ -7422,9 +7468,9 @@ ship_mod_protected_cruiser_guns_high = {
 		ship_vulnerability_add = 3
 	}
 
-	construction_goods = { # 2150
-		goods_input_artillery_add = 25
-		goods_input_ammunition_add = 8
+	construction_goods = { # 32250
+		goods_input_artillery_add = 375
+		goods_input_ammunition_add = 120
 	}
 
 	ai_weight = {
@@ -7477,9 +7523,9 @@ ship_mod_protected_cruiser_propulsion_light = {
 		ship_movement_speed_add = 10
 	}
 
-	construction_goods = { # 960
-		goods_input_engines_add = 12
-		goods_input_coal_add = 8
+	construction_goods = { # 13950
+		goods_input_engines_add = 75
+		goods_input_coal_add = 315
 	}
 
 	ai_weight = {
@@ -7532,9 +7578,9 @@ ship_mod_protected_cruiser_propulsion_medium = {
 		ship_movement_speed_add = 12.5
 	}
 
-	construction_goods = { # 1380
-		goods_input_engines_add = 18
-		goods_input_coal_add = 10
+	construction_goods = { # 20550
+		goods_input_engines_add = 120
+		goods_input_coal_add = 445
 	}
 
 	ai_weight = {
@@ -7587,9 +7633,9 @@ ship_mod_protected_cruiser_propulsion_high = {
 		ship_movement_speed_add = 15
 	}
 
-	construction_goods = { # 1680
-		goods_input_engines_add = 22
-		goods_input_coal_add = 12
+	construction_goods = { # 24900
+		goods_input_engines_add = 140
+		goods_input_coal_add = 550
 	}
 
 	ai_weight = {
@@ -7644,8 +7690,8 @@ ship_mod_protected_cruiser_range_light = {
 		ship_supply_capacity_add = 30
 	}
 
-	construction_goods = { # 300
-		goods_input_groceries_add = 10
+	construction_goods = { # 4500
+		goods_input_groceries_add = 150
 	}
 
 	ai_weight = {
@@ -7694,8 +7740,8 @@ ship_mod_protected_cruiser_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 720
-		goods_input_groceries_add = 24
+	construction_goods = { # 10800
+		goods_input_groceries_add = 360
 	}
 
 	ai_weight = {
@@ -7744,8 +7790,8 @@ ship_mod_protected_cruiser_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 1140
-		goods_input_groceries_add = 38
+	construction_goods = { # 16950
+		goods_input_groceries_add = 565
 	}
 
 	ai_weight = {
@@ -7793,8 +7839,8 @@ ship_mod_armored_cruiser_armor_light = {
 		ship_hit_points_max_add = 275
 	}
 
-	construction_goods = { # 500
-		goods_input_steel_add = 10
+	construction_goods = { # 8250
+		goods_input_steel_add = 165
 	}
 
 	ai_weight = {
@@ -7839,8 +7885,8 @@ ship_mod_armored_cruiser_armor_medium = {
 		ship_hit_points_max_add = 650
 	}
 
-	construction_goods = { # 900
-		goods_input_steel_add = 18
+	construction_goods = { # 14750
+		goods_input_steel_add = 295
 	}
 
 	ai_weight = {
@@ -7885,8 +7931,8 @@ ship_mod_armored_cruiser_armor_high = {
 		ship_hit_points_max_add = 1300
 	}
 
-	construction_goods = { # 1250
-		goods_input_steel_add = 25
+	construction_goods = { # 20250
+		goods_input_steel_add = 405
 	}
 
 	ai_weight = {
@@ -7932,9 +7978,9 @@ ship_mod_armored_cruiser_guns_light = {
 		ship_critical_hit_chance_add = 0.1
 	}
 
-	construction_goods = { # 850
-		goods_input_artillery_add = 10
-		goods_input_ammunition_add = 3
+	construction_goods = { # 14300
+		goods_input_artillery_add = 165
+		goods_input_ammunition_add = 55
 	}
 
 	ai_weight = {
@@ -7990,9 +8036,9 @@ ship_mod_armored_cruiser_guns_medium = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 1510
-		goods_input_artillery_add = 18
-		goods_input_ammunition_add = 5
+	construction_goods = { # 24900
+		goods_input_artillery_add = 295
+		goods_input_ammunition_add = 85
 	}
 
 	ai_weight = {
@@ -8048,9 +8094,9 @@ ship_mod_armored_cruiser_guns_high = {
 		ship_vulnerability_add = 2
 	}
 
-	construction_goods = { # 2150
-		goods_input_artillery_add = 25
-		goods_input_ammunition_add = 8
+	construction_goods = { # 34850
+		goods_input_artillery_add = 405
+		goods_input_ammunition_add = 130
 	}
 
 	ai_weight = {
@@ -8103,9 +8149,9 @@ ship_mod_armored_cruiser_propulsion_light = {
 		ship_movement_speed_add = 8.5
 	}
 
-	construction_goods = { # 960
-		goods_input_engines_add = 12
-		goods_input_coal_add = 8
+	construction_goods = { # 15900
+		goods_input_engines_add = 70
+		goods_input_coal_add = 390
 	}
 
 	ai_weight = {
@@ -8158,9 +8204,9 @@ ship_mod_armored_cruiser_propulsion_medium = {
 		ship_movement_speed_add = 11
 	}
 
-	construction_goods = { # 1380
-		goods_input_engines_add = 18
-		goods_input_coal_add = 10
+	construction_goods = { # 22500
+		goods_input_engines_add = 105
+		goods_input_coal_add = 540
 	}
 
 	ai_weight = {
@@ -8213,9 +8259,9 @@ ship_mod_armored_cruiser_propulsion_high = {
 		ship_movement_speed_add = 13
 	}
 
-	construction_goods = { # 1860
-		goods_input_engines_add = 25
-		goods_input_coal_add = 12
+	construction_goods = { # 30300
+		goods_input_engines_add = 145
+		goods_input_coal_add = 720
 	}
 
 	ai_weight = {
@@ -8270,8 +8316,8 @@ ship_mod_armored_cruiser_range_light = {
 		ship_supply_capacity_add = 40
 	}
 
-	construction_goods = { # 420
-		goods_input_groceries_add = 14
+	construction_goods = { # 6750
+		goods_input_groceries_add = 225
 	}
 
 	ai_weight = {
@@ -8320,8 +8366,8 @@ ship_mod_armored_cruiser_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 780
-		goods_input_groceries_add = 26
+	construction_goods = { # 12600
+		goods_input_groceries_add = 420
 	}
 
 	ai_weight = {
@@ -8370,8 +8416,8 @@ ship_mod_armored_cruiser_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 1140
-		goods_input_groceries_add = 38
+	construction_goods = { # 18450
+		goods_input_groceries_add = 615
 	}
 
 	ai_weight = {
@@ -8419,8 +8465,8 @@ ship_mod_seaplane_tender_armor_light = {
 		ship_hit_points_max_add = 175
 	}
 
-	construction_goods = { # 210
-		goods_input_steel_add = 5
+	construction_goods = { # 6750
+		goods_input_steel_add = 135
 	}
 
 	ai_weight = {
@@ -8465,8 +8511,8 @@ ship_mod_seaplane_tender_armor_medium = {
 		ship_hit_points_max_add = 550
 	}
 
-	construction_goods = { # 400
-		goods_input_steel_add = 8
+	construction_goods = { # 11250
+		goods_input_steel_add = 225
 	}
 
 	ai_weight = {
@@ -8511,8 +8557,8 @@ ship_mod_seaplane_tender_armor_high = {
 		ship_hit_points_max_add = 1100
 	}
 
-	construction_goods = { # 600
-		goods_input_steel_add = 12
+	construction_goods = { # 16500
+		goods_input_steel_add = 330
 	}
 
 	ai_weight = {
@@ -8559,8 +8605,8 @@ ship_mod_seaplane_tender_guns_light = {
 		ship_vulnerability_add = 3
 	}
 
-	construction_goods = { # 400
-		goods_input_aeroplanes_add = 5
+	construction_goods = { # 10800
+		goods_input_aeroplanes_add = 135
 	}
 
 	ai_weight = {
@@ -8607,8 +8653,8 @@ ship_mod_seaplane_tender_guns_medium = {
 		ship_vulnerability_add = 7
 	}
 
-	construction_goods = { # 800
-		goods_input_aeroplanes_add = 10
+	construction_goods = { # 22000
+		goods_input_aeroplanes_add = 275
 	}
 
 	ai_weight = {
@@ -8655,9 +8701,9 @@ ship_mod_seaplane_tender_guns_high = {
 		ship_vulnerability_add = 14
 	}
 
-	construction_goods = { # 1450
-		goods_input_aeroplanes_add = 15
-		goods_input_ammunition_add = 5
+	construction_goods = { # 39950
+		goods_input_aeroplanes_add = 415
+		goods_input_ammunition_add = 135
 	}
 
 	ai_weight = {
@@ -8710,9 +8756,9 @@ ship_mod_seaplane_tender_propulsion_light = {
 		ship_movement_speed_add = 8
 	}
 
-	construction_goods = { # 840
-		goods_input_engines_add = 10
-		goods_input_coal_add = 8
+	construction_goods = { # 23100
+		goods_input_engines_add = 125
+		goods_input_coal_add = 520
 	}
 
 	ai_weight = {
@@ -8765,9 +8811,9 @@ ship_mod_seaplane_tender_propulsion_medium = {
 		ship_movement_speed_add = 10
 	}
 
-	construction_goods = { # 1200
-		goods_input_engines_add = 15
-		goods_input_coal_add = 10
+	construction_goods = { # 33000
+		goods_input_engines_add = 185
+		goods_input_coal_add = 730
 	}
 
 	ai_weight = {
@@ -8820,9 +8866,9 @@ ship_mod_seaplane_tender_propulsion_high = {
 		ship_movement_speed_add = 12.5
 	}
 
-	construction_goods = { # 1680
-		goods_input_engines_add = 22
-		goods_input_coal_add = 12
+	construction_goods = { # 46500
+		goods_input_engines_add = 275
+		goods_input_coal_add = 1000
 	}
 
 	ai_weight = {
@@ -8875,8 +8921,8 @@ ship_mod_seaplane_tender_range_light = {
 		ship_supply_capacity_add = 20
 	}
 
-	construction_goods = { # 270
-		goods_input_groceries_add = 9
+	construction_goods = { # 7350
+		goods_input_groceries_add = 245
 	}
 
 	ai_weight = {
@@ -8923,8 +8969,8 @@ ship_mod_seaplane_tender_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 480
-		goods_input_groceries_add = 16
+	construction_goods = { # 13350
+		goods_input_groceries_add = 445
 	}
 
 	ai_weight = {
@@ -8971,8 +9017,8 @@ ship_mod_seaplane_tender_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 780
-		goods_input_groceries_add = 26
+	construction_goods = { # 21450
+		goods_input_groceries_add = 715
 	}
 
 	ai_weight = {
@@ -9020,9 +9066,9 @@ ship_mod_aircraft_carrier_armor_light = {
 		ship_hit_points_max_add = 175
 	}
 
-	construction_goods = { # 310
-		goods_input_steel_add = 5
-		goods_input_wood_add = 3
+	construction_goods = { # 6550
+		goods_input_steel_add = 105
+		goods_input_wood_add = 65
 	}
 
 	ai_weight = {
@@ -9076,8 +9122,8 @@ ship_mod_aircraft_carrier_armor_medium = {
 		ship_hit_points_max_add = 550
 	}
 
-	construction_goods = { # 600
-		goods_input_steel_add = 12
+	construction_goods = { # 12750
+		goods_input_steel_add = 255
 	}
 
 	ai_weight = {
@@ -9122,8 +9168,8 @@ ship_mod_aircraft_carrier_armor_high = {
 		ship_hit_points_max_add = 1100
 	}
 
-	construction_goods = { # 1000
-		goods_input_steel_add = 20
+	construction_goods = { # 21750
+		goods_input_steel_add = 435
 	}
 
 	ai_weight = {
@@ -9170,8 +9216,8 @@ ship_mod_aircraft_carrier_guns_light = {
 		ship_vulnerability_add = 6
 	}
 
-	construction_goods = { # 800
-		goods_input_aeroplanes_add = 15
+	construction_goods = { # 25200
+		goods_input_aeroplanes_add = 315
 	}
 
 	ai_weight = {
@@ -9218,9 +9264,9 @@ ship_mod_aircraft_carrier_guns_medium = {
 		ship_vulnerability_add = 14
 	}
 
-	construction_goods = { # 1850
-		goods_input_aeroplanes_add = 30
-		goods_input_ammunition_add = 10
+	construction_goods = { # 62350
+		goods_input_aeroplanes_add = 645
+		goods_input_ammunition_add = 215
 	}
 
 	ai_weight = {
@@ -9276,9 +9322,9 @@ ship_mod_aircraft_carrier_guns_high = {
 		ship_vulnerability_add = 56
 	}
 
-	construction_goods = { # 3000
-		goods_input_aeroplanes_add = 40
-		goods_input_ammunition_add = 20
+	construction_goods = { # 89750
+		goods_input_aeroplanes_add = 850
+		goods_input_ammunition_add = 435
 	}
 
 	ai_weight = {
@@ -9331,9 +9377,9 @@ ship_mod_aircraft_carrier_propulsion_light = {
 		ship_movement_speed_add = 10
 	}
 
-	construction_goods = { # 1480
-		goods_input_engines_add = 18
-		goods_input_oil_add = 10
+	construction_goods = { # 31800
+		goods_input_engines_add = 290
+		goods_input_oil_add = 360
 	}
 
 	ai_weight = {
@@ -9386,9 +9432,9 @@ ship_mod_aircraft_carrier_propulsion_medium = {
 		ship_movement_speed_add = 12.5
 	}
 
-	construction_goods = { # 1900
-		goods_input_engines_add = 25
-		goods_input_oil_add = 10
+	construction_goods = { # 41100
+		goods_input_engines_add = 405
+		goods_input_oil_add = 420
 	}
 
 	ai_weight = {
@@ -9441,9 +9487,9 @@ ship_mod_aircraft_carrier_propulsion_high = {
 		ship_movement_speed_add = 15
 	}
 
-	construction_goods = { # 2520
-		goods_input_engines_add = 32
-		goods_input_oil_add = 15
+	construction_goods = { # 54300
+		goods_input_engines_add = 525
+		goods_input_oil_add = 570
 	}
 
 	ai_weight = {
@@ -9496,8 +9542,8 @@ ship_mod_aircraft_carrier_range_light = {
 		ship_supply_capacity_add = 45
 	}
 
-	construction_goods = { # 390
-		goods_input_groceries_add = 13
+	construction_goods = { # 8250
+		goods_input_groceries_add = 275
 	}
 
 	ai_weight = {
@@ -9544,8 +9590,8 @@ ship_mod_aircraft_carrier_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 780
-		goods_input_groceries_add = 26
+	construction_goods = { # 16650
+		goods_input_groceries_add = 555
 	}
 
 	ai_weight = {
@@ -9592,8 +9638,8 @@ ship_mod_aircraft_carrier_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 1200
-		goods_input_groceries_add = 40
+	construction_goods = { # 25500
+		goods_input_groceries_add = 850
 	}
 
 	ai_weight = {
@@ -9641,8 +9687,9 @@ ship_mod_early_troop_ship_armor_light = {
 		ship_hit_points_max_add = 100
 	}
 
-	construction_goods = { # 200
-		goods_input_hardwood_add = 5
+	construction_goods = { # 1760
+		goods_input_hardwood_add = 25
+		goods_input_copper_add = 19
 	}
 
 	ai_weight = {
@@ -9663,6 +9710,15 @@ ship_mod_early_troop_ship_armor_light = {
 			add = { value = 0
 				# equipment_ship_mod_early_troop_ship_armor_light_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_early_troop_ship_armor_light_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_7527ad61975d9a06_equipment_material_pressure_copper_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_armor_light_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_armor_light_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_7527ad61975d9a06_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -9671,7 +9727,7 @@ ship_mod_early_troop_ship_armor_light = {
 				# equipment_ship_mod_early_troop_ship_armor_light_hardwood_scarcity [military]; 候选真实正投入hardwood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_armor_light.ai_weight
@@ -9688,9 +9744,10 @@ ship_mod_early_troop_ship_armor_medium = {
 		ship_hit_points_max_add = 250
 	}
 
-	construction_goods = { # 320
-		goods_input_hardwood_add = 8
-		goods_input_iron_add = 2
+	construction_goods = { # 3720
+		goods_input_hardwood_add = 45
+		goods_input_iron_add = 18
+		goods_input_copper_add = 30
 	}
 
 	ai_weight = {
@@ -9713,6 +9770,15 @@ ship_mod_early_troop_ship_armor_medium = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_armor_medium_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_early_troop_ship_armor_medium_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_23fd9e71b0f7f61f_equipment_material_pressure_copper_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_armor_medium_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_armor_medium_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_23fd9e71b0f7f61f_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -9745,9 +9811,10 @@ ship_mod_early_troop_ship_armor_high = {
 		ship_hit_points_max_add = 375
 	}
 
-	construction_goods = { # 450
-		goods_input_hardwood_add = 8
-		goods_input_iron_add = 5
+	construction_goods = { # 4800
+		goods_input_hardwood_add = 45
+		goods_input_iron_add = 45
+		goods_input_copper_add = 30
 	}
 
 	ai_weight = {
@@ -9770,6 +9837,15 @@ ship_mod_early_troop_ship_armor_high = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_armor_high_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_early_troop_ship_armor_high_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_2078df711d6a2767_equipment_material_pressure_copper_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_armor_high_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_armor_high_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_2078df711d6a2767_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -9802,8 +9878,8 @@ ship_mod_early_troop_ship_guns_light = {
 		ship_crew_damage_add = 2
 	}
 
-	construction_goods = { # 140
-		goods_input_artillery_add = 2
+	construction_goods = { # 1260
+		goods_input_artillery_add = 18
 	}
 
 	ai_weight = {
@@ -9850,8 +9926,8 @@ ship_mod_early_troop_ship_guns_medium = {
 		ship_vulnerability_add = 10
 	}
 
-	construction_goods = { # 280
-		goods_input_artillery_add = 4
+	construction_goods = { # 2450
+		goods_input_artillery_add = 35
 	}
 
 	ai_weight = {
@@ -9899,8 +9975,8 @@ ship_mod_early_troop_ship_guns_high = {
 		ship_vulnerability_add = 20
 	}
 
-	construction_goods = { # 420
-		goods_input_artillery_add = 6
+	construction_goods = { # 3500
+		goods_input_artillery_add = 50
 	}
 
 	ai_weight = {
@@ -9945,9 +10021,10 @@ ship_mod_early_troop_ship_propulsion_light = {
 		ship_movement_speed_add = 5.0
 	}
 
-	construction_goods = { # 360
-		goods_input_fabric_add = 8
-		goods_input_hardwood_add = 5
+	construction_goods = { # 3250
+		goods_input_fabric_add = 45
+		goods_input_hardwood_add = 25
+		goods_input_coal_add = 45
 	}
 
 	ai_weight = {
@@ -9970,6 +10047,15 @@ ship_mod_early_troop_ship_propulsion_light = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_light_fabric_opportunity [military]; 候选真实正投入fabric已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_ship_mod_early_troop_ship_propulsion_light_coal_opportunity [military]; 候选真实正投入coal已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_ea14d57423b93177_equipment_material_pressure_coal_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_propulsion_light_coal_pressure [military]; 候选真实正投入coal高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_propulsion_light_coal_scarcity [military]; 候选真实正投入coal已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_ea14d57423b93177_equipment_material_pressure_fabric_negative
 			add = { value = 0
@@ -10001,10 +10087,10 @@ ship_mod_early_troop_ship_propulsion_medium = {
 		ship_movement_speed_add = 8.0
 	}
 
-	construction_goods = { # 530
-		goods_input_fabric_add = 5
-		goods_input_engines_add = 5
-		goods_input_coal_add = 3
+	construction_goods = { # 4250
+		goods_input_fabric_add = 25
+		goods_input_engines_add = 45
+		goods_input_coal_add = 35
 	}
 
 	unlocking_technologies = { atmospheric_engine }
@@ -10069,10 +10155,10 @@ ship_mod_early_troop_ship_propulsion_high = {
 		ship_movement_speed_add = 10.0
 	}
 
-	construction_goods = { # 870
-		goods_input_fabric_add = 3
-		goods_input_engines_add = 10
-		goods_input_coal_add = 5
+	construction_goods = { # 7220
+		goods_input_fabric_add = 16
+		goods_input_engines_add = 90
+		goods_input_coal_add = 50
 	}
 
 	unlocking_technologies = { watertube_boiler }
@@ -10138,9 +10224,9 @@ ship_mod_early_troop_ship_range_light = {
 		ship_supply_capacity_add = 25
 	}
 
-	construction_goods = { # 230
-		goods_input_groceries_add = 3
-		goods_input_grain_add = 7
+	construction_goods = { # 2200
+		goods_input_groceries_add = 30
+		goods_input_grain_add = 65
 	}
 
 	ai_weight = {
@@ -10198,9 +10284,9 @@ ship_mod_early_troop_ship_range_medium = {
 		ship_supply_efficiency_add = 0.05
 	}
 
-	construction_goods = { # 330
-		goods_input_groceries_add = 7
-		goods_input_grain_add = 7
+	construction_goods = { # 3250
+		goods_input_groceries_add = 65
+		goods_input_grain_add = 65
 	}
 
 	ai_weight = {
@@ -10258,9 +10344,9 @@ ship_mod_early_troop_ship_range_high = {
 		ship_supply_efficiency_add = 0.15
 	}
 
-	construction_goods = { # 600
-		goods_input_groceries_add = 13
-		goods_input_grain_add = 10
+	construction_goods = { # 5400
+		goods_input_groceries_add = 120
+		goods_input_grain_add = 90
 	}
 
 	ai_weight = {
@@ -10318,9 +10404,9 @@ ship_mod_troop_ship_armor_light = {
 		ship_hit_points_max_add = 150
 	}
 
-	construction_goods = { # 140
-		goods_input_wood_add = 3
-		goods_input_iron_add = 2
+	construction_goods = { # 1160
+		goods_input_wood_add = 24
+		goods_input_iron_add = 17
 	}
 
 	ai_weight = {
@@ -10375,8 +10461,8 @@ ship_mod_troop_ship_armor_medium = {
 		ship_hit_points_max_add = 375
 	}
 
-	construction_goods = { # 250
-		goods_input_steel_add = 5
+	construction_goods = { # 2000
+		goods_input_steel_add = 40
 	}
 
 	ai_weight = {
@@ -10422,8 +10508,8 @@ ship_mod_troop_ship_armor_high = {
 		ship_hit_points_max_add = 750
 	}
 
-	construction_goods = { # 500
-		goods_input_steel_add = 10
+	construction_goods = { # 4250
+		goods_input_steel_add = 85
 	}
 
 	ai_weight = {
@@ -10471,8 +10557,8 @@ ship_mod_troop_ship_guns_light = {
 		ship_vulnerability_add = 10
 	}
 
-	construction_goods = { # 210
-		goods_input_artillery_add = 3
+	construction_goods = { # 1680
+		goods_input_artillery_add = 24
 	}
 
 	ai_weight = {
@@ -10520,8 +10606,8 @@ ship_mod_troop_ship_guns_medium = {
 		ship_vulnerability_add = 25
 	}
 
-	construction_goods = { # 560
-		goods_input_artillery_add = 8
+	construction_goods = { # 4200
+		goods_input_artillery_add = 60
 	}
 
 	ai_weight = {
@@ -10569,8 +10655,8 @@ ship_mod_troop_ship_guns_high = {
 		ship_vulnerability_add = 50
 	}
 
-	construction_goods = { # 840
-		goods_input_artillery_add = 12
+	construction_goods = { # 7000
+		goods_input_artillery_add = 100
 	}
 
 	ai_weight = {
@@ -10615,10 +10701,10 @@ ship_mod_troop_ship_propulsion_light = {
 		ship_movement_speed_add = 8.5
 	}
 
-	construction_goods = { # 490
-		goods_input_fabric_add = 5
-		goods_input_engines_add = 5
-		goods_input_coal_add = 3
+	construction_goods = { # 3920
+		goods_input_fabric_add = 40
+		goods_input_engines_add = 40
+		goods_input_coal_add = 24
 	}
 
 	ai_weight = {
@@ -10681,10 +10767,10 @@ ship_mod_troop_ship_propulsion_medium = {
 		ship_movement_speed_add = 11
 	}
 
-	construction_goods = { # 810
-		goods_input_fabric_add = 3
-		goods_input_engines_add = 10
-		goods_input_coal_add = 5
+	construction_goods = { # 6780
+		goods_input_fabric_add = 24
+		goods_input_engines_add = 85
+		goods_input_coal_add = 40
 	}
 
 	ai_weight = {
@@ -10747,9 +10833,9 @@ ship_mod_troop_ship_propulsion_high = {
 		ship_movement_speed_add = 13
 	}
 
-	construction_goods = { # 1140
-		goods_input_engines_add = 15
-		goods_input_coal_add = 8
+	construction_goods = { # 9000
+		goods_input_engines_add = 120
+		goods_input_coal_add = 60
 	}
 
 	ai_weight = {
@@ -10879,9 +10965,9 @@ ship_mod_troop_ship_range_light = {
 		ship_supply_capacity_add = 35
 	}
 
-	construction_goods = { # 350
-		goods_input_groceries_add = 5
-		goods_input_grain_add = 10
+	construction_goods = { # 2900
+		goods_input_groceries_add = 40
+		goods_input_grain_add = 85
 	}
 
 	ai_weight = {
@@ -10939,9 +11025,9 @@ ship_mod_troop_ship_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 500
-		goods_input_groceries_add = 10
-		goods_input_grain_add = 10
+	construction_goods = { # 4250
+		goods_input_groceries_add = 85
+		goods_input_grain_add = 85
 	}
 
 	ai_weight = {
@@ -10999,9 +11085,9 @@ ship_mod_troop_ship_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 900
-		goods_input_groceries_add = 20
-		goods_input_grain_add = 15
+	construction_goods = { # 7200
+		goods_input_groceries_add = 160
+		goods_input_grain_add = 120
 	}
 
 	ai_weight = {
@@ -11059,8 +11145,8 @@ ship_mod_torpedo_boat_armor_light = {
 		ship_hit_points_max_add = 150
 	}
 
-	construction_goods = { # 150
-		goods_input_iron_add = 4
+	construction_goods = { # 3600
+		goods_input_iron_add = 90
 	}
 
 	ai_weight = {
@@ -11107,8 +11193,8 @@ ship_mod_torpedo_boat_armor_medium = {
 		ship_hit_points_max_add = 325
 	}
 
-	construction_goods = { # 300
-		goods_input_iron_add = 8
+	construction_goods = { # 6800
+		goods_input_iron_add = 170
 	}
 
 	ai_weight = {
@@ -11155,8 +11241,8 @@ ship_mod_torpedo_boat_armor_high = {
 		ship_hit_points_max_add = 650
 	}
 
-	construction_goods = { # 500
-		goods_input_iron_add = 12
+	construction_goods = { # 10400
+		goods_input_iron_add = 260
 	}
 
 	ai_weight = {
@@ -11205,8 +11291,8 @@ ship_mod_torpedo_boat_guns_light = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 400
-		goods_input_explosives_add = 8
+	construction_goods = { # 8500
+		goods_input_explosives_add = 170
 	}
 
 	ai_weight = {
@@ -11255,9 +11341,9 @@ ship_mod_torpedo_boat_guns_medium = {
 		ship_vulnerability_add = 3
 	}
 
-	construction_goods = { # 610
-		goods_input_explosives_add = 8
-		goods_input_artillery_add = 3
+	construction_goods = { # 13050
+		goods_input_explosives_add = 170
+		goods_input_artillery_add = 65
 	}
 
 	ai_weight = {
@@ -11315,9 +11401,9 @@ ship_mod_torpedo_boat_guns_high = {
 		ship_vulnerability_add = 6
 	}
 
-	construction_goods = { # 950
-		goods_input_explosives_add = 12
-		goods_input_artillery_add = 5
+	construction_goods = { # 20350
+		goods_input_explosives_add = 260
+		goods_input_artillery_add = 105
 	}
 
 	unlocking_technologies = { ironclad_tech }
@@ -11374,9 +11460,9 @@ ship_mod_torpedo_boat_propulsion_light = {
 		ship_movement_speed_add = 8.5
 	}
 
-	construction_goods = { # 390
-		goods_input_engines_add = 5
-		goods_input_coal_add = 3
+	construction_goods = { # 8250
+		goods_input_engines_add = 45
+		goods_input_coal_add = 185
 	}
 
 	ai_weight = {
@@ -11431,9 +11517,9 @@ ship_mod_torpedo_boat_propulsion_medium = {
 		ship_movement_speed_add = 11.5
 	}
 
-	construction_goods = { # 630
-		goods_input_engines_add = 8
-		goods_input_coal_add = 5
+	construction_goods = { # 13800
+		goods_input_engines_add = 75
+		goods_input_coal_add = 310
 	}
 
 	ai_weight = {
@@ -11488,9 +11574,9 @@ ship_mod_torpedo_boat_propulsion_high = {
 		ship_movement_speed_add = 14
 	}
 
-	construction_goods = { # 960
-		goods_input_engines_add = 12
-		goods_input_coal_add = 8
+	construction_goods = { # 20550
+		goods_input_engines_add = 105
+		goods_input_coal_add = 475
 	}
 
 	ai_weight = {
@@ -11545,8 +11631,8 @@ ship_mod_torpedo_boat_range_light = {
 		ship_supply_capacity_add = 6
 	}
 
-	construction_goods = { # 180
-		goods_input_groceries_add = 6
+	construction_goods = { # 3750
+		goods_input_groceries_add = 125
 	}
 
 	ai_weight = {
@@ -11594,8 +11680,8 @@ ship_mod_torpedo_boat_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 300
-		goods_input_groceries_add = 10
+	construction_goods = { # 6450
+		goods_input_groceries_add = 215
 	}
 
 	ai_weight = {
@@ -11643,8 +11729,8 @@ ship_mod_torpedo_boat_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 510
-		goods_input_groceries_add = 17
+	construction_goods = { # 10650
+		goods_input_groceries_add = 355
 	}
 
 	ai_weight = {
@@ -11693,8 +11779,8 @@ ship_mod_torpedo_boat_destroyer_armor_light = {
 		ship_hit_points_max_add = 175
 	}
 
-	construction_goods = { # 200
-		goods_input_steel_add = 4
+	construction_goods = { # 3750
+		goods_input_steel_add = 75
 	}
 
 	ai_weight = {
@@ -11740,8 +11826,8 @@ ship_mod_torpedo_boat_destroyer_armor_medium = {
 		ship_hit_points_max_add = 425
 	}
 
-	construction_goods = { # 400
-		goods_input_steel_add = 8
+	construction_goods = { # 7500
+		goods_input_steel_add = 150
 	}
 
 	ai_weight = {
@@ -11787,8 +11873,8 @@ ship_mod_torpedo_boat_destroyer_armor_high = {
 		ship_hit_points_max_add = 850
 	}
 
-	construction_goods = { # 700
-		goods_input_steel_add = 14
+	construction_goods = { # 13000
+		goods_input_steel_add = 260
 	}
 
 	ai_weight = {
@@ -11836,9 +11922,9 @@ ship_mod_torpedo_boat_destroyer_guns_light = {
 		ship_vulnerability_add = 2
 	}
 
-	construction_goods = { # 600
-		goods_input_explosives_add = 5
-		goods_input_artillery_add = 5
+	construction_goods = { # 10800
+		goods_input_explosives_add = 90
+		goods_input_artillery_add = 90
 	}
 
 	ai_weight = {
@@ -11895,9 +11981,9 @@ ship_mod_torpedo_boat_destroyer_guns_medium = {
 		ship_vulnerability_add = 6
 	}
 
-	construction_goods = { # 960
-		goods_input_explosives_add = 8
-		goods_input_artillery_add = 8
+	construction_goods = { # 18000
+		goods_input_explosives_add = 150
+		goods_input_artillery_add = 150
 	}
 
 	ai_weight = {
@@ -11954,9 +12040,9 @@ ship_mod_torpedo_boat_destroyer_guns_high = {
 		ship_vulnerability_add = 12
 	}
 
-	construction_goods = { # 1440
-		goods_input_explosives_add = 12
-		goods_input_artillery_add = 12
+	construction_goods = { # 27000
+		goods_input_explosives_add = 225
+		goods_input_artillery_add = 225
 	}
 
 	ai_weight = {
@@ -12010,9 +12096,9 @@ ship_mod_torpedo_boat_destroyer_propulsion_light = {
 		ship_movement_speed_add = 8.5
 	}
 
-	construction_goods = { # 630
-		goods_input_engines_add = 8
-		goods_input_coal_add = 5
+	construction_goods = { # 11700
+		goods_input_engines_add = 75
+		goods_input_coal_add = 240
 	}
 
 	ai_weight = {
@@ -12066,9 +12152,9 @@ ship_mod_torpedo_boat_destroyer_propulsion_medium = {
 		ship_movement_speed_add = 11.5
 	}
 
-	construction_goods = { # 960
-		goods_input_engines_add = 12
-		goods_input_coal_add = 8
+	construction_goods = { # 17400
+		goods_input_engines_add = 110
+		goods_input_coal_add = 360
 	}
 
 	ai_weight = {
@@ -12122,9 +12208,9 @@ ship_mod_torpedo_boat_destroyer_propulsion_high = {
 		ship_movement_speed_add = 14
 	}
 
-	construction_goods = { # 1380
-		goods_input_engines_add = 18
-		goods_input_coal_add = 10
+	construction_goods = { # 25500
+		goods_input_engines_add = 170
+		goods_input_coal_add = 510
 	}
 
 	ai_weight = {
@@ -12178,8 +12264,8 @@ ship_mod_torpedo_boat_destroyer_range_light = {
 		ship_supply_capacity_add = 6
 	}
 
-	construction_goods = { # 180
-		goods_input_groceries_add = 6
+	construction_goods = { # 3300
+		goods_input_groceries_add = 110
 	}
 
 	ai_weight = {
@@ -12226,8 +12312,8 @@ ship_mod_torpedo_boat_destroyer_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 420
-		goods_input_groceries_add = 14
+	construction_goods = { # 7800
+		goods_input_groceries_add = 260
 	}
 
 	ai_weight = {
@@ -12274,8 +12360,8 @@ ship_mod_torpedo_boat_destroyer_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 720
-		goods_input_groceries_add = 24
+	construction_goods = { # 13500
+		goods_input_groceries_add = 450
 	}
 
 	ai_weight = {
@@ -12323,8 +12409,8 @@ ship_mod_submarine_armor_light = {
 		ship_hit_points_max_add = 250
 	}
 
-	construction_goods = { # 250
-		goods_input_steel_add = 5
+	construction_goods = { # 6750
+		goods_input_steel_add = 135
 	}
 
 	ai_weight = {
@@ -12371,8 +12457,8 @@ ship_mod_submarine_armor_medium = {
 		ship_hit_points_max_add = 675
 	}
 
-	construction_goods = { # 500
-		goods_input_steel_add = 10
+	construction_goods = { # 13750
+		goods_input_steel_add = 275
 	}
 
 	ai_weight = {
@@ -12419,8 +12505,8 @@ ship_mod_submarine_armor_high = {
 		ship_hit_points_max_add = 1250
 	}
 
-	construction_goods = { # 750
-		goods_input_steel_add = 15
+	construction_goods = { # 20250
+		goods_input_steel_add = 405
 	}
 
 	ai_weight = {
@@ -12468,8 +12554,8 @@ ship_mod_submarine_guns_light = {
 		ship_critical_hit_chance_add = 0.1
 	}
 
-	construction_goods = { # 400
-		goods_input_explosives_add = 8
+	construction_goods = { # 10750
+		goods_input_explosives_add = 215
 	}
 
 	ai_weight = {
@@ -12515,11 +12601,10 @@ ship_mod_submarine_guns_medium = {
 		ship_hull_damage_add = 80
 		ship_crew_damage_add = 20
 		ship_critical_hit_chance_add = 0.15
-		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 810
-		goods_input_explosives_add = 15
+	construction_goods = { # 20250
+		goods_input_explosives_add = 405
 	}
 
 	ai_weight = {
@@ -12565,11 +12650,10 @@ ship_mod_submarine_guns_high = {
 		ship_hull_damage_add = 115
 		ship_crew_damage_add = 30
 		ship_critical_hit_chance_add = 0.2
-		ship_vulnerability_add = 2
 	}
 
-	construction_goods = { # 1250
-		goods_input_explosives_add = 25
+	construction_goods = { # 34500
+		goods_input_explosives_add = 690
 	}
 
 	ai_weight = {
@@ -12615,9 +12699,9 @@ ship_mod_submarine_propulsion_light = {
 		ship_movement_speed_add = 5.5
 	}
 
-	construction_goods = { # 600
-		goods_input_engines_add = 8
-		goods_input_oil_add = 3
+	construction_goods = { # 16500
+		goods_input_engines_add = 65
+		goods_input_oil_add = 315
 	}
 
 	ai_weight = {
@@ -12672,9 +12756,9 @@ ship_mod_submarine_propulsion_medium = {
 		ship_movement_speed_add = 6.5
 	}
 
-	construction_goods = { # 920
-		goods_input_engines_add = 12
-		goods_input_oil_add = 5
+	construction_goods = { # 25500
+		goods_input_engines_add = 105
+		goods_input_oil_add = 480
 	}
 
 	ai_weight = {
@@ -12729,9 +12813,9 @@ ship_mod_submarine_propulsion_high = {
 		ship_movement_speed_add = 8
 	}
 
-	construction_goods = { # 1400
-		goods_input_engines_add = 18
-		goods_input_oil_add = 8
+	construction_goods = { # 38700
+		goods_input_engines_add = 155
+		goods_input_oil_add = 735
 	}
 
 	ai_weight = {
@@ -12786,8 +12870,8 @@ ship_mod_submarine_range_light = {
 		ship_supply_capacity_add = 6
 	}
 
-	construction_goods = { # 210
-		goods_input_groceries_add = 7
+	construction_goods = { # 5850
+		goods_input_groceries_add = 195
 	}
 
 	ai_weight = {
@@ -12834,8 +12918,8 @@ ship_mod_submarine_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 420
-		goods_input_groceries_add = 14
+	construction_goods = { # 11700
+		goods_input_groceries_add = 390
 	}
 
 	ai_weight = {
@@ -12883,8 +12967,8 @@ ship_mod_submarine_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 660
-		goods_input_groceries_add = 22
+	construction_goods = { # 18000
+		goods_input_groceries_add = 600
 	}
 
 	ai_weight = {
@@ -12933,8 +13017,8 @@ ship_mod_destroyer_armor_light = {
 		ship_hit_points_max_add = 250
 	}
 
-	construction_goods = { # 250
-		goods_input_steel_add = 5
+	construction_goods = { # 5500
+		goods_input_steel_add = 110
 	}
 
 	ai_weight = {
@@ -12980,8 +13064,8 @@ ship_mod_destroyer_armor_medium = {
 		ship_hit_points_max_add = 675
 	}
 
-	construction_goods = { # 500
-		goods_input_steel_add = 10
+	construction_goods = { # 11250
+		goods_input_steel_add = 225
 	}
 
 	ai_weight = {
@@ -13027,8 +13111,8 @@ ship_mod_destroyer_armor_high = {
 		ship_hit_points_max_add = 1250
 	}
 
-	construction_goods = { # 800
-		goods_input_steel_add = 16
+	construction_goods = { # 18000
+		goods_input_steel_add = 360
 	}
 
 	ai_weight = {
@@ -13076,9 +13160,9 @@ ship_mod_destroyer_guns_light = {
 		ship_vulnerability_add = 3
 	}
 
-	construction_goods = { # 750
-		goods_input_ammunition_add = 8
-		goods_input_artillery_add = 5
+	construction_goods = { # 16700
+		goods_input_ammunition_add = 180
+		goods_input_artillery_add = 110
 	}
 
 	ai_weight = {
@@ -13135,9 +13219,9 @@ ship_mod_destroyer_guns_medium = {
 		ship_vulnerability_add = 7
 	}
 
-	construction_goods = { # 1160
-		goods_input_ammunition_add = 12
-		goods_input_artillery_add = 8
+	construction_goods = { # 26100
+		goods_input_ammunition_add = 270
+		goods_input_artillery_add = 180
 	}
 
 	ai_weight = {
@@ -13194,9 +13278,9 @@ ship_mod_destroyer_guns_high = {
 		ship_vulnerability_add = 14
 	}
 
-	construction_goods = { # 1590
-		goods_input_ammunition_add = 15
-		goods_input_artillery_add = 12
+	construction_goods = { # 35400
+		goods_input_ammunition_add = 330
+		goods_input_artillery_add = 270
 	}
 
 	ai_weight = {
@@ -13250,9 +13334,9 @@ ship_mod_destroyer_propulsion_light = {
 		ship_movement_speed_add = 9
 	}
 
-	construction_goods = { # 920
-		goods_input_engines_add = 12
-		goods_input_oil_add = 5
+	construction_goods = { # 20700
+		goods_input_engines_add = 125
+		goods_input_oil_add = 330
 	}
 
 	ai_weight = {
@@ -13306,9 +13390,9 @@ ship_mod_destroyer_propulsion_medium = {
 		ship_movement_speed_add = 12
 	}
 
-	construction_goods = { # 1400
-		goods_input_engines_add = 18
-		goods_input_oil_add = 8
+	construction_goods = { # 31500
+		goods_input_engines_add = 185
+		goods_input_oil_add = 510
 	}
 
 	ai_weight = {
@@ -13362,9 +13446,9 @@ ship_mod_destroyer_propulsion_high = {
 		ship_movement_speed_add = 15
 	}
 
-	construction_goods = { # 1980
-		goods_input_engines_add = 25
-		goods_input_oil_add = 12
+	construction_goods = { # 44400
+		goods_input_engines_add = 260
+		goods_input_oil_add = 720
 	}
 
 	ai_weight = {
@@ -13420,8 +13504,8 @@ ship_mod_destroyer_range_light = {
 		ship_supply_capacity_add = 20
 	}
 
-	construction_goods = { # 240
-		goods_input_groceries_add = 8
+	construction_goods = { # 5400
+		goods_input_groceries_add = 180
 	}
 
 	ai_weight = {
@@ -13470,8 +13554,8 @@ ship_mod_destroyer_range_medium = {
 		ship_supply_efficiency_add = 0.1
 	}
 
-	construction_goods = { # 510
-		goods_input_groceries_add = 17
+	construction_goods = { # 11250
+		goods_input_groceries_add = 375
 	}
 
 	ai_weight = {
@@ -13520,8 +13604,8 @@ ship_mod_destroyer_range_high = {
 		ship_supply_efficiency_add = 0.25
 	}
 
-	construction_goods = { # 780
-		goods_input_groceries_add = 26
+	construction_goods = { # 17550
+		goods_input_groceries_add = 585
 	}
 
 	ai_weight = {

@@ -534,10 +534,9 @@ def snapshot_index(path: Path | None = None) -> VanillaIndex | None:
 def _load(path: Path) -> Snapshot | None:
     from .snapshot import Snapshot  # noqa: PLC0415 - 避免与 snapshot 的循环导入
 
-    try:
-        return Snapshot.load(path)
-    except (OSError, ValueError):
-        return None
+    snap = Snapshot.load(path)
+    snap.require_version()
+    return snap
 
 
 def from_snapshot(snap: Snapshot, *, origin: Path | None = None) -> VanillaIndex:

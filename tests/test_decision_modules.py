@@ -12,10 +12,16 @@ from pdx import (
     decision_economy,
     decisions,
     distribution,
+    version_contracts,
 )
 from pdx.parser import parse_text
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(scope="module")
+def release_inputs():
+    return distribution.package_inputs(include_engineering_metadata=True)
 
 
 def test_经济模块未知输入保守且边界有限():
@@ -75,8 +81,8 @@ def test_未知安全输入局部退出且玩家边界静态检查():
 
 
 @pytest.mark.integration
-def test_正式包启用模块与生命周期契约一致():
-    policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
+def test_正式包启用模块与生命周期契约一致(release_inputs):
+    policy, extensions, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
     contract = metadata["module_contract"]
     enabled_modules = set(metadata["enabled_modules"])
@@ -132,10 +138,12 @@ def test_generated_route_fallbacks_do_not_emit_empty_boolean_blocks():
 
 
 @pytest.mark.integration
-def test_正式候选生成所有脚本和全语言无回退():
-    policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
+def test_正式候选生成所有脚本和全语言无回退(release_inputs):
+    policy, extensions, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert policy.package.status == "released"
+    assert policy.package.status == (
+        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+    )
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",

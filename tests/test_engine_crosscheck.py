@@ -49,45 +49,10 @@ def _needs_logs() -> None:
         )
 
 
-def _state_matches_log(report) -> None:
-    """日志是否描述了**当前这份安装的 mod 状态**；不是就跳过，并说清差在哪。
-
-    为什么不硬判（2026-09-22 实测定性）
-    ----------------------------------
-    那 16 条 token 不一致**没有一条是解析器的问题**，而且证据是可测的：
-
-    * 涉及的 2 个文件都被 mod 覆盖，且**覆盖版与原版行数不同**
-      （``gui/military_formation_panel.gui`` 原版 8098 / 覆盖版 7767）
-      ⇒ 行号**根本不可比**：日志来自另一套内容，我们读到的是当前覆盖版。
-      这类记进 :attr:`CrossCheckReport.unverifiable_tokens`。
-    * 主因是 Workshop mod **「Ultra Historical Warfare」**（``supported_game_version``
-      是 **1.13\\***，本机 **1.14.3**），它覆盖了那两个 gui。
-    * 另有探针会话的残留：探针往 ``gui/error_deer.gui`` 插的 `CLEAR`/`DUMP`
-      （已单独归档到 ``v3probe-logs-20260922``）。
-
-    所以"跳过"不是偷懒：这条外部真值**当前确实不可比**。
-    要恢复只需**跑一次常规游戏**（日志会轮转，新日志与当时安装一致）。
-    """
-    unverifiable = report.unverifiable_tokens
-    absent = report.absent_tokens
-    if not unverifiable and not absent:
-        return
-    files = sorted({rel for rel, *_ in unverifiable + absent})
-    pytest.skip(
-        f"{len(unverifiable) + len(absent)} 条断言无法核对：涉及 {len(files)} 个被覆盖的"
-        "文件（" + "、".join(files[:3]) + ("…" if len(files) > 3 else "") + "）。"
-        "主因是 Workshop mod「Ultra Historical Warfare」（支持 1.13 / 本机 1.14.3）"
-        "覆盖了这些 gui ⇒ 日志行号与当前覆盖版**不可比**，或 token 在当前安装里不存在。"
-        "**跑一次常规游戏**即可让日志与安装一致。"
-    )
-
-
 @pytest.fixture(scope="module")
 def report():
     _needs_logs()
-    rep = engine_log.cross_check(_CLAIMS, log_version=_VERSION)
-    _state_matches_log(rep)
-    return rep
+    return engine_log.cross_check(_CLAIMS, log_version=_VERSION)
 
 
 # ── 覆盖面：对「全量」最直接的外部检验 ──────────────────────
@@ -212,3 +177,15 @@ def test_找不到日志时优雅返回(tmp_path) -> None:
     claims, version = engine_log.parse_logs(tmp_path / "nope")
     assert claims == []
     assert version == ""
+
+
+def test_旧版本日志不冒充当前引擎证据(report) -> None:
+    for verdict in report.token_verdicts():
+        version = report.token_versions.get(
+            (verdict.file_rel, verdict.line, verdict.token), report.log_version
+        )
+        if not version or version != report.source_version:
+            assert verdict.state == engine_log.TOKEN_UNVERIFIABLE
+            assert verdict.kind == engine_log.KIND_VERSION_INCOMPARABLE
+    if not report.version_comparable:
+        assert report.claim_versions != {report.source_version}

@@ -84,12 +84,55 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from typing import TYPE_CHECKING
 
-from pdx import config, docgen
+import pytest
+
+from pdx import config, docgen, usage, version_contracts
+from pdx.doc_tables import merge_rows
+from pdx.version_contracts import is_115
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0", "1.15.1"])
+def test_current_pm_empirical_table_drops_only_absent_native_fields(monkeypatch, version):
+    monkeypatch.setattr(
+        usage, "field_occurrences", lambda *_args, **_kwargs: Counter(scoring_override=2)
+    )
+    with version_contracts.select_version(version):
+        spec = next(
+            spec for spec in usage.doc_table_specs() if spec.name == "doc14 表10 production_methods"
+        )
+        rows = merge_rows(
+            spec,
+            [
+                ["`low_pop_method`", "2", "old.txt:4", "retired"],
+                ["`scoring_override`", "99", "current.txt:4", "current"],
+            ],
+        )
+    assert any("`scoring_override` | 2 |" in row for row in rows)
+    assert any("`low_pop_method`" in row for row in rows) == (version != "1.15.1")
+
+
+def test_current_pm_ai_table_uses_each_native_directory_and_keeps_absence_zero(monkeypatch):
+    counts = {
+        "common/production_methods": Counter(ai_value=1, scoring_override=2),
+        "common/production_method_groups": Counter(ai_selection=60),
+    }
+    monkeypatch.setattr(usage, "field_occurrences", counts.__getitem__)
+    with version_contracts.select_version("1.15.1"):
+        spec = next(spec for spec in usage.doc_table_specs() if spec.name == "doc14 PM/PMG AI 字段")
+        assert dict(spec.cells()) == {
+            "ai_value": {2: "1"},
+            "ai_selection": {2: "60"},
+            "scoring_override": {2: "2"},
+            "ai_will_do": {2: "0"},
+            "ai_weight": {2: "0"},
+        }
+
 
 #: doc 13 由 `v3 index` **整体重新生成**，其中的数字不可能过期，故不参与盘点。
 FULLY_GENERATED_DOCS = frozenset({"13-common全量键名索引.md"})
@@ -505,6 +548,17 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     ("06-本地化与界面资源.md", 743): "§5.1 / 附录 A 语料计数：`fonts.font` 的实际行数"
     "（四种独立口径一致）—— 随版本变的本机语料事实，同 11 / 44 那一类",
 }
+
+
+if is_115():
+    # 1.15 页首不再携带旧安装树采集值；其历史登记仍保留给 1.14 默认文档。
+    del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27723)]
+    del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27725)]
+    # 下列值在当前同页已有精确 claim，已不属于未看守散文数字。
+    del PROSE_NOT_COMPUTED[("04-脚本系统.md", 98)]  # script.events_md_doc04
+    del PROSE_NOT_COMPUTED[("06-本地化与界面资源.md", 5)]  # loc.je_widgets_doc06
+    # 该页已移除旧版本提示；正文「0 命中」和表格中的 0 不再落入散文扫描口径。
+    del PROSE_NOT_COMPUTED[("15-政治人口与社会.md", 0)]
 
 
 def _unguarded_prose() -> dict[str, set[int]]:

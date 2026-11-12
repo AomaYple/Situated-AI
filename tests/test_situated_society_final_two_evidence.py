@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from pdx import config
+from pdx import config, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.textio import normalized_text
@@ -111,6 +111,25 @@ def _shape(block: Block) -> Any:
 def test_new_ig_evidence_sources_match_actual_locked_original_bytes(
     source, raw_hash, normalized_hash
 ):
+    current_hashes = {
+        COMMUNISM: (
+            "181a9dd06a69f50a7964736b2714cdb733a7c78305cd0ea84c73322042335559",
+            "107fa64a7e5587d8459eab2404b504b06042d1fffb7a8918eb49b5a4654512c2",
+        ),
+        IDEOLOGIES: (
+            "c2ef71fe0b3f880e84be534bcaee21335902a23747105365544a8c210c2f3e00",
+            "9637ce7b900e671af5880f1876be7b086e913d9caf5031aae84e3bf080f2c660",
+        ),
+        UNIONS: (
+            "fbbd35b8b436b8d092406f8635fbe29004482ba688ce7f4f7ef55048bca33833",
+            "dd11f29ac662a390d0ddeafe5de5e6e63ef91fd7b885892670fa6b3c89896201",
+        ),
+    }
+    if version_contracts.is_115():
+        raw_hash, normalized_hash = current_hashes[source]
+    if version_contracts.active_version() == "1.15.1" and source == COMMUNISM:
+        raw_hash = "48bbccf031b99ace62f6732c3dc81ca6811aaeb13c09e983b1ff2a857f66dd86"
+        normalized_hash = "f38d15776d815e759e01b4d30db13510fa7f37437551063677cdaf0b336723ba"
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     assert (
@@ -121,7 +140,28 @@ def test_new_ig_evidence_sources_match_actual_locked_original_bytes(
 
 def test_country_has_complete_exact_law_stance_interest_group_collection_consumer(roots):
     country = _child(roots[COMMUNISM], "je_communism_1")
-    limit = _child(_child(_child(_child(country, "on_fail"), "else"), "if"), "limit")
+    if version_contracts.is_115():
+        outcomes = [
+            item.value
+            for item in country.all("outcome")
+            if isinstance(item.value, Block)
+            and _scalar(item.value, "header") == "je_standard_completion_header"
+        ]
+        assert len(outcomes) == 1
+        effect = _child(outcomes[0], "effect")
+        branches = _child(effect, "else").all("if")
+        support = [
+            item.value
+            for item in branches
+            if isinstance(item.value, Block)
+            and _child(item.value, "limit").all("any_interest_group")
+        ]
+        assert len(support) == 1
+        limit = _child(support[0], "limit")
+        random_limit = _child(_child(support[0], "random_interest_group"), "limit")
+        assert _shape(random_limit) == _shape(_child(limit, "any_interest_group"))
+    else:
+        limit = _child(_child(_child(_child(country, "on_fail"), "else"), "if"), "limit")
     assert _shape(_child(limit, "any_interest_group")) == (
         (
             "law_stance",
@@ -131,18 +171,21 @@ def test_country_has_complete_exact_law_stance_interest_group_collection_consume
     )
 
 
-def test_trade_unions_exist_before_anarchism_and_have_native_populist_support(roots):
+def test_trade_unions_exist_before_anarchism_and_populist_stance_is_versioned(roots):
     unions = _child(roots[UNIONS], "ig_trade_unions")
     assert _shape(_child(unions, "enable")) == (("always", "=", "yes"),)
     assert "ideology_populist" in _list(unions, "ideologies")
     populist = _child(
         _child(roots[IDEOLOGIES], "ideology_populist"), "lawgroup_distribution_of_power"
     )
-    assert _scalar(populist, "law_anarchy") == "approve"
-    # A positive absolute stance is weaker than a preference over current law.
-    # The production query must read actual law_stance; it cannot infer the
-    # final stance from an ideology label or invent law_enactment_stance.
-    assert _scalar(populist, "law_universal_suffrage") == "strongly_approve"
+    current = version_contracts.is_115()
+    assert _scalar(populist, "law_anarchy") == ("neutral" if current else "approve")
+    # The current neutral anarchy stance also disproves using an ideology
+    # label as positive support. Read actual law_stance rather than inferring
+    # the final stance or substituting law_enactment_stance.
+    assert _scalar(populist, "law_universal_suffrage") == (
+        "approve" if current else "strongly_approve"
+    )
 
 
 def test_anarchy_research_unlock_and_cooperative_ownership_are_different_requirements(roots):

@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 
@@ -134,6 +135,61 @@ def test_pytest尾行计数支持装饰符且不计子断言(mem, tail, expected
     counts, failed = mem.parse_pytest_tail(tail)
     assert counts == expected
     assert failed == []
+
+
+@pytest.mark.parametrize(
+    "nested",
+    [
+        "E     12422 tests collected, 2 errors in 12.84s",
+        "E     ================= 2 errors in 12.84s =================",
+        "'12422 tests collected, 2 errors in 12.84s'",
+        '"2 failed, 2 errors in 12.84s"',
+        "> assert output == '2 failed, 2 errors in 12.84s'",
+        "unexpected diagnostic, 2 errors in 12.84s",
+        "2 failed, malformed outcome, 2 errors in 12.84s",
+    ],
+)
+def test_pytest_summary_rejects_nested_or_partial_lines(mem, nested):
+    counts, _ = mem.parse_pytest_tail(
+        nested + "\n1179 failed, 11071 passed, 16 skipped, 4 warnings, 166 errors, "
+        "1560 subtests passed in 3118.06s (0:51:58)\n"
+    )
+    assert counts == {"failed": 1179, "passed": 11071, "skipped": 16, "error": 166}
+    assert mem.parse_pytest_tail(nested)[0] == {}
+
+
+def test_pytest_multiple_complete_summaries_retain_cumulative_counts(mem):
+    counts, failed = mem.parse_pytest_tail(
+        "FAILED tests/first.py::test_one\n"
+        "==== 1 failed, 2 passed, 1 warning, 3 subtests passed in 1.00s ====\n"
+        "ERROR tests/second.py::test_two\n"
+        "4 passed, 2 errors, 5 deselected, 1 xfailed, 2 xpassed, 3 rerun, "
+        "1 subtests failed, 2 subtests skipped in 2.00s (0:02)\n"
+    )
+    assert counts == {
+        "failed": 1,
+        "passed": 6,
+        "error": 2,
+        "deselected": 5,
+        "xfailed": 1,
+        "xpassed": 2,
+        "rerun": 3,
+    }
+    assert failed == ["tests/first.py::test_one", "tests/second.py::test_two"]
+
+
+@pytest.mark.parametrize(
+    ("tail", "expected"),
+    [
+        ("no tests ran in 0.01s", {}),
+        ("==== no tests collected in 0.01s ====", {}),
+        ("5 deselected in 0.01s", {"deselected": 5}),
+        ("12422 tests collected, 2 errors in 12.84s", {"error": 2}),
+        ("1 xfailed, 1 xpassed, 2 rerun in 1.0s", {"xfailed": 1, "xpassed": 1, "rerun": 2}),
+    ],
+)
+def test_pytest_complete_summary_variants(mem, tail, expected):
+    assert mem.parse_pytest_tail(tail) == (expected, [])
 
 
 def _summary(*, tag: str, group: str, peak: float = 900.0, per_worker: float = 100.0) -> dict:
@@ -265,8 +321,36 @@ def test_inproc_fixture_wrapper_preserves_setup_error(mem, monkeypatch):
     with pytest.raises(ValueError) as result:
         hook.throw(error)
     assert result.value is error
-    assert mem._INPROC["errors"] == ["FIXTURE-ERROR broken: ValueError('fixture setup failed')"]
+    assert mem._INPROC["errors"] == []
+    assert mem._INPROC["test_errors"] == [
+        "FIXTURE-ERROR broken: ValueError('fixture setup failed')"
+    ]
     assert not mem._INPROC["fixtures"]
+
+
+def test_inproc_sampler_records_instrument_failure(mem, monkeypatch):
+    """线程失败必须持久化为仪器错误，不能被一次成功的最终快照抹去。"""
+    monkeypatch.setattr(mem._INPROC_STOP, "wait", lambda _timeout: False)
+    monkeypatch.setattr(mem, "_inproc_snapshot", Mock(side_effect=OSError("counter unavailable")))
+    mem._inproc_sampler()
+    assert mem._INPROC["errors"] == ["SAMPLER-ERROR OSError('counter unavailable')"]
+    assert mem._INPROC["test_errors"] == []
+
+
+@pytest.mark.parametrize("outcome", ["passed", "failed", "skipped"])
+def test_inproc_test_outcomes_do_not_invalidate_sampling(mem, monkeypatch, outcome):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(mem, "_INPROC_ACTIVE", True)
+    mem.pytest_runtest_logreport(
+        SimpleNamespace(when="call", nodeid="sample.py::test_case", outcome=outcome)
+    )
+    assert mem._INPROC["errors"] == []
+    assert mem._INPROC["test_errors"] == (
+        ["FAILED sample.py::test_case"] if outcome == "failed" else []
+    )
+    key = outcome if outcome != "skipped" else "other"
+    assert mem._INPROC["counts"][key] == 1
 
 
 def test_inproc_fixture_wrapper_preserves_unittest_skip_without_sampler_error(mem, monkeypatch):
@@ -282,6 +366,161 @@ def test_inproc_fixture_wrapper_preserves_unittest_skip_without_sampler_error(me
     assert result.value is skipped
     assert not mem._INPROC["errors"]
     assert not mem._INPROC["fixtures"]
+
+
+def _wait_for_progress(folder, process):
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        assert process.poll() is None, "miniature pytest exited before its held fixture"
+        for path in folder.glob("inproc-full-master-*.json"):
+            payload = json.loads(path.read_bytes())
+            current = payload["current_test"]
+            if (
+                current is not None
+                and current["nodeid"].endswith("::test_held")
+                and any(row["name"] == "held" for row in payload["active_fixtures"])
+                and payload["last_test"] is not None
+                and payload["last_test"]["nodeid"].endswith("::test_first")
+            ):
+                return path, payload
+        time.sleep(0.02)
+    pytest.fail("no checkpoint identified the real held fixture within 15 seconds")
+
+
+@pytest.mark.parametrize("terminate", [True, False])
+def test_real_inproc_progress_survives_termination_without_becoming_final_evidence(
+    mem, tmp_path, monkeypatch, terminate
+):
+    from tools.ci import test_suite
+
+    project = tmp_path / "project with 空格"
+    project.mkdir()
+    (project / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+    (project / "test_progress.py").write_text(
+        "import os, time\n"
+        "from pathlib import Path\n"
+        "import pytest\n"
+        "@pytest.fixture(scope='module')\n"
+        "def held():\n"
+        "    assert 'MEMBASELINE_OUT' not in os.environ\n"
+        "    assert 'MEMBASELINE_TAG' not in os.environ\n"
+        "    while not Path('release').exists():\n"
+        "        time.sleep(0.02)\n"
+        "    return ['original fixture value']\n"
+        "def test_first():\n"
+        "    assert 'MEMBASELINE_OUT' not in os.environ\n"
+        "def test_held(held):\n"
+        "    assert held == ['original fixture value']\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "reports"
+    out.mkdir()
+    env = dict(os.environ)
+    for name in (
+        "PYTEST_XDIST_WORKER",
+        "PYTEST_XDIST_WORKER_COUNT",
+        "PYTEST_XDIST_TESTRUNUID",
+        "PYTEST_CURRENT_TEST",
+    ):
+        env.pop(name, None)
+    env.update(
+        PYTHONPATH=str(config.REPO),
+        PYTEST_DISABLE_PLUGIN_AUTOLOAD="1",
+        MEMBASELINE_OUT=str(out),
+        MEMBASELINE_TAG="full",
+        SITAI_TEST_COLLECTION=str(out / "collection.json"),
+    )
+    log = project / "pytest.log"
+    with log.open("w", encoding="utf-8") as stream:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-B",
+                "-X",
+                "utf8",
+                "-m",
+                "pytest",
+                "-c",
+                "pytest.ini",
+                "-o",
+                "addopts=",
+                "-p",
+                "tools.ci.test_suite",
+                "-p",
+                "tools.ci.mem_baseline",
+                "test_progress.py",
+            ],
+            cwd=project,
+            env=env,
+            stdout=stream,
+            stderr=subprocess.STDOUT,
+        )
+        try:
+            path, checkpoint = _wait_for_progress(out / "progress", process)
+            assert checkpoint["diagnostic_only"] is True
+            assert checkpoint["finalized"] is False
+            process_tree = {process.pid}
+            process_tree.update(
+                child.pid for child in mem.psutil.Process(process.pid).children(recursive=True)
+            )
+            assert checkpoint["pid"] in process_tree
+            assert checkpoint["worker"] == "master"
+            assert checkpoint["current_test"]["phase"] == "setup"
+            assert checkpoint["current_test"]["elapsed_s"] > 0
+            assert checkpoint["peak_ws_mb"] >= checkpoint["ws_mb"] > 0
+            assert checkpoint["peak_source"] in {"hwm", "sampled"}
+            assert "tests" not in checkpoint
+            assert "fixtures" not in checkpoint
+            assert "series" not in checkpoint
+            assert not list(out.glob("inproc-full-*.json"))
+            if terminate:
+                mem.kill_tree(process.pid)
+                assert process.wait(timeout=5) != 0
+            else:
+                (project / "release").touch()
+                assert process.wait(timeout=15) == 0, log.read_text(encoding="utf-8")
+        finally:
+            if process.poll() is None:
+                mem.kill_tree(process.pid)
+                process.wait(timeout=5)
+    persisted = json.loads(path.read_bytes())
+    assert persisted["diagnostic_only"] is True
+    assert persisted["finalized"] is False
+    lines = path.with_suffix(".jsonl").read_text(encoding="utf-8").splitlines()
+    # A hard kill can interrupt the next append; every committed checkpoint
+    # references a complete journal prefix, never that possible partial suffix.
+    if terminate:
+        lines = lines[: persisted["journal_seq"]]
+    events = [json.loads(line) for line in lines]
+    assert [row["seq"] for row in events] == list(range(1, len(events) + 1))
+    first_call = next(
+        row
+        for row in events
+        if row["event"] == "report"
+        and row["nodeid"].endswith("::test_first")
+        and row["when"] == "call"
+    )
+    assert first_call["duration_s"] >= 0
+    assert first_call["outcome"] == "passed"
+    assert any(row["event"] == "fixture_start" and row["name"] == "held" for row in events)
+    monkeypatch.setattr(mem, "OUT_DIR", out)
+    if terminate:
+        assert mem.read_inproc("full") == {}
+        with pytest.raises(ValueError, match="缺少进程内采样"):
+            test_suite._resource_evidence(out, {})
+    else:
+        final = json.loads((out / "inproc-full-master.json").read_bytes())
+        assert final["schema"] == 2
+        assert final["pid"] == checkpoint["pid"]
+        assert final["exitstatus"] == 0
+        assert final["counts"] == {"passed": 2, "failed": 0, "other": 0}
+        assert len(final["tests"]) == 2
+        assert any(row["name"] == "held" and row["len"] == 1 for row in final["fixtures"])
+        assert final["phases"][-1]["phase"] == "sessionfinish"
+        assert final["series"]
+        assert final["errors"] == []
+        assert mem.read_inproc("full")["files"] == 1
+        assert any(row["event"] == "fixture_finish" and row["name"] == "held" for row in events)
 
 
 def module_artifact_stem(mem: ModuleType, tag: str, group: str) -> str:

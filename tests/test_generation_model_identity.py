@@ -5,13 +5,23 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decisions
+from pdx import decisions, version_contracts
 
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(scope="module", autouse=True)
+def historical_assembly_contract():
+    """Exercise input identity assembly with the frozen offline 1.14.5 contract.
+
+    Current generation verifies live sources and is covered by release integration.
+    """
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
 @pytest.fixture(scope="module")
-def model():
+def model(historical_assembly_contract):
     return decisions.load_situated_model()
 
 

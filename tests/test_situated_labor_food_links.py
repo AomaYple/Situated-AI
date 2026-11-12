@@ -227,7 +227,7 @@ def generated(policies: dict[str, Any]) -> tuple[dict[str, str], dict[str, str]]
     files, _ = decision_adapters.build(
         selected, texts=inputs, country_policy=country_state.load(), consumer_ir=model.consumer_ir
     )
-    baseline = compiler.BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     files[INFO] = decision_rules.patch(
         baseline,
         policies[INFO],
@@ -348,7 +348,7 @@ def test_disabling_local_modules_preserves_exact_native_sources(
     adapters = decision_adapters.load()
     disabled, _ = decision_adapters.build(adapters, texts=inputs, enabled_domains=frozenset())
     assert disabled == {}
-    baseline = compiler.BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     assert (
         decision_rules.patch(
             baseline, policies[INFO], baseline=baseline, enabled_domains=frozenset()

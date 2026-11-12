@@ -20,9 +20,13 @@ from .receipts import AuditResult, CoverageRow, ReceiptStatus, StageReceipt, dig
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from .compiler import SituatedModel
+
 
 def _production_continuous_bindings(
     generated: Mapping[str, str | bytes],
+    *,
+    _metadata: native_treatments._AuditMetadata | None = None,
 ) -> tuple[domain_coverage.ContinuousProgramBinding, ...]:
     """Read continuous semantics from the same actual package output being audited.
 
@@ -67,8 +71,11 @@ def _production_continuous_bindings(
         return nodes[0]
 
     try:
-        metadata_text = text(generated.get(".metadata/metadata.json", "{}"))
-        metadata = json.loads(metadata_text)
+        if _metadata is not None and type(_metadata) is not native_treatments._AuditMetadata:
+            raise TypeError("audit metadata must be owned by this candidate's byte-bound scope")
+        metadata_raw = generated.get(".metadata/metadata.json", "{}")
+        metadata_owner = _metadata or native_treatments._AuditMetadata(metadata_raw)
+        metadata = metadata_owner.document(metadata_raw, utf8_text=True)
         bundle = metadata.get("situated_actions", {}).get("consumer_ir", {})
         rows = bundle.get("writers", [])
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
@@ -172,7 +179,7 @@ def _production_continuous_bindings(
             raise ValueError("支持程序实际overlay与完整语义不一致或重复")
         restored = pattern.sub("", content)
         if without_lines(asdict(support_node(restored))) != without_lines(
-            asdict(support_node(decisions.BASELINE.read_text(encoding="utf-8")))
+            asdict(support_node(decisions.baseline_path().read_text(encoding="utf-8")))
         ):
             raise ValueError("支持程序存在未登记写入或原版尾部漂移")
         binding = domain_coverage.ContinuousProgramBinding(
@@ -182,7 +189,7 @@ def _production_continuous_bindings(
             production_source=source,
             production_sha256=hashlib.sha256(content.encode()).hexdigest(),
             overlay_sha256=hashlib.sha256(blocks[0].group("body").encode()).hexdigest(),
-            metadata_sha256=hashlib.sha256(metadata_text.encode()).hexdigest(),
+            metadata_sha256=metadata_owner.sha256(metadata_raw),
         )
         problem = domain_coverage.continuous_writer_issue(binding)
         if problem is not None:
@@ -213,16 +220,43 @@ def native_report() -> dict[str, object]:
     """
     from pdx import distribution  # noqa: PLC0415
 
+    _policy, _extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
+    # All later consumers accept bytes. Convert once and release the much larger
+    # engineering Unicode payload before building the native/effective AST indexes.
+    generated_bytes = {
+        name: text.encode("utf-8") if isinstance(text, str) else text
+        for name, text in generated.items()
+    }
+    del generated
+    model = load_model()
+    return _native_report_from_candidate(model, generated_bytes)
+
+
+def _native_report_from_candidate(
+    model: SituatedModel, generated_bytes: Mapping[str, bytes]
+) -> dict[str, object]:
+    """Evaluate one freshly generated, complete engineering candidate.
+
+    This private entry trusts its caller to supply every member directly
+    from package_inputs(include_engineering_metadata=True), together with
+    the current model. It cannot infer completeness from a partial mapping.
+    Installed originals are independently discovered and reread here.
+    """
+    from . import r2_native, r2_reader_authority  # noqa: PLC0415
     from .architecture_receipts import source_snapshot  # noqa: PLC0415
 
-    _policy, _extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
-    model = load_model()
+    metadata = native_treatments._AuditMetadata(
+        generated_bytes.get(".metadata/metadata.json", b"{}")
+    )
     scope = vanilla_inventory.discover()
     sources = {
         source: (config.GAME / source).read_bytes()
         for source in scope.source_hashes
         if not source.startswith("@")
     }
+    network_bindings = r2_native.production_bindings(generated_bytes, sources, metadata=metadata)
+    if network_bindings:
+        r2_reader_authority.verify_installation(config.GAME.parent)
     coverage = domain_coverage.native_coverage(
         scope,
         model.action_instances,
@@ -237,17 +271,16 @@ def native_report() -> dict[str, object]:
         },
         native_sources=sources,
         production_policies=dict(decision_adapters.load().policies),
-        continuous_programs=_production_continuous_bindings(generated),
+        continuous_programs=_production_continuous_bindings(generated_bytes, _metadata=metadata),
+        network_programs=network_bindings,
     )
     treatments = native_treatments.native_treatments(
         scope,
         sources,
-        {
-            name: text.encode("utf-8") if isinstance(text, str) else text
-            for name, text in generated.items()
-        },
+        generated_bytes,
         coverage=coverage,
         production_complete=True,
+        _metadata=metadata,
     )
     return {
         "schema": 1,

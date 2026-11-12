@@ -6,8 +6,10 @@ import pytest
 
 from pdx import decisions
 from pdx.parser import parse_text
+from pdx.situated import core_contracts as c
 from pdx.situated import pdx_eval, relations
 from pdx.situated.compiler import load_model, strategy_overlay
+from pdx.situated.schema import Relation
 
 pytestmark = pytest.mark.unit
 
@@ -60,7 +62,7 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
         assert result.operation == "add"
         assert result.delta == pytest.approx(expected)
     patched = decisions.patch_default(
-        decisions.BASELINE.read_text(encoding="utf-8"),
+        decisions.baseline_path().read_text(encoding="utf-8"),
         decisions.load(),
         decisions.load_extensions(profile="release"),
         action_overlay=overlay,
@@ -83,3 +85,66 @@ def test_duplicate_and_asymmetric_relations_fail_closed() -> None:
                 *(item for item in model.actions if item.id != first.id),
             )
         )
+
+
+def test_observed_condition_requires_boolean_current_world_fact() -> None:
+    evidence = c.EvidenceRef("common/ai/relations.txt", 1)
+    actor = c.EntityKey("country", "FRA")
+    time = c.TimeIdentity("session", 1)
+    fact = c.FactSpec(
+        "ready",
+        "reader.ready",
+        "boolean",
+        "boolean",
+        "country",
+        "actor",
+        ("consumer",),
+        (evidence,),
+    )
+    schedule = c.EvaluationSchedule("schedule", "consumer", (evidence,))
+    snap = c.SituationSnapshot(
+        actor,
+        None,
+        "consumer",
+        time,
+        "country",
+        (c.Observation("ready", actor, "boolean", "known", time, True, (evidence,)),),
+        "schedule",
+    )
+    relation = Relation("a", "b", "enables", 1.0, "root", ("ready",), "vanilla")
+    assert relations.observed_condition(relation, snap, (fact,), schedule) is True
+    stale = replace(snap.observations[0], status="stale", value=None, sources=())
+    assert (
+        relations.observed_condition(
+            relation, replace(snap, observations=(stale,)), (fact,), schedule
+        )
+        is None
+    )
+
+
+def test_observed_condition_does_not_treat_candidate_readiness_as_completion() -> None:
+    evidence = c.EvidenceRef("common/ai/relations.txt", 1)
+    actor = c.EntityKey("country", "FRA")
+    time = c.TimeIdentity("session", 1)
+    fact = c.FactSpec(
+        "ready",
+        "reader.ready",
+        "boolean",
+        "boolean",
+        "country",
+        "actor",
+        ("consumer",),
+        (evidence,),
+    )
+    schedule = c.EvaluationSchedule("schedule", "consumer", (evidence,))
+    snap = c.SituationSnapshot(
+        actor,
+        None,
+        "consumer",
+        time,
+        "country",
+        (c.Observation("ready", actor, "boolean", "known", time, False, (evidence,)),),
+        "schedule",
+    )
+    relation = Relation("a", "b", "enables", 1.0, "root", ("ready",), "vanilla")
+    assert relations.observed_condition(relation, snap, (fact,), schedule) is False

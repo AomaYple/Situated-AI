@@ -8,7 +8,7 @@ from collections import Counter
 
 import pytest
 
-from pdx import config, decision_rules, law_opportunities
+from pdx import config, decision_rules, law_opportunities, version_contracts
 from pdx.situated import programs
 
 pytestmark = pytest.mark.unit
@@ -23,12 +23,17 @@ def derived():
 def _policy(derived, source):
     rows = [rule for rule in derived["rules"] if rule["source"] == source]
     used = {clause["fact"] for rule in rows for clause in rule["conditions"]}
+    readers = copy.deepcopy({key: derived["readers"][key] for key in sorted(used)})
+    if version_contracts.is_115():
+        from pdx.situated.engine_reader_115 import project_population_readers
+
+        project_population_readers(readers)
     policy = decision_rules.from_data(
         {
             "schema": 1,
             "baseline_sha256": "0" * 64,
             "domains": dict.fromkeys({row["domain"] for row in rows}, True),
-            "readers": {key: derived["readers"][key] for key in sorted(used)},
+            "readers": readers,
             "rules": [
                 {key: value for key, value in row.items() if key != "source"} for row in rows
             ],
@@ -50,6 +55,24 @@ def _value(derived, law, changes):
         f"{law}.ai_enact_weight_modifier"
     )
     return result[1] if result else 0
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_law_fixture_preserves_rural_transition_under_selected_population_contract(
+    derived, monkeypatch, version
+):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
+    historical_readers = copy.deepcopy(derived["readers"])
+    assert (
+        _value(
+            derived,
+            "law_tenant_farmers",
+            {"law_context_current_law_serfdom": True, "peasant_share": 0.6},
+        )
+        == 12
+    )
+    assert _value(derived, "law_tenant_farmers", {"peasant_share": 0.9}) == 0
+    assert derived["readers"] == historical_readers
 
 
 def test_six_complete_native_families_have_37_unique_concrete_consumers(derived):
@@ -195,3 +218,59 @@ def test_complete_native_sources_and_definitions_are_verified_without_looking_up
         law_opportunities.verify_inputs(
             {key: value for key, value in inputs.items() if key != source}
         )
+
+
+def test_115_new_consumers_are_counted_and_explicitly_retain_native_policy():
+    with version_contracts.select_version("1.15.0"):
+        data = law_opportunities.load()
+        retained = law_opportunities.native_retained_candidates()
+    assert retained == {
+        "law_official_nationality": "common/laws/00_citizenship.txt",
+        "law_caesaropapism": "common/laws/00_church_and_state.txt",
+    }
+    assert set(data["candidates"]).isdisjoint(retained)
+    assert len(data["candidates"]) == 52
+    assert len({**data["candidates"], **retained}) == 54
+    with version_contracts.select_version("1.14.5"):
+        assert law_opportunities.native_retained_candidates() == {}
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("source", "old", "new", "message"),
+    [
+        (
+            "common/laws/00_citizenship.txt",
+            "country_authority_add = 200",
+            "country_authority_add = 201",
+            "权威机制漂移",
+        ),
+        (
+            "common/laws/02_labour_associations.txt",
+            "state_radicals_from_political_movements_mult = 0.25",
+            "state_radicals_from_political_movements_mult = 0.26",
+            "劳动机制漂移",
+        ),
+        (
+            "common/laws/01_policing.txt",
+            "state_mortality_turmoil_mult = 0.004",
+            "state_mortality_turmoil_mult = 0.005",
+            "警务机制漂移",
+        ),
+    ],
+)
+def test_repinning_does_not_authorize_changed_transition_mechanisms(
+    monkeypatch, source, old, new, message
+):
+    import hashlib
+
+    data = law_opportunities.load()
+    inputs = {
+        name: (config.GAME / name).read_text(encoding="utf-8-sig") for name in data["sources"]
+    }
+    assert old in inputs[source]
+    inputs[source] = inputs[source].replace(old, new)
+    data["sources"][source] = hashlib.sha256(inputs[source].encode()).hexdigest()
+    monkeypatch.setattr(law_opportunities, "load", lambda: data)
+    with pytest.raises(ValueError, match=message):
+        law_opportunities.verify_inputs(inputs)

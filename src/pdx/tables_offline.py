@@ -11,7 +11,8 @@ CI runner 上没有游戏，于是「表格是否与生成结果一致」这件�
 做法（与 `v3 verify --from-snapshot` 同一个思路）
 -----------------------------------------------
 1. 生成快照时把**每张表当时的数据行**记进 ``域.doc_tables``（:mod:`pdx.snapshot`）；
-2. 离线时只读文档 + 快照，逐行比对；
+2. 离线时只读文档 + 快照，逐行比对；当前 1.15.1 的三处 doc08 说明另从
+   版本合同、冻结表分母和版本化官方文档 manifest 同源派生，原快照字节不变；
 3. ``--write`` 时按快照里的行把文档恢复成当时的样子 —— 这就是「没有游戏也能
    把表恢复到最后一次已知正确状态」的能力。
 
@@ -27,7 +28,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import docgen
+from . import docgen, install_tree
 from .doc_tables import current_rows, spec_key, write_rows
 from .snapshot import Snapshot
 from .verify import latest_compact_snapshot
@@ -64,7 +65,8 @@ def load_tables(path: Path | None = None) -> dict[str, list[str]]:
     snap = Snapshot.load(path) if path is not None else _latest()
     if snap is None:
         return {}
-    return snap.sections.get(SECTION, {})
+    snap.require_version()
+    return install_tree.current_doc08_narrative_tables(snap.sections.get(SECTION, {}))
 
 
 def compare(

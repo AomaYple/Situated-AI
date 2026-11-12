@@ -8,13 +8,14 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import re
 import tomllib
 from dataclasses import dataclass, replace
 from itertools import pairwise
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from . import (
     building_opportunities,
@@ -30,9 +31,10 @@ from . import (
     production_inputs,
     technology_opportunities,
     treaty_opportunities,
+    version_contracts,
 )
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
-from .model import Block, Scalar
+from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .situated import supply_program
 from .situated.supply_program import SupplyAction, SupplyProgram
@@ -45,6 +47,9 @@ if TYPE_CHECKING:
     from .situated.decision_ir import ConsumerIRBundle
 
 SOURCE = config.REPO / "mod/decisions/adapters.toml"
+NATIVE_AUTHORITY_115 = config.REPO / "research/situated/1.15.0/consumer-adapters.json"
+NATIVE_AUTHORITY_1151_SHA256 = "31f9c0c6edf633af3706d0aefca39de5aa8c5ffc4c2f0d4de43ce037d2d6ae9e"
+NATIVE_AUTHORITY_115_SHA256 = "405667f37790d5b593b2e7453d0f89283f11c751e2cfe382c586bf6fe33de108"
 _FLEET_SOURCE = "common/ai_strategies/00_default_strategy.txt"
 _FLEET_FIELD = (
     "ai_strategy_default",
@@ -69,11 +74,12 @@ class InitialValue:
 
 @dataclass(frozen=True, slots=True)
 class SupplyPlan:
-    """对原版尚未声明立场的商品追加有条件的生产/贸易供给偏好。"""
+    """追加供给偏好；精确1.15.1三商品合成原生或AI稀缺的同一枚举。"""
 
     source: str
     goods: tuple[str, ...]
     price_threshold: float
+    native_stances: tuple[supply_program.NativeSupplyStance, ...] = ()
 
     def actions(self) -> tuple[SupplyProgram, ...]:
         if (
@@ -82,8 +88,11 @@ class SupplyPlan:
             or len(set(self.goods)) != len(self.goods)
         ):
             raise ValueError("商品供给计划商品身份缺失或重复")
+        native = {item.good: item for item in self.native_stances}
+        if len(native) != len(self.native_stances) or not native.keys() <= set(self.goods):
+            raise ValueError("供给计划原版合成商品身份重复或缺失")
         return tuple(
-            SupplyProgram(SupplyAction(self.source, good, self.price_threshold))
+            SupplyProgram(SupplyAction(self.source, good, self.price_threshold), native.get(good))
             for good in self.goods
         )
 
@@ -99,6 +108,179 @@ class AdapterSet:
     company_sectors_sha256: str | None = None
     law_opportunities_sha256: str | None = None
     technology_opportunities_sha256: str | None = None
+    native_authority_sha256: str | None = None
+
+
+def native_authority_path() -> Path:
+    return (
+        version_contracts.research_path("situated", "consumer-adapters.json")
+        if version_contracts.active_version() == "1.15.1"
+        else NATIVE_AUTHORITY_115
+    )
+
+
+def native_authority_sha256() -> str:
+    return (
+        NATIVE_AUTHORITY_1151_SHA256
+        if version_contracts.active_version() == "1.15.1"
+        else NATIVE_AUTHORITY_115_SHA256
+    )
+
+
+def native_contract_data(
+    declaration: Mapping[str, Any],
+    inputs: Mapping[str, str],
+    *,
+    information: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Record exact native parents, score fields and declared default values.
+
+    This captures static source structure only. Reader/consumer scopes and
+    default-initializer authority still require their separate reviewed proof;
+    recording a missing field or a define never grants a writer permission.
+    """
+
+    def shape(node: Assignment | Block | Scalar | None) -> object:
+        if isinstance(node, Assignment):
+            return [node.key, node.op, node.prefix, shape(node.value)]
+        if isinstance(node, Block):
+            return [shape(item) for item in node.items]
+        if isinstance(node, Scalar):
+            return [node.text, node.quoted]
+        if node is None:
+            return None
+        raise ValueError("1.15 adapter authority: unknown native AST node")
+
+    def fingerprint(node: Assignment | Block | Scalar | None) -> str:
+        return hashlib.sha256(
+            json.dumps(shape(node), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+
+    sources = {
+        name: hashlib.sha256(normalized_text(inputs[name]).encode("utf-8")).hexdigest()
+        for name in sorted(declaration["sources"])
+    }
+    roots: dict[str, Block] = {}
+
+    def root(source: str) -> Block:
+        if source not in roots:
+            parsed = parse_text(inputs[source], source)
+            if parsed.errors:
+                raise ValueError(f"1.15 adapter authority: invalid native AST {source}")
+            roots[source] = parsed.root
+        return roots[source]
+
+    def child(block: Block, key: str) -> Assignment:
+        entries = block.all(key)
+        if len(entries) != 1 or entries[0].op != "=" or entries[0].prefix is not None:
+            raise ValueError(f"1.15 adapter authority: missing/ambiguous ordinary parent {key}")
+        return entries[0]
+
+    initial = {(item["source"], item["field"]): item for item in declaration["initial_values"]}
+    scalar_fields = {(item["source"], item["field"]) for item in declaration["scalar_values"]}
+    fields = []
+    locations = {(item["source"], item["field"]) for item in declaration["rules"]}
+    if information is not None:
+        locations.update(
+            (_FLEET_SOURCE, "ai_strategy_default." + item["field"]) for item in information["rules"]
+        )
+    for source, field in sorted(locations):
+        body = root(source)
+        parents = []
+        keys = field.split(".")
+        for index, key in enumerate(keys[:-1], 1):
+            parent = child(body, key)
+            if not isinstance(parent.value, Block):
+                raise ValueError(f"1.15 adapter authority: non-block parent {field}")
+            parents.append(
+                {
+                    "path": ".".join(keys[:index]),
+                    "line": parent.line,
+                    "ast_sha256": fingerprint(parent),
+                }
+            )
+            body = parent.value
+        entries = body.all(keys[-1])
+        default = None
+        if not entries and (source, field) in initial:
+            item = initial[source, field]
+            namespace, define = item["define"].split(".")
+            namespace_entry = child(root(item["define_source"]), namespace)
+            if not isinstance(namespace_entry.value, Block):
+                raise ValueError("1.15 adapter authority: non-block default namespace")
+            constant = child(namespace_entry.value, define)
+            if not isinstance(constant.value, Scalar) or not re.fullmatch(
+                r"[0-9]+(?:\.[0-9]+)?", constant.value.text
+            ):
+                raise ValueError("1.15 adapter authority: non-numeric default")
+            default = {**item, "value": constant.value.text, "line": constant.line}
+            kind, field_hash = "missing_declared_default", None
+        else:
+            score = child(body, keys[-1])
+            if isinstance(score.value, Block):
+                decision_rules._block_at(root(source), tuple(keys))
+                kind = "numeric_block"
+            elif isinstance(score.value, Scalar) and (source, field) in scalar_fields:
+                if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", score.value.text):
+                    raise ValueError("1.15 adapter authority: non-numeric declared scalar")
+                kind = "declared_scalar"
+            else:
+                raise ValueError(f"1.15 adapter authority: unreviewed native score shape {field}")
+            field_hash = fingerprint(score)
+        fields.append(
+            {
+                "source": source,
+                "field": field,
+                "parents": parents,
+                "kind": kind,
+                "field_ast_sha256": field_hash,
+                "default": default,
+            }
+        )
+    return {
+        "schema": 1,
+        "game_version": version_contracts.active_version(),
+        "evidence": "static_native_ast",
+        "builder": {
+            "path": "src/pdx/decision_adapters.py",
+            "function": "native_contract_data",
+            "source_sha256": hashlib.sha256(
+                inspect.getsource(native_contract_data).encode()
+            ).hexdigest(),
+        },
+        "sources": sources,
+        "fields": fields,
+    }
+
+
+def write_native_authority_115(game: Path) -> Path:
+    """Explicit recapture command; loading never rewrites reviewed evidence."""
+    from .situated import r2_reader_authority  # noqa: PLC0415
+
+    if native_authority_path().exists():
+        native_authority_115()
+    r2_reader_authority.verify_installation(game.parent)
+    declaration = tomllib.loads(SOURCE.read_text(encoding="utf-8"))
+    information = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    inputs = {
+        name: (game / name).read_text(encoding="utf-8-sig") for name in declaration["sources"]
+    }
+    data = native_contract_data(declaration, inputs, information=information)
+    native_authority_path().parent.mkdir(parents=True, exist_ok=True)
+    native_authority_path().write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return native_authority_path()
+
+
+def native_authority_115() -> dict[str, Any]:
+    """Load the independently reviewed input/AST declaration without live reads."""
+    raw = native_authority_path().read_bytes()
+    if hashlib.sha256(raw).hexdigest() != native_authority_sha256():
+        raise ValueError("1.15 adapter authority: frozen declaration drift")
+    return cast("dict[str, Any]", json.loads(raw))
 
 
 def writes(
@@ -154,6 +336,37 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         "rules",
     } or (type(data["schema"]) is not int or data["schema"] != 1):
         raise ValueError("消费者适配 schema 无效")
+    authority_digest = None
+    building_default_digest = None
+    if source == SOURCE and version_contracts.is_115():
+        from .situated import engine_building_115  # noqa: PLC0415
+
+        authority = native_authority_115()
+        building_default_digest = hashlib.sha256(engine_building_115.snapshot()).hexdigest()
+        if set(data["sources"]) != set(authority["sources"]):
+            raise ValueError("1.15 adapter authority: source denominator drift")
+        data["sources"] = dict(authority["sources"])
+        # 1.15 supplies native journal-aware ai_value blocks for several
+        # previously implicit buildings. Preserve those complete blocks and
+        # their ordering; initialize only the exact fields still absent in the
+        # reviewed AST. Rules remain attached to the same physical consumers.
+        missing = {
+            (item["source"], item["field"])
+            for item in authority["fields"]
+            if item["kind"] == "missing_declared_default"
+        }
+        data["initial_values"] = [
+            item for item in data["initial_values"] if (item["source"], item["field"]) in missing
+        ]
+        scalar = {
+            (item["source"], item["field"])
+            for item in authority["fields"]
+            if item["kind"] == "declared_scalar"
+        }
+        data["scalar_values"] = [
+            item for item in data["scalar_values"] if (item["source"], item["field"]) in scalar
+        ]
+        authority_digest = native_authority_sha256()
     sector_digest = None
     opportunity_digest = None
     equipment_digest = None
@@ -181,7 +394,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         }
         _merge_derivation(data, derived, "公司部门派生")
         data.setdefault("initial_values", []).extend(company_sectors.initialized_fields(sectors))
-        sector_digest = hashlib.sha256(company_sectors.BASELINE.read_bytes()).hexdigest()
+        sector_digest = hashlib.sha256(company_sectors.baseline_path().read_bytes()).hexdigest()
         opportunity = building_opportunities.derive(data, sectors)
         _merge_derivation(data, opportunity, "建筑基础机会")
         opportunity_digest = hashlib.sha256(
@@ -192,7 +405,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         equipment = equipment_opportunities.derive(data)
         _merge_derivation(data, equipment, "舰船材料机会")
         equipment_digest = hashlib.sha256(
-            equipment_opportunities.BASELINE.read_bytes()
+            equipment_opportunities.baseline_path().read_bytes()
             + b"\0parameters:"
             + equipment_opportunities.PARAMETERS.read_bytes()
             + b"\0generator:"
@@ -202,7 +415,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         treaty_fields = {(row["source"], row["field"]) for row in treaties["covered"]}
         _merge_derivation(data, treaties, "条约实际承诺机会")
         treaty_digest = hashlib.sha256(
-            treaty_opportunities.BASELINE.read_bytes()
+            treaty_opportunities.baseline_path().read_bytes()
             + b"\0parameters:"
             + treaty_opportunities.PARAMETERS.read_bytes()
             + b"\0generator:"
@@ -219,7 +432,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 raise ValueError("医疗动员AI所有者与编队原生ROOT冲突")
             actor_bindings[name] = path
         mobilization_digest = hashlib.sha256(
-            mobilization_opportunities.BASELINE.read_bytes()
+            mobilization_opportunities.baseline_path().read_bytes()
             + b"\0parameters:"
             + mobilization_opportunities.PARAMETERS.read_bytes()
             + b"\0generator:"
@@ -235,9 +448,17 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         technologies = technology_opportunities.derive(data)
         _merge_derivation(data, technologies, "具体科技机制机会")
         technology_digest = hashlib.sha256(
-            technology_opportunities.PARAMETERS.read_bytes()
+            technology_opportunities.parameter_path().read_bytes()
             + b"\0generator:"
             + Path(technology_opportunities.__file__).read_bytes()
+        ).hexdigest()
+    population_reader_digest = None
+    if source == SOURCE and version_contracts.is_115():
+        from .situated import engine_reader_115  # noqa: PLC0415
+
+        engine_reader_115.project_population_readers(data["readers"])
+        population_reader_digest = hashlib.sha256(
+            Path(engine_reader_115.__file__).read_bytes()
         ).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
@@ -302,6 +523,17 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     used_contexts: set[str] = set()
     digest = hashlib.sha256(
         raw
+        + (
+            b"\0population_reader_generator:" + population_reader_digest.encode("ascii")
+            if population_reader_digest
+            else b""
+        )
+        + (b"\0native_authority:" + authority_digest.encode("ascii") if authority_digest else b"")
+        + (
+            b"\0building_default_engine:" + building_default_digest.encode("ascii")
+            if building_default_digest
+            else b""
+        )
         + (b"\0company_sectors:" + sector_digest.encode("ascii") if sector_digest else b"")
         + (
             b"\0building_opportunities:" + opportunity_digest.encode("ascii")
@@ -469,6 +701,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             proof = json.loads(engine_scope.company_default_snapshot())
             if field_path[0] not in {row["id"] for row in proof["implicit_companies"]}:
                 raise ValueError("公司缺省评分不在精确引擎证据集合中")
+        elif authority_digest is not None:
+            from .situated import engine_building_115  # noqa: PLC0415
+
+            if (native_source, field) not in engine_building_115.authorized_fields():
+                raise ValueError("1.15 building default: initializer outside exact engine proof")
         building_policy = dict(policies)[native_source]
         if field_path not in {rule.field for rule in building_policy.rules}:
             raise ValueError("建筑缺省评分缺少实际规则消费者")
@@ -498,7 +735,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ):
             raise ValueError("商品供给计划必须是锁定默认策略上的有界追加")
         supply = SupplyPlan(
-            item["source"], tuple(sorted(item["goods"])), float(item["price_threshold"])
+            item["source"],
+            tuple(sorted(item["goods"])),
+            float(item["price_threshold"]),
+            supply_program.native_stances_1151()
+            if source == SOURCE and version_contracts.active_version() == "1.15.1"
+            else (),
         )
     scalar_values = []
     if not isinstance(data.get("scalar_values", []), list):
@@ -549,6 +791,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         sector_digest,
         law_digest,
         technology_digest,
+        authority_digest,
     )
     writes(adapters)
     return adapters
@@ -640,7 +883,14 @@ def _supply_patch(
     words: frozenset[str],
     programs: tuple[SupplyProgram, ...],
 ) -> str:
-    """保留已有商品立场与资格，只追加缺省的、按市场稀缺激活的立场。"""
+    """Compose reviewed stance activation; retain real action execution rules.
+
+    1.15.1 default source lines 6493-6494 describe production/trade planning
+    and active-strategy override. Only its three pinned enum conditions may be
+    extended; this is not a general permission to OR native eligibility gates.
+    """
+    if programs != plan.actions():
+        raise ValueError("供给渲染必须消费完整、唯一的已登记有类型程序")
     parsed = parse_text(text)
     if parsed.errors:
         raise ValueError("供给计划原件无法解析")
@@ -671,14 +921,52 @@ def _supply_patch(
         <= words
     ):
         raise ValueError("商品供给计划缺少锁定的原版读取或立场依据")
-    for good in plan.goods:
-        if goods_stances.value.first(good) is not None or len(definitions.root.all(good)) != 1:
+    native = {
+        program.good: program.native_stance
+        for program in programs
+        if program.native_stance is not None
+    }
+    if native:
+        from .situated.native_treatments import _ast  # noqa: PLC0415
+
+        baseline = parse_text(inputs[plan.source])
+        parent = baseline.root.first("ai_strategy_default")
+        before = (
+            parent.value.first("goods_stances")
+            if parent is not None and isinstance(parent.value, Block)
+            else None
+        )
+        if (
+            baseline.errors
+            or before is None
+            or not isinstance(before.value, Block)
+            or _ast(before.value) != _ast(goods_stances.value)
+        ):
+            raise ValueError("供给合成前原版立场或兄弟字段已漂移")
+        overlap = set(goods_stances.value.keys()) & set(plan.goods)
+        if overlap != native.keys():
+            raise ValueError("供给合成只允许精确已复核的三商品交集")
+    replacements = []
+    for program in programs:
+        good = program.good
+        if len(definitions.root.all(good)) != 1:
             raise ValueError(f"商品供给计划不能覆写原版立场或引用未知商品：{good}")
+        if program.native_stance is not None:
+            start, end = supply_program.block_span(
+                text, ("ai_strategy_default", "goods_stances", good)
+            )
+            if text[start:end] != program.native_stance.body:
+                raise ValueError(f"供给合成原版立场精确字节漂移：{good}")
+            replacements.append((start, end, program.composed_body()))
+        elif goods_stances.value.first(good) is not None:
+            raise ValueError(f"商品供给计划不能覆写原版立场或引用未知商品：{good}")
+    for start, end, replacement in sorted(replacements, reverse=True):
+        text = text[:start] + replacement + text[end:]
     position = decision_rules._offsets(text, {("ai_strategy_default", "goods_stances")})[
         ("ai_strategy_default", "goods_stances")
     ]
     rows = ["\n\t\t# SITAI BEGIN supply:goods_stances\n"]
-    rows.extend(program.render() for program in programs)
+    rows.extend(program.render() for program in programs if program.native_stance is None)
     rows.append("\t\t# SITAI END supply:goods_stances\n\t")
     result = text[:position] + "".join(rows) + text[position:]
     if parse_text(result).errors:
@@ -815,6 +1103,21 @@ def read_inputs(
         if hashlib.sha256(text.encode("utf-8")).hexdigest() != expected:
             raise ValueError(f"消费者适配原件漂移：{name}")
         inputs[name] = text
+    if adapters.native_authority_sha256 is not None:
+        if adapters.native_authority_sha256 != native_authority_sha256():
+            raise ValueError("1.15 adapter authority: adapter identity drift")
+        declaration = tomllib.loads(SOURCE.read_text(encoding="utf-8"))
+        information = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+        if (
+            native_contract_data(declaration, inputs, information=information)
+            != native_authority_115()
+        ):
+            raise ValueError("1.15 adapter authority: native parent/field/default AST drift")
+        from .situated import engine_building_115  # noqa: PLC0415
+
+        engine_building_115.snapshot()
+        if texts is None:
+            engine_building_115.verify_game(game)
     return inputs
 
 

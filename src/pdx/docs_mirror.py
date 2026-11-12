@@ -32,9 +32,11 @@ from pathlib import Path
 from . import config
 from .doc_tables import KeyedTableSpec
 from .textio import text_bytes
+from .version_contracts import active_version, contract
 
 #: 清单文件名（放在 research/ 下，与镜像目录平级）
-MANIFEST_NAME = "official-docs.manifest.json"
+HISTORICAL_MANIFEST_NAME = "official-docs.manifest.json"
+MANIFEST_NAME = config.STARTUP_CONTRACT.official_manifest_name
 
 #: 内容根 → 目录名前缀。清单与镜像都用 ``<根>/<相对路径>`` 作键，
 #: 因为不同内容根下可能有同名相对路径（只写相对路径会互相覆盖）。
@@ -56,7 +58,7 @@ class DocEntry:
 
 
 def manifest_path() -> Path:
-    return config.RESEARCH / MANIFEST_NAME
+    return config.RESEARCH / contract().official_manifest_name
 
 
 def iter_docs() -> list[tuple[str, Path]]:
@@ -121,6 +123,12 @@ def write_manifest() -> Path:
     """完整构建非空清单后原子替换；读取或写入失败保留旧权威清单。"""
     path = manifest_path()
     data = build_manifest()
+    version = data.get("版本")
+    if (
+        not isinstance(version, dict)
+        or version.get("caligula_branch") != f"release/{active_version()}"
+    ):
+        raise ValueError("官方文档清单原版版本不匹配，拒绝覆盖其他版本证据")
     if not data["文档"]:
         roots = ", ".join(f"{name}={base}" for name, base in _ROOTS)
         raise ValueError(f"官方文档清单为空，拒绝覆盖权威清单；检查输入目录：{roots}")
@@ -139,15 +147,21 @@ def write_manifest() -> Path:
 
 
 def load_manifest() -> dict[str, object]:
-    """读清单；不存在或损坏时返回空字典（调用方据此跳过）。"""
+    """读当前版本清单；缺失返回空字典，已存在的损坏或版本不符清单硬失败。"""
     path = manifest_path()
     if not path.is_file():
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"官方文档清单损坏：{path}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"官方文档清单结构错误：{path}")
+    version = data.get("版本")
+    expected = f"release/{active_version()}"
+    if not isinstance(version, dict) or version.get("caligula_branch") != expected:
+        raise ValueError(f"官方文档清单版本不匹配：期望 {expected}，实际 {version!r}")
+    return data
 
 
 def entries(data: dict[str, object] | None = None) -> dict[str, dict[str, object]]:

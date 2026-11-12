@@ -7,14 +7,24 @@ import json
 import pytest
 from _situated_sources import production_policy_sources
 
+from pdx import config, version_contracts
 from pdx.situated import inventory
 
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def structure_inventory_has_no_live_game(request, monkeypatch, tmp_path):
+    """Pure structure/denominator checks never trigger a live full production build."""
+    if request.node.get_closest_marker("integration") is None:
+        monkeypatch.setattr(config, "GAME", tmp_path / "unavailable-game")
+
+
+@pytest.mark.integration
 def test_k0_inventory_has_stable_scope_and_verified_production_witnesses() -> None:
-    first = inventory.discover()
-    second = inventory.discover()
+    with version_contracts.select_version("1.15.1"):
+        first = inventory.discover()
+        second = inventory.discover()
     assert first.scope_hash == second.scope_hash
     assert first.discovered_count >= 1412
     assert first.status_counts == {"implemented": first.discovered_count}
@@ -83,3 +93,22 @@ def test_k0_invalid_alternate_baseline_keeps_strict_model_validation(tmp_path) -
     baseline.write_text("ai_strategy_default = {", encoding="utf-8", newline="\n")
     with pytest.raises(ValueError, match="默认策略底本无法解析"):
         inventory.discover(baseline=baseline)
+
+
+def test_current_inventory_keeps_failed_generation_pending(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
+    with version_contracts.select_version("1.15.1"):
+        result = inventory.discover()
+    assert result.status_counts == {"pending": result.discovered_count}
+    assert all(surface.evidence_state != "production_witnessed" for surface in result.surfaces)
+
+
+def test_historical_inventory_cannot_borrow_current_mod_tree(monkeypatch, tmp_path):
+    # This is the actual current tree, not invented historical evidence.
+    metadata = json.loads((config.REPO / "mod/.metadata/metadata.json").read_text(encoding="utf-8"))
+    assert metadata["supported_game_version"] == "1.15.1"
+    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
+    with version_contracts.select_version("1.14.5"):
+        result = inventory.discover()
+    assert result.status_counts == {"pending": result.discovered_count}
+    assert all(surface.evidence_state != "production_witnessed" for surface in result.surfaces)

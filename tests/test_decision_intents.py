@@ -7,7 +7,7 @@ import hashlib
 
 import pytest
 
-from pdx import decision_rules
+from pdx import decision_rules, version_contracts
 
 
 def _strategy_data():
@@ -267,13 +267,20 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
         industrial_route=True,
         population=3_000_000,
     )
-    fields = (
+    fields: tuple[str, ...] = (
         "wanted_construction_output",
-        "institution_scores.institution_schools",
         "treaty_category_scores.trade",
         "treaty_category_scores.economy",
     )
+    school_field = "institution_scores.institution_schools"
+    if version_contracts.active_version() != "1.15.1":
+        fields += (school_field,)
     result = decision_rules.evaluate(policy, values, is_ai=True)
+    if version_contracts.active_version() == "1.15.1":
+        # The current school consumer has one R2 additive writer. The retired
+        # legacy multipliers must not survive in this rule-only evaluator.
+        assert school_field not in result
+        assert all(".".join(rule.field) != school_field for rule in policy.rules)
     assert all(result[field][1] > 1 for field in fields)
     for change in (
         {"loans": True},

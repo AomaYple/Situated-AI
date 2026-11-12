@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from pdx import version_contracts
 from pdx.situated import inventory
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ def _write(root: Path, relative: str, text: str) -> None:
 
 def _game(tmp_path: Path) -> Path:
     game = tmp_path / "game"
-    _write(tmp_path, "caligula_branch.txt", "release/1.14.5\n")
+    _write(tmp_path, "caligula_branch.txt", f"release/{version_contracts.active_version()}\n")
     _write(tmp_path, "caligula_rev.txt", "fixture\n")
     _write(tmp_path, "clausewitz_branch.txt", "fixture\n")
     _write(tmp_path, "clausewitz_rev.txt", "fixture\n")

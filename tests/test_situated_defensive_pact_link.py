@@ -72,6 +72,9 @@ def test_reader_rejects_state_actor_and_changed_minimum(engine):
 
 
 def test_pinned_reader_manifest_is_checked_before_returning_words(monkeypatch, tmp_path):
+    # This mutation targets the historical artifact explicitly; the independent
+    # current manifest has its own corruption tests in test_engine_reader_115.
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
     assert decision_interfaces.proven_reader_words() == frozenset(
         {
             "num_defensive_pacts",
@@ -117,7 +120,7 @@ def generated():
     model = compiler.load_model()
     assert model.consumer_ir is not None
     compiled = compiler.compile_policy(policy, INFO, model)[0]
-    native = compiler.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_path().read_text(encoding="utf-8")
     text = decision_rules.patch(
         native,
         compiled,

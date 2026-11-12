@@ -259,7 +259,7 @@ def sys_mem() -> dict[str, float | None]:
 
 def cpu_count() -> int | None:
     try:
-        return len(os.sched_getaffinity(0))  # type: ignore[attr-defined]
+        return len(getattr(os, "sched_getaffinity")(0))  # noqa: B009 - 平台可选 API
     except AttributeError:
         return os.cpu_count()
 
@@ -1193,13 +1193,25 @@ def run_group(
 
 
 #: pytest 收尾汇总里的计数段（`5 failed` / `1592 passed` / `1 error`）。
-_COUNT_RE = re.compile(r"(\d+) (passed|failed|skipped|error|errors|deselected|xfailed|xpassed)")
+_COUNT_RE = re.compile(
+    r"(\d+) (passed|failed|skipped|error|errors|deselected|xfailed|xpassed|rerun)"
+)
+_SUMMARY_ITEM = (
+    rf"(?:{_COUNT_RE.pattern}|\d+ warnings?|\d+ subtests (?:passed|failed|skipped|xfailed|xpassed)"
+    r"|\d+ tests? collected)"
+)
+_SUMMARY_RE = re.compile(
+    rf"(?P<counts>{_SUMMARY_ITEM}(?:, {_SUMMARY_ITEM})*|no tests (?:ran|collected))"
+    r" in \d+(?:\.\d+)?s(?: \(\d+(?::\d{2}){1,2}\))?"
+)
 
 
 def parse_pytest_tail(text: str) -> tuple[dict[str, int], list[str]]:
     """从 pytest 收尾汇总里取计数与失败用例名（拿不到就给空，不猜）。
 
-    为什么要按逗号切再 ``fullmatch``：`-q` 的收尾行是
+    先核对完整收尾行，拒绝 traceback 的 ``E ...`` 或引用文本；不能从
+    任意一行中捡出逗号后的合法片段。多条真实摘要保留累计合同。
+    再按逗号切并 ``fullmatch``：`-q` 的收尾行是
     ``35 passed, 16 subtests passed in 1.23s`` 这种**没有 ``=``** 的行，
     而 ``16 subtests passed`` 不是用例数 —— 按整段切、逐段 fullmatch
     才能既拿到 ``35`` 又不把 ``16`` 算进去（实测踩过）。
@@ -1210,8 +1222,10 @@ def parse_pytest_tail(text: str) -> tuple[dict[str, int], list[str]]:
         stripped = line.strip()
         if stripped.startswith(("FAILED ", "ERROR ")):
             failed.append(stripped.split(" ", 1)[1][:160])
-        head = stripped.strip("= ").split(" in ", 1)[0]
-        for chunk in head.split(","):
+        summary = _SUMMARY_RE.fullmatch(stripped.strip("= "))
+        if summary is None:
+            continue
+        for chunk in summary.group("counts").split(","):
             hit = _COUNT_RE.fullmatch(chunk.strip())
             if not hit:
                 continue
@@ -1810,7 +1824,7 @@ def _step_invariant(limit: int) -> int:
     3. **行号保真**：``Scalar.line`` / ``Block.line`` 一致；
     4. **引号标记保真**：``Scalar.quoted`` 一致。
 
-    「全新解析」必须**绕过两层缓存**（直接调 ``cache._parse_file``，原名 ``parse_file``），
+    「全新解析」必须**绕过两层缓存**（直接调 ``pdx.parser.parse_file``），
     否则两边读的是同一份缓存、比对恒真。
     """
     import hashlib as _hashlib  # noqa: PLC0415 - 延迟导入（见 corpus_files）
@@ -1819,6 +1833,7 @@ def _step_invariant(limit: int) -> int:
     from pdx.model import Assignment as _Assignment  # noqa: PLC0415
     from pdx.model import Block as _Block  # noqa: PLC0415
     from pdx.model import Scalar as _Scalar  # noqa: PLC0415
+    from pdx.parser import parse_file  # noqa: PLC0415
 
     _add_pdx_path()
     from pdx import config as pdx_config  # noqa: PLC0415
@@ -1857,7 +1872,7 @@ def _step_invariant(limit: int) -> int:
         return digest, nodes, int(getattr(tree, "had_bom", 0))
 
     for path in files:
-        direct = cache._parse_file(str(path))
+        direct = parse_file(str(path))
         cached = cache.parse_cached(str(path))
         if fingerprint(direct) != fingerprint(cached):
             mismatches.append(str(path))
@@ -2036,6 +2051,7 @@ def _step_index_audit(sample: int) -> int:
     import random  # noqa: PLC0415 - 延迟导入
 
     from pdx import cache  # noqa: PLC0415 - 延迟导入（见 corpus_files）
+    from pdx.parser import parse_file  # noqa: PLC0415
 
     files = corpus_files()
     per_shard = {index: cache._load_index(index) for index in range(cache.SHARDS)}
@@ -2059,7 +2075,7 @@ def _step_index_audit(sample: int) -> int:
         if got is None:
             mismatch.append(f"{path}（索引有、取不回来）")
             continue
-        direct = cache._parse_file(str(path))
+        direct = parse_file(str(path))
         if _tree_fingerprint(got, foreign) != _tree_fingerprint(direct, foreign):
             mismatch.append(str(path))
 
@@ -2374,6 +2390,7 @@ class InprocState(TypedDict):
     series: list[list[float]]
     counts: dict[str, int]
     errors: list[str]
+    test_errors: list[str]
 
 
 _INPROC: InprocState = {
@@ -2383,11 +2400,263 @@ _INPROC: InprocState = {
     "series": [],
     "counts": {"passed": 0, "failed": 0, "other": 0},
     "errors": [],
+    "test_errors": [],
 }
 _INPROC_LOCK = threading.Lock()
 _INPROC_STOP = threading.Event()
 _INPROC_T0 = time.time()
 _INPROC_ACTIVE = bool(os.environ.get("MEMBASELINE_OUT"))
+
+
+class _InprocProgress:
+    """Bounded diagnostic checkpoints and incremental events, never final evidence."""
+
+    def __init__(self) -> None:
+        # test_suite hides these variables while a test runs. Capture identities
+        # and I/O entry points before application mocks or child environments act.
+        out = Path(os.environ["MEMBASELINE_OUT"])
+        folder = out / "progress"
+        folder.mkdir(parents=True, exist_ok=True)
+        self.tag = os.environ.get("MEMBASELINE_TAG", "inproc")
+        self.worker = os.environ.get("PYTEST_XDIST_WORKER", "master")
+        self.pid = os.getpid()
+        self.path = folder / f"inproc-{self.tag}-{self.worker}-{self.pid}.json"
+        self.events_path = self.path.with_suffix(".jsonl")
+        self.temporary = self.path.with_suffix(".tmp")
+        self._open = open
+        self._replace = os.replace
+        self._clock = time.monotonic
+        self._dumps = json.dumps
+        self.started_unix_s = time.time()
+        self.started = self._clock()
+        self.last_flush = float("-inf")
+        self.lock = threading.Lock()
+        self.seq = 0
+        self.events: list[dict[str, Any]] = []
+        self.phase = "configure"
+        self.current: dict[str, Any] | None = None
+        self.last_test: dict[str, Any] | None = None
+        self.active_fixtures: list[dict[str, Any]] = []
+        self.completed = 0
+        self.ws_mb = 0.0
+        self.peak_mb = 0.0
+        self.last_sample_s = 0.0
+        self.peak_context: dict[str, Any] | None = None
+        self.peak_source = MemReader().peak_source
+        self.replace_deferred = 0
+        self.replace_access_denials = 0
+        self.replace_pending = False
+        self.replace_error: str | None = None
+
+    def diagnostics(self) -> dict[str, Any]:
+        return {
+            "checkpoint_replace_deferred": self.replace_deferred,
+            "checkpoint_access_denials": self.replace_access_denials,
+            "checkpoint_replace_pending": self.replace_pending,
+            "checkpoint_replace_error": self.replace_error,
+        }
+
+    def elapsed(self) -> float:
+        return round(self._clock() - self.started, 6)
+
+    def _event(self, event: str, **extra: Any) -> None:
+        self.seq += 1
+        self.events.append(
+            {
+                "seq": self.seq,
+                "event": event,
+                "elapsed_s": self.elapsed(),
+                "worker": self.worker,
+                "pid": self.pid,
+                **extra,
+            }
+        )
+
+    def set_phase(self, phase: str, **extra: Any) -> None:
+        with self.lock:
+            self.phase = phase
+            self._event("phase", phase=phase, **extra)
+
+    def start_phase(self, nodeid: str, phase: str) -> None:
+        with self.lock:
+            if self.current is None or self.current["nodeid"] != nodeid:
+                self.current = {"nodeid": nodeid, "started_s": self.elapsed(), "reports": {}}
+                self._event("test_start", nodeid=nodeid)
+            self.phase = "running"
+            self.current["phase"] = phase
+            self._event("test_phase", nodeid=nodeid, phase=phase)
+
+    def report(self, report: Any) -> None:
+        subtest = hasattr(report, "context") or type(report).__name__ == "SubTestReport"
+        with self.lock:
+            local = self.current is not None and self.current["nodeid"] == report.nodeid
+            details = {
+                "when": report.when,
+                "outcome": report.outcome,
+                "duration_s": getattr(report, "duration", None),
+                "subtest": subtest,
+            }
+            self._event(
+                "report",
+                nodeid=report.nodeid,
+                executed_here=local,
+                report_worker=getattr(report, "worker_id", self.worker),
+                **details,
+            )
+            # Controllers receive forwarded reports; their RSS must never be
+            # attributed to those workers' tests. Only local hooks set current.
+            if local and not subtest:
+                assert self.current is not None
+                self.current["reports"][report.when] = details
+                if report.when == "teardown":
+                    finished = self.elapsed()
+                    self.last_test = {
+                        **self.current,
+                        "finished_s": finished,
+                        "elapsed_s": round(finished - self.current["started_s"], 6),
+                    }
+                    self.current = None
+                    self.completed += 1
+
+    def fixture_start(self, name: str, scope: str) -> int:
+        with self.lock:
+            token = self.seq + 1
+            nodeid = self.current["nodeid"] if self.current is not None else None
+            self.active_fixtures.append(
+                {"token": token, "name": name, "scope": scope, "started_s": self.elapsed()}
+            )
+            self._event("fixture_start", name=name, scope=scope, nodeid=nodeid)
+            return token
+
+    def fixture_finish(self, token: int, outcome: str) -> None:
+        with self.lock:
+            fixture = next(row for row in self.active_fixtures if row["token"] == token)
+            self.active_fixtures.remove(fixture)
+            self._event(
+                "fixture_finish",
+                name=fixture["name"],
+                scope=fixture["scope"],
+                duration_s=round(self.elapsed() - fixture["started_s"], 6),
+                outcome=outcome,
+            )
+
+    def sample(self, rss: float, hwm: float) -> None:
+        with self.lock:
+            now = self.elapsed()
+            self.ws_mb = rss
+            if hwm > self.peak_mb:
+                self.peak_mb = hwm
+                self.peak_context = {
+                    "observed_s": now,
+                    "previous_sample_s": self.last_sample_s,
+                    "nodeid": self.current["nodeid"] if self.current is not None else None,
+                    "phase": self.current["phase"] if self.current is not None else self.phase,
+                    "fixtures": [row["name"] for row in self.active_fixtures],
+                }
+                self._event("peak_observed", peak_ws_mb=hwm, context=self.peak_context)
+            self.last_sample_s = now
+
+    def _journal(self) -> None:
+        with self.lock:
+            events, self.events = self.events, []
+        if events:
+            try:
+                with self._open(self.events_path, "a", encoding="utf-8", newline="\n") as stream:
+                    stream.write(
+                        "".join(self._dumps(row, ensure_ascii=False) + "\n" for row in events)
+                    )
+            except Exception:
+                with self.lock:
+                    self.events = events + self.events
+                raise
+
+    def flush(self, *, force: bool = False, final: bool = False) -> None:
+        # Only the existing sampler writes periodically; configure and finish
+        # write before it starts or after it joins. Never serialize full reports.
+        now = self._clock()
+        if not force and now - self.last_flush < 2.0:
+            return
+        with self.lock:
+            elapsed = self.elapsed()
+            current = (
+                {
+                    **self.current,
+                    "elapsed_s": round(elapsed - self.current["started_s"], 6),
+                    "reports": dict(self.current["reports"]),
+                }
+                if self.current is not None
+                else None
+            )
+            payload = {
+                "schema": 1,
+                "diagnostic_only": True,
+                "finalized": False,
+                "tag": self.tag,
+                "worker": self.worker,
+                "pid": self.pid,
+                "started_unix_s": self.started_unix_s,
+                "elapsed_s": elapsed,
+                "phase": self.phase,
+                "current_test": current,
+                "last_test": self.last_test,
+                "active_fixtures": [
+                    {**row, "elapsed_s": round(elapsed - row["started_s"], 6)}
+                    for row in self.active_fixtures
+                ],
+                "completed_tests": self.completed,
+                "ws_mb": self.ws_mb,
+                "peak_ws_mb": self.peak_mb,
+                "peak_source": self.peak_source,
+                "peak_context": self.peak_context,
+                "journal_seq": self.seq,
+            }
+        self._journal()
+        with self._open(self.temporary, "w", encoding="utf-8", newline="\n") as stream:
+            stream.write(self._dumps(payload, ensure_ascii=False) + "\n")
+        try:
+            self._replace(self.temporary, self.path)
+        except PermissionError as exc:
+            # Windows readers can temporarily deny replacement of this purely
+            # diagnostic checkpoint. Journaled events and the complete pending
+            # file survive; retry once at the next normal flush without sleep.
+            code = getattr(exc, "winerror", None)
+            if not _IS_WIN or code not in {5, 32}:
+                raise
+            self.replace_deferred += 1
+            if code == 5:
+                self.replace_access_denials += 1
+            self.replace_pending = True
+            self.replace_error = repr(exc)
+            with self.lock:
+                self._event(
+                    "checkpoint_deferred",
+                    attempt=self.replace_deferred,
+                    error=self.replace_error,
+                )
+            self._journal()
+            # ERROR_ACCESS_DENIED can also mean a permanent ACL failure. Give
+            # transient readers two normal flush intervals to release; never
+            # accept an unresolved access denial as successful final evidence.
+            if (final and self.replace_access_denials) or self.replace_access_denials >= 3:
+                raise
+        else:
+            self.replace_access_denials = 0
+            self.replace_pending = False
+            self.replace_error = None
+        self.last_flush = now
+
+
+class InprocRuntime(TypedDict):
+    progress: _InprocProgress | None
+    thread: threading.Thread | None
+    last_progress_diagnostics: dict[str, Any] | None
+
+
+_INPROC_RUNTIME: InprocRuntime = {
+    "progress": None,
+    "thread": None,
+    "last_progress_diagnostics": None,
+}
 
 
 def _inproc_enabled() -> bool:
@@ -2401,9 +2670,27 @@ def _inproc_snapshot() -> tuple[float, float]:
 
 def _inproc_sampler() -> None:  # pragma: no cover - 线程体
     while not _INPROC_STOP.wait(0.5):
-        rss, hwm = _inproc_snapshot()
+        try:
+            rss, hwm = _inproc_snapshot()
+        except Exception as exc:
+            # 仪器失败与被测代码失败分别保存；线程异常不能无声丢失。
+            with _INPROC_LOCK:
+                _INPROC["errors"].append(f"SAMPLER-ERROR {exc!r}")
+            return
         with _INPROC_LOCK:
             _INPROC["series"].append([round(time.time() - _INPROC_T0, 3), rss, hwm])
+        progress = _INPROC_RUNTIME["progress"]
+        if progress is not None:
+            try:
+                progress.sample(rss, hwm)
+                progress.flush()
+            except Exception as exc:
+                with _INPROC_LOCK:
+                    _INPROC["errors"].append(f"PROGRESS-ERROR {exc!r}")
+                # A broken diagnostic writer must not stop the independent
+                # core sampler. Preserve the error for the final resource gate.
+                _INPROC_RUNTIME["last_progress_diagnostics"] = progress.diagnostics()
+                _INPROC_RUNTIME["progress"] = None
 
 
 def _inproc_phase(name: str, **extra: Any) -> None:
@@ -2429,6 +2716,7 @@ def _inproc_write(exitstatus: Any) -> Path | None:
     worker = os.environ.get("PYTEST_XDIST_WORKER", "master")
     rss, hwm = _inproc_snapshot()
     payload = {
+        "schema": 2,
         "tag": tag,
         "worker": worker,
         "pid": os.getpid(),
@@ -2445,6 +2733,12 @@ def _inproc_write(exitstatus: Any) -> Path | None:
         "phases": _INPROC["phases"],
         "series": _INPROC["series"],
         "errors": _INPROC["errors"][:20],
+        "test_errors": _INPROC["test_errors"][:20],
+        "progress_diagnostics": (
+            _INPROC_RUNTIME["progress"].diagnostics()
+            if _INPROC_RUNTIME["progress"] is not None
+            else _INPROC_RUNTIME["last_progress_diagnostics"]
+        ),
     }
     path = out / f"inproc-{tag}-{worker}.json"
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8", newline="\n")
@@ -2464,8 +2758,15 @@ def pytest_configure(config: Any) -> None:  # pragma: no cover - 由 pytest 调�
     if not _inproc_enabled():
         return
     _inproc_phase("configure")
-    threading.Thread(target=_inproc_sampler, name="membaseline-sampler", daemon=True).start()
+    progress = _InprocProgress()
+    _INPROC_RUNTIME["progress"] = progress
+    progress.set_phase("configure")
     rss, hwm = _inproc_snapshot()
+    progress.sample(rss, hwm)
+    progress.flush(force=True)
+    thread = threading.Thread(target=_inproc_sampler, name="membaseline-sampler", daemon=True)
+    _INPROC_RUNTIME["thread"] = thread
+    thread.start()
     print(
         f"INPROC start tag={os.environ.get('MEMBASELINE_TAG')} "
         f"worker={os.environ.get('PYTEST_XDIST_WORKER', 'master')} pid={os.getpid()} "
@@ -2478,6 +2779,16 @@ def pytest_collection_finish(session: Any) -> None:  # pragma: no cover
     if not _inproc_enabled():
         return
     _inproc_phase("collection_finish", collected=len(session.items))
+    progress = _INPROC_RUNTIME["progress"]
+    if progress is not None:
+        progress.set_phase("collection_finish", collected=len(session.items))
+
+
+def pytest_sessionstart(session: Any) -> None:  # pragma: no cover
+    del session  # 只为对齐 hookspec 的形参名
+    progress = _INPROC_RUNTIME["progress"]
+    if _inproc_enabled() and progress is not None:
+        progress.set_phase("collection")
 
 
 def pytest_runtest_logstart(nodeid: str, location: Any) -> None:  # pragma: no cover
@@ -2492,7 +2803,12 @@ def pytest_runtest_logstart(nodeid: str, location: Any) -> None:  # pragma: no c
 
 
 def pytest_runtest_logreport(report: Any) -> None:  # pragma: no cover
-    if not _inproc_enabled() or report.when != "call":
+    if not _inproc_enabled():
+        return
+    progress = _INPROC_RUNTIME["progress"]
+    if progress is not None:
+        progress.report(report)
+    if report.when != "call":
         return
     rss, hwm = _inproc_snapshot()
     row = {
@@ -2502,17 +2818,38 @@ def pytest_runtest_logreport(report: Any) -> None:  # pragma: no cover
         "t_s": round(time.time() - _INPROC_T0, 3),
         "ws_mb": rss,
         "peak_mb": hwm,
+        "subtest": hasattr(report, "context") or type(report).__name__ == "SubTestReport",
     }
     with _INPROC_LOCK:
         _INPROC["tests"].append(row)
         if report.outcome == "failed":
             _INPROC["counts"]["failed"] += 1
-            _INPROC["errors"].append(f"FAILED {report.nodeid}")
-        else:
+            _INPROC["test_errors"].append(f"FAILED {report.nodeid}")
+        elif report.outcome == "passed":
             _INPROC["counts"]["passed"] += 1
+        else:
+            _INPROC["counts"]["other"] += 1
 
 
 if pytest is not None:  # pragma: no branch
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_runtest_setup(item: Any) -> None:  # pragma: no cover
+        progress = _INPROC_RUNTIME["progress"]
+        if _inproc_enabled() and progress is not None:
+            progress.start_phase(item.nodeid, "setup")
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_runtest_call(item: Any) -> None:  # pragma: no cover
+        progress = _INPROC_RUNTIME["progress"]
+        if _inproc_enabled() and progress is not None:
+            progress.start_phase(item.nodeid, "call")
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_runtest_teardown(item: Any) -> None:  # pragma: no cover
+        progress = _INPROC_RUNTIME["progress"]
+        if _inproc_enabled() and progress is not None:
+            progress.start_phase(item.nodeid, "teardown")
 
     @pytest.hookimpl(wrapper=True)
     def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:  # pragma: no cover
@@ -2522,40 +2859,70 @@ if pytest is not None:  # pragma: no branch
         原样 ``return`` 回去，漏了会让夹具返回值变成 None。
         """
         del request  # 只为对齐 hookspec 的形参名
+        progress = _INPROC_RUNTIME["progress"] if _inproc_enabled() else None
+        token = (
+            progress.fixture_start(fixturedef.argname, fixturedef.scope)
+            if progress is not None
+            else None
+        )
+        outcome = "interrupted"
         try:
-            value = yield
-        except SkipTest:
-            # unittest.setUpClass 的正常跳过由 pytest/JUnit 记录，不是采样错误。
-            raise
-        except Exception as exc:
-            if _inproc_enabled():
-                _INPROC["errors"].append(f"FIXTURE-ERROR {fixturedef.argname}: {exc!r}")
-            raise
-        if not _inproc_enabled():
+            try:
+                value = yield
+            except (SkipTest, pytest.skip.Exception):
+                # unittest.setUpClass 的正常跳过由 pytest/JUnit 记录，不是采样错误。
+                outcome = "skipped"
+                raise
+            except Exception as exc:
+                outcome = "failed"
+                if _inproc_enabled():
+                    _INPROC["test_errors"].append(f"FIXTURE-ERROR {fixturedef.argname}: {exc!r}")
+                raise
+            outcome = "passed"
+            if not _inproc_enabled():
+                return value
+            rss, hwm = _inproc_snapshot()
+            if progress is not None:
+                progress.sample(rss, hwm)
+            extra: dict[str, Any] = {}
+            if isinstance(value, (list, tuple, set, frozenset, dict)):
+                extra["len"] = len(value)
+            with _INPROC_LOCK:
+                _INPROC["fixtures"].append(
+                    {
+                        "name": fixturedef.argname,
+                        "scope": fixturedef.scope,
+                        "t_s": round(time.time() - _INPROC_T0, 3),
+                        "ws_mb": rss,
+                        "peak_mb": hwm,
+                        **extra,
+                    }
+                )
             return value
-        rss, hwm = _inproc_snapshot()
-        extra: dict[str, Any] = {}
-        if isinstance(value, (list, tuple, set, frozenset, dict)):
-            extra["len"] = len(value)
-        with _INPROC_LOCK:
-            _INPROC["fixtures"].append(
-                {
-                    "name": fixturedef.argname,
-                    "scope": fixturedef.scope,
-                    "t_s": round(time.time() - _INPROC_T0, 3),
-                    "ws_mb": rss,
-                    "peak_mb": hwm,
-                    **extra,
-                }
-            )
-        return value
+        finally:
+            if progress is not None and token is not None:
+                progress.fixture_finish(token, outcome)
 
 
 def pytest_sessionfinish(session: Any, exitstatus: Any) -> None:  # pragma: no cover
     if not _inproc_enabled():
         return
     _INPROC_STOP.set()
+    thread = _INPROC_RUNTIME["thread"]
+    if thread is not None:
+        thread.join(timeout=5)
+        if thread.is_alive():
+            _INPROC["errors"].append("PROGRESS-ERROR sampler did not stop before final flush")
     _inproc_phase("sessionfinish", collected=getattr(session, "testscollected", None))
+    progress = _INPROC_RUNTIME["progress"]
+    if progress is not None and (thread is None or not thread.is_alive()):
+        try:
+            progress.set_phase("sessionfinish", exitstatus=int(exitstatus))
+            rss, hwm = _inproc_snapshot()
+            progress.sample(rss, hwm)
+            progress.flush(force=True, final=True)
+        except Exception as exc:
+            _INPROC["errors"].append(f"PROGRESS-ERROR {exc!r}")
     _inproc_write(exitstatus)
 
 

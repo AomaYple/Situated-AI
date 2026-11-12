@@ -137,7 +137,7 @@ def command(
 
 def workloads(*, rounds: int = 5) -> dict[str, object]:
     """有输出指纹的实际功能负载；每项独立，禁止为快而改变结果。"""
-    from pdx import citations, decisions, localization  # noqa: PLC0415
+    from pdx import citations, config, decisions, localization, version_contracts  # noqa: PLC0415
 
     with tempfile.TemporaryDirectory(prefix="sitai-perf-") as folder:
         root = Path(folder)
@@ -155,7 +155,10 @@ def workloads(*, rounds: int = 5) -> dict[str, object]:
             return (len(result), sum(item.ok for item in result))
 
         def generator() -> object:
-            files = decisions.build()
+            # This is the historical offline core workload, never current live
+            # production. The latter retains its installed-source/EXE checks.
+            with version_contracts.select_version("1.14.5"):
+                files = decisions.build()
             return hashlib.sha256(json.dumps(files, sort_keys=True).encode("utf-8")).hexdigest()
 
         return {
@@ -164,6 +167,23 @@ def workloads(*, rounds: int = 5) -> dict[str, object]:
                 "python": sys.version,
                 "platform": platform.platform(),
                 "cpu": platform.processor(),
+            },
+            "input_identity": {
+                "decisions.core_inputs": {
+                    "profile": "1.14.5",
+                    "evidence": "historical_offline_core_not_current_production",
+                    "source_sha256": {
+                        path.relative_to(config.REPO).as_posix(): hashlib.sha256(
+                            path.read_bytes()
+                        ).hexdigest()
+                        for folder in (
+                            config.REPO / "mod/decisions",
+                            config.REPO / "research/vanilla-ai/1.14.5",
+                        )
+                        for path in sorted(folder.rglob("*"))
+                        if path.is_file()
+                    },
+                }
             },
             "workloads": {
                 "citations.repeated_file": measure(reference_scan, rounds=rounds),
@@ -182,6 +202,8 @@ def regressions(before: dict, after: dict, *, tolerance: float = 0.1) -> list[st
     problems: list[str] = []
     if before.get("environment") != after.get("environment"):
         return ["环境不同，不可直接比较性能"]
+    if before.get("input_identity") != after.get("input_identity"):
+        return ["输入身份不同，不可直接比较性能"]
     old = before.get("workloads", {})
     new = after.get("workloads", {})
     if old.keys() != new.keys():

@@ -28,7 +28,9 @@ from _table_guards import (
     skip_if_no_game,
 )
 
-from pdx import ai, config, doc_tables, install_tree, usage
+from pdx import ai, config, doc_tables, install_tree, usage, version_contracts
+from pdx.model import Block
+from pdx.parser import parse_bytes
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,15 +84,32 @@ def test_doc03_的_Top25_真的是前_25() -> None:
     smallest = min(counts[p] for p in listed)
     outside = {p: n for p, n in counts.items() if p not in listed and n > smallest}
     assert not outside, f"这些前缀比表里最小的 {smallest} 还大，却没进 Top25：{outside}"
+    assert len(listed) == 25
+    if version_contracts.is_115():
+        selected = set(listed)
+        for chosen in selected:
+            assert all(
+                counts[chosen] > counts[omitted]
+                or (counts[chosen] == counts[omitted] and chosen < omitted)
+                for omitted in counts.keys() - selected
+            )
 
 
 def test_doc10_两类分类都覆盖全部字段() -> None:
-    """四类语义与三种形态必须各自加总到 60（字段总数）。"""
+    """两类分类须覆盖所选原版定义的全部字段身份。"""
     skip_if_no_game(_doc("doc10"))
     semantics = sum(int(c[1]) for _k, c in ai.semantic_rows())
     shapes = sum(int(c[1]) for _k, c in ai.shape_rows())
     total = len(ai._strategy_fields())
-    assert total == 60, f"ai_strategy 字段数从 60 变成 {total} —— 两张表的标题要跟着改"
+    source = config.GAME / "common/ai_strategies/00_default_strategy.txt"
+    parsed = parse_bytes(source.read_bytes(), str(source))
+    assert not parsed.errors
+    definitions = parsed.root.all("ai_strategy_default")
+    assert len(definitions) == 1
+    assert isinstance(definitions[0].value, Block)
+    native_fields = [item.key for item in definitions[0].value.assignments()]
+    assert [name for name, _comment, _value in ai._strategy_fields()] == native_fields
+    assert total == {"1.14.5": 60, "1.15.0": 61, "1.15.1": 61}[version_contracts.active_version()]
     assert semantics == total, f"语义四类相加 {semantics} ≠ {total}"
     assert shapes == total, f"形态三类相加 {shapes} ≠ {total}"
 

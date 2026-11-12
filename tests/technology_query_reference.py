@@ -12,10 +12,16 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from pdx import version_contracts
+
+_VERSION = version_contracts.active_version()
+_SOURCE = {
+    "1.14.5": "technology_opportunities.toml",
+    "1.15.0": "technology_opportunities_115.toml",
+    "1.15.1": "technology_opportunities_1151.toml",
+}[_VERSION]
 _RAW = tomllib.loads(
-    (Path(__file__).resolve().parents[1] / "mod/decisions/technology_opportunities.toml").read_text(
-        encoding="utf-8"
-    )
+    (Path(__file__).resolve().parents[1] / "mod/decisions" / _SOURCE).read_text(encoding="utf-8")
 )
 CATALOG = json.loads(_RAW["catalog_json"])
 BUILDING_METHODS = {
@@ -28,6 +34,12 @@ BUILDING_METHODS = {
 }
 BUILDING_IDENTITIES = tuple(sorted(BUILDING_METHODS))
 METHOD_IDENTITIES = tuple(sorted(CATALOG["methods"]))
+
+
+def _check_version():
+    # The catalog is frozen once per worker; a context switch must never silently
+    # evaluate another profile against this worker's captured mechanism data.
+    assert version_contracts.active_version() == _VERSION, "technology oracle profile changed"
 
 
 def _all(values):
@@ -128,6 +140,7 @@ def _gates(row, root):
 
 
 def _members(technology, purpose):
+    _check_version()
     profile = CATALOG["technologies"][technology]
     selected = []
     for row in profile["opportunities"]:
@@ -264,7 +277,11 @@ def realize_query_world(reader):
             candidate
             for candidate in candidates
             if not purpose.endswith("_ready")
-            or all(CATALOG["goods"][good]["market"] for good in candidate["inputs"])
+            or all(
+                CATALOG["goods"][good]["market"]
+                for good, amount in (candidate["inputs"] | candidate.get("losses", {})).items()
+                if amount > 0
+            )
         )
         building, method = row["building"], row["prior"]
         if row["method"]:

@@ -7,13 +7,20 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import decisions
+from pdx import decisions, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import pdx_eval
 from pdx.situated.compiler import load_model, strategy_overlay
 from pdx.situated.schema import Relation
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def historical_extension_assembly():
+    """Exercise frozen extension assembly; live current release is integration-tested."""
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 def test_未验收扩展默认停用():
@@ -55,7 +62,7 @@ def test_启用扩展只追加声明字段且原版逐字保留():
     restored = re.sub(
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n", "", patched, flags=re.DOTALL
     )
-    assert restored == decisions.BASELINE.read_text(encoding="utf-8")
+    assert restored == decisions.baseline_path().read_text(encoding="utf-8")
     assert patched.count("# SITAI BEGIN") == 5
     for name, text in files.items():
         assert "\r" not in text

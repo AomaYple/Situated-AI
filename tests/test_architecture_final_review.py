@@ -7,8 +7,11 @@ sources exactly; ordinary integration runs rebuild one shared native report.
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import os
+import re
+import tomllib
 from collections import Counter, defaultdict
 from dataclasses import replace
 from pathlib import Path
@@ -20,19 +23,35 @@ import test_architecture_explicit_witnesses as explicit
 import test_observed_relations_feedback as feedback
 import test_observed_relations_witness_capture as witness
 import test_situated_production_guards as guards
+from r2_final_reference import diplomacy_score
+from test_network_profile import _score as network_score
+from test_supply_1151 import _ast as supply_ast
+from test_supply_1151 import _evaluate as supply_condition
 
-from pdx import config, country_state, decision_adapters, decision_rules, decisions, distribution
-from pdx.model import Block, Scalar
+from pdx import (
+    config,
+    country_state,
+    decision_adapters,
+    decision_rules,
+    decisions,
+    distribution,
+    version_contracts,
+)
+from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import (
+    action_network,
     architecture_receipts,
     audit,
     compiler,
     migration_baseline,
-    pdx_eval,
+    network_profile,
+    production_profile,
     relations,
+    vanilla_inventory,
 )
 from pdx.situated.native_treatments import _digest, _resolve
+from pdx.situated.profile_configuration import ProfileConfiguration
 from pdx.situated.receipts import digest
 
 if TYPE_CHECKING:
@@ -88,6 +107,325 @@ SUPPLY_GOODS = (
 )
 
 
+def _merged_supply_truth_table(good, generated, native, program):
+    """Use literal native technology/building predicates and scarcity outcomes."""
+    technologies = {
+        "oil": ("combustion_engine",),
+        "radios": (
+            "nco_training",
+            "mobile_armor",
+            "defense_in_depth",
+            "battleship_tech",
+            "carrier_tech",
+        ),
+        "telephones": ("telephone",),
+    }[good]
+    for tech, building, ai, market, price, delta in itertools.product(
+        (None, *technologies),
+        (False, True),
+        (False, True),
+        (False, True),
+        (None, 0.25, 0.5),
+        (None, -1, 0),
+    ):
+        native_active = tech is not None and (good != "telephones" or building)
+        scarce = (
+            ai and market and price is not None and price > 0.25 and delta is not None and delta < 0
+        )
+        facts: dict[str, Any] = {
+            "is_ai": ai,
+            "has_technology_researched": {tech} if tech else set(),
+            "has_building": {"building_government_administration"} if building else set(),
+        }
+        if market:
+            facts["market"] = {
+                f"mg:{good}": {"market_goods_pricier": price, "market_goods_delta": delta}
+            }
+        assert supply_condition(native, facts) is native_active
+        assert supply_condition(generated, facts) is (native_active or scarce)
+        for enabled in (False, True):
+            expected = "wants_high_supply" if native_active or (enabled and scarce) else None
+            assert (
+                program.evaluate(
+                    is_ai=ai,
+                    price=price,
+                    delta=delta,
+                    market_present=market,
+                    good_present=market,
+                    enabled=enabled,
+                    native_active=native_active,
+                )
+                == expected
+            )
+    for missing in ("market", f"mg:{good}", "market_goods_pricier", "market_goods_delta"):
+        facts = {
+            "is_ai": True,
+            "market": {f"mg:{good}": {"market_goods_pricier": 0.5, "market_goods_delta": -1}},
+        }
+        if missing == "market":
+            facts.pop(missing)
+        elif missing.startswith("mg:"):
+            facts["market"].pop(missing)
+        else:
+            facts["market"][f"mg:{good}"].pop(missing)
+        assert supply_condition(generated, facts) is False
+
+
+R2_CONSUMERS = (
+    ("a0-econ-road", "common/decrees/00_decree.txt", "decree_road_maintenance", "ai_weight"),
+    (
+        "a0-pol-schools",
+        "common/ai_strategies/00_default_strategy.txt",
+        "ai_strategy_default",
+        "institution_scores.institution_schools",
+    ),
+    (
+        "a0-dip-relations",
+        "common/diplomatic_actions/00_relations_actions.txt",
+        "increase_relations",
+        "ai.propose_score",
+    ),
+)
+
+
+def _r2_rows(candidate, disabled):
+    """Execute three real fields, their complete native tails and six roles.
+
+    Unknown is a static lowering variant with one unavailable required reader;
+    it is explicitly distinguished from the canonical production candidate.
+    """
+    disabled_metadata = json.loads(disabled[".metadata/metadata.json"])
+    assert disabled_metadata["configuration"] == ProfileConfiguration(core=False).identity()
+    profile = production_profile.load_profile(production_profile.baseline_root())
+    programs = {
+        item.network.actions[0].definition.consumer_id: item
+        for item in network_profile.compile_profile(profile)
+    }
+    declared = {
+        (row.id, row.source.removeprefix("game/"), row.definition, ".".join(row.field))
+        for row in profile.declarations
+    }
+    assert declared == set(R2_CONSUMERS)
+    for ident, source, definition, field in R2_CONSUMERS:
+        content = candidate["files"][source].decode("utf-8-sig")
+        native_text = (production_profile.baseline_root() / "game" / source).read_text(
+            encoding="utf-8-sig"
+        )
+        native, state = _resolve(parse_text(native_text).root, definition, field)
+        assert state == "found"
+        assert native is not None
+        assert isinstance(native.value, Block)
+        actual, state = _resolve(parse_text(content).root, definition, field)
+        assert state == "found"
+        assert actual is not None
+        assert isinstance(actual.value, Block)
+        assert (decisions.product_path() / source).read_bytes() == candidate["files"][source]
+        marker = re.compile(
+            rf"\n\t# SITAI POLICY 1\.15\.1 BEGIN {re.escape(ident)}\n"
+            rf"(?P<body>[\s\S]*?)\t# SITAI POLICY 1\.15\.1 END {re.escape(ident)}\n"
+        )
+        matches = list(marker.finditer(content))
+        assert len(matches) == 1
+        restored, state = _resolve(parse_text(marker.sub("", content)).root, definition, field)
+        assert state == "found"
+        assert restored is not None
+        assert supply_ast(restored) == supply_ast(native)
+        program = programs[ident]
+        canonical_overlay = matches[0].group("body")
+        assert supply_ast(parse_text(canonical_overlay).root) == supply_ast(
+            parse_text(network_profile.render_program(program)).root
+        )
+        scenarios: tuple[tuple[str, dict[str, object], float, float, float], ...]
+        if ident == "a0-econ-road":
+            base = {
+                "ai": True,
+                "owner_ai": False,
+                "infrastructure": 0.1,
+                "road-present": False,
+                "capital": False,
+                "journals": (),
+                "variables": (),
+                "home_state": False,
+            }
+            scenarios = (
+                ("positive", {}, 325, 4, 329),
+                ("negative", {"infrastructure": 0.8, "road-present": True}, 125, -2, 123),
+                ("unknown", {}, 325, 0, 325),
+                ("disabled", {}, 325, 0, 325),
+                ("player", {"ai": False, "owner_ai": True}, 325, 0, 325),
+                (
+                    "native_tail",
+                    {
+                        "capital": True,
+                        "journals": ("je_tp_pool_develop_capital", "je_tp_fav_parochial"),
+                        "variables": ("tp_fav_home_state",),
+                        "home_state": True,
+                    },
+                    5231.25,
+                    4,
+                    5240.25,
+                ),
+            )
+            missing = "infrastructure"
+        elif ident == "a0-pol-schools":
+            base = {
+                "ai": True,
+                "literacy": 0.4,
+                "population": 1,
+                "bureaucracy": 1,
+                "net-surplus": 1,
+                "default": False,
+                "school-agenda": False,
+            }
+            scenarios = (
+                ("positive", {}, 10, 2.75, 12.75),
+                ("negative", {"literacy": 0.6, "bureaucracy": -1, "default": True}, 10, -4, 6),
+                ("unknown", {}, 10, 0, 10),
+                ("disabled", {}, 10, 0, 10),
+                ("player", {"ai": False}, 10, 0, 10),
+                ("native_tail", {"school-agenda": True}, 10, 3.75, 13.75),
+            )
+            missing = "bureaucracy"
+        else:
+            base = {
+                "ai": True,
+                "protective": True,
+                "conciliatory": False,
+                "influence": 500,
+                "target-interference": False,
+                "target_rank": 2,
+                "actor_is_subject": False,
+                "target_is_subject": False,
+                "journals": (),
+            }
+            scenarios = (
+                ("positive", {}, 16, 2, 18),
+                ("negative", {"protective": False, "influence": 100}, 11, -2, 9),
+                ("unknown", {}, 16, 0, 16),
+                ("disabled", {}, 16, 0, 16),
+                ("player", {"ai": False}, 16, 0, 16),
+                (
+                    "native_tail",
+                    {
+                        "target_rank": 3,
+                        "actor_is_subject": True,
+                        "ai_has_regional_objective_befriend_reason": True,
+                    },
+                    78,
+                    2,
+                    80,
+                ),
+            )
+            missing = "influence"
+        for role, changes, expected_native, expected_delta, expected_complete in scenarios:
+            facts = {**base, **changes}
+            selected = content
+            # Native-tail and AI guard inputs belong to the PDX interpreter;
+            # the policy evaluator accepts only its declared network facts.
+            reference_facts = {fact.id: facts[fact.id] for fact in program.network.facts}
+            if role == "disabled":
+                # A complete core-off build may omit a source it does not
+                # override. That source then inherits the actual native script;
+                # keep the output mapping intact and record this distinction.
+                selected = disabled.get(source, native_text)
+                assert f"BEGIN {ident}" not in selected
+            elif role == "unknown":
+                reference_facts.pop(missing)
+                available = tuple(item.id for item in program.network.facts if item.id != missing)
+                variant = network_profile.render_program(program, available=available)
+                selected = (
+                    content[: matches[0].start("body")]
+                    + variant
+                    + content[matches[0].end("body") :]
+                )
+            selected_node, state = _resolve(parse_text(selected).root, definition, field)
+            assert state == "found"
+            assert selected_node is not None
+            assert isinstance(selected_node.value, Block)
+            if role == "disabled":
+                assert supply_ast(selected_node) == supply_ast(native)
+            if ident == "a0-dip-relations":
+                observed_native = diplomacy_score(native.value, facts)
+                observed_complete = diplomacy_score(selected_node.value, facts)
+            else:
+                scope = "state" if ident == "a0-econ-road" else "actor"
+                observed_native = network_score(native.value, facts, scope)
+                observed_complete = network_score(selected_node.value, facts, scope)
+            delta = (
+                0
+                if role in {"disabled", "player"}
+                else action_network.evaluate_network(program, reference_facts).total
+            )
+            factor = 2.25 if ident == "a0-econ-road" and role == "native_tail" else 1
+            # Scores use one float representation in strict JSON witnesses;
+            # numeric equality alone does not equate JSON 325 with 325.0.
+            expected = {
+                "native": float(expected_native),
+                "insertion": float(expected_delta),
+                "complete": float(expected_complete),
+            }
+            reference = {
+                "native": float(expected_native),
+                "insertion": float(delta),
+                "complete": float(expected_native + delta * factor),
+            }
+            generated = {
+                "native": observed_native,
+                "insertion": (observed_complete - observed_native) / factor,
+                "complete": observed_complete,
+            }
+            assert expected == reference == generated, (ident, role)
+            yield {
+                "case_id": f"r2.{ident}.{role}",
+                "role": role,
+                "input": {
+                    "contract_version": "1.15.1",
+                    "facts": facts,
+                    "mode": "static_unavailable_reader_specialization"
+                    if role == "unknown"
+                    else "disabled_configuration"
+                    if role == "disabled"
+                    else "canonical_candidate",
+                    "unavailable_reader": missing if role == "unknown" else None,
+                    "disabled_source": {
+                        "origin": "generated_override"
+                        if source in disabled
+                        else "native_inherited",
+                        "override_text_sha256": hashlib.sha256(
+                            disabled[source].encode()
+                        ).hexdigest()
+                        if source in disabled
+                        else None,
+                        "effective_text_sha256": hashlib.sha256(selected.encode()).hexdigest(),
+                    }
+                    if role == "disabled"
+                    else None,
+                    "canonical_production_sha256": hashlib.sha256(
+                        candidate["files"][source]
+                    ).hexdigest(),
+                    "native_numeric_ast_sha256": _digest(native),
+                    "restored_numeric_ast_sha256": _digest(restored),
+                },
+                "expected": expected,
+                "reference": reference,
+                "generated": generated,
+                "production": [
+                    "mod/decisions/action_network_1151.toml",
+                    "src/pdx/situated/network_profile.py",
+                    "src/pdx/situated/action_network.py",
+                ],
+                "consumers": [
+                    {
+                        "path": (
+                            decisions.product_path().relative_to(config.REPO) / source
+                        ).as_posix(),
+                        "definition": definition,
+                        "field": field,
+                    }
+                ],
+            }
+
+
 @pytest.fixture(scope="module")
 def final_candidate():
     before = architecture_receipts.source_snapshot(config.REPO)
@@ -124,9 +462,27 @@ def final_native(final_candidate):
         assert path.is_file(), f"explicit final native report missing: {path}"
         report = json.loads(path.read_bytes())
     else:
-        report = audit.native_report()
+        assert (
+            digest(architecture_receipts.source_snapshot(config.REPO))
+            == (final_candidate["snapshot"])
+        )
+        # Keep both full native closure checks from package_inputs while
+        # reusing this module's freshly generated complete candidate.
+        distribution.verify_compatibility_installation()
+        report = audit._native_report_from_candidate(
+            final_candidate["model"], final_candidate["files"]
+        )
+        distribution.verify_compatibility_installation()
+        assert (
+            digest(architecture_receipts.source_snapshot(config.REPO))
+            == (final_candidate["snapshot"])
+        )
     assert report["source_snapshot_sha256"] == final_candidate["snapshot"]
     assert report["plan_version"] == architecture_receipts.PLAN_VERSION
+    # Re-discover the installed originals independently of the supplied/built
+    # treatment report. A report cannot choose its own source denominator.
+    installed_scope = vanilla_inventory.discover()
+    assert report["scope"] == installed_scope.as_dict()
     treatments = report["native_treatments"]
     assert treatments["production_hashes"] == {
         name: hashlib.sha256(raw).hexdigest() for name, raw in final_candidate["files"].items()
@@ -136,6 +492,7 @@ def final_native(final_candidate):
 
 @pytest.fixture(scope="module")
 def final_disabled(final_candidate):
+    """Complete core-off output; omitted source paths inherit installed originals."""
     return decisions.build(
         replace(final_candidate["policy"], enabled=False),
         extensions=replace(
@@ -146,6 +503,9 @@ def final_disabled(final_candidate):
             economy_enabled=False,
             diplomacy_enabled=False,
         ),
+        configuration=ProfileConfiguration(core=False)
+        if version_contracts.active_version() == "1.15.1"
+        else None,
     )
 
 
@@ -162,7 +522,8 @@ def final_supply(final_candidate, final_disabled):
     assert len(writers) == len(programs) == len(SUPPLY_GOODS)
     assert set(programs) == set(SUPPLY_GOODS)
     source = explicit.SOURCE
-    original = parse_text(compiler.BASELINE.read_text(encoding="utf-8")).root
+    original = parse_text(compiler.baseline_path().read_text(encoding="utf-8")).root
+    installed_original = parse_text((config.GAME / source).read_text(encoding="utf-8-sig")).root
     current = parse_text(candidate["files"][source].decode("utf-8-sig")).root
     disabled = parse_text(final_disabled[source]).root
     original_map, status = _resolve(original, "ai_strategy_default", "goods_stances")
@@ -170,17 +531,79 @@ def final_supply(final_candidate, final_disabled):
     assert original_map is not None
     assert isinstance(original_map.value, Block)
     originals = {item.key: _digest(item) for item in original_map.value.assignments()}
-    assert len(originals) == 17
+    installed_map, status = _resolve(installed_original, "ai_strategy_default", "goods_stances")
+    assert status == "found"
+    assert installed_map is not None
+    assert isinstance(installed_map.value, Block)
+    installed_originals = {item.key: _digest(item) for item in installed_map.value.assignments()}
+    assert originals == installed_originals
+    disabled_map, state = _resolve(disabled, "ai_strategy_default", "goods_stances")
+    assert state == "found"
+    assert disabled_map is not None
+    assert supply_ast(disabled_map.value) == supply_ast(original_map.value)
+    assert (
+        len(originals)
+        == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 21}[version_contracts.active_version()]
+    )
     actual_map, status = _resolve(current, "ai_strategy_default", "goods_stances")
     assert status == "found"
     assert actual_map is not None
     assert isinstance(actual_map.value, Block)
-    actual_originals = {
-        item.key: _digest(item) for item in actual_map.value.assignments() if item.key in originals
-    }
-    assert {item.key for item in actual_map.value.assignments()} == set(originals) | set(
-        SUPPLY_GOODS
+    actual_nodes = list(actual_map.value.assignments())
+    assert len(actual_nodes) == len({item.key for item in actual_nodes})
+    assert {item.key for item in actual_nodes} == set(originals) | set(SUPPLY_GOODS)
+    merged = (
+        {"oil", "radios", "telephones"} if version_contracts.active_version() == "1.15.1" else set()
     )
+    assert set(originals) & set(SUPPLY_GOODS) == merged
+    actual_originals = {}
+    for original_node in original_map.value.assignments():
+        actual = actual_map.value.first(original_node.key)
+        assert actual is not None
+        restored = actual
+        if original_node.key in merged:
+            assert isinstance(actual.value, Block)
+            assert isinstance(original_node.value, Block)
+            assert actual.value.keys() == ["stance", "trigger"]
+            trigger = actual.value.first("trigger")
+            native_trigger = original_node.value.first("trigger")
+            assert trigger is not None
+            assert native_trigger is not None
+            assert trigger.op == "="
+            assert trigger.prefix is None
+            assert isinstance(trigger.value, Block)
+            assert trigger.value.keys() == ["OR"]
+            union = trigger.value.items[0]
+            assert isinstance(union, Assignment)
+            assert union.op == "="
+            assert union.prefix is None
+            assert isinstance(union.value, Block)
+            assert union.value.keys() == ["AND", "AND"]
+            native_branch, scarcity_branch = union.value.items
+            assert isinstance(native_branch, Assignment)
+            assert isinstance(scarcity_branch, Assignment)
+            assert all(
+                item.op == "=" and item.prefix is None for item in (native_branch, scarcity_branch)
+            )
+            assert supply_ast(native_branch.value) == supply_ast(native_trigger.value)
+            good = original_node.key
+            literal_scarcity = parse_text(
+                f"is_ai=yes exists=market market={{exists=mg:{good} "
+                f"mg:{good}={{market_goods_pricier>0.25 market_goods_delta<0}}}}"
+            ).root
+            assert supply_ast(scarcity_branch.value) == supply_ast(literal_scarcity)
+            # Restore from the actual first AND, actual stance and siblings.
+            # Substituting the baseline here would conceal a changed native arm.
+            restored_trigger = replace(trigger, value=native_branch.value)
+            restored = replace(
+                actual,
+                value=Block(
+                    [restored_trigger if item is trigger else item for item in actual.value.items]
+                ),
+            )
+            _merged_supply_truth_table(good, trigger.value, native_trigger.value, programs[good])
+        assert supply_ast(restored) == supply_ast(original_node)
+        actual_originals[original_node.key] = _digest(restored)
     assert actual_originals == originals
     return {
         "programs": programs,
@@ -188,6 +611,7 @@ def final_supply(final_candidate, final_disabled):
         "disabled": disabled,
         "originals": originals,
         "actual_originals": actual_originals,
+        "merged": merged,
     }
 
 
@@ -210,7 +634,11 @@ def _supply_rows(context, good):
     assert isinstance(trigger.value, Block)
     assert len(node.value.items) == 2
     disabled_node, _ = _resolve(disabled, "ai_strategy_default", field)
-    assert disabled_node is None
+    if good in context["merged"]:
+        assert disabled_node is not None
+        assert _digest(disabled_node) == originals[good]
+    else:
+        assert disabled_node is None
     native_hash = digest(originals)
     observed_native_hash = digest(actual_originals)
     # All conjuncts here describe this one good's actual scarcity, rather than
@@ -227,6 +655,7 @@ def _supply_rows(context, good):
         enabled = role != "disabled"
         inputs = {
             "good": good,
+            "contract_version": version_contracts.active_version(),
             "is_ai": is_ai,
             "price": price,
             "delta": delta,
@@ -255,7 +684,15 @@ def _supply_rows(context, good):
         }
         generated = {
             "selected": stance.value.unquoted
-            if enabled and pdx_eval.condition(trigger.value, observation) is True
+            if (
+                supply_condition(trigger.value, observation)
+                if enabled
+                else disabled_node is not None
+                and isinstance(disabled_node.value, Block)
+                and supply_condition(
+                    cast("Assignment", disabled_node.value.first("trigger")).value, observation
+                )
+            )
             else None,
             "native_stances_sha256": observed_native_hash,
         }
@@ -275,7 +712,11 @@ def _supply_rows(context, good):
                 "src/pdx/situated/compiler.py",
             ],
             "consumers": [
-                {"path": "mod/" + source, "definition": "ai_strategy_default", "field": field}
+                {
+                    "path": (decisions.product_path().relative_to(config.REPO) / source).as_posix(),
+                    "definition": "ai_strategy_default",
+                    "field": field,
+                }
             ],
         }
 
@@ -376,12 +817,23 @@ def _native_review(candidate, report, *, integration):
     scope, treatments = report["scope"], report["native_treatments"]
     rows = treatments["rows"]
     expected = [row["declaration_id"] for row in scope["surfaces"]]
-    assert scope["discovered_count"] == treatments["denominator"] == len(expected) == 8856
+    assert scope["discovered_count"] == treatments["denominator"] == len(expected)
     assert len(set(expected)) == len(expected)
     assert Counter(expected) == Counter(row["declaration_id"] for row in rows)
     assert scope["parse_failures"] == []
     assert treatments["production_manifest_complete_asserted"] is True
-    assert all(row["active_unknown_usage"] is False for row in rows)
+    active_unknown = [
+        {
+            "declaration_id": row["declaration_id"],
+            "source": row["source"],
+            "field": row["field"],
+            "issues": row["issues"],
+            "source_protection": row["source_protection"]["issues"],
+        }
+        for row in rows
+        if row["active_unknown_usage"] is not False
+    ]
+    assert active_unknown == [], active_unknown[:20]
     unresolved = [
         row["declaration_id"]
         for row in rows
@@ -403,7 +855,7 @@ def _native_review(candidate, report, *, integration):
         # every actual game script and localization byte must match this build.
         for name, raw in candidate["files"].items():
             if name.startswith(("common/", "events/", "localization/")):
-                assert (config.REPO / "mod" / name).read_bytes() == raw, name
+                assert (decisions.product_path() / name).read_bytes() == raw, name
     return {
         "declarations": len(rows),
         "active_unknown": 0,
@@ -425,7 +877,7 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
         for name, raw in candidate["files"].items()
         if name.endswith((".txt", ".yml", ".json"))
     }
-    baseline = compiler.BASELINE.read_text(encoding="utf-8")
+    baseline = compiler.baseline_path().read_text(encoding="utf-8")
     # pytest exposes the original factory through __wrapped__ at runtime;
     # FixtureFunctionDefinition's type stub does not declare that attribute.
     legacy_candidate = cast("Any", legacy.witness_candidate).__wrapped__(
@@ -473,29 +925,86 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     for good in SUPPLY_GOODS:
         for case in _supply_rows(final_supply, good):
             record(**case)
-    assert len(legacy.IDENTITIES) == 927
+    current_r2 = version_contracts.active_version() == "1.15.1"
+    expected_legacy = {"1.14.5": 927, "1.15.0": 937, "1.15.1": 936}[
+        version_contracts.active_version()
+    ]
+    r2_identities: set[tuple[str, str, str]] = set()
+    if current_r2:
+        with decision_rules.SOURCE.open("rb") as handle:
+            information = tomllib.load(handle)
+        historical = {
+            (legacy.INFO, tuple(rule["field"].split("."))) for rule in information["rules"]
+        } | {(source, rule.field) for source, policy in adapters.policies for rule in policy.rules}
+        school = (legacy.INFO, ("institution_scores", "institution_schools"))
+        assert len(historical) == 937
+        assert set(legacy.IDENTITIES) == historical - {school}
+        migrated = [rule for rule in information["rules"] if rule["field"] == ".".join(school[1])]
+        assert len(migrated) == 6
+        assert {rule["id"] for rule in migrated} == set(network_profile.SCHOOL_MIGRATION)
+        for case in _r2_rows(candidate, disabled):
+            r2_identities.update(
+                (item["path"], item["definition"], item["field"]) for item in case["consumers"]
+            )
+            record(**case)
+        assert len(r2_identities) == 3
+    assert len(legacy.IDENTITIES) == expected_legacy
     assert len(explicit.CARDS) == 11
     # The external fleet script body and its actual strategy reference are
     # separate physical consumers; both require their own six executed roles.
-    assert len(rows) == (927 + 1 + 11 + 1 + 33) * len(ROLES)
+    expected_cases_per_role = (
+        expected_legacy + 1 + len(explicit.CARDS) + 1 + len(SUPPLY_GOODS) + len(r2_identities)
+    )
+    assert len(rows) == expected_cases_per_role * len(ROLES)
     assert len({row["case_id"] for row in rows}) == len(rows)
     consumers = {
         (item["path"], item["definition"], item["field"])
         for row in rows
         for item in row["consumers"]
     }
-    assert len(consumers) == 970
-    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, 973)
+    # Establish the physical field set from rules, explicit cards, the native
+    # fleet reference, support and the independent supply list before comparing
+    # executed records. Coexisting responsibilities can share physical fields.
+    expected_consumers = {
+        tuple(legacy._consumer(source, field)[key] for key in ("path", "definition", "field"))
+        for source, field in legacy.IDENTITIES
+    }
+    current_path = (decisions.product_path().relative_to(config.REPO) / explicit.SOURCE).as_posix()
+    expected_consumers.update(
+        (current_path, explicit.DEFINITION, card[1]) for card in explicit.CARDS
+    )
+    expected_consumers.add((current_path, explicit.DEFINITION, "diplomatic_play_support"))
+    fleet_links = {
+        (
+            (decisions.product_path().relative_to(config.REPO) / source).as_posix(),
+            field[0],
+            ".".join(field[1:]),
+        )
+        for source, field in legacy.IDENTITIES
+        if legacy._consumer(source, field)["field"] == "__body__"
+    }
+    assert len(fleet_links) == 1
+    expected_consumers.update(fleet_links)
+    expected_consumers.update(
+        (current_path, explicit.DEFINITION, f"goods_stances.{good}") for good in SUPPLY_GOODS
+    )
+    assert expected_consumers.isdisjoint(r2_identities)
+    expected_consumers.update(r2_identities)
+    assert consumers == expected_consumers
+    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, expected_cases_per_role)
     assert digest(architecture_receipts.source_snapshot(config.REPO)) == candidate["snapshot"]
     return {
         "review": {
-            "legacy_consumers": 927,
+            "contract_version": version_contracts.active_version(),
+            "legacy_consumers": expected_legacy,
             "legacy_strategy_links": 1,
             "explicit_cards": 11,
             "support_programs": 1,
             "supply_enum_programs": 33,
+            "r2_network_programs": len(r2_identities),
             "physical_consumers": len(consumers),
             "executed_cases": len(rows),
+            "expected_cases": expected_cases_per_role * len(ROLES),
             "roles": list(ROLES),
             "fresh_execution_sha256": digest(rows),
             "production_output_hashes": {
@@ -506,9 +1015,19 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     }
 
 
-def test_whole_mod_review_reexecutes_the_exact_current_consumer_matrix(final_whole_review):
-    """Build-only verification; formal S5 capture occurs in its six role tests."""
-    assert final_whole_review["review"]["executed_cases"] == 5838
+@pytest.mark.parametrize("role", ROLES)
+def test_whole_mod_review_reexecutes_the_exact_current_consumer_matrix(
+    final_whole_review, architecture_witness, role
+):
+    """Capture every freshly executed consumer under this candidate's full matrix."""
+    whole = final_whole_review
+    review = whole["review"]
+    assert review["executed_cases"] == review["expected_cases"]
+    for case in whole["rows"]:
+        if case["role"] == role:
+            architecture_witness(
+                **{**case, "input": {**case["input"], "whole_mod_review": whole["review"]}}
+            )
 
 
 @pytest.fixture(scope="module")
@@ -533,8 +1052,12 @@ def final_reviews(final_candidate):
 @pytest.mark.parametrize(("stage", "requirement"), REQUIREMENTS)
 @pytest.mark.parametrize("role", ROLES)
 def test_requirement_specific_full_review_and_real_consumer_roles(
-    final_candidate, final_reviews, architecture_witness, request, stage, requirement, role
+    final_candidate, architecture_witness, request, stage, requirement, role
 ):
+    if requirement in {"legal_scope_disposition", "native_integration"}:
+        reviews = {}
+    else:
+        reviews = request.getfixturevalue("final_reviews")
     if requirement in {
         "legal_scope_disposition",
         "native_integration",
@@ -544,17 +1067,9 @@ def test_requirement_specific_full_review_and_real_consumer_roles(
         integrated = _native_review(
             final_candidate, report, integration=requirement != "legal_scope_disposition"
         )
-        review = {**final_reviews.get(requirement, {}), "native_scope": integrated}
+        review = {**reviews.get(requirement, {}), "native_scope": integrated}
     else:
-        review = final_reviews[requirement]
-    if requirement == "whole_mod_functional_review":
-        whole = request.getfixturevalue("final_whole_review")
-        review = {**review, "whole_mod_matrix": whole["review"]}
-        for case in whole["rows"]:
-            if case["role"] == role:
-                architecture_witness(
-                    **{**case, "input": {**case["input"], "whole_mod_review": whole["review"]}}
-                )
+        review = reviews[requirement]
     assert review
     candidate = final_candidate["r8"]
 

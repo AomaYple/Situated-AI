@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from pdx import decision_adapters, decision_rules
+from pdx import decision_adapters, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.textio import normalized_text
@@ -24,10 +24,18 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .decision_ir import EvaluationContext, WriterDecisionIR
+    from .r2_native import NetworkProgramBinding
     from .vanilla_inventory import VanillaInventory, VanillaSurface
 
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_SOURCE = REPO / "mod" / "decisions" / "domain_actions.toml"
+
+
+def source_path() -> Path:
+    """Use the current generated count ledger with unchanged domain contracts."""
+    if version_contracts.is_115():
+        return DEFAULT_SOURCE.parent / version_contracts.active_version() / DEFAULT_SOURCE.name
+    return DEFAULT_SOURCE
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,37 +194,20 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
     ):
         return "continuous_writer_contract_mismatch"
     context = writer.evaluation_context
-    source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+    from .compiler import support_evaluation_context  # noqa: PLC0415
+
+    try:
+        expected_context = support_evaluation_context()
+    except (OSError, ValueError):
+        return "evaluation_context_unproven"
     if context is None or context.status != "observed" or context.actor_scope is None:
         return "evaluation_context_unproven"
-    if asdict(context.actor_scope) != {
-        "name": "root",
-        "kind": "country",
-        "role": "actor",
-        "source": source,
-        "line": 183,
-    }:
+    if context.actor_scope != expected_context.actor_scope:
         return "actor_type_mismatch"
-    expected_targets = (
-        {
-            "name": "target_country",
-            "kind": "country",
-            "role": "target",
-            "source": source,
-            "line": 184,
-        },
-        {
-            "name": "enemy_country",
-            "kind": "country",
-            "role": "target",
-            "source": source,
-            "line": 185,
-        },
-    )
     if (
-        tuple(asdict(row) for row in context.targets) != expected_targets
+        context.targets != expected_context.targets
         or context.auxiliary_scopes
-        or context.evidence != tuple(f"{source}:{line}" for line in (183, 184, 185))
+        or context.evidence != expected_context.evidence
     ):
         return "target_type_mismatch"
     return None
@@ -367,7 +358,12 @@ def _native_context_issue(
         "diplomatic_play_boldness": ("native_randomized_additive_boldness", {"add"}),
         "min_law_chance_to_pass": ("override_pass_chance_threshold", {"add"}),
         "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
-        "change_law_chance": ("additive_percentage_chance", {"add"}),
+        "change_law_chance": (
+            "first_nonzero_active_change_law_chance_else_default"
+            if version_contracts.is_115()
+            else "additive_percentage_chance",
+            {"add"},
+        ),
         "max_progressiveness": ("override_progressiveness_limit", {"add"}),
         "max_regressiveness": ("override_regressiveness_limit", {"add"}),
         "recklessness": ("additive_strength_estimate_multiplier", {"add"}),
@@ -819,7 +815,7 @@ class _NativeBindingProofs:
             "default": row["define_field"],
             "default_value": row["default_value"],
             "evidence": [
-                engine_scope.COMPANY_DEFAULT_MANIFEST_ID,
+                engine_scope._company_manifest(default=True)[1],
                 f"{row['define_source']}:{row['define_line']}",
                 f"{binding.source}:{definition.line}",
             ],
@@ -850,12 +846,12 @@ class _NativeBindingProofs:
             and context.actor_scope is not None
             and context.actor_scope.name == "root"
             and context.actor_scope.kind == "country"
-            and context.actor_scope.source == engine_scope.COMPANY_MANIFEST_ID
+            and context.actor_scope.source == engine_scope._company_manifest()[1]
             and not context.targets
             and not context.auxiliary_scopes
-            and f"{engine_scope.COMPANY_MANIFEST_ID}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}"
+            and f"{engine_scope._company_manifest()[1]}:sha256={engine_scope._company_manifest()[2]}"
             in context.evidence
-            and f"{engine_scope.COMPANY_MANIFEST_ID}:definition_only:company_type"
+            and f"{engine_scope._company_manifest()[1]}:definition_only:company_type"
             in context.evidence
         )
 
@@ -971,6 +967,7 @@ def native_coverage(
     native_sources: Mapping[str, bytes] | None = None,
     production_policies: Mapping[str, decision_rules.RuleSet] | None = None,
     continuous_programs: tuple[ContinuousProgramBinding, ...] = (),
+    network_programs: tuple[NetworkProgramBinding, ...] = (),
 ) -> dict[str, Any]:
     """Join real production bindings to an independently discovered denominator.
 
@@ -985,6 +982,8 @@ def native_coverage(
     """
 
     explicit = dict(explicit_consumers or {})
+    from . import r2_native  # noqa: PLC0415
+
     proofs = _NativeBindingProofs(inventory, native_sources or {}, production_policies or {})
     by_id = {item.action_id: item for item in instances}
     if len(by_id) != len(instances):
@@ -992,6 +991,11 @@ def native_coverage(
     program_ids = [item.writer.writer_id for item in continuous_programs]
     if len(program_ids) != len(set(program_ids)) or set(program_ids) & set(by_id):
         raise ValueError("连续程序与生产行动的writer身份重复")
+    network_ids = [item.consumer for item in network_programs]
+    if len(network_ids) != len(set(network_ids)) or set(network_ids) & (
+        set(by_id) | set(program_ids)
+    ):
+        raise ValueError("R2程序与其他生产writer身份重复")
     if set(explicit) - set(by_id) or any(by_id[key].kind != "action_card" for key in explicit):
         raise ValueError("显式消费者映射只能引用实际显式行动卡")
     identities: dict[tuple[str, str, str], list[VanillaSurface]] = {}
@@ -1097,6 +1101,34 @@ def native_coverage(
             continuous_matches.setdefault(program_candidates[0].declaration_id, []).append(
                 program_binding
             )
+    network_matches: dict[str, list[NetworkProgramBinding]] = {}
+    network_records: dict[str, dict[str, Any]] = {}
+    for network_binding in network_programs:
+        network_candidates = identities.get(
+            (network_binding.source, network_binding.definition, network_binding.field), []
+        )
+        network_records[network_binding.consumer] = {
+            "consumer": network_binding.consumer,
+            "source": network_binding.source,
+            "definition": network_binding.definition,
+            "field": network_binding.field,
+            "production_sha256": network_binding.production_sha256,
+            "overlay_sha256": network_binding.overlay_sha256,
+            "metadata_sha256": network_binding.metadata_sha256,
+            "binding_status": "unproven",
+            "business_complete": False,
+        }
+        if len(network_candidates) != 1:
+            unmatched.append(
+                {
+                    "action_id": network_binding.consumer,
+                    "reason": "network_native_identity_unproven",
+                }
+            )
+        else:
+            network_matches.setdefault(network_candidates[0].declaration_id, []).append(
+                network_binding
+            )
     categories: dict[str, list[str]] = {
         name: []
         for name in (
@@ -1114,6 +1146,7 @@ def native_coverage(
     for surface in sorted(inventory.surfaces, key=lambda item: item.declaration_id):
         candidates = matches.get(surface.declaration_id, [])
         continuous = continuous_matches.get(surface.declaration_id, [])
+        networks = network_matches.get(surface.declaration_id, [])
         issues = {
             item.action_id: reason
             for item in candidates
@@ -1134,10 +1167,18 @@ def native_coverage(
                     binding_status="interface_bound",
                     native_evidence=evidence,
                 )
+        for network_binding in networks:
+            reason = r2_native.native_issue(network_binding, surface)
+            if reason is not None:
+                issues[network_binding.consumer] = reason
+            else:
+                network_records[network_binding.consumer]["binding_status"] = "interface_bound"
         binding_issue_count += len(issues)
-        matched_ids = [item.action_id for item in candidates] + [
-            item.writer.writer_id for item in continuous
-        ]
+        matched_ids = (
+            [item.action_id for item in candidates]
+            + [item.writer.writer_id for item in continuous]
+            + [item.consumer for item in networks]
+        )
         covered = sorted(writer_id for writer_id in matched_ids if writer_id not in issues)
         if surface.ambiguity:
             status = "unknown"
@@ -1199,6 +1240,7 @@ def native_coverage(
         ],
         "implicit_rows": implicit_rows,
         "continuous_programs": list(continuous_records.values()),
+        "network_programs": list(network_records.values()),
         "implicit_denominator_policy": "documented_optional_consumers_separate_from_discovered_denominator",
         "binding_complete": bool(inventory.surfaces)
         and not (unresolved or unmatched or binding_issue_count or inventory.parse_failures),
@@ -1322,9 +1364,10 @@ CHAINS: tuple[JointChain, ...] = (
 )
 
 
-def render_counts(path: Path = DEFAULT_SOURCE) -> str:
+def render_counts(path: Path | None = None) -> str:
     """Update only generated per-domain instance counts in the source ledger."""
 
+    path = source_path() if path is None else path
     text = path.read_text(encoding="utf-8")
     data = tomllib.loads(text)
     if data.get("schema") != 1 or not isinstance(data.get("domains"), dict):
@@ -1355,9 +1398,10 @@ def render_counts(path: Path = DEFAULT_SOURCE) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
-def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
+def check_counts(path: Path | None = None) -> list[str]:
     """Return a clear error when checked-in generated counts are stale."""
 
+    path = source_path() if path is None else path
     try:
         actual = path.read_text(encoding="utf-8")
         expected = render_counts(path)
@@ -1371,11 +1415,12 @@ def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
 
 
 def load(
-    path: Path = DEFAULT_SOURCE,
+    path: Path | None = None,
     *,
     information: decision_rules.RuleSet | None = None,
     adapters: decision_adapters.AdapterSet | None = None,
 ) -> dict[str, DomainCoverage]:
+    path = source_path() if path is None else path
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if data.get("schema") != 1 or set(data) != {"schema", "domains", "chains"}:
         raise ValueError("domain_actions.toml schema 无效")

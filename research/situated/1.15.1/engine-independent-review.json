@@ -1,0 +1,249 @@
+{
+  "schema": 1,
+  "reviewer": "/root/review_binary_1151; separate instance from implementer /root/reprove_binary_1151",
+  "requested_model": "gpt-6.1-sol",
+  "requested_effort": "xhigh",
+  "evidence_category": "static_check",
+  "evidence_kind": "independent_binary_static_review",
+  "runtime": "unknown",
+  "reviewed_at": "2026-11-11T16:06:45.458266+00:00",
+  "scope": "Independent read-only semantic review of the 1.15.1 engine authority migration and optional deployment helper; no source/research/Git/dependency mutation, no game or deployment execution.",
+  "conclusion": "No actionable blocking defect found in the reviewed exact field/member/type/consumer authorization. Historical window nomination plus current typed parser roots, own tokens, exact member origins, current scope/key construction and actual merge callers is sufficient for these bounded static contracts. It is not independent discovery of every wrapper name and does not authorize arbitrary scopes/readers/runtime claims.",
+  "findings": [],
+  "exe": {
+    "sha256": "fb4ec0698afd3d3b1a785926d57bd5d68c95a4afd04b56f6bd45abd7a5672b15",
+    "bytes": 100221048,
+    "image_base": "0x140000000"
+  },
+  "inputs": {
+    "research/situated/1.15.1/engine-building-default.json": "f6f0922c9f0d254d6921ff0fa1f6f24f4e566f1fd9dd340b05dfa2f6ba3c86e2",
+    "research/situated/1.15.1/engine-company-default.json": "b05113003de48d057f5c371d563924a414f506f116fbe74c3ad754752faf1593",
+    "research/situated/1.15.1/engine-company.json": "c8dc4846d92318dddf2398b0b512908b8b69782cf198c49d374a4e7e81bdf82e",
+    "research/situated/1.15.1/engine-country-definition.json": "7cbf568f2981b7bf2451f621ffe5f58bef919229119c2b7a89ba9bf1b23ef713",
+    "research/situated/1.15.1/engine-defensive-pact-reader.json": "eac4993fad1b0b0bb02acbce3e70117b79de13dc90718fe5ebf677b8e12416c0",
+    "research/situated/1.15.1/engine-law.json": "03c8bf8b565d44349ea3dfdc8a8c04bf0d745c4f4fae4b13016cb0f2e4d53cc1",
+    "research/situated/1.15.1/engine-static-reproof.json": "4e0a4fc57e41f056828ce5640c57f7a9809e397e08cc8d82482b34f50da96862",
+    "research/situated/1.15.1/engine-strategy.json": "a14aa71db94aa6fe526370f6c39c7e7366032ab03ebd48e848c6f57eb8e1c46b",
+    "research/situated/1.15.1/engine-technology.json": "3e439fb4d2e800ae27af325dec620dbe96a309c1c8126afa0a7687019b864922"
+  },
+  "verified": {
+    "current_pe_observation_points": 478,
+    "observation_va_file_offset_bytes_equal": true,
+    "rtti_type_roots_replayed": 15,
+    "core_parser_identities_relocated": 8,
+    "own_field_atom_token_paths": 33,
+    "parser_exact_members": 33,
+    "current_consumer_member_origins": 33,
+    "default_active_call_pairs": 31,
+    "production_entrypoints": {
+      "strategy": {
+        "passed": true,
+        "wall_seconds": 1.117,
+        "source_hashes": 4
+      },
+      "company": {
+        "passed": true,
+        "wall_seconds": 0.587,
+        "source_hashes": 2
+      },
+      "company-default": {
+        "passed": true,
+        "wall_seconds": 0.667,
+        "source_hashes": 3
+      },
+      "reader": {
+        "passed": true,
+        "wall_seconds": 1.183,
+        "source_hashes": 13
+      },
+      "building": {
+        "passed": true,
+        "wall_seconds": 0.08,
+        "source_hashes": 7
+      },
+      "law": {
+        "passed": true,
+        "wall_seconds": 0.077,
+        "source_hashes": 2
+      },
+      "technology": {
+        "passed": true,
+        "wall_seconds": 0.079,
+        "source_hashes": 2
+      },
+      "country-definition": {
+        "passed": true,
+        "wall_seconds": 0.078,
+        "source_hashes": 2
+      }
+    },
+    "historical_1150_manifests_equal_HEAD": 8,
+    "independent_operand_comparison": {
+      "windows": 135,
+      "equal_except_relative_targets": 127,
+      "changed": 8,
+      "historical_map_role": "candidate locator only; current wrappers/member roots and real operands reviewed separately"
+    }
+  },
+  "semantic_checks": [
+    {
+      "claim": "Company eligibility and scoring use the same checked Country actor; false eligibility returns zero and signed nonpositive final scores are rejected.",
+      "evidence": [
+        "0x141643f36 stores Country in r14, eligibility0x141643f48, score0x141643f66 passes r14",
+        "0x141653ba8 call -> CMP qword[rsp+0x28],0 at0x141653bad -> JLE0x141653bb3 to0x141654080",
+        "Numeric member0x390; absent expression loads exact NAI global0x145c11a10 at0x14174aa06. Explicit empty/nonpositive permission remains restricted by production contract."
+      ]
+    },
+    {
+      "claim": "change_law_chance uses first nonzero active result, including negative; only all-zero active traversal evaluates default.",
+      "evidence": [
+        "0x1415f21cd calls current field wrapper0x141840e10",
+        "TEST rbx,rbx0x1415f21d9; JNE0x1415f21dc ->0x1415f25f5",
+        "Default call0x1415f222c; actual legal candidate qualification0x1415f2729, false skip0x1415f2735."
+      ]
+    },
+    {
+      "claim": "Economic spending merge remains additive; changed native economic tail does not grant extra permissions.",
+      "evidence": [
+        "default0x14165511e and active0x14165514d call wrapper0x141840c80",
+        "ADD rdi,[rax]0x141655152; current destination[r14+0x478]0x14165517e",
+        "Added helpers/member movements and cleanup changes reviewed as opaque native work; complete current observation reproduced."
+      ]
+    },
+    {
+      "claim": "Parser dispatch resolves own current token and field, including embedded jump-table data and guarded parser receivers.",
+      "evidence": [
+        "Current RTTI parser0x14183af70, subobject0x20d8",
+        "Both table pairs0x14183c314/0x14183c360 and0x14183c414/0x14183c434 interpreted as data",
+        "possible dispatch guard0x14183b12d reaches interface receiver0x14183b191; trigger base0x40, parser interface0x48",
+        "aggression guard0x14183b9c5 reaches receiver0x14183b9ec. These guarded-entry differences do not change numeric member0x1180."
+      ]
+    },
+    {
+      "claim": "Wrapper matching does not reuse a Country container to authorize a different field or target.",
+      "evidence": [
+        "All33 own parser member deltas independently checked; exact current consumer origins checked, using payload+8 for numeric/map objects where required",
+        "Country tag5 plus actor ID+0x18 in current wrapper contexts",
+        "law target tuple tag0x31, law key global0x145cd5ae8 and typed CCountryLaw resolver0x140980610; definition-only law ai_will_do remains a separate path",
+        "wargoal diplomatic_play tuple remains explicitly unprojected_unknown."
+      ]
+    },
+    {
+      "claim": "Country creation/formation and technology retain definition-only targets.",
+      "evidence": [
+        "Typed creation/formation databases independently anchored at vtables0x1447798e0/0x14477b638, through current registration/load/candidate chains",
+        "Creation country tuple -> definition+b0 at0x1415debdb; formation country tuple -> definition+a0 at0x1415de7cd; false candidate branches preserved",
+        "Technology token0x53ce -> numeric interface0x68/payload0x70; current scoring at0x1415dfdf0 receives Country context. Eligibility, cost, randomization and max comparison remain native; no terminal-zero rule inferred."
+      ]
+    },
+    {
+      "claim": "Building and defensive-pact reader contracts remain bounded.",
+      "evidence": [
+        "Building template/self selection precedes score emptiness; selected0x560 evaluated once with State tag0x4c and ID+0x8; both empty defaults pinned1000",
+        "Reader0x142982750 validates Country tag5, iterates Country treaty IDs then article IDs and increments on exact definition flag bit1",
+        "Reader result is qualifying article count scaled100000, not unique partners; no active/draft/suspension filter inferred."
+      ]
+    },
+    {
+      "claim": "Native numeric contexts may use distinct helpers while preserving the exact field.",
+      "evidence": [
+        "ship_construction_output_multiplier default0x141625e5b calls0x14085ffd0 on interface+0x1c00; active0x141625f33 calls0x1409bde30 on payload+0x1c08",
+        "wanted_num_supply_ships uses payload0x1b48 and max_ship_design_complexity payload0x1d88; matching their parser interfaces0x1b40/0x1d80."
+      ]
+    }
+  ],
+  "changed_windows_reviewed": [
+    {
+      "label": "actual company scoring wrapper",
+      "current_va": "0x141643f00",
+      "changed_instruction_ranges": 3,
+      "review_note": "Current stack frame and local result location changed. Actual eligibility0x141643f48 precedes score0x141643f66; score receives the same current Country actor. The complete score wrapper0x14174a9d0 itself is instruction-equivalent apart from relocation and retains member+0x390, default global0x145c11a10 and empty/nonempty split."
+    },
+    {
+      "label": "company AI selection country lookup and positive-score guard",
+      "current_va": "0x1416539c0",
+      "changed_instruction_ranges": 24,
+      "review_note": "Stack frame/local slots changed and native AI collection members moved +0x410/+0x418 to +0x488/+0x490. Current candidate wrapper call0x141653ba8 writes rsp+0x28; compare0x141653bad and JLE0x141653bb3 to0x141654080 reject nonpositive results. The contract points to JLE, not CMP; full current selection function is observed."
+    },
+    {
+      "label": "actual law AI candidate consumer",
+      "current_va": "0x1415f2040",
+      "changed_instruction_ranges": 7,
+      "review_note": "Current caller adds zero-register setup, native logger context locals and changes padding. Active change_law_chance call0x1415f21cd tests RBX and JNE0x1415f21dc exits to0x1415f25f5 on any nonzero including negative; default call0x1415f222c follows all-zero active traversal. Law qualification0x1415f2729 still tests AL and false branch0x1415f2735 skips candidate to0x1415f29c8. Full current .pdata extent is observed."
+    },
+    {
+      "label": "CAIStrategy complete parser all 33 token paths and jump tables",
+      "current_va": "0x14183af70",
+      "changed_instruction_ranges": 3,
+      "review_note": "Code-embedded jump-table RVA displacements changed; disassembly of trailing table bytes is data, not instructions. Exact current atom-token dispatch is independently interpreted for all33 fields. Tables0x14183c314/0x14183c360 and0x14183c414/0x14183c434 are freshly observed through current parser end0x14183c4cf. Possible receiver is0x14183b191 after guard0x14183b12d."
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "current_va": "0x140872dd0",
+      "changed_instruction_ranges": 1,
+      "review_note": "Native assertion/log source-line immediate changed0x34c->0x53c; strategy default/active calls and merge instruction sequence are unchanged apart from relocation."
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "current_va": "0x1415e8800",
+      "changed_instruction_ranges": 1,
+      "review_note": "Native log/source-location immediate changed0x11d9->0x129e; strategy calls and merge sequence remain unchanged apart from relocation."
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "current_va": "0x141654c00",
+      "changed_instruction_ranges": 30,
+      "review_note": "Native economic AI tail changes member offsets by0x78, adds native helper calls, changes temporary registers, rearranges cleanup branches and updates diagnostic line constant0x4f9->0x52b. Current spending-balance default call0x14165511e and active call0x14165514d still feed additive merge; exact current full caller is preserved without claiming tail equivalence or runtime quality."
+    },
+    {
+      "label": "typed strategy database accessor",
+      "current_va": "0x1407d2590",
+      "changed_instruction_ranges": 2,
+      "review_note": "Per-thread/singleton native TLS offsets changed0x8670/0x86b8->0x8680/0x86c8; same current typed database registration and accessor bridges are observed. No historical TLS offset is consumed by production."
+    }
+  ],
+  "deployment_helper": {
+    "path": "tools/out/release_330_deploy.py",
+    "sha256": "b4135d411e465b546fd3ce0d1420eed69481a0d65fb684e434d4ebbbb03febdc",
+    "compared_with": "tools/out/release_320_deploy.py",
+    "diff": "Only 3.2.0 -> 3.3.0 text and the documentation link differ; no deployment logic change.",
+    "self_check": {
+      "passed": true,
+      "cases": [
+        "rename failure restores previous",
+        "exact swap SHA",
+        "out-of-root path refusal",
+        "cache allowlist refusal"
+      ],
+      "installed_files_touched": false
+    },
+    "review": "Pinned final checkout/tag/ZIP and production validator, exact source/backup/staging inventories, same-volume two-rename restoration, launcher preservation and explicit cache allowlist reviewed. Actual deployment was not executed."
+  },
+  "limitations": [
+    "This is a bounded static permission review. Engine loading, command success, save compatibility, execution timing, longitudinal reevaluation, AI quality, balance and in-game performance remain unknown.",
+    "Core RTTI/parser/atom/type/database/reader roots were rediscovered from current PE. Some wrappers/callers were nominated by old masked windows and reviewed by current member/type/operand/caller correspondence; no claim of independent naming of every wrapper.",
+    "Operand comparison ignores relative branch/call targets and RIP displacements; it supplements the current typed graph and cannot authorize unknown callees by itself. Embedded parser tables are data.",
+    "Reused and audited tools/ci/engine_discovery_1151.py PE/RTTI/token interpreter for root replay; independently checked actual current operands and producer-to-consumer boundaries rather than treating its result or hash as attestation.",
+    "Controlled discovery checks Capstone native DLL hash, import path and version. Its recorded wheel archive hash is not automatically validated by that script; this review rechecked the DLL and version, not the wheel archive.",
+    "No full acceptance gate or test suite was run in this review; the parent is coordinating those checks separately."
+  ],
+  "artifacts": {
+    "tools/out/version1151/binary/independent-review/entrypoints.json": "e63175d575da2dc567473a0ed4ac357a5f3b9fad045c9ead6ae0fcb49c186853",
+    "tools/out/version1151/binary/independent-review/field-member-consumer-checks.json": "9929b4a99d7c323a4d8761efbbbaefd5f68010a27580df44530749c655f7c3d6",
+    "tools/out/version1151/binary/independent-review/historical-1150-byte-identity.json": "acfc344d647c93d2cafeaf2bfc85b5ef65fd5b2a82700645b66853295e6d46c0",
+    "tools/out/version1151/binary/independent-review/link-roots.json": "69c8598c693e186946cb8ecde904ac0a045a8fcb1ef44ca1a6abc6642ff87f5a",
+    "tools/out/version1151/binary/independent-review/operand-semantic-comparison.json": "8e06152aa737c6ead3ce158732f016ee39ff6ee94bc98524c6c45f0d6b79f6ea",
+    "tools/out/version1151/binary/independent-review/roots.json": "97da465c5f3a831906b1ef7d3b8feb919bba94ab5ac4818c1f40a0d75f62618e",
+    "tools/out/version1151/binary/independent-review/token-traces.json": "add58c78227e08d37f06a8fe7396d68d4a28a65c1b88172c89893a1accc41ea0",
+    "tools/out/version1151/binary/independent-review/tokens-and-receivers.json": "a229a9f5e87ea65072b06f727f80dccbb85d35a142a38d81dd662d6834a5ad2a"
+  },
+  "reviewed_production_and_discovery_sources": {
+    "src/pdx/situated/engine_scope_115.py": "4d210cfb296ae066211f277a1a0d111e1f58448068bc03d378b3c4ddd2fdbd03",
+    "src/pdx/situated/engine_scope.py": "facc97dd4df3e9c9489a469cbc8fe3a864971e02a7484c299bd139aa96dcfcda",
+    "src/pdx/situated/engine_strategy_115.py": "c8151d7aba5ab90d4fe8b8a99cbee22a73ce5cd7c2cfd3e5774adde868909d26",
+    "src/pdx/situated/engine_strategy_1151.py": "d8dbef2fc584716a505a5f4787c118c4dbf192852697407a1bb1dca93d18d62c",
+    "src/pdx/situated/engine_reader_115.py": "56a9dd78745040199fe52d3f92ffbb57e2272744146a909fde8cd750a894c77f",
+    "src/pdx/situated/engine_building_115.py": "f3da13696334c3168486a9baad84e6f78697a4617039343af1cb8834c3e32227",
+    "tools/ci/engine_discovery_1151.py": "730b84deba2638d7220b099eddf95a1814d9dd2835245caaa1d37b28499ae417"
+  }
+}

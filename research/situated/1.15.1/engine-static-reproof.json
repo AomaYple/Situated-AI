@@ -1,0 +1,369 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "runtime": "unknown",
+  "version": "1.15.1",
+  "purpose": "Implementer static reproof and reproducible discovery handoff; independent semantic review remains pending",
+  "independent_review": "pending_separate_instance",
+  "exe": {
+    "sha256": "fb4ec0698afd3d3b1a785926d57bd5d68c95a4afd04b56f6bd45abd7a5672b15",
+    "bytes": 100221048,
+    "image_base": "0x140000000"
+  },
+  "discovery": {
+    "controlled_script": "tools/ci/engine_discovery_1151.py",
+    "script_sha256": "730b84deba2638d7220b099eddf95a1814d9dd2835245caaa1d37b28499ae417",
+    "reads_manifest": false,
+    "roots": "Exact current type names -> TypeDescriptor -> signature1/COL self-RVA and subobject check -> vtable slot4 adjustor thunk -> parser. Current field-name literals -> atom token -> bounded current dispatcher trace; direct E8 callers are filtered by current unwind instruction boundaries. No old address delta authorizes a current observation.",
+    "historical_assistance": "Historical code windows nominated candidates by exact opcode/register/member/immediate windows with only RIP displacement and direct relative branch/call operands masked. Current RTTI, literals, parser-token paths and actual call graph supersede candidate addresses; explicit mismatches and non-equivalent windows were reviewed.",
+    "rtti_types": 15,
+    "strategy_tokens": 33,
+    "tool": "capstone5.0.7",
+    "wheel_sha256": "4ab8bcb7da8f221ff45926ca168ca33e76f7237d06fbf3c10780002faa2670e1",
+    "native_dll_sha256": "46b7c385efe50db4def8aa99aa351c44ea28b1f3c2ccbc4ca41dbb2a02340e39"
+  },
+  "comparison": {
+    "code_windows": 135,
+    "masked_instruction_equivalent": 127,
+    "changed_windows": 8,
+    "reviewed_known_reference_edges": 3898,
+    "known_edge_mismatches": 0,
+    "algorithm_limit": "Correspondence comparison is supplemental evidence only. It does not prove unknown callees, data interpretation, or runtime behavior. Table bytes must be interpreted as tables, not disassembled as code.",
+    "changes": [
+      {
+        "label": "actual company scoring wrapper",
+        "current_va": "0x141643f00",
+        "changed_instruction_ranges": 3,
+        "review_note": "Current stack frame and local result location changed. Actual eligibility0x141643f48 precedes score0x141643f66; score receives the same current Country actor. The complete score wrapper0x14174a9d0 itself is instruction-equivalent apart from relocation and retains member+0x390, default global0x145c11a10 and empty/nonempty split."
+      },
+      {
+        "label": "company AI selection country lookup and positive-score guard",
+        "current_va": "0x1416539c0",
+        "changed_instruction_ranges": 24,
+        "review_note": "Stack frame/local slots changed and native AI collection members moved +0x410/+0x418 to +0x488/+0x490. Current candidate wrapper call0x141653ba8 writes rsp+0x28; compare0x141653bad and JLE0x141653bb3 to0x141654080 reject nonpositive results. The contract points to JLE, not CMP; full current selection function is observed."
+      },
+      {
+        "label": "actual law AI candidate consumer",
+        "current_va": "0x1415f2040",
+        "changed_instruction_ranges": 7,
+        "review_note": "Current caller adds zero-register setup, native logger context locals and changes padding. Active change_law_chance call0x1415f21cd tests RBX and JNE0x1415f21dc exits to0x1415f25f5 on any nonzero including negative; default call0x1415f222c follows all-zero active traversal. Law qualification0x1415f2729 still tests AL and false branch0x1415f2735 skips candidate to0x1415f29c8. Full current .pdata extent is observed."
+      },
+      {
+        "label": "CAIStrategy complete parser all 33 token paths and jump tables",
+        "current_va": "0x14183af70",
+        "changed_instruction_ranges": 3,
+        "review_note": "Code-embedded jump-table RVA displacements changed; disassembly of trailing table bytes is data, not instructions. Exact current atom-token dispatch is independently interpreted for all33 fields. Tables0x14183c314/0x14183c360 and0x14183c414/0x14183c434 are freshly observed through current parser end0x14183c4cf. Possible receiver is0x14183b191 after guard0x14183b12d."
+      },
+      {
+        "label": "actual default active strategy caller and retained native tail",
+        "current_va": "0x140872dd0",
+        "changed_instruction_ranges": 1,
+        "review_note": "Native assertion/log source-line immediate changed0x34c->0x53c; strategy default/active calls and merge instruction sequence are unchanged apart from relocation."
+      },
+      {
+        "label": "actual default active strategy caller and retained native tail",
+        "current_va": "0x1415e8800",
+        "changed_instruction_ranges": 1,
+        "review_note": "Native log/source-location immediate changed0x11d9->0x129e; strategy calls and merge sequence remain unchanged apart from relocation."
+      },
+      {
+        "label": "actual default active strategy caller and retained native tail",
+        "current_va": "0x141654c00",
+        "changed_instruction_ranges": 30,
+        "review_note": "Native economic AI tail changes member offsets by0x78, adds native helper calls, changes temporary registers, rearranges cleanup branches and updates diagnostic line constant0x4f9->0x52b. Current spending-balance default call0x14165511e and active call0x14165514d still feed additive merge; exact current full caller is preserved without claiming tail equivalence or runtime quality."
+      },
+      {
+        "label": "typed strategy database accessor",
+        "current_va": "0x1407d2590",
+        "changed_instruction_ranges": 2,
+        "review_note": "Per-thread/singleton native TLS offsets changed0x8670/0x86b8->0x8680/0x86c8; same current typed database registration and accessor bridges are observed. No historical TLS offset is consumed by production."
+      }
+    ]
+  },
+  "manifests": {
+    "strategy": {
+      "path": "research/situated/1.15.1/engine-strategy.json",
+      "sha256": "a14aa71db94aa6fe526370f6c39c7e7366032ab03ebd48e848c6f57eb8e1c46b"
+    },
+    "company": {
+      "path": "research/situated/1.15.1/engine-company.json",
+      "sha256": "c8dc4846d92318dddf2398b0b512908b8b69782cf198c49d374a4e7e81bdf82e"
+    },
+    "company-default": {
+      "path": "research/situated/1.15.1/engine-company-default.json",
+      "sha256": "b05113003de48d057f5c371d563924a414f506f116fbe74c3ad754752faf1593"
+    },
+    "country-definition": {
+      "path": "research/situated/1.15.1/engine-country-definition.json",
+      "sha256": "7cbf568f2981b7bf2451f621ffe5f58bef919229119c2b7a89ba9bf1b23ef713"
+    },
+    "law": {
+      "path": "research/situated/1.15.1/engine-law.json",
+      "sha256": "03c8bf8b565d44349ea3dfdc8a8c04bf0d745c4f4fae4b13016cb0f2e4d53cc1"
+    },
+    "technology": {
+      "path": "research/situated/1.15.1/engine-technology.json",
+      "sha256": "3e439fb4d2e800ae27af325dec620dbe96a309c1c8126afa0a7687019b864922"
+    },
+    "building-default": {
+      "path": "research/situated/1.15.1/engine-building-default.json",
+      "sha256": "f6f0922c9f0d254d6921ff0fa1f6f24f4e566f1fd9dd340b05dfa2f6ba3c86e2"
+    },
+    "defensive-pact-reader": {
+      "path": "research/situated/1.15.1/engine-defensive-pact-reader.json",
+      "sha256": "eac4993fad1b0b0bb02acbce3e70117b79de13dc90718fe5ebf677b8e12416c0"
+    }
+  },
+  "validation": {
+    "frozen_byte_reproduction_points": 478,
+    "production_entrypoints": {
+      "strategy": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 4
+      },
+      "company": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 2
+      },
+      "company-default": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 3
+      },
+      "reader": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 13
+      },
+      "building": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 7
+      },
+      "law": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 2
+      },
+      "technology": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 2
+      },
+      "country-definition": {
+        "ok": true,
+        "verified": true,
+        "source_hashes": 2
+      }
+    },
+    "historical_1150_snapshot_entrypoints": [
+      "strategy",
+      "company",
+      "company-default",
+      "reader",
+      "building"
+    ],
+    "format_and_lint": "ruff format and ruff check passed for owned6 production modules and discovery script",
+    "full_gate_run": false,
+    "exact_entrypoint_names": [
+      "engine_scope.verify_strategy_game(game)",
+      "engine_scope.verify_company_game(game)",
+      "engine_scope.verify_company_defaults_game(game)",
+      "engine_reader_115.verify_game(game)",
+      "engine_building_115.verify_game(game)",
+      "engine_scope.law_evidence(game, exact_current_script_inputs)",
+      "engine_scope.technology_evidence(game, exact_current_script_inputs)",
+      "engine_scope.country_evidence(game, exact_current_script_inputs)"
+    ]
+  },
+  "current_core_parsers": {
+    ".?AVCAIStrategy@@": [
+      {
+        "type_descriptor": "0x1456833b0",
+        "col": "0x144cc9920",
+        "subobject": "0x20d8",
+        "vtables": [
+          "0x14479ecd8"
+        ],
+        "parser_thunk": "0x140849604",
+        "parser": "0x14183af70"
+      }
+    ],
+    ".?AVCBuildingType@@": [
+      {
+        "type_descriptor": "0x145686d38",
+        "col": "0x144cc8908",
+        "subobject": "0x870",
+        "vtables": [
+          "0x14479dd28"
+        ],
+        "parser_thunk": "0x140849430",
+        "parser": "0x14184aca0"
+      }
+    ],
+    ".?AVCCompanyType@@": [
+      {
+        "type_descriptor": "0x1456a8fa0",
+        "col": "0x144cb2a70",
+        "subobject": "0x598",
+        "vtables": [
+          "0x14477abb0"
+        ],
+        "parser_thunk": "0x1408494fc",
+        "parser": "0x141748920"
+      }
+    ],
+    ".?AVCTechnologyType@@": [
+      {
+        "type_descriptor": "0x14545e388",
+        "col": "0x144cd3748",
+        "subobject": "0x1a8",
+        "vtables": [
+          "0x1447aaa20"
+        ],
+        "parser_thunk": "0x140848958",
+        "parser": "0x1418c8fb0"
+      }
+    ],
+    ".?AVCLawType@@": [
+      {
+        "type_descriptor": "0x1456989d0",
+        "col": "0x144cc4300",
+        "subobject": "0x748",
+        "vtables": [
+          "0x144784d30"
+        ],
+        "parser_thunk": "0x140848b7c",
+        "parser": "0x141804f20"
+      }
+    ],
+    ".?AVCCountryCreation@@": [
+      {
+        "type_descriptor": "0x145686078",
+        "col": "0x144cb2668",
+        "subobject": "0x228",
+        "vtables": [
+          "0x144779998"
+        ],
+        "parser_thunk": "0x140848f50",
+        "parser": "0x14174d9b0"
+      }
+    ],
+    ".?AVCCountryFormation@@": [
+      {
+        "type_descriptor": "0x1456ad858",
+        "col": "0x144cb10e8",
+        "subobject": "0x3d0",
+        "vtables": [
+          "0x144779ac0"
+        ],
+        "parser_thunk": "0x140849970",
+        "parser": "0x1417532d0"
+      }
+    ],
+    ".?AVCTreatyArticleType@@": [
+      {
+        "type_descriptor": "0x14544d298",
+        "col": "0x144bf8d18",
+        "subobject": "0xcd0",
+        "vtables": [
+          "0x1446f41e0"
+        ],
+        "parser_thunk": "0x140848e08",
+        "parser": "0x140f3ae40"
+      }
+    ]
+  },
+  "replay": [
+    ".venv/Scripts/python.exe -B -X utf8 tools/ci/engine_discovery_1151.py --exe <installation>/binaries/victoria3.exe --vendor tools/out/version1151/binary/vendor --output tools/out/version1151/binary/independent-replay --callee 0x14174a9d0 --callee 0x14184e320 --callee 0x141840e10 --disassemble 0x141653b9d 0x141653bd0",
+    ".venv/Scripts/python.exe -B -X utf8 tools/ci/engine_evidence.py research/situated/1.15.1/engine-<kind>.json --exe <installation>/binaries/victoria3.exe --output tools/out/version1151/binary/reproduced",
+    ".venv/Scripts/python.exe -B -X utf8 tools/out/version1151/binary/semantic_difference.py"
+  ],
+  "investigation_artifact_hashes": {
+    "tools/out/version1151/binary/discovery.json": "0254085b11c5d88b3aa4be0bc87120b2eed4418e2a2a1be1bc142dcc32be95fb",
+    "tools/out/version1151/binary/strategy-current-token-traces.json": "876ee35357ade64eeaed96b164ebf0da9772db2a4f18af68876e7cad2f499d20",
+    "tools/out/version1151/binary/current-call-graph.json": "06d0a85f2583b46130178b254a3737a529b58642c60f3c992b476fad9a2d501d",
+    "tools/out/version1151/binary/current-graph.json": "fc82c95f0c675dce9f0612cfc7245b19f9f4343fe2ba8c905f8b74d693ae19a9",
+    "tools/out/version1151/binary/current-map.json": "9220ad2dc4f0ba1d75eeca03d4eaf94dcd4aa4d6fe967b882ddf707b4603adb9",
+    "tools/out/version1151/binary/reviewed-graph-edges.json": "0841c050f465fbc8f160d85486c336c2d92ef77af7ad9e65c4055eb8ba1c8fae",
+    "tools/out/version1151/binary/final-root-fixes.json": "15ea0cf1f3e4dff0e6db3f391ecb2aeff004eeef9dd3f741455eb368ba2a6e0b",
+    "tools/out/version1151/binary/semantic-difference.json": "15b950652ddaaf127a75414c756d2dd09a78d1fa194cd85727ec707b73bfee3c",
+    "tools/out/version1151/binary/production-validation.json": "f74ebb60b4bc54e134638538da460a1383aabdb7be394380e9bb55802a80b8b2",
+    "tools/out/version1151/binary/independent-replay/current-discovery.json": "194f0dc7db223f6493064dc87fdc63b620695d37c2071b5ad80d562ac5b5b6ac"
+  },
+  "limits": [
+    "Static code and exact current source evidence only; game never started or modified.",
+    "Runtime behavior, command success, save compatibility, player benefit and AI quality remain unknown.",
+    "Defensive-pact reader counts qualifying treaty articles, not deduplicated partners, and proves no additional active/draft/suspended/ratification filter.",
+    "Only each frozen field actor/target/member/merge contract is authorized; no arbitrary reader or foreign-country scope follows from Country containers.",
+    "No project dependency or CI entrypoint changed; explicit vendor is a separate ignored investigation tool.",
+    "The478 byte matches are reproduction checks, not independent semantic review. Independent review by a different instance remains required for release acceptance."
+  ],
+  "evidence_lineage": [
+    {
+      "group": "Core parser identities, scope/link/database type roots, exact field atoms",
+      "initial_locator": "Current exact or unique anonymous-prefix type/literal bytes",
+      "current_checks": [
+        "TypeDescriptor pointer",
+        "COL signature1, type RVA, self RVA and subobject offset",
+        "current vtable slots and relative thunk targets",
+        "own literal-pointer atom and concrete token-dispatch path"
+      ],
+      "historical_role": "Names/expected interface role and permission vocabulary only; current addresses are directly rediscovered",
+      "examples": [
+        "CAIStrategy TD0x1456833b0/COL0x144cc9920/vtable0x14479ecd8/slot4 thunk0x140849604/parser0x14183af70",
+        "CCompanyType parser0x141748920",
+        "CBuildingType parser0x14184aca0",
+        "Treaty article parser0x140f3ae40"
+      ]
+    },
+    {
+      "group": "33 strategy consumers and31 default/active merge contracts",
+      "initial_locator": "Historical full instruction-window masked structural candidate nomination; not every wrapper was independently named from current RTTI",
+      "current_checks": [
+        "Current exact field token dispatch selects its own unchanged member offset",
+        "Complete current wrapper opcode/register/member/immediate sequence matches historical semantic window except relocation for all ordinary strategy wrappers",
+        "Current country tag5 and actor identity, named target scope key or typed resolver operands are decoded in their full current wrappers",
+        "Numeric/boolean evaluator targets and typed saved-target links are checked against current graph",
+        "Actual current direct E8 caller edges and complete default/active merge callers are observed; named default strategy database is independently RTTI anchored",
+        "Changed merge/native-tail windows are separately itemized; current native tails remain opaque to permission expansion"
+      ],
+      "historical_role": "Candidate nomination and prior semantic labels. current_calls.py starts from nominated/current-map wrappers, so caller enumeration is not independent discovery of wrapper names",
+      "limitations": "This is a combined current-root plus full semantic-correspondence proof, not33 independent string-to-wrapper discoveries. A separate reviewer must verify current member/type origin and merge interpretation rather than treating map uniqueness or frozen bytes as sufficient."
+    },
+    {
+      "group": "Company/building score/default and technology/law/country-definition AI caller chains",
+      "initial_locator": "Parser roots independently discovered; scoring wrappers and some actual AI caller windows were structurally nominated",
+      "current_checks": [
+        "Own current parser token and definition member offset",
+        "Complete wrapper scope construction and evaluator call",
+        "Current actual caller E8 references",
+        "Company current nonpositive JLE and current typed define global bridge",
+        "Building current selected-template/self logic and State tag0x4c/owner check",
+        "Current typed creation/formation database registration/accessor/loader chain to actual candidate consumers"
+      ],
+      "historical_role": "Candidate windows and schema vocabulary; current changed code requires explicit review",
+      "corrections_from_current_review": [
+        "CountryCreation database vtable is0x1447798e0, not the preceding COL pointer",
+        "CountryFormation database vtable is0x14477b638, not the preceding COL pointer",
+        "Company nonpositive rejection contract denotes JLE0x141653bb3; compare itself is0x141653bad",
+        "Possible parser receiver0x14183b191 is distinct from allocation guard0x14183b12d"
+      ]
+    },
+    {
+      "group": "Defensive pact reader",
+      "initial_locator": "Current anonymous-prefix reader RTTI and current own reader literal registration",
+      "current_checks": [
+        "Current reader vtable getter slot5",
+        "Current Country signature and numeric result signature",
+        "Getter current typed country/treaty/article lookup calls",
+        "TreatyArticleType current own parser flags token0x6e4 and current35-entry enum table with defensive token at index1",
+        "Getter reads article definition+0x18 then bit1 of complete object+0xd0 and scales count100000"
+      ],
+      "historical_role": "Expected semantic vocabulary/slot roles and supplemental unchanged instruction comparison; no address translation"
+    }
+  ]
+}

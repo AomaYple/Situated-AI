@@ -24,6 +24,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .version_contracts import CURRENT_VERSION, VERSION_SPECS, contract
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -190,14 +192,32 @@ NAMESPACE_PREFIX = "sitai_"
 REPO = Path(__file__).resolve().parents[2]
 
 #: 文档与资料目录
-DOCS = REPO / "docs" / "victoria3-modding"
+HISTORICAL_DOCS = REPO / "docs" / "victoria3-modding"
+DOCS_115 = REPO / "docs" / "victoria3-modding-1.15.0"
+DOCS_1151 = REPO / "docs" / "victoria3-modding-1.15.1"
+# Compatibility aliases are not authority selection. Unknown environment values
+# stay unresolved until an operation, so an explicit profile can take priority.
+_STARTUP_VERSION = os.environ.get("V3_CONTRACT_PROFILE", CURRENT_VERSION)
+STARTUP_CONTRACT = VERSION_SPECS.get(_STARTUP_VERSION, VERSION_SPECS[CURRENT_VERSION])
+DOCS = REPO / "docs" / STARTUP_CONTRACT.docs_subdir
+_STARTUP_DOCS = DOCS
 RESEARCH = REPO / "research"
+
+
+def docs_root(version: str | None = None) -> Path:
+    """Resolve documentation at the operation boundary; preserve explicit test overrides."""
+    if version is None and DOCS != _STARTUP_DOCS:
+        return DOCS
+    return REPO / "docs" / contract(version).docs_subdir
+
 
 #: 游戏自带官方 ``.md`` 的 UTF-8 无 BOM、LF 镜像（保留原始相对路径）。
 #: 原件与规范化镜像分别记录哈希；原始字节按外部来源契约保留，不复制进仓库。
 #: 由 ``tests/test_docs_mirror.py`` 在装有游戏的环境下看守其时效性 ——
 #: 游戏升级后镜像会静默过期，而照过期镜像写 mod 会漏掉新规则（真实踩过）。
-OFFICIAL_DOCS_MIRROR = RESEARCH / "official-docs"
+OFFICIAL_DOCS_MIRROR = RESEARCH / (
+    "official-docs" if _STARTUP_VERSION == "1.14.5" else f"official-docs-{_STARTUP_VERSION}"
+)
 
 #: 中间产物目录（已 gitignore）
 OUT = REPO / "tools" / "out"

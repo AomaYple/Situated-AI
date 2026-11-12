@@ -1,0 +1,3131 @@
+{
+  "current_version": "1.15.0",
+  "evidence_kind": "static_check",
+  "exceptions": [
+    {
+      "current_sha256": "8d32cb32829cc19965b48fc93f0d435374effa017131ce3a7ae5a9f8b0642746",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "96f4a6553c38fdc9d365c0ee94add7c5f4fa3686e6181be880a192fce2e8290e",
+      "identity": [
+        "compiled_action",
+        "common/buildings/06_urban_center.txt",
+        "building_local_building_power_plant_pm_coal_fired_plant_ready",
+        "rule_action_common_buildings_06_urban_center_txt_building_local_building_power_plant_pm_coal_fired_plant_ready"
+      ],
+      "rationale": "Current native recipe-derived conditions differ from the historical action. Retain the current exact action as a version-specific replacement; old condition facts are not silently carried forward."
+    },
+    {
+      "current_sha256": "33bf776917b375ab9917688d17c9ae7609532cf196759ed41327a16e4254beb1",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c6df04bf8bb74dec2b098cfed3cab4a575b1d11db943f158ddda07c54937ea63",
+      "identity": [
+        "compiled_action",
+        "common/buildings/06_urban_center.txt",
+        "building_local_building_power_plant_pm_early_power_plant_ready",
+        "rule_action_common_buildings_06_urban_center_txt_building_local_building_power_plant_pm_early_power_plant_ready"
+      ],
+      "rationale": "Current native recipe-derived conditions differ from the historical action. Retain the current exact action as a version-specific replacement; old condition facts are not silently carried forward."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "34a7a805fa3da0adea4e01191d08bedd36ee37fdc115a3fd65e3bb8437cdd477",
+      "identity": [
+        "compiled_action",
+        "common/buildings/06_urban_center.txt",
+        "building_local_building_power_plant_pm_early_power_plant_wood_cost",
+        "rule_action_common_buildings_06_urban_center_txt_building_local_building_power_plant_pm_early_power_plant_wood_cost"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": "e17c289e099f43979c0f7a0de354d1ac8c793fd902920042450be6cb00c793f8",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "be12e3abf58da499c5406860e0da3163684cfe2ff93636a6c464dd5b718f21bf",
+      "identity": [
+        "compiled_action",
+        "common/buildings/06_urban_center.txt",
+        "building_local_building_power_plant_pm_oil_fired_plant_ready",
+        "rule_action_common_buildings_06_urban_center_txt_building_local_building_power_plant_pm_oil_fired_plant_ready"
+      ],
+      "rationale": "Current native recipe-derived conditions differ from the historical action. Retain the current exact action as a version-specific replacement; old condition facts are not silently carried forward."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "d6049f685cbd57cd61ed7e0c635a83a27b46556e05dd7e6354afe32b9d9209ef",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_basic_clippers_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_basic_clippers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "cb34e7d23c40ab3e864d656fc5d9382689e499e393af1e1bfb9658f23f706173",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_basic_need",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_basic_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "76b2ea9f2a95a270e89ee954bfc1697569d9cf5c35aac0b1660c79928eb784d5",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_basic_pressure",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_basic_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "ba5d6a55d4712a927ace0fac49b3fc567cedf8876ced621e77c469e06eb388a2",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_coal_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_coal_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "0b7e0c9bb1b9cea14463ecc48ed6349a9cd5896cd696a91c66339b3520fbfca3",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_need",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "fd80523068a1c7ac205bb98fa646c5dade3d3c57c2c49fea3ae303629f9a94c5",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_pressure",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "fec864281ba753c53198df34d5035bf915ff79c3872d81405a92b7556bb12a79",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_steamers_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "7d185215c1bf3a3f6965e26d28ea03618efc815ec46c36493b5eb657ab4536ce",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_need",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "a41a5ab8f54050c0d98412af890ede5aec974372b0d55002def1334e33c554fe",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_oil_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_oil_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "9d2b56d9b6bb83eaebbcc194878eed02a2d4c22892b9cd504714241f5555a6c2",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_pressure",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "bc268d306323d3b42d1ae267c9d3577932291185d6b9527645c288cf4a503503",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_steamers_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "12912642b28328665c2a01059cc5c5aadf322838ca5f56328f7bdcf66afd4014",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_broken_hill_proprietary_company_lead_need",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_broken_hill_proprietary_company_lead_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "6583014ff448ed2dd0389b284a0315b60451ae6195f1230a6e8e4bb13406c50e",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_broken_hill_proprietary_company_lead_pressure",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_broken_hill_proprietary_company_lead_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "3f85f72577a04ab85be43b76ef38438b812fe0fd3cb09c0911482bfffd49a45e",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_ferranti_ltd_lead_input",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_ferranti_ltd_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "a20f0335cbea5b08d37823af95984478fe0e708827d3f721cf6663d93aa89099",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_sumitomo_lead_need",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_sumitomo_lead_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "5d896b1d39cf5f630b952f502581673bafc20d7511712d8201033b305c71c0a5",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_sumitomo_lead_pressure",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_sumitomo_lead_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "a60433a67b175434c159eb084ab6ab6e4975a9180b48b85d5e731ef106a603e9",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_basic_clippers_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_basic_clippers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "dd3b098bcc35d301421b4ad0f637cb021738674039b6acad74d6d711fa6036d0",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_basic_need",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_basic_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "b86fff7c460817cb2fdfa4af226522060115f7493d35a3a719fa1ec01697adb6",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_basic_pressure",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_basic_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "977a86dc873663b8020e1ee8ab09dba25aa71928e831f23597026b97a8c0c3bc",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_coal_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_coal_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "617b10e517b386cd100566e3e93669c8ab1323876f3e0893312290e5d7a9da79",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_need",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "09e20b9ea3b29d9d97d6cb332298eeef89518fe0b0f76b8bec401dd1dc9846fc",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_pressure",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "55683f30c144166f5f252520d289c36403c4bbfe544a1593485f5d5adba4503a",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_steamers_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "6938bea922c00512f4e619bc5baf6c6b97fd6b0f732b582f4eae234916a84bfe",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_need",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "202b70781d95ef5f6619bc69f86f0d912e5fd28dbf89bbccd153487f8fecadd3",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_oil_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_oil_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "8e559c64a96a54c60be4167169f1d9954866fbdf78c855e19ca3f271ff591ddf",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_pressure",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "7f0776c6b144904e6dc64f9800f7c08014c5c8bf7fcdcd6edb00e2e366ff65be",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_steamers_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "ec4db76388cbd54223c64aecb75e1329384e4ef46256e633c50581f3b3d3855e",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ericsson_lead_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ericsson_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "6cadc4872baec7177154b729ecee19cf082b6fcbf72dc14e13a355386cbdfc6f",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_philips_lead_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_philips_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "f8bf099a4a9ba9e5fce649c1b04cffa12497b66a6fd64b5614f5fca90a20752c",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_germany.txt",
+        "company_sector_company_siemens_and_halske_lead_input",
+        "rule_action_common_company_types_00_companies_germany_txt_company_sector_company_siemens_and_halske_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "f8c00464b0e01b420afc2c69b468328023f67807b5968042640b46887e0b1467",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_mp1.txt",
+        "company_sector_company_paradox_lead_input",
+        "rule_action_common_company_types_00_companies_mp1_txt_company_sector_company_paradox_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "510023c102b17527aa63a63fc2f139228d9715381ae1105d235108b5eff273a7",
+      "identity": [
+        "compiled_action",
+        "common/company_types/00_companies_usa.txt",
+        "company_sector_company_general_electric_lead_input",
+        "rule_action_common_company_types_00_companies_usa_txt_company_sector_company_general_electric_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "f7ca53f3de228f82a477cec675ca24308f4a394f8273993d0f55820461a9d0c0",
+      "identity": [
+        "compiled_action",
+        "common/company_types/99_basic_companies.txt",
+        "company_sector_company_basic_electrics_lead_input",
+        "rule_action_common_company_types_99_basic_companies_txt_company_sector_company_basic_electrics_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "56cfa1b29f933ea6715a6bcfeb0f3f2f66935672d3063bb9ab1c6c68e600ac5e",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_high_iron_opportunity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_high_iron_opportunity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "c8e5fd447ac0f14305528366d58b3119942192fe4374f4799b76683ac92aae51",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_high_iron_pressure",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_high_iron_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "2d22b01a873718056fa908a1aa7b66c705bab8160378de6165e1f99c4d6cec29",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_high_iron_scarcity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_high_iron_scarcity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "c76ea4c18515302122dbff0c054e6afbab2334aa2ed36c208ffe7ef37ca9b70a",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_light_iron_opportunity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_light_iron_opportunity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "e1fc187b433888ef695d2645359a9010fcd4bed156aed22f79fa6351c898e147",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_light_iron_pressure",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_light_iron_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "f5547014a60152c1e36ed514a7fdbbddf0cc4926343485543f2c9e1f0619595b",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_light_iron_scarcity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_light_iron_scarcity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "41b3abc489c5fad81bd58dabbc4e4c700c985f43a164f604d0054f7d2b1921ab",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_medium_iron_opportunity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_medium_iron_opportunity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "6ef93a6c48079a405cb48c8ca4d42ac6671d24576220b140093675932eb7bab0",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_medium_iron_pressure",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_medium_iron_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "1f733bdf2cbfa6f6772a3a8e7d45f25bd215fd73fae947ac09d03d0e47fdbfa9",
+      "identity": [
+        "compiled_action",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_medium_iron_scarcity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_medium_iron_scarcity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "c6267b8715f8b53d9caf40062634ffedcca7adf6a96b09ed3cb25f590cb44de7",
+      "identity": [
+        "compiled_action",
+        "common/technology/technologies/10_production.txt",
+        "technology_dough_rollers_labor_ready",
+        "rule_action_common_technology_technologies_10_production_txt_technology_dough_rollers_labor_ready"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "e37ea00f68e618afc28dea2ef9beeeb0fe6de06f1f31ad03defb349f925bc504",
+      "identity": [
+        "compiled_reader_binding",
+        "common/buildings/06_urban_center.txt",
+        "state_owner_wood_balance"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "dff3d19fa4ac41ed7c71a8a7a7eedd112d0307db6c26c3a8ca9ba15a3c59ccda",
+      "identity": [
+        "compiled_reader_binding",
+        "common/buildings/06_urban_center.txt",
+        "state_owner_wood_price"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "5a6e9cb2b0222b01ed938fd0611b62324acd2fb60f1e771023af22fe5d8e6d41",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "company_port_basic"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "ff682ec88129ca9bd20c5b8403cc68de144bfd8e67996f1c866a11a40f02c290",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "company_port_industrial"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "7382c936776590b8f7c293d3e27065baeb4778cb63f5c83da59d03c6c013064f",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "company_port_modern"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "7448ef57352cb97dd289a27e932b84e63b06c342c094f07909e545862e80b698",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "country_goods_merchant_marine_balance"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "c6cccf8d3fcce6258467de4e0a21dfd6236e847bb2e12e160f8372c6f30bef8c",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "country_goods_merchant_marine_price"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "c685af7eee68b04521f7d9895811abfca9e135eb94c91fe87cbdfede2ea93aef",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "country_goods_oil_price"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "a9348ac466464a790f845ae9ba0bed7f9cf1a524974844ec874f94398307ad10",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ep2.txt",
+        "country_goods_lead_balance"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "0098bb23101391648b0d1219414fca0d9acba3f4f74c0ec1974d3f0249d6536a",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ep2.txt",
+        "country_goods_lead_price"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "b57756cfaffe82759589e55c2efd12bd06c13f772d4549af105f228d7ba09f36",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_europe.txt",
+        "company_port_basic"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "88a84cfd81fa4b9187ec3544ff96f19aaa7a8b74a65c022007a0ad3054b8b0d7",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_europe.txt",
+        "company_port_industrial"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "02005adb55c517e91ea63c45259bb6b3c7c631f2f2db661a523d6c721ce83370",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_europe.txt",
+        "company_port_modern"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "30e76554ccbd6b1a8ed7d8a57f1efdc766b579e05834e31905bab2690c6fcb0f",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_europe.txt",
+        "country_goods_merchant_marine_balance"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "a553ea807950ef29687d4bd7ea4130c448199d4ff5f9e5f276bbfa99e0324f24",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_europe.txt",
+        "country_goods_merchant_marine_price"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "899ac93bb4074dfec36ed3adf02f61f7d63895b390a92455baa2d6fd81815cd0",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_mp1.txt",
+        "country_goods_lead_price"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "8b7aae7f4f0956b84b599c4b6d7e269d765a66a80919ca6ece594dc1a840eec8",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_usa.txt",
+        "country_goods_lead_price"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "056c24225a9e6caba9217bf4cdbbf756c7e28e5b4fb6f12c3d83917a6f9a41a4",
+      "identity": [
+        "compiled_reader_binding",
+        "common/technology/technologies/10_production.txt",
+        "technology_use_dough_rollers_labor_ready"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": "c8ebfade4e2eb5855e1af6c178ee33d1da2a292347f1338ba32c5bd084d6a45b",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "f54a13099b0161df8727a0ac741c453a8ef78d29b76faf84462d9ce05af685d2",
+      "identity": [
+        "compiled_reader_binding",
+        "mod/decisions/information.toml",
+        "native_army_capacity"
+      ],
+      "rationale": "Reader metadata is retyped for the 1.15 native query contract. Preserve both exact signatures; do not treat the old unit or range as current."
+    },
+    {
+      "current_sha256": "69ecb95907e5df5863040640c3ed02d348e8b95c1b922a12c12ef2f1dea20054",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "4164eb25d14867ba9a1e7a776eafaae13c2526acd45ff8d087d88b0f7db8b2ed",
+      "identity": [
+        "compiled_reader_binding",
+        "mod/decisions/information.toml",
+        "native_marine_capacity"
+      ],
+      "rationale": "Reader metadata is retyped for the 1.15 native query contract. Preserve both exact signatures; do not treat the old unit or range as current."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "eee45b296876f4a32c04ca4f6f3a8a998fba29d1a2883d08b381f08a8b5d83a4",
+      "identity": [
+        "compiled_writer",
+        "common/buildings/06_urban_center.txt",
+        "building_local_building_power_plant_pm_early_power_plant_wood_cost",
+        "rule_action_common_buildings_06_urban_center_txt_building_local_building_power_plant_pm_early_power_plant_wood_cost"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "aa94754480d4d87c40263beebe5ab4c7247ba33989d08690c9fccff2b13e7e63",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_basic_clippers_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_basic_clippers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "554c8bf182b92bf81f7387fd2b04721f735928524dcd5b0f83aa90c59e60117b",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_basic_need",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_basic_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "0499d7718d6ef14f5d5066afa7d25d67bfc3a5678fbd0b0bd3f9f72287d820e4",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_basic_pressure",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_basic_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "2502c94cc48142f43a95ecc68c50209b8d1868e730f63b96acf700d5968b0fc0",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_coal_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_coal_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "4b63ef2947911e711bcf78e82777f927b6aa3cde33726b172851a4c9d8f46f5d",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_need",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "33832b3c54bf1537fc107e3009c282688e949b7df98c1867c074246d7b6da84a",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_pressure",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "79e3feeb36466b48ea5c8e5154e92895be3b4854476daa2313e7080976197922",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_industrial_steamers_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_industrial_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "2ed7a8cf09b2c70034e903e424df5cebefcf525a9bb51a1806f3d21de6b3b373",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_need",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "9550dbc307aed16c399f493b705489fbdee49ae77622860638c3a91868e68ff5",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_oil_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_oil_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "adecb65af16495586544508b754f7a1d2f7a2d9a61734fca4b88832a1af481f2",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_pressure",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "e3f270012113d0513d7c46ba6a25109e3eb88e6313df9fe80f73b8746db1b141",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_cots.txt",
+        "company_sector_company_sudamericana_de_vapores_port_modern_steamers_input",
+        "rule_action_common_company_types_00_companies_cots_txt_company_sector_company_sudamericana_de_vapores_port_modern_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "9b915ec31403044fa40f0ce13e477346cfbf37c969afc72e1fda8c2595f64295",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_broken_hill_proprietary_company_lead_need",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_broken_hill_proprietary_company_lead_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "41470f6e49b0941a4c326c3ecd428fd2e6154bccbb134fe5c5510657b7354b60",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_broken_hill_proprietary_company_lead_pressure",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_broken_hill_proprietary_company_lead_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "6b26531cc02a3d234860e2063b07f5e885fdd03d39806bdbb5c131c7753050e3",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_ferranti_ltd_lead_input",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_ferranti_ltd_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "ef888b3f9eba6d0b45d2e81bb32037a3c116054916c3b7e38a28bf2e161880a7",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_sumitomo_lead_need",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_sumitomo_lead_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "746a6424bba09c05d19acd2adb4b805ec30b68f2a687b94342147321059d4082",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_ep2.txt",
+        "company_sector_company_sumitomo_lead_pressure",
+        "rule_action_common_company_types_00_companies_ep2_txt_company_sector_company_sumitomo_lead_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "61358f7373a873617c943977b28682f3373a359be033efe2192f5b92d334431e",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_basic_clippers_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_basic_clippers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "c99746c88dc992aca642504f64c58c2b18f20cbdc70d650b1ad121af255b30a3",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_basic_need",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_basic_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "21bd2e84ac14b64738637e5c3b7a799c1e4cbb41389eebeabb4f049551a5d220",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_basic_pressure",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_basic_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "861f654cac0097b94d25f70ab1ebd5be1d6987c2dc50837a81a9721c6541cf5d",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_coal_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_coal_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "92ec801dfb405cd56aed1a69b84a5b524d5b6f96d6f936ff49c45e5426d99bdd",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_need",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "a6baaee11438152243480ef28f16472463dca7e824e87e7a273afde2f8243c6b",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_pressure",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "4a4b9215b3ddf877f726375c5ffa3c83e5fbc9a4c7ab15bcdb4701a586696eb3",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_industrial_steamers_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_industrial_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "2e43e4dd8bd0b902f319a0ecad6d3e28d0cd39ffc1b7ba0d3d16dbd2055cd952",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_need",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_need"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "e889f4b8e6643aa0b6dc1b19b1d6b060388bbd49eb505784e4cb4eafb98d490a",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_oil_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_oil_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "1d4851f36d9dab1659a363b6dc5aafacf7b2d45b2f97a01f114b3c8476fd0594",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_pressure",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "d5bd0e6c46d9341ab45acc554975dc4eb71829fb49d533f0917645f8b3aba6ab",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ap_moller_port_modern_steamers_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ap_moller_port_modern_steamers_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "a12541206ac2bb94678dd32f4d0919ffb9fb6eeb7dbae17a27c4ea67902a1596",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_ericsson_lead_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_ericsson_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "29ce6c53c091f50a9f97fee944747d1eac4bc5998017ba52f450334e895bda03",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_europe.txt",
+        "company_sector_company_philips_lead_input",
+        "rule_action_common_company_types_00_companies_europe_txt_company_sector_company_philips_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "6d32a6f3447bc2e406ef7c7b6e9a7514176c3787d677ed4574ffe0acdc34ef68",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_germany.txt",
+        "company_sector_company_siemens_and_halske_lead_input",
+        "rule_action_common_company_types_00_companies_germany_txt_company_sector_company_siemens_and_halske_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "5adbc52a362ce05c6e329708f18a89f5c8e3ce7084d0f08511f633079c369cd3",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_mp1.txt",
+        "company_sector_company_paradox_lead_input",
+        "rule_action_common_company_types_00_companies_mp1_txt_company_sector_company_paradox_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "174c914e7fa582f1d0c219bb24acaac6aeb351848ee90771e89f16759fe1832e",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/00_companies_usa.txt",
+        "company_sector_company_general_electric_lead_input",
+        "rule_action_common_company_types_00_companies_usa_txt_company_sector_company_general_electric_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "76bce2761e1fb2a6798d06964e5670c55c4fe121141022b86279a1203fb3b257",
+      "identity": [
+        "compiled_writer",
+        "common/company_types/99_basic_companies.txt",
+        "company_sector_company_basic_electrics_lead_input",
+        "rule_action_common_company_types_99_basic_companies_txt_company_sector_company_basic_electrics_lead_input"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "bdc468155fa7cb6cfaafeebf1441968e44ae5e05930fcc23c61ceb7bd0a1f589",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_high_iron_opportunity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_high_iron_opportunity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "9753a554f0e2886398e7cdd25543cffef11e3ed1801fe28f26eea1a91e145d99",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_high_iron_pressure",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_high_iron_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "4f997cbcbfabdddcc9f92d06756df0516fdd92937c602fb12631d2f5776767ae",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_high_iron_scarcity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_high_iron_scarcity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "6844a2d0cb4806da4d284b6b741696faf16f15497f975a42314fa81267ac83bf",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_light_iron_opportunity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_light_iron_opportunity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "b06dd54a941caa21a2c779218376db1c18961d355e594bd90defa4b7672924ba",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_light_iron_pressure",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_light_iron_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "da1794ada635873d7ff0bd754d92b7a0f2c5d65a9c467eb354bd8f26b9375a4c",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_light_iron_scarcity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_light_iron_scarcity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "b2e23913047f6dcc3546dc4f75060632e38ee6816407cac667e875d4d96d90dd",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_medium_iron_opportunity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_medium_iron_opportunity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "4630540217a46a5f2dfe1c021526a961118887d458756a6086b8e02cf2fa3d6f",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_medium_iron_pressure",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_medium_iron_pressure"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "b6bf24b936f604a99c59fe11602765d3c22283bed6e9ecb98b5b9b62680b41d6",
+      "identity": [
+        "compiled_writer",
+        "common/ship_modifications/00_ship_modifications.txt",
+        "equipment_ship_mod_iron_frigate_guns_medium_iron_scarcity",
+        "rule_action_common_ship_modifications_00_ship_modifications_txt_equipment_ship_mod_iron_frigate_guns_medium_iron_scarcity"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": null,
+      "engineering_disposition": "retired_generated_identity",
+      "historical_sha256": "157cc617c47dcfab80de943e0c7ec770d71fd8b8f1dcefd4a81c8ec799d90740",
+      "identity": [
+        "compiled_writer",
+        "common/technology/technologies/10_production.txt",
+        "technology_dough_rollers_labor_ready",
+        "rule_action_common_technology_technologies_10_production_txt_technology_dough_rollers_labor_ready"
+      ],
+      "rationale": "Native 1.15 generated portfolio no longer consumes this exact historical variant/reader. Retire this engineering identity; no unchanged semantic inheritance. Current same-field identities are reported as related replacements only."
+    },
+    {
+      "current_sha256": "bbcb6328169575c48236a02b6dc750badff6083205a4a64696c6a2b69ac8baa1",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "52d2ae6e7d8b8e2926ac7073321c5d963206632efc22250c684fa895c1d6856c",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/buildings/06_urban_center.txt:building_power_plant.ai_value"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "57051f3ce21c2daff327674f31647a0185b069ec88ba1a87ec00766d3881caa9",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "64376b7da34fb17e5267e558011893221fbf6c0c1c6eb3447e24b9201128def7",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_americas.txt:company_famae.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "3ef83c0db002023ec45f063ccf31a9f47947eb3df8b997c379007f975bb701a7",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "3ce3df9d2d97c07b58e52b7ce1e1b160b660e6f028865b9e05acba2f933956c9",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_austria_hungary.txt:company_manfred_weiss.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "f78bf57a8727701b1495f533f86fc177012a5b366642ef4c6117d0c23cb33efa",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "4cf124d9db3a524d7edb3c3f1d0c5c5ec5ebc3ec854aded693720a3b3d748ab2",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_china.txt:company_hanyang_arsenal.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "1faf3e2af4566d804cdc8fcfe616a967097db6bd93b32e63f712a171adfa5fa7",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "8e82e4ef404faea0cf2dd51bda69784c9b7367559a58e7ef234f952f5c664c96",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_cots.txt:company_eea.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "46c364c3e4bc78b84081971cbb9237bcec47a8f23013c4c3a43e97c4d64a928e",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "1c400eec163b6264e67569ec0db30ea52b4f132e21c7996efdddc3400e266771",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_cots.txt:company_electricidad_de_caracas.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "8cc8e5663c6e5f55dd21cccb7b35d2e91a65481a59c841413282be7d302077bb",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "e59d6561d04a71cb8024317c549f4ba441b94b5cd1e423e2d7be761ce2fb5b39",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_cots.txt:company_estanifera_llallagua.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "fb1fdb66d07fa1f55db9ddaebbb6f8d9fd960c26b5455b8467069a13d19ce515",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "ea8e224fa2724eb6654dbf4d9a21428273dd3b432f5a3fcebf79baa80a516ecf",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_cots.txt:company_rossi.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "f4b8c7a83739360b971b24b9599eb25b139686826fe318763328cce486be2283",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "eac8fcbfbed6fbdfc698884e337fd436a4f17fb57ee11a37e4522eade096f4dc",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_cots.txt:company_sudamericana_de_vapores.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "ba9de7a8fa87324b1e2b126bcdbd22e2445d40eb6e4dd3c6834f094c0c8d904f",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "a0dd5d5aebc66437dde5f9a44fd6ae57e72670133611bc2a752d6aec7e588b9f",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_ep2.txt:company_siam_electrical_company_limited.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "8abde521b1468f6310bf911e0da391a19330fd4d38fb7a43f101c9eb7a27344c",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "ce95f8163fdcd1808758f0c03f5e7d4b35c5cef026021921610e2198fbdc5459",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_ep2.txt:company_tokyo_electric_light_company.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "b55b81f125e2f76da0308b115a80e53d7a1f5aa40a1984445c20e126e74b8257",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "3844ca0fc59641b9e2005339909fb78a1f870c7d026054a9b2686cf8f96d7736",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_europe.txt:company_ap_moller.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "1dc0dc95f797d34ec2a9937260f47cd10f6798e0e53714612f55c36a70bc78e6",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c60e87bb0969f597db5ef3fbb91b2d8c4c26c555306e5206ba8923b1d54dc6e3",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_europe.txt:company_nokia.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "12fe25cd3785cf22c1b1438a436c8e411459b616c835cf47465d48b8f0851bca",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "254d6bb9a4233c6ca85c6841f758ff0cc0befc0776bd994b5c73b1e96fb2d4e2",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_europe.txt:company_zastava.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "ba0e9b37bda01d969106d12b48d5863d9fd050073cc46c5168802c0fab85bf64",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "27599dada93eae766184d5784a95ecdd45352cd8d12d5b41b5c9b55b7e044e81",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_france.txt:company_saint_etienne.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "ab7cbde0e068716ff546ab09e94d3543f648e0eaa46b8880fb9be67e2458c3d8",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "3a232ee54ca99c5690f4ec3d0d81ac8fd61c46ca2e558d733942c5466da9f4f6",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_germany.txt:company_rheinmetall.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "592d1ffb4e4ace6749e7b9a33c8bd8ae636e7a76f6f02c9103d9a67145d6bbea",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "79e32d130e08dbedd6996659db7399af74da00fea915697edcb9ff6d289a427b",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_great_britain.txt:company_armstrong_whitworth.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "30c7034ba37937f6ec2bcd096ecc88f0c45a9f57fda2bb2fc7f7019ec78ac7a0",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c1ba960bb051c621b62778006a210582b4bc21476e43987b21a997e71581e466",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_ip2.txt:company_calcutta_electric.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "9cbde82b5a73ca13de1e077b5d51c2451011e3b1090c70ab51c0b9a760802291",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "555ba2f2179775af66c0b8c410eabaf9345120d970d4d1a6104eec295e18708a",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_ip3.txt:company_getzner_mutter.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "f94b3dce5f0ae452228ff40b016ecc9feedb9b177e4719708e353c3eaadca07a",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "f94221b2746d7958d1f97f0a58f51b04e78575d816f8b1eae5765876cc122cad",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_mp1.txt:company_norsk_hydro.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "a3b084125fe6a62b83f5e6b585a4304b7afdfd8db0a60b99f104c4033ec441af",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "34d4be9c39cf1f8dfe37d6fbf906c96481a60353fedbfa93584544e26dd06f5e",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_russia.txt:company_izhevsk_arms_plant.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "bbce1b74e7c9ea5e629c8e2c44a23bfc2dc15e89753c5667033dd637f7a577b2",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "119a9df31aa48661080944bd9a1e6254677a49f7fa9ba312cea85aa0d16b4ee5",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_soi.txt:company_hanseong_jeongi_hoesa.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "6a2c82c73b09e1cc98b34dac0a08734c41a1b02e4c7d3fcc8a47a27e384d52b0",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c0b370cd9e960295d19734b20bdf8dfba85c820bb8a3f6739f549c589c1bb637",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/00_companies_totally_normal.txt:company_ingolstadt_electrical_company.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "0a655b345504012bb0bdd034cf6de64338edbaf19d1e1b87e5c0e38395c765cd",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "8941d0fd69532b60eb2caad0c20a2af7d9581875cf39548183346714cecb4c41",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/99_basic_companies.txt:company_basic_metal_mining.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "321999ab64df9d2c8753e1aa3b5aabfece179d6411f1f1fb400ef570d5b19f16",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "77c65b118db952e6900f8fbd23c259de81f66ea765d8d462b3571c387e7cca80",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/company_types/99_basic_companies.txt:company_basic_munitions.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "64ef1a7448ebf344b84d664dcd677bb1770fdfab521dd887c63250635090c771",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "f018b9a66b334173a0cac04696be8fe93d7f039f9a451c070523bba58eb9f99f",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_dreadnought_propulsion_light.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "34989ca40af91dd8bf0eb7999d6a6925afd4969634cf484d256613fa207e0a34",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "db2c3eade549d95daa7d78248c3702b7664539802cd5f28a207dc2194ced1373",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_dreadnought_propulsion_medium.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "0068c7e53066da445859169924f0745ceb2ec432fc46e739b8e7383f49eb01cb",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c1d0de3c07bc364f19cd740bae7deb7904620d1c587306b265a0948aae6a3cf6",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_early_troop_ship_armor_high.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "0c06d489f198bf30cfb9071a82b06c9de5537e5790a3a65500b1568d949af9ea",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "6524627d68ddd808dbbe7664ce558bd3b489464c38b991d0fd3ad5c9e4096a39",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_early_troop_ship_armor_light.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "001e6bfb6e88a554f98c08a66c3926826a3030cf6a8a80d724c99c1f524fad28",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "f35e3211ae8a094870e16ac38c2e065d39cb608c0a693041d53693340465421d",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_early_troop_ship_armor_medium.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "3167d364e6d831d91d6302c39b33f7bd8c931c55b6c2e26793809e1fb49670cb",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d5a66cbc16834b40ea8ced2e17c2e0a2134e562791ad28f500914d9195814402",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_early_troop_ship_propulsion_light.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "3561952ce122b926b86dadfa923021f9d21ddf711abd1d3582be1beca4145545",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "ed8fe300350beca7fd5d203166a997fd925c7389c547895e3144f0558746e11c",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_frigate_armor_high.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "2db4539c81a34acd488553f761af45dd990335e05edc64fbd1760125e0f417df",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "0f0f53df1576a483ebfdf762c558990ea9bd3cdf22411838a4617ebb3e0f72e2",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_frigate_armor_medium.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "4aca991caa5673b0c66833c72433acfe3d38276eda47cdca6c53a3de087bc999",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "995933a0139f4cf9473ef10970d988ce1d217f5735d48d5012e931849925583d",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_iron_frigate_guns_high.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "519d72236f6bd27af18ef18674aae0e50c49f287c66837037c5d027bdfbe3cc8",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "841b0d77286beef430bc48a6e21bfda8db75c1f90fcf937317ff6b6bd4262c64",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_iron_frigate_guns_light.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "51f14504485e54617205323d406a61913c39db14eab588e7d90df000ba1fb363",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "2793fea20ab0b9c067071addea3f0898f0b740bcb5b182fdea7710d1149feff9",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_iron_frigate_guns_medium.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "1b2302de99c254a11b8c09f65048dc8eada83b20729c48c6d1ac22417ddfc207",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "f44e6ee9fe5de3697705a75b032ae13962846bf9612b58c358568b0ad380e92a",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_light_cruiser_propulsion_light.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "e22d40463e9316aa40dc48f563a34059202ae8a9a85c2d58e13073df274d27ab",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d7b6e4320e62a31a6dc26d5e4eb74e2509107ec2d69de3aca0c2756eaeeee1a1",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_ship_of_the_line_armor_high.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "6fec976a814aa7337b940769cad7f8dc2e8d8472439fe4c7ed75a88c86dff361",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "78fbd64f4219206742e1247c813caba9dffa75873ce94f6a8ed6cd62359f9ada",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/ship_modifications/00_ship_modifications.txt:ship_mod_ship_of_the_line_armor_medium.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "e3e28ed737b9af8c3b45dd00b78ae53f343d4f3fd697e0a118cbb9eac40bad6b",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "53410603271fb41aec374ec5ba97cf670611b9f568690ade72d2281f03e10a11",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/technology/technologies/10_production.txt:atmospheric_engine.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "12c8b0ff58b1f83d4f7e5d58d50665214d3b764ade5a5ee9b1bf50e0c49e195f",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d262ff1ee2a742077bf4675f21e5ca237163fd6e0c8d48ba4bd4a98f7692a8d8",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/technology/technologies/10_production.txt:compression_ignition.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "fe91470c700f82ea88830a8e064fa4a0ecfcf5421c8ed3d7231cdcd81cf58b1b",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "f77c735ebc0372c28b0b7d3e10d90681540365b7b7e09fb2ed1b1abc7561cd4b",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/technology/technologies/10_production.txt:dough_rollers.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "af635b90292628a8e6871aa13d960b52bcf02995ae1fd3596aecbec06af29560",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "966707d6b7141211d4303ab90b262745620fd613ff9e177755d02bfdf5125bf2",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/technology/technologies/10_production.txt:dynamite.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "fbb876a6962d6ac193fa4a03ef30d3deaca8fc5f28d6134f342f61e99cd8e1c0",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "045afde6e051ae6c31243448d28ca4a169aedc0e2ddea185d59eaf073e8ae966",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/technology/technologies/10_production.txt:nitroglycerin.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "b1a8d61b2328995b31fb812bfb62701128ee080934c8fdb1682f5b0f4810edb7",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "7a6e61c112c06b0d99045825b33cb63d81bef717571d8e86bd056f809a4f0ef6",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/technology/technologies/10_production.txt:shaft_mining.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "5464a46845a8fd4d446e13720e3ec81c64539534493a3eb6521d3071eb35b3e3",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "57a76d8d9002f2ccc45294739f3aab624cf8bfe846576a9eb0a9304254de215c",
+      "identity": [
+        "physical_consumer",
+        "adapter:common/technology/technologies/10_production.txt:watertube_boiler.ai_weight"
+      ],
+      "rationale": "The physical write point persists with a changed native-derived portfolio cardinality. Retain its current complete declaration; cardinality identity does not prove unchanged policy semantics."
+    },
+    {
+      "current_sha256": "9f0feae41e8f00b54a136e47eb90616f4e4c3bee3220a78ab41235b3dbc48c86",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "a1a6fa8adca6449d2198362d2b300e36947c0c648c9879114655540dc24c13a8",
+      "identity": [
+        "compiled_reader_binding",
+        "common/ai_strategies/00_default_strategy.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/ai_strategies/00_default_strategy.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "e901c8b58f1f9457b7d770a97e1200f4f5df54063aea156e625fbaa4ac2545a1",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d08a4a760134f5237dedb9434f816cb73740c616581b5917229af01103f6cb52",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_africa.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_africa.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "5d9a9246e6401a06830bac9b1a11d2e0cd8b5e4eb635a5eeb46fbe15419564b4",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "60249f80b6ad3d088c5c5165d6ccbf711344d7f855987bf19e7e06927ce5c139",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_americas.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_americas.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "1ea108df567819ba8e3a03235cda3a5109e22986698a6be98ed151385f2f3527",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "96af30676fe44a1c7a2709a30fcda984b31e5c813c0925c9b1031f7075319e89",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_asia.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_asia.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "a687c4a9bad00064a7bfba7da1782f42213f843a4e11227fd5bae8fe298fb64f",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "b5f77e3690a5f50e1af66757f77be50a3c062352f075e9dc4f788b89f2d1160a",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_austria_hungary.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_austria_hungary.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "f7e97f29ccc80585d4dd35bf605d99f427673d789ffd572f88374e50e315d65b",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "86d0859cc5672d368090ac9314f053bcb8b9c71ca84e05a26b5bed57e553c8e3",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_china.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_china.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "029be02333796824fc4827df02978334074d7e1a87f698bddd9c456368eda7cc",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d9fd375d19bf6214994d88a7dc269ad1125fa7c3202097bdd039086d3f3adbc7",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_cots.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_cots.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "d4a08ebd49d71a9fa40390a3c61874212c0a3d6c2e507c1e61c9852e6b7ff4ff",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "57017f207809f9e5718ba7623e386b9cd5d32e9b6a44b8c72e8442ef8c076dfb",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ep2.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ep2.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "2bb9a3199346f848ab7f6e3fe107f89bd286951a21574064b6ba1b25301a5c03",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "dbb8c570261723e4ba5193c6e6b7e4cf01d5935e3bdb133d122e10651bf1f4e6",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_europe.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_europe.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "72429dbcb0ec953e4dd1df88874170e735323dd417093a185b16848329e41202",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "a0cbd2f04dfc8cdf2e5d04c3b740ed5128f5ae593533e18cc185387cf3576872",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_france.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_france.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "3fd2e6ea05e20b8d01834026e5927357e2d5c66de3ae270e1b7fd0433ce05e6a",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c662cb6692ce19626cdbb5becba62ce1f9f11139f64c225cbe05da94d620d5a2",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_germany.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_germany.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "b7c5b3411acc8e2db4afafc9f88980a7043f5e06d0c2ba06d39c30af3fe30345",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "a09d96500a46450cd95934da01ad510265a5e200e94e0792dd70d9010e9577d1",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_great_britain.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_great_britain.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "32552971894ea0220be51ec700d2aa7331bfa1725f87b4f00208866a50da9911",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d88244405d1495d94254250c7f7deb567f1e39b0d9cde502671cd0b400013037",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ip2.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ip2.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "97a68deb374f0afdc7fb8eb5bfa679b1c1b3aee0af12d69e26daee409b10f885",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c9af9b1012f3ddce89dcbaeb0144081439300adbc94ddfd0de52f928c586fa59",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ip3.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ip3.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "48de4aeec067daa90bef2e1be67f8c48b9300631f8a04c317ecf39a504f58af7",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "541d70352503b938a76d0199773e47fa62788cd75bedcf6776a93c6457e853ee",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_ip4.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_ip4.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "77c3f95c3621fdcba20394c6bb17b8ba195759e7a65b06fc83a645e215078d4c",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "ff7b39c601f6312ef88719416b9de5ad7850bb88c4b896126cc2089d66a55194",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_italy.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_italy.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "3045d91fb4bf45456144d22a9af82862299f102f4f124000163c31145c3eeb4d",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "4a00426558a0bad4da1e1bdab7463d68efdf0dc408db098196cb7d588e973494",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_japan.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_japan.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "cad4c395ffe0e46362b7ac882648f96c1bf4f6feeea9e158f18ca13708b04a53",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "06b1021a4c660044f7b847b878b29f037a31ca6cfb5b03ef21ecde970a484b95",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_mp1.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_mp1.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "57b95126cc8ab2fa9fbccd0ab05481dee1efcdb9b4072071ca2bc79ea8ad492f",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "d5755ffaade734edd21b04761ab0e86376f6530f3a6bcc72f14bdf2dfb160093",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_russia.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_russia.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "f2fa548a14fc9d9f60104851de64c06e7044a8aeef6abd7c9c73ed91721c2f44",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "7b9077dbb1fa2b70e1c28f3c5a0209d8c53f3d7bb7af61c8ea4b2c28dc83486b",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_soi.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_soi.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "fe5d7e80435571cf130e3990b6405f76e74576bc5c2dc8679128f990f26bc6e3",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "78bb40012435646c9266f4c218449b310f0b6ffafea9827d9817aa774f0dcf80",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_totally_normal.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_totally_normal.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "b8a7e7f28683d4e269fae1db0bf34ad7762ef00c2c72cd1a6e7ba11dc03d5f6d",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "39f0e6717704aa438cb04fb5012ccbf2a2ef6c8f90a2ee015ccb14ed61edc4e1",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/00_companies_usa.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/00_companies_usa.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "8da895121cdc10d86c22eb07aa558d9e97acf0120d1293600cdc307ed5e7059e",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "68aa43e5bbff8a43739f51d79767ae114c227deadf60d191f89c19b40bc68fc5",
+      "identity": [
+        "compiled_reader_binding",
+        "common/company_types/99_basic_companies.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/company_types/99_basic_companies.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "c2070ca624ac23512a8e2decdcbf9373a65ba14428be7087cd01d1594e0eac07",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "3620a3c8b12d4eff85c39067849bed6ddea12b769f03eef53fc257ed3eeda86d",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/00_distribution_of_power.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/00_distribution_of_power.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "9855b50fb3ef84a7deb0f2e929c1d8c8f1454f8a082e9d66407895aa5a3b71b8",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "97ded9c5d9fb48d18533afb6def0768ca91d7315dc263089baabbb994e98ba6f",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/01_education_system.txt",
+        "peasant_share"
+      ],
+      "rationale": "For common/laws/01_education_system.txt / peasant_share, the 1.15 country population getter binds target=pop_type:peasants and compares value. The historical pop_type=peasants / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact peasants definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "012ef49b2a5414bdfb040f2da8a85b560a26344d36725b415f9ea3d6b01fe252",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "c51bb6183063d557713de3b421d2bfca69cabc6f44c164ff7ec740ad7c4d699b",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/01_land_reform.txt",
+        "peasant_share"
+      ],
+      "rationale": "For common/laws/01_land_reform.txt / peasant_share, the 1.15 country population getter binds target=pop_type:peasants and compares value. The historical pop_type=peasants / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact peasants definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "70b517d8738643378c1439275a25ba15350aae8688b73eafd10e32a0760b1a55",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "e9a471e1090878f09d272d90235fb94afa5fb825b33dd3875f68ffe8e36da4e4",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_childrens_rights.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/02_childrens_rights.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "ce7f0bc71821c26aab26a4ccd6bb9c98df66f19887fba6e4aabd64ffffbe8329",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "7cce1056647fae2ab67730758cfe279b11d92ecad4739e243b3b929bc54f0c49",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_childrens_rights.txt",
+        "peasant_share"
+      ],
+      "rationale": "For common/laws/02_childrens_rights.txt / peasant_share, the 1.15 country population getter binds target=pop_type:peasants and compares value. The historical pop_type=peasants / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact peasants definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "964e152beaf57511694b8aca841da9ad3db6a0a43a846f0b2405705812ec1628",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "8e094ba4677378252f2291002e17f2e8e91caa07f1dc968e8dd62851977e25cd",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_labor_rights.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/02_labor_rights.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "35557dc26c0318877238ffe9478d8f27712981313376b2ba8ef4b84c9e2b2c18",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "b1f5789219c4298c600ebd6fb849b6f33fc63534e3d478500e130f25c0a702fc",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_rights_of_women.txt",
+        "skilled_workforce"
+      ],
+      "rationale": "For common/laws/02_rights_of_women.txt / skilled_workforce, the 1.15 country population getter binds target=pop_type:machinists and compares value. The historical pop_type=machinists / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact machinists definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "5889588ccfeb90604d5399da6c2ad3e611d81925766397cce5b44db678d968c4",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "580c7a395fb89b1922914d2350370b38101c8cceb691bad60f2aafc8b5f31d58",
+      "identity": [
+        "compiled_reader_binding",
+        "common/laws/02_welfare.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/laws/02_welfare.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "09e499d3eb9a6cc069e9312005612706d50ec9dfab629809e88aa9b600289b19",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "4b012bd6d1f8e7c643ef0808aa910f527f3b290597cbb1649f9b283e06207cf5",
+      "identity": [
+        "compiled_reader_binding",
+        "common/technology/technologies/30_society.txt",
+        "industrial_workforce"
+      ],
+      "rationale": "For common/technology/technologies/30_society.txt / industrial_workforce, the 1.15 country population getter binds target=pop_type:laborers and compares value. The historical pop_type=laborers / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact laborers definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    },
+    {
+      "current_sha256": "9698ecff1718824eaa6d0700ab118246dd036e48e2efe280b53009c51890ff2c",
+      "engineering_disposition": "version_specific_replacement",
+      "historical_sha256": "6f76fdb6beebc315e028cefa8e2f0fdd91af32be5909d6a0d2f5e835f6f573d7",
+      "identity": [
+        "compiled_reader_binding",
+        "common/technology/technologies/30_society.txt",
+        "skilled_workforce"
+      ],
+      "rationale": "For common/technology/technologies/30_society.txt / skilled_workforce, the 1.15 country population getter binds target=pop_type:machinists and compares value. The historical pop_type=machinists / percent signature remains isolated to 1.14.5. The current signature is supported by the locked urbanization and slave-revolt getter examples plus the exact machinists definition in research/situated/1.15.0/inventory-parameters.json. This replaces only the exact source-qualified compiled reader binding; R2 policy write authority is unchanged."
+    }
+  ],
+  "historical_counts": {
+    "compiled_action": 5742,
+    "compiled_reader_binding": 2123,
+    "compiled_relation": 2,
+    "compiled_writer": 5775,
+    "declared_action": 11,
+    "declared_binding": 5731,
+    "declared_consumer": 16,
+    "declared_initial_writer": 32,
+    "declared_intent": 3,
+    "declared_reader": 548,
+    "declared_relation": 2,
+    "declared_rule": 1324,
+    "declared_scalar_writer": 3,
+    "declared_strategy": 7,
+    "frozen_native_strategy": 12,
+    "physical_consumer": 927
+  },
+  "historical_generated_sources": {
+    ".metadata/metadata.json": "7f46789f1523ad5a5640c8610ddf28a724b0001236fedd56f76628f8112c208c",
+    "common/ai_strategies/00_default_strategy.txt": "2c5b7e549cc1d2cd31e23f8bd34e797bbb37408f9f21d7c59375f680ad3c3fd8",
+    "common/ai_strategies/01_admin_strategies.txt": "57b38934af939ced98217c266c4cdd35371eecfcc0edb99f4b2c211c620a8044",
+    "common/ai_strategies/02_subject_diplomatic_strategies.txt": "8717b3a4c5ef618b701fa75219fee5292d3e66c2c254524d32e37163af1d1fcd",
+    "common/buildings/01_industry.txt": "c4192aedf171f93cdc8244464d3ff5987521e279a8ea9d2f8e50d2cada112029",
+    "common/buildings/02_agro.txt": "561ceb66f81da007d412adab8ecf00c86df724eb1a087e3d29b026d6038027a4",
+    "common/buildings/03_mines.txt": "157885d8210e9dfdf09927ad809eb53b26b78ea650ebf8a38345b209c2034f05",
+    "common/buildings/04_plantations.txt": "8c679c3e81d24d06d69aa5b7c5d6bca9e1470017359ca57b66324ca8ba3690f4",
+    "common/buildings/06_urban_center.txt": "4fc39bfc348ea838c29e6757572c397cb71cdcde0a626d43d5fe0ffa01af3298",
+    "common/buildings/07_government.txt": "56ec7fbecca5412da966ed5136d64634f5bc829b2c456bb32c3ba63f26715f1a",
+    "common/buildings/09_misc_resource.txt": "c38163052785fa991c1d37ccd8baa5c8ce87e552e3fae66cec8b3a57d6d41218",
+    "common/buildings/11_private_infrastructure.txt": "cf38c914b42802673b7aba1b0f6d2ec5e458b76c1d1270781a3abe83ebb62602",
+    "common/company_types/00_companies_africa.txt": "a86a44742852b208919215f20d36c5fe30217602f28561d600e5895611a2be4f",
+    "common/company_types/00_companies_americas.txt": "31285f56ea577eb4130cd0393747a024f9ed5a3f3470c6dcbce580dd01772ece",
+    "common/company_types/00_companies_asia.txt": "3fcb838d11a63bb5ad107e46c25c0d74ec454807210b5930d95fe6eb3cb81a09",
+    "common/company_types/00_companies_austria_hungary.txt": "f479adf76a029b0eb6e56c2be9273f15e8638d834cbdfcc65c0524fbc411351d",
+    "common/company_types/00_companies_china.txt": "bfa6a3c5a4ef148c0e44e64829588284ef3b16b86d9698d678ae01241efd0c91",
+    "common/company_types/00_companies_cots.txt": "d86925be1070714aa294bd544c6a6d8b1a941665e0b27636c404219ded713c01",
+    "common/company_types/00_companies_ep2.txt": "e50eeb2d1539c0c77972a816ce648e5583dc248eb17abcc6c0c5e140f6ca40ae",
+    "common/company_types/00_companies_europe.txt": "840247052a1a18b5c621ec4daccda56880cd3dee299c5015aff51277d12bcf16",
+    "common/company_types/00_companies_france.txt": "5fd90d2ba09082b7edd1f3c0abb5ebbd7380fa157c2094f4f44ea8d8a29ccd69",
+    "common/company_types/00_companies_germany.txt": "01ecdb1434c2163cbd51a024218341f264362a2f601d6b6dfb8c91afaa9f4f8f",
+    "common/company_types/00_companies_great_britain.txt": "68821aebc9f1bd03dee122a3465b63588265004708e2d16d1aa6640ebf11103f",
+    "common/company_types/00_companies_ip2.txt": "05c9632ab608b35fdd0a5f9b98f4672f9f9b1bf35da42ffd63c02288947916ed",
+    "common/company_types/00_companies_ip3.txt": "4513888ce2ebc2b445e0560661853e75e1f8add70f5eeef658185b0e58ebee26",
+    "common/company_types/00_companies_ip4.txt": "e70b73344570330011cebe75cb16a3b94a9f46824848335f230b44b130dfeceb",
+    "common/company_types/00_companies_italy.txt": "6507524fcb27042f0e07ce646b44884e20df0302d1389512064a74d6cf398d69",
+    "common/company_types/00_companies_japan.txt": "3492f6db4df5d29886dba00f05572b5b81dcaaa1b648335fc4fbaab1b878d05b",
+    "common/company_types/00_companies_mp1.txt": "75107c87d0c820ead3d3360908c5b7f1a8a72152c8754658e1206aa1823fcdb1",
+    "common/company_types/00_companies_russia.txt": "fd783d66222945da385ad5d7ad4044d22a640aa4dea225e26dcac494e85b1872",
+    "common/company_types/00_companies_soi.txt": "03f8b6c0ef9c883d98f65800fae1369500f7a54936573e4a9a9e2d63d6b2ed69",
+    "common/company_types/00_companies_totally_normal.txt": "6c86535a53b840119a2646e47d942b430e2b71b0b1a6697e03af3e1b422914be",
+    "common/company_types/00_companies_usa.txt": "5278737091063576d39bab51af96b720c351e804ab54e03bcc8819b43db5f358",
+    "common/company_types/99_basic_companies.txt": "e9a12cc4754420e8969813df590803f69cd4b1d547cce9d590746bb0e74d1424",
+    "common/laws/00_army_model.txt": "493348929b7d10e6fd324ca6c2f3bfaf754632adaab0135e5e03efa0d0f242b4",
+    "common/laws/00_bureaucracy.txt": "301e54c2e53b56e060009b1fa645b7303047a650fc33ebf03509993fe2ddf86f",
+    "common/laws/00_caste_hegemony.txt": "48c96a9fd5bd44c9919a35c95d6d1b5796ebda7ae52b0cceae9ee7d3911a9d07",
+    "common/laws/00_church_and_state.txt": "2f638eaf9304d5345c2082deb596fc4fd7996d859c0ab85c2763b27649768f1f",
+    "common/laws/00_citizenship.txt": "57cfce29bb6fefec190c48475d5818ce6d9c8293b9b8a7e7ad6990a7b8c89bc7",
+    "common/laws/00_distribution_of_power.txt": "35f8fe821993daea117563a02e54567459480d3c20ded39430415d0bd6e3ec90",
+    "common/laws/00_governance_principles.txt": "91a5d81788d8ac97d080a0f85c09a1824c8febc501d3d9235ba3731d12d7c886",
+    "common/laws/00_internal_security.txt": "f300a629d0b647220aa5c4dcb500b74500b05d4d4d22a1034688dfbc4450b69a",
+    "common/laws/00_navy_model.txt": "b625bc84cc81102f70384a4221c9fc91872f461360e1e5d7692d4b63184c0912",
+    "common/laws/01_colonial_affairs.txt": "a37c812f98d12312a55ab2a1197216df40d173d31a1c06bc6bbba788405cddf4",
+    "common/laws/01_economic_system.txt": "01df20efc19911cf785df10bd5edd87b3875b6194cbd569cf0bfba837ae23929",
+    "common/laws/01_education_system.txt": "b510bf2512d7004b8622d88ce050358ff2dedd4fd38a8dc6670901eb410265bf",
+    "common/laws/01_health_system.txt": "5a3f44b965f5f8391f0880dcd0031f5c9e60278a781ee2987945c45a2fcc9b15",
+    "common/laws/01_land_reform.txt": "033f7f57787b3aa366d32f134a2a25819ee6c71ba0bcba6bf3af6e4c4d84cb9b",
+    "common/laws/01_policing.txt": "dfdb1a0be53e1163717bea7f23e13215dcfacb9cad254505cfca1c6e4a9ee17f",
+    "common/laws/01_taxation.txt": "41307f29d1a887b63b6bfc9ecafcbec617433d1e8a6a3607889cf19c842fc75c",
+    "common/laws/01_trade_policy.txt": "13114290d8af64647cfeb0f7a545e9ba010bcf5175c940c2710a40a095237920",
+    "common/laws/02_childrens_rights.txt": "e26a5097df59d19fb739ec91f3b30285f16d1571355593def5403c707cff90d5",
+    "common/laws/02_free_speech.txt": "80a553c01f6cafc01b046689e5c688b7885cee12c5a4e72e8d9ad9807067aa33",
+    "common/laws/02_labor_rights.txt": "c88f217b0b1a0be84400930437b402042797cebce40c2b091be9cca453f43659",
+    "common/laws/02_labour_associations.txt": "d7e395d1f521f39b18fec5f9eb6fb990f4dede00f830637e678875484861a65f",
+    "common/laws/02_migration.txt": "fcad477f50e337745a069bc7184ee68d7a3c2aaefb5612ba54ccee749b4565f8",
+    "common/laws/02_rights_of_women.txt": "f06163f9909df745c9041daba7606f66624eb7adcf02b97295f08e8b1a47d57b",
+    "common/laws/02_slavery.txt": "334a7211e55f60199927b8b9a7ef1e428647b51d4a6cb1423a1d458ff0bcf55b",
+    "common/laws/02_welfare.txt": "b67476273d5c16a09def620b0c8c834c7ef561874ac908fdbd1e50f11e753040",
+    "common/mobilization_options/00_mobilization_option.txt": "e9fa5503bde10d5d6d87c3d6371cb21f59dada78eac0b61ae697368f9ab7a49d",
+    "common/on_actions/sitai_fiscal_on_actions.txt": "9b29b379a6438045715c42d7b66ac91d010c07b61f1b811edc47781914c757f8",
+    "common/script_values/sitai_adapter_values.txt": "9cb8c476f4c61ffb2f3c5c80195309bc1a88c14821fe3164df02b9e9af813594",
+    "common/script_values/sitai_reform_values.txt": "08518aa8c223a0acbfdaede9b27986583c30285714eb722e1f3d911d0bd89b81",
+    "common/scripted_effects/sitai_fiscal_effects.txt": "39c8ab8b2b4b22723b6901331bbc5a58819cfb6c7499c00ba2d73a7131813846",
+    "common/scripted_triggers/sitai_country_triggers.txt": "247fdf744b0fa6a35e105363745f985b55d18d47c49d628215fafb6086883da5",
+    "common/scripted_triggers/sitai_diplomacy_triggers.txt": "82abcb4be1866d971e965da1bb2281c627d5a48917fe9bb8aa37daba3d6cfd2c",
+    "common/scripted_triggers/sitai_economy_triggers.txt": "70c461b4ac5eb285bf6445a5c9953f6c6e7e0a08651a3202af4690782a106bb3",
+    "common/scripted_triggers/sitai_fiscal_triggers.txt": "1289ae8d6d7cd23792b56e8d3d0ad1c8883519e41dab88fe4c6582cca370e5bd",
+    "common/scripted_triggers/sitai_reform_triggers.txt": "477cc62840f6b6ee0224a5583eedaea8e608b190fadca9b6f1dd898708cbd51c",
+    "common/scripted_triggers/sitai_security_triggers.txt": "67cf9f7abee97f1159d1b6c91f6ab944dde9c9136c4774d1e553757846c87fea",
+    "common/ship_modifications/00_ship_modifications.txt": "5cd3c0c103cdfce0293a3219f7a7c71eef9891365ef93957108ca6cf2c6e088a",
+    "common/ship_modifications/01_utility_modifications.txt": "19de175e7bac0a072b12d6eac633a7a23dd2370aba56406908334dbfa68c8c9d",
+    "common/technology/technologies/10_production.txt": "bda7d3797eb5c793a1bae3b7e2373524b9197e0102260a15cb7158d4e226ab8e",
+    "common/technology/technologies/20_military.txt": "7e3580ba3e109f869c5717d4d50055de484d4208c0bdf9a54ab8816a7186db3f",
+    "common/technology/technologies/30_society.txt": "1de6d11b8cdc70e7dcf84a666163bc29e280f333bf661d19195dc8a6d56918c9",
+    "common/treaty_articles/00_alliance.txt": "44e3813f956e7e3543069814fef354f334b21cb020e0fa8f6f0e05965d0ededa",
+    "common/treaty_articles/01_defensive_pact.txt": "c9b060080dcf9ca1b31df12636b869f266855aba24eb7dffc8c2e776bea91ff2",
+    "common/treaty_articles/02_guarantee_independence.txt": "2154158fcb015fc5e8576eee20000a56a875a5f14537840af23600d7f59659e3",
+    "common/treaty_articles/07_foreign_investment_rights.txt": "99d3f41713391fe8f0a36444d0d46464b776dd9eca8304348500ad78f75a5dbe",
+    "common/treaty_articles/24_transit_rights.txt": "fc5e37ef174e535954e468979f4bb749891a7a4fa27475bfbc49f1afb4fffac7",
+    "common/treaty_articles/25_trade_privilege.txt": "fda044938b621d6c471971519f4c7e9a9f79ce75262b6ca46dbee715546a7479",
+    "common/treaty_articles/31_toll_exemption.txt": "9159602aebc7cf410b9587b46f32b111196afe5b184d058a12b8d99a7c917933",
+    "common/treaty_articles/32_no_tolls.txt": "a97cacd524b59131e52ddd617110a538e8a1cf5c5d0342d5b2a76746fd0077af",
+    "common/treaty_articles/33_strait_access.txt": "f9dd3fe834c2c5923bd30f9f0a4e5bd71189bbbbd6d8d34bcf3dd7b086fe6358",
+    "common/treaty_articles/34_no_strait_closure.txt": "bf3b49ad3b52b4626677b6b2523375b39de864faae3520f180b0ffe23487a529",
+    "localization/braz_por/sitai_decisions_l_braz_por.yml": "f5f3a1ec76fa2d60cb90c1a919edc0dc4a561a29aee91322f6dceb3b486c0699",
+    "localization/english/sitai_decisions_l_english.yml": "9a50a96b7aa5da0aa12fea908d9918dd8a0ee74f2f4d1df27e3b64e04926a6e9",
+    "localization/french/sitai_decisions_l_french.yml": "6385930867d69e1964e0201a102a40ce26ec13ac87f51a97a6e6a152ec8b8b17",
+    "localization/german/sitai_decisions_l_german.yml": "a5694feff946dd364b791f4c9f8b10dd4bd1465fbf8e4e0adc3edb19b961af96",
+    "localization/japanese/sitai_decisions_l_japanese.yml": "8ae29dafa0cf7450358da876bb6ab61076a14f1de9bd77d6fbbc6f1e621912cb",
+    "localization/korean/sitai_decisions_l_korean.yml": "dc784fe28b3f81ec624131805a757c3f882e546de0ff1e519c28d430b9144979",
+    "localization/polish/sitai_decisions_l_polish.yml": "f1203af03cab2a28adbb65cbfeb71a5735870d73fa1494d3037839cd2334ab76",
+    "localization/russian/sitai_decisions_l_russian.yml": "48af78291c029eb53839c3c47fa4384b885971b559118535397f664af2899fb8",
+    "localization/simp_chinese/sitai_decisions_l_simp_chinese.yml": "a694fb75fe37f9914a1f7085671a1bb023da7d3f2319c3af244b5a6e4257eafe",
+    "localization/spanish/sitai_decisions_l_spanish.yml": "f1eadbd247e83c552aa315151401115799ed5b21917eea248ba3f57758a61275",
+    "localization/turkish/sitai_decisions_l_turkish.yml": "8258dc179ad8e8835bd932a70ace7d5806a65f0ada21416eadfa5de05e5d7540",
+    "thumbnail.png": "d9dba46a83b9348372ad538e59c11badd1e4e7deae6a90e7fe6fecf68a77d2e8"
+  },
+  "historical_generators": [
+    {
+      "path": "src/pdx/__init__.py",
+      "sha256": "db394b18bd33e44b067a41b3e87b97d13474a535dec2a688c94c7b9ceda08f8e"
+    },
+    {
+      "path": "src/pdx/ai.py",
+      "sha256": "a8c2857189aca106d8ee4b90b1f08a73c650c09b08f58b40d0d6d023c4d26908"
+    },
+    {
+      "path": "src/pdx/ai_surface.py",
+      "sha256": "75acbed75d0cf13dd46d1aca37224716ff9fe3620f29b02318edf22264b2493a"
+    },
+    {
+      "path": "src/pdx/analyze.py",
+      "sha256": "9d5acaffc27ca9ac7035464ef514a598631d8b56580ba58ea8f364cb1cc67ee0"
+    },
+    {
+      "path": "src/pdx/assets.py",
+      "sha256": "99f21520d16d99a609201354ff3514d625a5e22b32c5b3cdca348b8e772904b0"
+    },
+    {
+      "path": "src/pdx/building_opportunities.py",
+      "sha256": "0cb842f158004cf7fbcae2acfc4d14564e9b0b34de583bea69bb57ed4092e3b9"
+    },
+    {
+      "path": "src/pdx/cache.py",
+      "sha256": "d1a1d88caabfdbaf9569bbb6ffe9c48c9f757bff949f51ec5d9b6ae4a6a8ff21"
+    },
+    {
+      "path": "src/pdx/candidate_coverage.py",
+      "sha256": "e007fa1ad06fe000a0037bbdb338fe142e7907f9d9303c5e78ddb2820a4521c6"
+    },
+    {
+      "path": "src/pdx/citations.py",
+      "sha256": "c46244d311fc2ef0469ce3b3f8751b6af61c3952d53bea262dbfb4aec64d2b76"
+    },
+    {
+      "path": "src/pdx/cli.py",
+      "sha256": "c4472973b9e569e4a5dccd5df402b13c2aabb8183b10e595115bba0b7f90b8c9"
+    },
+    {
+      "path": "src/pdx/company_observations.py",
+      "sha256": "dd067dc87e1d9a3adfb0e90d82097f3e5b614c0fa6c71d650c9f45c33420f89c"
+    },
+    {
+      "path": "src/pdx/company_sectors.py",
+      "sha256": "ab9352466ddc82d8d6a3314a952d3745ca0c6cd0123ac214ba35639e3e072e93"
+    },
+    {
+      "path": "src/pdx/config.py",
+      "sha256": "82a95e2b2b54e7e769a7f11ae12dc4e333f1d0c08fdc5226ff9dafddfc98b394"
+    },
+    {
+      "path": "src/pdx/console.py",
+      "sha256": "30d793bbf38e165e8c73d13dc71f3f450141e83e329abc27df92afd02fb42b92"
+    },
+    {
+      "path": "src/pdx/consumer_audit.py",
+      "sha256": "415f15a67acdcf3b16aa61816a30a5679e2f70eac4ebcf28fd042dd14c138c82"
+    },
+    {
+      "path": "src/pdx/consumer_matrix.py",
+      "sha256": "f0c785269dc535ca6ba463e9a76e91407d31f333a709ef37b6689ea8dec120e6"
+    },
+    {
+      "path": "src/pdx/country_coordination.py",
+      "sha256": "454f3ba0641aea0001ad50b8b7166eb4d7f91fa9897ec213eedd111e26f4166b"
+    },
+    {
+      "path": "src/pdx/country_interfaces.py",
+      "sha256": "6650ca5353d179be10843ced8314c9a7f40af9a1c0674cd1ba30f3f135ad5309"
+    },
+    {
+      "path": "src/pdx/country_parameters.py",
+      "sha256": "a356a692a0103375a8d7288277ea21bc9b0a82598d7b697e66b7a9fc1d557853"
+    },
+    {
+      "path": "src/pdx/country_state.py",
+      "sha256": "aa7d37154cd83928618f35e645e55c0e891ca0f688eb527a314c05f94502bf7e"
+    },
+    {
+      "path": "src/pdx/covgate.py",
+      "sha256": "254a3ddea71f5bf124b00cf65f20407c8dd1571621e8b60e2fc9838939ca005f"
+    },
+    {
+      "path": "src/pdx/decision_adapters.py",
+      "sha256": "4fa81c7464d0bd8c2b37aa8162cedf6f5fe9c0d673aca30c45e48c302ffd8011"
+    },
+    {
+      "path": "src/pdx/decision_diplomacy.py",
+      "sha256": "b07154b2249413a05e3b97c6894ea591abcfe6638bf48a55f3cb495768f28c05"
+    },
+    {
+      "path": "src/pdx/decision_economy.py",
+      "sha256": "8276de7749e9acbc0d2d5c7dec2a7ea502afc5351f5c4e8abbf2dd10a16eb255"
+    },
+    {
+      "path": "src/pdx/decision_intents.py",
+      "sha256": "c975e2278ca9b2437dca2b22530d7621bef540acc4473ea44f2adc46915a3f29"
+    },
+    {
+      "path": "src/pdx/decision_interfaces.py",
+      "sha256": "3219b9e3679076e65603af589685764832a4d94a81227e7046245fe47fed5889"
+    },
+    {
+      "path": "src/pdx/decision_report.py",
+      "sha256": "92f05b4d3621a11c1727a3b33ba28aa7e3f8dff74a7553da06114893b06da19f"
+    },
+    {
+      "path": "src/pdx/decision_rules.py",
+      "sha256": "2ae1f7c94621271c86e5e6f7cf18773fb47f9e972c31f6af62b678ad8f5fab8b"
+    },
+    {
+      "path": "src/pdx/decision_security.py",
+      "sha256": "4ca0bd5e7ea59d26c77fa1c88f637b17555258be1202d7f9939a0bc01260a1eb"
+    },
+    {
+      "path": "src/pdx/decisions.py",
+      "sha256": "740887c55f1cd28761c78337561216aa8902bda627371967369d70accf595dcc"
+    },
+    {
+      "path": "src/pdx/defines.py",
+      "sha256": "f0a09f456d2b787eb85409ae195b26ebace59a4ea0ca20efb16443a3d662c869"
+    },
+    {
+      "path": "src/pdx/distribution.py",
+      "sha256": "848489db0d2d869af82be28192938e3999b456896dd5fbbe473594879da8b008"
+    },
+    {
+      "path": "src/pdx/doc04.py",
+      "sha256": "f5f5c33f02fa6a34da5df2ade2be2f3c580eab09a57e2f50e51c966a40fbce57"
+    },
+    {
+      "path": "src/pdx/doc14.py",
+      "sha256": "68b11eef4f857af2f0c8112bc070c309060dfc3affdf8494a3be87c5ff3cde13"
+    },
+    {
+      "path": "src/pdx/doc15.py",
+      "sha256": "81c35b33d89bff6701dc9b11258a4c10ac0c0cbd46505ddab202e27953478ef4"
+    },
+    {
+      "path": "src/pdx/doc16.py",
+      "sha256": "2aef3b132cfd7e78e632011bcf90e00e01f66b38006e8d5912362b51da62c900"
+    },
+    {
+      "path": "src/pdx/doc17.py",
+      "sha256": "074235c4563d85087366c2f88c197e8f1d41ba007038234221bb6dbcf5ea4710"
+    },
+    {
+      "path": "src/pdx/doc18.py",
+      "sha256": "1b5496f2513d0fb0771e5d9e7d6853f696d6624e14dc5d326bb3b3bbdfe92d6e"
+    },
+    {
+      "path": "src/pdx/doc_tables.py",
+      "sha256": "014d711f9256c3ca7d3acd01f88d32adeb4a6491a64ea8ad5e96583653e9340d"
+    },
+    {
+      "path": "src/pdx/docgen.py",
+      "sha256": "b0f19775020830c4cfb0ee39cd11bda0dab340b02c1aab879f610a62085e5321"
+    },
+    {
+      "path": "src/pdx/docs_mirror.py",
+      "sha256": "d3833f1339d9b4b953634198d065cbe84450f169748604a64aabab8b456ce479"
+    },
+    {
+      "path": "src/pdx/engine_log.py",
+      "sha256": "1f6c4f724417e3ae088b96868e0a231f71cacf19181c8efa7f6ad959082b43a2"
+    },
+    {
+      "path": "src/pdx/engineering.py",
+      "sha256": "6e5d4ea32165e67f1f2640e4ca6d07d8dd71d1c6ca624c5edda513b933b0c20d"
+    },
+    {
+      "path": "src/pdx/equipment_opportunities.py",
+      "sha256": "2be3711f87963c0859de484b9bee3318a8d263204b1571f19fa1852bc1a359e6"
+    },
+    {
+      "path": "src/pdx/evidence.py",
+      "sha256": "f8a42a193ca475cacffd46f7ce1bf508b73659487765077d5abf85de5d17b2f7"
+    },
+    {
+      "path": "src/pdx/exe_strings.py",
+      "sha256": "cc5dcb790639b5a770d34dfb6950dbbbd07507bd4a9e142f597aafe48a228c3d"
+    },
+    {
+      "path": "src/pdx/extract.py",
+      "sha256": "2497912110d0d07d283aa84674c5aaae3ca4ea6be8a421f621fa6706395d8a57"
+    },
+    {
+      "path": "src/pdx/game_root.py",
+      "sha256": "6eb43ebc9d49b8ed04794fc8950a07351e88ca393416282ab7482754fe983767"
+    },
+    {
+      "path": "src/pdx/gametimer.py",
+      "sha256": "3d5b6befeb51c9a442f24d1ba54e7ad2c062fb75c86af9b0277e93eaab089f92"
+    },
+    {
+      "path": "src/pdx/generation_transaction.py",
+      "sha256": "71c55eef2935fc3a8409b38397a91d50024e8979bd2cef1f6f66cc25ab3c7b3b"
+    },
+    {
+      "path": "src/pdx/information_catalog.py",
+      "sha256": "a8164d5e8b06d7d1ca8ffe49f839a0d6dde5de62bcfee615bb69c88e95c82b2f"
+    },
+    {
+      "path": "src/pdx/input_profile.py",
+      "sha256": "ad6d9a428a198f0cee98de674646c5b046ea15b623a61370b9d8624e2fe34259"
+    },
+    {
+      "path": "src/pdx/install_tree.py",
+      "sha256": "7e2e1ab24029164f8532262140b11848fb5f67d2eef2f22fe9751eccdfa941ff"
+    },
+    {
+      "path": "src/pdx/law_opportunities.py",
+      "sha256": "442b6919ba2f5dc1dad037486bc2e0166d2ac174249a37cd2606a45e9c421dfa"
+    },
+    {
+      "path": "src/pdx/lexer.py",
+      "sha256": "27c550b98edc6b1677d9421a65195d5ffbc132b5009e95e89ed9efd138298db0"
+    },
+    {
+      "path": "src/pdx/localization.py",
+      "sha256": "e67642eb3dcbf09b77da9c3d328257c8b426edc0f977f7bec4edb56eec2e209a"
+    },
+    {
+      "path": "src/pdx/localization_languages.py",
+      "sha256": "5af9a46466cc60d6d2764da25f7473683b7b5d9dfec2523e80cff6de57f137e1"
+    },
+    {
+      "path": "src/pdx/lockfile.py",
+      "sha256": "54f701b44dde285825f7d3860353c5e48b217d051c7c87002bcb9b13e5961869"
+    },
+    {
+      "path": "src/pdx/markers.py",
+      "sha256": "74f950d32830565028c805dd93ec62fcf4d27062a5cc533bbd68522a59c13520"
+    },
+    {
+      "path": "src/pdx/mobilization_opportunities.py",
+      "sha256": "09fe03cba7f0a23316ead8f2d0e51f1c81d36173d62e4081e25ea0a093f7456f"
+    },
+    {
+      "path": "src/pdx/model.py",
+      "sha256": "3e548a74a5bf37e8c32eb8e316f37b6080888d795949a0617aeab831a76460f7"
+    },
+    {
+      "path": "src/pdx/modifiers.py",
+      "sha256": "406157afa32e339581da423e0f3ab872417b0743f40ebb21e3b35b0965897911"
+    },
+    {
+      "path": "src/pdx/mods.py",
+      "sha256": "375d4dd9b92566d9f817f91f430d86bad75ace964352a190d73dcdb5d5439182"
+    },
+    {
+      "path": "src/pdx/normalize_repo.py",
+      "sha256": "c5228efc19ebe228d7c5f57ba14e3b71a121058476a163340c33521c59186c24"
+    },
+    {
+      "path": "src/pdx/observation_queries.py",
+      "sha256": "64c1ee1627e0e1b1c0a09e757691334be32c72a7ac674eb349729bff87772550"
+    },
+    {
+      "path": "src/pdx/observe.py",
+      "sha256": "1dcd9107d4b43708d001d6b53a1a810cef37d07b082ac5fe6c7d97fc5c20051d"
+    },
+    {
+      "path": "src/pdx/parallel.py",
+      "sha256": "d1840ed17870a658f14d3192383c56b97da6f02efa0f70f2edb0735c0e301f0e"
+    },
+    {
+      "path": "src/pdx/parser.py",
+      "sha256": "b802f427f6495faebc736ffea9c15acb736959fb440d12569a3321be9f053b83"
+    },
+    {
+      "path": "src/pdx/performance.py",
+      "sha256": "756299a014d3424cbd8e3abb267f596003851981aaa4dabbe1356ec1b6a1e177"
+    },
+    {
+      "path": "src/pdx/platform_support.py",
+      "sha256": "68f6755e63e10d852638d83188fe8b7fa61869888d2bb1ffcd9b9e778cb3ac5e"
+    },
+    {
+      "path": "src/pdx/policy_audit.py",
+      "sha256": "03fa677ff65afb4b58347bccc5c24f2af7bc51bb0512e4ce8be1f93342ce4807"
+    },
+    {
+      "path": "src/pdx/political_surface.py",
+      "sha256": "38780e256ece36cce80024c4c03436421f3d3279a4ed83d87b859dfbb597107f"
+    },
+    {
+      "path": "src/pdx/production_inputs.py",
+      "sha256": "a7a07d8aef6c857a577b20c3746b46f073afcf4aca98be5a273da3440b265454"
+    },
+    {
+      "path": "src/pdx/references.py",
+      "sha256": "15af871f67f3336081983b82982f57e6b84f83a3357ae7089a8de0d2ac04a717"
+    },
+    {
+      "path": "src/pdx/repo_audit.py",
+      "sha256": "2cf5f4bee26af9ca75968ccda5354df3ecff58641052825462768b02a21233a1"
+    },
+    {
+      "path": "src/pdx/savegame.py",
+      "sha256": "14faa941396880e5ad06d6f7e6261d24345ab99b10241b118476cee55c2b05a7"
+    },
+    {
+      "path": "src/pdx/scan.py",
+      "sha256": "3fa6000a436a3d243999fcbe1951aa1b7984bd570078efb41ea103b811bf91d1"
+    },
+    {
+      "path": "src/pdx/situated/__init__.py",
+      "sha256": "0ef069f44ad2da13f79f876f468ed57e321ac5abc5214d168db10cda129eb149"
+    },
+    {
+      "path": "src/pdx/situated/action_instances.py",
+      "sha256": "9ce9b07257daa4d1dafcad4272b7de4044ceef2cb0cb8e41e6bb406537f0bb86"
+    },
+    {
+      "path": "src/pdx/situated/actions.py",
+      "sha256": "7c82e215cc74ea8145669d48dbe9210e815cad4c4693ef5dbedcdfd966494c4c"
+    },
+    {
+      "path": "src/pdx/situated/architecture_receipts.py",
+      "sha256": "2be33562aff163558ffd9645729356a185bb467eb5582fd9edebcbfdaff85791"
+    },
+    {
+      "path": "src/pdx/situated/audit.py",
+      "sha256": "52b3cfc726647ba001cc27c6b6e835da56f9f1977ebc643788b82be9c0db192f"
+    },
+    {
+      "path": "src/pdx/situated/bindings.py",
+      "sha256": "7296efd084f0d6b973d6d7db2a43500134d0e5c0dfbdcb064a89a88f051bd9d5"
+    },
+    {
+      "path": "src/pdx/situated/commitment.py",
+      "sha256": "035ca919f71c7de72fe7b42be36c277b98f843f3ac1bd4037287481958244b67"
+    },
+    {
+      "path": "src/pdx/situated/compiler.py",
+      "sha256": "7fac9f7ede863a06ea9ac67412cebafc22816a1a336d57250b6ec9bd76103f03"
+    },
+    {
+      "path": "src/pdx/situated/contracts.py",
+      "sha256": "c3a83cfd79385ab52a98d1f4a4f4d7b5a5595863a2b97ed0e413a3565edb745d"
+    },
+    {
+      "path": "src/pdx/situated/core_contracts.py",
+      "sha256": "a88a6b2b6042232e4a57b483bdec5c31c501b812cf5fec200fb0759ceaa5c6d5"
+    },
+    {
+      "path": "src/pdx/situated/decision_ir.py",
+      "sha256": "af0faa3ed0dc8efe295ec985450fe2cba5d3e06ab10fdc2b7aea1be009ae7db9"
+    },
+    {
+      "path": "src/pdx/situated/domain_coverage.py",
+      "sha256": "8ad432ba6dc420edd22b3012b68609d14ce978d791df79bca1003d9c70207b7c"
+    },
+    {
+      "path": "src/pdx/situated/domain_registry.py",
+      "sha256": "24b138b06f7bcc73a3b7a9fa9016311e1945032b8bfeb21cf5c4ef6434738a74"
+    },
+    {
+      "path": "src/pdx/situated/engine_scope.py",
+      "sha256": "7927126b859b4d598cc72d8e13b94f448cca79ea04ab66a91782ebc49edb99e3"
+    },
+    {
+      "path": "src/pdx/situated/evidence.py",
+      "sha256": "b4487e2d2c30c3665d7887025b868991590b12169847eba1ba8d7140f1765950"
+    },
+    {
+      "path": "src/pdx/situated/expressions.py",
+      "sha256": "115d6958645e65e799bf325b50314ef87b8acb5351a48401e0b2007d73adb12d"
+    },
+    {
+      "path": "src/pdx/situated/families.py",
+      "sha256": "c62519ba7ba66eaa0d8ea0db617a57dd2cf2009c767a2646c5b6f1855be5bd7c"
+    },
+    {
+      "path": "src/pdx/situated/goals.py",
+      "sha256": "3dfa0f514eac39c2a76c8e0e0e61b3245327c251f82fffe999d9b63f5cf7335e"
+    },
+    {
+      "path": "src/pdx/situated/inventory.py",
+      "sha256": "7d25e28c5e7eba6a8ab0e9e3b05e48e48c9c4a226fe0020b429a92bfec196dee"
+    },
+    {
+      "path": "src/pdx/situated/ir.py",
+      "sha256": "b9782a28dffaf5c3377328cfac31fe577da4fe879b8888393b44a2e69e222bb4"
+    },
+    {
+      "path": "src/pdx/situated/joint_chain_contract.py",
+      "sha256": "a803cebf9af4779708af86a908209994b88b2e05e73b9715bf06e21e049308c7"
+    },
+    {
+      "path": "src/pdx/situated/layers.py",
+      "sha256": "57537b862a1351830df26ee2c63a8a709cf0004a38fa26ce9e02e4387b50e62f"
+    },
+    {
+      "path": "src/pdx/situated/lowering.py",
+      "sha256": "7061d78f07de051ed6ebb48ddeaa1ae936514053a1cec0d63f3e1a7c784df70f"
+    },
+    {
+      "path": "src/pdx/situated/migration_baseline.py",
+      "sha256": "1066d1af7f7a12423ee1d562f2d22c037b87170cc36646e517a63a8b1c2cfe24"
+    },
+    {
+      "path": "src/pdx/situated/native_catalog.py",
+      "sha256": "dd1eab31b6b54488a7cbb96f0f556d9504bcf7a0cc3bc84986fb9ae262fbe5fa"
+    },
+    {
+      "path": "src/pdx/situated/native_treatments.py",
+      "sha256": "26f004a3730ef4d7a26aa54147b56c8df8b894bf43391bcd52dafca2ea9e3858"
+    },
+    {
+      "path": "src/pdx/situated/opportunity.py",
+      "sha256": "5e2df75392640d7fa67b2a7917264fd640c9cd0ded045453f8282e5d194e386c"
+    },
+    {
+      "path": "src/pdx/situated/pdx_eval.py",
+      "sha256": "7cd49f77a3140fc30a04b101ec47d74e3db7cc3214a5c6c513f42dd11f567370"
+    },
+    {
+      "path": "src/pdx/situated/pressure.py",
+      "sha256": "a57a7a0261ff816d49230476ff716ee82ab4fab761ed7e1154e067a0c73afa8c"
+    },
+    {
+      "path": "src/pdx/situated/programs.py",
+      "sha256": "9a51886ae9e4d5549fff0dbbe81464a95cd000b56a836347001785a90d87303c"
+    },
+    {
+      "path": "src/pdx/situated/receipts.py",
+      "sha256": "d5f3f8cc38deb05b31b52afc6322d7f95da7e453c107be76e05784840f9433e6"
+    },
+    {
+      "path": "src/pdx/situated/relations.py",
+      "sha256": "5c5942aed72ac31c9c05f186eac035bd45ec26b4662d6f399a07f776be834c69"
+    },
+    {
+      "path": "src/pdx/situated/schema.py",
+      "sha256": "e15e877c6ac15689045d24698c00d22589e976be1983dc45a5b26ef5385c767e"
+    },
+    {
+      "path": "src/pdx/situated/signals.py",
+      "sha256": "564dff20c52d0dd2314afcbd6412f9bc59b67d2c2d07da9023e29b99cff6bb24"
+    },
+    {
+      "path": "src/pdx/situated/state.py",
+      "sha256": "2add57f6478dde2f316b92ae96320faecc45824d17c8b777cf82a34383e4e569"
+    },
+    {
+      "path": "src/pdx/situated/supply_program.py",
+      "sha256": "37e0fa5a6e749984b163944001f66c73e3b547fd0026f00425653f1436d6dcb6"
+    },
+    {
+      "path": "src/pdx/situated/support_program.py",
+      "sha256": "31d5f8da4b0f5fbf105e9c16d7236591f9f685b9225bcd47814030feafbfdfa6"
+    },
+    {
+      "path": "src/pdx/situated/support_signals.py",
+      "sha256": "1134e62ecc1491f991606d29df90f8f69b4f04104a2e068c4a10a5a32f305a22"
+    },
+    {
+      "path": "src/pdx/situated/vanilla_inventory.py",
+      "sha256": "5b05178c583b25650878b7367c7cfb3591d3391082c3fd3136c393287839f306"
+    },
+    {
+      "path": "src/pdx/situated/version_inventory.py",
+      "sha256": "0a4bc9300eef0c47e5428ad9449363734380c5e3113a5ed9b999e4b0300e7709"
+    },
+    {
+      "path": "src/pdx/snapshot.py",
+      "sha256": "b272506e761d633bf266891bcca1387a9365b3740aa50d69561d3c9a3f93ca45"
+    },
+    {
+      "path": "src/pdx/tables_offline.py",
+      "sha256": "41842c85cfaf740f5875832b599f56f88092cfe48b1a67b8877d899e9e706eb3"
+    },
+    {
+      "path": "src/pdx/tabular.py",
+      "sha256": "e6563f5ac599d2ebb8d533fce7645f8cedb375ad8ee8e418b7fc9a64bdf5eb49"
+    },
+    {
+      "path": "src/pdx/technology_opportunities.py",
+      "sha256": "e3079a2b978baee66085fb423a57340695e3fb61823760ca4c23ee829ed4c177"
+    },
+    {
+      "path": "src/pdx/textio.py",
+      "sha256": "53212d793483e0d83c66ffa0ed901a8f94d9ed06659dc2d00b2eec6f8a613d62"
+    },
+    {
+      "path": "src/pdx/treaty_opportunities.py",
+      "sha256": "7f295a88f36c9a522e211ec1b7bdd7b41d3cb8a7a1753932c60583158359c709"
+    },
+    {
+      "path": "src/pdx/unknowns.py",
+      "sha256": "daeebccace25a4bbf2885c469d5765fb862b5a2f32c0440f2aa1cd5f575be45c"
+    },
+    {
+      "path": "src/pdx/usage.py",
+      "sha256": "42d3edb2965b43ae122368fe69e7fb2076c9e0ad97af2be6e96dca2958dc3628"
+    },
+    {
+      "path": "src/pdx/vanilla_index.py",
+      "sha256": "bf9e530135661f9da7e6764ca06765278fe0abfd83376b1eae29d7153013cb20"
+    },
+    {
+      "path": "src/pdx/verify.py",
+      "sha256": "6c178930b87ff37cc99faa81dd0aa28106734c184796fdb035dba3b1d08ce130"
+    }
+  ],
+  "historical_inventory_sha256": "74cacfafaee9429d8f5d2e1026f1ee54aa76618adc31b167f30581e413e56758",
+  "historical_rows_sha256": "741ca8648e4defad296bbc78db1381b0cd552780077f7cc5b9613ce3d2aa03be",
+  "historical_sources": [
+    {
+      "bytes": 2525512,
+      "path": "mod/decisions/action_bindings.toml",
+      "sha256": "d9e81fc2b729a37ecf4a83c9b62255ae848bc49e84b3a9de09fe7838ffb40fae"
+    },
+    {
+      "bytes": 1882,
+      "path": "mod/decisions/action_families.toml",
+      "sha256": "8dc294d5d2f148fe3a8efd1e4b32574bc434aa72aaf1ae604a814436c9799d7c"
+    },
+    {
+      "bytes": 3579,
+      "path": "mod/decisions/action_layers.toml",
+      "sha256": "f22cfe2b6eefc6f046323750e4d85e8f39415a72d2b754910d7821643ff362dc"
+    },
+    {
+      "bytes": 10150,
+      "path": "mod/decisions/actions.toml",
+      "sha256": "242467a779cdf99692b959cce72e8da25ba1a734c76478f876e83dbe779f270b"
+    },
+    {
+      "bytes": 1399002,
+      "path": "mod/decisions/adapters.toml",
+      "sha256": "0b04f6e54741d2817c0fdd509b772c089b2d0c8f4cfb90fd2bf78ae3a2820203"
+    },
+    {
+      "bytes": 309,
+      "path": "mod/decisions/building_opportunities.toml",
+      "sha256": "59e40b9034ce64fcaf6971cca5ec44105616931ad5ff39f1e7cd24d41ad37922"
+    },
+    {
+      "bytes": 804,
+      "path": "mod/decisions/capacities.toml",
+      "sha256": "90571ea955b465d8b3a68c4ea88aa536f399fc52f3a19015d7451b1da255318d"
+    },
+    {
+      "bytes": 594,
+      "path": "mod/decisions/commitments.toml",
+      "sha256": "bbe2ac21aeff2463f796594f6296088c6fd83be2e703487d23bf3a11b86de3c3"
+    },
+    {
+      "bytes": 423,
+      "path": "mod/decisions/company_sectors.toml",
+      "sha256": "d99e1c8e603c4f01dd3c5f81c5173f990b7246b899f06d91fb3349e8bdd22bc8"
+    },
+    {
+      "bytes": 1117,
+      "path": "mod/decisions/consumers.toml",
+      "sha256": "05ff7f028fe81ad7c7cf5d23b4ba259e25ee0252c1fb4b137a3da229da7bbdc1"
+    },
+    {
+      "bytes": 6037,
+      "path": "mod/decisions/country_state.toml",
+      "sha256": "2a7f83b6d48a9ecc97af8298041775882d6f09a23e1b26b728170b6bc0705af4"
+    },
+    {
+      "bytes": 239,
+      "path": "mod/decisions/diplomatic_goals.toml",
+      "sha256": "cd771cbdd84da2f85d44b223dd489a968320910e73d526316b256bb6c8eb0319"
+    },
+    {
+      "bytes": 6574,
+      "path": "mod/decisions/domain_actions.toml",
+      "sha256": "617e016a86227e36a5b10d4c9069b8b2c26d9529fcf29368e6b62fc67341c452"
+    },
+    {
+      "bytes": 258,
+      "path": "mod/decisions/economy.toml",
+      "sha256": "1df101cd289aaac2e0263409591cb3b6780350df60e6d12d870d6c3bb1bdd313"
+    },
+    {
+      "bytes": 337,
+      "path": "mod/decisions/equipment_opportunities.toml",
+      "sha256": "64b58575583c5003354b3713259335b8b670caeb9deb405512aac1b3129aa882"
+    },
+    {
+      "bytes": 1426,
+      "path": "mod/decisions/extensions.toml",
+      "sha256": "6c77a21e5854b77d87edcd8cce880b02035dbca2c6a1964fb4340522c577ebeb"
+    },
+    {
+      "bytes": 4252,
+      "path": "mod/decisions/facts.toml",
+      "sha256": "9ca45c8493b67423f3ab2d471e4c08d34e5c584f308a242d988f417b7578fa0f"
+    },
+    {
+      "bytes": 1276,
+      "path": "mod/decisions/fiscal.toml",
+      "sha256": "af93a625a46763981203123bcca8d37b0ccbbf85ae95d675e479a9c30975c9d2"
+    },
+    {
+      "bytes": 562,
+      "path": "mod/decisions/goals.toml",
+      "sha256": "a666d9024939a576baa71fa9c0cb6adf35675b1f7996aed33befb5a860fc32f6"
+    },
+    {
+      "bytes": 47349,
+      "path": "mod/decisions/information.toml",
+      "sha256": "c9086f9da9191a8a64f828ab19a732a75613cc2dfed7cd1a4fae9e030d3111d1"
+    },
+    {
+      "bytes": 4165,
+      "path": "mod/decisions/law_opportunities.toml",
+      "sha256": "e37699c1a4161262f7ae871e3f5701a345ea625cde67a7aacaa10bc1eee7b15c"
+    },
+    {
+      "bytes": 208,
+      "path": "mod/decisions/localization.toml",
+      "sha256": "a056f2f2bde2ba356b00457d1d88d298b0ccfea07a4599b7155a4f1be828d94a"
+    },
+    {
+      "bytes": 418,
+      "path": "mod/decisions/mobilization_opportunities.toml",
+      "sha256": "fc235ecb86bdcc1f6072962767a580e0b17eda5d6af2b84febcf2995081f3975"
+    },
+    {
+      "bytes": 838,
+      "path": "mod/decisions/opportunities.toml",
+      "sha256": "525008b8d61b7a70bc816a542ec9293867a3d2023f3c49c9fc0f9add472d9014"
+    },
+    {
+      "bytes": 535,
+      "path": "mod/decisions/pressures.toml",
+      "sha256": "281b0c0f18b7981176478cf11193b00cfadc1dd069f315f5c12e96db3ccaee69"
+    },
+    {
+      "bytes": 1209,
+      "path": "mod/decisions/relations.toml",
+      "sha256": "bd15ab189c75ef44234eb7cca7e1a11340c4c8931fb08c58fd4dafec01fa610d"
+    },
+    {
+      "bytes": 958,
+      "path": "mod/decisions/strategic.toml",
+      "sha256": "74bb1156320daa300c1ee2244f82e38694fbc07735eb4d058182d562efbba7cd"
+    },
+    {
+      "bytes": 515327,
+      "path": "mod/decisions/technology_opportunities.toml",
+      "sha256": "cdbf7aae01d7c6111a992dc90e00d1508b131c3ae39a859f5d445da76bc39e03"
+    },
+    {
+      "bytes": 320,
+      "path": "mod/decisions/treaty_opportunities.toml",
+      "sha256": "074e69772e39b8fadff9706ad64dac1bdec470511ea8c7d15b46d463adf7234e"
+    }
+  ],
+  "historical_version": "1.14.5",
+  "original_scan_failures": [
+    {
+      "failure": {
+        "detail": "'utf-8' codec can't decode byte 0xa9 in position 2038: invalid start byte",
+        "error": "UnicodeDecodeError",
+        "kind": "decode_or_parse",
+        "path": "game/licenses/software/FTL.txt"
+      },
+      "source_bytes": 6741,
+      "source_sha256": "f4b133e25df1f86ad3ffea453aa0e613f0474f34778dbbb3e437e7b2724937d8"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 18 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_01/female_headgear_japanese_common_01.asset"
+      },
+      "source_bytes": 1320,
+      "source_sha256": "98972ec7188ae8fe77e9b017b5b1eaf935b0c4c5392f77546670abf74686b52a"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 18 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_02/female_headgear_japanese_common_02.asset"
+      },
+      "source_bytes": 1320,
+      "source_sha256": "8ca627d15baed96f52100e2c8b3c7aed6d12454de8475aa01e08b66580f8fbfa"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 18 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_03/female_headgear_japanese_common_03.asset"
+      },
+      "source_bytes": 1320,
+      "source_sha256": "10eea503ceb4c08d2366d247eac9db7731141e6f88f184d39116c772ef905eb5"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 18 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/male_headgear/european_military/male_headgear_polish_military_02/male_headgear_polish_military_02.asset"
+      },
+      "source_bytes": 1092,
+      "source_sha256": "4bc5b20cb3b34bd63109975917b179205bbfcc06206b422585c46ef818b9092d"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 18 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_01/male_headgear_japanese_common_01.asset"
+      },
+      "source_bytes": 1292,
+      "source_sha256": "639dfeb98b1dd6d24d412f88cc57cf6532b0d9876eedfcd47c820530b3bf5c3c"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 19 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_04/female_headgear_japanese_common_04.asset"
+      },
+      "source_bytes": 1341,
+      "source_sha256": "87e6b402fdaa18c3ba38a0b45b7ab2c73866d472910775e1dc8406629f0a16d1"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 20 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_02/male_headgear_japanese_common_02.asset"
+      },
+      "source_bytes": 1293,
+      "source_sha256": "e44b222bd5e44e8f33718f2e90b1c85679fbdcac97b3d68f1e890c5eb6932348"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 20 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_03/male_headgear_japanese_common_03.asset"
+      },
+      "source_bytes": 1293,
+      "source_sha256": "424210f5d8b27601babd8cf96c99b02f0cb20e8442a55dd69101ae387c62afa1"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 20 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_04/male_headgear_japanese_common_04.asset"
+      },
+      "source_bytes": 1311,
+      "source_sha256": "a129f2dcecbfb2480bbcf2b985664ba2ed8c08d382b31b2da8a40b4cda1e8b41"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 20 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_eboshi_01/male_headgear_japanese_eboshi_01.asset"
+      },
+      "source_bytes": 1298,
+      "source_sha256": "986a9d93f78f83f0a15ca4d9249032fbf29cea1d887c373b94aef90a3290dd87"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 4 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/common/dna_data/00_bal_gangadhar_tilak.txt"
+      },
+      "source_bytes": 8094,
+      "source_sha256": "d5343c8ea68128f67aa4e132a28377f0ec3c556ab488f1a6887a13667380762d"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 4 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/common/dna_data/00_mahatma_gandhi.txt"
+      },
+      "source_bytes": 8165,
+      "source_sha256": "19c47321d7cd1acc8e4cf2035e61c2c82a667c158cbc67134f6be40ea4b496f4"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 4 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/common/dna_data/00_rani_lakshmibai.txt"
+      },
+      "source_bytes": 8082,
+      "source_sha256": "893b707f635c48c76bcd8b2a38afd0e897100184df12de6c36eac6b486f95b75"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 4 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/common/dna_data/00_sarojni_naidu.txt"
+      },
+      "source_bytes": 8015,
+      "source_sha256": "228f994eea419a1d717581e5c08b1ca627acb0c95565738d4ab619139ccc23d4"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 4 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/common/dna_data/00_zhou_xuexi.txt"
+      },
+      "source_bytes": 8482,
+      "source_sha256": "6effdf338a405a1ce31afa527d873e99cee2da167e3fe58fa3f439a18eeff7dc"
+    },
+    {
+      "failure": {
+        "errors": [
+          "第 5 行开始的块没有闭合的花括号"
+        ],
+        "kind": "parse",
+        "path": "game/common/dna_data/00_iwasaki_yataro.txt"
+      },
+      "source_bytes": 8490,
+      "source_sha256": "b7af41c2e44945256383276e9afddbc59dfca3b37131f9d64598afa0161346b2"
+    }
+  ],
+  "physical_redirects": [
+    {
+      "authority": "src/pdx/situated/compiler.py; information consumer lowering and default strategy insertion",
+      "historical_field": [
+        "institution_scores",
+        "institution_schools"
+      ],
+      "historical_source": "mod/decisions/information.toml",
+      "r2_consumer": "a0-pol-schools",
+      "rationale": "The historical information RuleSet lowers this field into ai_strategy_default in common/ai_strategies/00_default_strategy.txt. R2 now owns the same physical school score through its explicit action and bridges; no old multiplier policy is inherited."
+    }
+  ],
+  "runtime": "unknown",
+  "schema": "situated-ai.a0-disposition-authority/1",
+  "scope_decision": {
+    "compatibility": "retained only in broad engineering compiler; not installed by the R2 six-file package",
+    "policy_source": "mod/decisions/action_network_115.toml",
+    "r2_production_consumers": [
+      "a0-econ-road",
+      "a0-pol-schools",
+      "a0-dip-relations"
+    ],
+    "rationale": "R2 replaces the old condition-rule policy architecture with an explicitly bounded three-consumer ActionBridge source. No historical reader/action/writer/strategy acquires R2 write permission merely by compiling under 1.15.",
+    "unmapped_old_policy": "retired_from_r2; native_retained"
+  }
+}

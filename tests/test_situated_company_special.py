@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import company_sectors, config
+from pdx import company_sectors, config, decision_adapters, decision_rules, version_contracts
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 
@@ -182,6 +182,13 @@ def native():
 
 @pytest.mark.integration
 def test_current_exe_and_scripts_match_independent_default_witnesses(evidence):
+    if version_contracts.is_115():
+        from pdx.situated import engine_scope_115
+
+        path, _identity, digest = engine_scope_115.manifest("company-default")
+        frozen = path.read_bytes()
+        assert hashlib.sha256(frozen).hexdigest() == digest
+        evidence = json.loads(frozen)
     executable = config.GAME.parent / evidence["exe"]["path"]
     if not executable.is_file():
         pytest.skip("locked Victoria 3 Windows executable unavailable")
@@ -194,6 +201,31 @@ def test_current_exe_and_scripts_match_independent_default_witnesses(evidence):
         assert raw[start : start + len(expected)] == expected
     for source, expected_sha in evidence["script_hashes"].items():
         assert hashlib.sha256((config.GAME / source).read_bytes()).hexdigest() == expected_sha
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_company_consumer_metadata_names_selected_independent_scope_evidence(version):
+    from pdx.situated import engine_scope
+
+    with version_contracts.select_version(version):
+        source, policy = next(
+            (source, policy)
+            for source, policy in decision_adapters.load().policies
+            if source.startswith("common/company_types/")
+        )
+        contract = decision_rules.contract(policy, owner="consumer_adapters", source=source)
+        path, identity, digest = engine_scope._company_manifest()
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
+        assert engine_scope.company_snapshot() == path.read_bytes()
+        assert identity == f"research/situated/victoria3-{version}-company-scope.json"
+        rules = contract["rules"]
+        assert isinstance(rules, list)
+        assert rules
+        for rule in rules:
+            assert isinstance(rule, dict)
+            assert rule["consumer"]["scope_evidence"] == identity
+            assert rule["consumer"]["role"] == "vanilla_company_base_candidate_weight"
 
 
 @pytest.mark.integration
@@ -222,16 +254,31 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
     expected = set(MIXED_SPECIAL)
     for names in SPECIAL_GROUPS.values():
         expected.update(names)
+    current = version_contracts.is_115()
+    migrated_shipyards = {"company_ap_moller", "company_sudamericana_de_vapores"}
+    if current:
+        expected -= migrated_shipyards
+    if version_contracts.active_version() == "1.15.1":
+        # Anchorage now supplies local services; every base-port PM produces
+        # goods, so the port recipe includes merchant-marine market outputs.
+        expected -= {"company_white_star_line", *MIXED_SPECIAL}
     actual = {
         name
         for name, row in profiles.items()
         if row["explicit_weight"] and not row["market_outputs"]
     }
     assert actual == expected
-    assert len(actual) == 25
+    assert (
+        len(actual)
+        == {"1.14.5": 25, "1.15.0": 23, "1.15.1": 19}[version_contracts.active_version()]
+    )
     for building, names in SPECIAL_GROUPS.items():
         for name in names:
-            assert profiles[name]["primary"] == [building]
+            if current and name in migrated_shipyards:
+                assert profiles[name]["primary"] == ["building_shipyard"]
+                assert profiles[name]["market_outputs"] == ["clippers", "steamers"]
+            else:
+                assert profiles[name]["primary"] == [building]
     for name, buildings in MIXED_SPECIAL.items():
         assert set(profiles[name]["primary"]) == buildings
 
@@ -243,19 +290,21 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
         ("company_gwr", "transportation", "local_good_requires_state_market_evidence"),
         ("company_calcutta_electric", "electricity", "local_good_requires_state_market_evidence"),
         ("company_de_beers", "gold", "fixed_price_good_retains_native_mechanism"),
-        ("company_ap_moller", None, "no_mandatory_output_recipe_group"),
+        ("company_white_star_line", None, "no_mandatory_output_recipe_group"),
         ("company_suez_company", None, "no_goods_output_native_service"),
     ],
 )
 def test_special_recipe_exclusions_have_independent_native_causes(native, company, good, reason):
     _inputs, profiles = native
+    if version_contracts.active_version() == "1.15.1" and company == "company_white_star_line":
+        good, reason = "services", "local_good_requires_state_market_evidence"
     assert any(
         row["good"] == good and row["reason"] == reason for row in profiles[company]["native_only"]
     )
 
 
 @pytest.mark.integration
-def test_merchant_marine_is_ordinary_good_but_port_has_outputless_option(native):
+def test_merchant_marine_and_versioned_port_outputs_retain_native_options(native):
     inputs, profiles = native
     goods = []
     for source, text in inputs.items():
@@ -266,6 +315,51 @@ def test_merchant_marine_is_ordinary_good_but_port_has_outputless_option(native)
     for flag in ("local", "fixed_price"):
         assert goods[0].value.all(flag) == []
     assert goods[0].value.all("tradeable") == []
-    port = profiles["company_ap_moller"]["base_recipes"][0]
-    assert port["potential_outputs"] == ["merchant_marine"]
-    assert port["market_outputs"] == []
+    # White Star remains a real port consumer in both versions. The two
+    # current shipyard companies are checked independently above.
+    port = profiles["company_white_star_line"]["base_recipes"][0]
+    if version_contracts.active_version() == "1.15.1":
+        # Independent exact AST witnesses for the newly productive anchorage,
+        # all four native base methods, and the local-services exclusion.
+        methods = parse_text(inputs["common/production_methods/11_private_infrastructure.txt"]).root
+        group_entry = parse_text(
+            inputs["common/production_method_groups/07_government.txt"]
+        ).root.first("pmg_base_building_port")
+        assert group_entry is not None
+        assert isinstance(group_entry.value, Block)
+        method_list = group_entry.value.first("production_methods")
+        assert method_list is not None
+        assert isinstance(method_list.value, Block)
+        names = [node.text for node in method_list.value.scalars()]
+        assert names == ["pm_anchorage", "pm_basic_port", "pm_industrial_port", "pm_modern_port"]
+        for name, good, quantity in (
+            ("pm_anchorage", "services", "0.5"),
+            ("pm_basic_port", "merchant_marine", "9"),
+            ("pm_industrial_port", "merchant_marine", "20"),
+            ("pm_modern_port", "merchant_marine", "30"),
+        ):
+            method = methods.first(name)
+            assert method is not None
+            assert isinstance(method.value, Block)
+            modifiers = method.value.first("building_modifiers")
+            assert modifiers is not None
+            assert isinstance(modifiers.value, Block)
+            workforce = modifiers.value.first("workforce_scaled")
+            assert workforce is not None
+            assert isinstance(workforce.value, Block)
+            output = workforce.value.first(f"goods_output_{good}_add")
+            assert output is not None
+            assert isinstance(output.value, Scalar)
+            assert output.value.unquoted == quantity
+        assert port["potential_outputs"] == ["merchant_marine", "services"]
+        assert port["market_outputs"] == ["merchant_marine"]
+        service = parse_text(inputs["common/goods/00_goods.txt"]).root.first("services")
+        assert service is not None
+        assert isinstance(service.value, Block)
+        local = service.value.first("local")
+        assert local is not None
+        assert isinstance(local.value, Scalar)
+        assert local.value.unquoted == "yes"
+    else:
+        assert port["potential_outputs"] == ["merchant_marine"]
+        assert port["market_outputs"] == []

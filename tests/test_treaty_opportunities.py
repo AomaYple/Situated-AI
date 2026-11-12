@@ -287,13 +287,15 @@ def test_zero_cost_ship_transfer_and_missing_fields_are_not_initialized(raw, bas
     assert reasons["ship_transfer"] == "no_role_safe_new_contribution"
     assert baseline["candidates"]["ship_transfer"]["cost"] == "0"
     assert baseline["candidates"]["ship_transfer"]["weight_shape"] == "block"
-    assert sum(row["weight_shape"] == "block" for row in baseline["candidates"].values()) == 8
+    assert sum(row["weight_shape"] == "block" for row in baseline["candidates"].values()) == (
+        15 if treaty.version_contracts.is_115() else 8
+    )
     assert len(derived["covered"]) == 10
     assert len(derived["rules"]) == 27
-    assert {row["reason"] for row in derived["uncovered"]} == {
-        "no_role_safe_new_contribution",
-        "missing_native_proposal_weight",
-    }
+    expected_reasons = {"no_role_safe_new_contribution", "missing_native_proposal_weight"}
+    if treaty.version_contracts.is_115():
+        expected_reasons.add("no_reviewed_article_policy")
+    assert {row["reason"] for row in derived["uncovered"]} == expected_reasons
     assert not {"initial_values", "scalar_values", "actors", "contexts"} & derived.keys()
     assert all(
         spec["scope"] == "root" and "path" not in spec for spec in derived["readers"].values()
@@ -305,19 +307,21 @@ def test_influence_getter_has_exact_native_country_path_and_raw_identity(baselin
     assert proof == {
         "engine": "influence",
         "kind": "number",
-        "line": 142,
+        "line": 153 if treaty.version_contracts.is_115() else 142,
         "path": ["expel_diplomats", "ai", "will_propose", "OR", "AND", "OR", "influence"],
         "scope": "root",
         "source": GETTER,
         "unit": "capacity_balance",
     }
-    assert (
-        baseline["originals"][GETTER]["sha256"]
-        == "c8c7d92a001edd3341897aa34f6265fb0d9f15de02c178d40b1df7ce98a08df3"
+    assert baseline["originals"][GETTER]["sha256"] == (
+        "634b87f8eb3a55d4742e5bf724d6b993c570736765898a97070cebea75893d4f"
+        if treaty.version_contracts.is_115()
+        else "c8c7d92a001edd3341897aa34f6265fb0d9f15de02c178d40b1df7ce98a08df3"
     )
-    assert (
-        baseline["sources"][GETTER]
-        == "9bca63b14f0811d7381a658a567a3a84247242157275ed5a85b05857b47622fb"
+    assert baseline["sources"][GETTER] == (
+        "a1187db53529e92f733775a5d51746d7c6fc0dac8b15e6cf8b2e139298afc678"
+        if treaty.version_contracts.is_115()
+        else "9bca63b14f0811d7381a658a567a3a84247242157275ed5a85b05857b47622fb"
     )
 
 
@@ -378,8 +382,20 @@ def test_repin_cannot_hide_metadata_or_byte_inconsistency(
         data["candidates"]["alliance"]["target_country"] = True
     path = tmp_path / "baseline.json"
     path.write_text(treaty._canonical(data), encoding="utf-8", newline="\n")
-    monkeypatch.setattr(treaty, "BASELINE", path)
-    monkeypatch.setattr(treaty, "BASELINE_SHA256", hashlib.sha256(path.read_bytes()).hexdigest())
+    monkeypatch.setattr(
+        treaty,
+        "baseline_path",
+        lambda: path,
+    )
+    monkeypatch.setattr(
+        treaty,
+        "BASELINE_SHA256_1151"
+        if treaty.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
+        if treaty.version_contracts.is_115()
+        else "BASELINE_SHA256",
+        hashlib.sha256(path.read_bytes()).hexdigest(),
+    )
     with pytest.raises(ValueError):
         treaty.load_baseline()
 
@@ -563,8 +579,10 @@ def test_evaluation_probability_has_exact_root_capacity_cost(
         ("transit_rights", 1, 0.8),
     ],
 )
+@pytest.mark.parametrize("russian_agenda", [False, True])
+@pytest.mark.parametrize("journal_agenda", [False, True])
 def test_evaluation_preserves_real_native_rank_add_zero_and_input_tail(
-    raw, baseline, candidate, native, expected
+    raw, baseline, candidate, native, expected, russian_agenda, journal_agenda
 ):
     policy = _policy(treaty.derive(raw, baseline), candidate)
     text = _patch(baseline, candidate, policy)
@@ -610,6 +628,35 @@ def test_evaluation_preserves_real_native_rank_add_zero_and_input_tail(
         assert access is not None
         assert access.op == "<="
         limit.value = parse_text("always = yes" if native else "always = no").root
+    if treaty.version_contracts.is_115() and candidate != "transit_rights":
+        native_conditions = [
+            ("c:RUS ?= this has_variable = ai_russia_client_bloc_pending", russian_agenda, 0.15),
+        ]
+        if candidate == "foreign_investment_rights":
+            native_conditions.append(
+                (
+                    (
+                        "has_journal_entry = je_tp_tsar_heir_of_alexander "
+                        "NOT = { has_variable = je_tp_tsar_heir_of_alexander_button_2_complete }"
+                    ),
+                    journal_agenda,
+                    0.5,
+                )
+            )
+        for predicate, observed, increment in native_conditions:
+            wanted = treaty._ast(parse_text(predicate).root)
+            matches = []
+            for node in cloned.assignments():
+                if node.key != "if" or not isinstance(node.value, Block):
+                    continue
+                native_limit = node.value.first("limit")
+                if native_limit is not None and treaty._ast(native_limit.value) == wanted:
+                    matches.append(native_limit)
+            assert len(matches) == 1
+            # As with the rank above, supply the native predicate observation;
+            # the independent evaluator does not guess optional country-tag semantics.
+            matches[0].value = parse_text("always = yes" if observed else "always = no").root
+            expected += increment * 0.8 if observed else 0
     assert pdx_eval._numeric_value(Assignment("multiply", "=", cloned), facts) == pytest.approx(
         expected
     )

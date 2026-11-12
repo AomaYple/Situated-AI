@@ -88,6 +88,7 @@ from pdx import (
     unknowns,
     vanilla_index,
     verify,
+    version_contracts,
 )
 from pdx import mods as mods_mod
 from pdx.console import enable_utf8_stdio
@@ -97,6 +98,9 @@ from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
 from pdx.situated import bindings as situated_bindings
 from pdx.situated import domain_coverage as situated_domain_coverage
 from pdx.situated import inventory as situated_inventory
+from pdx.situated import network_profile as situated_network_profile
+from pdx.situated import production_profile as situated_production_profile
+from pdx.situated import profile_configuration
 
 # 必须在构造 Console 之前调用 —— 理由见 pdx/console.py 的模块文档：
 # rich 替代不了编码兜底，GBK 重定向下它自己就会抛 UnicodeEncodeError。
@@ -130,6 +134,13 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
 )
+
+
+@app.callback()
+def _command_lifetime(context: typer.Context) -> None:
+    """Release only completed-command memo ownership, including failure exits."""
+    context.call_on_close(cache.release_memo)
+
 
 situated_app = typer.Typer(
     help="处境行动内核的静态审计、报告和解释。",
@@ -667,6 +678,7 @@ def defines_cmd(
 # ── index ───────────────────────────────────────────────────
 #: 全量键名索引的落点。由 `v3 index` 重新生成。
 OUT_INDEX_DOC = config.DOCS / "13-common全量键名索引.md"
+_STARTUP_OUT_INDEX_DOC = OUT_INDEX_DOC
 
 
 def _build_index_doc() -> tuple[str, dict[str, int]]:
@@ -816,15 +828,20 @@ def index_cmd(
         console.print("[yellow]--dry-run：未写文件[/]")
         return
 
+    output_doc = (
+        OUT_INDEX_DOC
+        if OUT_INDEX_DOC != _STARTUP_OUT_INDEX_DOC
+        else config.docs_root() / OUT_INDEX_DOC.name
+    )
     try:
         # newline="\n"：见 analyze.dump 的注释 —— 否则文档在 Windows 上写成
         # CRLF，与 .gitattributes 的 eol=lf 打架，每次 `v3 index` 都弄脏工作树。
-        OUT_INDEX_DOC.write_text(text, encoding="utf-8", newline="\n")
+        output_doc.write_text(text, encoding="utf-8", newline="\n")
     except OSError as exc:
-        _fail(f"无法写入 {OUT_INDEX_DOC}：{type(exc).__name__}: {exc}")
+        _fail(f"无法写入 {output_doc}：{type(exc).__name__}: {exc}")
     console.print(
-        f"[green]已写入[/] {escape(_relative(OUT_INDEX_DOC))}  "
-        f"行数 {len(text.splitlines()):,}  字节 {OUT_INDEX_DOC.stat().st_size:,}"
+        f"[green]已写入[/] {escape(_relative(output_doc))}  "
+        f"行数 {len(text.splitlines()):,}  字节 {output_doc.stat().st_size:,}"
     )
 
 
@@ -1027,6 +1044,20 @@ def snap_diff(
         )
 
 
+def _matches_json_text(expected: str, value: Any) -> bool:
+    """Compare the complete encoded text without retaining a second JSON copy."""
+    encoder = json.JSONEncoder(ensure_ascii=False, indent=1, sort_keys=True)
+    offset = 0
+    matches = True
+    for chunk in encoder.iterencode(value):
+        if not expected.startswith(chunk, offset):
+            matches = False
+        offset += len(chunk)
+    # Consume every chunk even after a mismatch so later encoding errors retain
+    # the same failure behavior as json.dumps of the complete second snapshot.
+    return matches and offset == len(expected)
+
+
 @snapshot_app.command("verify")
 def snap_verify() -> None:
     """自我一致性检查：同一环境重复生成的快照必须逐字节相同。
@@ -1038,9 +1069,8 @@ def snap_verify() -> None:
     first = snapshot.build()
     second = snapshot.build()
     da = json.dumps(first.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
-    db = json.dumps(second.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
 
-    if da == db:
+    if _matches_json_text(da, second.to_dict()):
         total = sum(len(names) for body in first.sections.values() for names in body.values())
         console.print("[green]✅ 两次构建结果完全一致 —— 快照是确定性的[/]")
         console.print(f"   域 {len(first.sections)} 个，条目总计 {total:,}")
@@ -1195,7 +1225,7 @@ def refresh_cmd(
     console.rule("[bold]3/3 核验剩下的[/]")
     marker_issues = verify.check_markers()
     drift = verify.unknown_doc_drift()
-    results = verify.run_claims(verify.CLAIMS, include_slow=True)
+    results = verify.run_claims(verify.current_claims(), include_slow=True)
     failed = [r for r in results if not r.ok]
     console.print(
         f"  断言 {len(results) - len(failed)} / {len(results)} 通过"
@@ -1363,7 +1393,10 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
     抽成独立函数而不是塞在 ``verify_cmd`` 里，是为了让「无游戏也能跑」
     这条路径足够显眼 —— 它是 CI 上唯一能真正核对断言的入口。
     """
-    snap = verify.latest_compact_snapshot()
+    try:
+        snap = verify.latest_compact_snapshot()
+    except _READ_ERRORS as exc:
+        _fail(f"当前版本离线快照无法读取：{type(exc).__name__}: {exc}")
     if snap is None:
         # 不再直接退出：官方文档清单是第二份离线真值，没有快照时它照样能核验。
         console.print(
@@ -1374,7 +1407,7 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
 
     selected = [c for c in claims if not only or only in c.id]
     if only and not selected:
-        _fail(f"没有 id 含 {only!r} 的断言（注册表共 {len(verify.CLAIMS)} 条）")
+        _fail(f"没有 id 含 {only!r} 的断言（注册表共 {len(verify.current_claims())} 条）")
 
     results = verify.verify_from_snapshot(snap, selected)
     if not results:
@@ -1407,7 +1440,7 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
     covered = len(results)
     console.print(
         f"通过 {covered - len(failed)} / {covered}    失败 {len(failed)}"
-        f"    [dim]（离线真值覆盖 {covered}/{len(verify.CLAIMS)} 条；"
+        f"    [dim]（离线真值覆盖 {covered}/{len(verify.current_claims())} 条；"
         f"其余需读游戏本体，本地跑 v3 verify）[/]"
     )
     for r in failed:
@@ -1540,11 +1573,11 @@ def verify_cmd(
         return
 
     if from_snapshot:
-        _verify_from_snapshot(claims=verify.CLAIMS, only=only, no_drift=no_drift)
+        _verify_from_snapshot(claims=verify.current_claims(), only=only, no_drift=no_drift)
         return
 
     _require_game()
-    claims = verify.CLAIMS
+    claims = verify.current_claims()
     if unregistered:
         # 覆盖率扫描：文档里还有哪些「数量」没进断言表。
         # 它是**排查工具**不是门禁 —— 输出刻意宽松（宁可多报），退出码 0。
@@ -1573,7 +1606,7 @@ def verify_cmd(
             # 会静默报成功，是最容易骗过 CI 的一类假绿灯。
             _fail(
                 f"没有 id 含 {only!r} 的断言"
-                f"（注册表共 {len(verify.CLAIMS)} 条；用 v3 verify 不带 --only 查看全部）"
+                f"（注册表共 {len(verify.current_claims())} 条；用 v3 verify 不带 --only 查看全部）"
             )
 
     results = verify.run_claims(claims, include_slow=not fast)
@@ -1841,24 +1874,22 @@ def crosscheck_cmd(
 
     if unverifiable:
         console.print(
-            "\n[yellow]⚠️ 不可核对："
-            f"{len(unverifiable)} 条 token 断言所在文件被 mod 覆盖、与原版不是同一套行号"
-            "（行数不同／文件被删）⇒ 行号无从核对。[/]"
+            f"\n[yellow]⚠️ 不可核对：{len(unverifiable)} 条 token 断言的版本或行号不具备可比性。[/]"
         )
         console.print(
             "[yellow]   结论 = 不可核对（既不是通过，也不是不一致；本命令退出码 3）："
             "验不了的不是解析器，是我们与引擎读的不是同一份内容。[/]"
         )
         for v in unverifiable:
-            where = (
-                f"覆盖版里别处有（第 {v.ours} 行）" if v.ours is not None else "覆盖版整份都没有"
+            console.print(
+                f"   ⚠️ {escape(v.file_rel)}  日志第 {v.line} 行 {escape(repr(v.token))}"
+                f" —— {escape(v.reason)}"
             )
-            console.print(f"   ⚠️ {v.file_rel}  日志第 {v.line} 行 {v.token!r} —— {where}")
         if override_source:
             console.print("   覆盖来源（引擎读的是它，我们读的也是它）：")
             for rel in sorted(override_source):
                 console.print(f"     ⚠️ {rel}  ←  {_relative(override_source[rel])}")
-        else:
+        elif not any(v.kind == engine_log.KIND_VERSION_INCOMPARABLE for v in unverifiable):
             # 文件整份缺失的那一档没有覆盖来源可写：宁可少写一行，也不写空标题。
             console.print("   覆盖来源：无（生效文件整份缺失，不是被覆盖版持有）。")
         if misplaced:
@@ -2474,7 +2505,7 @@ def ai_surface_cmd(
             _fail(str(exc))
         if problem:
             _fail(problem)
-        console.print(f"[green]{escape(ai_surface.DOC_REL)} 与生成结果一致 ✅[/]")
+        console.print(f"[green]{escape(ai_surface.doc_path().as_posix())} 与生成结果一致 ✅[/]")
         if offline:
             index = ai_surface.offline_source()
             source = index.describe() if index is not None else "?"
@@ -2526,7 +2557,7 @@ def ai_surface_cmd(
         f"\ndefines 面：`00_ai.txt` {defines.lines} 行 / NAI 块 {defines.nai_keys} 键 / "
         f"原版子系统开关 {len(defines.enabled_switches)} 个 / `AI_*` 条目 {len(defines.ai_keys)} 个。"
     )
-    console.print("跑 `v3 ai-surface --write` 生成 `docs/design/02-可执行面.md`。")
+    console.print(f"跑 `v3 ai-surface --write` 生成 `{ai_surface.doc_path().as_posix()}`。")
 
 
 # ── political-surface（M5：政治候选静态语义）────────────────────
@@ -2646,26 +2677,96 @@ def _modgen_output_changes(production: dict[str, str | bytes]) -> dict[Path, byt
         }
 
 
+def _production_profile(
+    name: str | None,
+    configuration: Path | None = None,
+    *,
+    offline: bool = False,
+    context: typer.Context | None = None,
+):
+    """Require reviewed installed originals for every online production entry.
+
+    Offline checks retain the reproducible frozen input contract. Online calls
+    verify both that contract and the complete installed identity/reader closure;
+    a missing installation never silently selects the frozen copy instead.
+    """
+    selected = version_contracts.active_version(name)
+    if name is not None and context is not None:
+        scope = version_contracts.select_version(selected)
+        scope.__enter__()
+        context.call_on_close(lambda: scope.__exit__(None, None, None))
+    # A direct helper call has no command lifetime: select only while resolving,
+    # then restore its caller's context. Typer supplies the actual command's
+    # Context above; its vendored Click globals are distinct from click globals.
+    with version_contracts.select_version(selected):
+        if selected == "1.15.1":
+            situated_production_profile.verify_baseline()
+            if not offline:
+                frozen = situated_production_profile.load_profile(
+                    situated_production_profile.baseline_root()
+                )
+                distribution.check_profile_installation(frozen)
+            # The current profile uses the complete standard generation path.
+            return None
+        if name is None:
+            if configuration is not None:
+                raise ValueError("历史完整兼容入口不接受 --configuration；请显式选择 profile")
+            return None
+        if selected != "1.15.0":
+            if configuration is not None:
+                raise ValueError("历史版本不接受 --configuration")
+            return None
+        situated_production_profile.verify_baseline()
+        frozen = situated_production_profile.load_profile(
+            situated_production_profile.baseline_root()
+        )
+        return frozen if offline else distribution.check_profile_installation(frozen)
+
+
+def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutral"] = "policy"):
+    """Resolve configuration once at the CLI boundary."""
+    if path is None:
+        return profile_configuration.ProfileConfiguration(mode=mode)
+    return profile_configuration.load(path)
+
+
 @app.command("modgen")
 def modgen_cmd(
+    context: typer.Context,
     write: Annotated[bool, typer.Option("--write", help="生成唯一正式 Mod 的仓库产物")] = False,
     check: Annotated[bool, typer.Option("--check", help="逐字节核对生成物，不写盘")] = False,
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
+    ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """从生产 TOML 和锁定原版底本生成标准 Mod；生成物禁止手改。"""
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
+        selected_profile = _production_profile(profile, configuration, context=context)
+        if selected_profile is not None:
+            resolved = _profile_configuration(configuration)
+            if write:
+                files = distribution.write_profile_outputs(selected_profile, configuration=resolved)
+                console.print(f"[green]已生成 1.15.0 {resolved.mode} 产物：{len(files)} 个文件[/]")
+            elif check:
+                distribution.check_profile_outputs(selected_profile, configuration=resolved)
+                console.print("[green]1.15.0 隔离产物与 profile lock 逐字节一致[/]")
+            else:
+                console.print("Situated AI 1.15.0 profile：使用 --write 生成 / --check 核对")
+            return
         if not (config.GAME / "common").is_dir():
             raise ValueError(f"缺少锁定游戏原件：{config.GAME / 'common'}")
         if write:
             _modgen_verify_sources()
             bindings = situated_bindings.build()
             ledgers = {
-                situated_bindings.DEFAULT_SOURCE: situated_bindings.render(bindings).encode(
-                    "utf-8"
-                ),
-                situated_domain_coverage.DEFAULT_SOURCE: situated_domain_coverage.render_counts(
-                    situated_domain_coverage.DEFAULT_SOURCE
+                situated_bindings.source_path(): situated_bindings.render(bindings).encode("utf-8"),
+                situated_domain_coverage.source_path(): situated_domain_coverage.render_counts(
+                    situated_domain_coverage.source_path()
                 ).encode("utf-8"),
             }
             # Strict production readers need the updated generated counts and
@@ -2673,9 +2774,16 @@ def modgen_cmd(
             # verification; any later error restores their original bytes.
             with GenerationTransaction() as transaction:
                 transaction.replace(ledgers)
-                _, _, files = distribution.package_inputs()
-                production = {name: text for name, text in files.items() if name != "README.md"}
-                transaction.replace(_modgen_output_changes(production))
+                if version_contracts.active_version() == "1.15.1":
+                    production = distribution.write_standard_outputs(
+                        configuration=_profile_configuration(configuration), transaction=transaction
+                    )
+                else:
+                    _, _, files = distribution.package_inputs(
+                        configuration=_profile_configuration(configuration)
+                    )
+                    production = {name: text for name, text in files.items() if name != "README.md"}
+                    transaction.replace(_modgen_output_changes(production))
             console.print(
                 f"[green]已重建 {len(bindings)} 条原版消费者绑定和 "
                 f"{len(situated_domain_coverage.FAMILIES)} 个领域统计[/]"
@@ -2689,7 +2797,9 @@ def modgen_cmd(
             ]
             if source_problems:
                 _fail("生成合同不一致：\n" + "\n".join(source_problems), EXIT_FAILED)
-        _, _, files = distribution.package_inputs()
+        _, _, files = distribution.package_inputs(
+            configuration=_profile_configuration(configuration)
+        )
         production = {name: text for name, text in files.items() if name != "README.md"}
         if check:
             problems = decisions.check(decisions.PRODUCT, production)
@@ -2707,13 +2817,27 @@ def modgen_cmd(
 
 @app.command("package")
 def package_cmd(
+    context: typer.Context,
     output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = (
         distribution.DEFAULT_PACKAGE_PATH
     ),
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
+    ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
     try:
-        target = distribution.package(output)
+        selected_profile = _production_profile(profile, configuration, context=context)
+        target = (
+            distribution.profile_package(
+                output, selected_profile, configuration=_profile_configuration(configuration)
+            )
+            if selected_profile is not None
+            else distribution.package(output, configuration=_profile_configuration(configuration))
+        )
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
     console.print(f"[green]已生成[/] {escape(str(target))}")
@@ -2772,17 +2896,40 @@ def citations_cmd(
 
 @app.command("modguard")
 def modguard_cmd(
+    context: typer.Context,
     offline: Annotated[bool, typer.Option("--offline", help="从入库快照核对原版接口")] = False,
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
+    ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
+        selected_profile = _production_profile(
+            profile, configuration, offline=offline, context=context
+        )
+        if selected_profile is not None:
+            distribution.check_profile_outputs(
+                selected_profile, configuration=_profile_configuration(configuration)
+            )
+            console.print("[green]1.15.0 profile 身份、底本、policy 接线和隔离产物检查通过[/]")
+            return
         if offline:
             distribution.check_generation_lock()
-            policy, extensions = distribution.production_configuration()
+            policy, extensions = distribution.production_configuration(
+                configuration=_profile_configuration(configuration)
+            )
             production = distribution.read_production_files()
+            distribution.check_configuration_identity(
+                production, _profile_configuration(configuration)
+            )
             problems = []
         else:
-            policy, extensions, files = distribution.package_inputs()
+            policy, extensions, files = distribution.package_inputs(
+                configuration=_profile_configuration(configuration)
+            )
             production = {name: text for name, text in files.items() if name != "README.md"}
             problems = decisions.check(decisions.PRODUCT, production)
         index = vanilla_index.load(offline=offline)
@@ -2816,6 +2963,7 @@ def modguard_cmd(
 
 @app.command("decision-audit")
 def decision_audit_cmd(
+    context: typer.Context,
     output: Annotated[
         Path | None,
         typer.Option("--output", help="情境决策报告 JSON 输出路径；默认写入 tools/out/ci/"),
@@ -2825,6 +2973,12 @@ def decision_audit_cmd(
         "--offline",
         help="只使用入库源和锁定底本；适用于无游戏目录的 CI 静态合同检查",
     ),
+    profile: Annotated[
+        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
+    ] = None,
+    configuration: Annotated[
+        Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
+    ] = None,
 ) -> None:
     """核对情境决策合同并生成可解释报告。
 
@@ -2834,10 +2988,60 @@ def decision_audit_cmd(
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
+        selected_profile = _production_profile(
+            profile, configuration, offline=offline, context=context
+        )
+        if selected_profile is not None:
+            resolved = _profile_configuration(configuration)
+            profile_files = distribution.check_profile_outputs(
+                selected_profile, configuration=resolved
+            )
+            metadata = json.loads(profile_files[distribution.METADATA_NAME])
+            custom = metadata.get("game_custom_data", {})
+            policy_name = custom.get("policy") if isinstance(custom, dict) else None
+            resolved_identity = custom.get("configuration") if isinstance(custom, dict) else None
+            metadata = {
+                "schema": 1,
+                "evidence": "generated_1.15_profile_contract",
+                "profile": "situated-ai/production/1.15",
+                "game_version": selected_profile.game_version,
+                "build_id": selected_profile.build_id,
+                "policy": policy_name,
+                "configuration": resolved_identity,
+                "action_network": situated_network_profile.audit(
+                    selected_profile, configuration=resolved
+                ),
+                "generated_output": str(distribution.profile_output_root()),
+                "consumers": [
+                    {
+                        "id": row.id,
+                        "enabled": isinstance(resolved_identity, dict)
+                        and row.domain in resolved_identity.get("enabled_domains", []),
+                        "source": row.source,
+                        "definition": row.definition,
+                        "field": list(row.field),
+                        "actor": row.actor,
+                        "target": row.target,
+                        "operation": row.operation,
+                        "neutral": row.neutral,
+                        "native_contract_bounds": list(row.bounds),
+                    }
+                    for row in selected_profile.declarations
+                ],
+            }
+            report = metadata
+            _write_json(target, report)
+            console.print("[green]1.15.0 profile 静态审计通过[/]")
+            return
         if offline:
-            metadata = decision_report.source_metadata()
+            metadata = decision_report.source_metadata(
+                configuration=_profile_configuration(configuration)
+            )
         else:
-            _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+            _, _, files = distribution.package_inputs(
+                include_engineering_metadata=True,
+                configuration=_profile_configuration(configuration),
+            )
             metadata = json.loads(files[".metadata/metadata.json"])
             if not isinstance(metadata, dict):
                 raise ValueError("工程 metadata 顶层必须是对象")

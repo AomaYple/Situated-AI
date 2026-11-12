@@ -4,12 +4,24 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decisions
+from pdx import decisions, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import pdx_eval
 from pdx.situated.support_program import SupportObservation, SupportProgram
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+def test_support_metadata_identifies_selected_independent_context(version):
+    with version_contracts.select_version(version):
+        source = SupportProgram.from_extensions(decisions.Extensions()).as_dict()["native_source"]
+    if version == "1.14.5":
+        assert source == "research/vanilla-ai/1.14.5/00_default_strategy.txt:180-188"
+    else:
+        assert source == ";".join(
+            f"research/vanilla-ai/1.15.0/00_default_strategy.txt:{line}" for line in (210, 211, 212)
+        )
 
 
 def _facts(observation: SupportObservation) -> dict[str, object | None]:
@@ -248,7 +260,15 @@ def test_support_program_cancellation_and_direction(initiator, expected):
     assert pdx_eval.select(program.render(), facts).delta == expected
 
 
-def test_support_program_is_a_real_production_writer():
+@pytest.fixture
+def historical_support_assembly():
+    # This unit checks assembly against its original frozen source. Current
+    # installed-source proof and complete release assembly have separate gates.
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+def test_support_program_is_a_real_production_writer(historical_support_assembly):
     import json
     import re
 
@@ -266,7 +286,7 @@ def test_support_program_is_a_real_production_writer():
     restored = re.sub(
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n", "", source, flags=re.DOTALL
     )
-    assert restored.encode() == decisions.BASELINE.read_bytes()
+    assert restored.encode() == decisions.baseline_path().read_bytes()
     overlay = source.split("# SITAI BEGIN diplomatic_play_support\n", 1)[1].split(
         "\t\t# SITAI END diplomatic_play_support", 1
     )[0]

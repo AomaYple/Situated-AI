@@ -85,6 +85,7 @@ KIND_MATCHED_PREFIX = "matched_prefix"  # 那一行有以它开头的更长 toke
 KIND_STALE_ABSENT = "stale_absent"  # 生效与原版都没有 ⇒ 日志比安装旧
 KIND_STALE_NO_EFFECTIVE = "stale_no_effective"  # 生效整份没有、原版有、行号不可比
 KIND_LINES_INCOMPARABLE = "lines_incomparable"  # 行号不可比，其余情形
+KIND_VERSION_INCOMPARABLE = "version_incomparable"
 KIND_MISPLACED = "misplaced"  # 行号可比、断言却对不上 ⇒ 真错配
 
 
@@ -124,6 +125,8 @@ class EngineClaim:
     file_rel: str = ""  # kind == script_location / token_at
     line: int = 0
     token: str = ""
+    log_source: str = ""
+    log_version: str = ""
 
 
 @dataclass(slots=True)
@@ -139,6 +142,9 @@ class CrossCheckReport:
     #: 每个 ``(文件, token)`` 在我们这边的**文件内是否出现过**（跨行搜索的结果）。
     #: 用来区分"日志比当前 mod 状态旧"（整份文件都没有）与"行号漂了"（有、只是不在那行）。
     tokens_anywhere: dict[tuple[str, str], int | None] = field(default_factory=dict)
+    #: 每份日志自己的版本；轮转文件不能借用另一文件的版本号。
+    token_versions: dict[tuple[str, int, str], str] = field(default_factory=dict)
+    claim_versions: set[str] = field(default_factory=set)
     #: ``(文件, token)`` -> 引擎报的那一行上是否有**以它开头**的更长的 token。
     prefix_on_line: dict[tuple[str, str], bool] = field(default_factory=dict)
     #: ``(文件, token)`` -> 在**原版**文件里的行号（只对"生效文件里没找到"的 token 查）。
@@ -153,8 +159,15 @@ class CrossCheckReport:
     line_counts: dict[str, tuple[int, int]] = field(default_factory=dict)
     #: 日志里的游戏版本（可能是旧版本的日志）
     log_version: str = ""
+    #: 当前安装来源的版本；未知或与日志不同均不能证明行号匹配。
+    source_version: str = ""
     #: 日志条数统计
     counts: Counter = field(default_factory=Counter)
+
+    @property
+    def version_comparable(self) -> bool:
+        versions = self.claim_versions or {self.log_version}
+        return bool(self.source_version and versions == {self.source_version})
 
     @property
     def coverage_gaps(self) -> list[tuple[str, str, int, int, int]]:
@@ -198,7 +211,25 @@ class CrossCheckReport:
         out: list[TokenVerdict] = []
         for rel, line, tok, got in self.tokens:
             ours = got if got is not None else self.tokens_anywhere.get((rel, tok))
-            if got == line:
+            token_version = self.token_versions.get((rel, line, tok), self.log_version)
+            if not token_version or token_version != self.source_version:
+                reason = (
+                    f"日志版本 {token_version or 'unknown'} 与当前来源版本 "
+                    f"{self.source_version or 'unknown'} 不可比；当前 token 命中也不能证明旧日志"
+                )
+                out.append(
+                    TokenVerdict(
+                        rel,
+                        line,
+                        tok,
+                        TOKEN_UNVERIFIABLE,
+                        KIND_VERSION_INCOMPARABLE,
+                        reason,
+                        ours,
+                        got,
+                    )
+                )
+            elif got == line:
                 out.append(
                     TokenVerdict(
                         rel, line, tok, TOKEN_MATCH, KIND_MATCHED_EXACT, "那一行就有它", ours, got
@@ -233,7 +264,7 @@ class CrossCheckReport:
             elif rel in incomparable:
                 if got is None and ours is None:
                     kind = KIND_STALE_NO_EFFECTIVE
-                    reason = "覆盖版整份没有它；行号不可比（覆盖版与原版不是同一套行号）"
+                    reason = "覆盖版整份都没有它；行号不可比（覆盖版与原版不是同一套行号）"
                 else:
                     kind = KIND_LINES_INCOMPARABLE
                     reason = (
@@ -375,7 +406,9 @@ class CrossCheckReport:
 
         这一档既不许冒充通过，也不许冒充不一致；命令层的退出码 3 就是它。
         """
-        return self._by_kind(KIND_STALE_NO_EFFECTIVE, KIND_LINES_INCOMPARABLE)
+        return self._by_kind(
+            KIND_STALE_NO_EFFECTIVE, KIND_LINES_INCOMPARABLE, KIND_VERSION_INCOMPARABLE
+        )
 
     @property
     def misplaced_tokens(self) -> list[tuple[str, int, str, int | None]]:
@@ -415,6 +448,8 @@ class CrossCheckReport:
         """
         return {
             "日志版本": self.log_version or "未记录",
+            "当前来源版本": self.source_version or "未记录",
+            "日志与来源版本可比": self.version_comparable,
             "枚举组合": len(self.coverage),
             "覆盖面缺口": len(self.coverage_gaps),
             "位置断言": len(self.locations),
@@ -493,9 +528,9 @@ def parse_logs(log_dir: Path | None = None) -> tuple[list[EngineClaim], str]:
     if not log_dir.is_dir():
         return claims, version
 
-    seen_enum: set[tuple[str, str]] = set()
-    seen_loc: set[tuple[str, int]] = set()
-    seen_tok: set[tuple[str, int, str]] = set()
+    seen_enum: set[tuple[str, str, str]] = set()
+    seen_loc: set[tuple[str, int, str]] = set()
+    seen_tok: set[tuple[str, int, str, str]] = set()
 
     for log in sorted(log_dir.glob("*.log")):
         try:
@@ -503,16 +538,18 @@ def parse_logs(log_dir: Path | None = None) -> tuple[list[EngineClaim], str]:
         except TOLERATED_ERRORS:  # pragma: no cover - 单个日志读不了不该中断
             continue
 
-        if not version:
-            m = _VERSION_RE.search(text)
-            if m:
-                version = m.group(1)
+        file_versions = set(_VERSION_RE.findall(text))
+        file_version = next(iter(file_versions)) if len(file_versions) == 1 else ""
+        if not version and file_version:
+            version = file_version
+        first_claim = len(claims)
 
         for m in _ENUM_RE.finditer(text):
             key = (m.group(1).rstrip("/"), m.group(2))
-            if key in seen_enum or key[1] not in TEXTUAL_SUFFIXES:
+            enum_identity = (*key, file_version)
+            if enum_identity in seen_enum or key[1] not in TEXTUAL_SUFFIXES:
                 continue
-            seen_enum.add(key)
+            seen_enum.add(enum_identity)
             claims.append(
                 EngineClaim(
                     kind="enumeration",
@@ -524,9 +561,10 @@ def parse_logs(log_dir: Path | None = None) -> tuple[list[EngineClaim], str]:
 
         for m in _LOC_RE.finditer(text):
             key = (m.group(1), int(m.group(2)))
-            if key in seen_loc:
+            location_identity = (*key, file_version)
+            if location_identity in seen_loc:
                 continue
-            seen_loc.add(key)
+            seen_loc.add(location_identity)
             claims.append(
                 EngineClaim(
                     kind="script_location",
@@ -544,9 +582,10 @@ def parse_logs(log_dir: Path | None = None) -> tuple[list[EngineClaim], str]:
                 else:
                     file_text, line_no, tok_text = m.group(1), int(m.group(2)), m.group(3)
                 tok_key = (file_text, line_no, tok_text)
-                if tok_key in seen_tok:
+                token_identity = (*tok_key, file_version)
+                if token_identity in seen_tok:
                     continue
-                seen_tok.add(tok_key)
+                seen_tok.add(token_identity)
                 claims.append(
                     EngineClaim(
                         kind="token_at",
@@ -556,6 +595,9 @@ def parse_logs(log_dir: Path | None = None) -> tuple[list[EngineClaim], str]:
                         token=tok_text,
                     )
                 )
+        for claim in claims[first_claim:]:
+            claim.log_source = log.name
+            claim.log_version = file_version
     return claims, version
 
 
@@ -659,6 +701,9 @@ def cross_check(
     report = CrossCheckReport(
         counts=Counter(c.kind for c in claims),
         log_version=log_version,
+        source_version=config.game_version(root.parent)
+        .get("caligula_branch", "")
+        .removeprefix("release/"),
     )
     # 哪些文件被覆盖、且覆盖版与原版**行数不同** —— 这些文件行号不可比。
     # 只读行数（不是全文比对）是刻意的：它便宜、且足够判定"两套内容"。
@@ -703,6 +748,9 @@ def cross_check(
         return vanilla_cache[rel]
 
     for c in claims:
+        claim_version = c.log_version if c.log_source else report.log_version
+        comparable = bool(claim_version and claim_version == report.source_version)
+        report.claim_versions.add(claim_version)
         if c.kind == "enumeration":
             total, parsed = _scriptable_set(root, c.dir_rel, c.suffix)
             report.coverage[(c.dir_rel, c.suffix)] = (total, parsed, total)
@@ -711,12 +759,29 @@ def cross_check(
             if not resolve(c.file_rel).is_file():
                 report.locations.append((c.file_rel, c.line, "文件不存在"))
                 continue
+            if not comparable:
+                report.locations.append(
+                    (
+                        c.file_rel,
+                        c.line,
+                        f"版本不可比：日志 {claim_version or 'unknown'} / 来源 {report.source_version or 'unknown'}",
+                    )
+                )
+                continue
             lines = {t.line for t in tokens_of(c.file_rel)}
             report.locations.append(
                 (c.file_rel, c.line, "有 token" if c.line in lines else "该行无 token")
             )
 
         elif c.kind == "token_at":
+            key_with_line = (c.file_rel, c.line, c.token)
+            if (
+                key_with_line in report.token_versions
+                and report.token_versions[key_with_line] != claim_version
+            ):
+                report.token_versions[key_with_line] = ""
+            else:
+                report.token_versions[key_with_line] = claim_version
             if not resolve(c.file_rel).is_file():
                 report.missing_files.add(c.file_rel)
                 report.tokens.append((c.file_rel, c.line, c.token, None))

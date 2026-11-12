@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from dataclasses import replace
+
 import pytest
 
+from pdx import country_coordination, country_state
 from pdx.situated import commitment, evidence, opportunity, state
 from pdx.situated.schema import EvidenceValue
 
@@ -64,9 +68,21 @@ def test_typed_state_keeps_units_sources_and_expression() -> None:
     }
     foundation = next(item for item in result.capacities if item.id == "layer_foundation")
     assert foundation.known
-    assert foundation.value is True
+    # The normalized country policy selects expansion before foundation when
+    # its higher-tier capacity is proven.
+    assert foundation.value is False
+    assert next(item for item in result.capacities if item.id == "layer_expansion").value is True
     assert foundation.unit == "boolean"
-    assert foundation.source_facts == ("default", "war", "debt_ratio", "income")
+    assert set(foundation.source_facts) == {
+        "default",
+        "war",
+        "debt_ratio",
+        "income",
+        "net_surplus",
+        "bureaucracy",
+        "legitimacy",
+        "insurrection",
+    }
     assert foundation.expression
 
 
@@ -94,8 +110,69 @@ def test_each_need_is_a_local_expression() -> None:
     need = {item.id: item for item in result.needs}
     assert need["need_security"].value is True
     assert need["need_education"].value is True
-    assert need["need_industry"].value is False
+    # Parameterized readers carry positive evidence only: a false route value
+    # cannot prove a known absence of the route/war-defeat need.
+    assert need["need_industry"].value is None
     assert all(item.expression and item.source_facts for item in result.needs)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {},
+        {"default": True},
+        {"debt_ratio": 0.9},
+        {"bureaucracy": -5},
+        {"legitimacy": None},
+        {"debt_ratio": None},
+        {"war": True},
+    ],
+)
+def test_default_typed_layers_and_needs_match_normalized_coordinator(changes) -> None:
+    policy = country_state.load()
+    observed = values(**changes)
+    raw = {name: item.value if item.known else None for name, item in observed.items()}
+    expected = country_coordination.evaluate(policy, raw)
+    result = state.derive_typed(observed)
+    actual = {item.id: item.value for item in (*result.capacities, *result.needs)}
+    for name in (
+        *country_coordination.CAPACITIES,
+        *(f"layer_{name}" for name in country_coordination.LAYERS),
+        *(f"need_{name}" for name in country_coordination.NEEDS),
+    ):
+        assert actual[name] == expected[name]
+    if expected["layer_recovery"] is True:
+        assert actual["development"] is False
+        assert actual["layer_expansion"] is False
+
+
+def test_default_typed_entry_reads_policy_and_has_no_threshold_fallback(monkeypatch) -> None:
+    policy = country_state.load()
+    data = deepcopy(policy.data)
+    data["coordination"]["needs"]["education"]["when"] = (
+        (
+            {"fact": "literacy", "op": "<", "value": 0.25},
+            {"fact": "population", "op": ">", "value": 0},
+        ),
+    )
+    changed = replace(policy, data=data)
+    monkeypatch.setattr(country_state, "load", lambda: changed)
+    result = state.derive_typed(values(literacy=0.4))
+    need = next(item for item in result.needs if item.id == "need_education")
+    assert need.value is False
+    assert "0.25" in need.expression
+    assert (
+        next(item for item in result.opportunities if item.id == "opportunity_education").value
+        is False
+    )
+
+
+def test_retired_security_capacity_reports_unsupported_policy_node() -> None:
+    result = state.derive_typed(values(navy=100))
+    signal = next(item for item in result.capacities if item.id == "security_capacity")
+    assert signal.known is False
+    assert signal.quality == "unknown"
+    assert "unsupported" in signal.expression
 
 
 def test_opportunity_and_commitment_contract_preserve_unknown() -> None:

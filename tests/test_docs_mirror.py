@@ -41,6 +41,7 @@ import typer
 from conftest import NEEDS_GAME
 
 from pdx import config, docs_mirror
+from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.unit
 
 #: 官方 .md 的篇数。1.14.3 实测 92（game 91 + jomini 1）；1.14.4 实测 94（game 93 + jomini 1）。
-EXPECTED_DOCS = 94
+EXPECTED_DOCS = {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100}[active_version()]
 
 
 def test_清单存在且可读() -> None:
@@ -85,10 +86,10 @@ def test_清单自己不含易变字段(tmp_path: Path) -> None:
     时间戳、绝对路径这类东西一旦写进去，清单每次生成都不同，
     diff 就成了噪声，而且会在别人的机器上假报「变了」。
     """
-    a = json.dumps(docs_mirror.build_manifest(), ensure_ascii=False, sort_keys=True)
-    b = json.dumps(docs_mirror.build_manifest(), ensure_ascii=False, sort_keys=True)
     if not (config.GAME / "common").is_dir():
         pytest.skip("游戏目录不可用")
+    a = json.dumps(docs_mirror.build_manifest(), ensure_ascii=False, sort_keys=True)
+    b = json.dumps(docs_mirror.build_manifest(), ensure_ascii=False, sort_keys=True)
     assert a == b, "两次生成的清单不同 —— 混进了易变字段"
     assert str(config.REPO) not in a, "清单里出现了本机绝对路径"
 
@@ -138,8 +139,10 @@ def test_本地镜像与清单一致() -> None:
 
 
 # ── 合成目录：不碰游戏，纯逻辑 ──────────────────────────────
-def _fake_roots(tmp_path: Path) -> Path:
+def _fake_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """造一个假的「游戏安装」：两个内容根，各放一篇 .md。"""
+    (tmp_path / "caligula_branch.txt").write_text(f"release/{active_version()}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "ROOT", tmp_path)
     game = tmp_path / "game"
     jomini = tmp_path / "jomini"
     (game / "common").mkdir(parents=True)
@@ -153,7 +156,7 @@ def _fake_roots(tmp_path: Path) -> Path:
 def test_键带内容根前缀否则同名文件互相覆盖(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     monkeypatch.setattr(
         docs_mirror,
         "_ROOTS",
@@ -168,7 +171,7 @@ def test_镜像里的多余文件会被发现(tmp_path: Path, monkeypatch: pytes
     只查「清单里的篇目在不在镜像里」是**单向**的：镜像里多出来的那篇
     永远不会被发现，而它恰恰是过期最多、最容易被当成真的那份。
     """
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     mirror = tmp_path / "mirror"
     monkeypatch.setattr(
         docs_mirror,
@@ -194,7 +197,7 @@ def test_镜像里的多余文件会被发现(tmp_path: Path, monkeypatch: pytes
 
 def test_内容改动与字节数篡改都会被抓(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """sha256 是这里唯一的判据 —— 字节数相同但内容不同也必须报。"""
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     mirror = tmp_path / "mirror"
     monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", fake / "game"),))
     monkeypatch.setattr(config, "OFFICIAL_DOCS_MIRROR", mirror)
@@ -211,6 +214,8 @@ def _run_check(
 ) -> int:
     from pdx import cli
 
+    (tmp_path / "caligula_branch.txt").write_text(f"release/{active_version()}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "ROOT", tmp_path)
     research = tmp_path / "research"
     research.mkdir(exist_ok=True)
     monkeypatch.setattr(config, "RESEARCH", research)
@@ -264,7 +269,7 @@ def test_写清单可复现且能重读(tmp_path: Path, monkeypatch: pytest.Monk
     清单是**入库**文件，它的 diff 就是「Paradox 改了哪些文档」的审计记录 ——
     生成过程只要掺进一点不确定性（时间戳、遍历顺序），这份记录就废了。
     """
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     research = tmp_path / "research"
     monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", fake / "game"),))
     monkeypatch.setattr(config, "RESEARCH", research)
@@ -281,7 +286,7 @@ def test_写清单可复现且能重读(tmp_path: Path, monkeypatch: pytest.Monk
 
 def test_游戏侧三种漂移都能报出来(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """清单的**全部价值**就在这里：Paradox 改了、加了、删了文档，都要看得出来。"""
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     base = fake / "game"
     monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", base),))
     frozen = docs_mirror.build_manifest()  # 相当于入库的那份清单
@@ -311,7 +316,7 @@ def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.Monk
     """``v3 mirror write --sync``：把原文从游戏拷到本机镜像（本机那份不入库）。"""
     from pdx import cli
 
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     research = tmp_path / "research"
     mirror = tmp_path / "mirror"
     monkeypatch.setattr(
@@ -330,7 +335,7 @@ def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.Monk
 
 @pytest.mark.parametrize("failure", ["permission", "utf8", "missing"])
 def test_任一已枚举文档不可读时保留完整旧清单(tmp_path, monkeypatch, failure) -> None:
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     research = tmp_path / "research"
     research.mkdir()
     authoritative = research / docs_mirror.MANIFEST_NAME
@@ -366,7 +371,7 @@ def test_任一已枚举文档不可读时保留完整旧清单(tmp_path, monkey
 
 @pytest.mark.parametrize("failure", ["partial_write", "replace"])
 def test_写入或替换失败不破坏旧清单且清理临时文件(tmp_path, monkeypatch, failure) -> None:
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     research = tmp_path / "research"
     research.mkdir()
     authoritative = research / docs_mirror.MANIFEST_NAME
@@ -399,6 +404,9 @@ def test_写入或替换失败不破坏旧清单且清理临时文件(tmp_path, 
 
 @pytest.mark.parametrize("available_but_empty", [False, True])
 def test_无可用输入或空目录不能覆盖权威清单(tmp_path, monkeypatch, available_but_empty) -> None:
+    # Reach the empty-input guard with valid independent on-disk identity.
+    (tmp_path / "caligula_branch.txt").write_text(f"release/{active_version()}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "ROOT", tmp_path)
     root = tmp_path / "game"
     if available_but_empty:
         root.mkdir()
@@ -415,7 +423,7 @@ def test_无可用输入或空目录不能覆盖权威清单(tmp_path, monkeypat
 
 
 def test_可选内容根缺失不阻止有效游戏清单(tmp_path, monkeypatch) -> None:
-    fake = _fake_roots(tmp_path)
+    fake = _fake_roots(tmp_path, monkeypatch)
     monkeypatch.setattr(config, "RESEARCH", tmp_path / "research")
     monkeypatch.setattr(
         docs_mirror, "_ROOTS", (("game", fake / "game"), ("jomini", fake / "optional-absent"))

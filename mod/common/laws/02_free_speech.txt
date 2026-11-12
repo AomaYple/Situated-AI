@@ -32,6 +32,11 @@ law_outlawed_dissent = {
 			add = 750
 		}
 
+		if = {
+			limit = { divided_monarchists_ai_rejects_law = yes }
+			add = -750
+		}
+
 		# SITAI BEGIN information:law_outlawed_dissent.ai_enact_weight_modifier
 		# ACTION program_df4720efbfa3ee5e [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
@@ -118,6 +123,11 @@ law_right_of_assembly = {
 			add = 750
 		}
 
+		if = {
+			limit = { congress_poland_ai_rejects_law = yes }
+			add = -750
+		}
+
 		# SITAI BEGIN information:law_right_of_assembly.ai_enact_weight_modifier
 		# ACTION program_577c5c4a9a3bd4db [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
@@ -179,6 +189,11 @@ law_protected_speech = {
 		if = {
 			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
 			add = 750
+		}
+
+		if = {
+			limit = { congress_poland_ai_rejects_law = yes }
+			add = -750
 		}
 
 		# SITAI BEGIN information:law_protected_speech.ai_enact_weight_modifier

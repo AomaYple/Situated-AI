@@ -213,7 +213,7 @@ law_women_in_the_workplace = {
 			# GROUP program_4fbbab27db0fd26d_positive
 			add = { value = 0
 				# coordinated_layered_civic_law_women_in_the_workplace [political]; 可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.1 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } add = 5 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no pop_type_percent_country = { target = pop_type:machinists value >= 0 } pop_type_percent_country = { target = pop_type:machinists value <= 1 } pop_type_percent_country = { target = pop_type:machinists value >= 0.1 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 } } add = 5 }
 			}
 			# GROUP program_4fbbab27db0fd26d_negative
 			add = { value = 0
@@ -244,6 +244,7 @@ law_womens_suffrage = {
 		law_universal_suffrage
 		law_single_party_state
 		law_anarchy
+		law_labour_suffrage
 	}
 
 	on_enact = {

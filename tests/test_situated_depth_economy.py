@@ -2,11 +2,13 @@
 
 import hashlib
 import tomllib
-from dataclasses import replace
+from dataclasses import asdict, replace
 
 import pytest
 
 from pdx import config, country_state, decision_adapters, decision_rules
+from pdx.model import Block, Scalar
+from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
 from pdx.situated.compiler import load_model
 from pdx.situated.domain_coverage import CHAINS, contract, load
@@ -387,7 +389,43 @@ def test_government_administration_generation_keeps_cost_and_vanilla_tail(
     government_generated_text,
 ):
     generated = government_generated_text
-    assert "ai_value = { value = 1000" in generated
+    parsed = parse_text(generated)
+    assert not parsed.errors
+    definition = parsed.root.first("building_government_administration")
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    actual = definition.value.first("ai_value")
+    assert actual is not None
+    assert isinstance(actual.value, Block)
+    initial = actual.value.first("value")
+    assert initial is not None
+    assert isinstance(initial.value, Scalar)
+    assert initial.value.unquoted == "1000"
+
+    # 1.15 owns a native journal-dependent ai_value. Preserve all its operations
+    # and ordering instead of requiring the historical synthesized one-line form.
+    source = (config.GAME / GOVERNMENT_SOURCE).read_text(encoding="utf-8-sig")
+    native = parse_text(source)
+    assert not native.errors
+    original = native.root.first("building_government_administration")
+    assert original is not None
+    assert isinstance(original.value, Block)
+    native_value = original.value.first("ai_value")
+    if native_value is not None:
+        assert isinstance(native_value.value, Block)
+
+        def without_lines(value):
+            if isinstance(value, dict):
+                return {key: without_lines(item) for key, item in value.items() if key != "line"}
+            if isinstance(value, list):
+                return [without_lines(item) for item in value]
+            return value
+
+        remaining = iter(without_lines(asdict(actual.value))["items"])
+        assert all(
+            any(candidate == item for candidate in remaining)
+            for item in without_lines(asdict(native_value.value))["items"]
+        )
     assert "# SITAI BEGIN information:building_government_administration.ai_value" in generated
     assert "is_ai = yes" in generated
     for fragment in (

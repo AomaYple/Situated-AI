@@ -12,7 +12,14 @@ from typing import Any
 
 import pytest
 
-from pdx import config, country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx import (
+    config,
+    country_state,
+    decision_adapters,
+    decision_interfaces,
+    decision_rules,
+    version_contracts,
+)
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -34,6 +41,24 @@ TECHNOLOGIES = {
     "mass_surveillance": "home_affairs",
     "colonization": "colonial_affairs",
     "civilizing_mission": "colonial_affairs",
+}
+
+
+# Independently measured from the identity-verified 1.15.0 native files.
+# Historical hashes below retain their 1.14.5 contract.
+_CURRENT_NATIVE_HASHES = {
+    "common/institutions/00_institutions.txt": (
+        "9d3b8474e2e99a34cd23cc38343253b850d0b2991a0f9418c85577c68c8ece2b",
+        "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f",
+    ),
+    "common/achievements/base_achievements.txt": (
+        "276ed2057159ccc2c2b6ebe874e4e97a935300b9707d9b110e553f3c9c68602e",
+        "d073f27521c4d459410b61dea9f82b785603748ebd1a133e067ac029ec450414",
+    ),
+    "common/political_movements/00_ideological_movements.txt": (
+        "6c1c4ae0a9b3d3f65165093fc3f52b32beb20cfebfd955e797053de8db119d8c",
+        "17f682b4c10a64139c19230dbda69c212669319cb7e50e893e47bf2ea1f90dfb",
+    ),
 }
 
 
@@ -530,12 +555,14 @@ def test_existence_signature_has_country_owner_consumers_and_generic_institution
                 visit(item.value, in_owner=in_owner or item.key == "owner")
 
     visit(movements.root)
-    assert owner_arguments == {
+    expected_arguments = {
         "institution_social_security",
         "institution_workplace_safety",
-        "institution_schools",
         "institution_police",
     }
+    if version_contracts.active_version() == "1.14.5":
+        expected_arguments.add("institution_schools")
+    assert owner_arguments == expected_arguments
     tutorial = parse_text(
         (config.GAME / "common/journal_entries/00_tutorial.txt").read_text(encoding="utf-8-sig")
     )
@@ -543,7 +570,22 @@ def test_existence_signature_has_country_owner_consumers_and_generic_institution
     entry = tutorial.root.first("je_tutorial_invest_into_an_institution")
     assert entry is not None
     assert isinstance(entry.value, Block)
-    invalid = entry.value.first("invalid")
+    if version_contracts.is_115():
+        invalid_outcomes = []
+        for outcome in entry.value.all("outcome"):
+            assert isinstance(outcome.value, Block)
+            flags = outcome.value.first("flags")
+            if flags is not None:
+                assert isinstance(flags.value, Block)
+                if any(
+                    isinstance(flag, Scalar) and flag.unquoted == "invalid_outcome"
+                    for flag in flags.value.items
+                ):
+                    invalid_outcomes.append(outcome.value)
+        assert len(invalid_outcomes) == 1
+        invalid = invalid_outcomes[0].first("trigger")
+    else:
+        invalid = entry.value.first("invalid")
     assert invalid is not None
     assert isinstance(invalid.value, Block)
     assert _tree(invalid.value) == (
@@ -582,6 +624,8 @@ def test_this_slice_registers_no_second_capacity_award_on_existing_institution_c
     ],
 )
 def test_new_source_evidence_is_locked_to_actual_original_bytes(source, raw_hash, normalized_hash):
+    if version_contracts.is_115():
+        raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     assert (

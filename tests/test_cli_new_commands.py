@@ -11,13 +11,14 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 import pytest
 from _helpers import run_cli as _run
 from conftest import NEEDS_GAME
 
-from pdx import config
+from pdx import config, mods
 
 pytestmark = pytest.mark.unit
 
@@ -143,11 +144,21 @@ def test_prefixes列出目录用量() -> None:
     assert "功能前缀" in result.output
 
 
-@NEEDS_GAME
-def test_prefixes可以只看一个目录() -> None:
+def test_prefixes可以只看一个目录(monkeypatch, tmp_path) -> None:
+    # Workshop 目录随本机订阅变化；固定输入，仍经过实际目录聚合与 CLI 筛选。
+    example = mods.ModInfo(
+        root=tmp_path,
+        prefix_dirs={
+            "common/scripted_triggers": Counter({"REPLACE": 3}),
+            "common/scripted_effects": Counter({"INJECT": 7}),
+        },
+    )
+    monkeypatch.setattr(mods, "analyse_all", lambda: [example])
     result = _run("prefixes", "common/scripted_triggers")
     assert result.exit_code == 0
     assert "REPLACE" in result.output
+    assert "3" in result.output
+    assert "INJECT" not in result.output
 
 
 @NEEDS_GAME
@@ -222,12 +233,48 @@ def test_每个新命令都有帮助文本() -> None:
         assert len(result.output) > 200, f"{name} 的帮助太短了"
 
 
-def test_离线快照路径与验证器同源() -> None:
+def test_离线快照路径与验证器同源(monkeypatch) -> None:
     """两个模块不许各写一套「哪份快照算数」的规则。"""
-    from pdx import tables_offline, verify
+    from copy import deepcopy
+    from dataclasses import replace
 
-    assert tables_offline.load_tables() == verify.latest_compact_snapshot().sections.get(  # type: ignore[union-attr]
-        tables_offline.SECTION, {}
-    )
-    assert isinstance(tables_offline.load_tables(), dict)
+    from pdx import install_tree, tables_offline, verify
+    from pdx.snapshot import SnapshotFormatError
+
+    assert tables_offline.latest_compact_snapshot is verify.latest_compact_snapshot
+    snapshot_path = verify.latest_compact_snapshot_path()
+    assert snapshot_path is not None
+    captured_bytes = snapshot_path.read_bytes()
+    snapshot = verify.latest_compact_snapshot()
+    assert snapshot is not None
+    before = deepcopy(snapshot.to_dict())
+    monkeypatch.setattr(tables_offline, "latest_compact_snapshot", lambda: snapshot)
+    assert tables_offline._latest() is snapshot
+    raw = snapshot.sections.get(tables_offline.SECTION, {})
+    recorded = tables_offline.load_tables()
+    assert recorded == install_tree.current_doc08_narrative_tables(raw)
+    projected = {
+        "08-目录全量清单.md::doc08 版本指纹": ("游戏版本", {1, 2}),
+        "08-目录全量清单.md::doc08 localization 语言目录": ("`english`", {3}),
+        "08-目录全量清单.md::doc08 gfx 子目录": ("`map`", {4}),
+    }
+    assert recorded.keys() == raw.keys()
+    assert {key: rows for key, rows in recorded.items() if key not in projected} == {
+        key: rows for key, rows in raw.items() if key not in projected
+    }
+    for key, (label, allowed_columns) in projected.items():
+        assert len(recorded[key]) == len(raw[key])
+        for old_row, new_row in zip(raw[key], recorded[key], strict=True):
+            old_cells = [cell.strip() for cell in old_row.strip("|").split("|")]
+            new_cells = [cell.strip() for cell in new_row.strip("|").split("|")]
+            assert len(new_cells) == len(old_cells)
+            for column, (old, new) in enumerate(zip(old_cells, new_cells, strict=True)):
+                if old_cells[0] != label or column not in allowed_columns:
+                    assert new == old
+    assert snapshot.to_dict() == before
+    wrong_version = replace(snapshot, version={"caligula_branch": "release/0.0.0"})
+    monkeypatch.setattr(tables_offline, "latest_compact_snapshot", lambda: wrong_version)
+    with pytest.raises(SnapshotFormatError, match="快照原版版本不匹配"):
+        tables_offline.load_tables()
+    assert snapshot_path.read_bytes() == captured_bytes
     assert Path(config.OUT / "snapshots").is_dir()

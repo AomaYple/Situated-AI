@@ -7,7 +7,7 @@ law_serfdom = {
 
 	is_visible = {
 		NOR = {
-			c:AUS ?= this # Austria and the Danubian Principalities have manorialism instead
+			c:AUS ?= this # Austria, Poland, and the Danubian Principalities have manorialism instead
 			AND = {
 				exists = c:AUS
 				is_subject_of = c:AUS
@@ -113,6 +113,7 @@ law_manorialism = {
 				c:AUS ?= { has_law = law_type:law_manorialism }
 			}
 			country_has_primary_culture = cu:romanian # Also for the Danubian principalities
+			country_has_primary_culture = cu:polish # And for Poland
 		}
 	}
 
@@ -292,7 +293,7 @@ law_tenant_farmers = {
 			# GROUP program_28fdb081160986f6_law_rural_transition_positive
 			add = { value = 0
 				# law_context_law_tenant_farmers_law_serfdom_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 12 }
 			}
 			min = -10
 			max = 22
@@ -676,9 +677,9 @@ law_peasant_proprietorship = { # Homesteading for old world countries
 			# GROUP program_850da58071245d17_law_rural_transition_positive
 			add = { value = 0
 				# law_context_law_peasant_proprietorship_law_tenant_farmers_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 12 }
 				# law_context_law_peasant_proprietorship_law_serfdom_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 12 }
 			}
 			min = -10
 			max = 22
@@ -806,9 +807,9 @@ law_homesteading = {
 			# GROUP program_64211edbb5cbd2c8_law_rural_transition_positive
 			add = { value = 0
 				# law_context_law_homesteading_law_tenant_farmers_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_tenant_farmers pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 12 }
 				# law_context_law_homesteading_law_serfdom_rural_transition [political]; 当前农奴或佃农制度存在显著农村人口约束；候选实际减少土地就业或迁移限制，保留原版变体与地理资格；不承诺迁移已发生
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_serfdom pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 12 }
 			}
 			min = -10
 			max = 22

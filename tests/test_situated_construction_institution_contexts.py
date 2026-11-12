@@ -10,7 +10,7 @@ from dataclasses import replace
 import pytest
 from _frozen_reader_words import frozen_reader_words
 
-from pdx import country_state, decision_rules
+from pdx import country_state, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, decision_ir, engine_scope, pdx_eval, vanilla_inventory
@@ -18,7 +18,16 @@ from pdx.situated import compiler, decision_ir, engine_scope, pdx_eval, vanilla_
 pytestmark = pytest.mark.unit
 
 
-def test_snapshot_authorizes_only_exact_construction_and_institution_consumers():
+@pytest.fixture
+def historical_strategy_contract():
+    """Only synthetic revision attacks use the reviewed historical schema."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+def test_snapshot_authorizes_only_exact_construction_and_institution_consumers(
+    historical_strategy_contract,
+):
     contracts = json.loads(engine_scope.strategy_snapshot())["consumers"]
     assert "wanted_construction_output" in contracts
     assert "institution_scores" in contracts
@@ -46,7 +55,7 @@ def test_snapshot_authorizes_only_exact_construction_and_institution_consumers()
 
 
 @pytest.fixture
-def construction_institution_proof(tmp_path, monkeypatch):
+def construction_institution_proof(tmp_path, monkeypatch, historical_strategy_contract):
     """Exercise file verification with all 28 observed spans in a compact image."""
     data = json.loads(engine_scope.strategy_snapshot())
     observations = data["observations"][120:148]
@@ -353,7 +362,7 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
     ]
     from collections import Counter
 
-    assert Counter(row.field.removeprefix("ai_strategy_default.") for row in selected) == {
+    expected = {
         "wanted_construction_output": 6,
         "institution_scores.institution_schools": 6,
         "institution_scores.institution_health_system": 7,
@@ -363,6 +372,11 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
         "institution_scores.institution_police": 6,
         "institution_scores.institution_colonial_affairs": 2,
     }
+    if version_contracts.active_version() == "1.15.1":
+        school = "institution_scores.institution_schools"
+        expected.pop(school)
+        assert all(row.field.removeprefix("ai_strategy_default.") != school for row in selected)
+    assert Counter(row.field.removeprefix("ai_strategy_default.") for row in selected) == expected
     for writer in selected:
         instance = instances[writer.writer_id]
         assert writer.evaluation_context == instance.evaluation_context
@@ -377,6 +391,16 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
 
 @pytest.fixture(scope="module")
 def numeric_production():
+    return _numeric_production()
+
+
+@pytest.fixture(params=("1.14.5", "1.15.0"))
+def historical_numeric_production(request):
+    with version_contracts.select_version(request.param):
+        yield _numeric_production()
+
+
+def _numeric_production():
     source = "common/ai_strategies/00_default_strategy.txt"
     policy = decision_rules.load()
     rules = tuple(
@@ -384,7 +408,11 @@ def numeric_production():
         for rule in policy.rules
         if rule.id in {"fiscal_construction_guard", "remaining_school_catchup_need"}
     )
-    assert len(rules) == 2
+    assert {rule.id for rule in rules} == (
+        {"fiscal_construction_guard"}
+        if version_contracts.active_version() == "1.15.1"
+        else {"fiscal_construction_guard", "remaining_school_catchup_need"}
+    )
     keys = frozenset(key for rule in rules for key in rule.input_keys())
     policy = replace(
         policy,
@@ -396,7 +424,7 @@ def numeric_production():
     )
     model = compiler.load_model()
     compiled, _ = compiler.compile_policy(policy, "mod/decisions/information.toml", model)
-    native = compiler.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_path().read_text(encoding="utf-8")
     generated = decision_rules.patch(
         native,
         compiled,
@@ -435,9 +463,26 @@ def _numeric_overlay(text, field):
     ],
 )
 def test_generated_numeric_targets_preserve_player_disabled_unknown_and_country_identity(
-    numeric_production, field, values, root, base, expected
+    historical_numeric_production, field, values, root, base, expected
 ):
-    _, policy, _, generated = numeric_production
+    _assert_numeric_target(historical_numeric_production, field, values, root, base, expected)
+
+
+def test_current_construction_preserves_player_disabled_unknown_and_country_identity(
+    numeric_production,
+):
+    _assert_numeric_target(
+        numeric_production,
+        "wanted_construction_output",
+        {"default": True, "war": False},
+        {"in_default": True, "is_at_war": False},
+        100,
+        75,
+    )
+
+
+def _assert_numeric_target(production, field, values, root, base, expected):
+    _, policy, _, generated = production
     overlay = _numeric_overlay(generated, field)
     facts = {"ROOT": {"is_ai": True, **root}}
     result = pdx_eval.select(overlay, facts)

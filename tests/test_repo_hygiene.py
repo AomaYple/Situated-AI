@@ -31,6 +31,7 @@ import pytest
 
 from pdx import config
 from pdx.repo_audit import BINARY_SUFFIXES as _BINARY_SUFFIXES
+from pdx.repo_audit import is_native_evidence_path, native_evidence_contract
 
 #: 一条判据：读到的字节（可能是分块流）→ 违规说明（``None`` = 合规）。
 _判据 = Callable[[Path, "_Source"], "str | None"]
@@ -104,9 +105,13 @@ def _受控文件() -> tuple[str, ...]:
             for chunk in proc.stdout.split(b"\x00")
             if chunk
             for rel in (chunk.decode("utf-8"),)
-            if (config.REPO / rel).is_file()
+            if (config.REPO / rel).is_file() and not is_native_evidence_path(rel)
         )
     )
+
+
+def test_原版证据路径与哈希合同():
+    native_evidence_contract(config.REPO)
 
 
 def _是二进制(data: bytes) -> bool:

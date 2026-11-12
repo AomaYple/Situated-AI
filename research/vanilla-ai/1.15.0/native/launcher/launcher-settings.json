@@ -1,0 +1,44 @@
+{
+	"formatVersion": 1.1,
+	"gameId": "victoria3",
+	"displayName": "Victoria 3",
+	"version": "1.15.0 (Ivan-Chai)",
+	"rawVersion": "1.15.0",
+	"distPlatform": "steam",
+	"ingameSettingsPath": "pdx_settings.json",
+	"gameDataPath": "%USER_DOCUMENTS%/Paradox Interactive/Victoria 3",
+	"modPath": "mod",
+	"modExtension": "zip",
+	"modStubberPath": "../binaries/victoria3.exe",
+	"modStubberData": {	
+		"args": [ "--mod_stubber" ],
+		"type": "MOD_NAME_PROMPT"
+	},
+	"isLooseFilesModSupported": true,
+	"distPlatformModsEnabled": true,
+	"dlcPath": "../game",
+	"ingameSettingsLayoutPath": "settings-layout.json",
+	"themeFile": "./assets/theme-settings.json",
+	"browserDlcUrl": "",
+	"browserModUrl": "",
+	"exePath": "../binaries/victoria3.exe",
+	"exeArgs": [ "-gdpr-compliant" ],
+	"alternativeExecutables": [
+			{
+		"label": {
+			"de": "Spiel im Debug-Modus öffnen",
+			"en": "Open game in Debug Mode",
+			"es": "Abrir juego en modo de depuración",
+			"fr": "Ouvrir le jeu en mode débogage",
+			"ja": "デバッグモードでゲームを開",
+			"ko": "디버그 모드로 게임 열기",
+			"pl": "Uruchom grę w trybie debugowania",
+			"pt": "Abrir jogo em modo debug",
+			"ru": "Запустить игру в режиме разработчика",
+			"zh-hans": "以调试模式打开游戏"
+		},
+		"exePath": "../binaries/victoria3.exe",
+		"exeArgs": [ "-gdpr-compliant","-debug_mode" ]
+		}
+	]
+}

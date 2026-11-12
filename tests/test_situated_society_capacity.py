@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from pdx import config, country_state, decision_adapters, decision_rules
+from pdx import config, country_state, decision_adapters, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -29,6 +29,28 @@ COMPANY = (
 )
 AUTHORITY = ("mass_communication", "nationalism", "pan-nationalism", "political_agitation")
 TECHNOLOGIES = (*COMPANY, *AUTHORITY)
+
+
+# Independently measured from the identity-verified 1.15.0 native files.
+# Historical hashes below retain their 1.14.5 contract.
+_CURRENT_NATIVE_HASHES = {
+    "common/technology/technologies/30_society.txt": (
+        "204340e2ff81f31d5bceddb36824566d57fa2be941dc2ba90407d56be75176dc",
+        "9e4a9ec6b2df956da8104339460b87f2d78b8ae038e394f9dfaebb74e44052ad",
+    ),
+    "common/alert_types/00_alert_types.txt": (
+        "ca60cb0f7425744d2695560d905f4ec58bbeb9dd3e6f1aedfcc891ceb23a55e3",
+        "06099e868214b521f615cac1b5cf1f0d410aff5c8809484e44e56f66213545da",
+    ),
+    "common/journal_entries/00_tutorial.txt": (
+        "83e4f81f813ae2cb04563ed02bed77d760d93b7b1f196bf58da11ac933d7ab78",
+        "0fb0757ac536ac0ef76f0b925ec8754056feaef14511de947028be2125ca541a",
+    ),
+    "common/character_interactions/01_additional_interactions.txt": (
+        "a36ecfbddbc8a4454393f832e0a0bc02d43afe73320185896520ba6312f0386f",
+        "1ae63b1785cc7df424b487192561c220d603d24ad8921c0b3d7759b4f75262e9",
+    ),
+}
 
 
 def _field(technology: str) -> str:
@@ -443,6 +465,8 @@ def test_capacity_and_side_effect_claims_match_actual_native_modifiers(productio
 def test_reader_evidence_uses_exact_native_bytes_and_registered_normalization(
     source, raw_hash, normalized_hash
 ):
+    if version_contracts.is_115():
+        raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     text = normalized_text(raw.decode("utf-8-sig"))

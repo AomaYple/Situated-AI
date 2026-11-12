@@ -240,14 +240,29 @@ def test_player_disabled_owner_and_native_tail_remain_independent(production):
     assert after is not None
     assert isinstance(before.value, Block)
     assert isinstance(after.value, Block)
-    # The only new child is the already-authorized initialized ai_value.
-    original_children = tuple(_syntax(a) for a in before.value.items)
+    # The policy changes only ai_value; 1.15 already owns its native block.
+    original_children = tuple(
+        _syntax(a)
+        for a in before.value.items
+        if not (isinstance(a, Assignment) and a.key == "ai_value")
+    )
     actual_children = tuple(
         _syntax(a)
         for a in after.value.items
         if not (isinstance(a, Assignment) and a.key == "ai_value")
     )
     assert actual_children == original_children
+    original_value = before.value.first("ai_value")
+    actual_value = after.value.first("ai_value")
+    assert actual_value is not None
+    assert isinstance(actual_value.value, Block)
+    if original_value is not None:
+        assert isinstance(original_value.value, Block)
+        remaining = iter(actual_value.value.items)
+        assert all(
+            any(_syntax(candidate) == _syntax(item) for candidate in remaining)
+            for item in original_value.value.items
+        )
     assert pdx_eval.select(overlay, _facts(policy, values)).delta > 0
     assert 0 * pdx_eval.select(overlay, _facts(policy, values)).delta == 0
 
