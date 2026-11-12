@@ -75,15 +75,16 @@ def test_cli_profile_defaults_follow_strict_version_but_explicit_profile_wins(
         monkeypatch.delenv("V3_CONTRACT_PROFILE", raising=False)
     else:
         monkeypatch.setenv("V3_CONTRACT_PROFILE", selected)
-    frozen = native.load_profile(native.BASELINE_ROOT)
+    with version_contracts.select_version("1.15.0"):
+        frozen = native.load_profile(native.BASELINE_ROOT)
     assert cli._production_profile("1.15.0", offline=True) == frozen
     if selected == "unknown":
         with pytest.raises(ValueError, match="合同版本"):
             cli._production_profile(None, offline=True)
     else:
-        assert cli._production_profile(None, offline=True) == (
-            frozen if selected == "1.15.0" else None
-        )
+        # Historical 1.15.0 is an explicit opt-in; the implicit current
+        # standard production path and historical compatibility return None.
+        assert cli._production_profile(None, offline=True) is None
 
 
 def test_fresh_cli_import_preserves_explicit_profile_over_unknown_environment():
@@ -362,7 +363,13 @@ def test_profile_generation_binds_source_before_compilation(installation, tmp_pa
 
 
 @pytest.fixture(autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
+def _historical_1150_contract(request):
+    """Keep archived witnesses exact; environment-resolution tests need no override."""
+    if (
+        request.node.originalname
+        == "test_cli_profile_defaults_follow_strict_version_but_explicit_profile_wins"
+    ):
         yield
+    else:
+        with version_contracts.select_version("1.15.0"):
+            yield

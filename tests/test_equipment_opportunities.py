@@ -87,13 +87,15 @@ def game(tmp_path):
 def baseline(game, tmp_path, monkeypatch):
     monkeypatch.setattr(
         equipment_opportunities,
-        "BASELINE_115" if equipment_opportunities.version_contracts.is_115() else "BASELINE",
-        tmp_path / "baseline.json",
+        "baseline_path",
+        lambda: tmp_path / "baseline.json",
     )
     path = equipment_opportunities.write_baseline(game)
     monkeypatch.setattr(
         equipment_opportunities,
-        "BASELINE_SHA256_115"
+        "BASELINE_SHA256_1151"
+        if equipment_opportunities.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
         if equipment_opportunities.version_contracts.is_115()
         else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
@@ -512,7 +514,9 @@ def test_repinning_source_hash_does_not_hide_changed_ast_materials(game, baselin
     frozen.write_text(equipment_opportunities._canonical(baseline), encoding="utf-8", newline="\n")
     monkeypatch.setattr(
         equipment_opportunities,
-        "BASELINE_SHA256_115"
+        "BASELINE_SHA256_1151"
+        if equipment_opportunities.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
         if equipment_opportunities.version_contracts.is_115()
         else "BASELINE_SHA256",
         hashlib.sha256(frozen.read_bytes()).hexdigest(),
@@ -548,7 +552,9 @@ def test_offline_identity_and_structural_faults_fail_closed(baseline, monkeypatc
     path.write_text(text, encoding="utf-8", newline="\n")
     monkeypatch.setattr(
         equipment_opportunities,
-        "BASELINE_SHA256_115"
+        "BASELINE_SHA256_1151"
+        if equipment_opportunities.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
         if equipment_opportunities.version_contracts.is_115()
         else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),

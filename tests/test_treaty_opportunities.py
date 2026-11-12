@@ -384,12 +384,16 @@ def test_repin_cannot_hide_metadata_or_byte_inconsistency(
     path.write_text(treaty._canonical(data), encoding="utf-8", newline="\n")
     monkeypatch.setattr(
         treaty,
-        "BASELINE_115" if treaty.version_contracts.is_115() else "BASELINE",
-        path,
+        "baseline_path",
+        lambda: path,
     )
     monkeypatch.setattr(
         treaty,
-        "BASELINE_SHA256_115" if treaty.version_contracts.is_115() else "BASELINE_SHA256",
+        "BASELINE_SHA256_1151"
+        if treaty.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
+        if treaty.version_contracts.is_115()
+        else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError):

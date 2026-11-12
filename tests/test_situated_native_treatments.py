@@ -963,7 +963,14 @@ def test_full_first_batch_against_installed_native_declarations(installed_invent
     counts = report["interface_counts"]
     current = version_contracts.is_115()
     # Independent native AST counts retain the historical denominator too.
-    assert counts["static_modifier_valuation"] == (2291 if current else 2197)
+    assert (
+        counts["static_modifier_valuation"]
+        == {
+            "1.14.5": 2197,
+            "1.15.0": 2291,
+            "1.15.1": 2293,
+        }[version_contracts.active_version()]
+    )
     assert counts["static_construction_cap"] == (271 if current else 261)
     assert counts["lifecycle_effect"] == 12
     assert counts["completion_observation"] == (8 if current else 5)

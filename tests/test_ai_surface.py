@@ -17,7 +17,7 @@ import pdx.ai_surface as surf
 import pdx.config
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
-from pdx.version_contracts import is_115, select_version
+from pdx.version_contracts import active_version, is_115, select_version
 
 if TYPE_CHECKING:
     from pdx.model import ParsedFile
@@ -174,7 +174,7 @@ def test_核对缺文件时给出提示(tmp_path, monkeypatch) -> None:
 
 def test_versioned_surface_path_resolves_context_before_environment(monkeypatch) -> None:
     monkeypatch.delenv("V3_CONTRACT_PROFILE", raising=False)
-    assert surf.doc_path() == surf.DOC_PATH
+    assert surf.doc_path().name == "02-可执行面-1.15.1.md"
     monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
     assert surf.doc_path().name == "02-可执行面-1.15.0.md"
     with select_version("1.14.5"):
@@ -404,12 +404,17 @@ def test_真实原版_权重为0的牌只有默认牌() -> None:
             base = weight.value.first("value")
             if base is not None and isinstance(base.value, Scalar) and base.value.unquoted == "0":
                 zeros.append((name, card_name, weight.line))
-    current = is_115()
-    assert zeros == [("00_default_strategy.txt", "ai_strategy_default", 11273 if current else 9702)]
+    assert zeros == [
+        (
+            "00_default_strategy.txt",
+            "ai_strategy_default",
+            {"1.14.5": 9702, "1.15.0": 11273, "1.15.1": 11300}[active_version()],
+        )
+    ]
     default = _cards_of(_parsed("00_default_strategy.txt"))["ai_strategy_default"]
     possible = default.first("possible")
     assert possible is not None
-    assert possible.line == (11268 if current else 9697)
+    assert possible.line == {"1.14.5": 9697, "1.15.0": 11268, "1.15.1": 11295}[active_version()]
     assert isinstance(possible.value, Block)
     always = possible.value.first("always")
     assert always is not None

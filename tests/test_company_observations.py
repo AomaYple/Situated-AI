@@ -658,9 +658,9 @@ def test_full_trade_company_program_combines_port_and_loss_with_actual_objects(c
         baseline=text,
         default_strategy=False,
         reader_words=frozenset(
-            {r.engine for r in policy.readers}
-            | {x for r in policy.readers for x in r.path}
-            | {"mg:grain"}
+            decision_adapters.reader_evidence(
+                decision_adapters.read_inputs(decision_adapters.load())
+            )
         ),
     )
     overlay = pdx_eval.marked_block(patched, policy.consumer_programs[0].action_id)

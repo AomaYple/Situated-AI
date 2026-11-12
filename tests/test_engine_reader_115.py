@@ -10,7 +10,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_interfaces, decision_rules, distribution
+from pdx import config, decision_interfaces, decision_rules, distribution, version_contracts
 from pdx.situated import engine_reader_115, engine_scope_115, joint_chain_contract
 from pdx.situated import production_profile as native
 
@@ -22,7 +22,11 @@ def test_current_reader_has_independent_executable_and_native_source_identity():
     assert len(data["script_hashes"]) == 8
     assert data["flag_map"]["is_defensive_pact_index"] == 1
     hashes = dict(engine_reader_115.verify_game(config.GAME))
-    assert hashes["@engine/binaries/victoria3.exe"] == engine_scope_115.EXE_SHA256
+    assert hashes["@engine/binaries/victoria3.exe"] == (
+        engine_scope_115.EXE_SHA256_1151
+        if version_contracts.active_version() == "1.15.1"
+        else engine_scope_115.EXE_SHA256
+    )
 
 
 def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_history(monkeypatch):
@@ -83,7 +87,11 @@ def test_rebound_reader_evidence_cannot_expand_permission(tmp_path, monkeypatch,
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        engine_scope_115.MANIFESTS,
+        (
+            engine_scope_115.MANIFESTS_1151
+            if version_contracts.active_version() == "1.15.1"
+            else engine_scope_115.MANIFESTS
+        ),
         "defensive-pact-reader",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -108,7 +116,11 @@ def test_rebound_reader_integer_identity_rejects_equal_nonintegers(
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        engine_scope_115.MANIFESTS,
+        (
+            engine_scope_115.MANIFESTS_1151
+            if version_contracts.active_version() == "1.15.1"
+            else engine_scope_115.MANIFESTS
+        ),
         "defensive-pact-reader",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -152,6 +164,7 @@ def test_three_consumer_profile_has_no_legacy_reader_dependency(monkeypatch):
 
     monkeypatch.setattr(engine_reader_115, "snapshot", reject)
     monkeypatch.setattr(engine_reader_115, "verify_game", reject)
-    profile = native.load_profile(native.BASELINE_ROOT)
-    files = distribution.profile_outputs(profile)
+    with version_contracts.select_version("1.15.0"):
+        profile = native.load_profile(native.BASELINE_ROOT)
+        files = distribution.profile_outputs(profile)
     assert "common/decrees/00_decree.txt" in files

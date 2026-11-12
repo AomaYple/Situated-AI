@@ -260,7 +260,15 @@ def test_support_program_cancellation_and_direction(initiator, expected):
     assert pdx_eval.select(program.render(), facts).delta == expected
 
 
-def test_support_program_is_a_real_production_writer():
+@pytest.fixture
+def historical_support_assembly():
+    # This unit checks assembly against its original frozen source. Current
+    # installed-source proof and complete release assembly have separate gates.
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+def test_support_program_is_a_real_production_writer(historical_support_assembly):
     import json
     import re
 

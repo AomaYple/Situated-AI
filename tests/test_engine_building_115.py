@@ -9,7 +9,7 @@ import os
 
 import pytest
 
-from pdx import config, decision_adapters
+from pdx import config, decision_adapters, version_contracts
 from pdx.situated import engine_building_115, engine_scope_115
 
 
@@ -22,7 +22,11 @@ def test_current_building_default_verifies_both_native_define_branches_and_execu
     assert contract["selection"] == "valid_template_else_self"
     assert len(data["observations"]) == 37
     hashes = dict(engine_building_115.verify_game(config.GAME))
-    assert hashes["@engine/binaries/victoria3.exe"] == engine_scope_115.EXE_SHA256
+    assert hashes["@engine/binaries/victoria3.exe"] == (
+        engine_scope_115.EXE_SHA256_1151
+        if version_contracts.active_version() == "1.15.1"
+        else engine_scope_115.EXE_SHA256
+    )
     assert hashes["common/defines/00_ai.txt"] == data["script_hashes"]["common/defines/00_ai.txt"]
 
 
@@ -50,7 +54,11 @@ def test_rebound_manifest_cannot_expand_exact_initializer_contract(tmp_path, mon
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        engine_scope_115.MANIFESTS,
+        (
+            engine_scope_115.MANIFESTS_1151
+            if version_contracts.active_version() == "1.15.1"
+            else engine_scope_115.MANIFESTS
+        ),
         "building-default",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )

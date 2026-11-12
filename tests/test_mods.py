@@ -217,7 +217,7 @@ def test_doc12_重复路径结论与现场一致() -> None:
 
 def _assert_current_summary(text: str, scanned: list[mods.ModInfo]) -> None:
     """Current markers are unique and describe this scan, not the historical tables."""
-    assert "当前 1.15.0 机器扫描摘要" in text
+    assert "当前 1.15.1 机器扫描摘要" in text
     for key, expected in (
         ("mod.total", len(scanned)),
         ("mod.files", sum(info.files for info in scanned)),
@@ -291,7 +291,7 @@ def test_current_mod_statistics_keep_content_and_noncontent_collisions_separate(
         {"README.md": 2, "common/shared.txt": 2} if content_collision else {"README.md": 2}
     )
     assert mods.aggregate_prefixes(scanned) == {"INJECT": 1, "REPLACE": 1, "INJECT_OR_CREATE": 1}
-    summary = "当前 1.15.0 机器扫描摘要 3<!--claim:mod.total--> 6<!--claim:mod.files-->"
+    summary = "当前 1.15.1 机器扫描摘要 3<!--claim:mod.total--> 6<!--claim:mod.files-->"
     _assert_current_summary(summary, scanned)
     for damaged in (
         summary.replace("3<!--claim:mod.total-->", "2<!--claim:mod.total-->"),

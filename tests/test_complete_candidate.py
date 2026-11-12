@@ -65,7 +65,7 @@ def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, ve
 
     calls = []
 
-    def capture(destination):
+    def capture(destination, **_kwargs):
         calls.append(("historical", destination))
         return destination
 
@@ -77,12 +77,22 @@ def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, ve
         calls.append(("current", destination))
         return destination
 
+    # This is a dispatch unit witness. Live installation validation is covered
+    # independently by test_profile_live_boundary; resolve frozen identity here.
+    from pdx import cli
+
+    resolve = cli._production_profile
+
+    def frozen_profile(name, configuration=None, *, context=None):
+        return resolve(name, configuration, offline=True, context=context)
+
+    monkeypatch.setattr(cli, "_production_profile", frozen_profile)
     monkeypatch.setattr(distribution, "package", capture)
     monkeypatch.setattr(distribution, "profile_package", capture_profile)
     runner = CliRunner()
     output = tmp_path / "release.zip"
     with version_contracts.select_version(version):
-        result = runner.invoke(app, ["package", "--output", str(output)])
+        result = runner.invoke(app, ["package", "--profile", version, "--output", str(output)])
     assert result.exit_code == 0, result.output
     assert calls == [("current" if version == "1.15.0" else "historical", output)]
 
@@ -224,6 +234,12 @@ def test_实际外部生成分支防御对称不重复加分且有上下文保�
 
 
 def test_完整开关关闭清理外部文件且不删用户文件(tmp_path):
+    # This offline lifecycle witness retains the historical core build inputs.
+    with version_contracts.select_version("1.14.5"):
+        _assert_disabled_output_cleanup(tmp_path)
+
+
+def _assert_disabled_output_cleanup(tmp_path):
     extra = replace(decisions.load_extensions(), security_enabled=True, market_enabled=True)
     active = decisions.build(extensions=extra)
     disabled = decisions.build(

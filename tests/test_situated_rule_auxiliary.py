@@ -12,7 +12,7 @@ from test_situated_local_foundations import (
     _values as _foundation_values,
 )
 
-from pdx import decision_adapters, decision_rules
+from pdx import decision_adapters, decision_rules, version_contracts
 from pdx.situated import pdx_eval, programs
 
 generated = foundations.generated
@@ -317,7 +317,7 @@ def test_explicit_auxiliary_opt_ins_and_ir_drift_are_checked_per_source():
         for rule in policy.rules
         if rule.auxiliary_facts
     ]
-    assert {rule.id: rule.auxiliary_facts for _, _, rule in opted} == {
+    expected = {
         "institution_supply_home_administrative": ("bureaucracy",),
         "institution_supply_home_capacity": ("net_surplus", "bureaucracy"),
         "institution_supply_home_funded": ("net_surplus",),
@@ -380,6 +380,15 @@ def test_explicit_auxiliary_opt_ins_and_ir_drift_are_checked_per_source():
         "wartime_navy_capacity": ("net_surplus", "bureaucracy"),
         "wartime_navy_fiscal_capacity": ("net_surplus",),
     }
+    if version_contracts.active_version() == "1.15.1":
+        # These legacy opt-ins migrate to the single additive R2 school writer.
+        for key in (
+            "remaining_school_administrative",
+            "remaining_school_capacity",
+            "remaining_school_fiscal",
+        ):
+            del expected[key]
+    assert {rule.id: rule.auxiliary_facts for _, _, rule in opted} == expected
     assert model.consumer_ir is not None
     for source, policy, rule in opted:
         assert ir.from_rule(rule, source="test").to_rule() == rule

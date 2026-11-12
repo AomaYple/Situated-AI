@@ -309,6 +309,9 @@ def test_performance_measurement_and_regression_contract():
     }
     assert len(performance.regressions(baseline, changed)) == 3
     assert performance.regressions(baseline, {"environment": {"different": True}})
+    assert performance.regressions(
+        baseline, {**baseline, "input_identity": {"profile": "1.15.1"}}
+    ) == ["输入身份不同，不可直接比较性能"]
     with pytest.raises(ValueError):
         performance.measure(lambda: None, rounds=0)
     with pytest.raises(ValueError):

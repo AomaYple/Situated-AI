@@ -1075,17 +1075,29 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
     installed_version = config.game_version()["caligula_branch"].removeprefix("release/")
     with version_contracts.select_version(installed_version):
         derived = company_sectors.derive(inputs)
-    current = installed_version == "1.15.0"
-    assert derived["counts"] == (
-        {"companies": 231, "explicit_weight": 205, "implicit_weight": 26, "primary_buildings": 49}
-        if current
-        else {
+    # Independent AST inventory of each exact installed release; these values
+    # are handwritten witnesses, never copied from derive() at assertion time.
+    expected_counts = {
+        "1.14.5": {
             "companies": 221,
             "explicit_weight": 195,
             "implicit_weight": 26,
             "primary_buildings": 48,
-        }
-    )
+        },
+        "1.15.0": {
+            "companies": 231,
+            "explicit_weight": 205,
+            "implicit_weight": 26,
+            "primary_buildings": 49,
+        },
+        "1.15.1": {
+            "companies": 231,
+            "explicit_weight": 205,
+            "implicit_weight": 26,
+            "primary_buildings": 49,
+        },
+    }[installed_version]
+    assert derived["counts"] == expected_counts
     for company, output, required in (
         ("company_lkab", "iron", "tools"),
         ("company_ursus", "engines", "steel"),
@@ -1102,7 +1114,7 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
         initialized = company_sectors.initialized_fields(derived)
     assert len(initialized) == 26
     assert any(row["field"] == "company_basic_gold_mining.ai_weight" for row in initialized)
-    assert len({row["field"] for row in derived["rules"]}) == (231 if current else 221)
+    assert len({row["field"] for row in derived["rules"]}) == expected_counts["companies"]
     assert any(row["field"] == "company_de_beers.ai_weight" for row in derived["rules"])
     gaps = company_sectors.unsupported_facets(derived)
     assert gaps == []

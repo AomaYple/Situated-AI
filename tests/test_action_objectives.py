@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 import test_network_profile as witness
 
+from pdx import version_contracts
 from pdx.situated import action_network as net
 from pdx.situated import core_contracts as core
 from pdx.situated import expressions as expr
@@ -785,3 +786,10 @@ def test_audit_preserves_symbolic_goals_without_creating_sampled_baselines(profi
         )
         assert goal["lifetime"] == "evaluation"
         assert goal["score_comparison_baseline"] == "retained-native"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _historical_1150_contract():
+    """Bind the archived three-consumer objective witnesses to their input identity."""
+    with version_contracts.select_version("1.15.0"):
+        yield

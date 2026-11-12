@@ -386,6 +386,16 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
 
 @pytest.fixture(scope="module")
 def numeric_production():
+    return _numeric_production()
+
+
+@pytest.fixture(params=("1.14.5", "1.15.0"))
+def historical_numeric_production(request):
+    with version_contracts.select_version(request.param):
+        yield _numeric_production()
+
+
+def _numeric_production():
     source = "common/ai_strategies/00_default_strategy.txt"
     policy = decision_rules.load()
     rules = tuple(
@@ -393,7 +403,11 @@ def numeric_production():
         for rule in policy.rules
         if rule.id in {"fiscal_construction_guard", "remaining_school_catchup_need"}
     )
-    assert len(rules) == 2
+    assert {rule.id for rule in rules} == (
+        {"fiscal_construction_guard"}
+        if version_contracts.active_version() == "1.15.1"
+        else {"fiscal_construction_guard", "remaining_school_catchup_need"}
+    )
     keys = frozenset(key for rule in rules for key in rule.input_keys())
     policy = replace(
         policy,
@@ -444,9 +458,26 @@ def _numeric_overlay(text, field):
     ],
 )
 def test_generated_numeric_targets_preserve_player_disabled_unknown_and_country_identity(
-    numeric_production, field, values, root, base, expected
+    historical_numeric_production, field, values, root, base, expected
 ):
-    _, policy, _, generated = numeric_production
+    _assert_numeric_target(historical_numeric_production, field, values, root, base, expected)
+
+
+def test_current_construction_preserves_player_disabled_unknown_and_country_identity(
+    numeric_production,
+):
+    _assert_numeric_target(
+        numeric_production,
+        "wanted_construction_output",
+        {"default": True, "war": False},
+        {"in_default": True, "is_at_war": False},
+        100,
+        75,
+    )
+
+
+def _assert_numeric_target(production, field, values, root, base, expected):
+    _, policy, _, generated = production
     overlay = _numeric_overlay(generated, field)
     facts = {"ROOT": {"is_ai": True, **root}}
     result = pdx_eval.select(overlay, facts)

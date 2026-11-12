@@ -6,7 +6,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_adapters, decision_rules
+from pdx import decision_adapters, decision_rules, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, evidence, pdx_eval
 from pdx.situated.schema import EvidenceSpec, EvidenceValue
@@ -327,9 +327,23 @@ def test_every_declared_predicate_has_boolean_metadata_and_raw_reader_is_numeric
         else:
             assert fact.kind in {"number", "ratio"}, fact.id
     raw = {reader.key: reader for reader in decision_rules.load().readers}
-    assert raw["bureaucracy"].kind == raw["literacy"].kind == "number"
+    assert raw["bureaucracy"].kind == "number"
     assert raw["bureaucracy"].engine == "bureaucracy"
-    assert raw["literacy"].engine == "literacy_rate"
+    if version_contracts.active_version() == "1.15.1":
+        assert "literacy" not in raw
+        from pdx.situated import network_profile, production_profile
+
+        profile = production_profile.load_profile(production_profile.baseline_root())
+        school = next(
+            p
+            for p in network_profile.compile_profile(profile)
+            if p.network.actions[0].definition.consumer_id == "a0-pol-schools"
+        )
+        literacy = next(f for f in school.network.facts if f.id == "literacy")
+        assert (literacy.kind, literacy.unit) == ("ratio", "ratio")
+    else:
+        assert raw["literacy"].kind == "number"
+        assert raw["literacy"].engine == "literacy_rate"
 
 
 @pytest.mark.parametrize(

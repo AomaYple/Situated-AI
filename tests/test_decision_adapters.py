@@ -38,17 +38,19 @@ if TYPE_CHECKING:
 )
 def test_current_native_authority_recapture_reproduces_reviewed_bytes_twice(tmp_path, monkeypatch):
     """Exercise the explicit writer against live sources, keeping frozen evidence untouched."""
-    reviewed = decision_adapters.NATIVE_AUTHORITY_115.read_bytes()
-    assert hashlib.sha256(reviewed).hexdigest() == decision_adapters.NATIVE_AUTHORITY_115_SHA256
+    installed_version = config.game_version()["caligula_branch"].removeprefix("release/")
+    with version_contracts.select_version(installed_version):
+        reviewed = decision_adapters.native_authority_path().read_bytes()
+        assert hashlib.sha256(reviewed).hexdigest() == decision_adapters.native_authority_sha256()
     destination = tmp_path / "authority" / "native-authority.json"
-    monkeypatch.setattr(decision_adapters, "NATIVE_AUTHORITY_115", destination)
-    with version_contracts.select_version("1.15.0"):
+    monkeypatch.setattr(decision_adapters, "native_authority_path", lambda: destination)
+    with version_contracts.select_version(installed_version):
         assert decision_adapters.write_native_authority_115(config.GAME) == destination
         first = destination.read_bytes()
         assert first == reviewed
         assert decision_adapters.write_native_authority_115(config.GAME) == destination
         assert destination.read_bytes() == first
-        assert decision_adapters.native_authority_115()["game_version"] == "1.15.0"
+        assert decision_adapters.native_authority_115()["game_version"] == installed_version
 
 
 @pytest.mark.integration
@@ -1145,6 +1147,52 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
             r"\1",
             restored,
         )
+        if (
+            name == "common/ai_strategies/00_default_strategy.txt"
+            and version_contracts.active_version() == "1.15.1"
+        ):
+            # Independently peel the three reviewed stance unions. Retain the
+            # original AND bytes before restoring the original complete body;
+            # an unrelated edit or a damaged native condition still fails.
+            from pdx.lexer import LBRACE, RBRACE, tokenize
+
+            def span(source, path):
+                tokens = list(tokenize(source))
+                lines = source.splitlines(keepends=True)
+                offsets = [0]
+                for line in lines:
+                    offsets.append(offsets[-1] + len(line))
+                stack = []
+                starts = []
+                found = []
+                for index, token in enumerate(tokens):
+                    if token.kind == LBRACE:
+                        stack.append(tokens[index - 2].value)
+                        starts.append(offsets[token.line - 1] + token.col - 1)
+                    elif token.kind == RBRACE:
+                        if tuple(stack) == path:
+                            found.append((starts[-1], offsets[token.line - 1] + token.col))
+                        stack.pop()
+                        starts.pop()
+                assert len(found) == (2 if path[-2:] == ("OR", "AND") else 1)
+                return found[0]
+
+            for good in ("oil", "radios", "telephones"):
+                path = ("ai_strategy_default", "goods_stances", good)
+                start, end = span(baseline, path)
+                native_body = baseline[start:end]
+                original_start, original_end = span(baseline, (*path, "trigger"))
+                first_start, first_end = span(restored, (*path, "trigger", "OR", "AND"))
+                assert restored[first_start:first_end] == baseline[original_start:original_end]
+                trigger_start, trigger_end = span(restored, (*path, "trigger"))
+                # Peel only the reviewed trigger union, preserving all siblings.
+                restored = (
+                    restored[:trigger_start]
+                    + baseline[original_start:original_end]
+                    + restored[trigger_end:]
+                )
+                start, end = span(restored, path)
+                assert restored[start:end] == native_body
         assert restored == baseline, name
 
 

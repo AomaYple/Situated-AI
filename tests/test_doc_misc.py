@@ -109,7 +109,7 @@ def test_doc10_两类分类都覆盖全部字段() -> None:
     assert isinstance(definitions[0].value, Block)
     native_fields = [item.key for item in definitions[0].value.assignments()]
     assert [name for name, _comment, _value in ai._strategy_fields()] == native_fields
-    assert total == {"1.14.5": 60, "1.15.0": 61}[version_contracts.active_version()]
+    assert total == {"1.14.5": 60, "1.15.0": 61, "1.15.1": 61}[version_contracts.active_version()]
     assert semantics == total, f"语义四类相加 {semantics} ≠ {total}"
     assert shapes == total, f"形态三类相加 {shapes} ≠ {total}"
 

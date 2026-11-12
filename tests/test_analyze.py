@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from pathlib import Path
 
 import pytest
 from conftest import NEEDS_GAME
@@ -71,7 +72,10 @@ class TestGameAnalysis:
 
     def test_common_has_138_dirs(self, ga):
         """空目录也必须收录 —— scripted_modifiers 只有 .md 没有 .txt。"""
-        assert len(ga.common) == {"1.14.5": 138, "1.15.0": 140}[version_contracts.active_version()]
+        assert (
+            len(ga.common)
+            == {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141}[version_contracts.active_version()]
+        )
 
     def test_scripted_modifiers_present_but_empty(self, ga):
         res = ga.common["scripted_modifiers"]
@@ -105,6 +109,8 @@ class TestGameAnalysis:
                 "production_methods": 450,
                 "on_actions": 287,
             }
+        if version_contracts.active_version() == "1.15.1":
+            known.update(modifier_type_definitions=2476, static_modifiers=6487)
         for name, want in known.items():
             assert ga.common[name].unique_entries == want, name
 
@@ -128,11 +134,14 @@ class TestGameAnalysis:
     def test_official_docs_94(self, ga):
         assert (
             len(ga.official_docs)
-            == {"1.14.5": 94, "1.15.0": 99}[version_contracts.active_version()]
+            == {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100}[version_contracts.active_version()]
         )
 
     def test_dlc_count(self, ga):
-        assert len(ga.dlcs) == {"1.14.5": 17, "1.15.0": 18}[version_contracts.active_version()]
+        assert (
+            len(ga.dlcs)
+            == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18}[version_contracts.active_version()]
+        )
 
     def test_dlc_have_no_script_dirs(self, ga):
         """实测全部 DLC 只装资产，脚本内容都在主体 game/common 里。"""
@@ -333,3 +342,65 @@ class TestRenderingUnit:
         assert analyze.classify(".dds") == "图形"
         assert analyze.classify(".wav") == "音频"
         assert analyze.classify(".xyz") == "其他"
+
+
+def test_streamed_reports_preserve_indented_and_compact_json_bytes(tmp_path, monkeypatch):
+    payload = {"乙": ['quote"', "back\\slash", "line\nfeed", "测试𐀀"], "甲": {"n": 1.5}}
+    ga = analyze.GameAnalysis(version={"caligula_branch": "release/测试𐀀"})
+    ma = analyze.ModsAnalysis()
+    ca = analyze.CrossAnalysis()
+    monkeypatch.setattr(analyze, "GAME_OUT", tmp_path / "game")
+    monkeypatch.setattr(analyze, "MODS_OUT", tmp_path / "mods")
+    monkeypatch.setattr(analyze, "CROSS_OUT", tmp_path / "cross")
+    monkeypatch.setattr(analyze.config, "REPORTS", tmp_path / "reports")
+    monkeypatch.setattr(analyze, "CONTENT_ROOTS", {})
+    monkeypatch.setattr(analyze, "to_data_dict", lambda: payload)
+    outputs = analyze.write_reports(ga, ma, ca)
+    assert outputs["游戏本体 JSON"].read_bytes() == json.dumps(
+        analyze.to_game_dict(ga), ensure_ascii=False, indent=2
+    ).encode("utf-8")
+    assert outputs["mod JSON"].read_bytes() == json.dumps(
+        analyze.to_mods_dict(ma), ensure_ascii=False, indent=2
+    ).encode("utf-8")
+    assert outputs["游戏数据 JSON"].read_bytes() == json.dumps(
+        payload, ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
+
+
+@pytest.mark.parametrize("failure", ["unsupported", "encoder", "fsync", "replace"])
+def test_streamed_report_failure_preserves_previous_file(tmp_path, monkeypatch, failure):
+    game = tmp_path / "game"
+    game.mkdir()
+    path = game / "游戏本体.json"
+    path.write_bytes(b"previous complete report\n")
+    monkeypatch.setattr(analyze, "GAME_OUT", game)
+    monkeypatch.setattr(analyze, "MODS_OUT", tmp_path / "mods")
+    monkeypatch.setattr(analyze, "CROSS_OUT", tmp_path / "cross")
+    monkeypatch.setattr(analyze.config, "REPORTS", tmp_path / "reports")
+
+    def reject(*_args, **_kwargs):
+        raise OSError("injected report write failure")
+
+    expected: type[TypeError] | type[OSError]
+    if failure == "unsupported":
+        monkeypatch.setattr(analyze, "to_game_dict", lambda _ga: {"partial": [1, object()]})
+        expected = TypeError
+    else:
+        expected = OSError
+        if failure == "encoder":
+
+            def partial(_obj, stream, **_kwargs):
+                stream.write('{"incomplete":')
+                reject()
+
+            monkeypatch.setattr(analyze.json, "dump", partial)
+        elif failure == "replace":
+            monkeypatch.setattr(Path, "replace", reject)
+        else:
+            monkeypatch.setattr(analyze.os, failure, reject)
+    with pytest.raises(expected):
+        analyze.write_reports(
+            analyze.GameAnalysis(), analyze.ModsAnalysis(), analyze.CrossAnalysis()
+        )
+    assert path.read_bytes() == b"previous complete report\n"
+    assert list(game.iterdir()) == [path]

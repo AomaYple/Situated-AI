@@ -59,6 +59,25 @@ def _source_data():
             "common/ai_strategies/00_default_strategy.txt"
         ]
         engine_reader_115.project_information_readers(data["readers"])
+    if version_contracts.active_version() == "1.15.1":
+        # Independent declaration oracle: name the complete retired set here,
+        # rather than deriving expected rule identities from the production loader.
+        retired = {
+            "remaining_school_catchup_need",
+            "remaining_school_fiscal",
+            "remaining_school_administrative",
+            "remaining_school_capacity",
+            "school_default_pressure",
+            "school_administrative_pressure",
+        }
+        school_rules = {
+            row["id"]
+            for row in data["rules"]
+            if row["field"] == "institution_scores.institution_schools"
+        }
+        assert school_rules == retired
+        data["rules"] = [row for row in data["rules"] if row["id"] not in retired]
+        del data["readers"]["literacy"]
     return data
 
 
@@ -805,6 +824,22 @@ class GeneratedRuleBlocks(NamedTuple):
 
 @pytest.fixture(scope="module")
 def generated_rule_blocks(rules):
+    return _generated_rule_blocks(rules)
+
+
+@pytest.fixture(params=("1.14.5", "1.15.0"))
+def historical_school_rules(request):
+    # Preserve the historical multiplier contract under its actual version.
+    with version_contracts.select_version(request.param):
+        yield decision_rules.load()
+
+
+@pytest.fixture
+def historical_school_blocks(historical_school_rules):
+    return _generated_rule_blocks(historical_school_rules)
+
+
+def _generated_rule_blocks(rules):
     baseline = decisions.baseline_path().read_text(encoding="utf-8")
     generated = decision_rules.patch(
         baseline,
@@ -874,9 +909,9 @@ def test_development_tiers_and_crisis_priority_in_generated_script(
 
 
 def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
-    generated_rule_blocks,
+    historical_school_blocks,
 ):
-    rules, blocks = generated_rule_blocks
+    rules, blocks = historical_school_blocks
     for legitimacy in (60, 80, None):
         values = _values(legitimacy=legitimacy, literacy=0.4, tools_balance=-1, tools_price=0.6)
         result = decision_rules.evaluate(rules, values, is_ai=True)
@@ -903,7 +938,8 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
     assert "treaty_category_scores.economy" not in healthy
 
 
-def test_small_low_literacy_countries_can_enter_education_capacity_tiers(rules):
+def test_small_low_literacy_countries_can_enter_education_capacity_tiers(historical_school_rules):
+    rules = historical_school_rules
     values = _values(population=1_000_000, literacy=0.3)
     assert decision_rules.evaluate(rules, values, is_ai=True)[
         "institution_scores.institution_schools"
@@ -917,8 +953,8 @@ def test_small_low_literacy_countries_can_enter_education_capacity_tiers(rules):
     assert "institution_scores.institution_schools" not in unknown
 
 
-def test_multifactor_capacity_rules_require_complete_context(generated_rule_blocks):
-    rules, blocks = generated_rule_blocks
+def test_multifactor_capacity_rules_require_complete_context(historical_school_blocks):
+    rules, blocks = historical_school_blocks
 
     def evaluate(values, field):
         result = decision_rules.evaluate(rules, values, is_ai=True)
@@ -1201,8 +1237,9 @@ def standard_release_package(tmp_path_factory):
     if not (config.GAME / "common/laws/readme.md").is_file():
         pytest.skip("需要锁定版本的游戏原件")
     root = tmp_path_factory.mktemp("standard-release")
-    if version_contracts.is_115():
-        # Build a complete current witness through the live production boundary.
+    if version_contracts.active_version() == "1.15.0":
+        # Only the historical 1.15.0 compatibility tree uses this generator.
+        # The current 1.15.1 standard package validates its checked generation lock.
         # The output directory is private to this module's worker; the actual
         # source root and every executable/source check stay unchanged.
         with pytest.MonkeyPatch.context() as patches:
@@ -1340,3 +1377,71 @@ def test_static_matrix_never_claims_execution_contract(tmp_path: Path):
     assert (
         json.loads(path.read_text(encoding="utf-8"))["evidence"] == "static_name_associations_only"
     )
+
+
+@pytest.fixture(scope="module")
+def current_school_program():
+    from pdx.situated import network_profile, production_profile
+
+    with version_contracts.select_version("1.15.1"):
+        legacy = decision_rules.load()
+        assert ("institution_scores", "institution_schools") not in legacy.groups()
+        assert "literacy" not in {reader.key for reader in legacy.readers}
+        profile = production_profile.load_profile(production_profile.baseline_root())
+        return next(
+            program
+            for program in network_profile.compile_profile(profile)
+            if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({}, 2.75),
+        ({"population": 1_000_000}, 2.75),
+        ({"legitimacy": 80}, 2.75),
+        ({"bureaucracy": 0}, 2.5),
+        ({"net-surplus": 0}, 2.25),
+        ({"bureaucracy": -1, "default": True}, -2),
+        ({"school-agenda": True}, 3.75),
+        ({"ai": False}, 0),
+        ({"population": 0}, 0),
+    ],
+)
+def test_current_school_capacity_uses_one_additive_successor(
+    current_school_program, changes, expected
+):
+    from test_network_profile import _parsed, _score
+
+    from pdx.situated import network_profile
+
+    facts = {
+        "ai": True,
+        "literacy": 0.3,
+        "population": 3_000_000,
+        "bureaucracy": 1,
+        "net-surplus": 1,
+        "default": False,
+        "school-agenda": False,
+        **changes,
+    }
+    # Literal policy expectations are evaluated from emitted PDX in source order;
+    # neither the producer evaluator nor the retired 1.25 multiplier is the oracle.
+    rendered = network_profile.render_program(current_school_program)
+    assert _score(_parsed(rendered), facts) == expected
+
+
+@pytest.mark.parametrize("missing", ["literacy", "population", "bureaucracy", "default"])
+def test_current_school_unknown_required_context_withdraws_successor(
+    current_school_program, missing
+):
+    from test_network_profile import _parsed, _score
+
+    from pdx.situated import network_profile
+
+    available = tuple(
+        fact.id for fact in current_school_program.network.facts if fact.id != missing
+    )
+    rendered = network_profile.render_program(current_school_program, available=available)
+    assert _score(_parsed(rendered), {"ai": True}) == 0

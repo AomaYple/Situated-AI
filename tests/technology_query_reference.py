@@ -7,16 +7,19 @@ renderer, compiler, generator or evaluator. Numeric expectations stay in tests.
 from __future__ import annotations
 
 import json
-import os
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from pdx import version_contracts
+
+_VERSION = version_contracts.active_version()
 _SOURCE = {
     "1.14.5": "technology_opportunities.toml",
     "1.15.0": "technology_opportunities_115.toml",
-}[os.environ.get("V3_CONTRACT_PROFILE", "1.14.5")]
+    "1.15.1": "technology_opportunities_1151.toml",
+}[_VERSION]
 _RAW = tomllib.loads(
     (Path(__file__).resolve().parents[1] / "mod/decisions" / _SOURCE).read_text(encoding="utf-8")
 )
@@ -31,6 +34,12 @@ BUILDING_METHODS = {
 }
 BUILDING_IDENTITIES = tuple(sorted(BUILDING_METHODS))
 METHOD_IDENTITIES = tuple(sorted(CATALOG["methods"]))
+
+
+def _check_version():
+    # The catalog is frozen once per worker; a context switch must never silently
+    # evaluate another profile against this worker's captured mechanism data.
+    assert version_contracts.active_version() == _VERSION, "technology oracle profile changed"
 
 
 def _all(values):
@@ -131,6 +140,7 @@ def _gates(row, root):
 
 
 def _members(technology, purpose):
+    _check_version()
     profile = CATALOG["technologies"][technology]
     selected = []
     for row in profile["opportunities"]:

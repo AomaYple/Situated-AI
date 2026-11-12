@@ -7,13 +7,20 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import decisions
+from pdx import decisions, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import pdx_eval
 from pdx.situated.compiler import load_model, strategy_overlay
 from pdx.situated.schema import Relation
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def historical_extension_assembly():
+    """Exercise frozen extension assembly; live current release is integration-tested."""
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 def test_未验收扩展默认停用():

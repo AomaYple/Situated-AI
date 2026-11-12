@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tomllib
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -44,13 +45,22 @@ def test_module_cli_help_exposes_four_real_candidates_without_requiring_installa
     assert "--output" in result.stdout
 
 
+class CaptureSandbox(NamedTuple):
+    repo: Path
+    installation: Path
+    verified: list[Path]
+    candidate_root: Path
+
+
 @pytest.fixture
 def sandbox(tmp_path, monkeypatch):
-    repo = tmp_path / "repo"
+    repo = tmp_path / "repository"
     repo.mkdir()
     installation = tmp_path / "installation"
     game = installation / "game"
     game.mkdir(parents=True)
+    assert repo.resolve().is_relative_to(tmp_path.resolve())
+    assert installation.resolve().is_relative_to(tmp_path.resolve())
     monkeypatch.setattr(config, "REPO", repo)
     verified = []
 
@@ -61,7 +71,10 @@ def sandbox(tmp_path, monkeypatch):
         return {"runtime": "unknown"}
 
     monkeypatch.setattr(r2_reader_authority, "verify_installation", verify)
-    return repo, installation, verified
+    candidate_root = tmp_path / "repository" / "tools" / "out"
+    assert candidate_root.resolve().is_relative_to(tmp_path.resolve())
+    assert candidate_root == repo / "tools/out"
+    return CaptureSandbox(repo, installation, verified, candidate_root)
 
 
 def _argv(installation, kind, output):
@@ -79,41 +92,41 @@ def _argv(installation, kind, output):
 
 @pytest.mark.parametrize("missing", ["--profile", "--installation", "--kind", "--output"])
 def test_cli_requires_every_selection_even_when_environment_has_current_profile(sandbox, missing):
-    repo, installation, verified = sandbox
-    args = _argv(installation, "parameters", repo / "tools/out/capture/parameters.json")
+    _repo, installation, verified, _candidate_root = sandbox
+    args = _argv(installation, "parameters", sandbox.candidate_root / "capture/parameters.json")
     position = args.index(missing)
     del args[position : position + 2]
     with pytest.raises(SystemExit) as exc:
         capture.main(args)
     assert exc.value.code == 2
     assert verified == []
-    assert not (repo / "tools/out").exists()
+    assert not sandbox.candidate_root.exists()
 
 
 @pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.2"])
 def test_cli_rejects_noncurrent_explicit_profile_before_reads_or_writes(sandbox, profile):
-    repo, installation, verified = sandbox
-    args = _argv(installation, "parameters", repo / "tools/out/capture/parameters.json")
+    _repo, installation, verified, _candidate_root = sandbox
+    args = _argv(installation, "parameters", sandbox.candidate_root / "capture/parameters.json")
     args[1] = profile
     with pytest.raises(SystemExit) as exc:
         capture.main(args)
     assert exc.value.code == 2
     assert verified == []
-    assert not (repo / "tools/out").exists()
+    assert not sandbox.candidate_root.exists()
 
 
 def test_cli_rejects_unknown_kind_before_reads_or_writes(sandbox):
-    repo, installation, verified = sandbox
+    _repo, installation, verified, _candidate_root = sandbox
     with pytest.raises(SystemExit) as exc:
-        capture.main(_argv(installation, "all", repo / "tools/out/capture/all.json"))
+        capture.main(_argv(installation, "all", sandbox.candidate_root / "capture/all.json"))
     assert exc.value.code == 2
     assert verified == []
-    assert not (repo / "tools/out").exists()
+    assert not sandbox.candidate_root.exists()
 
 
 @pytest.fixture
 def native_inputs(sandbox, monkeypatch):
-    repo, installation, _ = sandbox
+    repo, installation, _, _candidate_root = sandbox
     game = installation / "game"
     strategy = (
         "ai_strategy_default = {\n"
@@ -183,9 +196,9 @@ def native_inputs(sandbox, monkeypatch):
 def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
     sandbox, native_inputs, capsys, kind
 ):
-    repo, installation, verified = sandbox
+    _repo, installation, verified, _candidate_root = sandbox
     suffix = ".toml" if kind == "technology-catalog" else ".json"
-    output = repo / "tools/out/capture" / (kind + suffix)
+    output = sandbox.candidate_root / "capture" / (kind + suffix)
     with version_contracts.select_version("1.15.0"):
         assert capture.main(_argv(installation, kind, output)) == 0
         assert version_contracts.active_version() == "1.15.0"
@@ -223,9 +236,9 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_candidate_is_idempotent_but_never_replaces_different_bytes(sandbox, native_inputs, kind):
-    repo, installation, _ = sandbox
+    _repo, installation, _, _candidate_root = sandbox
     suffix = ".toml" if kind == "technology-catalog" else ".json"
-    output = repo / "tools/out/capture" / (kind + suffix)
+    output = sandbox.candidate_root / "capture" / (kind + suffix)
     args = _argv(installation, kind, output)
     assert capture.main(args) == 0
     original = output.read_bytes()
@@ -252,17 +265,17 @@ def test_candidate_is_idempotent_but_never_replaces_different_bytes(sandbox, nat
     ],
 )
 def test_cli_rejects_protected_or_unsafe_output_before_installation_reads(sandbox, relative):
-    repo, installation, verified = sandbox
-    output = repo / relative
-    assert capture.main(_argv(installation, "parameters", output)) == 1
+    repo, installation, verified, _candidate_root = sandbox
+    unsafe_output = repo / relative
+    assert capture.main(_argv(installation, "parameters", unsafe_output)) == 1
     assert verified == []
-    assert not (repo / "tools/out").exists()
-    assert not output.exists()
+    assert not sandbox.candidate_root.exists()
+    assert not unsafe_output.exists()
 
 
 def test_cli_rejects_directory_output_without_modifying_it(sandbox):
-    repo, installation, verified = sandbox
-    output = repo / "tools/out/existing.json"
+    _repo, installation, verified, _candidate_root = sandbox
+    output = sandbox.candidate_root / "existing.json"
     output.mkdir(parents=True)
     assert capture.main(_argv(installation, "parameters", output)) == 1
     assert verified == []
@@ -271,10 +284,10 @@ def test_cli_rejects_directory_output_without_modifying_it(sandbox):
 
 
 def test_cli_rejects_linked_output_and_preserves_target(sandbox):
-    repo, installation, verified = sandbox
+    repo, installation, verified, _candidate_root = sandbox
     target = repo / "reviewed.json"
     target.write_bytes(b"reviewed original bytes\n")
-    output = repo / "tools/out/link.json"
+    output = sandbox.candidate_root / "link.json"
     output.parent.mkdir(parents=True)
     try:
         output.symlink_to(target)
@@ -286,8 +299,8 @@ def test_cli_rejects_linked_output_and_preserves_target(sandbox):
 
 
 def test_cli_rejects_output_inside_installation_even_under_tools_out(sandbox):
-    repo, _, verified = sandbox
-    installation = repo / "tools/out/installation"
+    _repo, _, verified, _candidate_root = sandbox
+    installation = sandbox.candidate_root / "installation"
     (installation / "game").mkdir(parents=True)
     output = installation / "candidate.json"
     assert capture.main(_argv(installation, "parameters", output)) == 1
@@ -297,9 +310,9 @@ def test_cli_rejects_output_inside_installation_even_under_tools_out(sandbox):
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_direct_capture_rejects_historical_context_before_identity_or_output(sandbox, kind):
-    repo, installation, verified = sandbox
+    _repo, installation, verified, _candidate_root = sandbox
     suffix = ".toml" if kind == "technology-catalog" else ".json"
-    output = repo / "tools/out/candidate" / (kind + suffix)
+    output = sandbox.candidate_root / "candidate" / (kind + suffix)
     functions = {
         "parameters": capture.capture_parameters,
         "retentions-native-subset": capture.capture_retentions,
@@ -317,9 +330,9 @@ def test_direct_capture_rejects_historical_context_before_identity_or_output(san
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_installation_drift_fails_before_any_candidate_is_created(sandbox, monkeypatch, kind):
-    repo, installation, _ = sandbox
+    repo, installation, _, _candidate_root = sandbox
     suffix = ".toml" if kind == "technology-catalog" else ".json"
-    output = repo / "tools/out/capture" / (kind + suffix)
+    output = sandbox.candidate_root / "capture" / (kind + suffix)
     # Use the real verifier against an incomplete installation, not a fake success.
     monkeypatch.undo()
     monkeypatch.setattr(config, "REPO", repo)
@@ -328,42 +341,42 @@ def test_installation_drift_fails_before_any_candidate_is_created(sandbox, monke
 
 
 def test_changed_retained_ast_fails_without_creating_candidate(sandbox, native_inputs):
-    repo, installation, _ = sandbox
+    _repo, installation, _, _candidate_root = sandbox
     source = installation / "game" / STRATEGY
     source.write_text(native_inputs[STRATEGY].replace("value = 2", "value = 3"), encoding="utf-8")
-    output = repo / "tools/out/capture/retentions.json"
+    output = sandbox.candidate_root / "capture/retentions.json"
     assert capture.main(_argv(installation, "retentions-native-subset", output)) == 1
     assert not output.parent.exists()
 
 
 def test_unknown_hook_scope_fails_without_creating_candidate(sandbox, native_inputs):
-    repo, installation, _ = sandbox
+    _repo, installation, _, _candidate_root = sandbox
     source = installation / "game/common/on_actions/00_code_on_actions.txt"
     source.write_text(
         source.read_text(encoding="utf-8").replace("Root = Country", "Root = State"),
         encoding="utf-8",
     )
-    output = repo / "tools/out/capture/compatibility.json"
+    output = sandbox.candidate_root / "capture/compatibility.json"
     assert capture.main(_argv(installation, "compatibility", output)) == 1
     assert not output.parent.exists()
 
 
 def test_hook_at_first_line_cannot_borrow_country_comment_from_end(sandbox, native_inputs):
-    repo, installation, _ = sandbox
+    _repo, installation, _, _candidate_root = sandbox
     source = installation / "game/common/on_actions/00_code_on_actions.txt"
     source.write_text(
         source.read_text(encoding="utf-8").removeprefix("# Root = Country\n")
         + "\n# Root = Country\n",
         encoding="utf-8",
     )
-    output = repo / "tools/out/capture/compatibility.json"
+    output = sandbox.candidate_root / "capture/compatibility.json"
     assert capture.main(_argv(installation, "compatibility", output)) == 1
     assert not output.parent.exists()
 
 
 def test_output_parent_redirect_is_rejected_without_symlink_privileges(sandbox, monkeypatch):
-    repo, installation, verified = sandbox
-    output = repo / "tools/out/capture/parameters.json"
+    repo, installation, verified, _candidate_root = sandbox
+    output = sandbox.candidate_root / "capture/parameters.json"
     actual_resolve = Path.resolve
 
     def redirected_resolve(path, *args, **kwargs):
@@ -381,7 +394,7 @@ def test_output_parent_redirect_is_rejected_without_symlink_privileges(sandbox, 
 def test_source_redirect_fails_even_after_installation_identity_check(
     sandbox, native_inputs, monkeypatch, kind
 ):
-    repo, installation, verified = sandbox
+    repo, installation, verified, _candidate_root = sandbox
     source = installation / "game" / (TECHNOLOGY if kind == "technology-catalog" else STRATEGY)
     actual_resolve = Path.resolve
 
@@ -392,18 +405,18 @@ def test_source_redirect_fails_even_after_installation_identity_check(
 
     monkeypatch.setattr(Path, "resolve", redirected_resolve)
     suffix = ".toml" if kind == "technology-catalog" else ".json"
-    output = repo / "tools/out/capture" / (kind + suffix)
+    output = sandbox.candidate_root / "capture" / (kind + suffix)
     assert capture.main(_argv(installation, kind, output)) == 1
     assert verified == [installation]
     assert not output.parent.exists()
 
 
 def test_new_technology_consumer_requires_review_before_writing(sandbox, native_inputs):
-    repo, installation, _ = sandbox
+    _repo, installation, _, _candidate_root = sandbox
     source = installation / "game" / TECHNOLOGY
     source.write_text(
         native_inputs[TECHNOLOGY] + "new_native = { ai_weight = { value = 1 } }", encoding="utf-8"
     )
-    output = repo / "tools/out/capture/technology.toml"
+    output = sandbox.candidate_root / "capture/technology.toml"
     assert capture.main(_argv(installation, "technology-catalog", output)) == 1
     assert not output.parent.exists()

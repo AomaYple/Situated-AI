@@ -144,7 +144,9 @@ def test_native_changes_keep_journal_aware_blocks_and_only_initialize_actual_mis
 
 @pytest.mark.integration
 def test_new_hyphenated_company_retains_native_identity_and_receives_sector_program():
-    with version_contracts.select_version("1.15.0"):
+    with version_contracts.select_version(
+        config.game_version()["caligula_branch"].removeprefix("release/")
+    ):
         data = company_sectors.verify_game(config.GAME)
         adapters = decision_adapters.load()
     assert data["counts"] == {
@@ -184,7 +186,9 @@ def test_native_authority_cannot_bless_an_empty_numeric_block():
 
 @pytest.mark.integration
 def test_changed_default_cannot_hide_behind_an_updated_source_hash():
-    with version_contracts.select_version("1.15.0"):
+    with version_contracts.select_version(
+        config.game_version()["caligula_branch"].removeprefix("release/")
+    ):
         adapters = decision_adapters.load()
         texts = decision_adapters.read_inputs(adapters)
         source = "common/defines/00_ai.txt"
@@ -229,9 +233,9 @@ def test_current_subject_branch_requires_complete_exact_reachability_ast(damage)
 
 @pytest.mark.integration
 def test_new_scripted_predicate_is_reproducible_without_reading_old_manifest(tmp_path, monkeypatch):
-    expected = decision_interfaces.SCRIPTED_PREDICATE_115.read_bytes()
+    expected = decision_interfaces.scripted_predicate_path().read_bytes()
     destination = tmp_path / "current-predicate.json"
-    monkeypatch.setattr(decision_interfaces, "SCRIPTED_PREDICATE_115", destination)
+    monkeypatch.setattr(decision_interfaces, "scripted_predicate_path", lambda: destination)
     monkeypatch.setattr(
         decision_interfaces, "SCRIPTED_PREDICATE_SOURCE", tmp_path / "absent-old.json"
     )
@@ -251,7 +255,9 @@ def test_current_state_witness_retains_optional_owner_and_victim_memory():
     )
     texts = {source: (config.GAME / source).read_text(encoding="utf-8-sig") for source in sources}
     assert "owner ?=" in texts[sources[0]]
-    with version_contracts.select_version("1.15.0"):
+    with version_contracts.select_version(
+        config.game_version()["caligula_branch"].removeprefix("release/")
+    ):
         references = decision_interfaces.verify_state_devastation_sources(texts)
         assert len(references) == 3
         changed = {**texts, sources[0]: texts[sources[0]].replace("owner ?=", "owner =")}
@@ -311,7 +317,7 @@ def test_current_company_builder_identity_includes_helpers_outside_derive(tmp_pa
     alternate.write_bytes(changed)
     monkeypatch.setattr(company_sectors, "__file__", str(alternate))
     with (
-        version_contracts.select_version("1.15.0"),
+        version_contracts.select_version("1.15.1"),
         pytest.raises(ValueError, match="生成来源漂移"),
     ):
         company_sectors.load_baseline()

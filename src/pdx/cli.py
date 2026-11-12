@@ -2774,11 +2774,16 @@ def modgen_cmd(
             # verification; any later error restores their original bytes.
             with GenerationTransaction() as transaction:
                 transaction.replace(ledgers)
-                _, _, files = distribution.package_inputs(
-                    configuration=_profile_configuration(configuration)
-                )
-                production = {name: text for name, text in files.items() if name != "README.md"}
-                transaction.replace(_modgen_output_changes(production))
+                if version_contracts.active_version() == "1.15.1":
+                    production = distribution.write_standard_outputs(
+                        configuration=_profile_configuration(configuration), transaction=transaction
+                    )
+                else:
+                    _, _, files = distribution.package_inputs(
+                        configuration=_profile_configuration(configuration)
+                    )
+                    production = {name: text for name, text in files.items() if name != "README.md"}
+                    transaction.replace(_modgen_output_changes(production))
             console.print(
                 f"[green]已重建 {len(bindings)} 条原版消费者绑定和 "
                 f"{len(situated_domain_coverage.FAMILIES)} 个领域统计[/]"

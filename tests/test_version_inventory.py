@@ -19,6 +19,7 @@ from pdx.situated.version_inventory import (
     canonical_json,
     inventory_installation,
 )
+from pdx.version_contracts import CURRENT_VERSION
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,7 +42,7 @@ def installation(tmp_path: Path) -> Path:
     _write(
         root,
         "launcher/launcher-settings.json",
-        json.dumps({"gameId": "victoria3", "rawVersion": "1.15.0"}),
+        json.dumps({"gameId": "victoria3", "rawVersion": CURRENT_VERSION}),
     )
     _write(
         root,

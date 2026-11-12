@@ -204,7 +204,10 @@ def final_supply(final_candidate, final_disabled):
     assert isinstance(installed_map.value, Block)
     installed_originals = {item.key: _digest(item) for item in installed_map.value.assignments()}
     assert originals == installed_originals
-    assert len(originals) == {"1.14.5": 17, "1.15.0": 18}[version_contracts.active_version()]
+    assert (
+        len(originals)
+        == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 21}[version_contracts.active_version()]
+    )
     actual_map, status = _resolve(current, "ai_strategy_default", "goods_stances")
     assert status == "found"
     assert actual_map is not None

@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 real_generated_branches = adapter_tests.real_generated_branches
 
 ROOT = config.REPO.resolve()
+RUN_VERSION = version_contracts.active_version()
 TEST_FILE = "tests/test_architecture_baseline_evidence.py"
 KINDS = {
     "archive_identity": "archive",
@@ -278,7 +279,10 @@ def baseline_capture(request: pytest.FixtureRequest) -> BaselineCapture:
 
 @pytest.fixture(scope="module")
 def actual_scope(baseline_capture: BaselineCapture) -> vanilla_inventory.VanillaInventory:
-    inventory = vanilla_inventory.discover()
+    # Current integration observes the actual selected installation. The
+    # archived receipt's unit checks below retain their original 1.15.0 scope.
+    with version_contracts.select_version(RUN_VERSION):
+        inventory = vanilla_inventory.discover()
     baseline_capture.scope = inventory
     return inventory
 
@@ -411,6 +415,24 @@ def test_s0_independent_scope(
         if version == "1.15.0"
         else historical_expected
     )
+    if version == "1.15.1":
+        # Independently recounted from the actual f843 installation on 2026-11-12:
+        # 1960 bound sources were rehashed; 1878 belong to discovery's txt scope.
+        # This is the finite A0 discovery denominator, not the full native catalog.
+        expected = {
+            "declarations": 9780,
+            "legal": 5742,
+            "capabilities": {
+                "direct": 2899,
+                "indirect": 2843,
+                "observation": 3412,
+                "pending": 626,
+                "unexposed": 0,
+            },
+            "parsed_files": 1878,
+            "content_roots": ["common"],
+            "parse_failures": [],
+        }
     observed = {
         "declarations": len(inventory.surfaces),
         "legal": sum(
@@ -454,7 +476,7 @@ def test_s0_independent_scope(
     native_sources = _actual_sources(inventory)
     # Complete achievement and population sources prove reader scopes without
     # entering consumer discovery or changing its reviewed declaration count.
-    assert len(native_sources) == (1960 if version == "1.15.0" else 1894)
+    assert len(native_sources) == {"1.14.5": 1894, "1.15.0": 1960, "1.15.1": 1960}[version]
     historical_pins = {
         "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
         "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
@@ -475,6 +497,17 @@ def test_s0_independent_scope(
         if version == "1.15.0"
         else historical_pins
     )
+    if version == "1.15.1":
+        # These six actual 1.15.1 files were independently read and hashed;
+        # equality with their 1.15.0 bytes does not imply version interchangeability.
+        expected_pins = {
+            "common/achievements/ep1_sphere_of_influence_achievements.txt": "323263f0483c14145c79b2a054bc7dd04aee5783731e5204604861d602cd4969",
+            "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
+            "common/pop_types/laborers.txt": "3b136e31556cd483ea213c82eef47c93f9774490775870622331f6139160d9f2",
+            "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
+            "common/pop_types/machinists.txt": "5960f8b6cc15e67b1305bf5d0d74368d2004572099b87ce4c6c827818497c39f",
+            "common/journal_entries/00_urbanization.txt": "dff544be003ef9c6283132b38696bf2b765f170aa0a06771a6ce4afc820fd622",
+        }
     assert {name: native_sources[name] for name in expected_pins} == expected_pins
     baseline_capture.record(
         requirement,
@@ -637,7 +670,8 @@ def _known_failure_observations(
         observed_diagnostics,
     )
     capture.artifact(requirement, ROOT / "tests/test_decision_adapters.py")
-    current = version_contracts.active_version() == "1.15.0"
+    version = version_contracts.active_version()
+    current = version_contracts.is_115()
     law_manifest = (
         ROOT / "research/situated/victoria3-1.15.0-law-scope.json"
         if current
@@ -648,6 +682,9 @@ def _known_failure_observations(
         if current
         else "eb96a222582705af59147adc6da9e6f2b11533e05a73eb9583e55171f79b0ba9"
     )
+    if version == "1.15.1":
+        law_manifest = ROOT / "research/situated/1.15.1/engine-law.json"
+        expected_manifest_sha = "03c8bf8b565d44349ea3dfdc8a8c04bf0d745c4f4fae4b13016cb0f2e4d53cc1"
     manifest_bytes = law_manifest.read_bytes()
     assert _sha(manifest_bytes) == expected_manifest_sha
     data = json.loads(manifest_bytes)
@@ -662,6 +699,23 @@ def _known_failure_observations(
     if current:
         # Independently pinned current edges lie in the reviewed, byte-locked
         # observation windows. Do not inherit historical instruction addresses.
+        edges = (
+            (
+                ("law parser thunk", "0x140848b83", "e998c3fb00", "0x141804f20"),
+                ("law exact token dispatch", "0x141805147", "0f8447010000", "0x141805294"),
+                ("law qualification wrapper", "0x141633d09", "e8023f1d00", "0x141807c10"),
+                ("actual law AI candidate consumer", "0x1415f2729", "e8f2130400", "0x141633b20"),
+                ("actual law AI candidate consumer", "0x1415f2735", "0f848d020000", "0x1415f29c8"),
+            )
+            if version == "1.15.1"
+            else (
+                ("law parser thunk", "0x140840e3f", "e97cbefa00", "0x1417eccc0"),
+                ("law exact token dispatch", "0x1417ecee7", "0f8447010000", "0x1417ed034"),
+                ("law qualification wrapper", "0x141621f79", "e832da1c00", "0x1417ef9b0"),
+                ("actual law AI candidate consumer", "0x1415e1449", "e842090400", "0x141621d90"),
+                ("actual law AI candidate consumer", "0x1415e1455", "0f848d020000", "0x1415e16e8"),
+            )
+        )
         control_flow_checks = [
             {
                 "label": label,
@@ -669,13 +723,7 @@ def _known_failure_observations(
                 "instruction_bytes": instruction,
                 "target_va": target,
             }
-            for label, address, instruction, target in (
-                ("law parser thunk", "0x140840e3f", "e97cbefa00", "0x1417eccc0"),
-                ("law exact token dispatch", "0x1417ecee7", "0f8447010000", "0x1417ed034"),
-                ("law qualification wrapper", "0x141621f79", "e832da1c00", "0x1417ef9b0"),
-                ("actual law AI candidate consumer", "0x1415e1449", "e842090400", "0x141621d90"),
-                ("actual law AI candidate consumer", "0x1415e1455", "0f848d020000", "0x1415e16e8"),
-            )
+            for label, address, instruction, target in edges
         ]
         windows = {point["label"]: point for point in data["observations"]}
         for check in control_flow_checks:
@@ -751,6 +799,7 @@ def test_s0_known_failures_migration(
     bundle = model.consumer_ir
     assert bundle is not None
     retired = migration_baseline.validated_retirements(bundle)
+    current_school_replacements: frozenset[tuple[str, str, str]] = frozenset()
     historical = json.loads(migration_baseline.DEFAULT_SOURCE.read_bytes())
     retirement_data = json.loads(migration_baseline.RETIREMENTS_SOURCE.read_bytes())
     assert (
@@ -797,6 +846,23 @@ def test_s0_known_failures_migration(
                 )
                 == expected_hash
             )
+        if version_contracts.active_version() == "1.15.1":
+            current_school_replacements = migration_baseline._school_network_replacements(
+                versioned, bundle.writers
+            )
+            school = versioned["school_policy_migration"]
+            assert school["successor"] == {
+                "consumer": "a0-pol-schools",
+                "action": "school-investment",
+                "source": "game/common/ai_strategies/00_default_strategy.txt",
+                "definition": "ai_strategy_default",
+                "field": ["institution_scores", "institution_schools"],
+                "actor": "root",
+                "actor_scope": "country",
+                "target": "institution_schools",
+                "operation": "add",
+            }
+            assert len(current_school_replacements) == 36
     assert len(retirements) == len(retirement_data["retirements"])
     assert retired == set(retirements)
     expected_rows = []
@@ -835,6 +901,16 @@ def test_s0_known_failures_migration(
                 )
             else:
                 for replacement in retirement["replacements"]:
+                    if (*identity, replacement) in current_school_replacements:
+                        # Historical multiplier identity is preserved in the
+                        # receipt; its actual successor is an additive R2
+                        # action, independently validated above. No legacy
+                        # rule with the replacement name may remain active.
+                        assert row["source"] == "mod/decisions/information.toml"
+                        assert row["field"] == "institution_scores.institution_schools"
+                        assert row["operation"] == "multiply"
+                        assert (row["source"], replacement) not in all_ids
+                        continue
                     redirect = redirects.get((row["source"], row["definition"], replacement))
                     current_replacement = replacement
                     if redirect is not None:
@@ -939,7 +1015,12 @@ def test_s0_known_failures_migration(
     baseline_capture.artifact(requirement, migration_baseline.DEFAULT_SOURCE)
     baseline_capture.artifact(requirement, migration_baseline.RETIREMENTS_SOURCE)
     if versioned is not None:
-        baseline_capture.artifact(requirement, migration_baseline._VERSION_115_SOURCE)
+        baseline_capture.artifact(
+            requirement,
+            version_contracts.research_path("situated", "migration-retentions.json")
+            if version_contracts.active_version() == "1.15.1"
+            else migration_baseline._VERSION_115_SOURCE,
+        )
     baseline_capture.observation(
         requirement,
         "migration-responsibilities.json",
@@ -952,8 +1033,9 @@ def test_s0_known_failures_migration(
     _known_failure_observations(baseline_capture, request, real_generated_branches)
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
+@pytest.fixture(autouse=True)
+def _witness_contract(request):
+    """Archive units keep their identity; integration proves the selected install."""
+    selected = RUN_VERSION if request.node.get_closest_marker("integration") else "1.15.0"
+    with version_contracts.select_version(selected):
         yield

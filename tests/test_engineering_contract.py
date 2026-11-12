@@ -77,7 +77,9 @@ def _assert_r2_acceptance_consistent(receipt: str, statuses: tuple[str, ...], ma
         pending = bool(re.search(r"尚未|未闭合|待闭合|待.*验收|等待|尚待|正在.*验收", state))
         if complete:
             assert not pending, state
-            assert re.search(r"已.*(?:验收|通过|完成|签署)|共同(?:通过|完成|签署)", state), state
+            assert re.search(
+                r"(?:已|当时).*(?:验收|通过|完成|签署)|共同(?:通过|完成|签署)", state
+            ), state
         else:
             assert pending, state
     for requirement, signed in (("SAI-19", passed[0]), ("SAI-20", complete)):
@@ -112,8 +114,8 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     engineering = (root / "docs/principles/工程原则.md").read_text(encoding="utf-8")
     mod_principles = (root / "docs/principles/Mod开发原则.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
-    # Temporary plan status follows the unique current receipt. Both pending
-    # and signed states must agree; old process receipts never sign this one.
+    # These paragraphs describe the signed 1.15.0 round. The current migration
+    # introduction has its own gates and cannot inherit the historical signature.
     receipt = (root / "docs/design/exec/1.15-R2-最终验收结果.md").read_text(encoding="utf-8")
     matrix = (root / "docs/design/exec/1.15-R2-需求验收矩阵.md").read_text(encoding="utf-8")
     for page, prefix in ((plan_entry, "exec/"), (implementation, ""), (checklist, "exec/")):
@@ -123,9 +125,13 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     _assert_r2_acceptance_consistent(
         receipt,
         (
-            plan_entry.split("\n\n")[1],
+            next(
+                paragraph
+                for paragraph in plan_entry.split("\n\n")
+                if paragraph.startswith("架构实施基准为 **1.15 架构主计划 R2**")
+            ),
             implementation.split("\n\n")[1],
-            checklist.split("\n\n")[1],
+            _document_section(checklist, "1.15.0 架构阶段承接").strip().split("\n\n")[0],
             a6[0].split("|")[-2],
         ),
         matrix,
@@ -201,7 +207,13 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     assert "发布" in checklist
     assert "部署" in checklist
     assert "(exec/版本交付-结果.md)" in checklist
-    assert f"(exec/{distribution.RELEASE_VERSION}-交付结果.md)" in checklist
+    # A new source version is a release target until its actual delivery exists.
+    delivery_index = (root / "docs/design/exec/版本交付-结果.md").read_text(encoding="utf-8")
+    delivered = re.findall(r"当前交付为 \*\*(\d+\.\d+\.\d+)\*\*", delivery_index)
+    assert len(delivered) == 1
+    receipt_link = f"{delivered[0]}-交付结果.md"
+    assert f"(exec/{receipt_link})" in checklist
+    assert (root / "docs/design/exec" / receipt_link).is_file()
     assert "不得缩小源码哈希集合、刷新旧锁或跳过失败制造通过" in checklist
     assert "11 种语言" in previous
 

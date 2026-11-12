@@ -324,10 +324,23 @@ def migration_inventory(root: Path = ROOT, *, version: str = "1.14.5") -> dict[s
 
     rows: list[dict[str, Any]] = []
     sources = []
-    for path in sorted((root / "mod/decisions").glob("*.toml")):
+    declaration_paths = sorted((root / "mod/decisions").glob("*.toml"))
+    frozen_sources = {}
+    if version == "1.14.5":
+        # The immutable historical receipt defines its original source set.
+        # New version-specific declarations cannot expand that denominator.
+        # Read and verify every original file; absent/changed originals fail.
+        from tools.ci.migration_dispositions import load_authority  # noqa: PLC0415
+
+        frozen_sources = {row["path"]: row for row in load_authority()["historical_sources"]}
+        declaration_paths = [root / name for name in sorted(frozen_sources)]
+    for path in declaration_paths:
         raw = path.read_bytes()
         relative = path.relative_to(root).as_posix()
-        sources.append({"path": relative, "sha256": digest(raw), "bytes": len(raw)})
+        source_identity = {"path": relative, "sha256": digest(raw), "bytes": len(raw)}
+        if frozen_sources and source_identity != frozen_sources[relative]:
+            raise ValueError(f"historical declaration source drift: {relative}")
+        sources.append(source_identity)
         rows.extend(declaration_rows(tomllib.loads(raw.decode("utf-8")), relative))
     # The old denominator must not inherit an ambient 1.15 selection. Current
     # compatibility identities are captured separately with an explicit version.
@@ -409,8 +422,34 @@ def migration_inventory(root: Path = ROOT, *, version: str = "1.14.5") -> dict[s
         )
     # Preserve native strategy IDs in the frozen production output separately
     # from symbolic strategy layers/intents; they are different namespaces.
-    for path in sorted((root / "mod/common/ai_strategies").glob("*.txt")):
+    strategy_root = root / "mod"
+    strategy_expected = None
+    if version == "1.14.5":
+        strategy_root = root / "research/situated/1.14.5/generated"
+        strategy_expected = {
+            name: sha
+            for name, sha in load_authority()["historical_generated_sources"].items()
+            if name.startswith("common/ai_strategies/")
+        }
+    strategy_paths = sorted((strategy_root / "common/ai_strategies").glob("*.txt"))
+    if strategy_expected is not None and {
+        path.relative_to(strategy_root).as_posix() for path in strategy_paths
+    } != set(strategy_expected):
+        raise ValueError("historical strategy source set drift")
+    strategy_sources = []
+    for path in strategy_paths:
         raw = path.read_bytes()
+        relative_strategy = path.relative_to(strategy_root).as_posix()
+        if strategy_expected is not None and digest(raw) != strategy_expected[relative_strategy]:
+            raise ValueError(f"historical strategy source drift: {relative_strategy}")
+        strategy_sources.append(
+            {
+                "original_source": "mod/" + relative_strategy,
+                "source_location": path.relative_to(root).as_posix(),
+                "sha256": digest(raw),
+                "bytes": len(raw),
+            }
+        )
         parsed = parse_bytes(raw, path.as_posix())
         if parsed.errors:
             raise ValueError(f"frozen strategy parse failure: {path}: {parsed.errors}")
@@ -420,7 +459,7 @@ def migration_inventory(root: Path = ROOT, *, version: str = "1.14.5") -> dict[s
                     pending(
                         "frozen_native_strategy",
                         strategy_assignment.key,
-                        path.relative_to(root).as_posix(),
+                        "mod/" + relative_strategy,
                         f"root/{index}",
                         line=strategy_assignment.line,
                         source_sha256=digest(raw),
@@ -448,6 +487,7 @@ def migration_inventory(root: Path = ROOT, *, version: str = "1.14.5") -> dict[s
         ),
         "contract": CONTRACT,
         "sources": sources,
+        "strategy_sources": strategy_sources,
         "generator_sources": generator_sources,
         "model_source_fingerprints": dict(model.source_sha256),
         "native_adapter_sources": native_adapter_sources,

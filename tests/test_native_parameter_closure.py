@@ -98,13 +98,17 @@ def parameter_case(tmp_path, monkeypatch):
         "arguments": arguments,
     }
     if version_contracts.is_115():
-        evidence["baseline_version"] = "1.15.0"
+        evidence["baseline_version"] = version_contracts.active_version()
     evidence_path = tmp_path / "country-interfaces.json"
     evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
     monkeypatch.setattr(country_interfaces, "evidence_file", lambda: evidence_path)
     monkeypatch.setattr(
         country_interfaces,
-        "EVIDENCE_115_SHA256",
+        (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        ),
         hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
     )
     generated = {name: text.encode() for name, text in country_state.files(policy).items()}
@@ -196,9 +200,9 @@ def test_exact_stateless_parameter_helpers_bind_native_arguments(parameter_case,
     assert proof["parameter_contract"]["native_sources"]
 
 
-@pytest.fixture
+@pytest.fixture(params=["1.15.0", "1.15.1"])
 def current_parameter_case(monkeypatch, request):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", request.param)
     return request.getfixturevalue("parameter_case")
 
 
@@ -218,12 +222,27 @@ def test_current_country_parameters_select_current_authority(
     assert proof["parameter_contract"]["native_sources"]
 
 
-@pytest.mark.parametrize("fault", ["digest", "version", "missing_version"])
+@pytest.mark.parametrize("fault", ["digest", "version", "missing_version", "other_release_pin"])
 def test_current_country_parameters_reject_authority_drift(
     current_parameter_case, monkeypatch, fault
 ):
     _inventory, _sources, _generated, path = current_parameter_case
-    if fault == "digest":
+    if fault == "other_release_pin":
+        selected_pin = (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        )
+        other_pin = (
+            "EVIDENCE_115_SHA256"
+            if selected_pin == "EVIDENCE_1151_SHA256"
+            else "EVIDENCE_1151_SHA256"
+        )
+        monkeypatch.setattr(country_interfaces, selected_pin, "0" * 64)
+        monkeypatch.setattr(
+            country_interfaces, other_pin, hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+    elif fault == "digest":
         path.write_bytes(path.read_bytes() + b"\n")
     else:
         evidence = json.loads(path.read_bytes())
@@ -233,7 +252,13 @@ def test_current_country_parameters_reject_authority_drift(
             evidence.pop("baseline_version")
         path.write_text(json.dumps(evidence), encoding="utf-8")
         monkeypatch.setattr(
-            country_interfaces, "EVIDENCE_115_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+            country_interfaces,
+            (
+                "EVIDENCE_1151_SHA256"
+                if version_contracts.active_version() == "1.15.1"
+                else "EVIDENCE_115_SHA256"
+            ),
+            hashlib.sha256(path.read_bytes()).hexdigest(),
         )
     row = _report(current_parameter_case)
     assert not row["interface"]["control_authorized"]
@@ -355,7 +380,11 @@ def test_memory_parameter_requires_original_exact_1825_day_writes(
         evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
     monkeypatch.setattr(
         country_interfaces,
-        "EVIDENCE_115_SHA256",
+        (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        ),
         hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
     )
     row = _report(parameter_case)
@@ -382,7 +411,13 @@ def test_country_helper_at_building_owner_uses_the_exact_state_to_country_path(
     evidence["sources"][source] = hashlib.sha256(sources[source]).hexdigest()
     path.write_text(json.dumps(evidence), encoding="utf-8")
     monkeypatch.setattr(
-        country_interfaces, "EVIDENCE_115_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+        country_interfaces,
+        (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        ),
+        hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     surface = replace(inventory.surfaces[0], source=source, field="ai_value", actor_scope="state")
     inventory = replace(

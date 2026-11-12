@@ -1,6 +1,7 @@
 """D9 首批三个真实局部切片：手写结果与完整作用域生产 PDX。"""
 
 from dataclasses import replace
+from functools import cache
 from typing import Any, cast
 
 import pytest
@@ -10,6 +11,7 @@ from pdx import (
     decision_adapters,
     decision_rules,
     production_inputs,
+    version_contracts,
 )
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
@@ -102,6 +104,21 @@ def _scores(policies, changes, fields):
     result = []
     for source, field in fields:
         policy = policies[source]
+        if (
+            version_contracts.active_version() == "1.15.1"
+            and field == "institution_scores.institution_schools"
+            and policy.consumer_programs
+        ):
+            from pdx.situated import action_network
+
+            result.append(
+                10
+                + action_network.evaluate_network(
+                    _current_school(),
+                    {k: v for k, v in _school_facts(changes).items() if k != "ai"},
+                ).total
+            )
+            continue
         selected = decision_rules.evaluate(policy, _values(policy, **changes), is_ai=True).get(
             field
         )
@@ -184,7 +201,25 @@ LJ03_CASES = [
 ]
 
 
-@pytest.mark.parametrize(("changes", "expected"), LJ03_CASES)
+# A new additive school consumer changes only the school component. Keep both
+# literal tables: the 1.15.1 policy is not asserted equivalent to the old multiplier.
+LJ03_CURRENT_CASES = [
+    ({}, (12, 2400, 1.2)),
+    ({"literacy": 0.5, "state_owner_literacy": 0.5}, (10, 2000, 1.2)),
+    ({"state_owner_paper_price": 0.6, "state_owner_paper_balance": -1}, (12, 1900, 1.2)),
+    (
+        {"state_owner_academia_completed": None, "literacy": None, "state_owner_literacy": None},
+        (10, 2000, 1.2),
+    ),
+    ({"country_goods_tools_price": 0.2, "country_goods_tools_balance": 0}, (12, 2400, 1)),
+]
+
+
+def _lj03_cases():
+    return LJ03_CURRENT_CASES if version_contracts.active_version() == "1.15.1" else LJ03_CASES
+
+
+@pytest.mark.parametrize(("changes", "expected"), _lj03_cases())
 def test_lj03_actual_education_capacity_changes_research_without_blocking_industry(
     policies, changes, expected
 ):
@@ -408,6 +443,21 @@ def _pdx_scores(policies, generated, changes, fields, *, is_ai=True):
     scores = []
     for source, field in fields:
         values = _values(policies[source], **changes)
+        if (
+            version_contracts.active_version() == "1.15.1"
+            and field == "institution_scores.institution_schools"
+        ):
+            from test_network_profile import _parsed, _score
+
+            from pdx.situated import network_profile
+
+            assert field not in {".".join(rule.field) for rule in policies[source].rules}
+            school_facts = _school_facts(changes, is_ai=is_ai)
+            rendered = network_profile.render_program(
+                _current_school(), available=tuple(key for key in school_facts if key != "ai")
+            )
+            scores.append(10 + _score(_parsed(rendered), school_facts))
+            continue
         overlay = _overlay(files[source], field)
         actual = pdx_eval.select(overlay, _engine_facts(policies[source], values, is_ai=is_ai))
         factor = actual.delta if actual.operation == "multiply" else 1
@@ -424,7 +474,7 @@ def test_lj01_actual_generated_pdx_supply_and_recipe_scopes(policies, generated,
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize(("changes", "expected"), LJ03_CASES)
+@pytest.mark.parametrize(("changes", "expected"), _lj03_cases())
 def test_lj03_actual_generated_pdx_completed_knowledge_and_literacy(
     policies, generated, changes, expected
 ):
@@ -608,3 +658,75 @@ def test_all_depth_links_disabled_retain_exact_native_and_source_selection_canno
     assert _pdx_scores(policies, generated, values, ((GOV, "building_university.ai_value"),)) == (
         2400,
     )
+
+
+@cache
+def _current_school():
+    from pdx.situated import network_profile, production_profile
+
+    assert version_contracts.active_version() == "1.15.1"
+    profile = production_profile.load_profile(production_profile.baseline_root())
+    return next(
+        program
+        for program in network_profile.compile_profile(profile)
+        if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
+    )
+
+
+def _school_facts(changes, *, is_ai=True):
+    facts = {
+        "ai": is_ai,
+        "literacy": 0.3,
+        "population": 1,
+        "bureaucracy": 0,
+        "net-surplus": -1,
+        "default": False,
+        "school-agenda": False,
+        **{
+            ("net-surplus" if key == "net_surplus" else key): value
+            for key, value in changes.items()
+            if key
+            in {"literacy", "population", "bureaucracy", "net_surplus", "default", "school-agenda"}
+            and value is not None
+        },
+    }
+    for key, value in changes.items():
+        if value is None:
+            facts.pop("net-surplus" if key == "net_surplus" else key, None)
+    return facts
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({}, 11),
+        ({"literacy": 0.5, "state_owner_literacy": 0.5}, 10),
+        ({"state_owner_paper_price": 0.6, "state_owner_paper_balance": -1}, 11),
+        (
+            {
+                "state_owner_academia_completed": None,
+                "literacy": None,
+                "state_owner_literacy": None,
+            },
+            10,
+        ),
+        ({"country_goods_tools_price": 0.2, "country_goods_tools_balance": 0}, 11),
+    ],
+)
+def test_historical_school_lj03_multiplier_contract(version, changes, expected):
+    from test_full_information import _evaluate_script, _generated_rule_blocks
+
+    with version_contracts.select_version(version):
+        policy = decision_rules.load()
+        values = _values(policy, **changes)
+        field = "institution_scores.institution_schools"
+        selected = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+        assert 10 * (selected[1] if selected else 1) == expected
+        engine = {
+            r.engine + (":" + r.argument if r.argument else ""): values.get(r.key)
+            for r in policy.readers
+        }
+        assert (
+            10 * _evaluate_script(_generated_rule_blocks(policy).blocks[field], engine) == expected
+        )

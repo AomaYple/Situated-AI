@@ -392,7 +392,8 @@ def test_scanner_identity_failure_requires_rescan_not_asset_classification():
 def r2_baseline():
     # The independently frozen original reader closure is a real versioned
     # input. No installation-wide scan or game process is needed by this test.
-    return inventory.r2_profile_baseline(r2_reader_authority.FROZEN_ROOT)
+    with select_version("1.15.0"):
+        return inventory.r2_profile_baseline(r2_reader_authority.FROZEN_ROOT)
 
 
 def test_r2_baseline_runs_actual_native_parser_compile_and_build(r2_baseline):
@@ -430,8 +431,9 @@ def test_r2_baseline_runs_actual_native_parser_compile_and_build(r2_baseline):
 
 
 def test_r2_network_cost_uses_predeclared_limits_and_reports_excess():
-    profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
-    program = network_profile.compile_profile(profile)[0]
+    with select_version("1.15.0"):
+        profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
+        program = network_profile.compile_profile(profile)[0]
     tightened = replace(program.network.budget, max_bridges=1, max_edges=1, max_guard_nodes=1)
     result = inventory.r2_program_metrics(
         replace(program, network=replace(program.network, budget=tightened))
@@ -456,7 +458,8 @@ def test_r2_metrics_read_actual_built_overlay_and_keep_violations(monkeypatch):
         return outputs
 
     monkeypatch.setattr(network_profile, "build", modified)
-    report = inventory.r2_profile_baseline(r2_reader_authority.FROZEN_ROOT)
+    with select_version("1.15.0"):
+        report = inventory.r2_profile_baseline(r2_reader_authority.FROZEN_ROOT)
     assert report["budget_status"] == "failed"
     violated = {item["budget"] for item in report["budget_violations"]}
     assert "additional_iterators" in violated

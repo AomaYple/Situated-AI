@@ -266,13 +266,14 @@ class Snapshot:
         # newline="\n"：快照会入库（精简版），而 .gitattributes 规定 eol=lf。
         # 不传这个参数的话，Windows 上生成的快照与 Linux 上的**字节不同**，
         # 跨平台 diff 会整份报差异。
-        payload = json.dumps(self.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
         # 同目录临时文件 + os.replace：进程被中断时不会留下半个 JSON，
         # 且 replace 在 Windows/macOS/Linux 都是原子的（同一文件系统内）。
         fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
         try:
             with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
-                stream.write(payload)
+                # Stream the same JSON tokens without retaining a second full
+                # Unicode document alongside the complete snapshot.
+                json.dump(self.to_dict(), stream, ensure_ascii=False, indent=1, sort_keys=True)
                 stream.flush()
                 os.fsync(stream.fileno())
             Path(temporary).replace(path)

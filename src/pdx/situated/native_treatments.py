@@ -2108,7 +2108,11 @@ class _Dependencies:
                 version_contracts.is_115()
                 and (
                     hashlib.sha256(evidence_raw).hexdigest()
-                    != country_interfaces.EVIDENCE_115_SHA256
+                    != (
+                        country_interfaces.EVIDENCE_1151_SHA256
+                        if version_contracts.active_version() == "1.15.1"
+                        else country_interfaces.EVIDENCE_115_SHA256
+                    )
                     or evidence.get("baseline_version") != version_contracts.active_version()
                 )
             ):

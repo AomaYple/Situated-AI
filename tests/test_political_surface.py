@@ -171,7 +171,9 @@ def test_原版政治策略牌数量和关键策略字段():
         "ai_strategy_confrontation_agenda",
     }
     selected_version = version_contracts.active_version()
-    expected_names = {"1.14.5": historical_names, "1.15.0": current_names}[selected_version]
+    expected_names = {"1.14.5": historical_names, "1.15.0": current_names, "1.15.1": current_names}[
+        selected_version
+    ]
     assert len(historical_names) == 9
     assert len(current_names) == 11
 
@@ -208,7 +210,7 @@ def test_原版政治策略牌数量和关键策略字段():
     by_name = {strategy.name: strategy for strategy in strategies}
     assert len(strategies) == len(expected_names)
     assert set(by_name) == expected_names == set(native_cards)
-    if selected_version == "1.15.0":
+    if selected_version in {"1.15.0", "1.15.1"}:
         for name, chance, aversion in (
             ("ai_strategy_consolidation_agenda", 10, 75),
             ("ai_strategy_confrontation_agenda", 20, 25),

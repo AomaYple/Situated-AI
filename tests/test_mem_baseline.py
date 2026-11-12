@@ -136,6 +136,61 @@ def test_pytest尾行计数支持装饰符且不计子断言(mem, tail, expected
     assert failed == []
 
 
+@pytest.mark.parametrize(
+    "nested",
+    [
+        "E     12422 tests collected, 2 errors in 12.84s",
+        "E     ================= 2 errors in 12.84s =================",
+        "'12422 tests collected, 2 errors in 12.84s'",
+        '"2 failed, 2 errors in 12.84s"',
+        "> assert output == '2 failed, 2 errors in 12.84s'",
+        "unexpected diagnostic, 2 errors in 12.84s",
+        "2 failed, malformed outcome, 2 errors in 12.84s",
+    ],
+)
+def test_pytest_summary_rejects_nested_or_partial_lines(mem, nested):
+    counts, _ = mem.parse_pytest_tail(
+        nested + "\n1179 failed, 11071 passed, 16 skipped, 4 warnings, 166 errors, "
+        "1560 subtests passed in 3118.06s (0:51:58)\n"
+    )
+    assert counts == {"failed": 1179, "passed": 11071, "skipped": 16, "error": 166}
+    assert mem.parse_pytest_tail(nested)[0] == {}
+
+
+def test_pytest_multiple_complete_summaries_retain_cumulative_counts(mem):
+    counts, failed = mem.parse_pytest_tail(
+        "FAILED tests/first.py::test_one\n"
+        "==== 1 failed, 2 passed, 1 warning, 3 subtests passed in 1.00s ====\n"
+        "ERROR tests/second.py::test_two\n"
+        "4 passed, 2 errors, 5 deselected, 1 xfailed, 2 xpassed, 3 rerun, "
+        "1 subtests failed, 2 subtests skipped in 2.00s (0:02)\n"
+    )
+    assert counts == {
+        "failed": 1,
+        "passed": 6,
+        "error": 2,
+        "deselected": 5,
+        "xfailed": 1,
+        "xpassed": 2,
+        "rerun": 3,
+    }
+    assert failed == ["tests/first.py::test_one", "tests/second.py::test_two"]
+
+
+@pytest.mark.parametrize(
+    ("tail", "expected"),
+    [
+        ("no tests ran in 0.01s", {}),
+        ("==== no tests collected in 0.01s ====", {}),
+        ("5 deselected in 0.01s", {"deselected": 5}),
+        ("12422 tests collected, 2 errors in 12.84s", {"error": 2}),
+        ("1 xfailed, 1 xpassed, 2 rerun in 1.0s", {"xfailed": 1, "xpassed": 1, "rerun": 2}),
+    ],
+)
+def test_pytest_complete_summary_variants(mem, tail, expected):
+    assert mem.parse_pytest_tail(tail) == (expected, [])
+
+
 def _summary(*, tag: str, group: str, peak: float = 900.0, per_worker: float = 100.0) -> dict:
     """一份能过 `judge()` 的组读数（n=4 ⇒ 上限 1024+4×512）。"""
     return {

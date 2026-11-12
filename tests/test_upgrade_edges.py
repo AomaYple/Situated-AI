@@ -325,20 +325,21 @@ def test_package_cli_success_and_refusal(tmp_path, monkeypatch):
 
     target = tmp_path / "delivery.zip"
     runner = CliRunner()
-    assert runner.invoke(cli.app, ["package", "--output", str(target)]).exit_code == 0
+    first = runner.invoke(cli.app, ["package", "--output", str(target)])
+    assert first.exit_code == 0, first.output
     assert target.is_file()
     before = target.read_bytes()
-    current = version_contracts.is_115()
+    historical_profile = version_contracts.active_version() == "1.15.0"
     checked = False
 
     def drift(*_args, **_kwargs):
         nonlocal checked
         checked = True
-        if current:
+        if historical_profile:
             raise ValueError("隔离产物漂移，拒绝打包")
         return ["drift"]
 
-    if current:
+    if historical_profile:
         monkeypatch.setattr(distribution, "check_profile_outputs", drift)
     else:
         monkeypatch.setattr(distribution.decisions, "check", drift)

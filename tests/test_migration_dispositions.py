@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+from pdx.version_contracts import select_version
 from tools.ci import architecture_inventory as a0
 from tools.ci import migration_dispositions as migration
 
@@ -309,18 +310,19 @@ def test_historical_artifact_bytes_cannot_be_refreshed_from_current_output(tmp_p
 def test_actual_r2_proves_native_retention_and_rejects_protected_edits():
     from pdx.situated import network_profile, production_profile
 
-    profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
-    generated = network_profile.build(profile)
-    rows = migration.native_preservation(profile, generated, production_profile.BASELINE_ROOT)
-    assert len(rows) == 3
-    assert all(row["restored_equals_native"] is True for row in rows)
-    source = profile.declarations[0].source.removeprefix("game/")
-    generated[source] += "\n# protected native text changed\n"
-    with pytest.raises(ValueError, match="altered protected native"):
-        migration.native_preservation(profile, generated, production_profile.BASELINE_ROOT)
-    generated["common/extra-override.txt"] = "unexpected = {}"
-    with pytest.raises(ValueError, match="output file set"):
-        migration.native_preservation(profile, generated, production_profile.BASELINE_ROOT)
+    with select_version("1.15.0"):
+        profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
+        generated = network_profile.build(profile)
+        rows = migration.native_preservation(profile, generated, production_profile.BASELINE_ROOT)
+        assert len(rows) == 3
+        assert all(row["restored_equals_native"] is True for row in rows)
+        source = profile.declarations[0].source.removeprefix("game/")
+        generated[source] += "\n# protected native text changed\n"
+        with pytest.raises(ValueError, match="altered protected native"):
+            migration.native_preservation(profile, generated, production_profile.BASELINE_ROOT)
+        generated["common/extra-override.txt"] = "unexpected = {}"
+        with pytest.raises(ValueError, match="output file set"):
+            migration.native_preservation(profile, generated, production_profile.BASELINE_ROOT)
 
 
 def test_historical_denominator_ignores_a_current_ambient_profile(monkeypatch):
@@ -330,3 +332,79 @@ def test_historical_denominator_ignores_a_current_ambient_profile(monkeypatch):
     migration.validate_historical(historical, authority)
     assert len(historical["rows"]) == 22258
     assert json.loads(json.dumps(historical["rows"]))[0]["disposition"] == "pending_reproof"
+    manifest = json.loads(
+        (a0.ROOT / "research/situated/1.14.5/generated/manifest.json").read_text(encoding="utf-8")
+    )
+    assert historical["strategy_sources"] == [
+        {
+            "original_source": "mod/" + row["path"],
+            "source_location": "research/situated/1.14.5/generated/" + row["path"],
+            "sha256": row["sha256"],
+            "bytes": row["bytes"],
+        }
+        for row in manifest["files"]
+    ]
+    original_paths = {row["path"] for row in authority["historical_sources"]}
+    assert {row["path"] for row in historical["sources"]} == original_paths
+    assert {
+        path.relative_to(a0.ROOT).as_posix() for path in (a0.ROOT / "mod/decisions").glob("*.toml")
+    } > original_paths
+
+
+def test_current_inventory_includes_current_declarations():
+    current = a0.migration_inventory(version="1.15.1")
+    expected = {
+        path.relative_to(a0.ROOT).as_posix() for path in (a0.ROOT / "mod/decisions").glob("*.toml")
+    }
+    assert {row["path"] for row in current["sources"]} == expected
+    assert all(
+        row["source_location"] == row["original_source"] for row in current["strategy_sources"]
+    )
+
+
+@pytest.mark.parametrize("damage", ["missing", "extra", "changed"])
+def test_historical_inventory_rejects_strategy_source_drift(tmp_path, damage):
+    authority = migration.load_authority()
+    for row in authority["historical_sources"]:
+        destination = tmp_path / row["path"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((a0.ROOT / row["path"]).read_bytes())
+    archive = "research/situated/1.14.5/generated/"
+    strategies = [
+        name
+        for name in authority["historical_generated_sources"]
+        if name.startswith("common/ai_strategies/")
+    ]
+    for name in strategies:
+        destination = tmp_path / archive / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((a0.ROOT / archive / name).read_bytes())
+    original = tmp_path / archive / strategies[0]
+    if damage == "missing":
+        original.unlink()
+    elif damage == "extra":
+        (original.parent / "unexpected.txt").write_bytes(b"unexpected = {}\n")
+    else:
+        original.write_bytes(original.read_bytes() + b"\n# drift\n")
+    with pytest.raises(ValueError, match=r"historical strategy source (set )?drift"):
+        a0.migration_inventory(tmp_path, version="1.14.5")
+
+
+@pytest.mark.parametrize("damage", ["missing", "changed"])
+def test_historical_inventory_rejects_missing_or_changed_original_declarations(tmp_path, damage):
+    authority = migration.load_authority()
+    for row in authority["historical_sources"]:
+        source = a0.ROOT / row["path"]
+        destination = tmp_path / row["path"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+    original = tmp_path / authority["historical_sources"][0]["path"]
+    expected: type[FileNotFoundError] | type[ValueError]
+    if damage == "missing":
+        original.unlink()
+        expected = FileNotFoundError
+    else:
+        original.write_bytes(original.read_bytes() + b"\n# drift\n")
+        expected = ValueError
+    with pytest.raises(expected):
+        a0.migration_inventory(tmp_path, version="1.14.5")

@@ -869,25 +869,92 @@ def write_compatibility_outputs() -> dict[str, str | bytes]:
         raise ValueError("完整兼容隔离产物包含额外文件，拒绝覆盖：" + ", ".join(extras))
     with GenerationTransaction() as transaction:
         transaction.replace({target / name: raw for name, raw in expected.items()})
-        actual_paths = _profile_directory_files(target, excluded=transaction.temporary_paths)
-        if set(actual_paths) != set(expected):
-            raise ValueError("完整兼容生成期间产物文件集合发生漂移")
-        if generation_lock(files) != lock:
-            raise ValueError("完整兼容生成期间源码发生漂移")
-        if any(actual_paths[name].read_bytes() != raw for name, raw in expected.items()):
-            raise ValueError("完整兼容生成产物漂移")
-        actual_files = {name: actual_paths[name].read_bytes() for name in files}
-        check_generation_lock(actual_files)
-        verify_compatibility_installation()
-        # Live verification itself reads the full installation and can overlap
-        # a source/output change. Keep final repository checks inside rollback.
-        if generation_lock(files) != lock:
-            raise ValueError("完整兼容最终原件核验期间源码发生漂移")
-        final_paths = _profile_directory_files(target, excluded=transaction.temporary_paths)
-        if set(final_paths) != set(expected) or any(
-            final_paths[name].read_bytes() != raw for name, raw in expected.items()
-        ):
-            raise ValueError("完整兼容最终原件核验期间产物发生漂移")
+        _verify_written_outputs(transaction, target, files, lock, expected, source_lock)
+    return files
+
+
+def _verify_written_outputs(
+    transaction: GenerationTransaction,
+    target: Path,
+    files: Mapping[str, str | bytes],
+    lock: str,
+    expected: Mapping[str, bytes],
+    source_lock: str,
+) -> None:
+    """Keep source, output, lock and live checks inside the rollback boundary."""
+
+    def verify_tree() -> dict[str, Path]:
+        actual = _profile_directory_files(target, excluded=transaction.temporary_paths)
+        if set(actual) != set(expected):
+            raise ValueError("生产生成期间产物文件集合发生漂移")
+        if any(actual[name].read_bytes() != raw for name, raw in expected.items()):
+            raise ValueError("生产生成产物漂移")
+        return actual
+
+    actual = verify_tree()
+    if generation_lock({}) != source_lock or generation_lock(files) != lock:
+        raise ValueError("生产生成期间源码发生漂移")
+    check_generation_lock({name: actual[name].read_bytes() for name in files})
+    verify_compatibility_installation()
+    # The live verifier can itself overlap source or output changes.
+    if generation_lock({}) != source_lock or generation_lock(files) != lock:
+        raise ValueError("生产最终原件核验期间源码发生漂移")
+    verify_tree()
+
+
+def write_standard_outputs(
+    *,
+    configuration: profile_configuration.ProfileConfiguration | None = None,
+    transaction: GenerationTransaction | None = None,
+) -> dict[str, str | bytes]:
+    """Write the current standard Mod, verifying every boundary before commit.
+
+    A caller may supply its ledger transaction so failures also restore generated
+    source inputs. Existing user/source files are retained with their exact bytes;
+    undeclared production files and any new files appearing during the write fail.
+    """
+    if version_contracts.active_version() != "1.15.1":
+        raise ValueError("标准生产生成只接受当前 1.15.1 合同")
+    if transaction is None:
+        with GenerationTransaction() as owned:
+            return write_standard_outputs(configuration=configuration, transaction=owned)
+    source_lock = generation_lock({})
+    _, _, internal = package_inputs(configuration=configuration)
+    if generation_lock({}) != source_lock:
+        raise ValueError("标准生产生成期间源码发生漂移")
+    files = {name: raw for name, raw in _release_files(internal).items() if name != "README.md"}
+    _validate_paths(list(files))
+    target = decisions.product_path()
+    before = _profile_directory_files(target, excluded=transaction.temporary_paths)
+    original = {name: path.read_bytes() for name, path in before.items()}
+    # Apply existing stale-file retirement rules in a disposable tree. Do not
+    # copy transaction backup files or follow redirects into another directory.
+    with tempfile.TemporaryDirectory(prefix="sitai-standard-") as folder:
+        staged = Path(folder) / "mod"
+        staged.mkdir()
+        for name, raw in original.items():
+            path = staged / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(raw)
+        decisions.write(staged, files)
+        issues = decisions.check(staged, files)
+        if issues:
+            raise ValueError("标准产物包含额外文件或内容不一致：" + "; ".join(issues))
+        expected = {
+            name: path.read_bytes() for name, path in _profile_directory_files(staged).items()
+        }
+    lock = generation_lock(files)
+    expected["generation-lock.json"] = lock.encode("utf-8")
+    transaction.replace(
+        {
+            target / name: expected.get(name)
+            for name in sorted(original.keys() | expected.keys())
+            if original.get(name) != expected.get(name)
+            or name in files
+            or name == "generation-lock.json"
+        }
+    )
+    _verify_written_outputs(transaction, target, files, lock, expected, source_lock)
     return files
 
 

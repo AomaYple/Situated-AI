@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pdx import covgate
+from pdx import covgate, version_contracts
 from tools.ci import test_suite
 
 
@@ -22,23 +22,24 @@ def test_profile_identity_records_verified_live_inputs_and_binary(tmp_path, monk
     from pdx import config
     from pdx.situated import production_profile, r2_reader_authority
 
-    installation = tmp_path / "installation"
-    shutil.copytree(production_profile.BASELINE_ROOT, installation)
-    shutil.copytree(r2_reader_authority.FROZEN_ROOT, installation, dirs_exist_ok=True)
-    binary = installation / "binaries/victoria3.exe"
-    binary.write_bytes(b"identity only; not an engine scope proof")
-    monkeypatch.setattr(config, "ROOT", installation)
-    identity = test_suite.capture_game_identity(tmp_path, "1.15.0")
-    assert identity["profile"] == "1.15.0"
-    assert identity["version"]["caligula_branch"] == "release/1.15.0"
-    assert identity["profile_source_hashes"] == dict(
-        production_profile.load_profile(installation).source_hashes
-    )
-    assert identity["installation"] == str(installation.resolve())
-    assert identity["executable"]["bytes"] == binary.stat().st_size
-    assert identity["verified"] is True
-    assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
-    assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
+    with version_contracts.select_version("1.15.0"):
+        installation = tmp_path / "installation"
+        shutil.copytree(production_profile.BASELINE_ROOT, installation)
+        shutil.copytree(r2_reader_authority.FROZEN_ROOT, installation, dirs_exist_ok=True)
+        binary = installation / "binaries/victoria3.exe"
+        binary.write_bytes(b"identity only; not an engine scope proof")
+        monkeypatch.setattr(config, "ROOT", installation)
+        identity = test_suite.capture_game_identity(tmp_path, "1.15.0")
+        assert identity["profile"] == "1.15.0"
+        assert identity["version"]["caligula_branch"] == "release/1.15.0"
+        assert identity["profile_source_hashes"] == dict(
+            production_profile.load_profile(installation).source_hashes
+        )
+        assert identity["installation"] == str(installation.resolve())
+        assert identity["executable"]["bytes"] == binary.stat().st_size
+        assert identity["verified"] is True
+        assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
+        assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
 
 
 @pytest.mark.parametrize("broken", ["version", "input", "missing_binary"])
@@ -507,6 +508,10 @@ def test_collection_hook_retains_repeated_ids_and_worker_disagreement(tmp_path, 
 
 
 def test_silent_subprocess_timeout_is_reported(tmp_path, monkeypatch):
+    # Process-control unit fixture; game identity has its own strict tests.
+    monkeypatch.setattr(
+        test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
+    )
     project = tmp_path / "silent"
     project.mkdir()
     (project / "pytest.ini").write_text("[pytest]\naddopts = -n 0\n", encoding="utf-8")
@@ -707,6 +712,10 @@ def test_effective_configuration_rejects_inherited_repetition(tmp_path, monkeypa
 
 
 def test_sampler_startup_failure_stops_started_child(tmp_path, monkeypatch):
+    # Process-control unit fixture; game identity has its own strict tests.
+    monkeypatch.setattr(
+        test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
+    )
     process = Mock(pid=123)
     sampler = Mock(ident=None)
     sampler.start.side_effect = OSError("sampler start failed")

@@ -44080,6 +44080,13 @@
     "| `00_secret_goals.txt` | 15,022 | 初始化国家的秘密目标 |",
     "| `00_behavior_variables.txt` | 343 | 设置 AI 行为变量 |"
    ],
+   "14-经济与生产系统.md::doc14 PM/PMG AI 字段": [
+    "| `ai_value` | PM | **1** | PM 级 AI 基准值，`fixed_point` |",
+    "| `ai_selection` | **PMG** | 60 | 组的 AI 选法：`most_productive` / `most_profitable` |",
+    "| `scoring_override` | PM | 2 | 原版取值为 `world_market_hub_status` / `low_pop_method`，分别用于港口与贸易中心的 AI 选择 |",
+    "| `ai_will_do` | — | **0** | **PM 上没有这个字段** |",
+    "| `ai_weight` | — | **0** | **PM 上没有这个字段**（文档写了但 vanilla 不用） |"
+   ],
    "14-经济与生产系统.md::doc14 travel_network 节点令牌": [
     "| `province` | `province=<hex>` | 11,010 | 省份 ID（十六进制） |",
     "| `x` / `y` | `x=<int> y=<int>` | 11,010 | 地图坐标 |",
@@ -44128,7 +44135,7 @@
     "| `disallowing_laws` | 69 | `01_industry.txt:253` | **禁止**性法律（与 `unlocking_laws` 相反） |",
     "| `replacement_if_valid` | 8 | `01_industry.txt:130` | 若某 PM 有效则替换自身 |",
     "| `profession_ratio` | 18 | `05_military.txt:5` | 兵种比例（`soldiers = 97 / officers = 3`） |",
-    "| `low_pop_method` | 2 | `11_private_infrastructure.txt:4` | 低人口州 AI 自动启用 |",
+    "| `scoring_override` | 2 | `11_private_infrastructure.txt:4`、`:398` | AI 评分选择覆盖：`world_market_hub_status` 用于缺少活动世界市场枢纽的港口，`low_pop_method` 用于低人口州贸易中心；均据原版行内注释 |",
     "| `city_lights_color_index` | 3 | `06_urban_center.txt:85` | 城市灯光颜色索引 |",
     "| `unlocking_company_categories` | 12 | `14_companies.txt:5` | 需要特定公司类别 |",
     "| `unlocking_geographic_regions` | 4 | `02_agro.txt:21` | 需要位于特定地理区域 |",

@@ -103,3 +103,8 @@ research/vanilla-ai/1.15.1/r2-readers/game/common/journal_entries/08_tsarpoints.
 research/vanilla-ai/1.15.1/r2-readers/game/common/scripted_buttons/scripted_buttons.md binary
 research/vanilla-ai/1.15.1/r2-readers/game/common/scripted_triggers/05_tsarpoints_scripted_triggers.txt binary
 research/vanilla-ai/1.15.1/r2-readers/launcher/launcher-settings.json binary
+
+# 1.14.5 archived generation: original release bytes pinned by immutable migration authority.
+research/situated/1.14.5/generated/common/ai_strategies/00_default_strategy.txt binary
+research/situated/1.14.5/generated/common/ai_strategies/01_admin_strategies.txt binary
+research/situated/1.14.5/generated/common/ai_strategies/02_subject_diplomatic_strategies.txt binary

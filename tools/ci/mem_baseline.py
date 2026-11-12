@@ -1193,13 +1193,25 @@ def run_group(
 
 
 #: pytest 收尾汇总里的计数段（`5 failed` / `1592 passed` / `1 error`）。
-_COUNT_RE = re.compile(r"(\d+) (passed|failed|skipped|error|errors|deselected|xfailed|xpassed)")
+_COUNT_RE = re.compile(
+    r"(\d+) (passed|failed|skipped|error|errors|deselected|xfailed|xpassed|rerun)"
+)
+_SUMMARY_ITEM = (
+    rf"(?:{_COUNT_RE.pattern}|\d+ warnings?|\d+ subtests (?:passed|failed|skipped|xfailed|xpassed)"
+    r"|\d+ tests? collected)"
+)
+_SUMMARY_RE = re.compile(
+    rf"(?P<counts>{_SUMMARY_ITEM}(?:, {_SUMMARY_ITEM})*|no tests (?:ran|collected))"
+    r" in \d+(?:\.\d+)?s(?: \(\d+(?::\d{2}){1,2}\))?"
+)
 
 
 def parse_pytest_tail(text: str) -> tuple[dict[str, int], list[str]]:
     """从 pytest 收尾汇总里取计数与失败用例名（拿不到就给空，不猜）。
 
-    为什么要按逗号切再 ``fullmatch``：`-q` 的收尾行是
+    先核对完整收尾行，拒绝 traceback 的 ``E ...`` 或引用文本；不能从
+    任意一行中捡出逗号后的合法片段。多条真实摘要保留累计合同。
+    再按逗号切并 ``fullmatch``：`-q` 的收尾行是
     ``35 passed, 16 subtests passed in 1.23s`` 这种**没有 ``=``** 的行，
     而 ``16 subtests passed`` 不是用例数 —— 按整段切、逐段 fullmatch
     才能既拿到 ``35`` 又不把 ``16`` 算进去（实测踩过）。
@@ -1210,8 +1222,10 @@ def parse_pytest_tail(text: str) -> tuple[dict[str, int], list[str]]:
         stripped = line.strip()
         if stripped.startswith(("FAILED ", "ERROR ")):
             failed.append(stripped.split(" ", 1)[1][:160])
-        head = stripped.strip("= ").split(" in ", 1)[0]
-        for chunk in head.split(","):
+        summary = _SUMMARY_RE.fullmatch(stripped.strip("= "))
+        if summary is None:
+            continue
+        for chunk in summary.group("counts").split(","):
             hit = _COUNT_RE.fullmatch(chunk.strip())
             if not hit:
                 continue

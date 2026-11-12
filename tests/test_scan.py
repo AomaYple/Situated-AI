@@ -181,7 +181,9 @@ class TestRealGameTree(unittest.TestCase):
 
         common = GAME / "common"
         n = sum(1 for p in common.iterdir() if p.is_dir())
-        self.assertEqual(n, {"1.14.5": 138, "1.15.0": 140}[version_contracts.active_version()])
+        self.assertEqual(
+            n, {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141}[version_contracts.active_version()]
+        )
 
     def test_common_txt_count(self):
         """common 下 .txt 数。
@@ -195,14 +197,16 @@ class TestRealGameTree(unittest.TestCase):
         from pdx.config import GAME
 
         n = count_files(GAME / "common", ".txt")
-        self.assertEqual(n, {"1.14.5": 3030, "1.15.0": 3191}[version_contracts.active_version()])
+        self.assertEqual(
+            n, {"1.14.5": 3030, "1.15.0": 3191, "1.15.1": 3192}[version_contracts.active_version()]
+        )
 
     def test_common_total_file_count(self):
         from pdx.config import GAME
 
         self.assertEqual(
             count_files(GAME / "common"),
-            {"1.14.5": 3107, "1.15.0": 3271}[version_contracts.active_version()],
+            {"1.14.5": 3107, "1.15.0": 3271, "1.15.1": 3273}[version_contracts.active_version()],
         )
 
     def test_common_md_count_is_77(self):
@@ -210,7 +214,7 @@ class TestRealGameTree(unittest.TestCase):
 
         self.assertEqual(
             count_files(GAME / "common", ".md"),
-            {"1.14.5": 77, "1.15.0": 80}[version_contracts.active_version()],
+            {"1.14.5": 77, "1.15.0": 80, "1.15.1": 81}[version_contracts.active_version()],
         )
 
     def test_game_root_files_present(self):

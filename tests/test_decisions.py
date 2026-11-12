@@ -40,7 +40,7 @@ def policy():
 
 def test_财政开关显式开启且交付契约来自数据源(policy):
     assert policy.enabled
-    assert policy.package.product_version == distribution.RELEASE_VERSION
+    assert policy.package.product_version == "3.2.0"
     assert policy.package.status == (
         "candidate" if version_contracts.active_version() == "1.15.0" else "released"
     )
@@ -355,14 +355,16 @@ def test_拒绝错误类型和未审查游戏版本(tmp_path, mutation):
         'status = "released"|status = "unreviewed"',
         'save_compatibility = "new-game-only"|save_compatibility = "all"',
         'platforms = ["windows", "macos", "linux"]|platforms = ["plan9"]',
-        f'product_version = "{distribution.RELEASE_VERSION}"|product_version = "not-a-version"',
+        'product_version = "3.2.0"|product_version = "not-a-version"',
     ],
 )
 def test_拒绝不可靠的包契约(tmp_path, mutation):
     before, after = mutation.split("|")
     source = tmp_path / "bad.toml"
+    original = decisions.SOURCE.read_text(encoding="utf-8")
+    assert original.count(before) == 1
     source.write_text(
-        decisions.SOURCE.read_text(encoding="utf-8").replace(before, after),
+        original.replace(before, after),
         encoding="utf-8",
     )
     with pytest.raises(ValueError):

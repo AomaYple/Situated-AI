@@ -1,4 +1,4 @@
-"""Complete compatibility writes retain independent live and frozen boundaries."""
+"""Current standard writes retain independent live and frozen boundaries."""
 
 from __future__ import annotations
 
@@ -11,44 +11,45 @@ import pytest
 from pdx import config, decisions, distribution, version_contracts
 
 
-@pytest.fixture(scope="module", autouse=True)
-def selected_version():
-    with version_contracts.select_version("1.15.0"):
+@pytest.fixture(autouse=True)
+def selected_version(request):
+    version = "1.15.0" if "isolated_output_apis" in request.node.name else "1.15.1"
+    with version_contracts.select_version(version):
         yield
 
 
 @pytest.fixture(scope="module")
 def complete_inputs():
-    with version_contracts.select_version("1.15.0"):
+    with version_contracts.select_version("1.15.1"):
         return distribution.package_inputs(include_engineering_metadata=True)
 
 
 @pytest.fixture
-def compatibility_tree(tmp_path, monkeypatch, complete_inputs):
-    target = tmp_path / "compatibility"
+def standard_tree(tmp_path, monkeypatch, complete_inputs):
+    target = tmp_path / "standard"
     monkeypatch.setattr(decisions, "product_path", lambda: target)
     # Reuse a complete, genuinely generated input bundle. The final live
     # verifier, source lock, exact tree check and archive validator stay real.
     monkeypatch.setattr(distribution, "package_inputs", lambda **_kwargs: complete_inputs)
-    distribution.write_compatibility_outputs()
+    distribution.write_standard_outputs()
     return target
 
 
 @pytest.mark.integration
-def test_existing_complete_compatibility_tree_regenerates_exactly(compatibility_tree):
-    before = {path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()}
-    distribution.write_compatibility_outputs()
+def test_existing_complete_standard_tree_regenerates_exactly(standard_tree):
+    before = {path: path.read_bytes() for path in standard_tree.rglob("*") if path.is_file()}
+    distribution.write_standard_outputs()
     assert {
-        path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()
+        path: path.read_bytes() for path in standard_tree.rglob("*") if path.is_file()
     } == before
     distribution.check_generation_lock()
 
 
 @pytest.mark.integration
 @pytest.mark.parametrize("timing", ["existing", "during-transaction"])
-def test_compatibility_rejects_unowned_same_prefix_file(compatibility_tree, monkeypatch, timing):
-    before = {path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()}
-    unowned = compatibility_tree / "common/.sitai-generation-external"
+def test_standard_rejects_unowned_same_prefix_file(standard_tree, monkeypatch, timing):
+    before = {path: path.read_bytes() for path in standard_tree.rglob("*") if path.is_file()}
+    unowned = standard_tree / "common/.sitai-generation-external"
     if timing == "existing":
         unowned.write_bytes(b"unowned external bytes\n")
     else:
@@ -61,19 +62,15 @@ def test_compatibility_rejects_unowned_same_prefix_file(compatibility_tree, monk
 
         monkeypatch.setattr(distribution.GenerationTransaction, "replace", inject)
     with pytest.raises(ValueError, match=r"额外文件|文件集合.*漂移"):
-        distribution.write_compatibility_outputs()
+        distribution.write_standard_outputs()
     assert {path: path.read_bytes() for path in before} == before
     assert unowned.read_bytes() == b"unowned external bytes\n"
-    assert {path for path in compatibility_tree.rglob("*") if path.is_file()} == set(before) | {
-        unowned
-    }
+    assert {path for path in standard_tree.rglob("*") if path.is_file()} == set(before) | {unowned}
 
 
 @pytest.mark.integration
 @pytest.mark.parametrize("damage", ["exe", "native", "source", "output", "lock"])
-def test_final_compatibility_zip_boundary_rejects_drift(
-    compatibility_tree, tmp_path, monkeypatch, damage
-):
+def test_final_standard_zip_boundary_rejects_drift(standard_tree, tmp_path, monkeypatch, damage):
     destination = tmp_path / "packages/candidate.zip"
     destination.parent.mkdir()
     destination.write_bytes(b"previous complete ZIP")
@@ -83,8 +80,8 @@ def test_final_compatibility_zip_boundary_rejects_drift(
         "exe": config.GAME.parent / "binaries/victoria3.exe",
         "native": config.GAME / "common/ai_strategies/00_default_strategy.txt",
         "source": config.REPO / "src/pdx/situated/compiler.py",
-        "output": compatibility_tree / distribution.METADATA_NAME,
-        "lock": compatibility_tree / "generation-lock.json",
+        "output": standard_tree / distribution.METADATA_NAME,
+        "lock": standard_tree / "generation-lock.json",
     }[damage]
     opened = Path.open
     changed = False
@@ -111,10 +108,10 @@ def test_final_compatibility_zip_boundary_rejects_drift(
 
 @pytest.mark.integration
 @pytest.mark.parametrize("damage", ["exe", "native"])
-def test_final_compatibility_generation_live_drift_rolls_back(
-    compatibility_tree, tmp_path, monkeypatch, damage
+def test_final_standard_generation_live_drift_rolls_back(
+    standard_tree, tmp_path, monkeypatch, damage
 ):
-    before = {path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()}
+    before = {path: path.read_bytes() for path in standard_tree.rglob("*") if path.is_file()}
     view = tmp_path / "changed-view"
     view.write_bytes(b"changed after generation lock validation\n")
     target = (
@@ -138,7 +135,7 @@ def test_final_compatibility_generation_live_drift_rolls_back(
 
     monkeypatch.setattr(distribution, "check_generation_lock", drift_after_lock)
     with pytest.raises(ValueError, match=r"漂移|不一致"):
-        distribution.write_compatibility_outputs()
+        distribution.write_standard_outputs()
     assert changed
     assert {path: path.read_bytes() for path in before} == before
 
@@ -146,13 +143,13 @@ def test_final_compatibility_generation_live_drift_rolls_back(
 @pytest.mark.integration
 @pytest.mark.parametrize("damage", ["source", "output", "lock"])
 def test_change_during_final_live_verification_rolls_back(
-    compatibility_tree, tmp_path, monkeypatch, damage
+    standard_tree, tmp_path, monkeypatch, damage
 ):
-    before = {path: path.read_bytes() for path in compatibility_tree.rglob("*") if path.is_file()}
+    before = {path: path.read_bytes() for path in standard_tree.rglob("*") if path.is_file()}
     target = {
         "source": config.REPO / "src/pdx/situated/compiler.py",
-        "output": compatibility_tree / distribution.METADATA_NAME,
-        "lock": compatibility_tree / "generation-lock.json",
+        "output": standard_tree / distribution.METADATA_NAME,
+        "lock": standard_tree / "generation-lock.json",
     }[damage]
     view = tmp_path / "changed-view"
     view.write_bytes(b"changed during final live verification\n")
@@ -174,7 +171,7 @@ def test_change_during_final_live_verification_rolls_back(
         distribution, "verify_compatibility_installation", drift_during_live_verification
     )
     with pytest.raises(ValueError, match="漂移"):
-        distribution.write_compatibility_outputs()
+        distribution.write_standard_outputs()
     assert changed
     changed = False
     assert {path: path.read_bytes() for path in before} == before

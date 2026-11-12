@@ -239,6 +239,6 @@ def test_installed_native_sources_authorize_exact_local_tax_query():
     assert compiled.expression == EXPECTED
     assert compiled.world_scans == 0
     assert set(dict(compiled.source_hashes)) == {GOVERNMENT, PORTUGAL}
-    line = {"1.14.5": 530, "1.15.0": 580}[queries.version_contracts.active_version()]
+    line = {"1.14.5": 530, "1.15.0": 580, "1.15.1": 580}[queries.version_contracts.active_version()]
     assert f"{PORTUGAL}:{line}" in compiled.references
     assert f"{GOVERNMENT}:12" in compiled.references

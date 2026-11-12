@@ -6,7 +6,15 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import country_state, decision_adapters, decision_intents, decision_rules, decisions
+from pdx import (
+    config,
+    country_state,
+    decision_adapters,
+    decision_intents,
+    decision_rules,
+    decisions,
+    version_contracts,
+)
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import relations
@@ -25,6 +33,13 @@ from pdx.situated.schema import EvidenceValue
 from pdx.situated.state import derive
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture
+def historical_witness_contract():
+    """Offline assembly/audit witnesses retain their original frozen1145 identity."""
+    with version_contracts.select_version("1.14.5"):
+        yield
 
 
 def _max_exclusive_writes(block: Block) -> int:
@@ -176,7 +191,7 @@ def test_关系对称配对且仅使能关系禁止有向环():
         relations.validate(cyclic)
 
 
-def test_生产元数据登记行动合同():
+def test_生产元数据登记行动合同(historical_witness_contract):
     payload = json.loads(
         decisions.build(extensions=decisions.load_extensions(profile="release"))[
             ".metadata/metadata.json"
@@ -203,6 +218,7 @@ def test_生产元数据登记行动合同():
     assert ast["write_count"] == ast["witness_count"]
 
 
+@pytest.mark.integration
 def test_覆盖报告只在逐实例生产见证齐全时完成():
     report = audit_report()
     # 旧生产 writer 已逐项见证，但 D0 的独立原版范围仍包含 pending
@@ -335,3 +351,13 @@ def test_布尔状态保留真假未知且不接受原始数值冒充(raw, known
     vector = derive({name: EvidenceValue(name, raw, known, stale=stale) for name in names})
     actual = dict((*vector.capacities, *vector.pressures, *vector.opportunities))
     assert all(actual[name] == expected for name in names)
+
+
+def test_缺少当前生成原件时审计保留pending而不借历史完成状态(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
+    with version_contracts.select_version("1.15.1"):
+        report = audit_report()
+    assert report.status == "incomplete"
+    assert report.pending
+    assert all(row.status == "pending" for row in report.rows)
+    assert all(row.evidence_state != "production_witnessed" for row in report.rows)

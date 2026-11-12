@@ -48,7 +48,11 @@ def test_context_reuse_preserves_identity_isolation_and_rechecks_pin(monkeypatch
     assert sum(raw is not None for raw in reads) == 1
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_115" if mobilization.version_contracts.is_115() else "BASELINE_SHA256",
+        "BASELINE_SHA256_1151"
+        if mobilization.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
+        if mobilization.version_contracts.is_115()
+        else "BASELINE_SHA256",
         "0" * 64,
     )
     with pytest.raises(ValueError, match="身份漂移"):
@@ -101,6 +105,14 @@ def test_frozen_raw_hashes_reconstruct_complete_originals(baseline):
             OWNER: "ff43a0689abeec36d65076f4fc020f90172cbd60ac1a1d03a233d292edf6dc5b",
             COUNTRY: "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d",
             MODIFIER: "764aeaa461b09ba87bc57cb764300fb34f2a7945439fc2fe8317badedec7f40d",
+        }
+    if mobilization.version_contracts.active_version() == "1.15.1":
+        expected = {
+            "common/mobilization_options/00_mobilization_option.txt": "954cf50dc677fd61b0aa7da0d5cb9a32f870f2530d78d01cd56e544cdf511c97",
+            "common/mobilization_options/mobilization_options.md": "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
+            "common/modifier_type_definitions/00_modifier_types.txt": "764aeaa461b09ba87bc57cb764300fb34f2a7945439fc2fe8317badedec7f40d",
+            "common/on_actions/00_code_on_actions.txt": "0bbc933d54ea56f830850decafaf5034694eb2222e49d6c980f2c6122be777a9",
+            "events/tech_events/trench_warfare.txt": "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d",
         }
     assert set(baseline["originals"]) == set(expected)
     for source, original in _inputs(baseline).items():
@@ -387,12 +399,16 @@ def test_repin_cannot_hide_frozen_raw_ast_metadata_key_quantity_or_guard_tamperi
     path.write_text(mobilization._canonical(data), encoding="utf-8", newline="\n")
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_115" if mobilization.version_contracts.is_115() else "BASELINE",
-        path,
+        "baseline_path",
+        lambda: path,
     )
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_115" if mobilization.version_contracts.is_115() else "BASELINE_SHA256",
+        "BASELINE_SHA256_1151"
+        if mobilization.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
+        if mobilization.version_contracts.is_115()
+        else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError):
@@ -404,14 +420,18 @@ def test_hash_pin_and_canonical_bytes_are_independent_guards(baseline, tmp_path,
     path.write_text(mobilization._canonical(baseline) + " ", encoding="utf-8", newline="\n")
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_115" if mobilization.version_contracts.is_115() else "BASELINE",
-        path,
+        "baseline_path",
+        lambda: path,
     )
     with pytest.raises(ValueError, match="身份漂移"):
         mobilization.load_baseline()
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_115" if mobilization.version_contracts.is_115() else "BASELINE_SHA256",
+        "BASELINE_SHA256_1151"
+        if mobilization.version_contracts.active_version() == "1.15.1"
+        else "BASELINE_SHA256_115"
+        if mobilization.version_contracts.is_115()
+        else "BASELINE_SHA256",
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError, match="规范JSON"):

@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from pdx import version_contracts
 from pdx.model import Block
 from pdx.parser import parse_bytes
 from pdx.situated import architecture_receipts as receipts
@@ -109,7 +110,10 @@ def test_候选包拒绝探针缓存日志和Python运行态() -> None:
 
 
 def test_当前生产metadata登记ConsumerIR唯一owner() -> None:
-    result = situated_closeout.consumer_ir_owner_report()
+    # Exercise the original offline assembly contract. Current native release
+    # construction is covered by the complete installed-source production gate.
+    with version_contracts.select_version("1.14.5"):
+        result = situated_closeout.consumer_ir_owner_report()
 
     assert result["issues"] == []
     assert result["writer_count"] > 0

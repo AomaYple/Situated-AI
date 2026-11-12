@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import version_contracts
+from pdx import config, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import production_profile as profile
@@ -22,7 +22,7 @@ from pdx.situated.decision_ir import (
     WriterDecisionIR,
 )
 
-GAME = Path(r"C:\Program Files (x86)\Steam\steamapps\common\Victoria 3")
+GAME = config.ROOT
 
 
 def _at_line(prefix: str, line: int, body: str, suffix: str) -> bytes:
@@ -579,10 +579,15 @@ def test_legacy_road_policy_guard_preserves_named_actor(
     )
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not GAME.is_dir(), reason="requires actual 1.15 installation")
 def test_actual_installation_profile_smoke():
-    loaded = profile.load_profile(GAME)
-    assert loaded.game_version == "1.15.0"
+    installed_version = config.game_version(GAME)["caligula_branch"].removeprefix("release/")
+    with version_contracts.select_version(installed_version):
+        loaded = profile.load_profile(GAME)
+        frozen = profile.load_profile(profile.baseline_root())
+    assert loaded.game_version == installed_version
+    assert loaded.source_hashes == frozen.source_hashes
     assert len(loaded.source_hashes) == 10
     assert len(loaded.registry.manifests) == 3
 

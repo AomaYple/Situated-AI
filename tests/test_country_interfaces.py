@@ -77,7 +77,13 @@ def test_tampered_evidence_is_rejected(tmp_path, change, monkeypatch):
     path = tmp_path / "evidence.json"
     path.write_text(json.dumps(evidence), encoding="utf-8")
     monkeypatch.setattr(
-        country_interfaces, "EVIDENCE_115_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+        country_interfaces,
+        (
+            "EVIDENCE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "EVIDENCE_115_SHA256"
+        ),
+        hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError):
         country_interfaces.validate(country_state.load(), snapshot=_snapshot(), evidence_path=path)
@@ -101,7 +107,10 @@ def test_observations_do_not_accept_comments_or_variable_mentions():
 def test_installed_evidence_detects_drift_and_wrong_ast_line(tmp_path, monkeypatch):
     if not (config.GAME / "common/ai_strategies/00_default_strategy.txt").is_file():
         pytest.skip("需要锁定原版")
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.0")
+    monkeypatch.setenv(
+        version_contracts.ENVIRONMENT_VARIABLE,
+        config.game_version()["caligula_branch"].removeprefix("release/"),
+    )
     policy = country_state.load()
     evidence = json.loads(country_interfaces.evidence_file().read_text(encoding="utf-8"))
     for relative in {*evidence["sources"], "common/ai_strategies/00_default_strategy.txt"}:
@@ -114,7 +123,13 @@ def test_installed_evidence_detects_drift_and_wrong_ast_line(tmp_path, monkeypat
     path.write_text(json.dumps(evidence), encoding="utf-8")
     with monkeypatch.context() as rebinding:
         rebinding.setattr(
-            country_interfaces, "EVIDENCE_115_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+            country_interfaces,
+            (
+                "EVIDENCE_1151_SHA256"
+                if version_contracts.active_version() == "1.15.1"
+                else "EVIDENCE_115_SHA256"
+            ),
+            hashlib.sha256(path.read_bytes()).hexdigest(),
         )
         with pytest.raises(ValueError, match="样例不匹配"):
             country_interfaces.validate(policy, root=tmp_path, evidence_path=path)
@@ -174,13 +189,21 @@ def test_current_context_cannot_borrow_old_identity_or_grant_scope(tmp_path, cha
 def test_current_live_context_rejects_relocated_or_rebound_native_ast(tmp_path, monkeypatch):
     if not (config.GAME / "common/ai_strategies/00_default_strategy.txt").is_file():
         pytest.skip("需要锁定原版")
-    with version_contracts.select_version("1.15.0"):
+    with version_contracts.select_version(
+        config.game_version()["caligula_branch"].removeprefix("release/")
+    ):
         evidence = json.loads(country_interfaces.evidence_file().read_bytes())
         evidence["interfaces"]["bureaucracy"]["ast_context"]["ancestor_path"] = []
         path = tmp_path / "changed.json"
         path.write_text(json.dumps(evidence), encoding="utf-8")
         monkeypatch.setattr(
-            country_interfaces, "EVIDENCE_115_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+            country_interfaces,
+            (
+                "EVIDENCE_1151_SHA256"
+                if version_contracts.active_version() == "1.15.1"
+                else "EVIDENCE_115_SHA256"
+            ),
+            hashlib.sha256(path.read_bytes()).hexdigest(),
         )
         with pytest.raises(ValueError, match="AST语境不匹配"):
             country_interfaces.validate(country_state.load(), root=config.GAME, evidence_path=path)

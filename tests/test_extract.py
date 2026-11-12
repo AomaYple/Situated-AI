@@ -247,9 +247,17 @@ class TestRealGameCounts(unittest.TestCase):
         cls.common = GAME / "common"
 
     def test_known_entry_counts(self):
-        from pdx.version_contracts import is_115
+        from pdx.version_contracts import active_version
 
-        expected = self.KNOWN_115 if is_115() else self.KNOWN
+        expected = {
+            "1.14.5": self.KNOWN,
+            "1.15.0": self.KNOWN_115,
+            "1.15.1": {
+                **self.KNOWN_115,
+                "modifier_type_definitions": 2476,
+                "static_modifiers": 6487,
+            },
+        }[active_version()]
         for name, want in expected.items():
             with self.subTest(directory=name):
                 res = extract_dir(self.common / name)

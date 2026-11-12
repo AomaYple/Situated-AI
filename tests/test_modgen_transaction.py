@@ -84,7 +84,8 @@ def generation(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "_modgen_verify_sources", lambda: None)
     monkeypatch.setattr(cli.distribution, "generation_lock", lambda _files: "new-lock\n")
 
-    def build():
+    def build(*, configuration):
+        assert configuration == cli.profile_configuration.ProfileConfiguration()
         # Production's normal strict readers see only canonical new ledgers.
         assert binding.read_bytes() == b"new-bindings\n"
         assert domain.read_bytes() == b"new-domains\n"
@@ -179,7 +180,8 @@ def test_failure_restores_missing_ledger_existence(generation, monkeypatch):
     binding.unlink()
     initial.pop("decisions/action_bindings.toml")
 
-    def fail():
+    def fail(*, configuration):
+        assert configuration == cli.profile_configuration.ProfileConfiguration()
         raise OSError("missing-artifact build failure")
 
     monkeypatch.setattr(cli.distribution, "package_inputs", fail)

@@ -33,12 +33,16 @@ def scripted_source(tmp_path, monkeypatch):
         current = version_contracts.is_115()
         monkeypatch.setattr(
             decision_interfaces,
-            "SCRIPTED_PREDICATE_115" if current else "SCRIPTED_PREDICATE_SOURCE",
-            manifest,
+            "scripted_predicate_path",
+            lambda: manifest,
         )
         monkeypatch.setattr(
             decision_interfaces,
-            "SCRIPTED_PREDICATE_115_SHA256" if current else "SCRIPTED_PREDICATE_SHA256",
+            "SCRIPTED_PREDICATE_1151_SHA256"
+            if version_contracts.active_version() == "1.15.1"
+            else "SCRIPTED_PREDICATE_115_SHA256"
+            if current
+            else "SCRIPTED_PREDICATE_SHA256",
             hashlib.sha256(raw).hexdigest(),
         )
 

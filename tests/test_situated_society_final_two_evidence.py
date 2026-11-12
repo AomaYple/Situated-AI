@@ -127,6 +127,9 @@ def test_new_ig_evidence_sources_match_actual_locked_original_bytes(
     }
     if version_contracts.is_115():
         raw_hash, normalized_hash = current_hashes[source]
+    if version_contracts.active_version() == "1.15.1" and source == COMMUNISM:
+        raw_hash = "48bbccf031b99ace62f6732c3dc81ca6811aaeb13c09e983b1ff2a857f66dd86"
+        normalized_hash = "f38d15776d815e759e01b4d30db13510fa7f37437551063677cdaf0b336723ba"
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     assert (

@@ -124,7 +124,10 @@ def test_production_generation_rejects_drifted_scripted_predicate_before_build(m
     def must_not_build(*_args, **_kwargs):
         pytest.fail("unverified scripted predicate reached the production generator")
 
+    # Isolate the intended third guard: acceptance by earlier guards is synthetic,
+    # while the failing scripted-predicate guard must run before generation.
     monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
+    monkeypatch.setattr(distribution.engine_scope, "verify_company_game", lambda *_args: None)
     monkeypatch.setattr(distribution.decision_interfaces, "verify_scripted_trigger_game", reject)
     monkeypatch.setattr(distribution.decisions, "build", must_not_build)
     with pytest.raises(ValueError, match="来源SHA漂移"):

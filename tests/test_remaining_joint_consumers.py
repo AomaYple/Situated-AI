@@ -8,11 +8,18 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import replace
+from functools import cache
 
 import pytest
 from test_situated_joint_witnesses import _facts
 
-from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx import (
+    country_state,
+    decision_adapters,
+    decision_interfaces,
+    decision_rules,
+    version_contracts,
+)
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, migration_baseline, pdx_eval
@@ -283,7 +290,9 @@ CASES = [
 ]
 
 
-@pytest.mark.parametrize(("field", "changes", "expected"), CASES)
+@pytest.mark.parametrize(
+    ("field", "changes", "expected"), [case for case in CASES if case[0] != SCHOOL]
+)
 def test_complete_need_cost_and_capacity_match_generated_pdx(production, field, changes, expected):
     policies, generated, _native, _model = production
     source = DEFAULT if field.startswith("ai_strategy_default.") else INFO
@@ -298,7 +307,11 @@ def test_complete_need_cost_and_capacity_match_generated_pdx(production, field, 
 
 def test_every_consumer_retains_native_ast_and_player_and_missing_boundaries(production):
     policies, generated, native, _model = production
-    for source, fields in FIELDS.items():
+    for source, declared_fields in FIELDS.items():
+        fields = declared_fields
+        if version_contracts.active_version() == "1.15.1" and source == INFO:
+            assert ("institution_scores", "institution_schools") not in policies[source].groups()
+            fields = tuple(field for field in fields if field != SCHOOL)
         policy = policies[source]
         assert decision_rules.evaluate(policy, {}, is_ai=True) == {}
         assert decision_rules.evaluate(policy, _values(policy, {}), is_ai=False) == {}
@@ -488,3 +501,37 @@ def test_same_need_does_not_stack_and_actual_cost_envelopes_remain_bounded(produ
         )
         assert observed.delta == pytest.approx(expected)
         assert 0.5 <= observed.delta <= 1.5
+
+
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+@pytest.mark.parametrize(
+    ("field", "changes", "expected"), [case for case in CASES if case[0] == SCHOOL]
+)
+def test_historical_school_complete_need_cost_and_capacity_has_independent_pdx(
+    version, field, changes, expected
+):
+    with version_contracts.select_version(version):
+        policy, blocks = _historical_school_blocks(version)
+        values = _values(policy, changes)
+        result = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+        assert (result[1] if result else 1) == pytest.approx(expected)
+        assert pdx_eval.select(blocks[field], _facts(policy, values)).delta == pytest.approx(
+            expected
+        )
+
+
+@cache
+def _historical_school_blocks(version):
+    from test_full_information import _SYNTHETIC_READER_EVIDENCE
+
+    with version_contracts.select_version(version):
+        policy, _ = compiler.compile_policy(decision_rules.load(), INFO, compiler.load_model())
+        baseline = compiler.baseline_path().read_text(encoding="utf-8")
+        generated = decision_rules.patch(
+            baseline,
+            policy,
+            baseline=baseline,
+            reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+            country_policy=country_state.load(),
+        )
+        return policy, {SCHOOL: _overlay(generated, SCHOOL)}

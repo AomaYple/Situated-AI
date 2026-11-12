@@ -12,7 +12,14 @@ from pdx.situated.compiler import load_model
 pytestmark = pytest.mark.unit
 
 
-def test_metadata_contains_independent_pdx_semantic_witness() -> None:
+@pytest.fixture
+def historical_assembly_contract():
+    """Isolate offline metadata assembly using the frozen historical generation."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+def test_metadata_contains_independent_pdx_semantic_witness(historical_assembly_contract) -> None:
     metadata = json.loads(
         decisions.build(extensions=decisions.load_extensions(profile="release"))[
             ".metadata/metadata.json"
@@ -30,7 +37,9 @@ def test_metadata_contains_independent_pdx_semantic_witness() -> None:
     assert witness["behavior_quality"] == "not_evaluated"
 
 
-def test_offline_metadata_serializes_legacy_behavior_witness_contract(monkeypatch) -> None:
+def test_offline_metadata_serializes_legacy_behavior_witness_contract(
+    monkeypatch, historical_assembly_contract
+) -> None:
     """只隔离最终报告装配；实际 AST 见证由下方冻结树/重生成测试负责。"""
     sentinel = {"evidence": "metadata_assembly_test_only", "sentinel": ["final_texts"]}
     calls = []
@@ -65,14 +74,14 @@ def _assert_legacy_contract(witness) -> None:
     assert witness["behavior_quality"] == "not_evaluated"
 
 
-def test_historical_frozen_tree_contains_its_own_legacy_behavior_witness_contract() -> None:
+def test_current_frozen_tree_contains_its_own_legacy_behavior_witness_contract() -> None:
     production = config.REPO / "mod"
     files = {
         path.relative_to(production).as_posix(): path.read_text(encoding="utf-8")
         for path in (production / "common").rglob("*.txt")
     }
-    # mod/ is the archived 1.14.5 generation, not the active 1.15 tree.
-    with version_contracts.select_version("1.14.5"):
+    # mod/ is the current complete release tree; its metadata must use the same identity.
+    with version_contracts.select_version("1.15.1"):
         _assert_legacy_contract(
             action_instances.behavior_witness_contract(load_model().action_instances, files)
         )
