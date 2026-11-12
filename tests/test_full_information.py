@@ -1280,7 +1280,9 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
         assert metadata["version"] == distribution.RELEASE_VERSION
-        assert contract["status"] == ("candidate" if version_contracts.is_115() else "released")
+        assert contract["status"] == (
+            "candidate" if version_contracts.active_version() == "1.15.0" else "released"
+        )
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False
         assert engineering_metadata["consumer_adapters"]["behavior_verified"] is False

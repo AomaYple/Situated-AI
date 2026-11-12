@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from . import ai_surface, config, input_profile, vanilla_index
-from .cache import parse_cached
+from .cache import memo_lifetime, parse_cached
 from .defines import extract_defines
 from .extract import entry_fields
 from .model import Block
@@ -471,6 +471,7 @@ def _source_identity_snapshot() -> dict[str, list[str]]:
     return out
 
 
+@memo_lifetime()
 def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     """生成当前游戏版本的快照。
 

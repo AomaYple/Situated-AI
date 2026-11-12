@@ -158,6 +158,8 @@ def test_doc12_版本分布表与现场一致() -> None:
     「文档与**这台机器**一致」，没有 mod 就没有可比的东西，跳过而不是假装通过。
     """
     scanned = mods.analyse_all()
+    if not scanned:
+        pytest.skip("本机没有可发现的 mod，无从对照（CI 环境正常）")
     if version_contracts.is_115():
         text = _DOC12.read_text(encoding="utf-8")
         _assert_current_summary(text, scanned)
@@ -182,6 +184,8 @@ def test_doc12_版本分布表与现场一致() -> None:
 def test_doc12_重复路径结论与现场一致() -> None:
     """文档必须区分全量路径重复与游戏内容路径重复。"""
     live = mods.analyse_all()
+    if not live:
+        pytest.skip("本机没有可发现的 mod，无从对照（CI 环境正常）")
     paths: dict[str, list[str]] = {}
     for info in live:
         for rel in (*info.overrides, *info.additions):

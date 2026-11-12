@@ -34,6 +34,20 @@ def test_生成会修复编码和同长度正文漂移(tmp_path):
 
 
 @pytest.fixture
+def historical_core_assembly():
+    """These offline core lifecycle checks use their original frozen inputs."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
+@pytest.fixture
+def historical_policy(historical_core_assembly):
+    """Explicit dependency selects the frozen profile before loading policy."""
+    assert version_contracts.active_version() == "1.14.5"
+    return decisions.load()
+
+
+@pytest.fixture
 def policy():
     return decisions.load()
 
@@ -53,7 +67,8 @@ def test_财政开关显式开启且交付契约来自数据源(policy):
     assert fingerprint["baseline_sha256"] == policy.baseline_sha256
 
 
-def test_财政开关关闭不生成财政脚本且保留原版策略(policy):
+def test_财政开关关闭不生成财政脚本且保留原版策略(historical_policy):
+    policy = historical_policy
     disabled = replace(policy, enabled=False)
     files = decisions.build(disabled)
     assert set(files) == {
@@ -198,7 +213,8 @@ def test_财政外部暴露包含尚未选边的合法参与者(policy):
     assert "is_diplomatic_play_undecided_participant = yes" in triggers
 
 
-def test_生产扩展为本体每种语言生成完整键集(policy):
+def test_生产扩展为本体每种语言生成完整键集(historical_policy):
+    policy = historical_policy
     extra = replace(decisions.load_extensions(), market_enabled=True, security_enabled=True)
     files = decisions.build(policy, extensions=extra)
     expected = set(decisions.LANGUAGES)
@@ -220,7 +236,8 @@ def test_生产扩展为本体每种语言生成完整键集(policy):
     assert metadata["localization"]["explanation_fallback_languages"] == []
 
 
-def test_显式空语言集合不能静默退回默认集合(policy):
+def test_显式空语言集合不能静默退回默认集合(historical_policy):
+    policy = historical_policy
     with pytest.raises(ValueError, match="至少需要一种"):
         decisions.build(policy, languages=())
 
@@ -239,7 +256,8 @@ def test_即使哈希匹配也拒绝不符结构(policy, body):
         decisions.patch_default(body, altered)
 
 
-def test_所有生成脚本可解析且没有旧世界或换牌干预(policy):
+def test_所有生成脚本可解析且没有旧世界或换牌干预(historical_policy):
+    policy = historical_policy
     files = decisions.build(policy)
     for name, text in files.items():
         assert not text.startswith("\ufeff")
@@ -282,7 +300,7 @@ def test_财政生命周期写入包含迟滞和TTL边界(policy):
     assert policy.ttl_days >= 32
 
 
-def test_写盘检查发现篡改和遗留产物(tmp_path):
+def test_写盘检查发现篡改和遗留产物(tmp_path, historical_core_assembly):
     decisions.write(tmp_path)
     assert decisions.check(tmp_path) == []
     path = tmp_path / "common/ai_strategies/00_default_strategy.txt"
@@ -544,7 +562,8 @@ def test_关闭阻止默认挂载和内存风险状态(policy, monkeypatch):
     )
 
 
-def test_开关往返清理旧生成物且保留未知文件(tmp_path, policy):
+def test_开关往返清理旧生成物且保留未知文件(tmp_path, historical_policy):
+    policy = historical_policy
     enabled = decisions.build(
         policy,
         extensions=decisions.Extensions(reform_enabled=True, market_enabled=True),
@@ -766,7 +785,8 @@ def test_说明使用调用方提供的版本与财政参数(policy):
         assert expected in text
 
 
-def test_说明保留用户验收边界和回退且不进入游戏生成树(policy):
+def test_说明保留用户验收边界和回退且不进入游戏生成树(historical_policy):
+    policy = historical_policy
     from pdx.distribution import player_guide
 
     extensions = replace(decisions.Extensions(), diplomacy_enabled=True)

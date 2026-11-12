@@ -929,7 +929,10 @@ def write_standard_outputs(
     original = {name: path.read_bytes() for name, path in before.items()}
     # Apply existing stale-file retirement rules in a disposable tree. Do not
     # copy transaction backup files or follow redirects into another directory.
-    with tempfile.TemporaryDirectory(prefix="sitai-standard-") as folder:
+    # Canonicalize only our temporary parent: macOS /var and Windows 8.3 paths
+    # may alias physical directories. Keep output and staging link checks intact.
+    temporary_parent = Path(tempfile.gettempdir()).resolve(strict=True)
+    with tempfile.TemporaryDirectory(prefix="sitai-standard-", dir=temporary_parent) as folder:
         staged = Path(folder) / "mod"
         staged.mkdir()
         for name, raw in original.items():

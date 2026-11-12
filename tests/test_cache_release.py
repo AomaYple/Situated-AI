@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import pytest
 from typer.testing import CliRunner
 
-from pdx import analyze, cache, cli
+from pdx import analyze, cache, cli, docgen, snapshot, version_contracts
+from pdx.doc_tables import TableSpec
 
 pytestmark = pytest.mark.unit
 
@@ -255,3 +257,89 @@ def test_real_report_write_releases_memo_and_preserves_prior_json_on_serializati
         assert output["游戏数据 JSON"].read_text(encoding="utf-8").startswith('{"数据":')
     assert retained.top_keys == ["one"]
     assert cache.stats() == {"条目": 0, "命中": int(not fails), "未命中": 1}
+
+
+@pytest.fixture
+def snapshot_input(tmp_path, monkeypatch):
+    game = tmp_path / "game"
+    source = game / "common" / "scripted_effects" / "fixture.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("fixture = { nested = { value = 1 } }\n", encoding="utf-8")
+    localization = game / "localization" / "fixture.yml"
+    localization.parent.mkdir()
+    localization.write_text("l_english:\n alpha: Alpha\n omega: Omega\n", encoding="utf-8")
+    monkeypatch.setattr(snapshot.config, "ROOT", tmp_path)
+    for name in ("GAME", "JOMINI", "CLAUSEWITZ"):
+        monkeypatch.setattr(snapshot.config, name, tmp_path / name.lower())
+    monkeypatch.setattr(
+        snapshot.config,
+        "game_version",
+        lambda: {"caligula_branch": f"release/{version_contracts.active_version()}"},
+    )
+    monkeypatch.setattr(
+        snapshot,
+        "_scriptable_domain_sections",
+        partial(snapshot._scriptable_domain_sections, game),
+    )
+    monkeypatch.setattr(
+        snapshot, "_dlc_descriptor_snapshot", partial(snapshot._dlc_descriptor_snapshot, game)
+    )
+    target = docgen.DocTarget(
+        tmp_path / "fixture.md",
+        (TableSpec("fixture", "| Entry |", lambda: ["| fixture |"]),),
+    )
+    monkeypatch.setattr(docgen, "targets", lambda: (target,))
+    return source
+
+
+@pytest.mark.parametrize("compact", [False, True])
+def test_snapshot_build_releases_memo_while_retaining_complete_string_data(snapshot_input, compact):
+    retained_tree = cache.parse_cached(snapshot_input)
+    retained = snapshot.build(compact=compact)
+
+    assert cache.stats()["条目"] == 0
+    assert cache.stats()["命中"] > 0
+    assert cache.stats()["未命中"] == 1
+    assert retained_tree.top_keys == ["fixture"]
+    assert retained.sections["common_entries"] == {"scripted_effects": ["fixture"]}
+    assert retained.sections["fields"] == {"scripted_effects/fixture": ["nested"]}
+    assert retained.sections["vanilla_keys"]["common/scripted_effects"] == ["fixture"]
+    assert retained.sections["vocabulary"]["common/scripted_effects"] == [
+        "fixture",
+        "nested",
+        "value",
+    ]
+    assert retained.sections["doc_tables"] == {"fixture.md::fixture": ["| fixture |"]}
+    if compact:
+        assert retained.sections["localization_digest"]["l_english"][0] == "2 键"
+    else:
+        assert retained.sections["localization"] == {"l_english": ["alpha", "omega"]}
+
+    # Walk the retained result, including version/compact, without following
+    # classes or globals: no parser node may be reachable through its data.
+    pending = [vars(retained)]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            assert all(type(key) is str for key in value)
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+        else:
+            assert type(value) in (str, bool)
+
+
+def test_snapshot_build_releases_memo_without_replacing_failure(snapshot_input, monkeypatch):
+    retained_tree = cache.parse_cached(snapshot_input)
+    failure = RuntimeError("input profile unavailable")
+
+    def fail_profile():
+        raise failure
+
+    monkeypatch.setattr(snapshot, "_input_profile_snapshot", fail_profile)
+    with pytest.raises(RuntimeError, match="input profile unavailable") as raised:
+        snapshot.build()
+
+    assert raised.value is failure
+    assert retained_tree.top_keys == ["fixture"]
+    assert cache.stats() == {"条目": 0, "命中": 1, "未命中": 1}

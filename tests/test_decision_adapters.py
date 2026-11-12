@@ -870,6 +870,13 @@ def _expanded_law_negative_contracts():
     return contracts
 
 
+@pytest.fixture
+def historical_owner_collision_contract():
+    """Offline owner collision checks retain their original frozen authority."""
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
 def test_declared_sources_have_consumers_and_real_bounded_conditions():
     adapters = decision_adapters.load()
     rules = [rule for _, policy in adapters.policies for rule in policy.rules]
@@ -1075,6 +1082,12 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                         assert rule.value == 1.35
                     else:
                         assert 0.75 <= rule.value <= 1.3
+
+
+def test_historical_information_adapter_owner_collision_is_rejected(
+    historical_owner_collision_contract,
+):
+    adapters = decision_adapters.load()
     default_name = "common/ai_strategies/00_default_strategy.txt"
     default_policy = dict(adapters.policies)[default_name]
     changed = replace(
@@ -2598,7 +2611,11 @@ def test_relative_comparison_cannot_mix_units_or_use_unproven_getters(change):
         ("recklessness", "diplomacy"),
     ],
 )
-def test_legacy_and_information_field_owners_cannot_silently_stack(field, owner):
+def test_legacy_and_information_field_owners_cannot_silently_stack(
+    field,
+    owner,
+    historical_owner_collision_contract,
+):
     baseline, data = _relative_data()
     data["readers"]["target"]["scope"] = "root"
     data["rules"][0]["field"] = field

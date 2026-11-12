@@ -362,7 +362,7 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
     ]
     from collections import Counter
 
-    assert Counter(row.field.removeprefix("ai_strategy_default.") for row in selected) == {
+    expected = {
         "wanted_construction_output": 6,
         "institution_scores.institution_schools": 6,
         "institution_scores.institution_health_system": 7,
@@ -372,6 +372,11 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
         "institution_scores.institution_police": 6,
         "institution_scores.institution_colonial_affairs": 2,
     }
+    if version_contracts.active_version() == "1.15.1":
+        school = "institution_scores.institution_schools"
+        expected.pop(school)
+        assert all(row.field.removeprefix("ai_strategy_default.") != school for row in selected)
+    assert Counter(row.field.removeprefix("ai_strategy_default.") for row in selected) == expected
     for writer in selected:
         instance = instances[writer.writer_id]
         assert writer.evaluation_context == instance.evaluation_context

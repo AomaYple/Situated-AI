@@ -270,11 +270,8 @@ def test_labor_query_keeps_actual_method_employment_and_reserve_pool_on_same_sta
     catalog = module.inventory(
         _native_inputs(), {"threshing_machine": "common/technology/technologies/20_military.txt"}
     )
-    monkeypatch.setattr(
-        module,
-        "_QUERY_CATALOG_115" if module.version_contracts.is_115() else "_QUERY_CATALOG",
-        catalog,
-    )
+    # Bind the actual resolver in every profile; 1.15.1 has a separate cache.
+    monkeypatch.setattr(module, "_query_catalog", lambda: catalog)
     query = module.query_from_reader(
         "any_scope_state",
         {
@@ -359,11 +356,8 @@ def test_output_shortage_is_a_supply_opportunity_but_consuming_unit_is_not(monke
     catalog = module.inventory(
         _native_inputs(), dict.fromkeys(("artillery", "general_staff", "threshing_machine"), source)
     )
-    monkeypatch.setattr(
-        module,
-        "_QUERY_CATALOG_115" if module.version_contracts.is_115() else "_QUERY_CATALOG",
-        catalog,
-    )
+    # Bind the actual resolver in every profile; 1.15.1 has a separate cache.
+    monkeypatch.setattr(module, "_query_catalog", lambda: catalog)
     derived = module.derive({"sources": catalog["sources"], "readers": {}, "rules": []}, catalog)
     artillery = _policy(derived, "artillery")
     assert _reference(artillery, {"country_goods_artillery_balance": -1}) == pytest.approx(1.12)
@@ -677,3 +671,39 @@ def test_knowledge_ready_exact_prior_and_paper_unknown_are_local(technology):
         _building_object("building_paper_mill", "pm_scholastic_education")
     ]
     assert _query_values(technology, "knowledge_ready", country) == (False, False)
+
+
+def test_current_concrete_dockyards_ready_fixture_avoids_local_service_loss():
+    """Handwritten 1.15.1 port alternatives validate the independent fixture."""
+    from copy import deepcopy
+
+    if technology_reference._VERSION != "1.15.1":
+        pytest.skip("exact 1.15.1 anchorage service-loss contract")
+    spec = {
+        "parameters": {
+            "technology_query": "technology_use",
+            "technology": "concrete_dockyards",
+            "purpose": "productive_ready",
+        }
+    }
+    rows = technology_reference.CATALOG["technologies"]["concrete_dockyards"]["opportunities"]
+    ports = {row["prior"]: row for row in rows if row["method"] == "pm_modern_port"}
+    assert ports["pm_anchorage"]["losses"] == {"services": 0.5}
+    assert ports["pm_basic_port"]["losses"] == {}
+    assert ports["pm_industrial_port"]["losses"] == {}
+    assert technology_reference.CATALOG["goods"]["services"]["local"] is True
+    assert technology_reference.CATALOG["goods"]["services"]["market"] is False
+    world = technology_reference.realize_query_world(spec)
+    assert technology_reference.evaluate(spec, world) is True
+    for prior, expected in (
+        ("pm_anchorage", False),
+        ("pm_basic_port", True),
+        ("pm_industrial_port", True),
+    ):
+        candidate = deepcopy(world)
+        building = candidate["any_scope_building"][0]
+        assert building is candidate["any_scope_state"][0]["any_scope_building"][0]
+        building["has_active_production_method"] = {
+            (("argument", key),): key == prior for key in technology_reference.METHOD_IDENTITIES
+        }
+        assert technology_reference.evaluate(spec, candidate) is expected

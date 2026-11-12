@@ -147,15 +147,22 @@ def test_current_original_value_drift_blocks_getter_proof(tmp_path):
 
 @pytest.mark.integration
 def test_broad_online_generation_checks_current_reader_closure(monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
+    installed_version = config.game_version()["caligula_branch"].removeprefix("release/")
     monkeypatch.setattr(distribution, "production_configuration", lambda **_: (None, None))
+    calls = []
 
-    def reject(_):
+    def reject(game):
+        calls.append((game, version_contracts.active_version()))
         raise ValueError("current reader drift")
 
     monkeypatch.setattr(engine_reader_115, "verify_game", reject)
-    with pytest.raises(ValueError, match="current reader drift"):
-        distribution.package_inputs()
+    # Keep the preceding real scope/source guards aligned with this installation.
+    # A 1.15.0 contract against 1.15.1 bytes must fail before reaching the reader.
+    with version_contracts.select_version(installed_version):
+        assert version_contracts.is_115()
+        with pytest.raises(ValueError, match="current reader drift"):
+            distribution.package_inputs()
+    assert calls == [(config.GAME, installed_version)]
 
 
 def test_three_consumer_profile_has_no_legacy_reader_dependency(monkeypatch):

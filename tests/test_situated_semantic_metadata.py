@@ -6,7 +6,7 @@ import pytest
 from _situated_sources import production_policy_sources
 
 from pdx import config, decisions, distribution, version_contracts
-from pdx.situated import action_instances
+from pdx.situated import action_instances, lowering
 from pdx.situated.compiler import load_model
 
 pytestmark = pytest.mark.unit
@@ -44,7 +44,24 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
     sentinel = {"evidence": "metadata_assembly_test_only", "sentinel": ["final_texts"]}
     calls = []
 
-    def witness(instances, texts):
+    numeric_calls = []
+    ast_calls = []
+    collect_numeric = lowering.witnesses
+    collect_ast = lowering.ast_witnesses
+
+    def numeric(texts):
+        assert "common/ai_strategies/00_default_strategy.txt" in texts
+        assert all(name.endswith(".txt") for name in texts)
+        result = collect_numeric(texts)
+        numeric_calls.append(result)
+        return result
+
+    def ast(texts):
+        result = collect_ast(texts)
+        ast_calls.append(result)
+        return result
+
+    def witness(instances, generated):
         assert len([item for item in instances if item.kind == "rule_action"]) == len(
             production_policy_sources().rules
         )
@@ -53,16 +70,24 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
             for item in instances
             if item.kind == "rule_action"
         } == production_policy_sources().rules
-        assert "common/ai_strategies/00_default_strategy.txt" in texts
-        assert all(name.endswith(".txt") for name in texts)
-        calls.append(texts)
+        assert generated is numeric_calls[-1]
+        assert isinstance(generated, tuple)
+        assert all(item.source.endswith(".txt") for item in generated)
+        calls.append(generated)
         return sentinel
 
-    monkeypatch.setattr(action_instances, "behavior_witness_contract", witness)
-    files = decisions.build(extensions=decisions.load_extensions(profile="release"))
-    metadata = json.loads(files[".metadata/metadata.json"])
-    assert len(calls) == 1
-    assert metadata["situated_actions"]["legacy_behavior_witness_contract"] == sentinel
+    monkeypatch.setattr(lowering, "witnesses", numeric)
+    monkeypatch.setattr(lowering, "ast_witnesses", ast)
+    monkeypatch.setattr(action_instances, "_behavior_witness_contract", witness)
+    for count in (1, 2):
+        files = decisions.build(extensions=decisions.load_extensions(profile="release"))
+        metadata = json.loads(files[".metadata/metadata.json"])
+        assert len(calls) == len(numeric_calls) == len(ast_calls) == count
+        assert metadata["situated_actions"]["legacy_behavior_witness_contract"] == sentinel
+    assert numeric_calls[0] == numeric_calls[1]
+    assert numeric_calls[0] is not numeric_calls[1]
+    assert ast_calls[0] == ast_calls[1]
+    assert ast_calls[0] is not ast_calls[1]
 
 
 def _assert_legacy_contract(witness) -> None:

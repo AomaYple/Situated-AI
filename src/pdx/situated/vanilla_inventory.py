@@ -1823,6 +1823,46 @@ def _ship_modification_scope(
     return replace(documented, evidence=(*documented.evidence, f"{source}:{weight.line}"))
 
 
+def _road_maintenance_scope(
+    inputs: dict[str, bytes], definition: Assignment, source: str
+) -> _Scope:
+    """Classify the single pinned decree context, never all decree weights.
+
+    The native header documents an AI chance weight. Its actual ordered body
+    reads state infrastructure/decree presence at ROOT and country journals and
+    a home-state variable through scope:country. The deciding country is not
+    inferred from state ownership. This adds no declaration to discovery.
+    """
+    if version_contracts.active_version() != "1.15.1":
+        return _Scope()
+    from . import r2_reader_authority  # noqa: PLC0415
+
+    expected_source = "common/decrees/00_decree.txt"
+    raw = inputs.get(source)
+    if (
+        source != expected_source
+        or definition.key != "decree_road_maintenance"
+        or raw is None
+        or hashlib.sha256(raw).hexdigest()
+        != r2_reader_authority.source_hashes().get("game/" + source)
+    ):
+        return _Scope()
+    parsed = parse_bytes(raw, path=source)
+    original = _ordinary_child(parsed.root, definition.key)
+    if parsed.errors or original != definition or not isinstance(definition.value, Block):
+        return _Scope()
+    weight = _ordinary_child(definition.value, "ai_weight")
+    if weight is None or not isinstance(weight.value, Block) or weight.line != 22:
+        return _Scope()
+    return _Scope(
+        "state",
+        "scope:country=country",
+        "relative_weight",
+        "direct",
+        tuple(f"{source}:{line}" for line in (8, 22, 32, 42, 84, 87, 102, 105)),
+    )
+
+
 def _scope(
     directory: str,
     field: tuple[str, ...],
@@ -1889,6 +1929,8 @@ def _scope(
                 f"{source}:{definition.line}",
             ),
         )
+    if directory == "decrees" and field == ("ai_weight",):
+        return _road_maintenance_scope(inputs, definition, source)
     if directory == "technology" and field == ("ai_weight",):
         if (
             technology_proof is None

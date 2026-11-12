@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
+import subprocess
+from contextlib import ExitStack, contextmanager, suppress
 from pathlib import Path
 
 import pytest
@@ -67,6 +71,184 @@ def _tree(target):
         for path in target.rglob("*")
         if path.is_file()
     }
+
+
+def _write_standard_with_shared_ledger(ledger):
+    with GenerationTransaction() as transaction:
+        transaction.replace({ledger: b"new-ledger\n"})
+        distribution.write_standard_outputs(transaction=transaction)
+
+
+@contextmanager
+def _directory_redirect(link, destination):
+    """Create a real platform directory link and remove only that link."""
+    assert link.parent.is_dir()
+    assert not link.exists()
+    assert not link.is_symlink()
+    destination = destination.resolve(strict=True)
+    assert destination.is_dir()
+    if os.name == "nt":
+        result = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(destination)],
+            capture_output=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+    else:
+        link.symlink_to(destination, target_is_directory=True)
+    try:
+        assert link.resolve(strict=True) == destination
+        assert link.absolute() != destination
+        yield link
+    finally:
+        # TemporaryDirectory may already have removed a staging child. Never
+        # recurse into a target, or remove a replacement ordinary directory.
+        with suppress(FileNotFoundError):
+            info = link.lstat()
+            if stat.S_ISLNK(info.st_mode):
+                link.unlink()
+            else:
+                assert os.name == "nt"
+                assert getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+                link.rmdir()
+
+
+@pytest.fixture
+def aliased_temporary_parent(tmp_path, monkeypatch):
+    base = tmp_path.resolve(strict=True)
+    physical = base / "physical-temporary-parent"
+    physical.mkdir()
+    with _directory_redirect(base / "temporary-parent-alias", physical) as alias:
+        monkeypatch.setattr(distribution.tempfile, "gettempdir", lambda: str(alias))
+        yield physical
+        assert list(physical.iterdir()) == []
+
+
+@pytest.mark.parametrize("drift", [False, True])
+def test_standard_internal_temp_parent_alias_preserves_generation_and_source_drift(
+    standard_tree, aliased_temporary_parent, monkeypatch, drift
+):
+    target, ledger = standard_tree
+    stale = target / "common/scripted_triggers/sitai_country_triggers.txt"
+    stale.parent.mkdir()
+    stale.write_bytes(b"retired\n")
+    before = _tree(target)
+    write = decisions.write
+    staged_roots = []
+
+    def record_staging(root, files):
+        staged_roots.append(root)
+        assert root.parent.parent == aliased_temporary_parent
+        assert root.resolve(strict=True) == root.absolute()
+        result = write(root, files)
+        if drift:
+            ledger.write_bytes(b"changed-during-staging\n")
+        return result
+
+    monkeypatch.setattr(decisions, "write", record_staging)
+    if drift:
+        with pytest.raises(ValueError, match="源码发生漂移"):
+            distribution.write_standard_outputs()
+        assert _tree(target) == before
+        assert ledger.read_bytes() == b"changed-during-staging\n"
+    else:
+        files = distribution.write_standard_outputs()
+        assert files == {"common/current.txt": "new-production\n"}
+        assert not stale.exists()
+        assert (target / "user-note.bin").read_bytes() == b"keep-user-bytes\x00"
+        assert (target / "common/current.txt").read_bytes() == b"new-production\n"
+        assert ledger.read_bytes() == b"old-ledger\n"
+        distribution.check_generation_lock()
+    assert len(staged_roots) == 1
+    assert not staged_roots[0].parent.exists()
+    assert not list(target.rglob(".sitai-generation-*"))
+
+
+@pytest.mark.parametrize("placement", ["root", "parent", "nested"])
+def test_standard_user_output_redirect_is_rejected_and_shared_ledger_restored(
+    standard_tree, tmp_path, monkeypatch, placement
+):
+    target, ledger = standard_tree
+    before = _tree(target)
+    base = tmp_path.resolve(strict=True)
+    external = base / "external"
+    external.mkdir()
+    sentinel = external / "sentinel.txt"
+    sentinel.write_bytes(b"external original\n")
+    if placement == "root":
+        link, destination = base / "linked-output", target
+        selected = link
+    elif placement == "parent":
+        link, destination = base / "linked-parent", target.parent
+        selected = link / target.name
+    else:
+        link, destination = target / "linked-child", external
+        selected = target
+    monkeypatch.setattr(decisions, "product_path", lambda: selected)
+    with _directory_redirect(link, destination):
+        with pytest.raises(ValueError, match="符号链接或重解析点"):
+            _write_standard_with_shared_ledger(ledger)
+        assert ledger.read_bytes() == b"old-ledger\n"
+        assert sentinel.read_bytes() == b"external original\n"
+        assert list(external.iterdir()) == [sentinel]
+    assert _tree(target) == before
+    assert not list(base.rglob(".sitai-generation-*"))
+
+
+def test_standard_staging_redirect_is_rejected_with_canonical_temp_parent(
+    standard_tree, aliased_temporary_parent, tmp_path, monkeypatch
+):
+    target, ledger = standard_tree
+    before = _tree(target)
+    external = tmp_path.resolve(strict=True) / "staging-external"
+    external.mkdir()
+    sentinel = external / "sentinel.txt"
+    sentinel.write_bytes(b"external original\n")
+    write = decisions.write
+    staged_roots = []
+    with ExitStack() as redirects:
+
+        def inject(root, files):
+            assert root.parent.parent == aliased_temporary_parent
+            result = write(root, files)
+            staged_roots.append(root)
+            redirects.enter_context(_directory_redirect(root / "linked-child", external))
+            return result
+
+        monkeypatch.setattr(decisions, "write", inject)
+        with pytest.raises(ValueError, match="符号链接或重解析点"):
+            _write_standard_with_shared_ledger(ledger)
+    assert len(staged_roots) == 1
+    assert not staged_roots[0].parent.exists()
+    assert ledger.read_bytes() == b"old-ledger\n"
+    assert _tree(target) == before
+    assert sentinel.read_bytes() == b"external original\n"
+    assert list(external.iterdir()) == [sentinel]
+    assert not list(target.rglob(".sitai-generation-*"))
+
+
+def test_standard_redirect_during_final_verification_rolls_back_outputs_and_ledger(
+    standard_tree, tmp_path, monkeypatch
+):
+    target, ledger = standard_tree
+    before = _tree(target)
+    external = tmp_path.resolve(strict=True) / "late-external"
+    external.mkdir()
+    sentinel = external / "sentinel.txt"
+    sentinel.write_bytes(b"external original\n")
+    with ExitStack() as redirects:
+
+        def inject():
+            redirects.enter_context(_directory_redirect(target / "linked-child", external))
+
+        monkeypatch.setattr(distribution, "verify_compatibility_installation", inject)
+        with pytest.raises(ValueError, match="符号链接或重解析点"):
+            _write_standard_with_shared_ledger(ledger)
+        assert ledger.read_bytes() == b"old-ledger\n"
+    assert _tree(target) == before
+    assert sentinel.read_bytes() == b"external original\n"
+    assert list(external.iterdir()) == [sentinel]
+    assert not list(target.rglob(".sitai-generation-*"))
 
 
 def test_standard_retains_user_bytes_and_retires_only_declared_stale_files(standard_tree):

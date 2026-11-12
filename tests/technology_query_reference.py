@@ -277,7 +277,11 @@ def realize_query_world(reader):
             candidate
             for candidate in candidates
             if not purpose.endswith("_ready")
-            or all(CATALOG["goods"][good]["market"] for good in candidate["inputs"])
+            or all(
+                CATALOG["goods"][good]["market"]
+                for good, amount in (candidate["inputs"] | candidate.get("losses", {})).items()
+                if amount > 0
+            )
         )
         building, method = row["building"], row["prior"]
         if row["method"]:

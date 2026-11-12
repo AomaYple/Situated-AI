@@ -371,6 +371,131 @@ def test_audit_restores_all_native_source_context_without_numeric_credit(
     assert not report["rows"][0]["implemented_numeric"]
 
 
+def _enum_leaf_case(case):
+    """Keep the three native leaves as separate discovered responsibilities.
+
+    Ancillary source/getter authority remains the explicitly synthetic fixture
+    above. The three leaves, native triggers and complete production ORs use
+    the real frozen source and actual patcher output.
+    """
+    inventory, native, generated, path = case
+    stances = _stances(native[SOURCE].decode("utf-8-sig"))
+    scopes = vanilla_inventory._strategy_scopes(native)
+    surfaces = tuple(
+        vanilla_inventory._surface(
+            SOURCE,
+            "ai_strategy_default",
+            f"goods_stances.{good}",
+            stances.first(good).line,
+            scopes.get("goods_stances", vanilla_inventory._Scope()),
+        )
+        for good in sorted(OVERLAP)
+    )
+    return replace(inventory, surfaces=surfaces), native, generated, path
+
+
+def _enum_leaf_report(case, *, complete=True):
+    inventory, native, generated, _ = _enum_leaf_case(case)
+    report = native_treatments(inventory, native, generated, production_complete=complete)
+    assert report["denominator"] == inventory.discovered_count == 3
+    assert {row["declaration_id"] for row in report["rows"]} == {
+        surface.declaration_id for surface in inventory.surfaces
+    }
+    return report
+
+
+def test_all_three_actual_union_leaves_have_native_preservation_not_numeric_credit(
+    composition_projection_case,
+):
+    report = _enum_leaf_report(composition_projection_case)
+    assert {row["field"] for row in report["rows"]} == {f"goods_stances.{good}" for good in OVERLAP}
+    for row in report["rows"]:
+        protection = row["source_protection"]
+        assert protection["proven"]
+        assert protection["context_closed"]
+        assert protection["dependencies_closed"]
+        assert protection["native_enum_projection"]
+        assert not protection["structural_projection"]
+        binding = protection["native_enum_binding"]
+        assert binding["kind"] == "registered_enum_idempotent_or"
+        assert binding["field"] == row["field"]
+        assert binding["restored_native_ast_sha256"] == row["native_ast_sha256"]
+        assert binding["effective_ast_sha256"] == row["effective_ast_sha256"]
+        assert binding["native_sources"]
+        assert row["interface_kind"] == "needs_review"
+        assert not row["interface"]["known"]
+        assert not row["active_unknown_usage"]
+        assert not row["implemented_numeric"]
+        assert not row["interface"]["control_authorized"]
+        assert row["business_obligation"]["disposition"] == "preserve_native"
+
+
+def test_disabled_supply_retains_all_three_native_leaves_without_a_projection(
+    composition_projection_case,
+):
+    _, native, generated, _ = composition_projection_case
+    generated[SOURCE] = native[SOURCE]
+    metadata = json.loads(generated[".metadata/metadata.json"])
+    metadata["consumer_adapters"]["supply_plan"] = None
+    generated[".metadata/metadata.json"] = json.dumps(metadata).encode()
+    report = _enum_leaf_report(composition_projection_case)
+    for row in report["rows"]:
+        assert row["ast_status"] == "retained"
+        assert row["source_protection"]["proven"]
+        assert not row["source_protection"]["native_enum_projection"]
+        assert row["source_protection"]["native_enum_binding"] is None
+        assert not row["active_unknown_usage"]
+        assert not row["implemented_numeric"]
+
+
+@pytest.mark.parametrize("damage", ["metadata", "missing_metadata", "incomplete"])
+def test_claimed_union_cannot_hide_missing_actual_candidate_authority(
+    composition_projection_case, damage
+):
+    _, _, generated, _ = composition_projection_case
+    if damage != "incomplete":
+        metadata = json.loads(generated[".metadata/metadata.json"])
+        if damage == "missing_metadata":
+            metadata["consumer_adapters"].pop("supply_plan")
+        else:
+            metadata["consumer_adapters"]["supply_plan"]["behavior_verified"] = True
+        generated[".metadata/metadata.json"] = json.dumps(metadata).encode()
+    report = _enum_leaf_report(composition_projection_case, complete=damage != "incomplete")
+    for row in report["rows"]:
+        assert not row["source_protection"]["proven"]
+        assert not row["source_protection"]["native_enum_projection"]
+        assert row["active_unknown_usage"]
+
+
+@pytest.mark.parametrize(
+    ("before", "after"),
+    [
+        (
+            b'icon = "gfx/interface/icons/ai_strategy_icons/placate_population.dds"',
+            b'icon = "unreviewed.dds"',
+        ),
+        (b"nationalization_cost(scope:target_country)", b"nationalization_cost(root)"),
+    ],
+    ids=["source_companion", "native_cost"],
+)
+def test_valid_enum_union_cannot_mask_other_native_source_or_cost_changes(
+    composition_projection_case, before, after
+):
+    _, _, generated, _ = composition_projection_case
+    assert before in generated[SOURCE]
+    generated[SOURCE] = generated[SOURCE].replace(before, after, 1)
+    # The three OR expressions remain proven, while whole-source protection
+    # independently rejects a sibling or retained cost-operand change.
+    projections = _supply_enum_projections(_dependencies(composition_projection_case))[SOURCE]
+    assert sum(row["kind"] == "registered_enum_idempotent_or" for row in projections.values()) == 3
+    report = _enum_leaf_report(composition_projection_case)
+    for row in report["rows"]:
+        assert row["source_protection"]["native_enum_projection"]
+        assert not row["source_protection"]["context_closed"]
+        assert not row["source_protection"]["proven"]
+        assert row["active_unknown_usage"]
+
+
 @pytest.mark.parametrize(
     "damage", ["native", "stance", "player", "market", "good", "duplicate", "sibling", "extra"]
 )
@@ -392,3 +517,9 @@ def test_audit_rejects_changed_native_or_scarcity_or_sibling(composition_project
     assert before in generated[SOURCE]
     generated[SOURCE] = generated[SOURCE].replace(before, after, 1)
     assert not _supply_enum_projections(_dependencies(composition_projection_case))
+    report = _enum_leaf_report(composition_projection_case)
+    for row in report["rows"]:
+        assert not row["source_protection"]["native_enum_projection"]
+        assert not row["source_protection"]["proven"]
+        assert row["business_obligation"]["disposition"] == "unresolved"
+        assert row["active_unknown_usage"] or row["ast_status"] == "ambiguous"

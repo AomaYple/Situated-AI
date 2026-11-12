@@ -242,6 +242,7 @@ def _native_report_from_candidate(
     the current model. It cannot infer completeness from a partial mapping.
     Installed originals are independently discovered and reread here.
     """
+    from . import r2_native, r2_reader_authority  # noqa: PLC0415
     from .architecture_receipts import source_snapshot  # noqa: PLC0415
 
     metadata = native_treatments._AuditMetadata(
@@ -253,6 +254,9 @@ def _native_report_from_candidate(
         for source in scope.source_hashes
         if not source.startswith("@")
     }
+    network_bindings = r2_native.production_bindings(generated_bytes, sources, metadata=metadata)
+    if network_bindings:
+        r2_reader_authority.verify_installation(config.GAME.parent)
     coverage = domain_coverage.native_coverage(
         scope,
         model.action_instances,
@@ -268,6 +272,7 @@ def _native_report_from_candidate(
         native_sources=sources,
         production_policies=dict(decision_adapters.load().policies),
         continuous_programs=_production_continuous_bindings(generated_bytes, _metadata=metadata),
+        network_programs=network_bindings,
     )
     treatments = native_treatments.native_treatments(
         scope,

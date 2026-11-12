@@ -45,7 +45,8 @@ def _block_text(lines: list[str], start: int) -> str:
     depth = 0
     started = False
     parts: list[str] = []
-    for line in lines[start:]:
+    for index in range(len(lines))[start:]:
+        line = lines[index]
         parts.append(line)
         depth += line.count("{") - line.count("}")
         started = started or "{" in line
@@ -134,12 +135,12 @@ def ast_witnesses(texts: dict[str, str]) -> tuple[ASTWitness, ...]:
 
 
 def ast_mismatches(texts: dict[str, str]) -> tuple[str, ...]:
+    return _ast_mismatches(ast_witnesses(texts))
+
+
+def _ast_mismatches(found: tuple[ASTWitness, ...]) -> tuple[str, ...]:
     return tuple(
-        sorted(
-            item.action_id
-            for item in ast_witnesses(texts)
-            if not item.has_limit or not item.has_write
-        )
+        sorted(item.action_id for item in found if not item.has_limit or not item.has_write)
     )
 
 
@@ -199,14 +200,29 @@ def witnesses(texts: dict[str, str]) -> tuple[LoweringWitness, ...]:
 
 
 def missing(ir: Iterable[ActionIR], texts: dict[str, str]) -> tuple[str, ...]:
-    found = {item.action_id for item in witnesses(texts)}
+    return _missing(ir, witnesses(texts))
+
+
+def _missing(ir: Iterable[ActionIR], generated: tuple[LoweringWitness, ...]) -> tuple[str, ...]:
+    found = {item.action_id for item in generated}
     return tuple(item.action_id for item in ir if item.action_id not in found)
 
 
 def mismatches(ir: Iterable[ActionIR], texts: dict[str, str]) -> tuple[str, ...]:
     expected = {item.action_id: item for item in ir}
+    return _expected_mismatches(expected, witnesses(texts))
+
+
+def _mismatches(ir: Iterable[ActionIR], generated: tuple[LoweringWitness, ...]) -> tuple[str, ...]:
+    expected = {item.action_id: item for item in ir}
+    return _expected_mismatches(expected, generated)
+
+
+def _expected_mismatches(
+    expected: dict[str, ActionIR], generated: tuple[LoweringWitness, ...]
+) -> tuple[str, ...]:
     problems: list[str] = []
-    for item in witnesses(texts):
+    for item in generated:
         wanted = expected.get(item.action_id)
         if wanted is None:
             continue

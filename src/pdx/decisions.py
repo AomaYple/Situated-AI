@@ -1784,22 +1784,23 @@ def build(
     action_contract["action_instance_witness_contract"] = (
         situated_action_instances.witness_contract(expected_instances, files)
     )
+    numeric_witnesses = situated_lowering.witnesses(generated_texts)
     action_contract["legacy_behavior_witness_contract"] = (
-        situated_action_instances.behavior_witness_contract(
+        situated_action_instances._behavior_witness_contract(
             expected_instances,
-            generated_texts,
+            numeric_witnesses,
         )
     )
     action_contract["ir_lowering_witness"] = {
-        "missing": list(situated_lowering.missing(expected_ir, generated_texts)),
-        "mismatches": list(situated_lowering.mismatches(expected_ir, generated_texts)),
-        "witness_count": len(situated_lowering.witnesses(generated_texts)),
+        "missing": list(situated_lowering._missing(expected_ir, numeric_witnesses)),
+        "mismatches": list(situated_lowering._mismatches(expected_ir, numeric_witnesses)),
+        "witness_count": len(numeric_witnesses),
         "required_count": len(expected_ir),
         "evidence": "static_check",
     }
     ast_witnesses = situated_lowering.ast_witnesses(generated_texts)
     action_contract["ast_lowering_witness"] = {
-        "mismatches": list(situated_lowering.ast_mismatches(generated_texts)),
+        "mismatches": list(situated_lowering._ast_mismatches(ast_witnesses)),
         "witness_count": len(ast_witnesses),
         "parsed_count": sum(item.parsed for item in ast_witnesses),
         "limit_count": sum(item.has_limit for item in ast_witnesses),

@@ -50,6 +50,7 @@ def test_invalid_profile_fails_at_default_operation_in_a_fresh_process():
         env=environment,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     assert result.returncode != 0
@@ -78,6 +79,7 @@ def test_fresh_cli_explicit_profile_has_priority_over_an_unknown_environment():
             env=environment,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=False,
         )
         results.append(result)

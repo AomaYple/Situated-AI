@@ -17,6 +17,7 @@ from .families import classify
 if TYPE_CHECKING:
     from .. import decision_adapters, decision_rules  # noqa: TID252
     from .decision_ir import EvaluationContext
+    from .lowering import LoweringWitness
     from .schema import ActionCard, ConsumerContract
 
 _SAFE = re.compile(r"[^a-z0-9_]+")
@@ -293,6 +294,13 @@ def behavior_witness_contract(
 
     from .lowering import witnesses  # noqa: PLC0415
 
+    return _behavior_witness_contract(instances, witnesses(texts))
+
+
+def _behavior_witness_contract(
+    instances: tuple[ActionInstance, ...], numeric_witnesses: tuple[LoweringWitness, ...]
+) -> dict[str, object]:
+
     # 生成文本同时包含显式行动卡和 legacy 规则 marker。只把当前实例目录中
     # 真实 legacy writer 的精确 (产物来源, definition) 纳入重复检查；否则
     # 成本分区会让同一张显式卡合法地出现在多个互斥叶中，却被误报为
@@ -303,7 +311,7 @@ def behavior_witness_contract(
         if item.kind == "rule_action"
     }
     generated = tuple(
-        item for item in witnesses(texts) if (item.source, item.action_id) in expected_keys
+        item for item in numeric_witnesses if (item.source, item.action_id) in expected_keys
     )
     by_id: dict[tuple[str, str], Any] = {}
     duplicate_ids: set[str] = set()

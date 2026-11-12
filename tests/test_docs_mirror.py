@@ -404,6 +404,9 @@ def test_写入或替换失败不破坏旧清单且清理临时文件(tmp_path, 
 
 @pytest.mark.parametrize("available_but_empty", [False, True])
 def test_无可用输入或空目录不能覆盖权威清单(tmp_path, monkeypatch, available_but_empty) -> None:
+    # Reach the empty-input guard with valid independent on-disk identity.
+    (tmp_path / "caligula_branch.txt").write_text(f"release/{active_version()}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "ROOT", tmp_path)
     root = tmp_path / "game"
     if available_but_empty:
         root.mkdir()

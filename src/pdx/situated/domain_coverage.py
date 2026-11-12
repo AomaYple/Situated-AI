@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .decision_ir import EvaluationContext, WriterDecisionIR
+    from .r2_native import NetworkProgramBinding
     from .vanilla_inventory import VanillaInventory, VanillaSurface
 
 REPO = Path(__file__).resolve().parents[3]
@@ -966,6 +967,7 @@ def native_coverage(
     native_sources: Mapping[str, bytes] | None = None,
     production_policies: Mapping[str, decision_rules.RuleSet] | None = None,
     continuous_programs: tuple[ContinuousProgramBinding, ...] = (),
+    network_programs: tuple[NetworkProgramBinding, ...] = (),
 ) -> dict[str, Any]:
     """Join real production bindings to an independently discovered denominator.
 
@@ -980,6 +982,8 @@ def native_coverage(
     """
 
     explicit = dict(explicit_consumers or {})
+    from . import r2_native  # noqa: PLC0415
+
     proofs = _NativeBindingProofs(inventory, native_sources or {}, production_policies or {})
     by_id = {item.action_id: item for item in instances}
     if len(by_id) != len(instances):
@@ -987,6 +991,11 @@ def native_coverage(
     program_ids = [item.writer.writer_id for item in continuous_programs]
     if len(program_ids) != len(set(program_ids)) or set(program_ids) & set(by_id):
         raise ValueError("连续程序与生产行动的writer身份重复")
+    network_ids = [item.consumer for item in network_programs]
+    if len(network_ids) != len(set(network_ids)) or set(network_ids) & (
+        set(by_id) | set(program_ids)
+    ):
+        raise ValueError("R2程序与其他生产writer身份重复")
     if set(explicit) - set(by_id) or any(by_id[key].kind != "action_card" for key in explicit):
         raise ValueError("显式消费者映射只能引用实际显式行动卡")
     identities: dict[tuple[str, str, str], list[VanillaSurface]] = {}
@@ -1092,6 +1101,34 @@ def native_coverage(
             continuous_matches.setdefault(program_candidates[0].declaration_id, []).append(
                 program_binding
             )
+    network_matches: dict[str, list[NetworkProgramBinding]] = {}
+    network_records: dict[str, dict[str, Any]] = {}
+    for network_binding in network_programs:
+        network_candidates = identities.get(
+            (network_binding.source, network_binding.definition, network_binding.field), []
+        )
+        network_records[network_binding.consumer] = {
+            "consumer": network_binding.consumer,
+            "source": network_binding.source,
+            "definition": network_binding.definition,
+            "field": network_binding.field,
+            "production_sha256": network_binding.production_sha256,
+            "overlay_sha256": network_binding.overlay_sha256,
+            "metadata_sha256": network_binding.metadata_sha256,
+            "binding_status": "unproven",
+            "business_complete": False,
+        }
+        if len(network_candidates) != 1:
+            unmatched.append(
+                {
+                    "action_id": network_binding.consumer,
+                    "reason": "network_native_identity_unproven",
+                }
+            )
+        else:
+            network_matches.setdefault(network_candidates[0].declaration_id, []).append(
+                network_binding
+            )
     categories: dict[str, list[str]] = {
         name: []
         for name in (
@@ -1109,6 +1146,7 @@ def native_coverage(
     for surface in sorted(inventory.surfaces, key=lambda item: item.declaration_id):
         candidates = matches.get(surface.declaration_id, [])
         continuous = continuous_matches.get(surface.declaration_id, [])
+        networks = network_matches.get(surface.declaration_id, [])
         issues = {
             item.action_id: reason
             for item in candidates
@@ -1129,10 +1167,18 @@ def native_coverage(
                     binding_status="interface_bound",
                     native_evidence=evidence,
                 )
+        for network_binding in networks:
+            reason = r2_native.native_issue(network_binding, surface)
+            if reason is not None:
+                issues[network_binding.consumer] = reason
+            else:
+                network_records[network_binding.consumer]["binding_status"] = "interface_bound"
         binding_issue_count += len(issues)
-        matched_ids = [item.action_id for item in candidates] + [
-            item.writer.writer_id for item in continuous
-        ]
+        matched_ids = (
+            [item.action_id for item in candidates]
+            + [item.writer.writer_id for item in continuous]
+            + [item.consumer for item in networks]
+        )
         covered = sorted(writer_id for writer_id in matched_ids if writer_id not in issues)
         if surface.ambiguity:
             status = "unknown"
@@ -1194,6 +1240,7 @@ def native_coverage(
         ],
         "implicit_rows": implicit_rows,
         "continuous_programs": list(continuous_records.values()),
+        "network_programs": list(network_records.values()),
         "implicit_denominator_policy": "documented_optional_consumers_separate_from_discovered_denominator",
         "binding_complete": bool(inventory.surfaces)
         and not (unresolved or unmatched or binding_issue_count or inventory.parse_failures),
