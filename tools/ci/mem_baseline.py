@@ -2441,6 +2441,18 @@ class _InprocProgress:
         self.last_sample_s = 0.0
         self.peak_context: dict[str, Any] | None = None
         self.peak_source = MemReader().peak_source
+        self.replace_deferred = 0
+        self.replace_access_denials = 0
+        self.replace_pending = False
+        self.replace_error: str | None = None
+
+    def diagnostics(self) -> dict[str, Any]:
+        return {
+            "checkpoint_replace_deferred": self.replace_deferred,
+            "checkpoint_access_denials": self.replace_access_denials,
+            "checkpoint_replace_pending": self.replace_pending,
+            "checkpoint_replace_error": self.replace_error,
+        }
 
     def elapsed(self) -> float:
         return round(self._clock() - self.started, 6)
@@ -2542,7 +2554,21 @@ class _InprocProgress:
                 self._event("peak_observed", peak_ws_mb=hwm, context=self.peak_context)
             self.last_sample_s = now
 
-    def flush(self, *, force: bool = False) -> None:
+    def _journal(self) -> None:
+        with self.lock:
+            events, self.events = self.events, []
+        if events:
+            try:
+                with self._open(self.events_path, "a", encoding="utf-8", newline="\n") as stream:
+                    stream.write(
+                        "".join(self._dumps(row, ensure_ascii=False) + "\n" for row in events)
+                    )
+            except Exception:
+                with self.lock:
+                    self.events = events + self.events
+                raise
+
+    def flush(self, *, force: bool = False, final: bool = False) -> None:
         # Only the existing sampler writes periodically; configure and finish
         # write before it starts or after it joins. Never serialize full reports.
         now = self._clock()
@@ -2582,22 +2608,53 @@ class _InprocProgress:
                 "peak_context": self.peak_context,
                 "journal_seq": self.seq,
             }
-            events, self.events = self.events, []
-        if events:
-            with self._open(self.events_path, "a", encoding="utf-8", newline="\n") as stream:
-                stream.write("".join(self._dumps(row, ensure_ascii=False) + "\n" for row in events))
+        self._journal()
         with self._open(self.temporary, "w", encoding="utf-8", newline="\n") as stream:
             stream.write(self._dumps(payload, ensure_ascii=False) + "\n")
-        self._replace(self.temporary, self.path)
+        try:
+            self._replace(self.temporary, self.path)
+        except PermissionError as exc:
+            # Windows readers can temporarily deny replacement of this purely
+            # diagnostic checkpoint. Journaled events and the complete pending
+            # file survive; retry once at the next normal flush without sleep.
+            code = getattr(exc, "winerror", None)
+            if not _IS_WIN or code not in {5, 32}:
+                raise
+            self.replace_deferred += 1
+            if code == 5:
+                self.replace_access_denials += 1
+            self.replace_pending = True
+            self.replace_error = repr(exc)
+            with self.lock:
+                self._event(
+                    "checkpoint_deferred",
+                    attempt=self.replace_deferred,
+                    error=self.replace_error,
+                )
+            self._journal()
+            # ERROR_ACCESS_DENIED can also mean a permanent ACL failure. Give
+            # transient readers two normal flush intervals to release; never
+            # accept an unresolved access denial as successful final evidence.
+            if (final and self.replace_access_denials) or self.replace_access_denials >= 3:
+                raise
+        else:
+            self.replace_access_denials = 0
+            self.replace_pending = False
+            self.replace_error = None
         self.last_flush = now
 
 
 class InprocRuntime(TypedDict):
     progress: _InprocProgress | None
     thread: threading.Thread | None
+    last_progress_diagnostics: dict[str, Any] | None
 
 
-_INPROC_RUNTIME: InprocRuntime = {"progress": None, "thread": None}
+_INPROC_RUNTIME: InprocRuntime = {
+    "progress": None,
+    "thread": None,
+    "last_progress_diagnostics": None,
+}
 
 
 def _inproc_enabled() -> bool:
@@ -2628,7 +2685,10 @@ def _inproc_sampler() -> None:  # pragma: no cover - 线程体
             except Exception as exc:
                 with _INPROC_LOCK:
                     _INPROC["errors"].append(f"PROGRESS-ERROR {exc!r}")
-                return
+                # A broken diagnostic writer must not stop the independent
+                # core sampler. Preserve the error for the final resource gate.
+                _INPROC_RUNTIME["last_progress_diagnostics"] = progress.diagnostics()
+                _INPROC_RUNTIME["progress"] = None
 
 
 def _inproc_phase(name: str, **extra: Any) -> None:
@@ -2672,6 +2732,11 @@ def _inproc_write(exitstatus: Any) -> Path | None:
         "series": _INPROC["series"],
         "errors": _INPROC["errors"][:20],
         "test_errors": _INPROC["test_errors"][:20],
+        "progress_diagnostics": (
+            _INPROC_RUNTIME["progress"].diagnostics()
+            if _INPROC_RUNTIME["progress"] is not None
+            else _INPROC_RUNTIME["last_progress_diagnostics"]
+        ),
     }
     path = out / f"inproc-{tag}-{worker}.json"
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8", newline="\n")
@@ -2849,10 +2914,13 @@ def pytest_sessionfinish(session: Any, exitstatus: Any) -> None:  # pragma: no c
     _inproc_phase("sessionfinish", collected=getattr(session, "testscollected", None))
     progress = _INPROC_RUNTIME["progress"]
     if progress is not None and (thread is None or not thread.is_alive()):
-        progress.set_phase("sessionfinish", exitstatus=int(exitstatus))
-        rss, hwm = _inproc_snapshot()
-        progress.sample(rss, hwm)
-        progress.flush(force=True)
+        try:
+            progress.set_phase("sessionfinish", exitstatus=int(exitstatus))
+            rss, hwm = _inproc_snapshot()
+            progress.sample(rss, hwm)
+            progress.flush(force=True, final=True)
+        except Exception as exc:
+            _INPROC["errors"].append(f"PROGRESS-ERROR {exc!r}")
     _inproc_write(exitstatus)
 
 
