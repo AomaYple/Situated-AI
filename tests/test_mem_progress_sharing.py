@@ -94,7 +94,7 @@ def test_only_windows_replace_sharing_permissions_are_deferred(
 ):
     progress = checkpoint(mem)
     error = PermissionError(13, "held target")
-    error.winerror = winerror
+    monkeypatch.setattr(error, "winerror", winerror, raising=False)
 
     def denied(*_args):
         raise error
@@ -151,7 +151,7 @@ def test_nonsharing_final_flush_error_still_writes_failed_final_evidence(mem):
 def test_final_access_denial_fails_but_explicit_sharing_is_only_diagnostic(mem, monkeypatch, code):
     progress = checkpoint(mem)
     error = PermissionError(13, "held target")
-    error.winerror = code
+    monkeypatch.setattr(error, "winerror", code, raising=False)
 
     def denied(*_args):
         raise error
@@ -177,9 +177,9 @@ def test_final_access_denial_fails_but_explicit_sharing_is_only_diagnostic(mem, 
 def test_sharing_error_does_not_clear_an_unrecovered_access_denial(mem, monkeypatch):
     progress = checkpoint(mem)
     access = PermissionError(13, "ambiguous access denied")
-    access.winerror = 5
+    monkeypatch.setattr(access, "winerror", 5, raising=False)
     sharing = PermissionError(13, "sharing violation")
-    sharing.winerror = 32
+    monkeypatch.setattr(sharing, "winerror", 32, raising=False)
     errors = iter([access, sharing])
 
     def denied(*_args):
@@ -200,9 +200,9 @@ def test_sharing_error_does_not_clear_an_unrecovered_access_denial(mem, monkeypa
 def test_successful_replacement_clears_access_denial_before_final_sharing(mem, monkeypatch):
     progress = checkpoint(mem)
     access = PermissionError(13, "transient access denied")
-    access.winerror = 5
+    monkeypatch.setattr(access, "winerror", 5, raising=False)
     sharing = PermissionError(13, "sharing violation")
-    sharing.winerror = 32
+    monkeypatch.setattr(sharing, "winerror", 32, raising=False)
     replace = progress._replace
     calls = []
 
@@ -231,7 +231,7 @@ def test_successful_replacement_clears_access_denial_before_final_sharing(mem, m
 def test_repeated_access_denial_is_bounded_and_keeps_core_sampler(mem, monkeypatch):
     progress = checkpoint(mem)
     error = PermissionError(13, "permanent access denied")
-    error.winerror = 5
+    monkeypatch.setattr(error, "winerror", 5, raising=False)
 
     def denied(*_args):
         raise error

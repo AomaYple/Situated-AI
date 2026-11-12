@@ -125,3 +125,103 @@ def test_真实仓库的快照里记着全部生成表() -> None:
 def test_生成表规格数没变() -> None:
     """顺手钉一个总量：规格数量突然变化说明有张表被悄悄摘掉了。"""
     assert sum(len(t.specs) for t in docgen.targets()) >= 150
+
+
+def _doc08_metadata_rows():
+    prefix = "08-目录全量清单.md::doc08 "
+    return {
+        prefix + "版本指纹": ["| 游戏版本 | old | source |"],
+        prefix + "localization 语言目录": ["| `english` | 12 | 5 | old |"],
+        prefix + "gfx 子目录": ["| `map` | 40 | 3 | suffixes | old |"],
+        prefix + "english 固定子目录#2": [
+            f"| `{name}` | 1 | purpose |"
+            for name in ("character", "frontend", "historical", "interest_groups", "map")
+        ],
+    }
+
+
+def test_current_doc08_prose_uses_metadata_without_changing_capture(monkeypatch):
+    from copy import deepcopy
+
+    from pdx import install_tree
+
+    monkeypatch.setattr(install_tree, "active_version", lambda: "1.15.1")
+    monkeypatch.setattr(
+        install_tree.docs_mirror,
+        "load_manifest",
+        lambda: {
+            "文档": {
+                "game/gfx/map/a.md": {},
+                "game/gfx/map/sub/b.md": {},
+                "game/gfx/other/c.md": {},
+            }
+        },
+    )
+    raw = _doc08_metadata_rows()
+    before = deepcopy(raw)
+    result = install_tree.current_doc08_narrative_tables(raw)
+    assert raw == before
+    english = result["08-目录全量清单.md::doc08 localization 语言目录"][0]
+    assert "7 个直接文件" in english  # total 12 minus five recorded child files
+    assert "2 个官方 `.md`" in result["08-目录全量清单.md::doc08 gfx 子目录"][0]
+    assert install_tree.current_doc08_narrative_tables(result) == result
+    monkeypatch.setattr(install_tree, "active_version", lambda: "1.15.0")
+    assert install_tree.current_doc08_narrative_tables(raw) == before
+    monkeypatch.setattr(install_tree, "active_version", lambda: "1.14.5")
+    assert install_tree.current_doc08_narrative_tables(raw) == before
+
+
+@pytest.mark.parametrize(
+    "invalid", ["missing", "duplicate", "type", "commas", "negative", "child_count"]
+)
+def test_current_doc08_prose_rejects_incomplete_denominators(monkeypatch, invalid):
+    from pdx import install_tree
+    from pdx.doc_tables import TableMalformedError
+
+    monkeypatch.setattr(install_tree, "active_version", lambda: "1.15.1")
+    monkeypatch.setattr(
+        install_tree.docs_mirror, "load_manifest", lambda: {"文档": {"game/gfx/map/a.md": {}}}
+    )
+    rows = _doc08_metadata_rows()
+    children = "08-目录全量清单.md::doc08 english 固定子目录#2"
+    english = "08-目录全量清单.md::doc08 localization 语言目录"
+    if invalid == "missing":
+        rows[children].pop()
+    elif invalid == "duplicate":
+        rows[children].append(rows[children][0])
+    elif invalid == "type":
+        rows[children][0] = "| `character` | unknown | purpose |"
+    elif invalid == "commas":
+        rows[children][0] = "| `character` | 1,,2 | purpose |"
+    elif invalid == "negative":
+        rows[english][0] = "| `english` | 4 | 5 | old |"
+    else:
+        rows[english][0] = "| `english` | 12 | 4 | old |"
+    with pytest.raises(TableMalformedError):
+        install_tree.current_doc08_narrative_tables(rows)
+
+
+@pytest.mark.parametrize("bad", [{"game/gfx/map/../a.md": {}}, {"game/gfx/map/a.md": 1}, {}])
+def test_doc08_map_manifest_rejects_unknown_or_malformed_entries(monkeypatch, bad):
+    from pdx import install_tree
+    from pdx.doc_tables import TableMalformedError
+
+    monkeypatch.setattr(install_tree, "active_version", lambda: "1.15.1")
+    monkeypatch.setattr(install_tree.docs_mirror, "load_manifest", lambda: {"文档": bad})
+    with pytest.raises(TableMalformedError):
+        install_tree.current_doc08_narrative_tables(_doc08_metadata_rows())
+
+
+@pytest.mark.parametrize(
+    "branches",
+    [{}, {"caligula_branch": "release/1.15.0", "clausewitz_branch": "caligula/release/1.15.0"}],
+)
+def test_live_doc08_version_refuses_missing_or_other_installation(monkeypatch, tmp_path, branches):
+    from pdx import install_tree
+    from pdx.doc_tables import TableMalformedError
+
+    monkeypatch.setattr(install_tree, "active_version", lambda: "1.15.1")
+    monkeypatch.setattr(install_tree.config, "ROOT", tmp_path)
+    monkeypatch.setattr(install_tree.config, "game_version", lambda: branches)
+    with pytest.raises(TableMalformedError):
+        install_tree._spec_version_fingerprint().cells()

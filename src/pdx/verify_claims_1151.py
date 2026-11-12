@@ -22,7 +22,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "ai.nai_params_doc03",
         "03-AI系统.md",
-        "NAI 参数 1017",
+        "NAI 参数 1025",
         "defines_params",
         "00_ai.txt:NAI",
         1025,
@@ -70,7 +70,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "script.events_md_doc04",
         "04-脚本系统.md",
-        "GAME 下共有 98 个官方 .md",
+        "GAME 下共有 99 个官方 .md",
         "dir_md_files",
         "",
         99,
@@ -90,7 +90,7 @@ CLAIMS: list[Claim] = [
         "defines.suffix_mult", "05-defines与修饰符.md", "_mult 699", "modifier_suffix", "mult", 699
     ),
     Claim(
-        "defines.suffix_bool", "05-defines与修饰符.md", "_bool 96", "modifier_suffix", "bool", 98
+        "defines.suffix_bool", "05-defines与修饰符.md", "_bool 98", "modifier_suffix", "bool", 98
     ),
     Claim(
         "defines.script_values_blocks",
@@ -146,7 +146,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "ai.nai_params_doc09",
         "09-AI-mod实战技法.md",
-        "全库 NAI 有 1017 个参数",
+        "全库 NAI 有 1025 个参数",
         "defines_params",
         "00_ai.txt:NAI",
         1025,
@@ -202,7 +202,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "script.event_defs_doc04",
         "04-脚本系统.md",
-        "共 2400 个事件定义",
+        "共 2402 个事件定义",
         "event_definitions",
         "",
         2402,
@@ -234,7 +234,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "docs.common_md_doc07",
         "07-官方文档索引.md",
-        "common 下共 80 个 .md",
+        "common 下共 81 个 .md",
         "dir_md_files",
         "common",
         81,
@@ -299,7 +299,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "script.placement_values_doc04",
         "04-脚本系统.md",
-        "placement 取值共 340 个不同值",
+        "placement 取值共 359 个不同值",
         "field_distinct_values",
         "events/placement",
         359,
@@ -394,7 +394,7 @@ CLAIMS: list[Claim] = [
         5,
     ),
     Claim(
-        "env.common_dirs", "08-目录全量清单.md", "common 有 140 个子目录", "dir_subdirs", "", 141
+        "env.common_dirs", "08-目录全量清单.md", "common 有 141 个子目录", "dir_subdirs", "", 141
     ),
     Claim(
         "env.dlc",
@@ -408,7 +408,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "env.common_txt",
         "08-目录全量清单.md",
-        "common 有 3191 个 .txt",
+        "common 有 3192 个 .txt",
         "dir_txt_files",
         "",
         3192,
@@ -417,17 +417,17 @@ CLAIMS: list[Claim] = [
     Claim(
         "env.common_all",
         "08-目录全量清单.md",
-        "common 共 3271 个文件",
+        "common 共 3273 个文件",
         "dir_all_files",
         "",
         3273,
         "1.14.2 时为 3099",
     ),
-    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 99 篇官方 .md", "md_files", "", 100),
+    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 100 篇官方 .md", "md_files", "", 100),
     Claim(
         "docs.total_bytes",
         "07-官方文档索引.md",
-        "99 篇官方 .md 总字节数",
+        "100 篇官方 .md 总字节数",
         "md_total_bytes",
         "",
         259825,
@@ -610,7 +610,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.nai_count",
         "05-defines与修饰符.md",
-        "NAI 有 1017 个参数",
+        "NAI 有 1025 个参数",
         "defines_params",
         "00_ai.txt:NAI",
         1025,
@@ -635,7 +635,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.param_total",
         "05-defines与修饰符.md",
-        "defines 共 3589 个参数条目",
+        "defines 共 3597 个参数条目",
         "defines_param_total",
         "",
         3597,
@@ -644,7 +644,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.param_names",
         "05-defines与修饰符.md",
-        "defines 共 3582 个去重参数名",
+        "defines 共 3590 个去重参数名",
         "defines_param_names",
         "",
         3590,
@@ -653,7 +653,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.modtypes",
         "05-defines与修饰符.md",
-        "modifier_type_definitions 有 2474 个",
+        "modifier_type_definitions 有 2476 个",
         "dir_entries",
         "modifier_type_definitions",
         2476,
@@ -661,7 +661,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.static",
         "05-defines与修饰符.md",
-        "static_modifiers 有 6479 个",
+        "static_modifiers 有 6487 个",
         "dir_entries",
         "static_modifiers",
         6487,
@@ -730,7 +730,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "env.common_dirs_direct",
         "08-目录全量清单.md",
-        "直接枚举 common 得到 140 个子目录",
+        "直接枚举 common 得到 141 个子目录",
         "common_dir_count",
         "",
         141,
@@ -895,7 +895,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "tree.game_bytes",
         "08-目录全量清单.md",
-        "game 全树的字节总数（等价 18,218.96 MB）",
+        "game 全树的字节总数（等价 18,219.94 MB）",
         "tree_bytes",
         "game",
         19104989497,
@@ -911,7 +911,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "tree.binaries_bytes",
         "08-目录全量清单.md",
-        "binaries 目录字节总数（等价 263.53 MB）",
+        "binaries 目录字节总数（等价 263.75 MB）",
         "tree_bytes",
         "binaries",
         276558605,
@@ -954,7 +954,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "tree.gfx_bytes",
         "08-目录全量清单.md",
-        "game/gfx 目录字节总数（等价 9,875.40 MB）",
+        "game/gfx 目录字节总数（等价 9,876.20 MB）",
         "tree_bytes",
         "game/gfx",
         10355949745,
@@ -1029,7 +1029,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "script.events_subdir_files",
         "04-脚本系统.md",
-        "events 的 12 个子目录里的文件数（不含根目录自己那 130 个）",
+        "events 的 13 个子目录里的文件数（不含根目录自己那 133 个）",
         "tree_subdir_files",
         "game/events",
         215,
@@ -1129,7 +1129,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "loc.yml_unique_names_doc06",
         "06-本地化与界面资源.md",
-        "localization 下 .yml 按文件名去重后的个数（1,877 个文件、22 个重名）",
+        "localization 下 .yml 按文件名去重后的个数（2,009 个文件、22 个重名）",
         "loc_yml_unique_names",
         "",
         1987,
@@ -1493,7 +1493,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.template_genes",
         "17-角色科技与呈现.md",
-        "ethnicity_template 里出现过的 gene_* 键数（morph_genes 全集 97 减去缺的 4 个）",
+        "ethnicity_template 里出现过的 gene_* 键数（morph_genes 全集 98 减去缺的 5 个）",
         "doc17_block_prefix",
         "common/ethnicities/00_ethnicities_templates.txt|ethnicity_template|gene_",
         93,

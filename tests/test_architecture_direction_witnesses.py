@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import asdict, replace
+from types import SimpleNamespace
+from typing import Any, cast
+from weakref import ref
 
 import pytest
 import test_architecture_explicit_witnesses as explicit
@@ -32,12 +35,22 @@ COST = "cost_saturation_unknown_counterexamples"
 FEEDBACK = "observed_feedback_opportunity_cost"
 
 
-@pytest.fixture(scope="module")
-def candidate():
+def _release_candidate_evidence():
     policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
-    model = compiler.load_model()
-    raw = dict(decision_adapters.load().policies)[RAIL]
-    compiled = compiler.compile_policy(raw, RAIL, model)[0]
+    # Audit the complete real release output before retaining only the three
+    # physical consumers used below. The raw engineering metadata dies here.
+    continuous = audit._production_continuous_bindings(files)
+    assert len(continuous) == 1
+    return (
+        policy,
+        extensions,
+        files[explicit.SOURCE],
+        {path: files[path] for path in (RAIL, HELPERS)},
+        continuous[0].writer.program,
+    )
+
+
+def _disabled_candidate_evidence(policy, extensions):
     disabled = decisions.build(
         replace(policy, enabled=False),
         extensions=replace(
@@ -49,21 +62,145 @@ def candidate():
             diplomacy_enabled=False,
         ),
     )
-    continuous = audit._production_continuous_bindings(files)
-    assert len(continuous) == 1
+    # Preserve the original optional railway fallback without carrying unused
+    # disabled output or its metadata into the reference-model construction.
+    return disabled[explicit.SOURCE], {RAIL: disabled[RAIL]} if RAIL in disabled else {}
+
+
+@pytest.fixture(scope="module")
+def candidate():
+    policy, extensions, built, files, support = _release_candidate_evidence()
+    disabled, disabled_files = _disabled_candidate_evidence(policy, extensions)
+    model = compiler.load_model()
+    raw = dict(decision_adapters.load().policies)[RAIL]
+    compiled = compiler.compile_policy(raw, RAIL, model)[0]
     original = (config.GAME / RAIL).read_text(encoding="utf-8-sig")
     return {
-        "built": files[explicit.SOURCE],
+        "built": built,
         "files": files,
         "baseline": decisions.baseline_path().read_text(encoding="utf-8"),
-        "disabled": disabled[explicit.SOURCE],
-        "disabled_files": disabled,
+        "disabled": disabled,
+        "disabled_files": disabled_files,
         "model": model,
-        "support": continuous[0].writer.program,
+        "support": support,
         "raw": raw,
         "rail_policy": compiled,
         "rail_original": original,
     }
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("disabled_rail", [False, True])
+def test_candidate_releases_full_outputs_before_the_next_heavy_stage(
+    monkeypatch, tmp_path, disabled_rail
+):
+    """Both complete builds/audit execute without retaining either large mapping."""
+
+    class Output(dict):
+        pass
+
+    class MetadataText(str):
+        pass
+
+    package = decisions.PackageContract(
+        "3.3.0", "released", "vanilla-1.15.1", "new-game-only", ("windows",), "fixture"
+    )
+    policy = decisions.Policy(True, "1.15.1", "baseline", 1, 1, 1, 1, 1, package)
+    extensions = decisions.Extensions(
+        reform_enabled=True,
+        market_enabled=True,
+        security_enabled=True,
+        economy_enabled=True,
+        diplomacy_enabled=True,
+    )
+    references: dict[str, Any] = {}
+    support = object()
+    raw = object()
+    original = tmp_path / RAIL
+    original.parent.mkdir(parents=True)
+    original.write_text("actual native rail", encoding="utf-8-sig")
+    baseline = tmp_path / "baseline.txt"
+    baseline.write_text("actual baseline", encoding="utf-8")
+
+    def release(**kwargs):
+        assert kwargs == {"include_engineering_metadata": True}
+        metadata = MetadataText("complete engineering metadata")
+        output = Output(
+            {
+                explicit.SOURCE: "actual production",
+                RAIL: "actual production rail",
+                HELPERS: "actual production helpers",
+                ".metadata/metadata.json": metadata,
+                "unused.txt": "full production output",
+            }
+        )
+        references["release"] = ref(output)
+        references["raw_metadata"] = ref(metadata)
+        return policy, extensions, output
+
+    def continuous(output):
+        assert output is references["release"]()
+        assert output[".metadata/metadata.json"] == "complete engineering metadata"
+        assert output["unused.txt"] == "full production output"
+        references["audited"] = True
+        return (SimpleNamespace(writer=SimpleNamespace(program=support)),)
+
+    def disabled(selected, *, extensions):
+        assert references["release"]() is None, "full release output survives into disabled build"
+        assert references["raw_metadata"]() is None, "raw metadata survives into disabled build"
+        assert references["audited"] is True
+        assert selected == replace(policy, enabled=False)
+        assert all(
+            getattr(extensions, name) is False
+            for name in (
+                "reform_enabled",
+                "market_enabled",
+                "security_enabled",
+                "economy_enabled",
+                "diplomacy_enabled",
+            )
+        )
+        output = Output({explicit.SOURCE: "actual disabled", "unused.txt": "full disabled output"})
+        if disabled_rail:
+            output[RAIL] = "actual disabled rail"
+        references["disabled"] = ref(output)
+        return output
+
+    def model():
+        assert references["release"]() is None, "full release output survives into model load"
+        assert references["disabled"]() is None, "full disabled output survives into model load"
+        return "actual model"
+
+    def compile_policy(selected, path, selected_model):
+        assert selected is raw
+        assert path == RAIL
+        assert selected_model == "actual model"
+        return ("actual compiled rail",)
+
+    monkeypatch.setattr(distribution, "package_inputs", release)
+    monkeypatch.setattr(audit, "_production_continuous_bindings", continuous)
+    monkeypatch.setattr(decisions, "build", disabled)
+    monkeypatch.setattr(compiler, "load_model", model)
+    monkeypatch.setattr(compiler, "compile_policy", compile_policy)
+    monkeypatch.setattr(decision_adapters, "load", lambda: SimpleNamespace(policies=((RAIL, raw),)))
+    monkeypatch.setattr(decisions, "baseline_path", lambda: baseline)
+    monkeypatch.setattr(config, "GAME", tmp_path)
+    result = cast("Any", candidate).__wrapped__()
+    assert result == {
+        "built": "actual production",
+        "files": {RAIL: "actual production rail", HELPERS: "actual production helpers"},
+        "baseline": "actual baseline",
+        "disabled": "actual disabled",
+        "disabled_files": {RAIL: "actual disabled rail"} if disabled_rail else {},
+        "model": "actual model",
+        "support": support,
+        "raw": raw,
+        "rail_policy": "actual compiled rail",
+        "rail_original": "actual native rail",
+    }
+    assert result["disabled_files"].get(RAIL, result["rail_original"]) == (
+        "actual disabled rail" if disabled_rail else "actual native rail"
+    )
 
 
 def _record(witness, requirement, consumer, role, observations, expected, reference, actual):

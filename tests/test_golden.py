@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from _artifact_readback import assert_artifacts_readback
+from _artifact_text import assert_utf8_no_bom
 
 from pdx import analyze, config, docs_mirror, verify
 from pdx.version_contracts import active_version
@@ -135,9 +136,7 @@ def test_产物一律_LF_换行(artifacts) -> None:
 
 def test_报告是合法UTF8且无乱码(artifacts) -> None:
     for name, p in artifacts.items():
-        raw = p.read_bytes()
-        assert not raw.startswith(b"\xef\xbb\xbf"), f"{name} 不应带 BOM"
-        raw.decode("utf-8")  # 解码失败即失败
+        assert_utf8_no_bom(p, name=name)
 
 
 def test_重复分析结果逐字节一致(tmp_path, ga, ma, ca, monkeypatch) -> None:

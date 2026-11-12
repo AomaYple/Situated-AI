@@ -259,7 +259,7 @@ def sys_mem() -> dict[str, float | None]:
 
 def cpu_count() -> int | None:
     try:
-        return len(os.sched_getaffinity(0))  # type: ignore[attr-defined]
+        return len(getattr(os, "sched_getaffinity")(0))  # noqa: B009 - 平台可选 API
     except AttributeError:
         return os.cpu_count()
 
@@ -1824,7 +1824,7 @@ def _step_invariant(limit: int) -> int:
     3. **行号保真**：``Scalar.line`` / ``Block.line`` 一致；
     4. **引号标记保真**：``Scalar.quoted`` 一致。
 
-    「全新解析」必须**绕过两层缓存**（直接调 ``cache._parse_file``，原名 ``parse_file``），
+    「全新解析」必须**绕过两层缓存**（直接调 ``pdx.parser.parse_file``），
     否则两边读的是同一份缓存、比对恒真。
     """
     import hashlib as _hashlib  # noqa: PLC0415 - 延迟导入（见 corpus_files）
@@ -1833,6 +1833,7 @@ def _step_invariant(limit: int) -> int:
     from pdx.model import Assignment as _Assignment  # noqa: PLC0415
     from pdx.model import Block as _Block  # noqa: PLC0415
     from pdx.model import Scalar as _Scalar  # noqa: PLC0415
+    from pdx.parser import parse_file  # noqa: PLC0415
 
     _add_pdx_path()
     from pdx import config as pdx_config  # noqa: PLC0415
@@ -1871,7 +1872,7 @@ def _step_invariant(limit: int) -> int:
         return digest, nodes, int(getattr(tree, "had_bom", 0))
 
     for path in files:
-        direct = cache._parse_file(str(path))
+        direct = parse_file(str(path))
         cached = cache.parse_cached(str(path))
         if fingerprint(direct) != fingerprint(cached):
             mismatches.append(str(path))
@@ -2050,6 +2051,7 @@ def _step_index_audit(sample: int) -> int:
     import random  # noqa: PLC0415 - 延迟导入
 
     from pdx import cache  # noqa: PLC0415 - 延迟导入（见 corpus_files）
+    from pdx.parser import parse_file  # noqa: PLC0415
 
     files = corpus_files()
     per_shard = {index: cache._load_index(index) for index in range(cache.SHARDS)}
@@ -2073,7 +2075,7 @@ def _step_index_audit(sample: int) -> int:
         if got is None:
             mismatch.append(f"{path}（索引有、取不回来）")
             continue
-        direct = cache._parse_file(str(path))
+        direct = parse_file(str(path))
         if _tree_fingerprint(got, foreign) != _tree_fingerprint(direct, foreign):
             mismatch.append(str(path))
 

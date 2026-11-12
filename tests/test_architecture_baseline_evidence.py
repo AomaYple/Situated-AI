@@ -419,14 +419,16 @@ def test_s0_independent_scope(
         # Independently recounted from the actual f843 installation on 2026-11-12:
         # 1960 bound sources were rehashed; 1878 belong to discovery's txt scope.
         # This is the finite A0 discovery denominator, not the full native catalog.
+        # The pinned road-maintenance ai_weight scope was subsequently proven
+        # direct: one existing declaration moves from pending to legal/direct.
         expected = {
             "declarations": 9780,
-            "legal": 5742,
+            "legal": 5743,
             "capabilities": {
-                "direct": 2899,
+                "direct": 2900,
                 "indirect": 2843,
                 "observation": 3412,
-                "pending": 626,
+                "pending": 625,
                 "unexposed": 0,
             },
             "parsed_files": 1878,

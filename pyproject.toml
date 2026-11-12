@@ -275,9 +275,11 @@ runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration 
 # 本机开发环境的可选 numpy 类型桩使用 Python 3.12 的 type 语句。
 # mypy 按 3.12 解析；最低 3.11 运行时由 Ruff 和三平台解释器矩阵核对。
 python_version = "3.12"
-# 覆盖范围：解析器包 + 测试。
-# tools/ 中的检查与基准入口受全仓 ruff 和对应工具合同测试约束。
-files = ["src/pdx", "tests"]
+# 覆盖解析器包、测试及被测试直接导入的内存基准工具。
+# 显式包根让命名空间工具在本地与 CI 使用同一模块名。
+files = ["src/pdx", "tests", "tools/ci/mem_baseline.py"]
+mypy_path = ["src", "tests", "."]
+explicit_package_bases = true
 # 渐进式收紧：先保证「不出现新错误」，再逐步加严。
 warn_unused_configs = true
 warn_redundant_casts = true

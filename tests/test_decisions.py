@@ -52,6 +52,12 @@ def policy():
     return decisions.load()
 
 
+@pytest.fixture(scope="module")
+def release_package(tmp_path_factory):
+    """Only read-only ZIP assertions share this real, complete production package."""
+    return distribution.package(tmp_path_factory.mktemp("decision-release") / "mod.zip")
+
+
 def test_财政开关显式开启且交付契约来自数据源(policy):
     assert policy.enabled
     assert policy.package.product_version == "3.2.0"
@@ -470,12 +476,12 @@ def test_快照缺失扩展接口域明确报告未覆盖(tmp_path):
 
 
 @pytest.mark.integration
-def test_生产ZIP不携带历史档案(tmp_path):
+def test_生产ZIP不携带历史档案(release_package):
     import zipfile
 
     from pdx import distribution
 
-    with zipfile.ZipFile(distribution.package(tmp_path / "mod.zip")) as archive:
+    with zipfile.ZipFile(release_package) as archive:
         _, _, files = distribution.package_inputs()
         assert set(archive.namelist()) == set(files) | {
             "README.md",
@@ -485,12 +491,12 @@ def test_生产ZIP不携带历史档案(tmp_path):
 
 
 @pytest.mark.integration
-def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
+def test_生产ZIP清单携带实际包契约和源指纹(release_package):
     import zipfile
 
     from pdx import distribution
 
-    with zipfile.ZipFile(distribution.package(tmp_path / "mod.zip")) as archive:
+    with zipfile.ZipFile(release_package) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         metadata = json.loads(archive.read(".metadata/metadata.json"))
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
@@ -719,12 +725,12 @@ def test_正式包API和CLI输出逐字节一致(tmp_path):
 
 
 @pytest.mark.integration
-def test_交付说明由清单覆盖且明确用户验收边界(tmp_path):
+def test_交付说明由清单覆盖且明确用户验收边界(release_package):
     import zipfile
 
     from pdx import distribution
 
-    with zipfile.ZipFile(distribution.package(tmp_path / "guide.zip")) as archive:
+    with zipfile.ZipFile(release_package) as archive:
         raw = archive.read("README.md")
         text = raw.decode("utf-8")
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
