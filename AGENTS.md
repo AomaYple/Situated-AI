@@ -1,9 +1,8 @@
 # Situated AI 项目代理指南
 
-本文件是仓库级任务路由与接手入口，不重复贡献流程或原则正文。修改、验证、提交和交付流程见
-[CONTRIBUTING.md](CONTRIBUTING.md)；持续工程约束见[工程原则](docs/principles/工程原则.md)，产品目标与设计约束见
-[Mod 开发原则](docs/principles/Mod开发原则.md)。具体生成、包结构和证据合同见
-[工程交付基线](docs/design/exec/工程基线-1.0.md)。
+本文件是仓库级任务接手、权威来源和修改路由入口，不复制贡献流程、原则正文或当前阶段状态。环境、验证、Git 和交付流程见
+[CONTRIBUTING.md](CONTRIBUTING.md)；工程持续约束见[工程原则](docs/principles/工程原则.md)，产品目标与设计约束见
+[Mod 开发原则](docs/principles/Mod开发原则.md)；生成、包结构、证据和恢复合同见[工程交付基线](docs/design/exec/工程基线-1.0.md)。
 
 系统、开发者和用户指令优先于本文件；更窄目录中的 `AGENTS.md` 可按作用范围补充本指南。
 
@@ -15,37 +14,34 @@
 | 环境、验证、Git 和交付流程 | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | 工程持续约束 | [工程原则](docs/principles/工程原则.md) |
 | Mod 目标、设计和验收边界 | [Mod 开发原则](docs/principles/Mod开发原则.md) |
+| 规则文件分工、原则编号与执行覆盖 | [原则索引](docs/principles/README.md) |
 | 生成、包结构、证据和恢复合同 | [工程交付基线](docs/design/exec/工程基线-1.0.md) |
-| 当前架构与计划归档入口 | [架构主计划](docs/design/架构主计划.md) |
-| 子计划状态与历史方向入口 | [架构子计划](docs/design/架构子计划.md) |
+| 当前架构与计划入口 | [架构主计划](docs/design/架构主计划.md)、[架构子计划](docs/design/架构子计划.md) |
 | 当前事实与下一动作 | [当前工作清单](docs/design/当前工作清单.md) |
-| 阶段事实和交付收据 | `docs/design/exec/*-结果.md` |
+| 阶段事实和交付收据 | `docs/design/exec/*-结果.md` 及其索引 |
 | 安全问题报告 | [SECURITY.md](SECURITY.md) |
 
-原则页描述持续约束，计划页描述顺序和出口，清单页记录当前状态，结果页记录证据。原则或计划中的目标不证明
-代码已经实现；当前能力以生产源、检查结果和相应收据为准。导航页只提供入口，不复制另一份规则。
+原则页描述持续约束，计划页描述顺序和出口，清单页记录当前状态，结果页记录证据。原则、计划或合同中的目标不证明代码已经实现；当前能力以生产源、检查结果和相应收据为准。导航页只提供入口，不复制另一份规则。
 
 ## 接手顺序
 
 开始非只读任务前：
 
-1. 按贡献指南完成工作树检查，辨认并保留已有改动；按任务需要检查相关进程、部署指针和锁文件。
-2. 阅读本文件及适用的原则；Mod 工作同时阅读当前工作清单和主计划，涉及生成/快照/交付时阅读工程交付基线。
-3. 只有需要历史事实、失败因果或原始字节时，才深入读取旧结果、审计、报告和 `research` 材料。
-
-纯工程治理以规则、代码、文档、结构与工具的统一和行为保持为范围，不自动恢复产品计划。
-提交前核对与目标主线的全部差异；独立治理改动应从主线交付，未完成产品候选保留在原分支，不夹带合并。
+1. 按 [CONTRIBUTING.md](CONTRIBUTING.md) 完成工作树检查，辨认并保留已有改动；按任务需要检查相关进程、部署指针和锁文件。
+2. 阅读本文件及适用的原则；Mod 工作同时阅读当前工作清单和主计划，涉及生成、快照或交付时阅读工程交付基线。
+3. 只有需要历史事实、失败因果或原始字节时，才深入读取历史结果、审计、报告和 `research` 材料。
 
 ## 修改路由
 
-| 任务 | 首选入口 | 约束 |
+| 任务 | 首选入口 | 路由边界 |
 |---|---|---|
-| Mod 源和生成 | `mod/decisions/*.toml`、`src/pdx/decisions.py`、`decision_rules.py`、`decision_adapters.py`、`distribution.py` | 生成物不手改；按贡献流程重生成并核对 |
-| 全量分析与快照 | `src/pdx/`、`v3 analyze`、`v3 information-catalog`、`v3 snapshot` | 只登记可发现能力；不可见的引擎状态标为 `unknown`/`unsupported` |
-| 工程检查 | `tools/ci/run_check.py` | 使用仓库 `.venv`，无需激活；再生输出写入 `tools/out/`（仅登记的快照与证据受控，其余被忽略） |
-| 文档和机械表格 | 对应 CLI、`pdx.doc_tables`、`pdx.docgen` | 修改唯一来源后重新生成；不手改指纹、统计和 manifest |
-| 标准包 | `src/pdx/distribution.py`、`v3 package` | 依据工程交付基线；不得将探针、日志、缓存或历史实验放入生产包 |
-| 历史实验 | Git 历史；可再生输出在 `tools/out/` | 不进入当前工作树、计划、默认 CLI 路径或发布包 |
+| Mod 源和生成 | `mod/decisions/*.toml`、`src/pdx/decisions.py`、`decision_rules.py`、`decision_adapters.py`、`distribution.py` | 生产源是唯一输入；生成物按贡献流程更新，不手改生成结果。 |
+| 全量分析与快照 | `src/pdx/`、CLI 分析/快照入口 | 完整资料研究、国家运行期观测、解析能力和生产接线分别证明；不可见状态保持未知。 |
+| 工程检查 | `tools/ci/` | 检查入口只实现工程质量门；流程和运行口径以 [CONTRIBUTING.md](CONTRIBUTING.md) 为准。 |
+| 文档和机械表格 | 对应 CLI、`pdx.doc_tables`、`pdx.docgen` | 修改唯一来源后重新生成；不手改指纹、统计和 manifest。 |
+| 标准包 | `src/pdx/distribution.py`、package 入口 | 依据工程交付基线生成和核验；探针、日志、缓存和历史实验不进入生产包。 |
+| 实验与历史证据 | `tools/out/`、`docs/design/archive/` | 实验不进入默认生产路径；冻结证据按原字节合同保留。 |
 
-具体命令、检查范围和 Git 操作统一按 [CONTRIBUTING.md](CONTRIBUTING.md) 执行。当前阶段和版本不在本文件维护，避免
-入口规则随阶段推进而过期。
+纯工程治理以规则、代码、文档、结构与工具的统一和行为保持为范围，不自动恢复产品计划。提交前核对与目标主线的全部差异；独立治理改动不得夹带未完成产品候选。
+
+全局 `.codex/AGENTS.md` 属于会话治理规则，不复制进仓库。
