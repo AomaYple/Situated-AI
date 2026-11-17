@@ -92,7 +92,7 @@ def _is_root_build(relative: Path) -> bool:
     name = relative.name
     return (len(relative.parts) == 1 and name in ROOT_BUILD_NAMES) or (
         name.endswith(ROOT_BUILD_SUFFIXES)
-        and (len(relative.parts) == 1 or len(relative.parts) == 2 and relative.parts[0] == "src")
+        and (len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.parts[0] == "src"))
     )
 
 
