@@ -42,6 +42,11 @@ dependencies = [
     "rich>=15.0",      # 终端表格与格式化输出，取代手写字符串对齐。
 ]
 
+[project.urls]
+Homepage = "https://github.com/AomaYple/Situated-AI"
+Repository = "https://github.com/AomaYple/Situated-AI"
+Issues = "https://github.com/AomaYple/Situated-AI/issues"
+
 [project.optional-dependencies]
 # 测试与静态检查。一次装齐，避免后续「这个库没装」的反复。
 dev = [
@@ -83,6 +88,8 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["pdx*"]
+# 禁用隐式命名空间发现，避免缓存或意外目录进入 wheel。
+namespaces = false
 
 # ─────────────────────────────────────────────────────────────
 # pytest

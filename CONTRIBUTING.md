@@ -135,6 +135,8 @@ pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录�
 
 统一检查入口禁止当前及嵌套 Python 写入字节码；测试和静态工具仍可能生成其他缓存。结束后清理可再生目录，再运行 `hygiene` 作为最后的卫生检查；
 不要与测试并行运行 hygiene，否则会把测试正在创建的缓存误报成残留。
+可用 `python -m tools.ci.repo_hygiene --clean` 预览清理白名单；实际清理追加 `--apply`。
+该入口只清理缓存、字节码、根目录构建物和 `src/` 直系 egg-info，链接、reparse point、环境及证据目录不在清理范围。
 
 历史工具 `tools/ci/situated_closeout.py` 只核验归档 A2 身份，不是当前完成门；其历史实现与证据保留在原有源码、测试及归档收据中，不代替当前工程或产品验收。
 

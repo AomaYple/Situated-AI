@@ -1,7 +1,5 @@
 """仓库卫生检查器的正例、反例和排除范围。"""
 
-from __future__ import annotations
-
 import json
 import stat
 from types import SimpleNamespace
@@ -9,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tools.ci.repo_hygiene import find_violations, main, report
+from tools.ci.repo_hygiene import clean, find_violations, main, report
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,6 +22,25 @@ def test_clean_tree_has_no_violations(tmp_path: Path) -> None:
     (tmp_path / "src" / "module.py").write_text("value = 1\n", encoding="utf-8")
 
     assert find_violations(tmp_path) == []
+
+
+def test_src_egg_info_cleanup_is_limited_to_direct_children(tmp_path: Path) -> None:
+    artifact = tmp_path / "src" / "project.egg-info"
+    protected = (
+        tmp_path / "src" / "package" / "nested.egg-info",
+        tmp_path / "src" / "build",
+        tmp_path / ".venv" / "Lib" / "dependency.egg-info",
+    )
+    for directory in (artifact, *protected):
+        directory.mkdir(parents=True)
+        (directory / "PKG-INFO").write_bytes(b"metadata")
+    assert _paths(find_violations(tmp_path)) == {"src/project.egg-info"}
+    assert clean(tmp_path)["removed"] == []
+    assert artifact.is_dir()
+    result = clean(tmp_path, apply=True)
+    assert result["removed"] == ["src/project.egg-info"]
+    assert result["failures"] == []
+    assert all((directory / "PKG-INFO").read_bytes() == b"metadata" for directory in protected)
 
 
 def test_nonexistent_root_is_an_error_not_a_clean_tree(tmp_path: Path, capsys) -> None:
