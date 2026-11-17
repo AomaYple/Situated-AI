@@ -986,10 +986,33 @@ def test_frozen_format_and_keys_are_strict(inputs, tmp_path, monkeypatch, damage
             data["verified"] = True
         elif damage == "missing_key":
             data.pop("sources")
-        else:
+        elif damage == "bool_schema":
             data["schema"] = True
         path.write_text(company_sectors._canonical(data), encoding="utf-8", newline="\n")
     with pytest.raises(ValueError):
+        company_sectors.load_baseline()
+
+
+def test_115_frozen_format_requires_integer_schema(inputs, tmp_path, monkeypatch):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+    path = tmp_path / "baseline.json"
+    monkeypatch.setattr(company_sectors, "baseline_path", lambda: path)
+    monkeypatch.setattr(company_sectors, "_baseline_provenance", dict)
+    derived = company_sectors.derive(inputs)
+    payload = company_sectors._freeze(derived)
+    frozen = {
+        "schema": 3,
+        "game_version": "1.15.1",
+        "provenance": {},
+        "payload": payload,
+    }
+    path.write_text(company_sectors._canonical(frozen), encoding="utf-8", newline="\n")
+    assert type(json.loads(path.read_text(encoding="utf-8"))["schema"]) is int
+    assert company_sectors.load_baseline() == derived
+
+    frozen["schema"] = 3.0
+    path.write_text(company_sectors._canonical(frozen), encoding="utf-8", newline="\n")
+    with pytest.raises(ValueError, match=r"公司部门1\.15派生版本或生成来源漂移"):
         company_sectors.load_baseline()
 
 
