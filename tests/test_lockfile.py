@@ -143,3 +143,29 @@ def test_known_empty_dependency_metadata_is_valid(monkeypatch) -> None:
     monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
     monkeypatch.setattr(lockfile, "requires", lambda _name: None)
     assert lockfile.resolve() == {"fixture": "1.0"}
+
+
+def test_missing_active_transitive_dependency_rejects_incomplete_lock(monkeypatch) -> None:
+    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["root"])
+
+    def installed(name: str) -> str:
+        if name == "child":
+            raise lockfile.PackageNotFoundError(name)
+        return "1.0"
+
+    monkeypatch.setattr(lockfile, "version", installed)
+    monkeypatch.setattr(lockfile, "requires", lambda name: ["child"] if name == "root" else [])
+    with pytest.raises(RuntimeError, match=r"依赖闭包成员未安装.*child"):
+        lockfile.resolve()
+
+
+def test_extras_reached_after_base_visit_extend_closure_and_cycles_terminate(monkeypatch) -> None:
+    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["root", "shared"])
+    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
+    metadata = {
+        "root": ["shared[feature]"],
+        "shared": ["root", "optional; extra == 'feature'", "inactive; python_version < '3.0'"],
+        "optional": ["shared[feature]"],
+    }
+    monkeypatch.setattr(lockfile, "requires", lambda name: metadata[name])
+    assert lockfile.resolve() == {"optional": "1.0", "root": "1.0", "shared": "1.0"}

@@ -13,8 +13,8 @@ pytest / ruff / hypothesis 版本可能各不相同，于是「本地过了、CI
 
 1. 从 ``pyproject.toml`` 读出**直接依赖**（运行期 + ``dev`` extra）；
 2. 用 :mod:`importlib.metadata` 沿着 ``Requires-Dist`` 递归展开**闭包**
-   （只统计**本机真的装了**的那些 —— 没装的多半是别的平台/别的 Python 版本的
-   条件依赖，锁里不该凭空写一个版本号）;
+   （先按当前平台、解释器与已请求 extras 求值；条件不成立的依赖排除，
+   任何适用依赖缺失或元数据读取失败都拒绝生成不完整锁）；
 3. 按名字排序写成 ``requirements.lock``：``name==version``，外加一段文件头
    说明生成方式与解释器版本。
 
@@ -89,22 +89,26 @@ def normalize(name: str) -> str:
     return canonicalize_name(name.strip())
 
 
-def _marker_allows(marker: str) -> bool:
+def _marker_allows(marker: str, *, extra: str = "") -> bool:
     """使用 PEP 508 的 AND/OR、平台和版本语义；坏标记明确报错。"""
-    return Marker(marker).evaluate({"extra": ""})
+    return Marker(marker).evaluate({"extra": extra})
 
 
-def _requirement_names(specs: Iterable[str]) -> list[str]:
-    """从 PEP 508 依赖串里取包名（丢掉版本号、extra、标记）。"""
+def _requirement_names(specs: Iterable[str], *, extras: Iterable[str] = ("",)) -> list[str]:
+    """过滤不适用的 PEP 508 依赖，保留继续展开闭包所需的 extras。"""
     out: list[str] = []
+    contexts = tuple(extras)
     for raw in specs:
         line = raw.strip()
         if not line:
             continue
         requirement = Requirement(line)
-        if requirement.marker and not _marker_allows(str(requirement.marker)):
+        if requirement.marker and not any(
+            _marker_allows(str(requirement.marker), extra=extra) for extra in contexts
+        ):
             continue
-        out.append(requirement.name)
+        requested = f"[{','.join(sorted(requirement.extras))}]" if requirement.extras else ""
+        out.append(f"{requirement.name}{requested}")
     return out
 
 
@@ -121,23 +125,27 @@ def resolve() -> dict[str, str]:
     """本机已安装的依赖闭包：``{规范化包名: 版本}``。"""
     pinned: dict[str, str] = {}
     direct = direct_requirements()
-    direct_names = {normalize(name) for name in direct}
+    direct_names = {normalize(Requirement(name).name) for name in direct}
+    expanded: dict[str, set[str]] = {}
     queue = list(direct)
     while queue:
-        name = queue.pop()
+        requirement = Requirement(queue.pop())
+        name = requirement.name
         key = normalize(name)
-        if key in pinned:
+        contexts = {"", *requirement.extras} - expanded.get(key, set())
+        if not contexts:
             continue
-        try:
-            pinned[key] = version(name)
-        except PackageNotFoundError:
-            if key in direct_names:
-                raise RuntimeError(f"直接依赖未安装，不能生成不完整锁：{name}") from None
-            continue  # 条件依赖（别的平台 / 别的 Python）没装，锁里不写
-        # Unknown metadata is not evidence of an empty dependency closure.
-        # Preserve the actual failure so callers cannot publish an incomplete lock.
+        if key not in pinned:
+            try:
+                pinned[key] = version(name)
+            except PackageNotFoundError:
+                kind = "直接依赖" if key in direct_names else "依赖闭包成员"
+                raise RuntimeError(f"{kind}未安装，不能生成不完整锁：{name}") from None
+        # Process newly requested extras even when the base distribution was
+        # already visited. Unknown metadata never proves an empty closure.
         children = requires(name) or []
-        queue.extend(_requirement_names(children))
+        expanded.setdefault(key, set()).update(contexts)
+        queue.extend(_requirement_names(children, extras=contexts))
     return dict(sorted(pinned.items()))
 
 
