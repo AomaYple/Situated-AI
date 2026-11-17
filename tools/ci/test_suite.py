@@ -46,12 +46,22 @@ def create_run_dir(root: Path) -> Path:
     return target
 
 
-def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
+def _current_profile(profile: str | None = None) -> str:
+    """在任何读写前断言唯一当前身份及环境合同。"""
     from pdx import version_contracts  # noqa: PLC0415
 
+    current = version_contracts.CURRENT_VERSION
+    environment = os.environ.get(version_contracts.ENVIRONMENT_VARIABLE)
+    if environment is not None and environment != current:
+        raise ValueError(f"未支持的原版合同版本：{environment!r}")
     selected = version_contracts.active_version(profile)
-    with version_contracts.select_version(selected):
-        return _capture_selected_game_identity(out, selected)
+    if selected != current:
+        raise ValueError(f"未支持的原版合同版本：{selected!r}")
+    return selected
+
+
+def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
+    return _capture_selected_game_identity(out, _current_profile(profile))
 
 
 def _capture_selected_game_identity(out: Path, profile: str) -> dict[str, Any]:
@@ -82,6 +92,9 @@ def _capture_selected_game_identity(out: Path, profile: str) -> dict[str, Any]:
                 raise ValueError(f"不支持的完整验收 profile：{profile}")
             if not binary.is_file():
                 raise ValueError("完整版本验收缺少实际游戏 EXE")
+            identity["checksum"] = (
+                (installation / "binaries/checksum.txt").read_text(encoding="utf-8-sig").strip()
+            )
             loaded = production_profile.load_profile(installation)
             production_profile.verify_baseline()
             r2_reader_authority.verify_frozen()
@@ -697,12 +710,15 @@ def main(argv: list[str] | None = None) -> int:
     from pdx import version_contracts  # noqa: PLC0415
 
     parser.add_argument(
-        "--profile", choices=("1.15.0", "1.15.1"), default=version_contracts.active_version()
+        "--profile",
+        choices=(version_contracts.CURRENT_VERSION,),
+        default=version_contracts.CURRENT_VERSION,
     )
     raw = list(sys.argv[1:] if argv is None else argv)
     split = raw.index("--") if "--" in raw else len(raw)
     args = parser.parse_args(raw[:split])
     try:
+        _current_profile(args.profile)
         pytest_args = validate_pytest_args(raw[split + 1 :])
         if os.environ.get("PYTEST_ADDOPTS"):
             raise ValueError("完整验收拒绝外部 PYTEST_ADDOPTS；请显式声明诊断参数")

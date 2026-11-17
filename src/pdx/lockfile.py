@@ -28,6 +28,8 @@ pytest / ruff / hypothesis 版本可能各不相同，于是「本地过了、CI
   门禁不该顺手改文件。
 """
 
+from __future__ import annotations
+
 import sys
 import tomllib
 from dataclasses import dataclass

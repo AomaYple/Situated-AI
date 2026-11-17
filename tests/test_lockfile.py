@@ -14,6 +14,8 @@
 `v3 lock`（不带参数）的活，它的输出是给人看的。
 """
 
+from __future__ import annotations
+
 import sys
 
 import pytest

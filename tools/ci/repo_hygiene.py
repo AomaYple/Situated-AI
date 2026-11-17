@@ -14,6 +14,8 @@
     python -m tools.ci.repo_hygiene --clean --apply
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import shutil

@@ -1,5 +1,7 @@
 """检查入口保留平台无关的参数边界和子进程退出码。"""
 
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
@@ -178,3 +180,11 @@ def test_baseline_rejects_invalid_environment_before_launch(monkeypatch, selecte
     with pytest.raises(SystemExit) as caught:
         run_check.main()
     assert caught.value.code == 2
+
+
+def test_interpreter_contract_before_dependency_install_uses_same_lower_bound(monkeypatch) -> None:
+    monkeypatch.setattr(run_check, "_HAS_PACKAGING", False)
+    assert run_check.version_satisfies((3, 15, 2), ">=3.15.2")
+    assert not run_check.version_satisfies((3, 14, 7), ">=3.15.2")
+    with pytest.raises(ValueError, match="无法在无 packaging 回退中解析"):
+        run_check.version_satisfies((3, 15, 2), "~=3.15")

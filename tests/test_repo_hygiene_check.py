@@ -1,5 +1,7 @@
 """仓库卫生检查器的正例、反例和排除范围。"""
 
+from __future__ import annotations
+
 import json
 import stat
 from types import SimpleNamespace

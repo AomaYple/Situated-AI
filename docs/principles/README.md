@@ -50,14 +50,14 @@
 | EP-16 | 部分执行 | `pyproject.toml` 维护解释器要求；`tests/test_engineering_enforcement.py` 拒绝仓库根的独立工具配置文件并核对 pytest、coverage、ruff、mypy 配置段；其余工具的配置集中靠评审 |
 | EP-19 | 部分执行 | `tests/test_portability.py` 拒绝受控 `src`、`tools`、`tests` Python 文件中的机器专属绝对路径；`tests/test_engineering_enforcement.py` 只覆盖 `tests/` 下属性调用形式的 `read_text`/`write_text` 省略 encoding，以及带 `text=`/`universal_newlines=` 的 `subprocess` 属性调用省略 encoding；内建 `open()`、`Path.open()` 的文本模式、`from subprocess import run` 形式，以及 `src`、`tools` 的默认编码与 shell 默认行为都靠评审 |
 | EP-21 | 部分执行 | `run_check.py types` 在 `pyproject.toml` 的 mypy 文件范围检查类型兼容；公共注解完整性与错误合同仍需测试及评审 |
-| EP-22 | 部分执行 | CI 的 `v3 lock` 与 `pip check`、`tests/test_lockfile.py`；变更原因靠评审 |
+| EP-22 | 部分执行 | CI 的 `v3 lock` 与 `pip check`；`tests/test_lockfile.py` 覆盖解释器合同、条件依赖、extras、环及缺失闭包拒绝；变更原因靠评审 |
 | EP-23 | 部分执行 | `tests/test_engineering_enforcement.py` 核对 dev 依赖中的 Ruff、mypy 以 `==` 固定且与 `requirements.lock` 版本相等；CI 的 `v3 lock`；升级复核靠评审 |
 | EP-25 | 部分执行 | `v3 modgen --check` 只在本地 `run_check.py baseline`；CI 运行 `v3 modguard --offline` |
 | EP-26 | 部分执行 | 机械表格由 `tests/test_doc_overview.py` 与 CI 的 `v3 tables --offline` 看守；指纹与 manifest 未核实到专门的自动检查入口 |
 | EP-29 | 部分执行 | `tests/test_repo_hygiene.py` 的原版证据路径与哈希合同 |
 | EP-30 | 部分执行 | `src/pdx/distribution.py` 的包内容校验；默认生产路径靠评审 |
 | EP-31 | 部分执行 | `.gitignore`、`run_check.py hygiene`（CI）；凭据靠评审 |
-| EP-34 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
+| EP-34 | 部分执行 | CI 的 `tools/ci/test_summary.py` 拒绝未分类跳过；`tests/test_engineering_enforcement.py` 拒绝无法归类的跳过原因与未登记 xfail；覆盖率总门及核心模块门由本地 `full-acceptance` 核验，其余靠评审 |
 | EP-50 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
 | EP-55 | 部分执行 | `v3 verify --from-snapshot`（CI、pre-commit）与 `tests/test_docs_consistency.py` 只看守已登记的数字断言 |
 | EP-05 | 仅评审 | 失效的相对链接另由 `tests/test_docs_consistency.py` 发现 |
@@ -66,7 +66,8 @@
 | EP-01、EP-02、EP-08、EP-11、EP-12、EP-13、EP-15、EP-17、EP-18 | 仅评审 | 未核实到自动检查入口 |
 | EP-32、EP-33、EP-35、EP-37、EP-38、EP-39、EP-40、EP-41、EP-42、EP-43、EP-44、EP-45 | 仅评审 | 未核实到自动检查入口 |
 | EP-46、EP-47、EP-48、EP-49、EP-51、EP-52、EP-53、EP-54、EP-58 | 仅评审 | 未核实到自动检查入口 |
-| EP-59、EP-60、EP-61、EP-62、EP-63 | 仅评审 | 未核实到自动检查入口 |
+| EP-59、EP-60、EP-61 | 部分执行 | `pyproject.toml`、三平台 CI 统一 Python 3.15.2 基线；`tools/ci/run_check.py`、`tests/test_run_check.py` 在调用前拒绝错误解释器与不一致 pyvenv 记录；旧兼容代码清退和实现选型靠评审 |
+| EP-62、EP-63 | 仅评审 | 信息读取范围与成熟库选型需要专项审查，本轮工具检查不代签产品读取能力 |
 | MP-50 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
 | MP-55 | 强执行 | `src/pdx/distribution.py`、`tests/test_localization_languages.py` |
 | MP-56 | 部分执行 | `src/pdx/distribution.py` 在 `v3 package` 时校验语言头、键集合、占位符和路径；CI 没有打包步骤，未核实到覆盖这些拒绝路径的测试 |

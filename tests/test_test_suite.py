@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pdx import covgate, version_contracts
+from pdx import covgate
 from tools.ci import test_suite
 
 
@@ -22,37 +22,38 @@ def test_profile_identity_records_verified_live_inputs_and_binary(tmp_path, monk
     from pdx import config
     from pdx.situated import production_profile, r2_reader_authority
 
-    with version_contracts.select_version("1.15.0"):
-        installation = tmp_path / "installation"
-        shutil.copytree(production_profile.BASELINE_ROOT, installation)
-        shutil.copytree(r2_reader_authority.FROZEN_ROOT, installation, dirs_exist_ok=True)
-        binary = installation / "binaries/victoria3.exe"
-        binary.write_bytes(b"identity only; not an engine scope proof")
-        monkeypatch.setattr(config, "ROOT", installation)
-        identity = test_suite.capture_game_identity(tmp_path, "1.15.0")
-        assert identity["profile"] == "1.15.0"
-        assert identity["version"]["caligula_branch"] == "release/1.15.0"
-        assert identity["profile_source_hashes"] == dict(
-            production_profile.load_profile(installation).source_hashes
-        )
-        assert identity["installation"] == str(installation.resolve())
-        assert identity["executable"]["bytes"] == binary.stat().st_size
-        assert identity["verified"] is True
-        assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
-        assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
+    installation = tmp_path / "installation"
+    shutil.copytree(production_profile.baseline_root(), installation)
+    shutil.copytree(r2_reader_authority.frozen_root(), installation, dirs_exist_ok=True)
+    binary = installation / "binaries/victoria3.exe"
+    binary.write_bytes(b"identity only; not an engine scope proof")
+    monkeypatch.setattr(config, "ROOT", installation)
+    identity = test_suite.capture_game_identity(tmp_path, "1.15.1")
+    assert identity["profile"] == "1.15.1"
+    assert identity["checksum"] == "79da2ab6b2f3b5a78c820ca38470f843"
+    assert identity["version"]["caligula_branch"] == "release/1.15.1"
+    assert identity["profile_source_hashes"] == dict(
+        production_profile.load_profile(installation).source_hashes
+    )
+    assert identity["installation"] == str(installation.resolve())
+    assert identity["executable"]["bytes"] == binary.stat().st_size
+    assert identity["verified"] is True
+    assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
+    assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
 
 
-@pytest.mark.parametrize("broken", ["version", "input", "missing_binary"])
+@pytest.mark.parametrize("broken", ["version", "checksum", "input", "missing_binary"])
 def test_profile_identity_fails_closed_and_preserves_failure(tmp_path, monkeypatch, broken):
     from pdx import config
     from pdx.situated import production_profile
 
     installation = tmp_path / "installation"
-    shutil.copytree(production_profile.BASELINE_ROOT, installation)
+    shutil.copytree(production_profile.baseline_root(), installation)
     binary = installation / "binaries/victoria3.exe"
     binary.write_bytes(b"identity only")
     target = {
         "version": installation / "caligula_branch.txt",
+        "checksum": installation / "binaries/checksum.txt",
         "input": installation / "game/common/decrees/00_decree.txt",
         "missing_binary": binary,
     }[broken]
@@ -62,16 +63,17 @@ def test_profile_identity_fails_closed_and_preserves_failure(tmp_path, monkeypat
         target.write_bytes(b"drift")
     monkeypatch.setattr(config, "ROOT", installation)
     with pytest.raises(ValueError, match="完整验收输入身份核对失败"):
-        test_suite.capture_game_identity(tmp_path, "1.15.0")
+        test_suite.capture_game_identity(tmp_path, "1.15.1")
     report = json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8"))
     assert report["verified"] is False
     assert report["error"]
 
 
-def test_full_acceptance_rejects_unsupported_profile_before_launch(tmp_path, monkeypatch):
+@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "", "unknown"])
+def test_full_acceptance_rejects_unsupported_profile_before_launch(tmp_path, monkeypatch, profile):
     monkeypatch.setattr(test_suite, "execute", lambda *_args: pytest.fail("launch"))
     with pytest.raises(SystemExit) as caught:
-        test_suite.main(["--output-root", str(tmp_path), "--profile", "1.14.5"])
+        test_suite.main(["--output-root", str(tmp_path), "--profile", profile])
     assert caught.value.code == 2
     assert not list(tmp_path.iterdir())
 
@@ -350,7 +352,7 @@ def test_real_xdist_workers_and_children_preserve_utf8_capture_with_encoding_ove
     monkeypatch.setenv("PYTHONIOENCODING", "cp936")
     out = test_suite.create_run_dir(tmp_path / "reports")
     summary = test_suite.execute(
-        out, Namespace(timeout_s=45, quiet=True, allow_concurrent=True, profile="1.15.0"), []
+        out, Namespace(timeout_s=45, quiet=True, allow_concurrent=True, profile="1.15.1"), []
     )
     assert summary["exit_code"] == 0, (out / "pytest.log").read_text(encoding="utf-8")
     reports = json.loads((out / "collection.json").read_text(encoding="utf-8"))["reports"]
@@ -399,13 +401,13 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
         "    enable_utf8_stdio()\n"
         "    assert 'SITAI_TEST_COLLECTION' not in os.environ\n"
         "    assert 'MEMBASELINE_OUT' not in os.environ\n"
-        "    assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.0'\n"
+        "    assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.1'\n"
         "    child = subprocess.run([sys.executable, '-c',\n"
         "        \"import os; assert 'SITAI_TEST_COLLECTION' not in os.environ; \"\n"
         "        \"assert 'MEMBASELINE_OUT' not in os.environ; assert 'COVERAGE_FILE' not in os.environ\"], check=False)\n"
         "    assert child.returncode == 0\n"
         "    child = subprocess.run([sys.executable, '-c',\n"
-        "        \"import os; assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.0'\"], check=False)\n"
+        "        \"import os; assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.1'\"], check=False)\n"
         "    assert child.returncode == 0\n"
         "    if value == 1:\n"
         "        child = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', '-n0',\n"
@@ -441,7 +443,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     monkeypatch.setattr(test_suite.mem.TreeSampler, "sample_once", sample_and_release_workers)
     out = test_suite.create_run_dir(tmp_path / "reports")
     summary = test_suite.execute(
-        out, Namespace(timeout_s=30, quiet=True, allow_concurrent=True, profile="1.15.0"), []
+        out, Namespace(timeout_s=30, quiet=True, allow_concurrent=True, profile="1.15.1"), []
     )
     collection = json.loads((out / "collection.json").read_text(encoding="utf-8"))
     assert len(collection["nodeids"]) == 2
@@ -469,7 +471,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     assert len(collection["workers"]) == workers
     assert "environment_sha256" in summary
     assert summary["environment"]["V3_CONTRACT_PROFILE"]["present"]
-    assert summary["game_input"]["profile"] == "1.15.0"
+    assert summary["game_input"]["profile"] == "1.15.1"
     assert summary["versions"]["pytest-xdist"]
     assert len(list(out.glob("inproc-full-*.json"))) == workers + 1
     # 假装继承外层 worker 也必须创建独立 master 证据。
@@ -792,3 +794,26 @@ def test_test_subprocess_environment_isolated_and_restored(monkeypatch):
     with pytest.raises(StopIteration):
         next(protocol)
     assert all(os.environ[name] == "outer-evidence" for name in names)
+
+
+@pytest.mark.parametrize("selected", ["1.14.5", "1.15.0", "", "unknown"])
+@pytest.mark.parametrize("explicit", [False, True])
+def test_full_acceptance_rejects_invalid_environment_without_creating_output(
+    tmp_path, monkeypatch, selected, explicit
+) -> None:
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", selected)
+    monkeypatch.setattr(test_suite, "execute", lambda *_args: pytest.fail("launch"))
+    arguments = ["--output-root", str(tmp_path)]
+    if explicit:
+        arguments.extend(["--profile", "1.15.1"])
+    with pytest.raises(SystemExit) as caught:
+        test_suite.main(arguments)
+    assert caught.value.code == 2
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "", "unknown"])
+def test_direct_identity_capture_rejects_noncurrent_before_read_or_write(tmp_path, profile) -> None:
+    with pytest.raises(ValueError, match="未支持的原版合同版本"):
+        test_suite.capture_game_identity(tmp_path, profile)
+    assert not list(tmp_path.iterdir())

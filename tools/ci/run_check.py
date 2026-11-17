@@ -1,5 +1,7 @@
 """三平台检查入口；优先使用仓库虚拟环境，不依赖激活脚本。"""
 
+from __future__ import annotations
+
 import argparse
 import os
 import re
@@ -11,7 +13,9 @@ from pathlib import Path
 try:
     from packaging.specifiers import SpecifierSet
 except ModuleNotFoundError:  # pragma: no cover - exercised only before dependencies install
-    SpecifierSet = None
+    _HAS_PACKAGING = False
+else:
+    _HAS_PACKAGING = True
 
 ROOT = Path(__file__).resolve().parents[2]
 COMMANDS = {
@@ -66,7 +70,8 @@ def _version_tuple(value: str) -> tuple[int, int, int]:
     match = re.fullmatch(r"\s*(\d+)\.(\d+)(?:\.(\d+))?(?:[+].*)?\s*", value)
     if match is None:
         raise ValueError(f"无法解析解释器版本：{value!r}")
-    return tuple(int(part or 0) for part in match.groups())
+    major, minor, micro = match.groups()
+    return int(major), int(minor), int(micro or 0)
 
 
 def _fallback_satisfies(version: tuple[int, int, int], requirement: str) -> bool:
@@ -97,7 +102,7 @@ def _fallback_satisfies(version: tuple[int, int, int], requirement: str) -> bool
 
 def version_satisfies(version: tuple[int, int, int], requirement: str) -> bool:
     """判断解释器版本是否满足 ``requires-python``。"""
-    if SpecifierSet is None:
+    if not _HAS_PACKAGING:
         return _fallback_satisfies(version, requirement)
     return SpecifierSet(requirement).contains(".".join(map(str, version)), prereleases=True)
 
