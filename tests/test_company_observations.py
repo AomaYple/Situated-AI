@@ -262,7 +262,7 @@ def test_port_method_requires_owned_same_building_type_method_and_positive_level
 @pytest.fixture(scope="module")
 def native_texts():
     if not config.GAME.is_dir():
-        pytest.skip("locked Victoria 3 unavailable")
+        pytest.skip("需要锁定原版：游戏目录不可用")
     return {
         source: (config.GAME / source).read_text(encoding="utf-8-sig")
         for source in queries.SOURCE_HASHES

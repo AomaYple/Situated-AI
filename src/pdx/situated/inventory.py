@@ -209,7 +209,7 @@ def discover(*, baseline: Path | None = None) -> SurfaceInventory:
             }
             production_witnesses = witness_ids(generated_texts)
             production_witness_keys = witness_keys(generated_texts)
-        except (OSError, ValueError):
+        except OSError, ValueError:
             production_witnesses = set()
         # A repository Mod tree can belong to another release or generation.
         # Without freshly generated PDX, keep pending rather than borrowing its

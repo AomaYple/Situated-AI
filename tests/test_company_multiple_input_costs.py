@@ -6,14 +6,16 @@ The shared fertilizer/iron/sulfur inputs do not identify an active PM or bill.
 
 import hashlib
 import json
-from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from pdx import company_sectors, config, decision_rules, version_contracts
 from pdx.situated import pdx_eval, programs
 from pdx.textio import normalized_text
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 pytestmark = pytest.mark.unit
 # This fixture supplies the already tested reader vocabulary to the patcher;

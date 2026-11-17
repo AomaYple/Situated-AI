@@ -136,7 +136,7 @@ class SaveCollector:
                 continue
             try:
                 summary = read_save(path)
-            except (OSError, ValueError):
+            except OSError, ValueError:
                 try:
                     summary = {
                         "metadata": parse_save_metadata(path),
@@ -286,7 +286,7 @@ def _date_key(value: object) -> tuple[int, int, int]:
     try:
         parts = tuple(int(part) for part in str(value).split(".")[:3])
         return (*parts, 0, 0, 0)[:3]  # type: ignore[return-value]
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return (0, 0, 0)
 
 

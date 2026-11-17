@@ -185,8 +185,8 @@ def test_change_during_final_live_verification_rolls_back(
 def test_isolated_output_apis_reject_real_junction(tmp_path, monkeypatch, placement, entrypoint):
     external = tmp_path / "external"
     external.mkdir()
-    sentinel = external / "sentinel.txt"
-    sentinel.write_bytes(b"external original\n")
+    preserved_file = external / "sentinel.txt"
+    preserved_file.write_bytes(b"external original\n")
     root = tmp_path / "candidate"
     link = root
     if placement == "parent":
@@ -221,8 +221,8 @@ def test_isolated_output_apis_reject_real_junction(tmp_path, monkeypatch, placem
         }[entrypoint]
         with pytest.raises(ValueError, match="重解析点"):
             operation()
-        assert sentinel.read_bytes() == b"external original\n"
-        assert list(external.iterdir()) == [sentinel]
+        assert preserved_file.read_bytes() == b"external original\n"
+        assert list(external.iterdir()) == [preserved_file]
     finally:
         # Remove the checked junction itself; never recurse into its target.
         link.rmdir()

@@ -369,7 +369,7 @@ def report() -> AuditResult:
     )
     try:
         vanilla_scope = vanilla_inventory.discover()
-    except (OSError, ValueError):
+    except OSError, ValueError:
         vanilla_scope = None
     native = (
         domain_coverage.native_coverage(

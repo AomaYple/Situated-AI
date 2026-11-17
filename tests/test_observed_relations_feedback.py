@@ -1,8 +1,7 @@
 """Observed enacted institutions drive bounded feedback, never card eligibility."""
 
 import hashlib
-from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -11,6 +10,9 @@ from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
 from pdx.textio import normalized_text
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 pytestmark = pytest.mark.unit
 BALANCE = "economic_vs_government_spending_balance"

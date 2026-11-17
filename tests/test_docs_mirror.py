@@ -106,6 +106,7 @@ def test_镜像目录不在版本控制里() -> None:
         capture_output=True,
         text=True,
         check=False,
+        encoding="utf-8",
     )
     assert out.stdout.strip() == "", (
         f"research/official-docs 里还有被跟踪的文件：{out.stdout.splitlines()[:3]}"

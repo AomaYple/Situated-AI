@@ -1,6 +1,9 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pdx import references
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_scan_file_resolves_mod_and_reports_missing(tmp_path: Path, monkeypatch) -> None:

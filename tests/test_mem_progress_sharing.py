@@ -70,7 +70,9 @@ def test_held_reader_defers_without_stopping_sampling_and_recovers(mem):
     progress.flush(force=True)
     assert not progress.replace_pending
     assert not progress.temporary.exists()
-    events = [json.loads(line) for line in progress.events_path.read_text().splitlines()]
+    events = [
+        json.loads(line) for line in progress.events_path.read_text(encoding="utf-8").splitlines()
+    ]
     sequences = [row["seq"] for row in events]
     assert sequences == list(range(1, progress.seq + 1))
     assert len([row for row in events if row["event"] == "checkpoint_deferred"]) == 1
@@ -164,7 +166,9 @@ def test_final_access_denial_fails_but_explicit_sharing_is_only_diagnostic(mem, 
     assert payload["exitstatus"] == 0
     assert payload["progress_diagnostics"]["checkpoint_replace_pending"] is True
     assert payload["progress_diagnostics"]["checkpoint_replace_deferred"] == 1
-    events = [json.loads(line) for line in progress.events_path.read_text().splitlines()]
+    events = [
+        json.loads(line) for line in progress.events_path.read_text(encoding="utf-8").splitlines()
+    ]
     assert [row["seq"] for row in events] == list(range(1, progress.seq + 1))
     assert len([row for row in events if row["event"] == "checkpoint_deferred"]) == 1
     if code == 5:

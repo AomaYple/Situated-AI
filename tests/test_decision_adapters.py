@@ -64,8 +64,8 @@ def test_current_native_authority_recapture_rejects_existing_drift_without_overw
     destination = tmp_path / "native-authority.json"
     damaged = reviewed + b"\n"
     destination.write_bytes(damaged)
-    sentinel = tmp_path / "keep.txt"
-    sentinel.write_bytes(b"existing evidence must survive")
+    preserved_file = tmp_path / "keep.txt"
+    preserved_file.write_bytes(b"existing evidence must survive")
     before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
     monkeypatch.setattr(decision_adapters, "NATIVE_AUTHORITY_115", destination)
     with (

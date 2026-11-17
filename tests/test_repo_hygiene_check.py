@@ -2,12 +2,15 @@
 
 import json
 import stat
-from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import pytest
 
 from tools.ci.repo_hygiene import clean, find_violations, main, report
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _paths(rows: list[dict[str, str]]) -> set[str]:

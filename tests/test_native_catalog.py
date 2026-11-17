@@ -278,7 +278,7 @@ def test_symlinked_installation_root_is_rejected(tmp_path: Path) -> None:
     try:
         link.symlink_to(source, target_is_directory=True)
     except OSError as error:
-        pytest.skip(f"directory symlink unavailable: {error}")
+        pytest.skip(f"系统未授予符号链接权限：{error}")
     inventory = _input(
         source, {"game/common/ai_strategies/native.txt": "strategy = { weight = 1 }"}
     )

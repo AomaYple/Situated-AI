@@ -580,7 +580,7 @@ def test_legacy_road_policy_guard_preserves_named_actor(
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not GAME.is_dir(), reason="requires actual 1.15 installation")
+@pytest.mark.skipif(not GAME.is_dir(), reason="需要锁定原版 1.15 游戏目录")
 def test_actual_installation_profile_smoke():
     installed_version = config.game_version(GAME)["caligula_branch"].removeprefix("release/")
     with version_contracts.select_version(installed_version):

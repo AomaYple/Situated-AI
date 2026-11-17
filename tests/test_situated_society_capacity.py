@@ -7,9 +7,8 @@ Authority deficits concern the actual authority modifier, not political choices.
 
 import hashlib
 import re
-from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -18,6 +17,9 @@ from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
 from pdx.textio import normalized_text
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 pytestmark = pytest.mark.integration
 SOURCE = "common/technology/technologies/30_society.txt"

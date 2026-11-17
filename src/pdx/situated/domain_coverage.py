@@ -198,7 +198,7 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
 
     try:
         expected_context = support_evaluation_context()
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return "evaluation_context_unproven"
     if context is None or context.status != "observed" or context.actor_scope is None:
         return "evaluation_context_unproven"

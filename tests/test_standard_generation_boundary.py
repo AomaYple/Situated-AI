@@ -173,8 +173,8 @@ def test_standard_user_output_redirect_is_rejected_and_shared_ledger_restored(
     base = tmp_path.resolve(strict=True)
     external = base / "external"
     external.mkdir()
-    sentinel = external / "sentinel.txt"
-    sentinel.write_bytes(b"external original\n")
+    preserved_file = external / "sentinel.txt"
+    preserved_file.write_bytes(b"external original\n")
     if placement == "root":
         link, destination = base / "linked-output", target
         selected = link
@@ -189,8 +189,8 @@ def test_standard_user_output_redirect_is_rejected_and_shared_ledger_restored(
         with pytest.raises(ValueError, match="符号链接或重解析点"):
             _write_standard_with_shared_ledger(ledger)
         assert ledger.read_bytes() == b"old-ledger\n"
-        assert sentinel.read_bytes() == b"external original\n"
-        assert list(external.iterdir()) == [sentinel]
+        assert preserved_file.read_bytes() == b"external original\n"
+        assert list(external.iterdir()) == [preserved_file]
     assert _tree(target) == before
     assert not list(base.rglob(".sitai-generation-*"))
 
@@ -202,8 +202,8 @@ def test_standard_staging_redirect_is_rejected_with_canonical_temp_parent(
     before = _tree(target)
     external = tmp_path.resolve(strict=True) / "staging-external"
     external.mkdir()
-    sentinel = external / "sentinel.txt"
-    sentinel.write_bytes(b"external original\n")
+    preserved_file = external / "sentinel.txt"
+    preserved_file.write_bytes(b"external original\n")
     write = decisions.write
     staged_roots = []
     with ExitStack() as redirects:
@@ -222,8 +222,8 @@ def test_standard_staging_redirect_is_rejected_with_canonical_temp_parent(
     assert not staged_roots[0].parent.exists()
     assert ledger.read_bytes() == b"old-ledger\n"
     assert _tree(target) == before
-    assert sentinel.read_bytes() == b"external original\n"
-    assert list(external.iterdir()) == [sentinel]
+    assert preserved_file.read_bytes() == b"external original\n"
+    assert list(external.iterdir()) == [preserved_file]
     assert not list(target.rglob(".sitai-generation-*"))
 
 
@@ -234,8 +234,8 @@ def test_standard_redirect_during_final_verification_rolls_back_outputs_and_ledg
     before = _tree(target)
     external = tmp_path.resolve(strict=True) / "late-external"
     external.mkdir()
-    sentinel = external / "sentinel.txt"
-    sentinel.write_bytes(b"external original\n")
+    preserved_file = external / "sentinel.txt"
+    preserved_file.write_bytes(b"external original\n")
     with ExitStack() as redirects:
 
         def inject():
@@ -246,8 +246,8 @@ def test_standard_redirect_during_final_verification_rolls_back_outputs_and_ledg
             _write_standard_with_shared_ledger(ledger)
         assert ledger.read_bytes() == b"old-ledger\n"
     assert _tree(target) == before
-    assert sentinel.read_bytes() == b"external original\n"
-    assert list(external.iterdir()) == [sentinel]
+    assert preserved_file.read_bytes() == b"external original\n"
+    assert list(external.iterdir()) == [preserved_file]
     assert not list(target.rglob(".sitai-generation-*"))
 
 

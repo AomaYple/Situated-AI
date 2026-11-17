@@ -360,7 +360,7 @@ def test_inproc_fixture_wrapper_preserves_unittest_skip_without_sampler_error(me
     monkeypatch.setattr(mem, "_INPROC_ACTIVE", True)
     hook = mem.pytest_fixture_setup(SimpleNamespace(argname="unavailable", scope="class"), None)
     next(hook)
-    skipped = SkipTest("game directory unavailable")
+    skipped = SkipTest("游戏目录不可用")
     with pytest.raises(SkipTest) as result:
         hook.throw(skipped)
     assert result.value is skipped

@@ -361,7 +361,7 @@ class SaveArchive:
                     metadata = read_game_metadata(path)
                     if metadata and FileSignature.read(path) == signature:
                         stable.append((path, signature, *metadata))
-                except (OSError, UnicodeError, ValueError):
+                except OSError, UnicodeError, ValueError:
                     continue
         if self.playthrough_id is None:
             local = [
@@ -394,7 +394,7 @@ class SaveArchive:
                 and process.create_time() == self.process_started_at
                 and process.name().lower() in {"victoria3.exe", "victoria3"}
             )
-        except (psutil.Error, OSError):
+        except psutil.Error, OSError:
             return False
 
     def run(self) -> int:

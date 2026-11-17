@@ -6,9 +6,8 @@ and actual automobile consumption respectively remain unproved.
 
 import hashlib
 import re
-from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -16,6 +15,9 @@ from pdx import country_state, decision_adapters, decision_rules
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 pytestmark = pytest.mark.integration
 SOURCE = "common/technology/technologies/30_society.txt"

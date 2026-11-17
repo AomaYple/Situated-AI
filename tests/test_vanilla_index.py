@@ -1,8 +1,11 @@
 """原版离线路径索引的覆盖回归。"""
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pdx import vanilla_index
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_snapshot_path_dirs_covers_scriptable_assets_and_dlc(tmp_path: Path) -> None:

@@ -1880,7 +1880,7 @@ class _Dependencies:
                 "meaning": "exact_used_reader_parameters_scope_and_native_identity_only",
             }
             self.reader_parameter_cache[identity] = proof
-        except (OSError, KeyError, TypeError, ValueError, AttributeError, UnicodeDecodeError):
+        except OSError, KeyError, TypeError, ValueError, AttributeError, UnicodeDecodeError:
             return {}
         return self.reader_parameter_cache[identity]
 
@@ -2239,7 +2239,7 @@ class _Dependencies:
                 "readers": readers,
                 "meaning": "exact_typed_program_and_native_parameter_identity_only",
             }
-        except (OSError, KeyError, TypeError, ValueError, AttributeError):
+        except OSError, KeyError, TypeError, ValueError, AttributeError:
             return {}
         return self.country_parameter_proof
 
@@ -2554,7 +2554,7 @@ def _support_program_proof(
             "interface_authorized": True,
             "business_complete": False,
         }
-    except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+    except KeyError, TypeError, AttributeError, UnicodeError, ValueError:
         return {}
 
 
@@ -2746,7 +2746,7 @@ def _implicit_numeric_projections(
         try:
             binding = NativeConsumerBinding(source, definition, field)
             contract = contracts.implicit_building(binding) or contracts.implicit_company(binding)
-        except (KeyError, TypeError, ValueError):
+        except KeyError, TypeError, ValueError:
             continue
         covered = row.get("covered_actions")
         matched = row.get("matched_actions")
@@ -3103,7 +3103,7 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
         if _ast(restored_table) != _ast(before.value):
             return {}
         return {source: result}
-    except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+    except KeyError, TypeError, AttributeError, UnicodeError, ValueError:
         return {}
 
 
@@ -3395,7 +3395,7 @@ def native_treatments(
                 generated_sources, native_sources, metadata=_metadata
             )
         }
-    except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+    except KeyError, TypeError, AttributeError, UnicodeError, ValueError:
         # A forged/malformed declaration grants no dependency projection. The
         # ordinary changed-source and unknown-usage checks still apply below.
         network_bindings = {}
