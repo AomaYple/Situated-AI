@@ -19,7 +19,7 @@
 
 ## 环境准备
 
-需要 Python 3.11 或更新版本。优先使用仓库虚拟环境中的解释器，不依赖激活脚本、默认编码或本机绝对路径。
+需要满足 `pyproject.toml` 的 `requires-python` 合同；当前基线为 Python 3.15.2。优先使用仓库虚拟环境中的解释器，不依赖激活脚本、默认编码或本机绝对路径。
 
 ```text
 python -m venv .venv
@@ -41,7 +41,7 @@ macOS/Linux：
 
 开发命令应从完整仓库运行，以便读取 `mod/decisions/`、测试、快照和文档。可通过 `V3_ROOT` 指定游戏安装根目录，
 通过 `V3_USERDIR` 指定用户数据目录；未安装游戏时仍可运行离线检查。`requirements.lock` 仅适用于 Windows
-Python 3.14；其他平台依据 `pyproject.toml` 解析依赖，并由三平台 CI 核验。
+Python 3.15.2；其他平台依据 `pyproject.toml` 解析依赖，并由三平台 CI 核验。
 
 ## Mod 生成与打包
 

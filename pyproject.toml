@@ -18,7 +18,7 @@ name = "situated-ai-v3tools"
 version = "0.3.0"
 description = "Victoria 3 mod 开发研究工具链：PDX 脚本全量分析与信息提取"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.15.2"
 license = "Apache-2.0"
 authors = [{ name = "AomaYple", email = "2890599214@qq.com" }]
 keywords = ["victoria3", "paradox", "modding", "pdx", "clausewitz"]
@@ -26,10 +26,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Games/Entertainment :: Simulation",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -165,7 +162,7 @@ directory = "tools/out/coverage"
 # ─────────────────────────────────────────────────────────────
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py315"
 extend-exclude = [
     ".venv",
     # 排除产物与历史资料目录中可能出现的 Python 文件。
@@ -279,9 +276,8 @@ runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration 
 # mypy —— 类型检查
 # ─────────────────────────────────────────────────────────────
 [tool.mypy]
-# 本机开发环境的可选 numpy 类型桩使用 Python 3.12 的 type 语句。
-# mypy 按 3.12 解析；最低 3.11 运行时由 Ruff 和三平台解释器矩阵核对。
-python_version = "3.12"
+# 类型检查与唯一 Python 基线保持一致；渐进注解门保持既有强度。
+python_version = "3.15"
 # 覆盖解析器包、测试及被测试直接导入的内存基准工具。
 # 显式包根让命名空间工具在本地与 CI 使用同一模块名。
 files = ["src/pdx", "tests", "tools/ci/mem_baseline.py"]

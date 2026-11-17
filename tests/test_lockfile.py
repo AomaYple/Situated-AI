@@ -14,8 +14,6 @@
 `v3 lock`（不带参数）的活，它的输出是给人看的。
 """
 
-from __future__ import annotations
-
 import sys
 
 import pytest
@@ -30,6 +28,33 @@ def test_锁文件存在且可解析() -> None:
     assert locked, f"{lockfile.LOCK_FILE} 读不出来（文件缺失或头部标记被改）"
     assert all(name and ver for name, ver in locked.items())
     assert len(set(locked)) == len(locked), "锁里有重复条目"
+
+
+@pytest.mark.parametrize("version", [(3, 14, 7), (3, 15, 2)])
+def test_锁生成器版本合同(version) -> None:
+    requirement = lockfile.requires_python()
+    if version == (3, 14, 7):
+        with pytest.raises(RuntimeError, match=r"实际 Python 3\.14\.7.*要求 >=3\.15\.2"):
+            lockfile.validate_python_version(version, requirement)
+    else:
+        lockfile.validate_python_version(version, requirement)
+
+
+def test_锁头记录_python_要求和生成解释器() -> None:
+    text = lockfile.render({"sample-package": "1.0"})
+    assert "# Python 要求: >=3.15.2" not in text
+    assert "# Python 要求：>=3.15.2" in text
+    assert "# 解释器：Python " in text
+
+
+def test_旧解释器生成的锁不被静默接受(tmp_path) -> None:
+    target = tmp_path / lockfile.LOCK_FILE
+    current = ".".join(map(str, lockfile.current_python_version()))
+    text = lockfile.render({"sample-package": "1.0"}).replace(
+        f"# 解释器：Python {current}", "# 解释器：Python 3.14.7"
+    )
+    target.write_text(text, encoding="utf-8", newline="\n")
+    assert lockfile.read(target) == {}
 
 
 def test_直接依赖一条不少() -> None:
@@ -87,3 +112,34 @@ def test_差异检测能认出三种情况() -> None:
     locked = {"a": "1", "b": "1", "d": "9"}
     kinds = {d.name: d.kind for d in lockfile.compare(pinned, locked)}
     assert kinds == {"a": "版本不同", "c": "新增（锁里没有）", "d": "多余（环境里没有）"}
+
+
+@pytest.mark.parametrize("error", [OSError("metadata unreadable"), ValueError("bad metadata")])
+def test_dependency_metadata_failure_is_not_an_empty_closure(monkeypatch, error: Exception) -> None:
+    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["fixture"])
+    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
+
+    def broken_requires(_name: str) -> list[str]:
+        raise error
+
+    monkeypatch.setattr(lockfile, "requires", broken_requires)
+    with pytest.raises(type(error), match=str(error)):
+        lockfile.resolve()
+
+
+def test_missing_direct_dependency_is_not_an_empty_closure(monkeypatch) -> None:
+    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["fixture"])
+
+    def missing(_name: str) -> str:
+        raise lockfile.PackageNotFoundError("fixture")
+
+    monkeypatch.setattr(lockfile, "version", missing)
+    with pytest.raises(RuntimeError, match="直接依赖未安装"):
+        lockfile.resolve()
+
+
+def test_known_empty_dependency_metadata_is_valid(monkeypatch) -> None:
+    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["fixture"])
+    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
+    monkeypatch.setattr(lockfile, "requires", lambda _name: None)
+    assert lockfile.resolve() == {"fixture": "1.0"}
