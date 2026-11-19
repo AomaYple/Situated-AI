@@ -25,7 +25,7 @@ Mod ID 为 `situated-ai`，锁定的 Victoria 3 底本版本见[工程交付基�
 
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
-3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
+3. [原则索引](docs/principles/README.md)汇集工程与 Mod 约束及条款编号。
 4. [架构主计划](docs/design/架构主计划.md)、[架构子计划](docs/design/架构子计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
 5. [版本交付索引](docs/design/exec/版本交付-结果.md)：当前版本的发布、部署身份与逐版本交付结果入口；旧上下文见[历史归档](docs/design/archive/README.md)。
 
@@ -42,18 +42,7 @@ research/               原版资料清单与锁定接口证据
 dist/                   可再生发布 ZIP（忽略）
 ```
 
-## 快速开始
-
-Windows：
-
-```text
-.venv\Scripts\python.exe -X utf8 -m pip install -e ".[dev]"
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package
-```
-
-macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运行离线检查；有游戏时可用 `V3_ROOT`、`V3_USERDIR` 指定路径。生成和正式打包要求锁定原版底本，底本缺失或漂移时硬失败。
+环境准备、生成、检查和打包流程见[贡献指南](CONTRIBUTING.md)。文档的 Python 生成入口见[文档导航](docs/README.md#生成文档维护)。
 
 ## 标准包
 

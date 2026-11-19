@@ -10,6 +10,7 @@
 | 代理接手和修改边界 | [根目录 AGENTS.md](../AGENTS.md) |
 | 贡献、检查、Git 和发布 | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | 安全问题私密报告 | [SECURITY.md](../SECURITY.md) |
+| 规则分工与条款编号 | [原则索引](principles/README.md) |
 | 工程原则 | [工程原则](principles/工程原则.md) |
 | Mod 原则 | [Mod 开发原则](principles/Mod开发原则.md) |
 | 工具、快照和证据边界 | [工程交付基线](design/exec/工程基线-1.0.md) |
@@ -42,7 +43,16 @@
 | 原版机械统计、指纹和索引 | `docs/design/02-*.md`、`docs/victoria3-modding/08-目录全量清单.md`、`13-common全量键名索引.md` 等生成目标 | 使用仓库 Python CLI 生成或核对，禁止手改生成数据 |
 | Victoria 3 研究正文 | `docs/victoria3-modding/` | 保留历史采集值，但必须标明底本版本、快照时点和证据边界 |
 
-生成文件的声明优先级高于手工摘要；发现数字或版本漂移时先运行 `v3 refresh`，再修改无法由工具判断的散文。
+## 生成文档维护
+
+| 内容 | Python CLI 入口 |
+|---|---|
+| [已登记的机械表格](../src/pdx/docgen.py) | `v3 tables` 核对，`v3 tables --write` 重生成，`v3 tables --offline` 按入库快照核对 |
+| 原版 AI 可执行面、政治候选面 | `v3 ai-surface --check` 和 `v3 political-surface --check` 核对，对应的 `--write` 生成页面 |
+| common 全量键名索引 | `v3 index --dry-run` 查看统计，`v3 index` 重新生成 |
+| 已登记表格与绑定归属标记的正文数字 | `v3 refresh --dry-run` 查看差异，`v3 refresh` 更新 |
+
+以上入口也可用 `python -m pdx.cli` 调用。数字或版本漂移按 EP-26 和 EP-09 核对输入身份。本地与 CI 的验证流程见[贡献指南](../CONTRIBUTING.md)。
 
 ## 文档维护
 

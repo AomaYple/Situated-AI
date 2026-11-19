@@ -12,6 +12,8 @@
 当前工程交付链；日志分析、快照核对和最小复现辅助仍可用于处理用户反馈。发布包不包含 Python 工具、日志或
 历史实验。
 
+环境、验证和发布步骤见[贡献指南](../CONTRIBUTING.md)，文档生成入口见[文档导航](../docs/README.md#生成文档维护)。
+
 ## 当前入口
 
 | 路径/命令 | 用途 |
@@ -23,7 +25,7 @@
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |
 | `tools/ci/test_summary.py` | 汇总 pytest JUnit XML 并给 skipped 测试分配工程类别；未知或空的跳过原因返回退出码 2 |
-| `tools/ci/bench_summary.py` | 把 pytest-benchmark JSON 汇总成 Markdown 表（CI job summary 用，不作门禁） |
+| [CI 基准摘要](ci/bench_summary.py) | 把 pytest-benchmark JSON 汇总成 Markdown，默认输出到 stdout。`--github-step-summary` 为 CI 追加摘要。 |
 | `tools/ci/mem_baseline.py` | 并行测试内存基线：整套峰值、每 worker 峰值和总耗时，输出写入忽略的 `tools/out/mem/` |
 | `tools/ci/architecture_witness_capture.py` | 显式启用的串行 pytest 插件，采集独立 PDX 见证并写出结果与草稿行，不写阶段完成 |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
