@@ -435,6 +435,22 @@ def test_s0_independent_scope(
             "content_roots": ["common"],
             "parse_failures": [],
         }
+    if version == version_contracts.CURRENT_VERSION:
+        # Recounted on the installed 1.15.2 build after verifying its identity.
+        expected = {
+            "declarations": 9797,
+            "legal": 5745,
+            "capabilities": {
+                "direct": 2901,
+                "indirect": 2844,
+                "observation": 3416,
+                "pending": 636,
+                "unexposed": 0,
+            },
+            "parsed_files": 1878,
+            "content_roots": ["common"],
+            "parse_failures": [],
+        }
     observed = {
         "declarations": len(inventory.surfaces),
         "legal": sum(
@@ -478,7 +494,15 @@ def test_s0_independent_scope(
     native_sources = _actual_sources(inventory)
     # Complete achievement and population sources prove reader scopes without
     # entering consumer discovery or changing its reviewed declaration count.
-    assert len(native_sources) == {"1.14.5": 1894, "1.15.0": 1960, "1.15.1": 1960}[version]
+    assert (
+        len(native_sources)
+        == {
+            "1.14.5": 1894,
+            "1.15.0": 1960,
+            "1.15.1": 1960,
+            version_contracts.CURRENT_VERSION: 1960,
+        }[version]
+    )
     historical_pins = {
         "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
         "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
@@ -487,29 +511,17 @@ def test_s0_independent_scope(
         "common/pop_types/machinists.txt": "e0ddad8032fd6be5d0eb77533cf9f711a5baf5fe275d20819bc5ba8e3f6785ee",
         "common/journal_entries/00_urbanization.txt": "0be06294448f31679d2b14280b4e6c1991f0d2fa34f97ccc0452068c7cdc5ee6",
     }
-    expected_pins = (
-        {
-            "common/achievements/ep1_sphere_of_influence_achievements.txt": "323263f0483c14145c79b2a054bc7dd04aee5783731e5204604861d602cd4969",
-            "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
-            "common/pop_types/laborers.txt": "3b136e31556cd483ea213c82eef47c93f9774490775870622331f6139160d9f2",
-            "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
-            "common/pop_types/machinists.txt": "5960f8b6cc15e67b1305bf5d0d74368d2004572099b87ce4c6c827818497c39f",
-            "common/journal_entries/00_urbanization.txt": "dff544be003ef9c6283132b38696bf2b765f170aa0a06771a6ce4afc820fd622",
-        }
-        if version == "1.15.0"
-        else historical_pins
-    )
-    if version == "1.15.1":
-        # These six actual 1.15.1 files were independently read and hashed;
-        # equality with their 1.15.0 bytes does not imply version interchangeability.
-        expected_pins = {
-            "common/achievements/ep1_sphere_of_influence_achievements.txt": "323263f0483c14145c79b2a054bc7dd04aee5783731e5204604861d602cd4969",
-            "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
-            "common/pop_types/laborers.txt": "3b136e31556cd483ea213c82eef47c93f9774490775870622331f6139160d9f2",
-            "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
-            "common/pop_types/machinists.txt": "5960f8b6cc15e67b1305bf5d0d74368d2004572099b87ce4c6c827818497c39f",
-            "common/journal_entries/00_urbanization.txt": "dff544be003ef9c6283132b38696bf2b765f170aa0a06771a6ce4afc820fd622",
-        }
+    # Each of the six script hashes was independently rechecked on the installed 1.15.2.
+    expected_pins = {
+        "common/achievements/ep1_sphere_of_influence_achievements.txt": "323263f0483c14145c79b2a054bc7dd04aee5783731e5204604861d602cd4969",
+        "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
+        "common/pop_types/laborers.txt": "3b136e31556cd483ea213c82eef47c93f9774490775870622331f6139160d9f2",
+        "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
+        "common/pop_types/machinists.txt": "5960f8b6cc15e67b1305bf5d0d74368d2004572099b87ce4c6c827818497c39f",
+        "common/journal_entries/00_urbanization.txt": "dff544be003ef9c6283132b38696bf2b765f170aa0a06771a6ce4afc820fd622",
+    }
+    if version == "1.14.5":
+        expected_pins = historical_pins
     assert {name: native_sources[name] for name in expected_pins} == expected_pins
     baseline_capture.record(
         requirement,
@@ -687,6 +699,9 @@ def _known_failure_observations(
     if version == "1.15.1":
         law_manifest = ROOT / "research/situated/1.15.1/engine-law.json"
         expected_manifest_sha = "03c8bf8b565d44349ea3dfdc8a8c04bf0d745c4f4fae4b13016cb0f2e4d53cc1"
+    if version == version_contracts.CURRENT_VERSION:
+        law_manifest = version_contracts.research_path("situated", "engine-law.json", version)
+        expected_manifest_sha = "1e7c0e640d6cde80fcece6951bb26c3ff26b5bbb3eb8daae7c582517e265cec7"
     manifest_bytes = law_manifest.read_bytes()
     assert _sha(manifest_bytes) == expected_manifest_sha
     data = json.loads(manifest_bytes)
@@ -701,23 +716,30 @@ def _known_failure_observations(
     if current:
         # Independently pinned current edges lie in the reviewed, byte-locked
         # observation windows. Do not inherit historical instruction addresses.
-        edges = (
-            (
+        if version == version_contracts.CURRENT_VERSION:
+            edges = (
+                ("law parser thunk", "0x1408492c3", "e9e885fc00", "0x1418118b0"),
+                ("law exact token dispatch", "0x141811ad7", "0f8447010000", "0x141811c24"),
+                ("law qualification wrapper", "0x14163e349", "e852621d00", "0x1418145a0"),
+                ("actual law AI candidate consumer", "0x1415fcd19", "e842140400", "0x14163e160"),
+                ("actual law AI candidate consumer", "0x1415fcd25", "0f848d020000", "0x1415fcfb8"),
+            )
+        elif version == "1.15.1":
+            edges = (
                 ("law parser thunk", "0x140848b83", "e998c3fb00", "0x141804f20"),
                 ("law exact token dispatch", "0x141805147", "0f8447010000", "0x141805294"),
                 ("law qualification wrapper", "0x141633d09", "e8023f1d00", "0x141807c10"),
                 ("actual law AI candidate consumer", "0x1415f2729", "e8f2130400", "0x141633b20"),
                 ("actual law AI candidate consumer", "0x1415f2735", "0f848d020000", "0x1415f29c8"),
             )
-            if version == "1.15.1"
-            else (
+        else:
+            edges = (
                 ("law parser thunk", "0x140840e3f", "e97cbefa00", "0x1417eccc0"),
                 ("law exact token dispatch", "0x1417ecee7", "0f8447010000", "0x1417ed034"),
                 ("law qualification wrapper", "0x141621f79", "e832da1c00", "0x1417ef9b0"),
                 ("actual law AI candidate consumer", "0x1415e1449", "e842090400", "0x141621d90"),
                 ("actual law AI candidate consumer", "0x1415e1455", "0f848d020000", "0x1415e16e8"),
             )
-        )
         control_flow_checks = [
             {
                 "label": label,
@@ -727,22 +749,30 @@ def _known_failure_observations(
             }
             for label, address, instruction, target in edges
         ]
-        windows = {point["label"]: point for point in data["observations"]}
-        for check in control_flow_checks:
-            point = windows[check["label"]]
-            offset = int(check["instruction_va"], 16) - int(point["va"], 16)
-            instruction = bytes.fromhex(check["instruction_bytes"])
-            assert offset >= 0
-            assert bytes.fromhex(point["bytes"])[offset : offset + len(instruction)] == instruction
     else:
         control_flow_checks = data["control_flow_checks"]
     executable = config.GAME.parent / "binaries/victoria3.exe"
     assert executable.stat().st_size == data["exe"]["bytes"]
+    windows = {}
     with executable.open("rb") as stream:
         assert hashlib.file_digest(stream, "sha256").hexdigest() == data["exe"]["sha256"]
         for point in data["observations"]:
             stream.seek(int(point["file_offset"], 16))
-            assert stream.read(len(bytes.fromhex(point["bytes"]))) == bytes.fromhex(point["bytes"])
+            if version == version_contracts.CURRENT_VERSION:
+                raw = stream.read(point["size"])
+                assert len(raw) == point["size"]
+                assert _sha(raw) == point["sha256"]
+            else:
+                raw = bytes.fromhex(point["bytes"])
+                assert stream.read(len(raw)) == raw
+            windows[point["label"]] = (int(point["va"], 16), raw)
+    if current:
+        for check in control_flow_checks:
+            start, window = windows[check["label"]]
+            offset = int(check["instruction_va"], 16) - start
+            instruction = bytes.fromhex(check["instruction_bytes"])
+            assert offset >= 0
+            assert window[offset : offset + len(instruction)] == instruction
     for check in control_flow_checks:
         raw = bytes.fromhex(check["instruction_bytes"])
         assert int(check["instruction_va"], 16) + len(raw) + struct.unpack_from(
@@ -834,7 +864,10 @@ def test_s0_known_failures_migration(
                 "technology_dough_rollers_labor_ready",
             )
         }
-        current_native = ROOT / versioned["source"]
+        source_root = (
+            config.GAME if versioned["version"] == version_contracts.CURRENT_VERSION else ROOT
+        )
+        current_native = source_root / versioned["source"]
         assert _sha(current_native.read_bytes()) == versioned["source_sha256"]
         for field, expected_hash in versioned["retentions"].items():
             assert (
@@ -848,7 +881,7 @@ def test_s0_known_failures_migration(
                 )
                 == expected_hash
             )
-        if version_contracts.active_version() == "1.15.1":
+        if "school_policy_migration" in versioned:
             current_school_replacements = migration_baseline._school_network_replacements(
                 versioned, bundle.writers
             )
@@ -1020,7 +1053,7 @@ def test_s0_known_failures_migration(
         baseline_capture.artifact(
             requirement,
             version_contracts.research_path("situated", "migration-retentions.json")
-            if version_contracts.active_version() == "1.15.1"
+            if "school_policy_migration" in versioned
             else migration_baseline._VERSION_115_SOURCE,
         )
     baseline_capture.observation(
