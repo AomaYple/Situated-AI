@@ -188,6 +188,17 @@ def pytest_collection_modifyitems(config, items):
 
 # ── 真实语料 ────────────────────────────────────────────────
 @pytest.fixture(scope="session")
+def standard_release_package(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Share one complete, read-only standard package per pytest worker."""
+    from pdx import distribution
+
+    if not (pdx_config.GAME / "common/laws/readme.md").is_file():
+        pytest.skip("需要锁定版本的游戏原件")
+    root = tmp_path_factory.mktemp("standard-release")
+    return distribution.package(root / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
+
+
+@pytest.fixture(scope="session")
 def corpus_files() -> list[Path]:
     """游戏本体中所有需要深度解析的文件（实测 **6,250** 个）。
 

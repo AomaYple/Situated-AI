@@ -52,12 +52,6 @@ def policy():
     return decisions.load()
 
 
-@pytest.fixture(scope="module")
-def release_package(tmp_path_factory):
-    """Only read-only ZIP assertions share this real, complete production package."""
-    return distribution.package(tmp_path_factory.mktemp("decision-release") / "mod.zip")
-
-
 def test_财政开关显式开启且交付契约来自数据源(policy):
     assert policy.enabled
     assert policy.package.product_version == "3.2.0"
@@ -476,12 +470,12 @@ def test_快照缺失扩展接口域明确报告未覆盖(tmp_path):
 
 
 @pytest.mark.integration
-def test_生产ZIP不携带历史档案(release_package):
+def test_生产ZIP不携带历史档案(standard_release_package):
     import zipfile
 
     from pdx import distribution
 
-    with zipfile.ZipFile(release_package) as archive:
+    with zipfile.ZipFile(standard_release_package) as archive:
         _, _, files = distribution.package_inputs()
         assert set(archive.namelist()) == set(files) | {
             "README.md",
@@ -491,12 +485,12 @@ def test_生产ZIP不携带历史档案(release_package):
 
 
 @pytest.mark.integration
-def test_生产ZIP清单携带实际包契约和源指纹(release_package):
+def test_生产ZIP清单携带实际包契约和源指纹(standard_release_package):
     import zipfile
 
     from pdx import distribution
 
-    with zipfile.ZipFile(release_package) as archive:
+    with zipfile.ZipFile(standard_release_package) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         metadata = json.loads(archive.read(".metadata/metadata.json"))
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
@@ -688,49 +682,34 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
 
 
 @pytest.mark.integration
-def test_正式包API和CLI输出逐字节一致(tmp_path):
+def test_正式包API和CLI输出逐字节一致(standard_release_package, tmp_path):
     import zipfile
 
     from typer.testing import CliRunner
 
     from pdx import cli, distribution
 
-    api_target, cli_target = tmp_path / "api.zip", tmp_path / "cli.zip"
-    current = version_contracts.active_version() == "1.15.0"
-    if current:
-        from pdx.situated import production_profile
-
-        profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
-        distribution.profile_package(api_target, profile)
-    else:
-        distribution.package(api_target)
+    cli_target = tmp_path / "cli.zip"
     args = ["package", "--output", str(cli_target)]
     result = CliRunner().invoke(cli.app, args)
     assert result.exit_code == 0, result.output
-    assert cli_target.read_bytes() == api_target.read_bytes()
+    assert cli_target.read_bytes() == standard_release_package.read_bytes()
     assert CliRunner().invoke(cli.app, args).exit_code == 0
-    assert cli_target.read_bytes() == api_target.read_bytes()
-    with zipfile.ZipFile(api_target) as archive:
+    assert cli_target.read_bytes() == standard_release_package.read_bytes()
+    with zipfile.ZipFile(cli_target) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
-        if current:
-            assert manifest["generation"]["profile"] == "situated-ai/production/1.15"
-            assert manifest["generation"]["game_version"] == "1.15.0"
-            assert manifest["contract"]["game_version"] == "1.15.0"
-            assert "common/decrees/00_decree.txt" in archive.namelist()
-            assert "common/diplomatic_actions/00_relations_actions.txt" in archive.namelist()
-        else:
-            assert manifest["generation"]["variant"] == distribution.RELEASE_VARIANT
-            assert "fiscal" in manifest["contract"]["enabled_modules"]
-            assert "common/on_actions/sitai_fiscal_on_actions.txt" in archive.namelist()
+        assert manifest["generation"]["variant"] == distribution.RELEASE_VARIANT
+        assert "fiscal" in manifest["contract"]["enabled_modules"]
+        assert "common/on_actions/sitai_fiscal_on_actions.txt" in archive.namelist()
 
 
 @pytest.mark.integration
-def test_交付说明由清单覆盖且明确用户验收边界(release_package):
+def test_交付说明由清单覆盖且明确用户验收边界(standard_release_package):
     import zipfile
 
     from pdx import distribution
 
-    with zipfile.ZipFile(release_package) as archive:
+    with zipfile.ZipFile(standard_release_package) as archive:
         raw = archive.read("README.md")
         text = raw.decode("utf-8")
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
