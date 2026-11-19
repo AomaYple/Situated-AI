@@ -21,7 +21,13 @@ from .parser import parse_bytes
 from .textio import normalized_text
 
 _CAPTURE_VERSION = version_contracts.CURRENT_VERSION
-_KINDS = ("parameters", "retentions-native-subset", "compatibility", "technology-catalog")
+_KINDS = (
+    "parameters",
+    "retentions-native-subset",
+    "compatibility",
+    "technology-catalog",
+    "law-catalog",
+)
 _RESERVED_NAMES = {
     "CON",
     "PRN",
@@ -264,10 +270,14 @@ def main(argv: list[str] | None = None) -> int:
                 output = capture_retentions(game, output=args.output)
             elif args.kind == "compatibility":
                 output = capture_compatibility(game, output=args.output)
-            else:
+            elif args.kind == "technology-catalog":
                 from . import technology_opportunities  # noqa: PLC0415
 
                 output = technology_opportunities.write_catalog(game, output=args.output)
+            else:
+                from . import law_opportunities  # noqa: PLC0415
+
+                output = law_opportunities.write_catalog(game, output=args.output)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"[native-authority-capture] 捕获失败：{exc}", file=sys.stderr)
         return 1

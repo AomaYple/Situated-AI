@@ -12,7 +12,7 @@ from typing import NamedTuple
 
 import pytest
 
-from pdx import config, version_contracts
+from pdx import config, law_opportunities, version_contracts
 from pdx import native_authority_capture as capture
 from pdx import technology_opportunities as technology
 from pdx.situated import (
@@ -25,12 +25,19 @@ from pdx.situated import (
 
 pytestmark = pytest.mark.unit
 
-KINDS = ("parameters", "retentions-native-subset", "compatibility", "technology-catalog")
+KINDS = (
+    "parameters",
+    "retentions-native-subset",
+    "compatibility",
+    "technology-catalog",
+    "law-catalog",
+)
 STRATEGY = "common/ai_strategies/00_default_strategy.txt"
 TECHNOLOGY = "common/technology/technologies/30_society.txt"
+LAW = "common/laws/test_laws.txt"
 
 
-def test_module_cli_help_exposes_four_real_candidates_without_requiring_installation():
+def test_module_cli_help_exposes_real_candidates_without_requiring_installation():
     result = subprocess.run(
         [sys.executable, "-B", "-X", "utf8", "-m", "pdx.native_authority_capture", "--help"],
         capture_output=True,
@@ -157,6 +164,7 @@ def native_inputs(sandbox, monkeypatch):
         ),
         "common/script_values/war_support_values.txt": "war_support = { value = 1 }\n",
         TECHNOLOGY: "banking = { era = era_1 category = society ai_weight = { value = 1 } }\n",
+        LAW: "law_test = { ai_enact_weight_modifier = { value = 1 } }\n",
     }
     for source, text in inputs.items():
         path = game / source
@@ -202,6 +210,13 @@ def native_inputs(sandbox, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setattr(technology, "PARAMETERS_CURRENT", template)
+    monkeypatch.setattr(
+        law_opportunities,
+        "_load_policy",
+        lambda: {"sources": {LAW: ""}, "candidates": {"law_test": LAW}},
+    )
+    monkeypatch.setattr(law_opportunities, "native_retained_candidates", dict)
+    monkeypatch.setattr(law_opportunities, "_verify_mechanisms", lambda _roots: None)
     return inputs
 
 
@@ -210,7 +225,7 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
     sandbox, native_inputs, capsys, kind
 ):
     _repo, installation, verified, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     with version_contracts.select_version("1.15.0"):
         assert capture.main(_argv(installation, kind, output)) == 0
@@ -230,6 +245,13 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
             json.loads(data["catalog_json"])["sources"][TECHNOLOGY]
             == hashlib.sha256(native_inputs[TECHNOLOGY].encode()).hexdigest()
         )
+    elif kind == "law-catalog":
+        data = tomllib.loads(output.read_text(encoding="utf-8"))
+        assert data == {
+            "schema": 1,
+            "game_version": version_contracts.CURRENT_VERSION,
+            "sources": {LAW: hashlib.sha256(native_inputs[LAW].encode()).hexdigest()},
+        }
     else:
         data = json.loads(output.read_bytes())
         assert data["version"] == version_contracts.CURRENT_VERSION
@@ -252,7 +274,7 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
 @pytest.mark.parametrize("kind", KINDS)
 def test_candidate_is_idempotent_but_never_replaces_different_bytes(sandbox, native_inputs, kind):
     _repo, installation, _, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     args = _argv(installation, kind, output)
     assert capture.main(args) == 0
@@ -326,13 +348,14 @@ def test_cli_rejects_output_inside_installation_even_under_tools_out(sandbox):
 @pytest.mark.parametrize("kind", KINDS)
 def test_direct_capture_rejects_historical_context_before_identity_or_output(sandbox, kind):
     _repo, installation, verified, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "candidate" / (kind + suffix)
     functions = {
         "parameters": capture.capture_parameters,
         "retentions-native-subset": capture.capture_retentions,
         "compatibility": capture.capture_compatibility,
         "technology-catalog": technology.write_catalog,
+        "law-catalog": law_opportunities.write_catalog,
     }
     with (
         version_contracts.select_version("1.15.0"),
@@ -346,7 +369,7 @@ def test_direct_capture_rejects_historical_context_before_identity_or_output(san
 @pytest.mark.parametrize("kind", KINDS)
 def test_installation_drift_fails_before_any_candidate_is_created(sandbox, monkeypatch, kind):
     repo, installation, _, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     # Use the real verifier against an incomplete installation, not a fake success.
     monkeypatch.undo()
@@ -410,7 +433,8 @@ def test_source_redirect_fails_even_after_installation_identity_check(
     sandbox, native_inputs, monkeypatch, kind
 ):
     repo, installation, verified, _candidate_root = sandbox
-    source = installation / "game" / (TECHNOLOGY if kind == "technology-catalog" else STRATEGY)
+    sources = {"technology-catalog": TECHNOLOGY, "law-catalog": LAW}
+    source = installation / "game" / sources.get(kind, STRATEGY)
     actual_resolve = Path.resolve
 
     def redirected_resolve(path, *args, **kwargs):
@@ -419,7 +443,7 @@ def test_source_redirect_fails_even_after_installation_identity_check(
         return actual_resolve(path, *args, **kwargs)
 
     monkeypatch.setattr(Path, "resolve", redirected_resolve)
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     assert capture.main(_argv(installation, kind, output)) == 1
     assert verified == [installation]

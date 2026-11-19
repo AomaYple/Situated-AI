@@ -608,10 +608,6 @@ def write_catalog(game: Path, *, output: Path) -> Path:
     return _write_candidate(output, text)
 
 
-# The capture CLI can migrate its import independently.
-write_catalog_1151 = write_catalog
-
-
 def _validate_catalog(catalog: Mapping[str, Any]) -> None:
     """Reject malformed offline data before any reader or rule is derived.
 
