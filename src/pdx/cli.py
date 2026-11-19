@@ -39,7 +39,9 @@ from __future__ import annotations
 
 import json
 import time
+from collections import deque
 from dataclasses import asdict
+from itertools import zip_longest
 
 # Path 必须能**在运行期**导入：typer 用 ``inspect.signature(eval_str=True)``
 # 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError（已实测）。
@@ -1199,18 +1201,21 @@ def snap_diff(
         )
 
 
-def _matches_json_text(expected: str, value: Any) -> bool:
-    """Compare the complete encoded text without retaining a second JSON copy."""
+def _matches_json_text(first: Any, second: Any) -> bool:
+    """Compare the two canonical JSON encodings without materializing either."""
     encoder = json.JSONEncoder(ensure_ascii=False, indent=1, sort_keys=True)
-    offset = 0
+    first_chunks = encoder.iterencode(first)
     matches = True
-    for chunk in encoder.iterencode(value):
-        if not expected.startswith(chunk, offset):
-            matches = False
-        offset += len(chunk)
-    # Consume every chunk even after a mismatch so later encoding errors retain
-    # the same failure behavior as json.dumps of the complete second snapshot.
-    return matches and offset == len(expected)
+    try:
+        for left, right in zip_longest(first_chunks, encoder.iterencode(second)):
+            if left != right:
+                matches = False
+    except TypeError, ValueError, RecursionError:
+        # Complete the first encoding if the second raises. An error on the
+        # first still takes precedence, as with encoding the values in order.
+        deque(first_chunks, maxlen=0)
+        raise
+    return matches
 
 
 @snapshot_app.command("verify")
@@ -1223,9 +1228,8 @@ def snap_verify() -> None:
     console.print("构建快照两次并比较 …")
     first = snapshot.build()
     second = snapshot.build()
-    da = json.dumps(first.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
 
-    if _matches_json_text(da, second.to_dict()):
+    if _matches_json_text(first.to_dict(), second.to_dict()):
         total = sum(len(names) for body in first.sections.values() for names in body.values())
         console.print("[green]✅ 两次构建结果完全一致 —— 快照是确定性的[/]")
         console.print(f"   域 {len(first.sections)} 个，条目总计 {total:,}")
