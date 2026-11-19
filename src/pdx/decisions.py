@@ -879,7 +879,13 @@ def load(source: Path = SOURCE) -> Policy:
     if version_contracts.is_115() and source.resolve() == SOURCE.resolve():
         from .situated import compatibility_115, engine_scope  # noqa: PLC0415
 
-        authority = compatibility_115.snapshot()
+        current_release = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+        authority = (
+            compatibility_115.declaration() if current_release else compatibility_115.snapshot()
+        )
+        source_identity = raw + authority
+        if not current_release:
+            source_identity += engine_scope.strategy_snapshot()
         current = json.loads(authority)
         policy = replace(
             policy,
@@ -892,9 +898,7 @@ def load(source: Path = SOURCE) -> Policy:
                 else "released",
                 parent=f"vanilla-{version_contracts.active_version()}",
             ),
-            source_sha256=hashlib.sha256(
-                raw + authority + engine_scope.strategy_snapshot()
-            ).hexdigest(),
+            source_sha256=hashlib.sha256(source_identity).hexdigest(),
         )
     return policy
 
@@ -2070,6 +2074,12 @@ def validate(
             key_words = vocabulary_dir(baseline_path().parent)
         vocabulary_uncovered = True
 
+    if current and (snapshot is not None or game is not None):
+        # These source assignments have independent, build-specific coverage.
+        from .situated import compatibility_115  # noqa: PLC0415
+
+        key_words.update(compatibility_115.FIELDS)
+        key_words.add("is_adjacent_to_country")  # Default strategy, line 2438 in 1.15.2.
     evidence_words = vocabulary_words | key_words | variable_words | fiscal_words
     ordinary_interfaces = interfaces - script_value_interfaces
     issues = [
