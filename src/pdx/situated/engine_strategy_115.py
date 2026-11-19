@@ -868,7 +868,12 @@ def validate(data: Mapping[str, Any]) -> None:
     from pdx import version_contracts  # noqa: PLC0415
 
     contracts = _CONTRACTS
-    if version_contracts.active_version() == "1.15.1":
+    version = version_contracts.active_version()
+    if version == "1.15.2":
+        from .engine_strategy_1152 import CONTRACTS  # noqa: PLC0415
+
+        contracts = CONTRACTS
+    elif version == "1.15.1":
         from .engine_strategy_1151 import CONTRACTS  # noqa: PLC0415
 
         contracts = CONTRACTS
@@ -877,7 +882,13 @@ def validate(data: Mapping[str, Any]) -> None:
             raise ValueError(f"1.15 策略独立字段合同不一致：{name}")
     if data.get("evidence_kind") != "binary_static" or data.get("runtime") != "unknown":
         raise ValueError("1.15 策略证据类别不一致")
-    for family in ("institution", "stance"):
+    if version == "1.15.2":
+        from . import engine_scope_115  # noqa: PLC0415
+
+        digest, exe_bytes = engine_scope_115.executable_identity()
+        if data["exe"]["sha256"] != digest or data["exe"]["bytes"] != exe_bytes:
+            raise ValueError("1.15 策略证据可执行文件身份不一致")
+    for family in ("institution", "stance") if version != "1.15.2" else ():
         sources = data[family + "_definition_sources"]
         raw_sources = data.get(family + "_definition_bytes", {})
         if set(raw_sources) != set(sources) or any(
@@ -888,7 +899,11 @@ def validate(data: Mapping[str, Any]) -> None:
     # Exact current observations must cover every field's own parser branch and
     # own consumer, not merely a shared country container or another field.
     intervals = tuple(
-        (int(point["va"], 16), int(point["va"], 16) + len(bytes.fromhex(point["bytes"])))
+        (
+            int(point["va"], 16),
+            int(point["va"], 16)
+            + (point["size"] if version == "1.15.2" else len(bytes.fromhex(point["bytes"]))),
+        )
         for point in data["observations"]
     )
     for field, contract in data["consumers"].items():
