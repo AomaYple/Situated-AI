@@ -14,7 +14,7 @@
     "src/pdx/candidate_coverage.py": "e007fa1ad06fe000a0037bbdb338fe142e7907f9d9303c5e78ddb2820a4521c6",
     "src/pdx/capability_catalog.py": "db71028352ab2b442dc47d121848f4ca696881805eb77f98595551ae0fff5290",
     "src/pdx/citations.py": "c46244d311fc2ef0469ce3b3f8751b6af61c3952d53bea262dbfb4aec64d2b76",
-    "src/pdx/cli.py": "729e799a09ee8a63b24131372b27b22246ececf760e550d713573546a0a39efe",
+    "src/pdx/cli.py": "4dd9c18ea93b32b5bd152cac41e86b163f2ec3dbc4a753acdcb6bff9d1376325",
     "src/pdx/committed_raw.py": "87ef6c173695a680e44b45ab64da3842185a5d8b199e3eab9c654b59e3bf458e",
     "src/pdx/company_observations.py": "844a7859b969ab95e547a7121742cb22129348270e654e2186b64200e7117ae9",
     "src/pdx/company_sectors.py": "6050df2dccae194cc8ba953539467e5bab828a11226e6cca95bcaf0f34ea185d",
