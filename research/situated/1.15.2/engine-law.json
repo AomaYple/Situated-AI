@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "reviewed_chain": [
+    "CLawType RTTI identifies the parser at subobject +0x748. The ai_will_do atom 0x29df dispatches to the trigger interface +0x4d8 with storage at +0x4d0 and Country tag 5.",
+    "CCountryLaw stores the candidate definition at +0x38 and actor ID at +0x40. The actual candidate consumer calls qualification at 0x1415fcd19 and proceeds to the next candidate at 0x1415fcfb8 when qualification fails.",
+    "Qualification 0x14163e160 uses the checked Country lookup and invokes the definition trigger at 0x1418145a0. The checked wrapper evaluates member +0x4d0 with Country tag 5 and actor ID +0x18."
+  ],
+  "contract": {
+    "family": "laws",
+    "hook": "ai_will_do",
+    "actor": "country",
+    "target": "definition_only:law_type",
+    "operation": "eligibility",
+    "capability": "direct",
+    "named_targets_proven": []
+  },
+  "script_hashes": {
+    "common/laws/00_army_model.txt": "1182f962f069271061f677da5bb44395f3341b80f4e4161634efbe80814a972c",
+    "common/laws/00_bureaucracy.txt": "55874e4995608a4f82deab1a8f0e5b17c97de215d8f6a5207d73f00a7976b981",
+    "common/laws/00_caste_hegemony.txt": "0c31a075766c3fc3db997e23b9aa61d737fe0c4c1086a5c8f501a2d03eecbae8",
+    "common/laws/00_church_and_state.txt": "73c2c4e4fe5aab1070b501487a39d22591525e47e8e2ca3eaaee48aef22a19c3",
+    "common/laws/00_citizenship.txt": "2abec1fe4edaba2fc2e2d7881d577c93a160e71441c9f16c81976471799b21c3",
+    "common/laws/00_distribution_of_power.txt": "0a6f4c9f77a876ed149037b38dcfba7b629579194a16df57d8c91f7bc11f55a2",
+    "common/laws/00_governance_principles.txt": "1659bde35d38b03b68e8845cc010ca2f0e3807088990fb524d4e0e6866b3ff3a",
+    "common/laws/00_internal_security.txt": "cd6afaff490ef29a279151b4eff37946cc5cc4b81c901bee99b196df82209536",
+    "common/laws/00_navy_model.txt": "6605480a4c4c8cf066822629a2c4b7b0076d95beb6fd854a947e898a507fb414",
+    "common/laws/01_colonial_affairs.txt": "d3de8eae685e6e20ae88ee0314c5cbeff1ff3f72ded708e9f0a00a921d573e38",
+    "common/laws/01_economic_system.txt": "17bc01e0fc6412536a9adc54c23eb66eab53fe19277d206be20cccca2ca7ec76",
+    "common/laws/01_education_system.txt": "dd7ea8a9ecf8a52959a08d9d3a6b4441cc84c353ca3438586d28040274765bc7",
+    "common/laws/01_health_system.txt": "4d015438098f9eea1350bdeb4ffe308e86857c9245e24226ab2e643566e317ed",
+    "common/laws/01_land_reform.txt": "83c5324614a7fbad69a4815c42f69ecf816d964ab4cf95719084f0d0c98cb871",
+    "common/laws/01_policing.txt": "8d6938f1eb556f412ba5353056cd43797f4eea3fb7ea8d6ef6e7e9eeb4a80be3",
+    "common/laws/01_taxation.txt": "dd028ab3863ed9e3754ab91d17e07455661cc2bad2e77f98bfb4b64b59a7c317",
+    "common/laws/01_trade_policy.txt": "f6e0ca1e180c57f994aae1a04ea3e407bfadd4ede85f75f67c303ed16d734e6d",
+    "common/laws/02_childrens_rights.txt": "5c3659a8cfd083511b47ec0637c0ceb570a823029d9fc082f16ad854598d8818",
+    "common/laws/02_free_speech.txt": "791ec3c820fcd47ba7a42416fa20b6ba844063a065dd24e3e9f4df809d2ef958",
+    "common/laws/02_labor_rights.txt": "78c4f45f9f3e0a5b3ecdaf03a8ea6ede6ade46eb1de64ae31621e4ecdfe8c371",
+    "common/laws/02_labour_associations.txt": "08221952c114ce4df51f8a2f71436c004da28a20809b130c6ca69bbd55e1c34a",
+    "common/laws/02_migration.txt": "53229809fe63dd8d4c7748fa2205183c737f8afbfb60ab2e9510bc4d65fff5e3",
+    "common/laws/02_rights_of_women.txt": "2358abfd034c7f3d944b10fec6ee6bcb985dae1b105c1932f47358b0268446b4",
+    "common/laws/02_slavery.txt": "fd7c8c2bab70b65ef30dd2c5f18cf72ee61a33db65469326511947de1fe5f55f",
+    "common/laws/02_welfare.txt": "42594f77b4566637631453c60749318f21e154e23d554be166ac68c7cac44784"
+  },
+  "limits": [
+    "Runtime unknown; only exact laws.ai_will_do country eligibility is authorized.",
+    "No named law scope, adjacent fields, numeric lowering, success frequency, balance or performance is established.",
+    "Prior checks can accept or reject candidates on other branches; downstream politics, scores, command execution and fallback remain native-owned."
+  ],
+  "observations": [
+    {
+      "label": "law parser RTTI",
+      "va": "0x144cd2be0",
+      "rva": "0x4cd2be0",
+      "file_offset": "0x4cd1be0",
+      "size": 24,
+      "sha256": "c9825ce38a1a2de975dc43b1152c69b571841af57845d48d08c90bef2176e718"
+    },
+    {
+      "label": "law type name",
+      "va": "0x1456a6f90",
+      "rva": "0x56a6f90",
+      "file_offset": "0x56a5390",
+      "size": 15,
+      "sha256": "1ae3cb3c81232683136d4a197ceaeb93a62d16bc6d115534a74878aa071d7a61"
+    },
+    {
+      "label": "law parser vtable",
+      "va": "0x144792320",
+      "rva": "0x4792320",
+      "file_offset": "0x4791320",
+      "size": 48,
+      "sha256": "fb81b05bee22bbb2c705ec51f1ee07aed503691fd5a4d41efac2934191509ba3"
+    },
+    {
+      "label": "law parser thunk",
+      "va": "0x1408492bc",
+      "rva": "0x8492bc",
+      "file_offset": "0x8486bc",
+      "size": 12,
+      "sha256": "07c0a7bedc3e2842ee7b44b09fd711288c902b1b0bccf1d2989897fdc0c7aa4a"
+    },
+    {
+      "label": "law constructor",
+      "va": "0x141810170",
+      "rva": "0x1810170",
+      "file_offset": "0x180f570",
+      "size": 1749,
+      "sha256": "f9b20ab7a6ea759d99c7f134aed2d60d5328bcedd295c5ed2f16d9bdcd0a6088"
+    },
+    {
+      "label": "law exact token dispatch",
+      "va": "0x141811ad0",
+      "rva": "0x1811ad0",
+      "file_offset": "0x1810ed0",
+      "size": 19,
+      "sha256": "51849fb7658002c7a688bc8c5dffb1f7bdbd0dff504ae10faa8cfd90c899b4d5"
+    },
+    {
+      "label": "law ai_will_do parse body",
+      "va": "0x141811c24",
+      "rva": "0x1811c24",
+      "file_offset": "0x1811024",
+      "size": 129,
+      "sha256": "09771a76a8b60e1d91803a569c8b9a8bf0b4db5a1c6d395d91fcb3a102c4fa12"
+    },
+    {
+      "label": "ai_will_do atom",
+      "va": "0x1449a0d80",
+      "rva": "0x49a0d80",
+      "file_offset": "0x499fd80",
+      "size": 16,
+      "sha256": "6f174eb7f2ce00d57c158df8f0fa48edc8fac1d002d2b18bb3f89f4b6f2ac173"
+    },
+    {
+      "label": "ai_will_do literal",
+      "va": "0x144966b90",
+      "rva": "0x4966b90",
+      "file_offset": "0x4965b90",
+      "size": 11,
+      "sha256": "4a12060b9594d06c66bf90975f4d20fa83f83825f7a9370d6b7e9cd5e9b96fd8"
+    },
+    {
+      "label": "country law RTTI",
+      "va": "0x144ba7a60",
+      "rva": "0x4ba7a60",
+      "file_offset": "0x4ba6a60",
+      "size": 24,
+      "sha256": "1ec79cf697bff6d928d16502fc125c40dedcd3cf50ff5fb8880b52eed78344f0"
+    },
+    {
+      "label": "country law name",
+      "va": "0x145696208",
+      "rva": "0x5696208",
+      "file_offset": "0x5694608",
+      "size": 17,
+      "sha256": "f42392f6f75d021d1c3817dbb0e909d506662203052450e5865d5a1177dfa686"
+    },
+    {
+      "label": "country law vtable",
+      "va": "0x1446c4338",
+      "rva": "0x46c4338",
+      "file_offset": "0x46c3338",
+      "size": 16,
+      "sha256": "cbbdb33eee4263e9b565f1f15185c55629633fa9e9a870f178b51d82eb033db7"
+    },
+    {
+      "label": "country law constructor",
+      "va": "0x1408d5a30",
+      "rva": "0x8d5a30",
+      "file_offset": "0x8d4e30",
+      "size": 180,
+      "sha256": "120d20de824496b7a11268d9641a3ea1f6851e39b1d128135a7f894eb94c41f0"
+    },
+    {
+      "label": "law trigger wrapper",
+      "va": "0x1418145a0",
+      "rva": "0x18145a0",
+      "file_offset": "0x18139a0",
+      "size": 369,
+      "sha256": "cb60f74b315a62aa2f940a695e689cd9d802b2347d5e3b5ab97a116e7928d4e9"
+    },
+    {
+      "label": "law qualification wrapper",
+      "va": "0x14163e160",
+      "rva": "0x163e160",
+      "file_offset": "0x163d560",
+      "size": 523,
+      "sha256": "e3fbab54f6e112fe7f327cd6075baf67ef578f3ebe8bcef3ae00806512f44eea"
+    },
+    {
+      "label": "actual law AI candidate consumer",
+      "va": "0x1415fc630",
+      "rva": "0x15fc630",
+      "file_offset": "0x15fba30",
+      "size": 2966,
+      "sha256": "05c1eae50c4068236d6091c22e65010323a1e0941308700cc65d15e6760a0e9c"
+    },
+    {
+      "label": "country tag getter",
+      "va": "0x1417b6650",
+      "rva": "0x17b6650",
+      "file_offset": "0x17b5a50",
+      "size": 6,
+      "sha256": "21faa16607cb70438711aab3fa582829af50aa15d5946524996fc7aa8a8e4e6d"
+    },
+    {
+      "label": "country checked lookup",
+      "va": "0x1407322c0",
+      "rva": "0x7322c0",
+      "file_offset": "0x7316c0",
+      "size": 178,
+      "sha256": "40c94efa569d3c43ace0f80b5ff3ea8d5a913a86ae5737d03bdedfcbe8b27b78"
+    },
+    {
+      "label": "country RTTI name",
+      "va": "0x14546a4b8",
+      "rva": "0x546a4b8",
+      "file_offset": "0x54688b8",
+      "size": 15,
+      "sha256": "1025ac96a4a1b9f703088dae45f2a0868f4caac1aaf7cc2b224f6662ae519c16"
+    }
+  ],
+  "reference_sites": [
+    "0x1415fcd19",
+    "0x1418145a0",
+    "0x141811c24"
+  ]
+}

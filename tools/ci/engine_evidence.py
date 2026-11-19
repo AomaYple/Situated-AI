@@ -1,7 +1,7 @@
 """Reproduce reviewed PE observations without executing or modifying the game.
 
-The controlled manifest is the review specification: its exact VA and byte
-length select each observation. This tool verifies the original executable
+Each observation is identified by its exact VA and byte length. The current
+format records SHA-256 digests. This tool verifies the original executable
 identity, independently maps every RVA to a PE file offset and records optional
 dumpbin output. Outputs are local investigation artifacts, not new permissions.
 """
@@ -72,16 +72,21 @@ def reproduce(
         excerpts = []
         for point in data["observations"]:
             va, rva = int(point["va"], 16), int(point["rva"], 16)
-            expected = bytes.fromhex(point["bytes"])
-            if not expected or va != base + rva:
+            expected = bytes.fromhex(point["bytes"]) if "bytes" in point else None
+            size = len(expected) if expected is not None else point["size"]
+            if type(size) is not int or size <= 0 or va != base + rva:
                 raise ValueError(f"Invalid image-base identity: {point['label']}")
-            offset, is_code = file_location(rva, len(expected), sections)
+            offset, is_code = file_location(rva, size, sections)
             if offset != int(point["file_offset"], 16):
                 raise ValueError(f"File offset differs from PE mapping: {point['label']}")
-            actual = bytes(raw[offset : offset + len(expected)])
-            if actual != expected:
+            actual = raw[offset : offset + size]
+            if expected is None:
+                matches = hashlib.sha256(actual).hexdigest() == point["sha256"]
+            else:
+                matches = actual == expected
+            if not matches:
                 raise ValueError(f"Reviewed bytes differ: {point['label']}")
-            observations.append({**point, "bytes": actual.hex()})
+            observations.append(point)
             if dumpbin is not None and is_code:
                 command = [
                     str(dumpbin),

@@ -22,6 +22,8 @@ import sys
 from importlib import import_module
 from pathlib import Path
 
+EXPECTED_EXE_SHA256 = "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36"
+EXPECTED_EXE_BYTES = 100_280_440
 EXPECTED_DLL_SHA256 = "46b7c385efe50db4def8aa99aa351c44ea28b1f3c2ccbc4ca41dbb2a02340e39"
 
 FIELDS = (
@@ -83,10 +85,11 @@ class PE:
         self.path = executable
         self.stream = executable.open("rb")
         self.raw = mmap.mmap(self.stream.fileno(), 0, access=mmap.ACCESS_READ)
-        assert (
-            hashlib.sha256(self.raw).hexdigest()
-            == "fb4ec0698afd3d3b1a785926d57bd5d68c95a4afd04b56f6bd45abd7a5672b15"
-        )
+        if (
+            len(self.raw) != EXPECTED_EXE_BYTES
+            or hashlib.sha256(self.raw).hexdigest() != EXPECTED_EXE_SHA256
+        ):
+            raise ValueError("Unexpected Victoria 3 executable identity")
         h = struct.unpack_from("<I", self.raw, 0x3C)[0]
         n = struct.unpack_from("<H", self.raw, h + 6)[0]
         sz = struct.unpack_from("<H", self.raw, h + 20)[0]
@@ -387,7 +390,7 @@ def main():
                         row["parser_thunk"] = hex(pointer)
         result["rtti"][name] = rows
     strategies = result["rtti"][".?AVCAIStrategy@@"]
-    (strategy,) = [row for row in strategies if row["subobject"] == "0x20d8" and "parser" in row]
+    (strategy,) = [row for row in strategies if "parser" in row]
     start = int(strategy["parser"], 16)
     for name in FIELDS:
         atoms = p.atom(name)

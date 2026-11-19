@@ -94,3 +94,22 @@ def test_bad_identity_or_mapping_never_writes_outputs(evidence_tool, tiny_pe, tm
     with pytest.raises(ValueError):
         evidence_tool.reproduce(manifest, executable, output)
     assert not output.exists()
+
+
+def test_digest_format_replays_and_rejects_bad_observation(evidence_tool, tiny_pe, tmp_path):
+    executable, manifest, data, write = tiny_pe
+    point = data["observations"][0]
+    observed = bytes.fromhex(point.pop("bytes"))
+    point["size"] = len(observed)
+    point["sha256"] = hashlib.sha256(observed).hexdigest()
+    write()
+    output = tmp_path / "good"
+    assert evidence_tool.reproduce(manifest, executable, output)["points_verified"] == 1
+    assert (output / manifest.name).read_bytes() == manifest.read_bytes()
+
+    point["sha256"] = hashlib.sha256(b"different").hexdigest()
+    write()
+    output = tmp_path / "drift"
+    with pytest.raises(ValueError, match="Reviewed bytes differ"):
+        evidence_tool.reproduce(manifest, executable, output)
+    assert not output.exists()

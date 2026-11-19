@@ -127,9 +127,19 @@ def _verified_manifest(
         if stream.tell() != data["exe"]["bytes"]:
             raise ValueError(f"{label}的文件长度不一致")
         for point in data["observations"]:
-            expected = bytes.fromhex(point["bytes"])
             stream.seek(int(point["file_offset"], 16))
-            if stream.read(len(expected)) != expected:
+            if "bytes" in point:
+                expected = bytes.fromhex(point["bytes"])
+                matches = stream.read(len(expected)) == expected
+            else:
+                size = point["size"]
+                if type(size) is not int or size <= 0:
+                    raise ValueError(f"{label}观察范围不合法：{point['label']}")
+                actual = stream.read(size)
+                matches = (
+                    len(actual) == size and hashlib.sha256(actual).hexdigest() == point["sha256"]
+                )
+            if not matches:
                 raise ValueError(f"{label}字节不一致：{point['label']}")
     verified = all(
         source in inputs and hashlib.sha256(inputs[source]).hexdigest() == digest
@@ -1041,6 +1051,8 @@ def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
     )
     if version_contracts.active_version() == "1.15.1":
         references = ("0x1415f2729", "0x141807c10", "0x141805294")
+    if version_contracts.active_version() == "1.15.2":
+        references = tuple(data["reference_sites"])
     return LawScopeEvidence(
         True,
         hashes,

@@ -85,11 +85,27 @@ MANIFESTS_1151 = {
 }
 
 
+EXE_SHA256_1152 = "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36"
+EXE_BYTES_1152 = 100_280_440
+MANIFESTS_1152 = {
+    "country-definition": (
+        "research/situated/1.15.2/engine-country-definition.json",
+        "4d5547de4078b1136e7703fa4d577d0ebcb40cc899bb2ba77b27164a777bd24b",
+    ),
+    "law": (
+        "research/situated/1.15.2/engine-law.json",
+        "1e7c0e640d6cde80fcece6951bb26c3ff26b5bbb3eb8daae7c582517e265cec7",
+    ),
+}
+
+
 def executable_identity() -> tuple[str, int]:
     """Return the exact selected PE identity; historical declarations stay frozen."""
     from pdx import version_contracts  # noqa: PLC0415
 
     version = version_contracts.active_version()
+    if version == "1.15.2":
+        return EXE_SHA256_1152, EXE_BYTES_1152
     if version == "1.15.1":
         return EXE_SHA256_1151, EXE_BYTES_1151
     if version == "1.15.0":
@@ -103,7 +119,11 @@ def manifest(kind: str) -> tuple[Path, str, str]:
 
     executable_identity()
     version = version_contracts.active_version()
-    registry = MANIFESTS_1151 if version == "1.15.1" else MANIFESTS
+    registry = {
+        "1.15.0": MANIFESTS,
+        "1.15.1": MANIFESTS_1151,
+        "1.15.2": MANIFESTS_1152,
+    }[version]
     try:
         identity, digest = registry[kind]
     except KeyError as exc:
