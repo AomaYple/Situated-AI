@@ -111,7 +111,7 @@ def _shape(block: Block) -> Any:
 def test_new_ig_evidence_sources_match_actual_locked_original_bytes(
     source, raw_hash, normalized_hash
 ):
-    current_hashes = {
+    hashes_115 = {
         COMMUNISM: (
             "181a9dd06a69f50a7964736b2714cdb733a7c78305cd0ea84c73322042335559",
             "107fa64a7e5587d8459eab2404b504b06042d1fffb7a8918eb49b5a4654512c2",
@@ -125,12 +125,24 @@ def test_new_ig_evidence_sources_match_actual_locked_original_bytes(
             "dd11f29ac662a390d0ddeafe5de5e6e63ef91fd7b885892670fa6b3c89896201",
         ),
     }
+    version = version_contracts.active_version()
     if version_contracts.is_115():
-        raw_hash, normalized_hash = current_hashes[source]
-    if version_contracts.active_version() == "1.15.1" and source == COMMUNISM:
-        raw_hash = "48bbccf031b99ace62f6732c3dc81ca6811aaeb13c09e983b1ff2a857f66dd86"
-        normalized_hash = "f38d15776d815e759e01b4d30db13510fa7f37437551063677cdaf0b336723ba"
-    raw = (config.GAME / source).read_bytes()
+        raw_hash, normalized_hash = hashes_115[source]
+    if source == COMMUNISM:
+        raw_hash, normalized_hash = {
+            "1.15.1": (
+                "48bbccf031b99ace62f6732c3dc81ca6811aaeb13c09e983b1ff2a857f66dd86",
+                "f38d15776d815e759e01b4d30db13510fa7f37437551063677cdaf0b336723ba",
+            ),
+            "1.15.2": (
+                "37a6572ae8e99ac6637c8dbc2aab9c52a6885316136f5c3b19b6a315e553a95d",
+                "65b4623541d2411f54f460092dcb94bf95d38f6289fbf01217aa180f746c3485",
+            ),
+        }.get(version, (raw_hash, normalized_hash))
+    game = (
+        config.verified_game_root() if version == version_contracts.CURRENT_VERSION else config.GAME
+    )
+    raw = (game / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     assert (
         hashlib.sha256(normalized_text(raw.decode("utf-8-sig")).encode()).hexdigest()
