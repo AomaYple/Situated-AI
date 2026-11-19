@@ -32,7 +32,7 @@ from pathlib import Path
 from . import config
 from .doc_tables import KeyedTableSpec
 from .textio import text_bytes
-from .version_contracts import active_version, contract
+from .version_contracts import active_version, contract, verify_installation_identity
 
 #: 清单文件名（放在 research/ 下，与镜像目录平级）
 HISTORICAL_MANIFEST_NAME = "official-docs.manifest.json"
@@ -40,11 +40,11 @@ MANIFEST_NAME = config.STARTUP_CONTRACT.official_manifest_name
 
 #: 内容根 → 目录名前缀。清单与镜像都用 ``<根>/<相对路径>`` 作键，
 #: 因为不同内容根下可能有同名相对路径（只写相对路径会互相覆盖）。
-_ROOTS: tuple[tuple[str, Path], ...] = (
-    ("game", config.GAME),
-    ("jomini", config.JOMINI),
-    ("clausewitz", config.CLAUSEWITZ),
-)
+_ROOT_NAMES = ("game", "jomini", "clausewitz")
+
+
+def _doc_roots(installation: Path) -> tuple[tuple[str, Path], ...]:
+    return tuple((name, installation / name) for name in _ROOT_NAMES)
 
 
 @dataclass(slots=True, frozen=True)
@@ -68,8 +68,9 @@ def iter_docs() -> list[tuple[str, Path]]:
     只写相对路径会让它们互相覆盖。生成清单与重建镜像共用这一个入口，
     两边不可能列出不同的篇目集合。
     """
+    installation = verify_installation_identity(config.ROOT).root
     out: list[tuple[str, Path]] = []
-    for name, base in _ROOTS:
+    for name, base in _doc_roots(installation):
         if not base.is_dir():
             continue
         out.extend((f"{name}/{p.relative_to(base).as_posix()}", p) for p in base.rglob("*.md"))
@@ -112,7 +113,7 @@ def build_manifest() -> dict[str, object]:
         }
     return {
         "说明": "游戏自带官方 .md 的清单与指纹。原文不入库，见 tools/README.md 的「官方文档清单」。",
-        "来源": " ".join(f"{n}={b}" for n, b in _ROOTS),
+        "来源": " ".join(f"{n}={b}" for n, b in _doc_roots(config.ROOT)),
         "版本": config.game_version(),
         "篇数": len(entries),
         "文档": entries,
@@ -130,7 +131,7 @@ def write_manifest() -> Path:
     ):
         raise ValueError("官方文档清单原版版本不匹配，拒绝覆盖其他版本证据")
     if not data["文档"]:
-        roots = ", ".join(f"{name}={base}" for name, base in _ROOTS)
+        roots = ", ".join(f"{name}={base}" for name, base in _doc_roots(config.ROOT))
         raise ValueError(f"官方文档清单为空，拒绝覆盖权威清单；检查输入目录：{roots}")
     text = json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -268,7 +269,7 @@ def diff_mirror(data: dict[str, object] | None = None) -> list[str]:
             "镜像sha256", meta["sha256"]
         ):
             out.append(f"镜像与清单不符：{key}")
-    for name, _base in _ROOTS:
+    for name in _ROOT_NAMES:
         sub = root / name
         if not sub.is_dir():
             continue

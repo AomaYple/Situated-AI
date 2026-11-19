@@ -46,6 +46,7 @@ class VersionContract:
     # Original installed bytes (including BOM/newlines), distinct from the normalized baseline.
     default_strategy_sha256: str
     baseline_strategy_sha256: str
+    doc17_table_values_sha256: str | None = None
 
 
 VERSION_SPECS = {
@@ -75,6 +76,7 @@ VERSION_SPECS = {
         "release-1.15.1",
         "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba",
         "e0e2cc9762f2d1e07deeb45091ca2e317e3771038851b840232d5f80538210c0",
+        doc17_table_values_sha256="705649b0ecbd3ace8c8187210101f217b8b5657aef6767e88cdd20a7f3470568",
     ),
 }
 SUPPORTED_VERSIONS = frozenset(VERSION_SPECS)

@@ -26,9 +26,22 @@ from typing import overload
 
 import pytest
 
-from pdx import analyze, parallel
+from pdx import analyze, parallel, version_contracts
 from pdx import config as pdx_config
 from pdx.scan import walk_files
+from pdx.situated import r2_reader_authority
+
+
+def configure_current_identity(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Bind a synthetic installation to the current committed identity files."""
+    originals = r2_reader_authority.frozen_root("1.15.1")
+    for relative in version_contracts.INSTALLATION_IDENTITY_SHA256:
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((originals / relative).read_bytes())
+    monkeypatch.setattr(pdx_config, "ROOT", root)
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+
 
 # pytest 在某些 Windows + xdist + coverage 组合下会把默认 basetemp 解析到
 # 当前工作树。仓库卫生测试必须扫描未忽略的工作区文件，因此临时文件一旦落在

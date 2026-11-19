@@ -24,7 +24,12 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .version_contracts import CURRENT_VERSION, VERSION_SPECS, contract
+from .version_contracts import (
+    CURRENT_VERSION,
+    VERSION_SPECS,
+    contract,
+    verify_installation_identity,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -360,6 +365,14 @@ def is_scriptable(rel_parts: tuple[str, ...], suffix: str) -> bool:
     if is_excluded(rel_parts):
         return False
     return suffix in SCRIPTABLE_SUFFIXES
+
+
+def verified_game_root() -> Path:
+    """核对默认安装身份和内容根，供隐式现场读取使用。"""
+    installation = verify_installation_identity(ROOT).root
+    if GAME.resolve() != installation / "game":
+        raise ValueError("内容目录与 V3_ROOT 的 game/ 不一致")
+    return installation / "game"
 
 
 def game_version(root: Path | None = None) -> dict[str, str]:

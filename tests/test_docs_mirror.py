@@ -38,11 +38,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 import typer
-from conftest import NEEDS_GAME
+from conftest import NEEDS_GAME, configure_current_identity
 
 from pdx import config, docs_mirror
-from pdx.situated import r2_reader_authority
-from pdx.version_contracts import INSTALLATION_IDENTITY_SHA256, active_version
+from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -141,29 +140,25 @@ def test_本地镜像与清单一致() -> None:
 
 
 # ── 合成目录：不碰游戏，纯逻辑 ──────────────────────────────
-def _fake_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """造一个假的「游戏安装」：两个内容根，各放一篇 .md。"""
-    (tmp_path / "caligula_branch.txt").write_text(f"release/{active_version()}\n", encoding="utf-8")
-    monkeypatch.setattr(config, "ROOT", tmp_path)
+def _fake_roots(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, with_jomini: bool = True
+) -> Path:
+    """造一个带当前版本身份的合成安装，各内容根放一篇 .md。"""
+    configure_current_identity(tmp_path, monkeypatch)
     game = tmp_path / "game"
     jomini = tmp_path / "jomini"
     (game / "common").mkdir(parents=True)
-    (jomini / "docs").mkdir(parents=True)
     (game / "common" / "a.md").write_bytes("甲\n".encode())
-    # 与 game 侧**同名相对路径** —— 这正是键必须带根前缀的原因
-    (jomini / "docs" / "a.md").write_bytes("乙\n".encode())
+    if with_jomini:
+        (jomini / "docs").mkdir(parents=True)
+        (jomini / "docs" / "a.md").write_bytes("乙\n".encode())
     return tmp_path
 
 
 def test_键带内容根前缀否则同名文件互相覆盖(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fake = _fake_roots(tmp_path, monkeypatch)
-    monkeypatch.setattr(
-        docs_mirror,
-        "_ROOTS",
-        (("game", fake / "game"), ("jomini", fake / "jomini")),
-    )
+    _fake_roots(tmp_path, monkeypatch)
     assert [k for k, _ in docs_mirror.iter_docs()] == ["game/common/a.md", "jomini/docs/a.md"]
 
 
@@ -173,13 +168,8 @@ def test_镜像里的多余文件会被发现(tmp_path: Path, monkeypatch: pytes
     只查「清单里的篇目在不在镜像里」是**单向**的：镜像里多出来的那篇
     永远不会被发现，而它恰恰是过期最多、最容易被当成真的那份。
     """
-    fake = _fake_roots(tmp_path, monkeypatch)
+    _fake_roots(tmp_path, monkeypatch)
     mirror = tmp_path / "mirror"
-    monkeypatch.setattr(
-        docs_mirror,
-        "_ROOTS",
-        (("game", fake / "game"), ("jomini", fake / "jomini")),
-    )
     monkeypatch.setattr(config, "OFFICIAL_DOCS_MIRROR", mirror)
     manifest = docs_mirror.build_manifest()
 
@@ -199,9 +189,8 @@ def test_镜像里的多余文件会被发现(tmp_path: Path, monkeypatch: pytes
 
 def test_内容改动与字节数篡改都会被抓(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """sha256 是这里唯一的判据 —— 字节数相同但内容不同也必须报。"""
-    fake = _fake_roots(tmp_path, monkeypatch)
+    _fake_roots(tmp_path, monkeypatch, with_jomini=False)
     mirror = tmp_path / "mirror"
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", fake / "game"),))
     monkeypatch.setattr(config, "OFFICIAL_DOCS_MIRROR", mirror)
     manifest = docs_mirror.build_manifest()
 
@@ -216,17 +205,12 @@ def _run_check(
 ) -> int:
     from pdx import cli
 
-    (tmp_path / "caligula_branch.txt").write_text(f"release/{active_version()}\n", encoding="utf-8")
-    monkeypatch.setattr(config, "ROOT", tmp_path)
+    configure_current_identity(tmp_path, monkeypatch)
     research = tmp_path / "research"
     research.mkdir(exist_ok=True)
     monkeypatch.setattr(config, "RESEARCH", research)
     monkeypatch.setattr(config, "GAME", tmp_path / "没有这个目录")
-    # _ROOTS 在 import 期就把 config.GAME 绑死了，必须一起换成不存在的目录，
-    # 否则 build_manifest() 会去扫**真的**游戏，测试结果就取决于本机装没装游戏。
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", tmp_path / "没有这个目录"),))
     if manifest:
-        # 顺序要紧：先换 _ROOTS，再生成本就为空的清单
         (research / docs_mirror.MANIFEST_NAME).write_text(
             json.dumps(docs_mirror.build_manifest(), ensure_ascii=False), encoding="utf-8"
         )
@@ -271,9 +255,8 @@ def test_写清单可复现且能重读(tmp_path: Path, monkeypatch: pytest.Monk
     清单是**入库**文件，它的 diff 就是「Paradox 改了哪些文档」的审计记录 ——
     生成过程只要掺进一点不确定性（时间戳、遍历顺序），这份记录就废了。
     """
-    fake = _fake_roots(tmp_path, monkeypatch)
+    _fake_roots(tmp_path, monkeypatch, with_jomini=False)
     research = tmp_path / "research"
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", fake / "game"),))
     monkeypatch.setattr(config, "RESEARCH", research)
 
     first = docs_mirror.write_manifest()
@@ -290,7 +273,6 @@ def test_游戏侧三种漂移都能报出来(tmp_path: Path, monkeypatch: pytes
     """清单的**全部价值**就在这里：Paradox 改了、加了、删了文档，都要看得出来。"""
     fake = _fake_roots(tmp_path, monkeypatch)
     base = fake / "game"
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", base),))
     frozen = docs_mirror.build_manifest()  # 相当于入库的那份清单
 
     (base / "common" / "a.md").write_bytes("甲改了\n".encode())
@@ -308,7 +290,7 @@ def test_游戏侧三种漂移都能报出来(tmp_path: Path, monkeypatch: pytes
 
 def test_清单为空时提示重新生成(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """空清单不能静默返回「一致」—— 那等于把没查当成查过了。"""
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", tmp_path / "没有"),))
+    monkeypatch.setattr(config, "ROOT", tmp_path / "没有")
     diff = docs_mirror.diff_against_game({})
     assert len(diff) == 1, diff
     assert "mirror write" in diff[0], f"提示里要给出真正的命令名：{diff[0]}"
@@ -319,15 +301,8 @@ def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.Monk
     from pdx import cli
 
     fake = _fake_roots(tmp_path, monkeypatch)
-    for relative in INSTALLATION_IDENTITY_SHA256:
-        target = fake / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((r2_reader_authority.frozen_root("1.15.1") / relative).read_bytes())
     research = tmp_path / "research"
     mirror = tmp_path / "mirror"
-    monkeypatch.setattr(
-        docs_mirror, "_ROOTS", (("game", fake / "game"), ("jomini", fake / "jomini"))
-    )
     monkeypatch.setattr(config, "RESEARCH", research)
     monkeypatch.setattr(config, "GAME", fake / "game")
     monkeypatch.setattr(config, "OFFICIAL_DOCS_MIRROR", mirror)
@@ -348,9 +323,6 @@ def test_任一已枚举文档不可读时保留完整旧清单(tmp_path, monkey
     old = b'{"old-authoritative": true}\n'
     authoritative.write_bytes(old)
     monkeypatch.setattr(config, "RESEARCH", research)
-    monkeypatch.setattr(
-        docs_mirror, "_ROOTS", (("game", fake / "game"), ("jomini", fake / "jomini"))
-    )
     # The first document is valid: failure in a later member must not commit
     # that successful prefix as a new, apparently complete inventory.
     bad = fake / "jomini/docs/a.md"
@@ -377,14 +349,13 @@ def test_任一已枚举文档不可读时保留完整旧清单(tmp_path, monkey
 
 @pytest.mark.parametrize("failure", ["partial_write", "replace"])
 def test_写入或替换失败不破坏旧清单且清理临时文件(tmp_path, monkeypatch, failure) -> None:
-    fake = _fake_roots(tmp_path, monkeypatch)
+    _fake_roots(tmp_path, monkeypatch, with_jomini=False)
     research = tmp_path / "research"
     research.mkdir()
     authoritative = research / docs_mirror.MANIFEST_NAME
     old = b'{"old-authoritative": true}\n'
     authoritative.write_bytes(old)
     monkeypatch.setattr(config, "RESEARCH", research)
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", fake / "game"),))
     if failure == "partial_write":
         original = type(authoritative).write_text
 
@@ -411,8 +382,7 @@ def test_写入或替换失败不破坏旧清单且清理临时文件(tmp_path, 
 @pytest.mark.parametrize("available_but_empty", [False, True])
 def test_无可用输入或空目录不能覆盖权威清单(tmp_path, monkeypatch, available_but_empty) -> None:
     # Reach the empty-input guard with valid independent on-disk identity.
-    (tmp_path / "caligula_branch.txt").write_text(f"release/{active_version()}\n", encoding="utf-8")
-    monkeypatch.setattr(config, "ROOT", tmp_path)
+    configure_current_identity(tmp_path, monkeypatch)
     root = tmp_path / "game"
     if available_but_empty:
         root.mkdir()
@@ -421,7 +391,6 @@ def test_无可用输入或空目录不能覆盖权威清单(tmp_path, monkeypat
     authoritative = research / docs_mirror.MANIFEST_NAME
     authoritative.write_bytes(b"old\n")
     monkeypatch.setattr(config, "RESEARCH", research)
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", root), ("jomini", tmp_path / "absent")))
     with pytest.raises(ValueError, match="清单为空"):
         docs_mirror.write_manifest()
     assert authoritative.read_bytes() == b"old\n"
@@ -429,10 +398,7 @@ def test_无可用输入或空目录不能覆盖权威清单(tmp_path, monkeypat
 
 
 def test_可选内容根缺失不阻止有效游戏清单(tmp_path, monkeypatch) -> None:
-    fake = _fake_roots(tmp_path, monkeypatch)
+    _fake_roots(tmp_path, monkeypatch, with_jomini=False)
     monkeypatch.setattr(config, "RESEARCH", tmp_path / "research")
-    monkeypatch.setattr(
-        docs_mirror, "_ROOTS", (("game", fake / "game"), ("jomini", fake / "optional-absent"))
-    )
     path = docs_mirror.write_manifest()
     assert json.loads(path.read_text(encoding="utf-8"))["篇数"] == 1

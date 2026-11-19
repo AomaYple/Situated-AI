@@ -9,10 +9,19 @@ from typing import TYPE_CHECKING
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, config, distribution, version_contracts
+from pdx import (
+    ai_surface,
+    cli,
+    config,
+    distribution,
+    docs_mirror,
+    political_surface,
+    version_contracts,
+)
 from pdx.situated import r2_reader_authority
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -55,6 +64,30 @@ def test_live_command_rejects_unreviewed_build(installation: Path, arguments: li
     assert result.exit_code == cli.EXIT_USAGE, result.output
     assert "caligula_rev.txt" in result.output
     assert not config.OUT.exists()
+
+
+@pytest.mark.parametrize(
+    "read",
+    [
+        ai_surface.strategy_files,
+        ai_surface.read_cards,
+        ai_surface.read_defines,
+        ai_surface.build,
+        ai_surface.snapshot_section,
+        political_surface.strategy_files,
+        political_surface.read_strategies,
+        political_surface.read_default_strategy,
+        political_surface.build,
+        docs_mirror.iter_docs,
+        docs_mirror.build_manifest,
+    ],
+)
+def test_default_read_rejects_unreviewed_build(
+    installation: Path, read: Callable[[], object]
+) -> None:
+    (installation / "caligula_rev.txt").write_bytes(b"unreviewed")
+    with pytest.raises(ValueError, match=r"caligula_rev\.txt"):
+        read()
 
 
 @pytest.mark.parametrize(

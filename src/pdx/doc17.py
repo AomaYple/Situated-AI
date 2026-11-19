@@ -41,6 +41,7 @@ doc 17 就是那个时点：**25 张**表里有 24 张可以脚本化，而它�
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections import Counter
 from typing import TYPE_CHECKING
@@ -48,9 +49,11 @@ from typing import TYPE_CHECKING
 from . import config, version_contracts
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, norm_key
-from .extract import extract_dir
-from .model import Block
+from .extract import entry_fields, extract_dir
+from .model import Block, ParseError
+from .parser import parse_bytes
 from .usage import (
+    _entry_blocks,
     _iter_keyed_blocks,
     _rows,
     definition_rows,
@@ -61,8 +64,26 @@ from .usage import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
     from pathlib import Path
+
+    from .model import ParsedFile
+
+type SourceIdentity = tuple[str, int, str]
+
+# Their status is checked against the actual parse before their trees are omitted.
+FROZEN_PARTIAL_DNA_SHA256 = {
+    "dna_data/00_bal_gangadhar_tilak.txt": "d5343c8ea68128f67aa4e132a28377f0ec3c556ab488f1a6887a13667380762d",
+    "dna_data/00_iwasaki_yataro.txt": "b7af41c2e44945256383276e9afddbc59dfca3b37131f9d64598afa0161346b2",
+    "dna_data/00_mahatma_gandhi.txt": "19c47321d7cd1acc8e4cf2035e61c2c82a667c158cbc67134f6be40ea4b496f4",
+    "dna_data/00_rani_lakshmibai.txt": "893b707f635c48c76bcd8b2a38afd0e897100184df12de6c36eac6b486f95b75",
+    "dna_data/00_sarojni_naidu.txt": "228f994eea419a1d717581e5c08b1ca627acb0c95565738d4ab619139ccc23d4",
+    "dna_data/00_zhou_xuexi.txt": "6effdf338a405a1ce31afa527d873e99cee2da167e3fe58fa3f439a18eeff7dc",
+}
+
+
+def _current_observation() -> bool:
+    return version_contracts.active_version() == "1.15.1"
 
 
 # ────────────────────────── 口径 1：字段出现次数 ──────────────────────────
@@ -144,8 +165,12 @@ def _doc17_field_specs() -> list[KeyedTableSpec]:
     return [
         KeyedTableSpec(
             name=f"doc17 字段表{n} {d}",
-            header=header,
-            cells=_field_rows(d, col, within=within, zero_keys=zero),
+            header="| 字段 | 官方 `.md` | 完整 `.txt` 实测次数 | 说明 |"
+            if n == 1 and _current_observation()
+            else header,
+            cells=_dna_field_rows
+            if n == 1 and _current_observation()
+            else _field_rows(d, col, within=within, zero_keys=zero),
             occurrence=occ,
             append_new=False,
         )
@@ -539,6 +564,68 @@ def _overview_paths(dir_name: str) -> list[Path]:
     return sorted(p for p in base.rglob("*.txt") if p.is_file()) if base.is_dir() else []
 
 
+def _overview_sources(
+    name: str, identities: dict[str, SourceIdentity] | None = None
+) -> Iterator[tuple[Path, ParsedFile | None]]:
+    """Yield current complete ASTs and explicitly identified missing ASTs."""
+    current = _current_observation()
+    for path in _overview_paths(name):
+        relative = path.relative_to(config.GAME).as_posix()
+        frozen = FROZEN_PARTIAL_DNA_SHA256.get(relative.removeprefix("common/"))
+        if identities is not None or (current and frozen is not None):
+            raw = path.read_bytes()
+            digest = hashlib.sha256(raw).hexdigest()
+            parsed = parse_bytes(raw, str(path))
+            if identities is not None:
+                identities[f"game/{relative}"] = (digest, len(raw), parsed.parse_status)
+            if current and frozen is not None:
+                if digest != frozen or parsed.parse_status != "partial":
+                    raise ParseError(
+                        "doc17 DNA 来源 SHA-256 或部分解析状态不同于冻结原件", str(path)
+                    )
+                yield path, None
+                continue
+        else:
+            parsed = parse_cached(path)
+        if current:
+            parsed.require_complete()
+        yield path, parsed
+
+
+def _dna_occurrences(
+    identities: dict[str, SourceIdentity] | None = None,
+) -> tuple[Counter[int], Counter[str]]:
+    definitions: Counter[int] = Counter()
+    fields: Counter[str] = Counter()
+    for _, parsed in _overview_sources("dna_data", identities):
+        if parsed is None:
+            continue
+        blocks = _entry_blocks(parsed)
+        definitions[len(blocks)] += 1
+        for block in blocks:
+            fields.update(entry_fields(block))
+    return definitions, fields
+
+
+def _dna_field_rows(
+    identities: dict[str, SourceIdentity] | None = None,
+) -> list[tuple[str, dict[int, str]]]:
+    _, fields = _dna_occurrences(identities)
+    fields.setdefault("dna", 0)
+    return _rows(fields, 2)
+
+
+def dna_observation(statistic: str) -> int:
+    """Count only observations from complete DNA files."""
+    definitions, fields = _dna_occurrences()
+    return {
+        "definitions": sum(count * files for count, files in definitions.items()),
+        "empty_files": definitions[0],
+        "max_definitions_per_file": max(definitions, default=0),
+        "field_names": len(fields),
+    }[statistic]
+
+
 def _overview_counts() -> tuple[int, int]:
     """``(§0 的 .txt 数, 顶层定义键数)`` —— 一次遍历同时给出两个数。
 
@@ -548,42 +635,44 @@ def _overview_counts() -> tuple[int, int]:
     files = 0
     keys = 0
     for dir_name in OVERVIEW_DIRS:
-        paths = _overview_paths(dir_name)
-        files += len(paths)
-        for path in paths:
-            keys += sum(
-                1
-                for a in parse_cached(path).top_assignments
-                if not a.is_variable and isinstance(a.value, Block)
-            )
+        for _, parsed in _overview_sources(dir_name):
+            files += 1
+            if parsed is not None:
+                keys += len(_entry_blocks(parsed))
     return files, keys
 
 
-def _overview_table_rows() -> list[tuple[str, dict[int, str]]]:
+def _overview_table_rows(
+    identities: dict[str, SourceIdentity] | None = None,
+) -> list[tuple[str, dict[int, str]]]:
     """Own only the current overview's two mechanical columns."""
     result = []
     for name in OVERVIEW_DIRS:
-        paths = _overview_paths(name)
-        blocks = {
-            path: [
-                item.key
-                for item in parse_cached(path).top_assignments
-                if not item.is_variable and isinstance(item.value, Block)
+        blocks: dict[Path, list[str]] = {}
+        partial_count = 0
+        for path, parsed in _overview_sources(name, identities):
+            if parsed is None:
+                partial_count += 1
+                continue
+            blocks[path] = [
+                a.key
+                for a in parsed.top_assignments
+                if not a.is_variable and isinstance(a.value, Block)
             ]
-            for path in paths
-        }
-        files, keys = str(len(paths)), f"{sum(map(len, blocks.values())):,}"
+        files, keys = str(len(blocks) + partial_count), f"{sum(map(len, blocks.values())):,}"
         if name == "genes":
             keys = f"{len({key for values in blocks.values() for key in values})} 个块名（{keys} 处定义）"
         elif name == "technology":
             eras = [
                 path
-                for path in paths
+                for path in blocks
                 if path.is_relative_to(config.GAME / "common/technology/eras")
             ]
-            files = f"{len(paths) - len(eras)} + `eras/`{len(eras)}"
+            files = f"{len(blocks) - len(eras)} + `eras/`{len(eras)}"
             era_keys = sum(len(blocks[path]) for path in eras)
             keys = f"{sum(map(len, blocks.values())) - era_keys:,} + {era_keys}"
+        elif name == "dna_data" and _current_observation():
+            files += f"（{len(blocks)} 完整，{partial_count} 部分）"
         result.append((f"`{name}`", {2: files, 3: keys}))
     return result
 
@@ -816,7 +905,9 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             [
                 KeyedTableSpec(
                     name="doc17 §0 目录总览",
-                    header="| # | 目录 | .txt | 顶层定义键 |",
+                    header="| # | 目录 | .txt | 顶层定义键（完整文件） | 官方 `.md` | 一句话用途 |"
+                    if _current_observation()
+                    else "| # | 目录 | .txt | 顶层定义键 |",
                     cells=_overview_table_rows,
                     key_column=1,
                     append_new=False,

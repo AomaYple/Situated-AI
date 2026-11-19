@@ -55,6 +55,7 @@ from .doc16 import (
 from .doc17 import (
     block_item_count,
     block_prefix_count,
+    dna_observation,
     fallback_yes_count,
     field_occurrence,
     files_without_defs,
@@ -1040,6 +1041,7 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "doc17_field_occurrence": _doc17_field_occurrence,
     "doc17_files_without_defs": _doc17_files_without_defs,
     "doc17_dna_per_file": _doc17_dna_per_file,
+    "doc17_dna_observation": dna_observation,
     "within_field_count": _within_field_count,
     "stance_total": _stance_total,
     "flag_comment_braces": _flag_comment_braces,

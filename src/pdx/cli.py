@@ -80,6 +80,7 @@ from pdx import (
     lockfile,
     observe,
     political_surface,
+    research_catalog,
     situated,
     snapshot,
     tables_offline,
@@ -438,6 +439,16 @@ def input_inventory_cmd() -> None:
 
 @app.command("information-catalog")
 def information_catalog_cmd(
+    ctx: typer.Context,
+    raw_root: Annotated[
+        Path | None, typer.Option("--raw-root", help="规范研究模式的只读 raw 根")
+    ] = None,
+    epoch: Annotated[
+        str | None, typer.Option("--epoch", help="已提交 raw epoch 的 SHA-256")
+    ] = None,
+    output_dir: Annotated[
+        Path | None, typer.Option("--output-dir", help="研究结果的本机新目录")
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option("--output", help="能力目录 JSON 输出路径；默认写入 tools/out/game/"),
@@ -494,6 +505,33 @@ def information_catalog_cmd(
     运行时读取、行为质量和实机验证由用户在标准包上推进；本命令只登记静态能力，
     后续按权威实施计划逐步核对；静态登记不等于运行期行为通过。
     """
+
+    if any(value is not None for value in (raw_root, epoch, output_dir)):
+        if raw_root is None or epoch is None or output_dir is None:
+            _fail("规范研究模式须同时提供 --raw-root、--epoch 和 --output-dir")
+        localization_source = ctx.get_parameter_source("localization")
+        if (
+            any(
+                value is not None
+                for value in (
+                    output,
+                    localization_keys_output,
+                    consumer_matrix_output,
+                    candidate_metadata,
+                    candidate_coverage_output,
+                    candidate_dispositions_output,
+                )
+            )
+            or candidate_production
+            or (localization_source is not None and localization_source.name == "COMMANDLINE")
+        ):
+            _fail("规范研究模式不能混用现场目录、候选或本地化选项")
+        try:
+            marker = research_catalog.write(raw_root, epoch, output_dir)
+        except (OSError, ValueError) as exc:
+            _fail(f"规范研究构建失败：{exc}", EXIT_FAILED)
+        console.print(f"[green]规范研究目录已写入[/] {escape(str(marker.parent))}")
+        return
 
     if candidate_metadata is not None and candidate_production:
         console.print("[red]--candidate-metadata 与 --candidate-production 只能选一个[/]")
@@ -1396,7 +1434,10 @@ def tables_cmd(
 
 def _tables_offline(*, write: bool, only: str) -> None:
     """``v3 tables --offline``：只读快照与文档，不读游戏。"""
-    recorded = tables_offline.load_tables()
+    try:
+        recorded = tables_offline.load_tables(only=only)
+    except snapshot.SnapshotFormatError as exc:
+        _fail(str(exc), EXIT_FAILED)
     if not recorded:
         _fail(
             "快照里没有生成表记录（域 doc_tables）—— 在装有游戏的机器上跑 "
@@ -1438,7 +1479,7 @@ def _tables_offline(*, write: bool, only: str) -> None:
         console.print("[yellow]跑 `v3 tables --offline --write` 可按快照恢复[/]")
         raise typer.Exit(EXIT_FAILED)
 
-    covered = len(recorded) - len(orphans)
+    covered = sum(not only or only in key.partition("::")[0] for key in recorded) - len(orphans)
     console.print(f"[green]快照里记录的 {covered} 张生成表都与文档一致[/]")
     if missing:
         console.print(
@@ -2586,7 +2627,7 @@ def ai_surface_cmd(
 
     if check:
         try:
-            problem = ai_surface.check_doc(top=top, offline=offline)
+            problem = ai_surface.check_doc(game=config.GAME, top=top, offline=offline)
         except ai_surface.OfflineUnavailableError as exc:
             _fail(str(exc))
         if problem:
@@ -2604,13 +2645,13 @@ def ai_surface_cmd(
     if offline:
         cards, defines = ai_surface.read_offline()
     else:
-        cards = ai_surface.read_cards()
-        defines = ai_surface.read_defines()
+        cards = ai_surface.read_cards(config.GAME)
+        defines = ai_surface.read_defines(config.GAME)
     inputs = ai_surface.collect_inputs(cards)
 
     if write:
         try:
-            path = ai_surface.write_doc(top=top, offline=offline)
+            path = ai_surface.write_doc(game=config.GAME, top=top, offline=offline)
         except ai_surface.OfflineUnavailableError as exc:
             _fail(str(exc))
         console.print(
@@ -2668,22 +2709,22 @@ def political_surface_cmd(
     """
     _require_game()
     try:
-        strategies = political_surface.read_strategies()
-        default_strategy = political_surface.read_default_strategy()
+        strategies = political_surface.read_strategies(config.GAME)
+        default_strategy = political_surface.read_default_strategy(config.GAME)
     except (OSError, ValueError) as exc:
         _fail(f"原版政治策略无法读取：{exc}")
     if check:
-        problem = political_surface.check_doc()
+        problem = political_surface.check_doc(game=config.GAME)
         if problem:
             _fail(problem)
         console.print(f"[green]{escape(political_surface.DOC_REL)} 与生成结果一致 ✅[/]")
     if write:
-        path = political_surface.write_doc()
+        path = political_surface.write_doc(game=config.GAME)
         console.print(
             f"[green]已写入 {escape(str(path))}[/]：{len(strategies)} 张政治策略牌 + 默认层"
         )
     if json_path is not None:
-        path = political_surface.write_json(json_path)
+        path = political_surface.write_json(json_path, game=config.GAME)
         console.print(f"[green]已写入 {escape(str(path))}[/]")
     if write or check or json_path is not None:
         return

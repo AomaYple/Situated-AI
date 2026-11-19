@@ -36,11 +36,12 @@ doc 16 与 doc 17 是知识库里最大的两份手写文档（176 KB / 208 KB�
 from __future__ import annotations
 
 import re
+from hashlib import sha256
 from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import cache, config, docs_mirror
+from pdx import cache, config, doc17, docs_mirror
 from pdx.model import Block
 
 if TYPE_CHECKING:
@@ -86,12 +87,13 @@ def _txt_files(name: str) -> list[Path]:
     return sorted(p for p in d.rglob("*.txt") if p.is_file()) if d.is_dir() else []
 
 
-def _top_blocks(path: Path) -> int:
+def _top_blocks(path: Path, *, complete: bool) -> int:
     """顶层块的出现次数（doc 17 的口径）。"""
+    parsed = cache.parse_cached(path)
+    if complete:
+        parsed.require_complete()
     return sum(
-        1
-        for a in cache.parse_cached(path).top_assignments
-        if not a.is_variable and isinstance(a.value, Block)
+        1 for a in parsed.top_assignments if not a.is_variable and isinstance(a.value, Block)
     )
 
 
@@ -155,6 +157,7 @@ def test_doc17_总览表与实测一致() -> None:
     _require_game()
     lines = (config.DOCS / "17-角色科技与呈现.md").read_text(encoding="utf-8").splitlines()
     rows = _rows_after(lines, "| # | 目录 |")
+    complete = any("顶层定义键（完整文件）" in line for line in lines)
     assert len(rows) == 29, f"§0 应当是 29 行，实际 {len(rows)}"
 
     def intended(cell: str) -> int:
@@ -164,9 +167,22 @@ def test_doc17_总览表与实测一致() -> None:
     bad: list[str] = []
     for row in rows:
         name = row[1].strip("`").strip().rstrip("\\")
-        got_txt = len(_txt_files(name))
-        got_keys = sum(_top_blocks(p) for p in _txt_files(name))
-        want_txt, want_keys = intended(row[2]), intended(row[3])
+        paths = _txt_files(name)
+        got_txt = len(paths)
+        if complete and name == "dna_data":
+            partial = []
+            for path in paths:
+                parsed = cache.parse_cached(path)
+                if parsed.parse_status != "complete":
+                    raw = sha256(path.read_bytes()).hexdigest()
+                    relative = path.relative_to(COMMON).as_posix()
+                    assert parsed.parse_status == "partial"
+                    assert raw == doc17.FROZEN_PARTIAL_DNA_SHA256[relative]
+                    partial.append(path)
+            paths = [path for path in paths if path not in partial]
+            assert row[2] == f"{got_txt}（{len(paths)} 完整，{len(partial)} 部分）"
+        got_keys = sum(_top_blocks(p, complete=complete) for p in paths)
+        want_txt, want_keys = intended(row[2].split("（")[0]), intended(row[3])
         if want_txt != got_txt:
             bad.append(f"{name} .txt: 文档 {row[2]!r} = {want_txt} → 实测 {got_txt}")
         if want_keys != got_keys:
@@ -185,7 +201,10 @@ def test_doc17_头条与总览表同源() -> None:
     # 归属标记（``<!--claim:…-->``）会插在数字与量词之间，解析前先剥掉 ——
     # 它是给人看的绑定信息，不该影响正文的**文字**匹配。
     text = re.sub(r"<!--claim:[A-Za-z0-9_.]+-->", "", raw)
-    m = re.search(r"共 \*\*(\d[\d,]*) 个 \.txt 文件 / ([\d,]+) 个顶层定义键\*\*", text)
+    m = re.search(
+        r"共 \*\*(\d[\d,]*) 个 \.txt 文件 / (?:完整文件内观测到 )?([\d,]+) 个顶层定义键\*\*",
+        text,
+    )
     assert m, "找不到 doc 17 的头条声明 —— 措辞被改过？"
     head_txt = int(m.group(1).replace(",", ""))
     head_keys = int(m.group(2).replace(",", ""))
@@ -197,7 +216,7 @@ def test_doc17_头条与总览表同源() -> None:
         nums = [int(x.replace(",", "")) for x in re.findall(r"\d[\d,]*", cell)]
         return nums[-1] if "（" in cell and "处定义" in cell else sum(nums)
 
-    sum_txt = sum(intended(r[2]) for r in rows)
+    sum_txt = sum(intended(r[2].split("（")[0]) for r in rows)
     sum_keys = sum(intended(r[3]) for r in rows)
     assert (head_txt, head_keys) == (sum_txt, sum_keys), (
         f"头条写 {head_txt:,} .txt / {head_keys:,} 键，"

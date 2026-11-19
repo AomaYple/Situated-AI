@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from . import config
+from .model import Assignment, Scalar
 
 _REFERENCE_RE = re.compile(
     r"\b(?P<field>icon|sound|music|gfx|texture|mesh|font|asset|layout)\s*=\s*"
@@ -154,4 +155,138 @@ def scan_tree(root: Path) -> tuple[list[dict[str, object]], list[dict[str, objec
     return references, unresolved
 
 
-__all__ = ["ResourceReference", "scan_file", "scan_tree"]
+SCRIPT_SYMBOL_CATEGORIES = {
+    "script_values": "script_value",
+    "scripted_values": "script_value",
+    "scripted_triggers": "scripted_trigger",
+    "scripted_effects": "scripted_effect",
+}
+NUMERIC_FIELDS = frozenset(
+    {"value", "add", "subtract", "multiply", "divide", "min", "max", "base", "weight", "score"}
+)
+EXPRESSION_FIELDS = frozenset(
+    {
+        "value",
+        "base",
+        "add",
+        "subtract",
+        "multiply",
+        "divide",
+        "min",
+        "max",
+        "if",
+        "else_if",
+        "else",
+        "limit",
+        "always",
+        "exists",
+        "NOT",
+        "OR",
+        "AND",
+        "NOR",
+        "NAND",
+        "trigger",
+        "score",
+        "potential",
+    }
+)
+_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
+_EXPLICIT_REF = re.compile(r"(?:script(?:ed)?_value|scripted_trigger|scripted_effect):([\w$]+)")
+_PARAMETER = re.compile(r"\$[A-Za-z_0-9]+\$")
+
+
+def script_symbol_references(
+    item: Assignment | Scalar, names: set[str], parents: tuple[str, ...]
+) -> list[tuple[str, str, str, str | None]]:
+    """Return symbol, expression, syntax, requested kind; keep unknown explicit calls."""
+    result: list[tuple[str, str, str, str | None]] = []
+    if isinstance(item, Assignment):
+        if item.key in names and parents:
+            result.append((item.key, item.full_key, "assignment_key_call", None))
+        elif parents and item.key.endswith(("_scripted_trigger", "_scripted_effect")):
+            result.append((item.key, item.full_key, "unresolved_call_shaped_key", None))
+        value = item.value
+        if not isinstance(value, Scalar):
+            return result
+        expression = value.unquoted
+        numeric = item.key in NUMERIC_FIELDS
+        requested = SCRIPT_SYMBOL_CATEGORIES.get(
+            item.key, item.key if item.key.startswith("scripted_") else None
+        )
+    else:
+        expression = item.unquoted
+        numeric = bool(parents and parents[-1] in NUMERIC_FIELDS)
+        requested = None
+    quoted = (isinstance(item, Scalar) and item.quoted) or (
+        isinstance(item, Assignment) and isinstance(item.value, Scalar) and item.value.quoted
+    )
+    if quoted:
+        # A quoted token can be a localization/path/string mention. Preserve
+        # identifier-shaped names as observations, but never resolve them as
+        # executable calls, including explicit ``scripted_value:`` prefixes.
+        field_name = item.key if isinstance(item, Assignment) else (parents[-1] if parents else "")
+        symbolish_field = (
+            field_name in NUMERIC_FIELDS
+            or field_name in EXPRESSION_FIELDS
+            or field_name.startswith("scripted_")
+            or expression in names
+        )
+        if symbolish_field and (
+            _IDENTIFIER.fullmatch(expression) or _EXPLICIT_REF.fullmatch(expression)
+        ):
+            return [(expression, expression, "quoted_symbol_observation", requested)]
+        return result
+    explicit = list(_EXPLICIT_REF.finditer(expression))
+    if explicit:
+        for match in explicit:
+            prefix = match.group(0).split(":")[0]
+            kind = "script_value" if "value" in prefix else prefix
+            result.append((match.group(1), expression, "explicit_symbol_prefix", kind))
+        return result
+    if requested in {"scripted_value", "script_value", "scripted_trigger", "scripted_effect"}:
+        result.append(
+            (
+                expression,
+                expression,
+                "explicit_reference_field",
+                "script_value" if "value" in requested else requested,
+            )
+        )
+        return result
+    if _PARAMETER.search(expression):
+        result.append((expression, expression, "parameterized_reference", requested))
+        return result
+    words = _IDENTIFIER.findall(expression)
+    known = [word for word in words if word in names]
+    for word in dict.fromkeys(known):
+        syntax = (
+            "quoted_symbol_observation"
+            if (
+                (isinstance(item, Scalar) and item.quoted)
+                or (
+                    isinstance(item, Assignment)
+                    and isinstance(item.value, Scalar)
+                    and item.value.quoted
+                )
+            )
+            else "scalar_or_scope_chained_call"
+        )
+        result.append((word, expression, syntax, "script_value" if numeric else None))
+    if (
+        not known
+        and numeric
+        and re.fullmatch(r"[A-Za-z_][\w.:]*", expression)
+        and expression not in {"yes", "no"}
+    ):
+        result.append(
+            (
+                expression,
+                expression,
+                "unresolved_numeric_identifier_or_engine_getter",
+                "script_value",
+            )
+        )
+    return result
+
+
+__all__ = ["ResourceReference", "scan_file", "scan_tree", "script_symbol_references"]

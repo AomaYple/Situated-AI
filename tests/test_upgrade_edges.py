@@ -9,8 +9,10 @@ import sys
 import zipfile
 from collections import Counter
 from pathlib import Path
+from unittest.mock import create_autospec
 
 import pytest
+from conftest import configure_current_identity
 from hypothesis import given
 from hypothesis import strategies as st
 from packaging import markers
@@ -226,11 +228,11 @@ def test_deploy_rejects_existing_target_link(tmp_path):
 
 
 def test_normalized_mirror_retains_original_game_hash(tmp_path, monkeypatch):
+    configure_current_identity(tmp_path, monkeypatch)
     game = tmp_path / "game"
     game.mkdir()
     original = codecs.BOM_UTF8 + b"# game\r\n"
     (game / "doc.md").write_bytes(original)
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", game),))
     manifest = docs_mirror.build_manifest()
     entries = docs_mirror.entries(manifest)
     assert entries["game/doc.md"]["sha256"] == hashlib.sha256(original).hexdigest()
@@ -452,7 +454,11 @@ def test_table_cli_detects_repairs_and_preserves_prose(tmp_path, monkeypatch, of
     spec = TableSpec("sample", "| Name | Count |", lambda: rows)
     target = SimpleNamespace(name=doc.name, path=doc, specs=(spec,))
     monkeypatch.setattr(docgen, "targets", lambda: (target,))
-    monkeypatch.setattr(tables_offline, "load_tables", lambda: {"99-sample.md::sample": rows})
+    monkeypatch.setattr(
+        tables_offline,
+        "load_tables",
+        create_autospec(tables_offline.load_tables, return_value={"99-sample.md::sample": rows}),
+    )
     runner = CliRunner()
     args = ["tables", *(["--offline"] if offline else [])]
     before = doc.read_bytes()
@@ -492,7 +498,11 @@ def test_table_cli_missing_header_reports_prerequisite(tmp_path, monkeypatch, of
         docgen, "targets", lambda: (SimpleNamespace(name=doc.name, path=doc, specs=(spec,)),)
     )
     monkeypatch.setattr(
-        tables_offline, "load_tables", lambda: {"99-sample.md::sample": ["| alpha | 1 |"]}
+        tables_offline,
+        "load_tables",
+        create_autospec(
+            tables_offline.load_tables, return_value={"99-sample.md::sample": ["| alpha | 1 |"]}
+        ),
     )
     args = ["tables", *(["--offline"] if offline else []), *(["--write"] if write else [])]
     result = CliRunner().invoke(cli.app, args)
