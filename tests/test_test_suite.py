@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 from argparse import Namespace
@@ -13,61 +13,105 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from conftest import configure_current_identity
 
 from pdx import covgate, version_contracts
 from tools.ci import test_suite
 
 
-def test_profile_identity_records_verified_live_inputs_and_binary(tmp_path, monkeypatch):
-    from pdx import config
+@pytest.fixture
+def synthetic_profile_installation(tmp_path, monkeypatch):
     from pdx.situated import production_profile, r2_reader_authority
 
     installation = tmp_path / "installation"
-    shutil.copytree(production_profile.baseline_root(), installation)
-    shutil.copytree(r2_reader_authority.frozen_root(), installation, dirs_exist_ok=True)
+    configure_current_identity(installation, monkeypatch)
+    declaration = production_profile.declaration_path()
+    data, consumers = production_profile._load_declaration(declaration)
+    for relative in r2_reader_authority.source_hashes():
+        path = installation / relative
+        if not path.is_file():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"# synthetic reader input\n")
+    for consumer in consumers:
+        path = installation / consumer.source
+        *ancestors, field = (consumer.definition, *consumer.field)
+        lines = [f"{key} = {{" for key in ancestors]
+        lines.extend([""] * (consumer.baseline_line - len(lines) - 1))
+        lines.extend([f"{field} = {{}}", *("}" for _ in ancestors)])
+        path.write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+
+    for item in (*data["identity"], *data["input"]):
+        raw = (installation / item["path"]).read_bytes()
+        item["sha256"] = hashlib.sha256(raw).hexdigest()
+        if "value" in item:
+            item["value"] = raw.decode("utf-8").strip()
+    monkeypatch.setattr(production_profile, "_load_declaration", lambda _path: (data, consumers))
+    source_hashes = {
+        relative: hashlib.sha256((installation / relative).read_bytes()).hexdigest()
+        for relative in r2_reader_authority.source_hashes()
+    }
+    monkeypatch.setattr(r2_reader_authority, "CURRENT_SOURCE_SHA256", source_hashes)
+
     binary = installation / "binaries/victoria3.exe"
-    binary.write_bytes(b"identity only; not an engine scope proof")
-    monkeypatch.setattr(config, "ROOT", installation)
+    binary.write_bytes(b"synthetic executable identity")
+    return installation
+
+
+def test_profile_identity_records_verified_live_inputs_and_binary(
+    tmp_path, synthetic_profile_installation
+):
+    from pdx.situated import production_profile, r2_reader_authority
+
+    installation = synthetic_profile_installation
+    binary = installation / "binaries/victoria3.exe"
+    checksum = (installation / "binaries/checksum.txt").read_text(encoding="utf-8").strip()
     identity = test_suite.capture_game_identity(tmp_path, version_contracts.CURRENT_VERSION)
     assert identity["profile"] == version_contracts.CURRENT_VERSION
-    assert identity["checksum"] == "5bae45566db1e7b04a72a3a77db2fb14"
+    assert identity["checksum"] == checksum
     assert identity["version"]["caligula_branch"] == f"release/{version_contracts.CURRENT_VERSION}"
     assert identity["profile_source_hashes"] == dict(
         production_profile.load_profile(installation).source_hashes
     )
+    declaration = production_profile.declaration_path()
+    assert (
+        identity["profile_declaration_sha256"]
+        == hashlib.sha256(declaration.read_bytes()).hexdigest()
+    )
     assert identity["installation"] == str(installation.resolve())
-    assert identity["executable"]["bytes"] == binary.stat().st_size
+    assert identity["executable"] == {
+        "bytes": binary.stat().st_size,
+        "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+    }
     assert identity["verified"] is True
-    assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
+    assert identity["reader_authority"] == r2_reader_authority.verify_installation(installation)
     assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
 
 
-@pytest.mark.parametrize("broken", ["version", "checksum", "input", "missing_binary"])
-def test_profile_identity_fails_closed_and_preserves_failure(tmp_path, monkeypatch, broken):
-    from pdx import config
-    from pdx.situated import production_profile, r2_reader_authority
-
-    installation = tmp_path / "installation"
-    shutil.copytree(production_profile.baseline_root(), installation)
-    shutil.copytree(r2_reader_authority.frozen_root(), installation, dirs_exist_ok=True)
-    binary = installation / "binaries/victoria3.exe"
-    binary.write_bytes(b"identity only")
-    target = {
-        "version": installation / "caligula_branch.txt",
-        "checksum": installation / "binaries/checksum.txt",
-        "input": installation / "game/common/decrees/00_decree.txt",
-        "missing_binary": binary,
-    }[broken]
-    if broken == "missing_binary":
+@pytest.mark.parametrize(
+    ("relative", "diagnostic"),
+    [
+        ("caligula_branch.txt", "SHA-256 漂移"),
+        ("binaries/checksum.txt", "SHA-256 漂移"),
+        ("game/common/decrees/00_decree.txt", "SHA-256 漂移"),
+        ("game/common/ai_strategies/01_admin_strategies.txt", "source drift"),
+        ("binaries/victoria3.exe", "完整版本验收缺少实际游戏 EXE"),
+    ],
+)
+def test_profile_identity_fails_closed_and_preserves_failure(
+    tmp_path, synthetic_profile_installation, relative, diagnostic
+):
+    target = synthetic_profile_installation / relative
+    if target.suffix == ".exe":
         target.unlink()
     else:
         target.write_bytes(b"drift")
-    monkeypatch.setattr(config, "ROOT", installation)
-    with pytest.raises(ValueError, match="完整验收输入身份核对失败"):
+    with pytest.raises(ValueError, match=f"完整验收输入身份核对失败.*{diagnostic}"):
         test_suite.capture_game_identity(tmp_path, version_contracts.CURRENT_VERSION)
     report = json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8"))
     assert report["verified"] is False
-    assert report["error"]
+    assert diagnostic in report["error"]
+    if target.suffix != ".exe":
+        assert relative in report["error"]
 
 
 @pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.1", "", "unknown"])

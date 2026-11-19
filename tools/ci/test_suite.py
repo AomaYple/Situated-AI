@@ -95,16 +95,16 @@ def _capture_selected_game_identity(out: Path, profile: str) -> dict[str, Any]:
             identity["checksum"] = (
                 (installation / "binaries/checksum.txt").read_text(encoding="utf-8-sig").strip()
             )
-            loaded = production_profile.load_profile(installation)
-            production_profile.verify_baseline()
-            r2_reader_authority.verify_frozen()
+            declaration = production_profile.declaration_path()
+            declared_bytes = declaration.read_bytes()
+            loaded = production_profile.load_profile(installation, declaration)
             authority = r2_reader_authority.verify_installation(installation)
+            if declaration.read_bytes() != declared_bytes:
+                raise ValueError("完整验收期间生产声明发生变化")
             identity["reader_authority"] = authority
             identity["profile_source_hashes"] = dict(loaded.source_hashes)
             identity["build_id"] = loaded.build_id
-            identity["baseline_manifest_sha256"] = hashlib.sha256(
-                (production_profile.baseline_root() / "baseline-manifest.json").read_bytes()
-            ).hexdigest()
+            identity["profile_declaration_sha256"] = hashlib.sha256(declared_bytes).hexdigest()
             identity["verified"] = True
     except (ValueError, OSError) as exc:
         identity["error"] = str(exc)
