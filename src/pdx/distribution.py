@@ -221,6 +221,7 @@ def _validate_archive(
 
 def validate_package(archive_path: Path) -> dict[str, object]:
     """校验正式 ZIP，并拒绝任何偏离当前生产源的内容。"""
+    version_contracts.require_current()
     policy, extensions, internal_files = package_inputs(include_engineering_metadata=True)
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
