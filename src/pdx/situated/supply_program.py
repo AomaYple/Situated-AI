@@ -65,29 +65,36 @@ class NativeSupplyStance:
     """The three independently pinned preference activations."""
 
     good: str
-    body: str
+    body: str | None
     version: str = "1.15.1"
 
     def __post_init__(self) -> None:
-        if self.version not in {"1.15.1", version_contracts.CURRENT_VERSION} or hashlib.sha256(
-            self.body.encode()
-        ).hexdigest() != _NATIVE_STANCE_1151.get(self.good):
+        if (
+            self.version not in {"1.15.1", version_contracts.CURRENT_VERSION}
+            or self.good not in _NATIVE_STANCE_1151
+            or (self.body is not None and not self.matches(self.body))
+            or (self.version == "1.15.1" and self.body is None)
+        ):
             raise ValueError("供给立场原版身份漂移；只允许已锁三商品")
 
-    def compose(self, scarcity: str) -> str:
-        start, end = block_span(self.body, ("<anonymous>", "trigger"))
-        original = self.body[start:end]
-        # The complete original trigger body is the first AND, byte for byte.
-        # This extends this local planning preference's activation only; it is
-        # no permission to OR an arbitrary construction/trade execution gate.
+    def matches(self, body: str) -> bool:
+        return hashlib.sha256(body.encode()).hexdigest() == _NATIVE_STANCE_1151[self.good]
+
+    def compose(self, scarcity: str, *, body: str | None = None) -> str:
+        original_body = self.body if body is None else body
+        if original_body is None or not self.matches(original_body):
+            raise ValueError(f"供给合成原版立场精确字节漂移：{self.good}")
+        start, end = block_span(original_body, ("<anonymous>", "trigger"))
+        original = original_body[start:end]
+        # The first AND retains the complete original trigger.
         return (
-            self.body[:start]
+            original_body[:start]
             + "{ OR = { AND = "
             + original
             + " AND = { "
             + scarcity
             + " } } }"
-            + self.body[end:]
+            + original_body[end:]
         )
 
     def as_dict(self) -> dict[str, object]:
@@ -105,13 +112,19 @@ class NativeSupplyStance:
 
 
 def native_stances() -> tuple[NativeSupplyStance, ...]:
-    """Read the frozen lexical blocks proved identical in the current source.
-
-    Rendering independently compares each block to the exact production input.
-    """
+    """Declare current native identities without opening the game installation."""
     version = version_contracts.active_version()
-    if version not in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        raise ValueError("合成供给立场仅支持已锁原版版本")
+    if version == version_contracts.CURRENT_VERSION:
+        return tuple(
+            NativeSupplyStance(good, None, version) for good in sorted(_NATIVE_STANCE_1151)
+        )
+    return native_stances_1151()
+
+
+def native_stances_1151() -> tuple[NativeSupplyStance, ...]:
+    """Load the archived lexical blocks for historical validation."""
+    if version_contracts.active_version() != "1.15.1":
+        raise ValueError("合成供给立场仅支持精确1.15.1")
     path = Path(__file__).resolve().parents[3] / "research/vanilla-ai/1.15.1/native/game" / SOURCE
     raw = path.read_bytes()
     if hashlib.sha256(raw).hexdigest() != _NATIVE_1151_SHA256:
@@ -120,15 +133,8 @@ def native_stances() -> tuple[NativeSupplyStance, ...]:
     result = []
     for good in sorted(_NATIVE_STANCE_1151):
         start, end = block_span(text, ("ai_strategy_default", "goods_stances", good))
-        result.append(NativeSupplyStance(good, text[start:end], version))
+        result.append(NativeSupplyStance(good, text[start:end]))
     return tuple(result)
-
-
-def native_stances_1151() -> tuple[NativeSupplyStance, ...]:
-    """Retain the explicit historical validation entry."""
-    if version_contracts.active_version() != "1.15.1":
-        raise ValueError("合成供给立场仅支持精确1.15.1")
-    return native_stances()
 
 
 def _number(value: object) -> bool:
@@ -282,10 +288,10 @@ class SupplyProgram:
         start, end = block_span(self.action.render(), (self.good, "trigger"))
         return self.action.render()[start + 1 : end - 1]
 
-    def composed_body(self) -> str:
+    def composed_body(self, *, native_body: str | None = None) -> str:
         if self.native_stance is None:
             raise ValueError("追加程序没有原版立场合成体")
-        return self.native_stance.compose(self.scarcity_trigger())
+        return self.native_stance.compose(self.scarcity_trigger(), body=native_body)
 
     def as_dict(self) -> dict[str, object]:
         return {

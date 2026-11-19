@@ -961,9 +961,7 @@ def _supply_patch(
             start, end = supply_program.block_span(
                 text, ("ai_strategy_default", "goods_stances", good)
             )
-            if text[start:end] != program.native_stance.body:
-                raise ValueError(f"供给合成原版立场精确字节漂移：{good}")
-            replacements.append((start, end, program.composed_body()))
+            replacements.append((start, end, program.composed_body(native_body=text[start:end])))
         elif goods_stances.value.first(good) is not None:
             raise ValueError(f"商品供给计划不能覆写原版立场或引用未知商品：{good}")
     for start, end, replacement in sorted(replacements, reverse=True):

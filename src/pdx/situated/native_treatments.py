@@ -3013,12 +3013,13 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
                 start, end = supply_program.block_span(
                     native_text, ("ai_strategy_default", "goods_stances", good)
                 )
-                if len(original) != 1 or native_text[start:end] != stance.body:
+                native_body = native_text[start:end]
+                if len(original) != 1 or not stance.matches(native_body):
                     return {}
                 trigger_start, trigger_end = supply_program.block_span(
-                    stance.body, ("<anonymous>", "trigger")
+                    native_body, ("<anonymous>", "trigger")
                 )
-                native_trigger = stance.body[trigger_start:trigger_end]
+                native_trigger = native_body[trigger_start:trigger_end]
                 # Independent expected shape: exactly one value, complete native
                 # trigger as the first AND, and the independently scoped scarcity
                 # trigger as the second. Do not call the production compose/render.
