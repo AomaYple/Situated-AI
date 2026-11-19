@@ -83,6 +83,11 @@ def test_行动降低为有限原版消费者条件块():
         assert not parsed.errors
         assert _max_exclusive_writes(parsed.root) == 1
     assert all("is_ai = yes" in text for text in overlay.values())
+
+
+@pytest.mark.integration
+def test_原版默认策略可接入行动条件块():
+    overlay = strategy_overlay(load_model())
     patched = decisions.patch_default(
         decisions.baseline_path().read_text(encoding="utf-8"),
         decisions.load(),
@@ -355,8 +360,15 @@ def test_布尔状态保留真假未知且不接受原始数值冒充(raw, known
 
 def test_缺少当前生成原件时审计保留pending而不借历史完成状态(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         report = audit_report()
+    assert report.scope_status == "unverified"
+    assert report.native_coverage is None
+    assert (
+        report.receipts[0].input_hashes["baseline"]
+        == version_contracts.contract(version_contracts.CURRENT_VERSION).default_strategy_sha256
+    )
+    assert report.receipts[0].input_hashes["default_strategy_structure"]
     assert report.status == "incomplete"
     assert report.pending
     assert all(row.status == "pending" for row in report.rows)
