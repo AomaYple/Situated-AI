@@ -34,18 +34,16 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 import sys
 import sysconfig
 from pathlib import Path
 
 import pytest
-from conftest import NEEDS_GAME
+from conftest import NEEDS_GAME, configure_current_identity
 from typer.testing import CliRunner
 
 from pdx import cli, config, verify
-from pdx.situated import r2_reader_authority
 from pdx.version_contracts import CURRENT_VERSION
 
 pytestmark = pytest.mark.cli
@@ -214,12 +212,7 @@ def _crosscheck_fixture(
     """
     root = base / "game"
     (root / "gui").mkdir(parents=True)
-    shutil.copytree(
-        r2_reader_authority.frozen_root(CURRENT_VERSION),
-        base,
-        dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("game", r2_reader_authority.MANIFEST_NAME),
-    )
+    configure_current_identity(base, monkeypatch)
     (root / "gui" / "panel.gui").write_text(vanilla, encoding="utf-8")
 
     workshop = base / "workshop"
@@ -233,7 +226,6 @@ def _crosscheck_fixture(
     (userdir / "mod").mkdir()  # 本地 mod：空的
 
     monkeypatch.setattr(config, "GAME", root)
-    monkeypatch.setattr(config, "ROOT", base)
     monkeypatch.setattr(config, "WORKSHOP", workshop)
     monkeypatch.setattr(config, "LOCAL_MODS", userdir / "mod")
     monkeypatch.setattr(config, "USERDIR", userdir)
