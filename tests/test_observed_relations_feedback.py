@@ -1,9 +1,11 @@
 """Observed enacted institutions drive bounded feedback, never card eligibility."""
 
 import hashlib
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from conftest import NEEDS_GAME
 
 from pdx import config, decision_adapters, decisions
 from pdx.model import Assignment, Block, Scalar
@@ -16,6 +18,25 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.unit
 BALANCE = "economic_vs_government_spending_balance"
+SYNTHETIC_BASELINE = """\
+ai_strategy_default = {
+    diplomatic_play_neutrality = { value = 3 }
+    change_law_chance = { value = 2 }
+    economic_vs_government_spending_balance = {
+        value = -2
+        if = { limit = { always = yes } add = 1 }
+    }
+    recklessness = { value = 1 }
+    max_progressiveness = { value = 4 }
+    max_regressiveness = { value = 5 }
+    diplomatic_play_boldness = { value = 6 }
+    aggression = {
+        value = 7
+        if = { limit = { always = no } multiply = 0 }
+    }
+    diplomatic_play_support = { value = 8 }
+}
+"""
 
 
 @pytest.fixture(scope="module")
@@ -203,11 +224,24 @@ def _tree(item):
     return tuple(_tree(child) for child in item.items)
 
 
+def test_default_patch_preserves_fixture_tail_player_and_switches(model):
+    baseline = SYNTHETIC_BASELINE
+    policy = replace(
+        decisions.load(), baseline_sha256=hashlib.sha256(baseline.encode()).hexdigest()
+    )
+    _assert_default_patch(model, baseline, policy)
+
+
+@pytest.mark.integration
+@NEEDS_GAME
 def test_actual_default_patch_preserves_native_tail_player_and_switches(model):
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+    _assert_default_patch(model, decisions.baseline_text(), decisions.load())
+
+
+def _assert_default_patch(model, baseline: str, policy: decisions.Policy):
     overlay = compiler.strategy_overlay(model)
     profile = decisions.load_extensions(profile="release")
-    patched = decisions.patch_default(baseline, decisions.load(), profile, action_overlay=overlay)
+    patched = decisions.patch_default(baseline, policy, profile, action_overlay=overlay)
     parsed = parse_text(patched)
     assert not parsed.errors
     values, engine = _inputs({"current_public_schools": True, "schools_present": True})
@@ -219,7 +253,7 @@ def test_actual_default_patch_preserves_native_tail_player_and_switches(model):
     assert isinstance(actual.value, Block)
     # Compare the same extension profile so unrelated release additions are
     # part of the protected tail, rather than accidentally treated as vanilla.
-    without_actions = decisions.patch_default(baseline, decisions.load(), profile)
+    without_actions = decisions.patch_default(baseline, policy, profile)
     original = parse_text(without_actions).root.first("ai_strategy_default")
     assert original is not None
     assert isinstance(original.value, Block)
@@ -235,10 +269,17 @@ def test_actual_default_patch_preserves_native_tail_player_and_switches(model):
         pdx_eval.select(overlay[BALANCE], {"ROOT": {**engine, "is_ai": False}}).fallback
         == "vanilla"
     )
-    assert compiler.strategy_overlay(model, enabled_consumer_fields=set()) == {}
+    disabled = compiler.strategy_overlay(model, enabled_consumer_fields=set())
+    assert disabled == {}
+    assert compiler.evaluate_actions(model, values, is_ai=True, enabled_consumer_fields=set()) == {}
+    assert (
+        decisions.patch_default(baseline, policy, profile, action_overlay=disabled)
+        == without_actions
+    )
 
 
 @pytest.mark.integration
+@NEEDS_GAME
 def test_observed_school_readers_match_locked_real_law_and_root_scope(model):
     adapters = decision_adapters.load()
     readers = {

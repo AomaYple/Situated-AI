@@ -1,6 +1,7 @@
 """K4 关系降低与局部联动的反例。"""
 
 from dataclasses import replace
+from hashlib import sha256
 
 import pytest
 
@@ -17,7 +18,8 @@ pytestmark = pytest.mark.unit
 def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
     model = load_model()
     overlay = strategy_overlay(model)
-    text = overlay["economic_vs_government_spending_balance"]
+    field = "economic_vs_government_spending_balance"
+    text = overlay[field]
     assert "# ACTION industrial_foundation" in text
     assert "# ACTION education_and_research" in text
     # 互补项以行动内部的条件增量出现，不能成为主行动的硬资格门。
@@ -61,12 +63,11 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
         assert result.action_id == "joint_economic_balance"
         assert result.operation == "add"
         assert result.delta == pytest.approx(expected)
-    patched = decisions.patch_default(
-        decisions.baseline_path().read_text(encoding="utf-8"),
-        decisions.load(),
-        decisions.load_extensions(profile="release"),
-        action_overlay=overlay,
+    baseline = f"ai_strategy_default = {{ {field} = {{ value = 1 }} }}\n"
+    policy = replace(
+        decisions.load(), enabled=False, baseline_sha256=sha256(baseline.encode()).hexdigest()
     )
+    patched = decisions.patch_default(baseline, policy, action_overlay={field: text})
     assert not parse_text(patched).errors
 
 

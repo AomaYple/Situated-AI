@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from conftest import NEEDS_GAME
 
 from pdx import config, decisions, version_contracts
 from pdx.model import Block
@@ -121,6 +122,8 @@ def test_actual_observed_school_feedback_role(
     )
 
 
+@pytest.mark.integration
+@NEEDS_GAME
 def test_actual_observed_feedback_disabled_role(candidate, architecture_witness):
     model, _actual, _raw = candidate
     values, _engine = _observations(True)
@@ -128,7 +131,7 @@ def test_actual_observed_feedback_disabled_role(candidate, architecture_witness)
     overlay = compiler.strategy_overlay(model, enabled_consumer_fields=set())
     assert reference == {}
     assert overlay == {}
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+    baseline = decisions.baseline_text()
     profile = decisions.load_extensions(profile="release")
     patched = decisions.patch_default(baseline, decisions.load(), profile, action_overlay=overlay)
     without = decisions.patch_default(baseline, decisions.load(), profile)
@@ -167,9 +170,11 @@ def test_actual_observed_feedback_player_role(candidate, architecture_witness):
     )
 
 
+@pytest.mark.integration
+@NEEDS_GAME
 def test_actual_observed_feedback_native_tail_role(candidate, architecture_witness):
     model, _actual, raw = candidate
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+    baseline = decisions.baseline_text()
     profile = decisions.load_extensions(profile="release")
     plain = baseline
     overlay = compiler.strategy_overlay(model)
