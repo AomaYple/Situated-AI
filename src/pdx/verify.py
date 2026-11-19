@@ -90,7 +90,7 @@ from .usage import (
     file_definition_counts,
     file_line_count,
 )
-from .version_contracts import active_version
+from .version_contracts import CURRENT_VERSION, active_version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -2988,9 +2988,14 @@ HISTORICAL_CLAIMS = CLAIMS
 
 def claims_for_version(version: str | None = None) -> list[Claim]:
     """The full registry for one native version; historical checks retain their meaning."""
-    if active_version(version) == "1.14.5":
+    selected = active_version(version)
+    if selected == "1.14.5":
         return HISTORICAL_CLAIMS
-    if active_version(version) == "1.15.1":
+    if selected == CURRENT_VERSION:
+        from .verify_claims_1152 import CLAIMS as CLAIMS_1152  # noqa: PLC0415
+
+        return CLAIMS_1152
+    if selected == "1.15.1":
         from .verify_claims_1151 import CLAIMS as CLAIMS_1151  # noqa: PLC0415
 
         return CLAIMS_1151
@@ -3134,6 +3139,7 @@ def fix_claims(
         "1.14.5": "verify.py",
         "1.15.0": "verify_claims_115.py",
         "1.15.1": "verify_claims_1151.py",
+        "1.15.2": "verify_claims_1152.py",
     }[active_version()]
     path = source or (config.REPO / "src" / "pdx" / filename)
     text = path.read_text(encoding="utf-8")

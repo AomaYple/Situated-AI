@@ -46,7 +46,7 @@ from typing import TYPE_CHECKING
 from . import config, docs_mirror, scan
 from .doc_tables import KeyedTableSpec, TableMalformedError, TableSpec, split_row
 from .scan import stats_for
-from .version_contracts import active_version
+from .version_contracts import CURRENT_VERSION, active_version, verify_installation_identity
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -303,7 +303,7 @@ def _map_document_count() -> int:
 
 
 def current_doc08_narrative_tables(recorded: dict[str, list[str]]) -> dict[str, list[str]]:
-    """Derive current prose from frozen metadata; never edit the captured snapshot."""
+    """Restore the 1.15.1 narrative from its frozen table metadata."""
     out = {key: list(rows) for key, rows in recorded.items()}
     if active_version() != "1.15.1":
         return out
@@ -376,7 +376,6 @@ def _spec_version_fingerprint() -> KeyedTableSpec:
     只更新这四行：其余行（ROOT / GAME / 用户数据 / Workshop 路径）是环境事实，
     换台机器本来就该不同，不属于这个口径。
     """
-    version = config.game_version()
     keys = {
         "caligula 分支": "caligula_branch",
         "caligula 修订": "caligula_rev",
@@ -386,17 +385,22 @@ def _spec_version_fingerprint() -> KeyedTableSpec:
 
     def cells() -> list[tuple[str, dict[int, str]]]:
         _require(config.ROOT.is_dir(), "游戏安装根目录")
+        selected = active_version()
+        if selected == CURRENT_VERSION:
+            try:
+                verify_installation_identity(config.ROOT)
+            except ValueError as exc:
+                raise TableMalformedError(str(exc)) from exc
+        version = config.game_version()
         rows = [
             (label, {1: f"`{version[key]}`"}) for label, key in keys.items() if version.get(key)
         ]
-        if active_version() == "1.15.1":
-            if (
-                version.get("caligula_branch") != "release/1.15.1"
-                or version.get("clausewitz_branch") != "caligula/release/1.15.1"
-            ):
-                raise TableMalformedError(
-                    "doc08 installed branches do not match the current contract"
-                )
+        if selected == "1.15.1" and (
+            version.get("caligula_branch") != "release/1.15.1"
+            or version.get("clausewitz_branch") != "caligula/release/1.15.1"
+        ):
+            raise TableMalformedError("doc08 installed branches do not match the 1.15.1 record")
+        if selected in {"1.15.1", CURRENT_VERSION}:
             rows.append(("游戏版本", _doc08_narrative_cells(0, 1)["游戏版本"]))
         return rows
 
@@ -506,7 +510,7 @@ def _spec_dir_table(
         result = []
         for row in rows_of(base):
             values = {idx: fmt(row) for idx, fmt in columns.items()}
-            if active_version() == "1.15.1":
+            if active_version() in {"1.15.1", CURRENT_VERSION}:
                 if name == "doc08 localization 语言目录" and row.name == "english":
                     values.update(_doc08_narrative_cells(row.direct_files, 1)["english"])
                 elif name == "doc08 gfx 子目录" and row.name == "map":
