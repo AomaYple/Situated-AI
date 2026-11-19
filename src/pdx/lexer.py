@@ -129,6 +129,7 @@ class Token:
     value: str
     line: int
     col: int
+    terminated: bool = True
 
     def __repr__(self) -> str:  # pragma: no cover - 调试用
         return f"Token({self.kind}, {self.value!r}, {self.line}:{self.col})"
@@ -210,7 +211,7 @@ def tokenize(text: str, comments: list[tuple[int, str]] | None = None) -> list[T
             if text.find("\n", start, end) >= 0:
                 line += text.count("\n", start, end)
                 line_start = text.rfind("\n", start, end) + 1
-            append(Token(STRING, text[start:end], token_line, col))
+            append(Token(STRING, text[start:end], token_line, col, match.group("quote") == '"'))
         elif index == _G_LBRACE:
             append(Token(LBRACE, "{", line, col))
         elif index == _G_RBRACE:

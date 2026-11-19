@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 from . import ai_surface, config, political_surface, version_contracts
 from .cache import parse_cached
 from .localization import SUFFIXES, parse_loc_entries_with_lines
-from .model import Block
+from .model import Block, ParseError
 from .scan import FileEntry, walk_files
 
 if TYPE_CHECKING:
@@ -295,13 +295,15 @@ def _script_items(
                 )
             )
             continue
-        if parsed.errors:
+        try:
+            parsed.require_complete()
+        except ParseError as exc:
             items.append(
                 _unsupported_script_item(
                     domain=domain,
                     source=source,
                     digest=digest,
-                    reason="解析器报告错误：" + "；".join(parsed.errors),
+                    reason="解析器报告错误：" + ("；".join(parsed.errors) or exc.detail),
                 )
             )
             # 解析器可能仍返回部分 AST。部分树不能冒充完整发现，避免把

@@ -106,13 +106,29 @@ def require_current(version: str | None = None) -> str:
     return CURRENT_VERSION
 
 
-def verify_installation_identity(root: Path) -> None:
-    """Check the current install's build files and platform-neutral launcher identity."""
+@dataclass(frozen=True, slots=True)
+class VerifiedIdentitySource:
+    path: str
+    size: int
+    sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedInstallation:
+    root: Path
+    root_identity: tuple[int, int]
+    sources: tuple[VerifiedIdentitySource, ...]
+
+
+def verify_installation_identity(root: Path) -> VerifiedInstallation:
+    """Check the current install and return the specific root and source bytes checked."""
     version = require_current()
     try:
         root = root.resolve(strict=True)
+        root_identity = root.lstat()
     except OSError as exc:
         raise ValueError(f"缺少或无法读取 {version} 原版安装根：{root}") from exc
+    sources = []
     for relative, expected in INSTALLATION_IDENTITY_SHA256.items():
         path = root / relative
         try:
@@ -121,6 +137,7 @@ def verify_installation_identity(root: Path) -> None:
             raw = path.read_bytes()
         except OSError as exc:
             raise ValueError(f"缺少或无法读取 {version} 原版身份文件：{relative}") from exc
+        digest = hashlib.sha256(raw).hexdigest()
         if relative == _LAUNCHER_SETTINGS:
             try:
                 launcher = json.loads(raw.decode("utf-8-sig"), object_pairs_hook=_unique_fields)
@@ -134,9 +151,17 @@ def verify_installation_identity(root: Path) -> None:
                 and display_version.partition(" ")[0] == version
             )
         else:
-            matches = hashlib.sha256(raw).hexdigest() == expected
+            matches = digest == expected
         if not matches:
             raise ValueError(f"原版安装与锁定版本 {version} 的构建身份不符：{relative}")
+        sources.append(VerifiedIdentitySource(relative, len(raw), digest))
+    try:
+        current_root = root.lstat()
+    except OSError as exc:
+        raise ValueError("原版安装根在核对身份期间变更") from exc
+    if not os.path.samestat(root_identity, current_root):
+        raise ValueError("原版安装根在核对身份期间变更")
+    return VerifiedInstallation(root, (root_identity.st_dev, root_identity.st_ino), tuple(sources))
 
 
 def _unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
