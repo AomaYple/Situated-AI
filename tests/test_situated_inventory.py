@@ -30,7 +30,7 @@ def offline_inventory(tmp_path_factory: pytest.TempPathFactory) -> inventory.Sur
 
 @pytest.mark.integration
 def test_k0_inventory_has_stable_scope_and_verified_production_witnesses() -> None:
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         first = inventory.discover()
         second = inventory.discover()
     assert first.scope_hash == second.scope_hash
@@ -100,7 +100,7 @@ def test_k0_invalid_alternate_baseline_keeps_strict_model_validation(tmp_path) -
 
 def test_current_inventory_keeps_failed_generation_pending(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         result = inventory.discover()
     assert result.status_counts == {"pending": result.discovered_count}
     assert all(surface.evidence_state != "production_witnessed" for surface in result.surfaces)
@@ -109,7 +109,7 @@ def test_current_inventory_keeps_failed_generation_pending(monkeypatch, tmp_path
 def test_historical_inventory_cannot_borrow_current_mod_tree(monkeypatch, tmp_path):
     # This is the actual current tree, not invented historical evidence.
     metadata = json.loads((config.REPO / "mod/.metadata/metadata.json").read_text(encoding="utf-8"))
-    assert metadata["supported_game_version"] == "1.15.1"
+    assert metadata["supported_game_version"] == version_contracts.CURRENT_VERSION
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
     with version_contracts.select_version("1.14.5"):
         result = inventory.discover()

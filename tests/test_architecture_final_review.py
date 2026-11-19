@@ -194,6 +194,8 @@ def _r2_rows(candidate, disabled):
     Unknown is a static lowering variant with one unavailable required reader;
     it is explicitly distinguished from the canonical production candidate.
     """
+    version = version_contracts.CURRENT_VERSION
+    network_source = network_profile.source_path(version).relative_to(config.REPO).as_posix()
     disabled_metadata = json.loads(disabled[".metadata/metadata.json"])
     assert disabled_metadata["configuration"] == ProfileConfiguration(core=False).identity()
     profile = production_profile.load_profile(production_profile.baseline_root())
@@ -221,8 +223,8 @@ def _r2_rows(candidate, disabled):
         assert isinstance(actual.value, Block)
         assert (decisions.product_path() / source).read_bytes() == candidate["files"][source]
         marker = re.compile(
-            rf"\n\t# SITAI POLICY 1\.15\.1 BEGIN {re.escape(ident)}\n"
-            rf"(?P<body>[\s\S]*?)\t# SITAI POLICY 1\.15\.1 END {re.escape(ident)}\n"
+            rf"\n\t# SITAI POLICY {re.escape(version)} BEGIN {re.escape(ident)}\n"
+            rf"(?P<body>[\s\S]*?)\t# SITAI POLICY {re.escape(version)} END {re.escape(ident)}\n"
         )
         matches = list(marker.finditer(content))
         assert len(matches) == 1
@@ -379,7 +381,7 @@ def _r2_rows(candidate, disabled):
                 "case_id": f"r2.{ident}.{role}",
                 "role": role,
                 "input": {
-                    "contract_version": "1.15.1",
+                    "contract_version": version,
                     "facts": facts,
                     "mode": "static_unavailable_reader_specialization"
                     if role == "unknown"
@@ -410,7 +412,7 @@ def _r2_rows(candidate, disabled):
                 "reference": reference,
                 "generated": generated,
                 "production": [
-                    "mod/decisions/action_network_1151.toml",
+                    network_source,
                     "src/pdx/situated/network_profile.py",
                     "src/pdx/situated/action_network.py",
                 ],
@@ -505,7 +507,7 @@ def final_disabled(final_candidate):
             diplomacy_enabled=False,
         ),
         configuration=ProfileConfiguration(core=False)
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() == version_contracts.CURRENT_VERSION
         else None,
     )
 
@@ -542,10 +544,8 @@ def final_supply(final_candidate, final_disabled):
     assert state == "found"
     assert disabled_map is not None
     assert supply_ast(disabled_map.value) == supply_ast(original_map.value)
-    assert (
-        len(originals)
-        == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 21}[version_contracts.active_version()]
-    )
+    version = version_contracts.active_version()
+    assert len(originals) == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 21, "1.15.2": 21}[version]
     actual_map, status = _resolve(current, "ai_strategy_default", "goods_stances")
     assert status == "found"
     assert actual_map is not None
@@ -553,9 +553,7 @@ def final_supply(final_candidate, final_disabled):
     actual_nodes = list(actual_map.value.assignments())
     assert len(actual_nodes) == len({item.key for item in actual_nodes})
     assert {item.key for item in actual_nodes} == set(originals) | set(SUPPLY_GOODS)
-    merged = (
-        {"oil", "radios", "telephones"} if version_contracts.active_version() == "1.15.1" else set()
-    )
+    merged = {"oil", "radios", "telephones"} if version in {"1.15.1", "1.15.2"} else set()
     assert set(originals) & set(SUPPLY_GOODS) == merged
     actual_originals = {}
     for original_node in original_map.value.assignments():
@@ -928,10 +926,9 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     for good in SUPPLY_GOODS:
         for case in _supply_rows(final_supply, good):
             record(**case)
-    current_r2 = version_contracts.active_version() == "1.15.1"
-    expected_legacy = {"1.14.5": 927, "1.15.0": 937, "1.15.1": 936}[
-        version_contracts.active_version()
-    ]
+    version = version_contracts.active_version()
+    current_r2 = version == version_contracts.CURRENT_VERSION
+    expected_legacy = {"1.14.5": 927, "1.15.0": 937, "1.15.1": 936, "1.15.2": 936}[version]
     r2_identities: set[tuple[str, str, str]] = set()
     if current_r2:
         with decision_rules.SOURCE.open("rb") as handle:
