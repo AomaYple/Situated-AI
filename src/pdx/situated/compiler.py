@@ -89,10 +89,19 @@ SUPPORTING_SOURCES = (
 
 
 def baseline_path() -> Path:
-    """The full default strategy of the selected native version."""
+    """Locate the full default strategy of the selected native version."""
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return config.GAME / version_contracts.DEFAULT_STRATEGY_SOURCE
     if version_contracts.is_115():
         return version_contracts.research_path("vanilla-ai", "00_default_strategy.txt")
     return BASELINE
+
+
+def baseline_text() -> str:
+    """Use the verified installation when the current source is required."""
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return version_contracts.read_default_strategy(config.GAME)
+    return baseline_path().read_text(encoding="utf-8")
 
 
 def support_evaluation_context() -> decision_ir.EvaluationContext:
@@ -1722,13 +1731,11 @@ def load_model(
         if missing:
             raise ValueError(f"行动 {action.id} 引用了未知事实：{missing}")
         _validate_action_costs(action, {item.id: item for item in facts})
-    baseline_text = (
-        baseline if baseline is not None else baseline_path().read_text(encoding="utf-8")
-    )
-    parsed = parse_text(baseline_text)
+    source_text = baseline if baseline is not None else baseline_text()
+    parsed = parse_text(source_text)
     if parsed.errors:
         raise ValueError("默认策略底本无法解析")
-    available = set(re.findall(r"^\s*([a-z][a-z0-9_]*)\s*=\s*\{", baseline_text, re.MULTILINE))
+    available = set(re.findall(r"^\s*([a-z][a-z0-9_]*)\s*=\s*\{", source_text, re.MULTILINE))
     missing = [consumer.field for consumer in consumers if consumer.field not in available]
     if baseline is None and missing:
         raise ValueError(f"消费者字段不在默认策略底本：{missing[0]}")
@@ -1742,7 +1749,7 @@ def load_model(
         consumer_fields={item.id: item.field for item in consumers},
         consumer_contracts={item.id: item for item in consumers},
     )
-    observed_contexts = evaluation_contexts(baseline_text)
+    observed_contexts = evaluation_contexts(source_text)
     observed_contexts.update(_frozen_strategy_contexts())
     observed_contexts.update(_frozen_institution_contexts(observed_contexts["institution_scores"]))
     observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))

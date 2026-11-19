@@ -17,12 +17,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .model import Block, Scalar
+from .textio import normalized_text
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 ENVIRONMENT_VARIABLE = "V3_CONTRACT_PROFILE"
 CURRENT_VERSION = "1.15.2"
+DEFAULT_STRATEGY_SOURCE = "common/ai_strategies/00_default_strategy.txt"
 _LAUNCHER_SETTINGS = "launcher/launcher-settings.json"
 INSTALLATION_IDENTITY_SHA256 = {
     "binaries/checksum.txt": "2a8c3667c01597df3ec941c9c012f5b9e2f00a776a6fd9729c171d135422d344",
@@ -173,6 +175,25 @@ def verify_installation_identity(root: Path) -> VerifiedInstallation:
     if not os.path.samestat(root_identity, current_root):
         raise ValueError("原版安装根在核对身份期间变更")
     return VerifiedInstallation(root, (root_identity.st_dev, root_identity.st_ino), tuple(sources))
+
+
+def read_default_strategy(game: Path) -> str:
+    """Read the current source in place and validate raw and normalized identities."""
+    require_current()
+    selected = contract()
+    path = game / DEFAULT_STRATEGY_SOURCE
+    try:
+        if path.is_symlink() or path.resolve(strict=True) != path.absolute():
+            raise ValueError(f"原版默认策略路径含链接：{path}")
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"缺少或无法读取锁定原版默认策略：{path}") from exc
+    if hashlib.sha256(raw).hexdigest() != selected.default_strategy_sha256:
+        raise ValueError(f"当前原版默认策略原始字节漂移：{path}")
+    text = normalized_text(raw.decode("utf-8-sig"))
+    if hashlib.sha256(text.encode("utf-8")).hexdigest() != selected.baseline_strategy_sha256:
+        raise ValueError(f"当前原版默认策略归一化摘要漂移：{path}")
+    return text
 
 
 def _unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:

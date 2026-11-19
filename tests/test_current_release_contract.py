@@ -1,5 +1,7 @@
 """Current Victoria 3 build selection and installed identity."""
 
+from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -125,3 +127,32 @@ def test_current_package_rejects_drift_and_preserves_previous_package(
     with pytest.raises(ValueError, match="生产源码或产物与冻结记录不一致"):
         distribution.package(package)
     assert package.read_bytes() == b"previous package"
+
+
+@pytest.mark.parametrize("damage", [None, "normalized-only-match", "different-content"])
+def test_current_default_strategy_accepts_only_pinned_raw_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, damage: str | None
+) -> None:
+    game = tmp_path / "game"
+    original = game / "common/ai_strategies/00_default_strategy.txt"
+    original.parent.mkdir(parents=True)
+    normalized = b"example = { always = yes }\n"
+    raw = b"\xef\xbb\xbf" + normalized.replace(b"\n", b"\r\n")
+    original.write_bytes(raw)
+    current = version_contracts.contract()
+    monkeypatch.setitem(
+        version_contracts.VERSION_SPECS,
+        current.version,
+        replace(
+            current,
+            default_strategy_sha256=sha256(raw).hexdigest(),
+            baseline_strategy_sha256=sha256(normalized).hexdigest(),
+        ),
+    )
+    if damage is None:
+        assert version_contracts.read_default_strategy(game) == normalized.decode()
+    else:
+        broken = normalized if damage == "normalized-only-match" else b"other"
+        original.write_bytes(broken)
+        with pytest.raises(ValueError, match="默认策略原始字节"):
+            version_contracts.read_default_strategy(game)

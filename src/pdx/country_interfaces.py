@@ -20,6 +20,7 @@ from .textio import normalized_text
 
 EVIDENCE = config.REPO / "research/vanilla-ai/1.14.5/country-interfaces.json"
 BASELINE = EVIDENCE.parent / "00_default_strategy.txt"
+EVIDENCE_1152_SHA256 = "2f7b0bd819b22469049fde5028509ec11ddf0db67904b4de34bafccf22722da2"
 EVIDENCE_1151_SHA256 = "2ac5941ca97be50f09220f3ac3765262aa5e7472b5434539d7658fae04b70ebb"
 EVIDENCE_115_SHA256 = "c2e1eec0205efaa2e4c04ff770db418a4d7bd5ebe2649301eabca3e9a861e006"
 
@@ -151,16 +152,30 @@ def _ast_context(raw, relative, token, line):
     return result
 
 
-def extract(policy, root, sections):
-    """从真实原版建立有限样例，不改写既有快照或原版镜像。"""
-    root = Path(root)
-    baseline = root / "common/ai_strategies/00_default_strategy.txt"
+def _baseline_sha256() -> str:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return version_contracts.contract().baseline_strategy_sha256
+    return hashlib.sha256(baseline_path().read_bytes()).hexdigest()
+
+
+def _verify_baseline(root: Path) -> None:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        version_contracts.read_default_strategy(root)
+        return
     try:
-        baseline_text = baseline.read_text(encoding="utf-8-sig")
+        baseline_text = (root / version_contracts.DEFAULT_STRATEGY_SOURCE).read_text(
+            encoding="utf-8-sig"
+        )
     except FileNotFoundError as exc:
         raise ValueError("缺少锁定游戏原件") from exc
     if normalized_text(baseline_text) != baseline_path().read_text(encoding="utf-8"):
         raise ValueError("国家接口底本漂移")
+
+
+def extract(policy, root, sections):
+    """从真实原版建立有限样例，不改写既有快照或原版镜像。"""
+    root = Path(root)
+    _verify_baseline(root)
     required, arguments = _required(policy), _arguments(policy)
     found: dict[str, dict[str, Any]] = {}
     args: dict[tuple[str, str], dict[str, Any]] = {}
@@ -193,7 +208,7 @@ def extract(policy, root, sections):
     result = {
         "schema": 1,
         "evidence": "static_vanilla_examples_not_engine_execution",
-        "baseline_sha256": hashlib.sha256(baseline_path().read_bytes()).hexdigest(),
+        "baseline_sha256": _baseline_sha256(),
         "snapshot_sections_sha256": _digest(sections),
         "sources": sources,
         "interfaces": found,
@@ -243,18 +258,19 @@ def extract(policy, root, sections):
 def validate(policy, *, root=None, snapshot=None, evidence_path=None):
     selected_path = evidence_file() if evidence_path is None else Path(evidence_path)
     raw = selected_path.read_bytes()
-    if version_contracts.is_115() and hashlib.sha256(raw).hexdigest() != (
-        EVIDENCE_1151_SHA256
-        if version_contracts.active_version() == "1.15.1"
-        else EVIDENCE_115_SHA256
-    ):
-        raise ValueError("国家接口当前权威证据漂移")
+    if version_contracts.is_115():
+        expected = {
+            "1.15.0": EVIDENCE_115_SHA256,
+            "1.15.1": EVIDENCE_1151_SHA256,
+            version_contracts.CURRENT_VERSION: EVIDENCE_1152_SHA256,
+        }[version_contracts.active_version()]
+        if hashlib.sha256(raw).hexdigest() != expected:
+            raise ValueError("国家接口当前权威证据漂移")
     evidence = json.loads(raw)
     if (
         not isinstance(evidence, dict)
         or evidence.get("schema") != 1
-        or evidence.get("baseline_sha256")
-        != hashlib.sha256(baseline_path().read_bytes()).hexdigest()
+        or evidence.get("baseline_sha256") != _baseline_sha256()
     ):
         raise ValueError("国家接口冻结底本无效")
     sources, interfaces, args = (
@@ -326,14 +342,7 @@ def validate(policy, *, root=None, snapshot=None, evidence_path=None):
             raise ValueError("国家接口快照缺失或漂移")
         return
     root = Path(root)
-    try:
-        baseline_text = (root / "common/ai_strategies/00_default_strategy.txt").read_text(
-            encoding="utf-8-sig"
-        )
-    except FileNotFoundError as exc:
-        raise ValueError("缺少锁定游戏原件") from exc
-    if normalized_text(baseline_text) != baseline_path().read_text(encoding="utf-8"):
-        raise ValueError("国家接口底本漂移")
+    _verify_baseline(root)
     observed = {}
     for relative, digest in evidence["sources"].items():
         path = Path(relative)

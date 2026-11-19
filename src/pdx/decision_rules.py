@@ -224,7 +224,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         source_digest = hashlib.sha256(
             raw + b"\0current_reader:" + engine_reader_115.snapshot()
         ).hexdigest()
-    if source == SOURCE and version_contracts.active_version() == "1.15.1":
+    if source == SOURCE and version_contracts.active_version() in {
+        "1.15.1",
+        version_contracts.CURRENT_VERSION,
+    }:
+        from .situated import network_profile  # noqa: PLC0415
+
         # A single R2 consumer now owns schools. Its additive benefit/cost and
         # capacity tiers explicitly replace these six historical multipliers.
         # Keeping them in the legacy IR would double the same education and
@@ -241,10 +246,10 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             "school_administrative_pressure",
         }
         if {row["id"] for row in school_rules} != expected:
-            raise ValueError("1.15.1 学校迁移来源集合漂移")
+            raise ValueError("学校迁移来源集合漂移")
         data["rules"] = [row for row in data["rules"] if row not in school_rules]
         data["readers"].pop("literacy")
-        migration = SOURCE.with_name("action_network_1151.toml").read_bytes()
+        migration = network_profile.source_path().read_bytes()
         source_digest = hashlib.sha256(
             source_digest.encode() + b"\0school_migration:" + migration
         ).hexdigest()

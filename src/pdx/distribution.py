@@ -519,7 +519,10 @@ def production_configuration(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions]:
     """读取唯一发布 profile；读取配置不需要本机原版。"""
-    if profile is not None and profile.game_version != "1.15.1":
+    if profile is not None and profile.game_version not in {
+        "1.15.1",
+        version_contracts.CURRENT_VERSION,
+    }:
         # The native profile is verified before any generated file is touched.
         # Policy lowering is intentionally fail-closed until the A4 rule source
         # has been reviewed and attached to the same ConsumerIR bundle.
@@ -527,10 +530,14 @@ def production_configuration(
         raise ValueError(
             "1.15.0 profile 已锁定原版写点，但政策 RuleSet 尚未完成统一 IR 接线；拒绝生成"
         )
-    if profile is not None and profile != production_profile.load_profile(
-        production_profile.baseline_root("1.15.1")
-    ):
-        raise ValueError("正式 profile 与锁定完整生产身份不一致")
+    if profile is not None:
+        expected = (
+            production_profile.declared_profile()
+            if profile.game_version == version_contracts.CURRENT_VERSION
+            else production_profile.load_profile(production_profile.baseline_root("1.15.1"))
+        )
+        if profile != expected:
+            raise ValueError("正式 profile 与锁定完整生产身份不一致")
     policy, extensions = decisions.load(), decisions.load_extensions(profile="release")
     policy = replace(
         policy,
@@ -584,18 +591,22 @@ def check_configuration_identity(
 def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     """冻结源码和产物字节；离线只能核对冻结一致性，不能重建原版。"""
     root = decisions.PRODUCT.parent
+    selected = version_contracts.active_version()
+    if selected == version_contracts.CURRENT_VERSION:
+        vanilla_metadata = sorted((root / "research/vanilla-ai" / selected).glob("*.json"))
+    else:
+        baseline = decisions.baseline_path().parent
+        vanilla_metadata = [*sorted(baseline.glob("*.txt")), *sorted(baseline.glob("*.json"))]
     sources = [
         *sorted((root / "src/pdx").rglob("*.py")),
         *sorted((root / "mod/decisions").glob("*.toml")),
-        *sorted(decisions.baseline_path().parent.glob("*.txt")),
-        *sorted(decisions.baseline_path().parent.glob("*.json")),
+        *vanilla_metadata,
         *sorted((root / "research/situated").glob("*.json")),
     ]
     if version_contracts.is_115():
-        version = version_contracts.active_version()
-        sources.extend(sorted((root / "mod/decisions" / version).glob("*.toml")))
-        sources.extend(sorted((root / "research/situated" / version).glob("*.json")))
-        if version == "1.15.1":
+        sources.extend(sorted((root / "mod/decisions" / selected).glob("*.toml")))
+        sources.extend(sorted((root / "research/situated" / selected).glob("*.json")))
+        if selected == "1.15.1":
             sources.extend(sorted((root / "research/vanilla-ai/1.15.1/native").rglob("*")))
             sources.extend(sorted((root / "research/vanilla-ai/1.15.1/r2-readers").rglob("*")))
             sources = [path for path in sources if path.is_file()]
@@ -687,7 +698,10 @@ def package_inputs(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
-    if configuration is None and version_contracts.active_version() == "1.15.1":
+    if configuration is None and version_contracts.active_version() in {
+        "1.15.1",
+        version_contracts.CURRENT_VERSION,
+    }:
         configuration = profile_configuration.ProfileConfiguration()
     policy, extensions = production_configuration(profile=profile, configuration=configuration)
     verify_compatibility_installation()

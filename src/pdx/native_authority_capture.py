@@ -18,8 +18,9 @@ from typing import Any
 from . import config, version_contracts
 from .model import Assignment, Block
 from .parser import parse_bytes
+from .textio import normalized_text
 
-_CAPTURE_VERSION = "1.15.1"
+_CAPTURE_VERSION = version_contracts.CURRENT_VERSION
 _KINDS = ("parameters", "retentions-native-subset", "compatibility", "technology-catalog")
 _RESERVED_NAMES = {
     "CON",
@@ -63,8 +64,7 @@ def _prepare_capture(game: Path, output: Path, *, suffix: str) -> tuple[Path, Pa
     """Validate selection and paths before verifying the complete installed identity."""
     from .situated import r2_reader_authority  # noqa: PLC0415
 
-    if version_contracts.active_version() != _CAPTURE_VERSION:
-        raise ValueError("原版权威证据重捕获只接受当前 1.15.1 合同")
+    version_contracts.require_current()
     destination = _candidate_path(output, suffix=suffix)
     game = game.absolute()
     if game.name != "game" or not game.is_dir() or game.resolve() != game:
@@ -165,15 +165,15 @@ def capture_retentions(game: Path, *, output: Path) -> Path:
         if digest != historical:
             raise ValueError(f"当前原版保留字段与历史语义不同，必须独立处置：{field}")
         retentions[field] = digest
-    baseline = version_contracts.research_path("vanilla-ai", "00_default_strategy.txt")
+    baseline = version_contracts.read_default_strategy(game)
     return _write(
         output,
         {
             **previous,
             "capture_scope": "native_retention_subset_not_full_migration_contract",
             "version": version_contracts.active_version(),
-            "source": baseline.relative_to(config.REPO).as_posix(),
-            "source_sha256": hashlib.sha256(baseline.read_bytes()).hexdigest(),
+            "source": source,
+            "source_sha256": hashlib.sha256(baseline.encode("utf-8")).hexdigest(),
             "retentions": retentions,
         },
     )
@@ -220,9 +220,7 @@ def capture_compatibility(game: Path, *, output: Path) -> Path:
             "strategy_source": source,
             "strategy_source_sha256": hashlib.sha256(_source_bytes(game, source)).hexdigest(),
             "baseline_sha256": hashlib.sha256(
-                version_contracts.research_path(
-                    "vanilla-ai", "00_default_strategy.txt"
-                ).read_bytes()
+                version_contracts.read_default_strategy(game).encode("utf-8")
             ).hexdigest(),
             "definition": "ai_strategy_default",
             "fields": fields,
@@ -234,7 +232,9 @@ def capture_compatibility(game: Path, *, output: Path) -> Path:
                 _source_bytes(game, fiscal_source)
             ).hexdigest(),
             "fiscal_reference_sha256": hashlib.sha256(
-                version_contracts.research_path("vanilla-ai", "war_support_values.txt").read_bytes()
+                normalized_text(_source_bytes(game, fiscal_source).decode("utf-8-sig")).encode(
+                    "utf-8"
+                )
             ).hexdigest(),
         },
     )
