@@ -261,20 +261,20 @@ def corpus_texts(corpus_files: list[Path]) -> LazyCorpusTexts:
     return LazyCorpusTexts(readable)
 
 
-# ── 全量分析结果（整轮只跑一次）────────────────────────────
-@pytest.fixture(scope="session")
+# ── 全量分析结果（由使用它们的测试模块共享）──────────────────
+@pytest.fixture(scope="module")
 def ga():
     """游戏本体分析结果。"""
     return analyze.game_analysis()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def ma():
     """mod 分析结果。"""
     return analyze.mods_analysis()
 
 
-@pytest.fixture(scope="session")
-def ca(ga, ma):
+@pytest.fixture(scope="module")
+def ca(ma):
     """交叉分析结果。"""
     return analyze.cross_analysis(ma)
