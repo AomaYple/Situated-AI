@@ -114,12 +114,14 @@ class AdapterSet:
 def native_authority_path() -> Path:
     return (
         version_contracts.research_path("situated", "consumer-adapters.json")
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
         else NATIVE_AUTHORITY_115
     )
 
 
 def native_authority_sha256() -> str:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return "2d34f3718737321d1f510ee8e2ebfe280d1680a75acc517d1829c0a85fee2750"
     return (
         NATIVE_AUTHORITY_1151_SHA256
         if version_contracts.active_version() == "1.15.1"
@@ -280,7 +282,10 @@ def native_authority_115() -> dict[str, Any]:
     raw = native_authority_path().read_bytes()
     if hashlib.sha256(raw).hexdigest() != native_authority_sha256():
         raise ValueError("1.15 adapter authority: frozen declaration drift")
-    return cast("dict[str, Any]", json.loads(raw))
+    data = cast("dict[str, Any]", json.loads(raw))
+    if data["game_version"] != version_contracts.active_version():
+        raise ValueError("原版消费者 AST 声明版本不符")
+    return data
 
 
 def writes(

@@ -6,7 +6,7 @@ from typing import Any, cast
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, version_contracts
+from pdx import cli, decision_adapters, decision_interfaces, version_contracts
 from pdx.situated import network_profile, production_profile
 
 
@@ -57,3 +57,16 @@ def test_current_script_profile_preserves_three_r2_consumers_in_offline_audit() 
         "a0-dip-relations",
     }
     assert report["runtime"] == "unknown"
+
+
+def test_current_adapter_authority_proves_default_strategy_field_shapes() -> None:
+    authority = decision_adapters.native_authority_115()
+    assert authority["game_version"] == "1.15.2"
+    assert authority["sources"]["common/ai_strategies/00_default_strategy.txt"] == (
+        "42088c06f326a6fd1f01ed120928c8888d29b776c9bacb9795c63f9c390d7d40"
+    )
+
+
+def test_current_scripted_predicate_uses_the_current_version_inventory() -> None:
+    assert decision_interfaces.scripted_predicate_path().parent.name == "1.15.2"
+    assert decision_interfaces.scripted_trigger_snapshot()
