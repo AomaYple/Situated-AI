@@ -179,7 +179,9 @@ class TestSnapshotShape(unittest.TestCase):
         """必须覆盖全部数据目录（1.14.4 是 138 个）—— 曾经因路径口径错误变成 0。"""
         self.assertEqual(
             len(self.snap.sections["common_entries"]),
-            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141}[version_contracts.active_version()],
+            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
+                version_contracts.active_version()
+            ],
         )
 
     def test_common_entries_not_empty(self):
@@ -195,7 +197,9 @@ class TestSnapshotShape(unittest.TestCase):
         """
         self.assertEqual(
             len(self.snap.sections["defines"]),
-            {"1.14.5": 67, "1.15.0": 69, "1.15.1": 69}[version_contracts.active_version()],
+            {"1.14.5": 67, "1.15.0": 69, "1.15.1": 69, "1.15.2": 69}[
+                version_contracts.active_version()
+            ],
         )
 
     def test_localization_has_11_languages(self):
@@ -204,7 +208,9 @@ class TestSnapshotShape(unittest.TestCase):
     def test_dlc_count_is_17(self):
         self.assertEqual(
             len(self.snap.sections["dlc"]),
-            {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18}[version_contracts.active_version()],
+            {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18, "1.15.2": 18}[
+                version_contracts.active_version()
+            ],
         )
 
 
@@ -479,7 +485,9 @@ class TestCompactSnapshot(unittest.TestCase):
                     self.assertIn(f"{top}_{suffix}", self.snap.sections)
         self.assertEqual(
             len(self.snap.sections["common_entries"]),
-            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141}[version_contracts.active_version()],
+            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
+                version_contracts.active_version()
+            ],
         )
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 
