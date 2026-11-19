@@ -1036,13 +1036,13 @@ def _build_research_index(
                         except (SyntaxError, RecursionError) as error:
                             parse_status = "failed"
                             reason = "tooling_python_syntax_failed"
-                            location = (
+                            syntax_location = (
                                 f":{error.lineno}:{error.offset}"
                                 if isinstance(error, SyntaxError)
                                 else ""
                             )
-                            diagnostics += (f"{reason}{location}",)
-                            locator_diagnostics.append(f"{reason}{location}")
+                            diagnostics += (f"{reason}{syntax_location}",)
+                            locator_diagnostics.append(f"{reason}{syntax_location}")
                         else:
                             parse_status = "complete"
                             reason = "Python syntax and source line index; tool not executed"

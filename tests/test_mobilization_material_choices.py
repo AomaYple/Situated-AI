@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from pdx import mobilization_opportunities as mobilization
@@ -53,7 +55,7 @@ def test_each_paid_choice_has_exact_direct_inputs_and_original_utility_evidence(
 
 
 def test_current_receipt_preserves_rule_order_across_native_recovery_update():
-    raw = {"sources": {}, "readers": {}, "rules": []}
+    raw: dict[str, Any] = {"sources": {}, "readers": {}, "rules": []}
     with version_contracts.select_version("1.15.1"):
         prior = mobilization.derive(raw)
     with version_contracts.select_version(version_contracts.CURRENT_VERSION):
