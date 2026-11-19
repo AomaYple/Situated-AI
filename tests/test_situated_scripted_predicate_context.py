@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from pdx import decision_adapters, decision_interfaces, decision_rules, version_contracts
+from pdx import decision_adapters, decision_interfaces, decision_rules
 from pdx.situated import actions, compiler, decision_ir, evidence, relations, support_signals
 
 pytestmark = pytest.mark.unit
@@ -26,25 +26,13 @@ def scripted_source(tmp_path, monkeypatch):
     path.write_text(_DEFINITION, encoding="utf-8")
     data["sources"] = {source: hashlib.sha256(path.read_bytes()).hexdigest()}
     manifest = tmp_path / "predicate.json"
+    monkeypatch.setattr(decision_interfaces, "scripted_predicate_path", lambda: manifest)
 
     def freeze():
         raw = json.dumps(data).encode()
         manifest.write_bytes(raw)
-        current = version_contracts.is_115()
-        monkeypatch.setattr(
-            decision_interfaces,
-            "scripted_predicate_path",
-            lambda: manifest,
-        )
-        monkeypatch.setattr(
-            decision_interfaces,
-            "SCRIPTED_PREDICATE_1151_SHA256"
-            if version_contracts.active_version() == "1.15.1"
-            else "SCRIPTED_PREDICATE_115_SHA256"
-            if current
-            else "SCRIPTED_PREDICATE_SHA256",
-            hashlib.sha256(raw).hexdigest(),
-        )
+        digest = hashlib.sha256(raw).hexdigest()
+        monkeypatch.setattr(decision_interfaces, "scripted_predicate_sha256", lambda: digest)
 
     freeze()
     return game, path, data, freeze

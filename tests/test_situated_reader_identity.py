@@ -329,11 +329,16 @@ def test_every_declared_predicate_has_boolean_metadata_and_raw_reader_is_numeric
     raw = {reader.key: reader for reader in decision_rules.load().readers}
     assert raw["bureaucracy"].kind == "number"
     assert raw["bureaucracy"].engine == "bureaucracy"
-    if version_contracts.active_version() == "1.15.1":
+    version = version_contracts.active_version()
+    if version in {"1.15.1", version_contracts.CURRENT_VERSION}:
         assert "literacy" not in raw
         from pdx.situated import network_profile, production_profile
 
-        profile = production_profile.load_profile(production_profile.baseline_root())
+        profile = (
+            production_profile.declared_profile()
+            if version == version_contracts.CURRENT_VERSION
+            else production_profile.load_profile(production_profile.baseline_root())
+        )
         school = next(
             p
             for p in network_profile.compile_profile(profile)
