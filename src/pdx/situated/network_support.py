@@ -388,7 +388,8 @@ def matrix(
         declaration = declarations[consumer]
         witness = (
             "tests/test_release_1151_integration.py::test_school_additive_policy_has_literal_independent_pdx_witness"
-            if consumer == "a0-pol-schools" and version_contracts.active_version() == "1.15.1"
+            if consumer == "a0-pol-schools"
+            and profile.game_version in {"1.15.1", version_contracts.CURRENT_VERSION}
             else _WITNESS[consumer]
         )
         for feature in FEATURES:

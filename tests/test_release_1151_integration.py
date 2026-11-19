@@ -32,13 +32,19 @@ def profile():
     return native.load_profile(native.baseline_root())
 
 
-@pytest.fixture
-def school(profile):
-    return next(
-        program
-        for program in network.compile_profile(profile)
-        if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
-    )
+@pytest.fixture(params=["1.15.1", version_contracts.CURRENT_VERSION])
+def school(request):
+    with version_contracts.select_version(request.param):
+        profile = (
+            native.declared_profile()
+            if request.param == version_contracts.CURRENT_VERSION
+            else native.load_profile(native.baseline_root())
+        )
+        yield next(
+            program
+            for program in network.compile_profile(profile)
+            if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
+        )
 
 
 @pytest.mark.parametrize(

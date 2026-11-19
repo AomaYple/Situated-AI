@@ -117,15 +117,19 @@ def test_school_successor_refuses_changed_native_tail(contract, monkeypatch):
         migration._school_network_replacements(contract, ())
 
 
-@pytest.mark.parametrize("version", ["1.15.0", "1.15.1"])
+@pytest.mark.parametrize("version", ["1.15.0", "1.15.1", version_contracts.CURRENT_VERSION])
 def test_school_support_matrix_uses_numeric_witness_for_its_actual_version(version):
     with version_contracts.select_version(version):
-        profile = production_profile.load_profile(production_profile.baseline_root(version))
+        profile = (
+            production_profile.declared_profile()
+            if version == version_contracts.CURRENT_VERSION
+            else production_profile.load_profile(production_profile.baseline_root(version))
+        )
         rows = network_support.matrix(profile, network_profile.compile_profile(profile))
     expected = (
         "tests/test_release_1151_integration.py::"
         "test_school_additive_policy_has_literal_independent_pdx_witness"
-        if version == "1.15.1"
+        if version != "1.15.0"
         else "tests/test_network_profile.py::test_school_complete_costs_and_agenda_residual"
     )
     school = [
@@ -136,7 +140,7 @@ def test_school_support_matrix_uses_numeric_witness_for_its_actual_version(versi
     assert all(expected in cast("list[str]", row["witnesses"]) for row in school)
     wrong = (
         "test_school_complete_costs_and_agenda_residual"
-        if version == "1.15.1"
+        if version != "1.15.0"
         else "test_school_additive_policy_has_literal_independent_pdx_witness"
     )
     assert not any(
