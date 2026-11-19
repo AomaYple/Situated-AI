@@ -15,6 +15,7 @@ from test_remaining_joint_consumers import _historical_school_blocks
 from test_situated_joint_witnesses import _facts
 
 from pdx import (
+    config,
     country_state,
     decision_adapters,
     decision_interfaces,
@@ -41,7 +42,7 @@ def production():
     compiled, _ = compiler.compile_policy(source, INFO, model)
     adapters = decision_adapters.load()
     inputs = decision_adapters.read_inputs(adapters)
-    native = compiler.baseline_path().read_text(encoding="utf-8")
+    native = compiler.baseline_text()
     words = (
         frozenset(decision_adapters.reader_evidence(inputs))
         | decision_interfaces.proven_reader_words()
@@ -64,15 +65,24 @@ def production():
 
 @pytest.fixture(scope="module")
 def current_school(production):
-    if version_contracts.active_version() != "1.15.1":
+    version = version_contracts.active_version()
+    if version not in {"1.15.1", version_contracts.CURRENT_VERSION}:
         return None
-    profile = production_profile.load_profile(production_profile.baseline_root())
+    baseline_root = (
+        config.ROOT
+        if version == version_contracts.CURRENT_VERSION
+        else production_profile.baseline_root()
+    )
+    profile = production_profile.load_profile(baseline_root)
     program = next(
         row
         for row in network_profile.compile_profile(profile)
         if row.network.actions[0].definition.consumer_id == "a0-pol-schools"
     )
-    generated = network_profile.build(profile)["common/ai_strategies/00_default_strategy.txt"]
+    strategy = version_contracts.DEFAULT_STRATEGY_SOURCE
+    files = {strategy: production[2]}
+    network_profile.compose(files, profile)
+    generated = files[strategy]
     declaration = next(row for row in profile.declarations if row.id == "a0-pol-schools")
     assert production_profile.strip_policy(generated, declaration) == production[2]
     return program, generated, declaration
