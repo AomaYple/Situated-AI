@@ -824,7 +824,7 @@ def _frozen_treaty_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCon
 
 
 def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
-    """付费动员权重保留编队 ROOT 和实际所属国家；候选来自冻结原文。"""
+    """付费动员权重保留编队 ROOT 和实际所属国家。"""
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
     raw = mobilization_opportunities.baseline_path().read_bytes()
@@ -843,6 +843,7 @@ def _mobilization_context_rows(
 
     with version_contracts.select_version(version):
         data = mobilization_opportunities.load_baseline(raw=raw)
+        candidates = mobilization_opportunities.candidate_catalog(data)
     text = raw.decode("utf-8")
     line = text.count("\n", 0, text.index('"native_root": "military_formation"')) + 1
     context = decision_ir.EvaluationContext(
@@ -856,10 +857,7 @@ def _mobilization_context_rows(
             f"{source}:definition_only:mobilization_option",
         ),
     )
-    return tuple(
-        ((row["source"], row["field"]), context)
-        for row in mobilization_opportunities.candidate_catalog(data).values()
-    )
+    return tuple(((row["source"], row["field"]), context) for row in candidates.values())
 
 
 def _mobilization_context_readers(

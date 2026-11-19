@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from pdx import mobilization_opportunities as mobilization
+from pdx import version_contracts
 
 pytestmark = pytest.mark.unit
 
@@ -44,8 +45,24 @@ def test_each_paid_choice_has_exact_direct_inputs_and_original_utility_evidence(
         assert row["field"] == f"mobilization_option_{short}.ai_weight"
         assert row["goods_unit"] == "native_modifier_quantity_coefficient_not_purchase_or_currency"
         assert row["utility_evidence"]
-    # 原证据仍只有已冻结的两个医疗候选，新增能力不改历史资料。
-    assert len(frozen["candidates"]) == 2
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        assert set(frozen["candidates"]) == set(candidates)
+        assert all(set(record) == {"sha256"} for record in frozen["originals"].values())
+    else:
+        assert len(frozen["candidates"]) == 2
+
+
+def test_current_receipt_preserves_rule_order_across_native_recovery_update():
+    raw = {"sources": {}, "readers": {}, "rules": []}
+    with version_contracts.select_version("1.15.1"):
+        prior = mobilization.derive(raw)
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        data = mobilization.load_baseline()
+        current = mobilization.derive(raw, data)
+    assert data["candidates"]["mobilization_option_first_aid"]["recovery_rate"] == "0.10"
+    assert data["candidates"]["mobilization_option_field_hospitals"]["recovery_rate"] == "0.20"
+    for key in ("rules", "readers", "actors", "covered", "uncovered"):
+        assert current[key] == prior[key]
 
 
 def test_existing_medical_and_new_material_rules_share_one_joint_program_contract():

@@ -1,0 +1,1022 @@
+{
+  "candidates": {
+    "mobilization_option_balloon_recon": {
+      "definition": {
+        "line": 772,
+        "sha256": "0887ad13a7ffb92c75760640c24dca8c16893bd2c11a1f82eea8348195aa945b"
+      },
+      "field": "mobilization_option_balloon_recon.ai_weight",
+      "goods": {
+        "fabric": "2",
+        "oil": "0.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 819,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 823,
+          "sha256": "92f9bda2f33e57a329815c75db2a43a74c9e8db3e8d0c1643556f2e8dbce8742"
+        },
+        "on_activate_while_mobilized": {
+          "line": 790,
+          "sha256": "a85c2eb76b243b6f53c393853291d5df45d53f19b29666db7ab04e17a645c621"
+        },
+        "on_deactivate": {
+          "line": 800,
+          "sha256": "f750a80a023225952c0e2c014e8f7d2a19cb1c806feb66d3c4ccd987d136f3fa"
+        },
+        "possible": {
+          "line": 779,
+          "sha256": "f4c191550a9dd636637f511737fe9fccb465af87e2afebb96ddb87e1911f6b2c"
+        },
+        "texture": {
+          "line": 773,
+          "sha256": "34d5f04257be75b24f40af8e72f0ff27ab6462dc735627c75571bfbc6121f921"
+        },
+        "unit_modifier": {
+          "line": 814,
+          "sha256": "07b186330fdd180a7afabaa89b544caaca37381bc69ef5a10b6c882ac2e5de9b"
+        },
+        "unlocking_principles": {
+          "line": 775,
+          "sha256": "280dcf7b77aa418cc95d113cb87c55ac8915406bd0fb32c60d5b462b409a3f96"
+        },
+        "upkeep_modifier": {
+          "line": 810,
+          "sha256": "bda38c716d964ad6fd1a3bca084ba5642dda4281f763234a8ff81ae00a76077b"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3813,
+          "sha256": "c523a1a60c2d6e922a71aac3c419013bc363fb1a59b62f8f2ea39a6d52e8f761"
+        },
+        "effect": {
+          "line": 816,
+          "sha256": "a0b60bb65cdcdf9944975e5e4c3148672678c404ceac51d484755c0cad273266"
+        }
+      },
+      "weight": {
+        "line": 819,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_chemical_weapons": {
+      "definition": {
+        "line": 603,
+        "sha256": "59be9ac2a07a997a867050dd7d589b14717a225beb2af5f412b0d2e4e79ac70d"
+      },
+      "field": "mobilization_option_chemical_weapons.ai_weight",
+      "goods": {
+        "fertilizer": "2"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 645,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 649,
+          "sha256": "33dc1ff856891ea191040eb95a164f15f9d0265971a1785b5c9f163ad08bf474"
+        },
+        "on_activate_while_mobilized": {
+          "line": 614,
+          "sha256": "a85c2eb76b243b6f53c393853291d5df45d53f19b29666db7ab04e17a645c621"
+        },
+        "on_deactivate": {
+          "line": 624,
+          "sha256": "2078e53891ffed1b1f2e688fea1fe9a07a01dd9468e03a30bfabd668d602dddc"
+        },
+        "possible": {
+          "line": 606,
+          "sha256": "1a9a2512e2abac2e26d654034e9c88bca704b193b8a3eb8317bd53766b8aca9a"
+        },
+        "texture": {
+          "line": 604,
+          "sha256": "02e36b1849eb0b0b6ab52932e751cc2bba37025a32b056e4edf76bf529a2ce55"
+        },
+        "unit_modifier": {
+          "line": 640,
+          "sha256": "6cc1de04cc3779053d5ed20c5e724cf49b6cb283e937517d75f7927f9c182bf5"
+        },
+        "unlocking_technologies": {
+          "line": 634,
+          "sha256": "c2d9bf64f6992c3a71a506fa706bd8e0050fa04ff0d2075247f872648fb7d763"
+        },
+        "upkeep_modifier": {
+          "line": 637,
+          "sha256": "f0d9e1f7c3257340ee28f5a9bc9e494dd0c366d4e38b624cb84cdbb882a22a33"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3445,
+          "sha256": "e8227b9d74b5d9eba928367e64a310cd7dd1786871d459b318e0ca1fb7932b15"
+        },
+        "effect": {
+          "line": 641,
+          "sha256": "60ccd88d87ba0bd269b9afe293c077b70d93c78af8320a6da09109045470087e"
+        }
+      },
+      "weight": {
+        "line": 645,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_chocolate": {
+      "definition": {
+        "line": 160,
+        "sha256": "3740436425a5dcccb70a76c1134187dbb07337e541548996df95679212ed108c"
+      },
+      "field": "mobilization_option_chocolate.ai_weight",
+      "goods": {
+        "sugar": "1"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 189,
+          "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+        },
+        "group": {
+          "line": 215,
+          "sha256": "58ef9a00f4c1d2668209ecdd4c386d634ae4632ba258e8a5279f893825126f10"
+        },
+        "on_deactivate_while_mobilized": {
+          "line": 171,
+          "sha256": "4aad402343d34bf38f0e1c980f2da465cd6b2324ca03248d23c0ff840d03c39e"
+        },
+        "possible": {
+          "line": 163,
+          "sha256": "8bd6118eb7ec9c1125b7d75d75dbe9b01bd17f2639c68588deb65b57177750cd"
+        },
+        "texture": {
+          "line": 161,
+          "sha256": "c14503b95547b3897fb958488ceb3f4b3a4d825f38b711ec25e6fe173a195d0c"
+        },
+        "unit_modifier": {
+          "line": 186,
+          "sha256": "d5f49eb675f4b22f1f436d8e14782158ebbba26ff6e80259c8ed11d78e817ff4"
+        },
+        "upkeep_modifier": {
+          "line": 183,
+          "sha256": "f545074742ce121af796712306ff52b5185cc6cdec0ba5b47fcfb22c4c9db3ef"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3540,
+          "sha256": "38fb49acc5428a834d23ee7bbc27a110eb6582f410220948a493ce766f114a72"
+        },
+        "effect": {
+          "line": 187,
+          "sha256": "0ce5f60c0f9c8bdb292512b5f6c4f85ef5b8a5cd4218fe12a1bf89fcf5f9e74b"
+        }
+      },
+      "weight": {
+        "line": 189,
+        "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+      }
+    },
+    "mobilization_option_extra_supplies": {
+      "definition": {
+        "line": 31,
+        "sha256": "4cbef26e7b9e13125be435326e685fd5667a1713e9cd3d4fd393ed436e83ce79"
+      },
+      "field": "mobilization_option_extra_supplies.ai_weight",
+      "goods": {
+        "groceries": "1.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 75,
+          "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+        },
+        "group": {
+          "line": 101,
+          "sha256": "09efdccdf04b71db91ec046a22b83cc23935f6bf80163da3e8b62acc2f62a580"
+        },
+        "on_deactivate_while_mobilized": {
+          "line": 46,
+          "sha256": "4aad402343d34bf38f0e1c980f2da465cd6b2324ca03248d23c0ff840d03c39e"
+        },
+        "possible": {
+          "line": 34,
+          "sha256": "e17eb44754eaf1fb94edb97617429a14c5b5d2593eb74502986438fea5a6ceac"
+        },
+        "texture": {
+          "line": 32,
+          "sha256": "41634e7c062ca304d27bb527ae8a893a7a2d24962c1befd535aaa77f4344f45e"
+        },
+        "unit_modifier": {
+          "line": 70,
+          "sha256": "bc9c4817e24e6049a5d26c1a8cab908ca3f481276f864be8332f51100cb75e54"
+        },
+        "unlocking_technologies": {
+          "line": 42,
+          "sha256": "9caf52afd3fabdd812234510862293a53e3b06a4d296d74689af3480012b4019"
+        },
+        "upkeep_modifier": {
+          "line": 58,
+          "sha256": "35c435aee9514b6abfb0d6ce821249e418cb3234b10c3077275380773c33b3d4"
+        },
+        "upkeep_modifier_unscaled": {
+          "line": 61,
+          "sha256": "9593397e099926f55680c3e9aa009f75869535265b34ff2bd2d493e0fcf48e16"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3454,
+          "sha256": "16277d82e0e63a0e9e5345c74b9d1ac76a60dda26dc2d97a3fa9e2c783a95e8e"
+        },
+        "effect": {
+          "line": 72,
+          "sha256": "e2b4f9f001dfae8a78d82c53824579a43f6835aeb09d6db728d1c735672120be"
+        }
+      },
+      "weight": {
+        "line": 75,
+        "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+      }
+    },
+    "mobilization_option_field_hospitals": {
+      "definition": {
+        "line": 937,
+        "sha256": "ebb1ecb4c7eaf550d21e818d3462492b8fef5654a261a7bda6a3449ccb25faa5"
+      },
+      "field": "mobilization_option_field_hospitals.ai_weight",
+      "goods": {
+        "opium": "2",
+        "tools": "1"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "recovery_rate": "0.20",
+      "sections": {
+        "ai_weight": {
+          "line": 986,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 990,
+          "sha256": "811e0f1284937246aeb094e6e041e3bf6e14813e5408c06e61821f86981d194b"
+        },
+        "on_activate_while_mobilized": {
+          "line": 954,
+          "sha256": "36656ff61bb53011a010fb1c6329413a58dc3ad9c03a100f6b9eeec4c24296ca"
+        },
+        "on_deactivate": {
+          "line": 964,
+          "sha256": "1eba28a0f8e9614f7550600e46a1ab1fb5b97bcabe0ff9327f4d12115164cccf"
+        },
+        "possible": {
+          "line": 943,
+          "sha256": "7fc41bd92e2f53fab3d4dc2be6eb63929e83ce4f169f63b97b89a1ae96eed54c"
+        },
+        "texture": {
+          "line": 938,
+          "sha256": "4bf506e6731bf267af7f17e55a12f9610d9b4f0f4629a0cb90002a0d27b55ed3"
+        },
+        "unit_modifier": {
+          "line": 983,
+          "sha256": "f6b35b3ef5c1cf3386b7d10065a1015e1d3a5bd26e70bbec285f337c2ffe8353"
+        },
+        "unlocking_technologies": {
+          "line": 940,
+          "sha256": "6d47ba33566ea6e784c217e56baf51d77ac358913e90597311f9c96608946458"
+        },
+        "upkeep_modifier": {
+          "line": 979,
+          "sha256": "882fdb541fb9afdd2464c13947f59c6d968fe41f57a8a4e123a53ace307c5210"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3558,
+          "sha256": "38fb49acc5428a834d23ee7bbc27a110eb6582f410220948a493ce766f114a72"
+        },
+        "modifier": {
+          "line": 3553,
+          "sha256": "45cf61260aaa920f101da25e3416b37238c5b6df2d6be574b343697ed3da6894"
+        },
+        "source": "common/modifier_type_definitions/00_modifier_types.txt"
+      },
+      "weight": {
+        "line": 986,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_first_aid": {
+      "definition": {
+        "line": 879,
+        "sha256": "e55405173d67b6abda582a7312edbb59beed1d8fa91c3c63d9351ff2edace333"
+      },
+      "field": "mobilization_option_first_aid.ai_weight",
+      "goods": {
+        "fabric": "1",
+        "liquor": "2"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "recovery_rate": "0.10",
+      "sections": {
+        "ai_weight": {
+          "line": 930,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 934,
+          "sha256": "811e0f1284937246aeb094e6e041e3bf6e14813e5408c06e61821f86981d194b"
+        },
+        "on_activate_while_mobilized": {
+          "line": 897,
+          "sha256": "36656ff61bb53011a010fb1c6329413a58dc3ad9c03a100f6b9eeec4c24296ca"
+        },
+        "on_deactivate": {
+          "line": 907,
+          "sha256": "1eba28a0f8e9614f7550600e46a1ab1fb5b97bcabe0ff9327f4d12115164cccf"
+        },
+        "possible": {
+          "line": 884,
+          "sha256": "9f5921e81f0cbb6991cb1cec8331f64d4eafdd064b589524e0f81269457c3e58"
+        },
+        "texture": {
+          "line": 895,
+          "sha256": "5235d48f4e4df2dafa8512b91d808ef4ef0fe998583b3a1a366472240843605f"
+        },
+        "unit_modifier": {
+          "line": 927,
+          "sha256": "3af097301971145c11c3de7fb1f08480b6b2514eeeca3c93dbcc7c88cb4aacdb"
+        },
+        "unlocking_technologies": {
+          "line": 881,
+          "sha256": "e3910501a7c43f76f1c2b857a5fdbb3347158c32cff430b5d7bab292d23af164"
+        },
+        "upkeep_modifier": {
+          "line": 923,
+          "sha256": "0be303ab20a6bb93697a4c656dcc04fcb9853c070a21834023e49b0989fd4e62"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3558,
+          "sha256": "38fb49acc5428a834d23ee7bbc27a110eb6582f410220948a493ce766f114a72"
+        },
+        "modifier": {
+          "line": 3553,
+          "sha256": "45cf61260aaa920f101da25e3416b37238c5b6df2d6be574b343697ed3da6894"
+        },
+        "source": "common/modifier_type_definitions/00_modifier_types.txt"
+      },
+      "weight": {
+        "line": 930,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_flamethrowers": {
+      "definition": {
+        "line": 652,
+        "sha256": "0f1f668fc94587ee8cf4b8f0a1f0dc6da490399b57bf06da61e3dd28c8a2e93c"
+      },
+      "field": "mobilization_option_flamethrowers.ai_weight",
+      "goods": {
+        "oil": "1"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 694,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 698,
+          "sha256": "33dc1ff856891ea191040eb95a164f15f9d0265971a1785b5c9f163ad08bf474"
+        },
+        "on_activate_while_mobilized": {
+          "line": 663,
+          "sha256": "a85c2eb76b243b6f53c393853291d5df45d53f19b29666db7ab04e17a645c621"
+        },
+        "on_deactivate": {
+          "line": 673,
+          "sha256": "2078e53891ffed1b1f2e688fea1fe9a07a01dd9468e03a30bfabd668d602dddc"
+        },
+        "possible": {
+          "line": 655,
+          "sha256": "0ae9246d577dd2ec46dac75b392f08931161ce7ec74ec42c4a90b3203c0ac123"
+        },
+        "texture": {
+          "line": 653,
+          "sha256": "981c827729ec7b82ce0d58ec75b28bdaba6cdbd42d95dde16e94403506abe40b"
+        },
+        "unit_modifier": {
+          "line": 689,
+          "sha256": "c1778398be4c67e95714f8081501397f092dc69f0537d5d9922593f20aa61ff3"
+        },
+        "unlocking_technologies": {
+          "line": 683,
+          "sha256": "4a87fdbb06322281c4662b2643edda88cfdb44fdd6ee5db6d2a968bb4fd85d3f"
+        },
+        "upkeep_modifier": {
+          "line": 686,
+          "sha256": "0b4aedad0a8618a19778b25550f26714444deda4e79a6023f9f7abac99a776c6"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3445,
+          "sha256": "e8227b9d74b5d9eba928367e64a310cd7dd1786871d459b318e0ca1fb7932b15"
+        },
+        "effect": {
+          "line": 690,
+          "sha256": "e7faeb8b456cfb93bfaa11bb648a47071a27dd9783c4517c7a4f0c888ae8c8f2"
+        }
+      },
+      "weight": {
+        "line": 694,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_liquor": {
+      "definition": {
+        "line": 276,
+        "sha256": "d224e815e64498203213b35090801d38ee07962cec01f3c53e0feb5330a0a948"
+      },
+      "field": "mobilization_option_liquor.ai_weight",
+      "goods": {
+        "liquor": "0.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 305,
+          "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+        },
+        "group": {
+          "line": 331,
+          "sha256": "58ef9a00f4c1d2668209ecdd4c386d634ae4632ba258e8a5279f893825126f10"
+        },
+        "on_deactivate_while_mobilized": {
+          "line": 287,
+          "sha256": "4aad402343d34bf38f0e1c980f2da465cd6b2324ca03248d23c0ff840d03c39e"
+        },
+        "possible": {
+          "line": 279,
+          "sha256": "8a9ae30ac1f1031ba772e6ff71dd9c0f9ae6029466da6a1105b1f8b50087b7db"
+        },
+        "texture": {
+          "line": 277,
+          "sha256": "82d9352e23a5f3c26f401a27c723718c8fa11372005e37956c1bf6e793b654d0"
+        },
+        "unit_modifier": {
+          "line": 302,
+          "sha256": "d5f49eb675f4b22f1f436d8e14782158ebbba26ff6e80259c8ed11d78e817ff4"
+        },
+        "upkeep_modifier": {
+          "line": 299,
+          "sha256": "91fee73744909c1f0a234cd481c99cd4d1084e7edc38668640deaf3f21731e00"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3540,
+          "sha256": "38fb49acc5428a834d23ee7bbc27a110eb6582f410220948a493ce766f114a72"
+        },
+        "effect": {
+          "line": 303,
+          "sha256": "0ce5f60c0f9c8bdb292512b5f6c4f85ef5b8a5cd4218fe12a1bf89fcf5f9e74b"
+        }
+      },
+      "weight": {
+        "line": 305,
+        "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+      }
+    },
+    "mobilization_option_luxurious_supplies": {
+      "definition": {
+        "line": 104,
+        "sha256": "6ff92a0798cf0dc220eeb126ab98dbc2bfc5ef602749f9675336d55508cf70e1"
+      },
+      "field": "mobilization_option_luxurious_supplies.ai_weight",
+      "goods": {
+        "meat": "1.5",
+        "wine": "1.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 153,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 157,
+          "sha256": "09efdccdf04b71db91ec046a22b83cc23935f6bf80163da3e8b62acc2f62a580"
+        },
+        "on_deactivate_while_mobilized": {
+          "line": 123,
+          "sha256": "4aad402343d34bf38f0e1c980f2da465cd6b2324ca03248d23c0ff840d03c39e"
+        },
+        "possible": {
+          "line": 107,
+          "sha256": "44cf676127884b0d5a8d234f5f60d521996b5d278d5f05607b4c05c7d13e3964"
+        },
+        "texture": {
+          "line": 105,
+          "sha256": "afb87ba8008da476fe43f80dba4a605123acb5c85937e958cf91e0b17b3e86a2"
+        },
+        "unit_modifier": {
+          "line": 148,
+          "sha256": "bc9c4817e24e6049a5d26c1a8cab908ca3f481276f864be8332f51100cb75e54"
+        },
+        "unlocking_technologies": {
+          "line": 119,
+          "sha256": "3426c41db31b39092dfbe3c6b0ead91899f94020bc1174791cf87ae6e3897429"
+        },
+        "upkeep_modifier": {
+          "line": 135,
+          "sha256": "abd22e964b06db11ca2ae0c10df66ed31f5db3f201aaeeccac0ce84db2d6bdc9"
+        },
+        "upkeep_modifier_unscaled": {
+          "line": 139,
+          "sha256": "9593397e099926f55680c3e9aa009f75869535265b34ff2bd2d493e0fcf48e16"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3454,
+          "sha256": "16277d82e0e63a0e9e5345c74b9d1ac76a60dda26dc2d97a3fa9e2c783a95e8e"
+        },
+        "effect": {
+          "line": 150,
+          "sha256": "e2b4f9f001dfae8a78d82c53824579a43f6835aeb09d6db728d1c735672120be"
+        }
+      },
+      "weight": {
+        "line": 153,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_machinegunners": {
+      "definition": {
+        "line": 554,
+        "sha256": "72d71013246333e0085f78ead84e6d26367e793aed8ed3bb14ca88b7a2b28193"
+      },
+      "field": "mobilization_option_machinegunners.ai_weight",
+      "goods": {
+        "ammunition": "1",
+        "small_arms": "1"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 596,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 600,
+          "sha256": "33dc1ff856891ea191040eb95a164f15f9d0265971a1785b5c9f163ad08bf474"
+        },
+        "on_activate_while_mobilized": {
+          "line": 565,
+          "sha256": "a85c2eb76b243b6f53c393853291d5df45d53f19b29666db7ab04e17a645c621"
+        },
+        "on_deactivate": {
+          "line": 575,
+          "sha256": "2078e53891ffed1b1f2e688fea1fe9a07a01dd9468e03a30bfabd668d602dddc"
+        },
+        "possible": {
+          "line": 557,
+          "sha256": "79791c54256694581913e6ea16c4422174fe21973ac2d174339e5bb9ea16228c"
+        },
+        "texture": {
+          "line": 555,
+          "sha256": "f3d4f6869dbd05f20c0f2f2a46924dbb2c0e4d6c7de5048c695b22786810db99"
+        },
+        "unit_modifier": {
+          "line": 592,
+          "sha256": "686e16aa8eb605a784e4fd6397da0c14417764fb95a0f4f1ae8e59b8c1973fbd"
+        },
+        "unlocking_technologies": {
+          "line": 585,
+          "sha256": "70a13af65f808026f4ae72f6b9f6f70d1e9e4bc0694f01fb42e8159d881e5715"
+        },
+        "upkeep_modifier": {
+          "line": 588,
+          "sha256": "d7d35b08b62a363417a1447889801dedc9454ff95fee11fbc98926814b72d6c8"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3462,
+          "sha256": "e8227b9d74b5d9eba928367e64a310cd7dd1786871d459b318e0ca1fb7932b15"
+        },
+        "effect": {
+          "line": 594,
+          "sha256": "59a87aecba783100401176d2eb364f395563e3a84ea8777dec914af8589876d7"
+        }
+      },
+      "weight": {
+        "line": 596,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_motorized_recon": {
+      "definition": {
+        "line": 719,
+        "sha256": "204711639eb01da03e7b973f9baf665cb99de899e6283ca0f69035551512c300"
+      },
+      "field": "mobilization_option_motorized_recon.ai_weight",
+      "goods": {
+        "automobiles": "1",
+        "oil": "0.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 765,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 769,
+          "sha256": "92f9bda2f33e57a329815c75db2a43a74c9e8db3e8d0c1643556f2e8dbce8742"
+        },
+        "on_activate_while_mobilized": {
+          "line": 733,
+          "sha256": "a85c2eb76b243b6f53c393853291d5df45d53f19b29666db7ab04e17a645c621"
+        },
+        "on_deactivate": {
+          "line": 743,
+          "sha256": "2078e53891ffed1b1f2e688fea1fe9a07a01dd9468e03a30bfabd668d602dddc"
+        },
+        "possible": {
+          "line": 722,
+          "sha256": "9884078ce50792387eb34164e8d31b1465e4d0dd61cac21d78b224c403bd91f7"
+        },
+        "texture": {
+          "line": 720,
+          "sha256": "d8b26bbf8d8f29b4dad3a2d55daca724a25b8c2927ee08bf657aeb7769a2c17d"
+        },
+        "unit_modifier": {
+          "line": 760,
+          "sha256": "9964a4fef9faaca3fc6beeb10434307cc6a999fad36642ade391835abcb56542"
+        },
+        "unlocking_technologies": {
+          "line": 753,
+          "sha256": "b548f7772c399a9c505e29f6fc2589d4393798ed277a4f1560fdbc6eb76c1d0a"
+        },
+        "upkeep_modifier": {
+          "line": 756,
+          "sha256": "b97bccca7b2341c8fa20f57cc4ea84db00c39b3e695b4e147909e68fcc8d0235"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3734,
+          "sha256": "16277d82e0e63a0e9e5345c74b9d1ac76a60dda26dc2d97a3fa9e2c783a95e8e"
+        },
+        "effect": {
+          "line": 762,
+          "sha256": "86f494acc4d7d0614730bec43fc6d39dcdf5ed700cd3704cfb653f61e49426fe"
+        }
+      },
+      "weight": {
+        "line": 765,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_opium": {
+      "definition": {
+        "line": 334,
+        "sha256": "c2a7bca06f17495aa7797363ac166807ab01cb017149199d16d9374cf6e62760"
+      },
+      "field": "mobilization_option_opium.ai_weight",
+      "goods": {
+        "opium": "0.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 363,
+          "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+        },
+        "group": {
+          "line": 389,
+          "sha256": "58ef9a00f4c1d2668209ecdd4c386d634ae4632ba258e8a5279f893825126f10"
+        },
+        "on_deactivate_while_mobilized": {
+          "line": 345,
+          "sha256": "4aad402343d34bf38f0e1c980f2da465cd6b2324ca03248d23c0ff840d03c39e"
+        },
+        "possible": {
+          "line": 337,
+          "sha256": "d0cc2d9dce95d8e5e74790c6916aa58e592da0e590402aaf3c14458cea00ab6a"
+        },
+        "texture": {
+          "line": 335,
+          "sha256": "a93a51e7d544fb92e36a935da3c309c4cf5f6d6c2ecc1d086d6adc663650122c"
+        },
+        "unit_modifier": {
+          "line": 360,
+          "sha256": "d5f49eb675f4b22f1f436d8e14782158ebbba26ff6e80259c8ed11d78e817ff4"
+        },
+        "upkeep_modifier": {
+          "line": 357,
+          "sha256": "c876aff3de031db64ff70a033be64c6f5b50b625079210d4616278d5afdb513d"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3540,
+          "sha256": "38fb49acc5428a834d23ee7bbc27a110eb6582f410220948a493ce766f114a72"
+        },
+        "effect": {
+          "line": 361,
+          "sha256": "0ce5f60c0f9c8bdb292512b5f6c4f85ef5b8a5cd4218fe12a1bf89fcf5f9e74b"
+        }
+      },
+      "weight": {
+        "line": 363,
+        "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+      }
+    },
+    "mobilization_option_rail_transport": {
+      "definition": {
+        "line": 500,
+        "sha256": "cc1d4d0f55da538b7333899d40de7fc356eadb140602aa9a860c5482aec83551"
+      },
+      "field": "mobilization_option_rail_transport.ai_weight",
+      "goods": {
+        "engines": "0.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 547,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 551,
+          "sha256": "3225988cc0a5fa16c446fa06d87f92f1693396549e9ceec1c8fb9769da7aa45c"
+        },
+        "on_activate_while_mobilized": {
+          "line": 517,
+          "sha256": "a85c2eb76b243b6f53c393853291d5df45d53f19b29666db7ab04e17a645c621"
+        },
+        "on_deactivate": {
+          "line": 527,
+          "sha256": "2078e53891ffed1b1f2e688fea1fe9a07a01dd9468e03a30bfabd668d602dddc"
+        },
+        "possible": {
+          "line": 503,
+          "sha256": "d1ec15d9cd5514463a6733bcc6c27c0a03a8c7277c680ea02cc1814a961c069b"
+        },
+        "texture": {
+          "line": 501,
+          "sha256": "e1c9825073ef150ce7942a86111bd5d6a71339669ecea1cc8a7e4bcf752f8808"
+        },
+        "unit_modifier": {
+          "line": 543,
+          "sha256": "55710a274d5bada14ac32eb9cebc14ff446f417bc5685063fe42251994f98444"
+        },
+        "unlocking_technologies": {
+          "line": 537,
+          "sha256": "dbc15d1ade446774372a9bce3e722d606f28d08b467dfa025cabb354b057c2ce"
+        },
+        "upkeep_modifier": {
+          "line": 540,
+          "sha256": "f3179c9bea612ca1ba1f18b2959cdad2d4737e1b50e117fcfeeb23018e7c84c7"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3734,
+          "sha256": "16277d82e0e63a0e9e5345c74b9d1ac76a60dda26dc2d97a3fa9e2c783a95e8e"
+        },
+        "effect": {
+          "line": 544,
+          "sha256": "f219178434aa07aed40a5e96de68ee585e28a12fe355e57e15f40a4167f15ac7"
+        }
+      },
+      "weight": {
+        "line": 547,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    },
+    "mobilization_option_tobacco": {
+      "definition": {
+        "line": 218,
+        "sha256": "b3ce46fe7db3c4608134180cfa9ffb343fd3b9ad15cb8882cd54833eb4a28336"
+      },
+      "field": "mobilization_option_tobacco.ai_weight",
+      "goods": {
+        "tobacco": "0.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 247,
+          "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+        },
+        "group": {
+          "line": 273,
+          "sha256": "58ef9a00f4c1d2668209ecdd4c386d634ae4632ba258e8a5279f893825126f10"
+        },
+        "on_deactivate_while_mobilized": {
+          "line": 229,
+          "sha256": "4aad402343d34bf38f0e1c980f2da465cd6b2324ca03248d23c0ff840d03c39e"
+        },
+        "possible": {
+          "line": 221,
+          "sha256": "b94548e1653758f99ec069f384421552a5c22a0a1165ea89b9f41bd1d74d022c"
+        },
+        "texture": {
+          "line": 219,
+          "sha256": "e069bff3c5c770f6b927859d2c80b032a9f9ce3eb960164d84ce32f1a48e4193"
+        },
+        "unit_modifier": {
+          "line": 244,
+          "sha256": "d5f49eb675f4b22f1f436d8e14782158ebbba26ff6e80259c8ed11d78e817ff4"
+        },
+        "upkeep_modifier": {
+          "line": 241,
+          "sha256": "977c86ca0d43fa0f384f00478a70be6c596f36baaff61309bb24081caf0fe2bd"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3540,
+          "sha256": "38fb49acc5428a834d23ee7bbc27a110eb6582f410220948a493ce766f114a72"
+        },
+        "effect": {
+          "line": 245,
+          "sha256": "0ce5f60c0f9c8bdb292512b5f6c4f85ef5b8a5cd4218fe12a1bf89fcf5f9e74b"
+        }
+      },
+      "weight": {
+        "line": 247,
+        "sha256": "088c65f6873dc96c71b0ceedb07fc30738710b4e1bba62b09a21dd9a50c6d6a3"
+      }
+    },
+    "mobilization_option_truck_transport": {
+      "definition": {
+        "line": 446,
+        "sha256": "265845613a69c54e1a62c2f24f508f19d00f1a6e0c8713929c141316ef22c00c"
+      },
+      "field": "mobilization_option_truck_transport.ai_weight",
+      "goods": {
+        "automobiles": "0.5"
+      },
+      "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+      "sections": {
+        "ai_weight": {
+          "line": 493,
+          "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+        },
+        "group": {
+          "line": 497,
+          "sha256": "3225988cc0a5fa16c446fa06d87f92f1693396549e9ceec1c8fb9769da7aa45c"
+        },
+        "on_activate_while_mobilized": {
+          "line": 463,
+          "sha256": "a85c2eb76b243b6f53c393853291d5df45d53f19b29666db7ab04e17a645c621"
+        },
+        "on_deactivate": {
+          "line": 473,
+          "sha256": "2078e53891ffed1b1f2e688fea1fe9a07a01dd9468e03a30bfabd668d602dddc"
+        },
+        "possible": {
+          "line": 449,
+          "sha256": "ea83a0039932eed09fb79c7e77ce04169a825724dbf35ef8c340d3b8eed13e88"
+        },
+        "texture": {
+          "line": 447,
+          "sha256": "858db5248ca8e220b6c6c3d54014f4940574944de12f172207fcd5d6b3f4ed8c"
+        },
+        "unit_modifier": {
+          "line": 489,
+          "sha256": "7e8978cdcd02f91c084a19b44d8e593ca4fd0b2dc66bfdd751bcb2c42958e738"
+        },
+        "unlocking_technologies": {
+          "line": 483,
+          "sha256": "b548f7772c399a9c505e29f6fc2589d4393798ed277a4f1560fdbc6eb76c1d0a"
+        },
+        "upkeep_modifier": {
+          "line": 486,
+          "sha256": "31ded83e8335a3bbe1e0d28dbb0c37900eda821baaa94ec98b00e552cf160ba0"
+        }
+      },
+      "source": "common/mobilization_options/00_mobilization_option.txt",
+      "utility_evidence": {
+        "ai_value": {
+          "line": 3734,
+          "sha256": "16277d82e0e63a0e9e5345c74b9d1ac76a60dda26dc2d97a3fa9e2c783a95e8e"
+        },
+        "effect": {
+          "line": 490,
+          "sha256": "86f494acc4d7d0614730bec43fc6d39dcdf5ed700cd3704cfb653f61e49426fe"
+        }
+      },
+      "weight": {
+        "line": 493,
+        "sha256": "99ffbd493ba7e8bc52d5d33644462fed2b86bc98d388ebf3e536f48eb4e0f9ca"
+      }
+    }
+  },
+  "contract": {
+    "actor": "country",
+    "actor_path": [
+      "owner"
+    ],
+    "candidate": "static_definition",
+    "evidence": "native_documentation_and_exact_script_not_runtime",
+    "field": "ai_weight",
+    "native_comparison": "ai_weight_times_unit_modifier_ai_value_then_monetary_cost",
+    "native_root": "military_formation",
+    "operation": "multiplicative_score",
+    "supported_shape": "block",
+    "target": "none"
+  },
+  "native_identities": [
+    "mobilization_option_basic_supplies",
+    "mobilization_option_extra_supplies",
+    "mobilization_option_luxurious_supplies",
+    "mobilization_option_chocolate",
+    "mobilization_option_tobacco",
+    "mobilization_option_liquor",
+    "mobilization_option_opium",
+    "mobilization_option_forced_march",
+    "mobilization_option_truck_transport",
+    "mobilization_option_rail_transport",
+    "mobilization_option_machinegunners",
+    "mobilization_option_chemical_weapons",
+    "mobilization_option_flamethrowers",
+    "mobilization_option_motorized_recon",
+    "mobilization_option_balloon_recon",
+    "mobilization_option_aerial_recon",
+    "mobilization_option_first_aid",
+    "mobilization_option_field_hospitals"
+  ],
+  "originals": {
+    "common/mobilization_options/00_mobilization_option.txt": {
+      "sha256": "43ac95d13c33a6db5fd602b630a9a07c40c313ac9a69a7c6619c0496fb118ea5"
+    },
+    "common/mobilization_options/mobilization_options.md": {
+      "sha256": "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c"
+    },
+    "common/modifier_type_definitions/00_modifier_types.txt": {
+      "sha256": "764aeaa461b09ba87bc57cb764300fb34f2a7945439fc2fe8317badedec7f40d"
+    },
+    "common/on_actions/00_code_on_actions.txt": {
+      "sha256": "f07648b538fe8fae3347986baf621a4aa0f9b8d0b03e8c74ca930e413f50e444"
+    },
+    "events/tech_events/trench_warfare.txt": {
+      "sha256": "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d"
+    }
+  },
+  "schema": 2,
+  "scope_evidence": {
+    "owner_block": {
+      "line": 4774,
+      "sha256": "abcf86badc00870ada3321d2b9e974cea11f0021bd8099748041f2838761c5a6"
+    },
+    "owner_is_country": {
+      "line": 28,
+      "sha256": "6efb092ec132cdc02a5c8fa31222bcfe13208492aa9f8b4614b45645a4634375"
+    }
+  },
+  "sources": {
+    "common/mobilization_options/00_mobilization_option.txt": "8a05fb779628c3e7807702b0524ff7f90b3ace73c60cc53e4cb7cf94f5572cb0",
+    "common/mobilization_options/mobilization_options.md": "2b8d285c68ba3c988b5ccc4937efabe5388c8fddfb13513e393b38b51f08f07b",
+    "common/modifier_type_definitions/00_modifier_types.txt": "494fa65068e1242f933088f18d0a602f8d6b2135d54e7bea737a09b39635d22a",
+    "common/on_actions/00_code_on_actions.txt": "14b220f1113042518aa38c4e5f54b35c608337ff9ec9d2aeabc73c321588a191",
+    "events/tech_events/trench_warfare.txt": "d89447bea0291473e01b2cdeb69e5a689359b48d99f88bc8fb0a5163deb4979d"
+  },
+  "utility_evidence": {
+    "ai_value": {
+      "line": 3558,
+      "sha256": "38fb49acc5428a834d23ee7bbc27a110eb6582f410220948a493ce766f114a72"
+    },
+    "modifier": {
+      "line": 3553,
+      "sha256": "45cf61260aaa920f101da25e3416b37238c5b6df2d6be574b343697ed3da6894"
+    },
+    "source": "common/modifier_type_definitions/00_modifier_types.txt"
+  }
+}
