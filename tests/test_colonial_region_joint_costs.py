@@ -9,7 +9,7 @@ import pytest
 from _frozen_reader_words import frozen_reader_words
 from test_situated_joint_witnesses import _facts
 
-from pdx import country_state, decision_adapters, decision_rules
+from pdx import country_state, decision_adapters, decision_rules, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval, programs
 from pdx.situated.native_treatments import _digest
@@ -20,8 +20,19 @@ CONQUEST = "ai_strategy_default.strategic_region_stance_type_scores.stance_conqu
 CRISIS = {"legitimacy": 20, "insurrection": True, "radical_share": 0.3}
 
 
-@pytest.fixture(scope="module")
-def production():
+@pytest.fixture(
+    scope="module",
+    params=[
+        "1.15.0",
+        pytest.param(version_contracts.CURRENT_VERSION, marks=pytest.mark.integration),
+    ],
+)
+def production(request):
+    with version_contracts.select_version(request.param):
+        return _cost_case(compiler.baseline_text())
+
+
+def _cost_case(native):
     source = dict(decision_adapters.load().policies)[SOURCE]
     rules = tuple(r for r in source.rules if ".".join(r.field) in {COLONIAL, CONQUEST})
     assert len(rules) == 5
@@ -37,7 +48,6 @@ def production():
         ),
         source=SOURCE,
     )
-    native = compiler.baseline_path().read_text(encoding="utf-8")
     patched = decision_rules.patch(
         native,
         policy,

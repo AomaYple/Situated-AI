@@ -106,10 +106,6 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _baseline_id(path: Path) -> str:
-    return f"victoria3-{version_contracts.active_version()}:{_sha256(path)}"
-
-
 def _selected_baseline() -> Path:
     return compiler_baseline_path() if version_contracts.is_115() else BASELINE
 
@@ -151,15 +147,30 @@ def discover(*, baseline: Path | None = None) -> SurfaceInventory:
 
     from .. import decision_adapters, decision_rules  # noqa: PLC0415, TID252
 
-    baseline = _selected_baseline() if baseline is None else baseline
+    selected_baseline = _selected_baseline()
+    baseline = selected_baseline if baseline is None else baseline
+    default_baseline = baseline == selected_baseline
+    version = version_contracts.active_version()
+    model = load_model(baseline=None if default_baseline else baseline.read_text(encoding="utf-8"))
+    current_structure = default_baseline and version == version_contracts.CURRENT_VERSION
+    baseline_sha256 = (
+        version_contracts.contract().default_strategy_sha256
+        if current_structure
+        else _sha256(baseline)
+    )
 
     source_hashes = {
-        "baseline": _sha256(baseline),
+        "baseline": baseline_sha256,
         "facts": _sha256(config.REPO / "mod/decisions/facts.toml"),
         "actions": _sha256(config.REPO / "mod/decisions/actions.toml"),
         "information": _sha256(config.REPO / "mod/decisions/information.toml"),
         "adapters": _sha256(config.REPO / "mod/decisions/adapters.toml"),
     }
+    if current_structure:
+        # The current model compiles from the structure contract associated with the raw native pin.
+        source_hashes["default_strategy_structure"] = model.source_sha256[
+            "default_strategy_structure"
+        ]
     for name in (
         "capacities.toml",
         "pressures.toml",
@@ -175,9 +186,6 @@ def discover(*, baseline: Path | None = None) -> SurfaceInventory:
     failures: list[str] = []
     unknown_scopes: set[str] = set()
 
-    model = load_model(
-        baseline=None if baseline == _selected_baseline() else baseline.read_text(encoding="utf-8")
-    )
     model_instances = {
         (item.source, item.rule_id): item
         for item in model.action_instances
@@ -185,7 +193,7 @@ def discover(*, baseline: Path | None = None) -> SurfaceInventory:
     }
     production_witnesses: set[str] = set()
     production_witness_keys: set[tuple[str, str]] = set()
-    if baseline == _selected_baseline():
+    if default_baseline:
         # 生产盘点使用与正式包相同的生成入口；失败保持 pending，不能
         # 用 Python 规则数量替代真实 PDX 见证。
         try:
@@ -328,7 +336,7 @@ def discover(*, baseline: Path | None = None) -> SurfaceInventory:
     for item in surfaces_tuple:
         counts[item.status] = counts.get(item.status, 0) + 1
     return SurfaceInventory(
-        baseline_id=_baseline_id(baseline),
+        baseline_id=f"victoria3-{version}:{baseline_sha256}",
         source_hashes=source_hashes,
         scope_hash=_scope_hash(surfaces_tuple, source_hashes),
         surfaces=surfaces_tuple,

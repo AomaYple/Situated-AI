@@ -1,0 +1,314 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "contracts": [
+    {
+      "family": "country_creation",
+      "hook": "ai_will_do",
+      "actor": "country",
+      "target": "definition_only:country_creation",
+      "operation": "eligibility",
+      "directness": "direct",
+      "definition_trigger_member": "0xb0",
+      "parser_subobject": "0x228",
+      "actual_consumer": "0x1415e8bd0",
+      "trigger_call": "0x1415e8dfb",
+      "false_skip": "0x1415e8fd9",
+      "named_targets_proven": []
+    },
+    {
+      "family": "country_formation",
+      "hook": "ai_will_do",
+      "actor": "country",
+      "target": "definition_only:country_formation",
+      "operation": "eligibility",
+      "directness": "direct",
+      "definition_trigger_member": "0xa0",
+      "parser_subobject": "0x3d0",
+      "actual_consumer": "0x1415e8850",
+      "trigger_call": "0x1415e89ed",
+      "false_skip": "0x1415e8b84",
+      "named_targets_proven": []
+    }
+  ],
+  "script_hashes": {
+    "common/country_creation/00_releasable_countries.txt": "5871e73752d436c4877f34d5d39727ba4dc244af262f5c6c4d8fa289d5e50937",
+    "common/country_formation/00_formable_countries.txt": "38159e8a60379a6b6943d964c5dfe4f037fb794d66e8d8270c3a4887e5345ebd",
+    "common/country_formation/00_major_formables.txt": "df6c873820cd73267ee50becc31b9f8d9fbe754074198b021e5b767c6f914580"
+  },
+  "reviewed_chain": [
+    "The independently named CCountryCreation and CCountryFormation RTTI locate the parse interfaces at +0x228 and +0x3d0. Their ai_will_do paths use Country tag 5 and definition-local trigger storage at +0xb0 and +0xa0.",
+    "The typed databases install current matching vtables and loaders 0x1417895d0 and 0x141789990 construct and append definitions to database+0x80. Creation gathers via a cultural index while formation iterates its typed database.",
+    "The actual AI consumers resolve Country, construct the actor context and test their own trigger member before the native false path advances to the next candidate."
+  ],
+  "limits": [
+    "Static binary evidence; runtime unknown.",
+    "Exact ai_will_do eligibility only. No named target country scope, scalar utility, timing, fallback or command success is authorized."
+  ],
+  "observations": [
+    {
+      "label": "ai_will_do atom",
+      "va": "0x1449a0d80",
+      "rva": "0x49a0d80",
+      "file_offset": "0x499fd80",
+      "size": 16,
+      "sha256": "6f174eb7f2ce00d57c158df8f0fa48edc8fac1d002d2b18bb3f89f4b6f2ac173"
+    },
+    {
+      "label": "ai_will_do literal",
+      "va": "0x144966b90",
+      "rva": "0x4966b90",
+      "file_offset": "0x4965b90",
+      "size": 11,
+      "sha256": "4a12060b9594d06c66bf90975f4d20fa83f83825f7a9370d6b7e9cd5e9b96fd8"
+    },
+    {
+      "label": "country checked lookup",
+      "va": "0x1407322c0",
+      "rva": "0x7322c0",
+      "file_offset": "0x7316c0",
+      "size": 178,
+      "sha256": "40c94efa569d3c43ace0f80b5ff3ea8d5a913a86ae5737d03bdedfcbe8b27b78"
+    },
+    {
+      "label": "country lookup RTTI",
+      "va": "0x14546a4b8",
+      "rva": "0x546a4b8",
+      "file_offset": "0x54688b8",
+      "size": 15,
+      "sha256": "1025ac96a4a1b9f703088dae45f2a0868f4caac1aaf7cc2b224f6662ae519c16"
+    },
+    {
+      "label": "country scope tag",
+      "va": "0x1417b6650",
+      "rva": "0x17b6650",
+      "file_offset": "0x17b5a50",
+      "size": 6,
+      "sha256": "21faa16607cb70438711aab3fa582829af50aa15d5946524996fc7aa8a8e4e6d"
+    },
+    {
+      "label": "creation parser RTTI",
+      "va": "0x144cc0e60",
+      "rva": "0x4cc0e60",
+      "file_offset": "0x4cbfe60",
+      "size": 24,
+      "sha256": "e70068577816408509e6c0c24152760a8e02e03f7edc5da96c48738108eb4cb8"
+    },
+    {
+      "label": "creation type name",
+      "va": "0x145694690",
+      "rva": "0x5694690",
+      "file_offset": "0x5692a90",
+      "size": 24,
+      "sha256": "efaedb7f5a584a8420693e667d3de87be1b70677f577aa83525f86bbc5810f93"
+    },
+    {
+      "label": "creation parser vtable",
+      "va": "0x144786fc0",
+      "rva": "0x4786fc0",
+      "file_offset": "0x4785fc0",
+      "size": 48,
+      "sha256": "bb6e9cf21e5c6d3f48bef754036f3506c76884795880d3f841f40e0f60233239"
+    },
+    {
+      "label": "creation parser thunk",
+      "va": "0x14084967c",
+      "rva": "0x84967c",
+      "file_offset": "0x848a7c",
+      "size": 12,
+      "sha256": "cc7ba71db5030d4593f2f54a7b40d23bebaa10929b3bfe2c9e7ba18142561e5c"
+    },
+    {
+      "label": "creation constructor",
+      "va": "0x14175a1e0",
+      "rva": "0x175a1e0",
+      "file_offset": "0x17595e0",
+      "size": 431,
+      "sha256": "cc2bd825236fa7e4ee120df492eae058bf15506954bf40ba1b70303ce2da1989"
+    },
+    {
+      "label": "creation parser",
+      "va": "0x14175a3d0",
+      "rva": "0x175a3d0",
+      "file_offset": "0x17597d0",
+      "size": 827,
+      "sha256": "cb6b701f822fe46a8f8d032dc54c356cb008605e5f2b35aa142bbe431ab53c3e"
+    },
+    {
+      "label": "creation database RTTI",
+      "va": "0x144cbdc48",
+      "rva": "0x4cbdc48",
+      "file_offset": "0x4cbcc48",
+      "size": 24,
+      "sha256": "a7ef482cfa17b87495c44ddbfa1c08ed73ecd48a4631dc16610ff03b1e4c06fc"
+    },
+    {
+      "label": "creation database type name",
+      "va": "0x1457dae18",
+      "rva": "0x57dae18",
+      "file_offset": "0x57d9218",
+      "size": 32,
+      "sha256": "578d23406d81b220b2e8387a86b51270494da292eba63a45f38f576f08699a39"
+    },
+    {
+      "label": "creation database vtable",
+      "va": "0x144786f40",
+      "rva": "0x4786f40",
+      "file_offset": "0x4785f40",
+      "size": 64,
+      "sha256": "95fdff600e590fd7712a21905379dd12ac0b435a642f5d6bd958864df1835a4f"
+    },
+    {
+      "label": "creation database registration",
+      "va": "0x140779570",
+      "rva": "0x779570",
+      "file_offset": "0x778970",
+      "size": 496,
+      "sha256": "5fd73286beda791e92312ead2769d556e0dce94e882481898f02425328d67239"
+    },
+    {
+      "label": "creation loader",
+      "va": "0x1417895d0",
+      "rva": "0x17895d0",
+      "file_offset": "0x17889d0",
+      "size": 953,
+      "sha256": "687f795822c788f2688d53fad377479666273a9662a00521c84e0be43ea6e50f"
+    },
+    {
+      "label": "creation candidate index builder",
+      "va": "0x14175c9c0",
+      "rva": "0x175c9c0",
+      "file_offset": "0x175bdc0",
+      "size": 1632,
+      "sha256": "4d5a8c6a8b4c19b05098fa044d2ca0693f4eeb822b7a16ffa06f40c0ba84708c"
+    },
+    {
+      "label": "creation candidate gather",
+      "va": "0x14175c5e0",
+      "rva": "0x175c5e0",
+      "file_offset": "0x175b9e0",
+      "size": 991,
+      "sha256": "6a7974b560f175b45c5ee2ffb1a57b77c15f04da4b7ebd670e0c525536374eb9"
+    },
+    {
+      "label": "creation actual AI consumer",
+      "va": "0x1415e8bd0",
+      "rva": "0x15e8bd0",
+      "file_offset": "0x15e7fd0",
+      "size": 1213,
+      "sha256": "a4721923ee5b5f8259e0439f9b3d33b08613dc79c6a412ab1018c9b144d1e638"
+    },
+    {
+      "label": "formation parser RTTI",
+      "va": "0x144cbfb78",
+      "rva": "0x4cbfb78",
+      "file_offset": "0x4cbeb78",
+      "size": 24,
+      "sha256": "2677fe8bed7cfccfc08a1b352dc40b39606f5c5dfba6c3c7079684fad194ccb6"
+    },
+    {
+      "label": "formation type name",
+      "va": "0x1456bbe58",
+      "rva": "0x56bbe58",
+      "file_offset": "0x56ba258",
+      "size": 25,
+      "sha256": "55e92274b41f33874a678945ae8d6c8145b3d8fed9737aac1e558d985dc001f2"
+    },
+    {
+      "label": "formation parser vtable",
+      "va": "0x144787090",
+      "rva": "0x4787090",
+      "file_offset": "0x4786090",
+      "size": 48,
+      "sha256": "f2476249d0b9cdeb762a5b67a1204f8cc33f35ed11b0020345e88ed397fad631"
+    },
+    {
+      "label": "formation parser thunk",
+      "va": "0x14084a09c",
+      "rva": "0x84a09c",
+      "file_offset": "0x84949c",
+      "size": 12,
+      "sha256": "aee3a819f0dcf5ded5ac1e8e3eb04e0ed892ea290e4886719774590d436e22eb"
+    },
+    {
+      "label": "formation constructor",
+      "va": "0x14175fa00",
+      "rva": "0x175fa00",
+      "file_offset": "0x175ee00",
+      "size": 687,
+      "sha256": "bc6e1e4216b23b60a75b0acbe98151971fa551664ed0d2204289bc230d44a6d0"
+    },
+    {
+      "label": "formation parser",
+      "va": "0x14175fcf0",
+      "rva": "0x175fcf0",
+      "file_offset": "0x175f0f0",
+      "size": 1389,
+      "sha256": "169b9b86fde756cf8168671cddf24681ba99f06974ec02ee7c6af3873b5c4a7d"
+    },
+    {
+      "label": "formation database RTTI",
+      "va": "0x144cc1e68",
+      "rva": "0x4cc1e68",
+      "file_offset": "0x4cc0e68",
+      "size": 24,
+      "sha256": "9faa7202034b5f5e45f50e51f21bc6f0f06279380afe2455759f8f421b38ba44"
+    },
+    {
+      "label": "formation database type name",
+      "va": "0x1457dd490",
+      "rva": "0x57dd490",
+      "file_offset": "0x57db890",
+      "size": 33,
+      "sha256": "c8db1afd3c9f4085b28db073b001e372fb61fc0af3bbb790f20384fdfb842f6a"
+    },
+    {
+      "label": "formation database vtable",
+      "va": "0x144788c98",
+      "rva": "0x4788c98",
+      "file_offset": "0x4787c98",
+      "size": 64,
+      "sha256": "8f82d00949a5675e87e21b378feacf64f9281c4fb7d2a137cadf86a13875d8a5"
+    },
+    {
+      "label": "formation database registration",
+      "va": "0x140779820",
+      "rva": "0x779820",
+      "file_offset": "0x778c20",
+      "size": 178,
+      "sha256": "04575b616163f905691391c154ccfc2194c96dd3b6fbd76219908e0e5d3f3bd4"
+    },
+    {
+      "label": "formation loader",
+      "va": "0x141789990",
+      "rva": "0x1789990",
+      "file_offset": "0x1788d90",
+      "size": 1120,
+      "sha256": "0a786a52c221bbabeeeadb13aee4d75fa45db5feaa31280681d33fc85a4506da"
+    },
+    {
+      "label": "formation actual AI consumer",
+      "va": "0x1415e8850",
+      "rva": "0x15e8850",
+      "file_offset": "0x15e7c50",
+      "size": 884,
+      "sha256": "cc6a1c315dbfee7c33e114b5df1489f4d0db6e66b927eb7b065088d8fb6ef5ab"
+    }
+  ]
+}

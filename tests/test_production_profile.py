@@ -580,16 +580,25 @@ def test_legacy_road_policy_guard_preserves_named_actor(
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not GAME.is_dir(), reason="需要锁定原版 1.15 游戏目录")
+@pytest.mark.skipif(not GAME.is_dir(), reason="需要当前锁定原版游戏目录")
 def test_actual_installation_profile_smoke():
-    installed_version = config.game_version(GAME)["caligula_branch"].removeprefix("release/")
-    with version_contracts.select_version(installed_version):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         loaded = profile.load_profile(GAME)
-        frozen = profile.load_profile(profile.baseline_root())
-    assert loaded.game_version == installed_version
-    assert loaded.source_hashes == frozen.source_hashes
+        declared = profile.declared_profile()
+    assert loaded == declared
+    assert loaded.game_version == version_contracts.CURRENT_VERSION
     assert len(loaded.source_hashes) == 10
     assert len(loaded.registry.manifests) == 3
+
+
+@pytest.mark.parametrize("historical", ["1.15.0", "1.15.1"])
+def test_current_profile_rejects_historical_installation_bytes(historical):
+    archived = profile.baseline_root(historical)
+    with (
+        version_contracts.select_version(version_contracts.CURRENT_VERSION),
+        pytest.raises(ValueError, match=r"launcher/launcher-settings\.json.*SHA-256 漂移"),
+    ):
+        profile.load_profile(archived)
 
 
 @pytest.fixture(autouse=True)

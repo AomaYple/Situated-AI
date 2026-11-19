@@ -307,9 +307,10 @@ def test_complete_need_cost_and_capacity_match_generated_pdx(production, field, 
 
 def test_every_consumer_retains_native_ast_and_player_and_missing_boundaries(production):
     policies, generated, native, _model = production
+    version = version_contracts.active_version()
     for source, declared_fields in FIELDS.items():
         fields = declared_fields
-        if version_contracts.active_version() == "1.15.1" and source == INFO:
+        if version in {"1.15.1", "1.15.2"} and source == INFO:
             assert ("institution_scores", "institution_schools") not in policies[source].groups()
             fields = tuple(field for field in fields if field != SCHOOL)
         policy = policies[source]

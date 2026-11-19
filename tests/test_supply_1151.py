@@ -1,4 +1,4 @@
-"""Independent witnesses for the three reviewed 1.15.1 stance compositions."""
+"""Witnesses for the archived 1.15.1 and current supply stance compositions."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import pytest
 from test_native_parameter_boundary_proofs import _dependencies
 from test_native_parameter_boundary_proofs import supply_enum_case as _supply_enum_fixture
 
-from pdx import decision_adapters, version_contracts
+from pdx import config, decision_adapters, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import engine_scope, production_profile, supply_program, vanilla_inventory
@@ -23,6 +23,42 @@ from pdx.situated.native_treatments import _supply_enum_projections, native_trea
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
 GOODS = "common/goods/00_goods.txt"
 OVERLAP = {"oil", "radios", "telephones"}
+# The released 1.15.1 plan used these goods and a 0.25 price threshold.
+ARCHIVED_GOODS = (
+    "automobiles",
+    "clothes",
+    "coffee",
+    "explosives",
+    "fabric",
+    "fertilizer",
+    "fine_art",
+    "fish",
+    "fruit",
+    "furniture",
+    "glass",
+    "groceries",
+    "iron",
+    "lead",
+    "liquor",
+    "luxury_clothes",
+    "luxury_furniture",
+    "meat",
+    "merchant_marine",
+    "oil",
+    "opium",
+    "porcelain",
+    "radios",
+    "rubber",
+    "steel",
+    "sugar",
+    "sulfur",
+    "tea",
+    "telephones",
+    "tobacco",
+    "tools",
+    "wine",
+    "wood",
+)
 WORDS = frozenset(
     {"market_goods_delta", "market_goods_pricier", "wants_high_supply", "market", "mg:grain"}
 )
@@ -50,24 +86,46 @@ def _ast(node):
     return node.text, node.quoted
 
 
+def _patch_case(plan, text, goods):
+    inputs = {SOURCE: text, GOODS: goods}
+    result = decision_adapters._supply_patch(text, plan, inputs, WORDS, plan.actions())
+    return plan, text, inputs, result
+
+
 @pytest.fixture(scope="module")
 def case():
     with version_contracts.select_version("1.15.1"):
-        adapters = decision_adapters.load()
-        assert adapters.supply is not None
-        plan = adapters.supply
+        native_stances = supply_program.native_stances_1151()
         text = (production_profile.baseline_root() / "game" / SOURCE).read_text(
             encoding="utf-8-sig"
         )
-        # Real pinned native triggers; synthetic name-only goods definitions
-        # isolate the patcher's duplicate/unknown-name contract offline. These
-        # definitions grant no production reader/source/engine authority.
-        inputs = {SOURCE: text, GOODS: " ".join(f"{good}={{}}" for good in plan.goods)}
-        result = decision_adapters._supply_patch(text, plan, inputs, WORDS, plan.actions())
-        return plan, text, inputs, result
+    plan = decision_adapters.SupplyPlan(SOURCE, ARCHIVED_GOODS, 0.25, native_stances)
+    # The original triggers come from the archive. Only the goods names are synthetic.
+    goods = " ".join(f"{good}={{}}" for good in plan.goods)
+    return _patch_case(plan, text, goods)
 
 
 def test_all_three_native_stances_have_one_typed_idempotent_writer(case):
+    _assert_three_native_stance_writers(case, archived=True)
+
+
+@pytest.mark.integration
+def test_current_supply_composition_uses_locked_installed_native_stances():
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        version_contracts.verify_installation_identity(config.GAME.parent)
+        text = version_contracts.read_default_strategy(config.GAME)
+        goods = (config.GAME / GOODS).read_bytes()
+        assert (
+            hashlib.sha256(goods).hexdigest()
+            == vanilla_inventory._parameter_evidence_contract()[GOODS]
+        )
+        plan = decision_adapters.load().supply
+        assert plan is not None
+        case = _patch_case(plan, text, goods.decode("utf-8-sig"))
+    _assert_three_native_stance_writers(case, archived=False)
+
+
+def _assert_three_native_stance_writers(case, *, archived):
     plan, original, _, output = case
     programs = {program.good: program for program in plan.actions()}
     before, after = _stances(original), _stances(output)
@@ -84,8 +142,16 @@ def test_all_three_native_stances_have_one_typed_idempotent_writer(case):
         assert _ast(union.items[0].value) == _ast(before.first(good).value.first("trigger").value)
         native_stance = programs[good].native_stance
         assert native_stance is not None
-        start, end = supply_program.block_span(native_stance.body, ("<anonymous>", "trigger"))
-        assert "OR = { AND = " + native_stance.body[start:end] in programs[good].composed_body()
+        path = ("ai_strategy_default", "goods_stances", good)
+        start, end = supply_program.block_span(original, path)
+        native_body = original[start:end]
+        assert native_stance.body == (native_body if archived else None)
+        assert native_stance.version == (
+            "1.15.1" if archived else version_contracts.CURRENT_VERSION
+        )
+        start, end = supply_program.block_span(native_body, ("<anonymous>", "trigger"))
+        output_start, output_end = supply_program.block_span(output, path)
+        assert "OR = { AND = " + native_body[start:end] in output[output_start:output_end]
     for good in set(before.keys()) - OVERLAP:
         assert _ast(before.first(good)) == _ast(after.first(good))
     assert sum(program.operation == "append" for program in programs.values()) == 30
@@ -308,7 +374,7 @@ def composition_projection_case(case, tmp_path, monkeypatch):
     its test-only source pins isolate whole-source enum projection. No production
     authority or historic evidence file is changed or inferred from these bytes.
     """
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.1")
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
     inventory, native, generated, path = cast("Any", _supply_enum_fixture).__wrapped__(
         tmp_path, monkeypatch
     )

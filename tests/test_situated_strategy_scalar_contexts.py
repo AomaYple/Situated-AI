@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_rules, version_contracts
+from pdx import config, decision_rules, decisions, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
@@ -148,7 +148,10 @@ def test_play_instance_type_is_not_accepted_by_tag_guess(scalar_proof, member):
 
 
 @pytest.mark.parametrize("field", FIELDS)
-def test_scalar_contexts_bind_exact_objects_and_country_root(field):
+@pytest.mark.parametrize("version", ["1.15.1", version_contracts.CURRENT_VERSION])
+def test_scalar_contexts_bind_exact_objects_and_country_root(field, version, monkeypatch, tmp_path):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version)
+    monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     context = compiler._frozen_strategy_contexts()[field]
     reader = decision_rules.Reader("war", "is_at_war", "root", "boolean", "boolean")
     assert compiler.validate_context_readers(
@@ -244,7 +247,8 @@ def test_inventory_requires_each_exact_scalar_source_and_ordinary_child(scalar_p
 
 @pytest.fixture(scope="module")
 def scalar_model():
-    return compiler.load_model()
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        return compiler.load_model()
 
 
 def _assert_scalar_writer_bindings(writer, instance, card):
@@ -271,9 +275,8 @@ def _assert_scalar_writer_bindings(writer, instance, card):
     )
 
 
-def test_all_actual_scalar_writers_bind_every_input_and_share_the_instance_context(
-    scalar_model, monkeypatch, tmp_path
-):
+@pytest.mark.integration
+def test_all_actual_scalar_writers_bind_every_input_and_share_the_instance_context(scalar_model):
     model = scalar_model
     assert model.consumer_ir is not None
     instances = {row.action_id: row for row in model.action_instances}
@@ -311,12 +314,24 @@ def test_all_actual_scalar_writers_bind_every_input_and_share_the_instance_conte
     for writer in writers:
         instance = instances[writer.writer_id]
         _assert_scalar_writer_bindings(writer, instance, cards.get(writer.writer_id))
+
+
+def test_current_scalar_model_is_offline_and_generation_requires_locked_strategy(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
-    offline = compiler.load_model()
-    assert offline.consumer_ir is not None
-    assert offline.consumer_ir.writers == model.consumer_ir.writers
+    bundle = compiler.load_model().consumer_ir
+    assert bundle is not None
+    writer = next(
+        row for row in bundle.writers if row.writer_id == "card_diplomatic_aggression_guard"
+    )
+    assert writer.evaluation_context == compiler._frozen_strategy_contexts()["aggression"]
+    with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
+        decisions.build()
 
 
+@pytest.mark.integration
 def test_card_binding_cannot_drop_a_real_support_input_outside_condition_facts(scalar_model):
     model = scalar_model
     writer = next(

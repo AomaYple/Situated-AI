@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import shutil
 import tempfile
@@ -29,18 +31,29 @@ import pytest
 from pdx import analyze, parallel, version_contracts
 from pdx import config as pdx_config
 from pdx.scan import walk_files
-from pdx.situated import r2_reader_authority
 
 
 def configure_current_identity(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Bind a synthetic installation to the current committed identity files."""
-    originals = r2_reader_authority.frozen_root("1.15.1")
+    """Give a synthetic installation the identity expected by the real verifier."""
+    version = version_contracts.CURRENT_VERSION
+    launcher = json.dumps(
+        {"gameId": "victoria3", "rawVersion": version, "version": f"{version} Test"}
+    ).encode()
+    fixture_digests = {}
     for relative in version_contracts.INSTALLATION_IDENTITY_SHA256:
+        if relative == "launcher/launcher-settings.json":
+            raw = launcher
+        elif relative == "caligula_branch.txt":
+            raw = f"release/{version}\n".encode()
+        else:
+            raw = f"synthetic {version} {relative}\n".encode()
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((originals / relative).read_bytes())
+        target.write_bytes(raw)
+        fixture_digests[relative] = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(version_contracts, "INSTALLATION_IDENTITY_SHA256", fixture_digests)
     monkeypatch.setattr(pdx_config, "ROOT", root)
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
 
 
 # pytest 在某些 Windows + xdist + coverage 组合下会把默认 basetemp 解析到
@@ -248,20 +261,20 @@ def corpus_texts(corpus_files: list[Path]) -> LazyCorpusTexts:
     return LazyCorpusTexts(readable)
 
 
-# ── 全量分析结果（整轮只跑一次）────────────────────────────
-@pytest.fixture(scope="session")
+# ── 全量分析结果（由使用它们的测试模块共享）──────────────────
+@pytest.fixture(scope="module")
 def ga():
     """游戏本体分析结果。"""
     return analyze.game_analysis()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def ma():
     """mod 分析结果。"""
     return analyze.mods_analysis()
 
 
-@pytest.fixture(scope="session")
-def ca(ga, ma):
+@pytest.fixture(scope="module")
+def ca(ma):
     """交叉分析结果。"""
     return analyze.cross_analysis(ma)

@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from pdx import config
+from pdx import config, version_contracts
 from pdx import mobilization_opportunities as mobilization
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
@@ -30,6 +30,21 @@ def baseline():
     return mobilization.load_baseline()
 
 
+@pytest.fixture
+def archived_baseline():
+    with version_contracts.select_version("1.15.1"):
+        yield mobilization.load_baseline()
+
+
+def _pin_name():
+    return {
+        "1.14.5": "BASELINE_SHA256",
+        "1.15.0": "BASELINE_SHA256_115",
+        "1.15.1": "BASELINE_SHA256_1151",
+        version_contracts.CURRENT_VERSION: "BASELINE_SHA256_1152",
+    }[version_contracts.active_version()]
+
+
 def test_context_reuse_preserves_identity_isolation_and_rechecks_pin(monkeypatch):
     compiler._mobilization_context_rows.cache_clear()
     load = mobilization.load_baseline
@@ -48,11 +63,7 @@ def test_context_reuse_preserves_identity_isolation_and_rechecks_pin(monkeypatch
     assert sum(raw is not None for raw in reads) == 1
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_1151"
-        if mobilization.version_contracts.active_version() == "1.15.1"
-        else "BASELINE_SHA256_115"
-        if mobilization.version_contracts.is_115()
-        else "BASELINE_SHA256",
+        _pin_name(),
         "0" * 64,
     )
     with pytest.raises(ValueError, match="身份漂移"):
@@ -90,7 +101,8 @@ def _node(root, *path):
     return node
 
 
-def test_frozen_raw_hashes_reconstruct_complete_originals(baseline):
+def test_frozen_raw_hashes_reconstruct_complete_originals(archived_baseline):
+    baseline = archived_baseline
     expected = {
         SOURCE: "e3e5d52365bc56ec270ab91a6f6f280a07eebd862187e8c604574ae89cc5df40",
         DOC: "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
@@ -137,8 +149,9 @@ def test_frozen_raw_hashes_reconstruct_complete_originals(baseline):
     ],
 )
 def test_real_candidates_freeze_whole_ast_exact_basket_qualifications_and_lifecycle(
-    baseline, identity, basket, recovery, technology, other
+    archived_baseline, identity, basket, recovery, technology, other
 ):
+    baseline = archived_baseline
     parsed = parse_text(_inputs(baseline)[SOURCE].decode("utf-8-sig"))
     assert not parsed.errors
     row = baseline["candidates"][identity]
@@ -180,7 +193,10 @@ def test_real_candidates_freeze_whole_ast_exact_basket_qualifications_and_lifecy
         assert _ast(_node(definition.value, section.key)) == _ast(section)
 
 
-def test_native_formation_owner_country_and_nonzero_utility_have_independent_witnesses(baseline):
+def test_native_formation_owner_country_and_nonzero_utility_have_independent_witnesses(
+    archived_baseline,
+):
+    baseline = archived_baseline
     originals = _inputs(baseline)
     assert "root = military formation" in originals[DOC].decode("utf-8-sig")
     assert "after multiplication, this is compared against the monetary cost" in originals[
@@ -352,9 +368,9 @@ def test_complete_reader_signature_rejects_tampering(raw, baseline, reader, muta
     ],
 )
 def test_repin_cannot_hide_frozen_raw_ast_metadata_key_quantity_or_guard_tampering(
-    baseline, tmp_path, monkeypatch, mutation
+    archived_baseline, mutation
 ):
-    data = copy.deepcopy(baseline)
+    data = copy.deepcopy(archived_baseline)
     row = data["candidates"][FIRST]
     if mutation == "raw_hash":
         data["originals"][SOURCE]["sha256"] = "0" * 64
@@ -395,24 +411,8 @@ def test_repin_cannot_hide_frozen_raw_ast_metadata_key_quantity_or_guard_tamperi
             "bytes": original.hex(),
             "sha256": hashlib.sha256(original).hexdigest(),
         }
-    path = tmp_path / "baseline.json"
-    path.write_text(mobilization._canonical(data), encoding="utf-8", newline="\n")
-    monkeypatch.setattr(
-        mobilization,
-        "baseline_path",
-        lambda: path,
-    )
-    monkeypatch.setattr(
-        mobilization,
-        "BASELINE_SHA256_1151"
-        if mobilization.version_contracts.active_version() == "1.15.1"
-        else "BASELINE_SHA256_115"
-        if mobilization.version_contracts.is_115()
-        else "BASELINE_SHA256",
-        hashlib.sha256(path.read_bytes()).hexdigest(),
-    )
     with pytest.raises(ValueError):
-        mobilization.load_baseline()
+        mobilization._validate(data)
 
 
 def test_hash_pin_and_canonical_bytes_are_independent_guards(baseline, tmp_path, monkeypatch):
@@ -427,11 +427,7 @@ def test_hash_pin_and_canonical_bytes_are_independent_guards(baseline, tmp_path,
         mobilization.load_baseline()
     monkeypatch.setattr(
         mobilization,
-        "BASELINE_SHA256_1151"
-        if mobilization.version_contracts.active_version() == "1.15.1"
-        else "BASELINE_SHA256_115"
-        if mobilization.version_contracts.is_115()
-        else "BASELINE_SHA256",
+        _pin_name(),
         hashlib.sha256(path.read_bytes()).hexdigest(),
     )
     with pytest.raises(ValueError, match="规范JSON"):
@@ -452,42 +448,41 @@ def test_offline_derivation_preserves_callers_and_never_reads_game(raw, baseline
     "mutation",
     ["new_file", "dlc_file", "missing_file", "bytes", "quantity", "weight", "owner_scope", "doc"],
 )
-def test_verify_game_rejects_source_set_raw_and_semantic_drift(baseline, tmp_path, mutation):
-    for source, original in _inputs(baseline).items():
-        path = tmp_path / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(original)
-    assert mobilization.verify_game(tmp_path) == baseline
-    path = tmp_path / SOURCE
+def test_verify_game_rejects_source_set_raw_and_semantic_drift(monkeypatch, mutation):
+    if not (config.GAME / DOC).is_file():
+        pytest.skip("当前原版安装不可用")
+    originals = mobilization.read_inputs(config.GAME)
+    assert mobilization.verify_game(config.GAME) == mobilization.load_baseline()
+    damaged = dict(originals)
     if mutation in {"new_file", "dlc_file"}:
-        path = (
-            (tmp_path / "dlc/test/in_game/common/mobilization_options/extra.txt")
+        source = (
+            "dlc/test/in_game/common/mobilization_options/extra.txt"
             if mutation == "dlc_file"
-            else path.with_name("extra.txt")
+            else "common/mobilization_options/extra.txt"
         )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(b"# new native input\n")
+        damaged[source] = b"# new native input\n"
     elif mutation == "missing_file":
-        path.unlink()
+        damaged.pop(SOURCE)
     elif mutation == "owner_scope":
-        path = tmp_path / OWNER
-        path.write_bytes(
-            path.read_bytes().replace(b"on_military_formation_created =", b"on_fake_created =")
+        damaged[OWNER] = originals[OWNER].replace(
+            b"on_military_formation_created =", b"on_fake_created ="
         )
     elif mutation == "doc":
-        path = tmp_path / DOC
-        path.write_bytes(path.read_bytes().replace(b"root = military formation", b"root = country"))
+        damaged[DOC] = originals[DOC].replace(b"root = military formation", b"root = country")
     elif mutation == "bytes":
-        path.write_bytes(path.read_bytes() + b"# raw drift\n")
+        damaged[SOURCE] += b"# raw drift\n"
     else:
-        original = path.read_bytes()
-        path.write_bytes(
-            original.replace(b"goods_input_fabric_add = 1", b"goods_input_fabric_add = 3", 1)
+        damaged[SOURCE] = (
+            originals[SOURCE].replace(
+                b"goods_input_fabric_add = 1", b"goods_input_fabric_add = 3", 1
+            )
             if mutation == "quantity"
-            else original.replace(b"value = 1", b"value = 0", 1)
+            else originals[SOURCE].replace(b"value = 1", b"value = 0", 1)
         )
-    with pytest.raises((ValueError, FileNotFoundError)):
-        mobilization.verify_game(tmp_path)
+    assert originals != damaged
+    monkeypatch.setattr(mobilization, "read_inputs", lambda _game: damaged)
+    with pytest.raises(ValueError):
+        mobilization.verify_game(config.GAME)
 
 
 @pytest.mark.parametrize(

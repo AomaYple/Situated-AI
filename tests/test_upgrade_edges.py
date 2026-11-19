@@ -86,13 +86,16 @@ def test_dependency_marker_platforms(platform, monkeypatch):
     environment = markers.default_environment()
     environment["sys_platform"] = platform
     monkeypatch.setattr(markers, "default_environment", lambda: environment)
-    assert lockfile._requirement_names(
+    active = lockfile._active_requirements(
         [
             "base>=1",
             "native>=1; sys_platform == 'win32'",
             "other; sys_platform == 'linux' or sys_platform == 'darwin'",
         ]
-    ) == (["base", "native"] if platform == "win32" else ["base", "other"])
+    )
+    assert [requirement.name for requirement in active] == (
+        ["base", "native"] if platform == "win32" else ["base", "other"]
+    )
 
 
 def test_invalid_and_boolean_markers():
@@ -423,16 +426,9 @@ def test_profile_summary_counts_real_calls(tmp_path, request):
 @pytest.fixture
 def table_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from pdx import config
-    from pdx.situated import r2_reader_authority
-    from pdx.version_contracts import CURRENT_VERSION, INSTALLATION_IDENTITY_SHA256
 
+    configure_current_identity(tmp_path, monkeypatch)
     (tmp_path / "game/common").mkdir(parents=True)
-    baseline = r2_reader_authority.frozen_root(CURRENT_VERSION)
-    for relative in INSTALLATION_IDENTITY_SHA256:
-        target = tmp_path / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((baseline / relative).read_bytes())
-    monkeypatch.setattr(config, "ROOT", tmp_path)
     monkeypatch.setattr(config, "GAME", tmp_path / "game")
 
 

@@ -7,10 +7,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  # Frozen 1.15.1 inputs select the same contract on every offline runner.
-  V3_CONTRACT_PROFILE: "1.15.1"
-
 permissions:
   contents: read
 
@@ -78,7 +74,7 @@ jobs:
 
       - name: pytest —— 不依赖游戏的用例
         run: >-
-          python -m pytest -m "not integration and not benchmark"
+          python tools/ci/run_check.py test-offline
           --max-worker-restart=0 -vv --durations=25
           --junitxml=tools/out/ci/test-results.xml
 
@@ -169,5 +165,5 @@ jobs:
 
       - name: pytest —— 在锁定的环境里跑不依赖游戏的用例
         run: >-
-          python -m pytest -m "not integration and not benchmark"
+          python tools/ci/run_check.py test-offline
           --max-worker-restart=0 -vv --durations=25

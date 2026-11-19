@@ -67,6 +67,10 @@ ACTIONS = DECISIONS / "actions.toml"
 LAYERS = DECISIONS / "action_layers.toml"
 BINDINGS = DECISIONS / "action_bindings.toml"
 BASELINE = REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+_DEFAULT_STRATEGY_PROJECTION = REPO / "research/situated/1.15.2/default-strategy-structure.json"
+_DEFAULT_STRATEGY_PROJECTION_SHA256 = (
+    "a07ffedcf2ea3f23c9e49ccbef59f202e3b7896aea6adf39ad0e51ea1e0eb277"
+)
 _LAW_DOC = REPO / "research/situated/victoria3-1.14.5-law-enact-context.md"
 _LAW_DOC_MANIFEST = REPO / "research/official-docs.manifest.json"
 _LAW_DOC_SHA256 = "706098c2cb35770cbe477c84620940b716e60d8708f30f7ae72d46ed1e2091d8"
@@ -89,10 +93,19 @@ SUPPORTING_SOURCES = (
 
 
 def baseline_path() -> Path:
-    """The full default strategy of the selected native version."""
+    """Locate the full default strategy of the selected native version."""
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return config.GAME / version_contracts.DEFAULT_STRATEGY_SOURCE
     if version_contracts.is_115():
         return version_contracts.research_path("vanilla-ai", "00_default_strategy.txt")
     return BASELINE
+
+
+def baseline_text() -> str:
+    """Use the verified installation when the current source is required."""
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return version_contracts.read_default_strategy(config.GAME)
+    return baseline_path().read_text(encoding="utf-8")
 
 
 def support_evaluation_context() -> decision_ir.EvaluationContext:
@@ -100,13 +113,23 @@ def support_evaluation_context() -> decision_ir.EvaluationContext:
     path = baseline_path()
     raw = path.read_bytes()
     data = json.loads(engine_scope.strategy_snapshot())
-    native_hash = data["script_hashes"]["common/ai_strategies/00_default_strategy.txt"]
-    if native_hash not in {
-        hashlib.sha256(raw).hexdigest(),
-        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
-    }:
+    native_hash = data["script_hashes"][version_contracts.DEFAULT_STRATEGY_SOURCE]
+    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    accepted_hashes = {hashlib.sha256(raw).hexdigest()}
+    if not current:
+        accepted_hashes.add(hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest())
+    if native_hash not in accepted_hashes or (
+        current and native_hash != version_contracts.contract().default_strategy_sha256
+    ):
         raise ValueError("支持程序原版底本与引擎证据不一致")
-    parsed = parse_text(raw.decode("utf-8-sig"))
+    source = (
+        version_contracts.DEFAULT_STRATEGY_SOURCE if current else path.relative_to(REPO).as_posix()
+    )
+    return _support_evaluation_context(raw.decode("utf-8-sig"), source)
+
+
+def _support_evaluation_context(text: str, source: str) -> decision_ir.EvaluationContext:
+    parsed = parse_text(text)
     definitions = parsed.root.all("ai_strategy_default")
     if parsed.errors or len(definitions) != 1 or not isinstance(definitions[0].value, Block):
         raise ValueError("支持程序原版定义不唯一或无法解析")
@@ -118,7 +141,7 @@ def support_evaluation_context() -> decision_ir.EvaluationContext:
         or not isinstance(fields[0].value, Block)
     ):
         raise ValueError("支持程序原版字段不是唯一普通块")
-    lines = raw.decode("utf-8-sig").splitlines()
+    lines = text.splitlines()
     comments: dict[str, list[int]] = {}
     for index in range(fields[0].line - 2, definitions[0].line - 1, -1):
         line = lines[index].strip()
@@ -138,7 +161,6 @@ def support_evaluation_context() -> decision_ir.EvaluationContext:
         for marker in comments
     ):
         raise ValueError("支持程序原版字段缺少精确独立上下文")
-    source = path.relative_to(REPO).as_posix()
     actor, target, enemy = (comments[marker][0] for marker in markers[:3])
     return decision_ir.EvaluationContext(
         actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, actor),
@@ -662,18 +684,14 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
 
 def _frozen_institution_contexts(
     context: decision_ir.EvaluationContext,
+    *,
+    verified_baseline: str | None = None,
 ) -> dict[str, decision_ir.EvaluationContext]:
     """Project only exact numeric children of the pinned original ordinary map."""
     data = json.loads(engine_scope.strategy_snapshot())
-    raw = baseline_path().read_bytes()
-    source = "common/ai_strategies/00_default_strategy.txt"
-    # Repository snapshots omit the native UTF-8 BOM by the text contract.
-    if data["script_hashes"][source] not in {
-        hashlib.sha256(raw).hexdigest(),
-        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
-    }:
-        raise ValueError("冻结制度策略原件 SHA 与引擎证据不一致")
-    parsed = parse_text(raw.decode("utf-8-sig"))
+    if verified_baseline is None:
+        verified_baseline = _frozen_strategy_text(data, "制度")
+    parsed = parse_text(verified_baseline)
     definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
     scores = (
         vanilla_inventory._institution_score_map(
@@ -689,17 +707,14 @@ def _frozen_institution_contexts(
 
 def _frozen_strategy_score_contexts(
     contexts: dict[str, decision_ir.EvaluationContext],
+    *,
+    verified_baseline: str | None = None,
 ) -> dict[str, decision_ir.EvaluationContext]:
     """Project pinned enum numeric children without authorizing the map or trigger."""
     data = json.loads(engine_scope.strategy_snapshot())
-    raw = baseline_path().read_bytes()
-    source = "common/ai_strategies/00_default_strategy.txt"
-    if data["script_hashes"][source] not in {
-        hashlib.sha256(raw).hexdigest(),
-        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
-    }:
-        raise ValueError("冻结目标策略原件 SHA 与引擎证据不一致")
-    parsed = parse_text(raw.decode("utf-8-sig"))
+    if verified_baseline is None:
+        verified_baseline = _frozen_strategy_text(data, "目标")
+    parsed = parse_text(verified_baseline)
     definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
     result = {}
     for family in (
@@ -728,6 +743,96 @@ def _frozen_strategy_score_contexts(
             {f"{family}.{item.key}{suffix}": contexts[family] for item in scores.assignments()}
         )
     return result
+
+
+def _frozen_strategy_text(data: dict[str, Any], kind: str) -> str:
+    raw = baseline_path().read_bytes()
+    accepted = {hashlib.sha256(raw).hexdigest()}
+    if version_contracts.active_version() != version_contracts.CURRENT_VERSION:
+        # The historical repository snapshots omit the native UTF-8 BOM.
+        accepted.add(hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest())
+    if data["script_hashes"][version_contracts.DEFAULT_STRATEGY_SOURCE] not in accepted:
+        raise ValueError(f"冻结{kind}策略原件 SHA 与引擎证据不一致")
+    return raw.decode("utf-8-sig")
+
+
+def _strategy_source_identity() -> dict[str, str | int]:
+    selected = version_contracts.contract()
+    return {
+        "schema": 1,
+        "version": selected.version,
+        "source": version_contracts.DEFAULT_STRATEGY_SOURCE,
+        "source_sha256": selected.default_strategy_sha256,
+        "normalized_sha256": selected.baseline_strategy_sha256,
+    }
+
+
+def _project_default_strategy(verified_baseline: str) -> dict[str, Any]:
+    source = version_contracts.DEFAULT_STRATEGY_SOURCE
+    parsed = parse_text(verified_baseline)
+    definitions = parsed.root.all("ai_strategy_default")
+    if parsed.errors or len(definitions) != 1 or not isinstance(definitions[0].value, Block):
+        raise ValueError("默认策略底本没有唯一可解析的定义")
+    body = definitions[0].value
+    block_names = {
+        item.key
+        for item in body.assignments()
+        if item.op == "="
+        and item.prefix is None
+        and isinstance(item.value, Block)
+        and len(body.all(item.key)) == 1
+    }
+    frozen = _frozen_strategy_contexts()
+    numeric = _frozen_institution_contexts(
+        frozen["institution_scores"], verified_baseline=verified_baseline
+    )
+    numeric.update(_frozen_strategy_score_contexts(frozen, verified_baseline=verified_baseline))
+    return {
+        **_strategy_source_identity(),
+        "block_names": sorted(block_names),
+        "field_contexts": {
+            field: context.as_dict()
+            for field, context in evaluation_contexts(verified_baseline).items()
+        },
+        "numeric_children": sorted(numeric),
+        "support_context": _support_evaluation_context(verified_baseline, source).as_dict(),
+    }
+
+
+def _default_strategy_projection() -> dict[str, Any]:
+    raw = _DEFAULT_STRATEGY_PROJECTION.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _DEFAULT_STRATEGY_PROJECTION_SHA256:
+        raise ValueError("默认策略结构合同字节漂移")
+    data = cast("dict[str, Any]", json.loads(raw))
+    if any(data.get(key) != value for key, value in _strategy_source_identity().items()):
+        raise ValueError("默认策略结构合同与选定原版身份不一致")
+    return data
+
+
+def verify_default_strategy_projection(verified_baseline: str) -> None:
+    """Bind the installed source structure to the offline compiler's contract."""
+    if _project_default_strategy(verified_baseline) != _default_strategy_projection():
+        raise ValueError("锁定原版默认策略与结构合同不一致")
+
+
+def _declared_context(row: dict[str, Any]) -> decision_ir.EvaluationContext:
+    actor = row["actor_scope"]
+    return decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding(**actor) if actor is not None else None,
+        targets=tuple(decision_ir.ContextBinding(**item) for item in row["targets"]),
+        auxiliary_scopes=tuple(
+            decision_ir.ContextBinding(**item) for item in row["auxiliary_scopes"]
+        ),
+        evidence=tuple(row["evidence"]),
+        status=row["status"],
+    )
+
+
+def declared_support_evaluation_context() -> decision_ir.EvaluationContext:
+    """Return the scope contract for model consumers that need no original script."""
+    if version_contracts.active_version() != version_contracts.CURRENT_VERSION:
+        return support_evaluation_context()
+    return _declared_context(_default_strategy_projection()["support_context"])
 
 
 def _frozen_company_context() -> decision_ir.EvaluationContext:
@@ -810,7 +915,7 @@ def _frozen_treaty_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCon
 
 
 def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
-    """付费动员权重保留编队 ROOT 和实际所属国家；候选来自冻结原文。"""
+    """付费动员权重保留编队 ROOT 和实际所属国家。"""
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
     raw = mobilization_opportunities.baseline_path().read_bytes()
@@ -829,6 +934,7 @@ def _mobilization_context_rows(
 
     with version_contracts.select_version(version):
         data = mobilization_opportunities.load_baseline(raw=raw)
+        candidates = mobilization_opportunities.candidate_catalog(data)
     text = raw.decode("utf-8")
     line = text.count("\n", 0, text.index('"native_root": "military_formation"')) + 1
     context = decision_ir.EvaluationContext(
@@ -842,10 +948,7 @@ def _mobilization_context_rows(
             f"{source}:definition_only:mobilization_option",
         ),
     )
-    return tuple(
-        ((row["source"], row["field"]), context)
-        for row in mobilization_opportunities.candidate_catalog(data).values()
-    )
+    return tuple(((row["source"], row["field"]), context) for row in candidates.values())
 
 
 def _mobilization_context_readers(
@@ -1722,16 +1825,23 @@ def load_model(
         if missing:
             raise ValueError(f"行动 {action.id} 引用了未知事实：{missing}")
         _validate_action_costs(action, {item.id: item for item in facts})
-    baseline_text = (
-        baseline if baseline is not None else baseline_path().read_text(encoding="utf-8")
-    )
-    parsed = parse_text(baseline_text)
-    if parsed.errors:
-        raise ValueError("默认策略底本无法解析")
-    available = set(re.findall(r"^\s*([a-z][a-z0-9_]*)\s*=\s*\{", baseline_text, re.MULTILINE))
-    missing = [consumer.field for consumer in consumers if consumer.field not in available]
-    if baseline is None and missing:
-        raise ValueError(f"消费者字段不在默认策略底本：{missing[0]}")
+    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    projection = _default_strategy_projection() if current else None
+    if baseline is None and projection is not None:
+        available = set(projection["block_names"])
+        observed_contexts = {
+            field: _declared_context(row) for field, row in projection["field_contexts"].items()
+        }
+    else:
+        source_text = baseline if baseline is not None else baseline_text()
+        if parse_text(source_text).errors:
+            raise ValueError("默认策略底本无法解析")
+        available = set(re.findall(r"^\s*([a-z][a-z0-9_]*)\s*=\s*\{", source_text, re.MULTILINE))
+        observed_contexts = evaluation_contexts(source_text)
+    if baseline is None:
+        missing = [consumer.field for consumer in consumers if consumer.field not in available]
+        if missing:
+            raise ValueError(f"消费者字段不在默认策略底本：{missing[0]}")
     production, count, production_hashes = _production_inventory(
         information=information, adapters=adapters
     )
@@ -1742,10 +1852,19 @@ def load_model(
         consumer_fields={item.id: item.field for item in consumers},
         consumer_contracts={item.id: item for item in consumers},
     )
-    observed_contexts = evaluation_contexts(baseline_text)
     observed_contexts.update(_frozen_strategy_contexts())
-    observed_contexts.update(_frozen_institution_contexts(observed_contexts["institution_scores"]))
-    observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))
+    if projection is None:
+        observed_contexts.update(
+            _frozen_institution_contexts(observed_contexts["institution_scores"])
+        )
+        observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))
+    else:
+        observed_contexts.update(
+            {
+                field: observed_contexts[field.split(".")[0]]
+                for field in projection["numeric_children"]
+            }
+        )
     law_context = _frozen_law_context()
     company_context = _frozen_company_context()
     ship_modification_contexts = _frozen_ship_modification_contexts()
@@ -1953,13 +2072,15 @@ def load_model(
 
         hashes.update(
             compatibility_production_snapshot=hashlib.sha256(
-                compatibility_115.snapshot()
+                compatibility_115.declaration() if current else compatibility_115.snapshot()
             ).hexdigest(),
             building_default_context_snapshot=hashlib.sha256(
                 engine_building_115.snapshot()
             ).hexdigest(),
             defensive_pact_reader_snapshot=hashlib.sha256(engine_reader_115.snapshot()).hexdigest(),
         )
+    if projection is not None:
+        hashes["default_strategy_structure"] = _DEFAULT_STRATEGY_PROJECTION_SHA256
     return SituatedModel(
         facts,
         consumers,

@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "3.3.0"
+RELEASE_VERSION = "3.3.1"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -221,6 +221,7 @@ def _validate_archive(
 
 def validate_package(archive_path: Path) -> dict[str, object]:
     """校验正式 ZIP，并拒绝任何偏离当前生产源的内容。"""
+    version_contracts.require_current()
     policy, extensions, internal_files = package_inputs(include_engineering_metadata=True)
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
@@ -519,7 +520,10 @@ def production_configuration(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions]:
     """读取唯一发布 profile；读取配置不需要本机原版。"""
-    if profile is not None and profile.game_version != "1.15.1":
+    if profile is not None and profile.game_version not in {
+        "1.15.1",
+        version_contracts.CURRENT_VERSION,
+    }:
         # The native profile is verified before any generated file is touched.
         # Policy lowering is intentionally fail-closed until the A4 rule source
         # has been reviewed and attached to the same ConsumerIR bundle.
@@ -527,10 +531,14 @@ def production_configuration(
         raise ValueError(
             "1.15.0 profile 已锁定原版写点，但政策 RuleSet 尚未完成统一 IR 接线；拒绝生成"
         )
-    if profile is not None and profile != production_profile.load_profile(
-        production_profile.baseline_root("1.15.1")
-    ):
-        raise ValueError("正式 profile 与锁定完整生产身份不一致")
+    if profile is not None:
+        expected = (
+            production_profile.declared_profile()
+            if profile.game_version == version_contracts.CURRENT_VERSION
+            else production_profile.load_profile(production_profile.baseline_root("1.15.1"))
+        )
+        if profile != expected:
+            raise ValueError("正式 profile 与锁定完整生产身份不一致")
     policy, extensions = decisions.load(), decisions.load_extensions(profile="release")
     policy = replace(
         policy,
@@ -575,8 +583,7 @@ def check_configuration_identity(
     files: Mapping[str, str | bytes],
     configuration: profile_configuration.ProfileConfiguration,
 ) -> None:
-    if version_contracts.active_version() != "1.15.1":
-        return
+    version_contracts.require_current()
     metadata = json.loads(files[METADATA_NAME])
     if metadata.get("game_custom_data", {}).get("configuration") != configuration.identity():
         raise ValueError("生成物的完整配置身份不一致；生成、检查和打包必须选择同一配置")
@@ -585,18 +592,22 @@ def check_configuration_identity(
 def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     """冻结源码和产物字节；离线只能核对冻结一致性，不能重建原版。"""
     root = decisions.PRODUCT.parent
+    selected = version_contracts.active_version()
+    if selected == version_contracts.CURRENT_VERSION:
+        vanilla_metadata = sorted((root / "research/vanilla-ai" / selected).glob("*.json"))
+    else:
+        baseline = decisions.baseline_path().parent
+        vanilla_metadata = [*sorted(baseline.glob("*.txt")), *sorted(baseline.glob("*.json"))]
     sources = [
         *sorted((root / "src/pdx").rglob("*.py")),
         *sorted((root / "mod/decisions").glob("*.toml")),
-        *sorted(decisions.baseline_path().parent.glob("*.txt")),
-        *sorted(decisions.baseline_path().parent.glob("*.json")),
+        *vanilla_metadata,
         *sorted((root / "research/situated").glob("*.json")),
     ]
     if version_contracts.is_115():
-        version = version_contracts.active_version()
-        sources.extend(sorted((root / "mod/decisions" / version).glob("*.toml")))
-        sources.extend(sorted((root / "research/situated" / version).glob("*.json")))
-        if version == "1.15.1":
+        sources.extend(sorted((root / "mod/decisions" / selected).glob("*.toml")))
+        sources.extend(sorted((root / "research/situated" / selected).glob("*.json")))
+        if selected == "1.15.1":
             sources.extend(sorted((root / "research/vanilla-ai/1.15.1/native").rglob("*")))
             sources.extend(sorted((root / "research/vanilla-ai/1.15.1/r2-readers").rglob("*")))
             sources = [path for path in sources if path.is_file()]
@@ -688,7 +699,10 @@ def package_inputs(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
-    if configuration is None and version_contracts.active_version() == "1.15.1":
+    if configuration is None and version_contracts.active_version() in {
+        "1.15.1",
+        version_contracts.CURRENT_VERSION,
+    }:
         configuration = profile_configuration.ProfileConfiguration()
     policy, extensions = production_configuration(profile=profile, configuration=configuration)
     verify_compatibility_installation()
@@ -801,36 +815,30 @@ def package(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> Path:
     """核对仓库生成物后，生成唯一正式包。"""
+    version_contracts.require_current()
     source_lock = generation_lock({})
+    selected_profile = profile if profile is not None else production_profile.declared_profile()
     policy, extensions, internal_files = package_inputs(
-        include_engineering_metadata=True, profile=profile, configuration=configuration
+        include_engineering_metadata=True, profile=selected_profile, configuration=configuration
     )
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
     production_files = {name: text for name, text in files.items() if name != "README.md"}
-    if version_contracts.active_version() == "1.15.0":
-        _profile_directory_files(decisions.product_path())
     issues = decisions.check(decisions.product_path(), production_files)
     if issues:
         raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
 
-    if version_contracts.active_version() == "1.15.1":
-        check_generation_lock()
+    check_generation_lock()
 
     def verify_before_replace() -> None:
         verify_compatibility_installation()
+        check_profile_installation(selected_profile)
         if generation_lock({}) != source_lock:
             raise ValueError("完整兼容打包期间源码发生漂移")
         issues = decisions.check(decisions.product_path(), production_files)
         if issues:
             raise ValueError("完整兼容打包期间产物发生漂移：" + "; ".join(issues))
-        if version_contracts.active_version() == "1.15.1":
-            check_generation_lock()
-        if version_contracts.active_version() == "1.15.0":
-            actual = _profile_directory_files(decisions.product_path())
-            if set(actual) != set(production_files) | {"generation-lock.json"}:
-                raise ValueError("完整兼容打包期间产物文件集合发生漂移")
-            check_generation_lock()
+        check_generation_lock()
 
     return write_zip(
         files,
@@ -880,6 +888,8 @@ def _verify_written_outputs(
     lock: str,
     expected: Mapping[str, bytes],
     source_lock: str,
+    *,
+    profile: production_profile.ProductionProfile | None = None,
 ) -> None:
     """Keep source, output, lock and live checks inside the rollback boundary."""
 
@@ -896,6 +906,8 @@ def _verify_written_outputs(
         raise ValueError("生产生成期间源码发生漂移")
     check_generation_lock({name: actual[name].read_bytes() for name in files})
     verify_compatibility_installation()
+    if profile is not None:
+        check_profile_installation(profile)
     # The live verifier can itself overlap source or output changes.
     if generation_lock({}) != source_lock or generation_lock(files) != lock:
         raise ValueError("生产最终原件核验期间源码发生漂移")
@@ -913,13 +925,13 @@ def write_standard_outputs(
     source inputs. Existing user/source files are retained with their exact bytes;
     undeclared production files and any new files appearing during the write fail.
     """
-    if version_contracts.active_version() != "1.15.1":
-        raise ValueError("标准生产生成只接受当前 1.15.1 合同")
+    version_contracts.require_current()
     if transaction is None:
         with GenerationTransaction() as owned:
             return write_standard_outputs(configuration=configuration, transaction=owned)
     source_lock = generation_lock({})
-    _, _, internal = package_inputs(configuration=configuration)
+    profile = production_profile.declared_profile()
+    _, _, internal = package_inputs(profile=profile, configuration=configuration)
     if generation_lock({}) != source_lock:
         raise ValueError("标准生产生成期间源码发生漂移")
     files = {name: raw for name, raw in _release_files(internal).items() if name != "README.md"}
@@ -957,7 +969,9 @@ def write_standard_outputs(
             or name == "generation-lock.json"
         }
     )
-    _verify_written_outputs(transaction, target, files, lock, expected, source_lock)
+    _verify_written_outputs(
+        transaction, target, files, lock, expected, source_lock, profile=profile
+    )
     return files
 
 
@@ -1125,7 +1139,7 @@ def check_profile_installation(
     r2_reader_authority.verify_installation(config.ROOT)
     installed = production_profile.load_profile(config.ROOT)
     if installed != profile:
-        raise ValueError("1.15.0 本机原版 profile 与冻结生成身份不一致")
+        raise ValueError("本机原版 profile 与声明的生产身份不一致")
     return installed
 
 

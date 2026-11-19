@@ -136,6 +136,10 @@ company_schneider_creusot = {
 
 	possible = {
 		has_technology_researched = steelworking
+		any_scope_state = {
+			state_region = s:STATE_BURGUNDY
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_BURGUNDY
 			building = building_steel_mill
@@ -269,6 +273,10 @@ company_dmc = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_BURGUNDY
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_BURGUNDY
 			building = building_textile_mill
@@ -381,6 +389,10 @@ company_cgv = {
 
 	possible = {
 		has_technology_researched = joint_stock_companies
+		any_scope_state = {
+			state_region = s:STATE_CHAMPAGNE
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_CHAMPAGNE
 			building = building_vineyard
@@ -480,6 +492,10 @@ company_saint_etienne = {
 
 	possible = {
 		has_technology_researched = bolt_action_rifles
+		any_scope_state = {
+			state_region = s:STATE_RHONE
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_RHONE
 			building = building_arms_industry
@@ -607,6 +623,10 @@ company_fcm = {
 
 	possible = {
 		has_technology_researched = ironclad_tech
+		any_scope_state = {
+			state_region = s:STATE_PROVENCE
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_PROVENCE
 			building = building_shipyard
@@ -727,6 +747,10 @@ company_mines_anzin = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_FRENCH_LOW_COUNTRIES
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_FRENCH_LOW_COUNTRIES
 			building = building_coal_mine

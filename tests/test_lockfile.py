@@ -6,8 +6,8 @@
    重新生成锁，锁就从「可复现」退化成「看着像」）；
 2. **锁文件可解析**：格式稳定、没有重复条目 —— `read()` 是唯一的解析入口，
    它认不出自己的输出就说明渲染或解析有一边坏了；
-3. **标记求值是保守的**：只跳过 `extra ==` 与明确不成立的 `python_version`，
-   其余一律当作成立（宁可多写一行，也不漏掉一个真依赖）。
+3. **按 PEP 508 解析闭包**：按平台、解释器和已请求 extras 选择适用依赖，
+   核对直接和传递依赖的版本约束。
 
 ⚠️ 这里**不**比较版本号是否等于本机当前版本：CI 是按 `pyproject.toml` 的
 声明现解析的，与「这台机器锁住的组合」本来就可能不同。版本对账是本地命令
@@ -16,13 +16,38 @@
 
 from __future__ import annotations
 
+import json
 import sys
+from importlib.metadata import Distribution, PackageNotFoundError
+from pathlib import Path
+from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import pytest
 
 from pdx import lockfile
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from importlib.metadata import DistributionFinder
+
 pytestmark = pytest.mark.unit
+
+
+def _project_dependencies(tmp_path, monkeypatch, *specs: str) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        f"[project]\ndependencies = {json.dumps(specs)}\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(lockfile.config, "REPO", tmp_path)
+
+
+def _installed_metadata(directory: Path, name: str, version: str, *requires: str) -> Path:
+    installed = directory / f"{name.replace('-', '_')}-{version}.dist-info"
+    installed.mkdir(parents=True)
+    lines = ["Metadata-Version: 2.4", f"Name: {name}", f"Version: {version}"]
+    lines.extend(f"Requires-Dist: {requirement}" for requirement in requires)
+    (installed / "METADATA").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return installed
 
 
 def test_锁文件存在且可解析() -> None:
@@ -90,6 +115,79 @@ def test_只认自己生成的文件(tmp_path) -> None:
     assert lockfile.read(target) == {}
 
 
+@pytest.mark.parametrize("invalid_line", ["Sample_Package==1.0", "malformed row"])
+def test_lock_rejects_duplicate_and_malformed_entries(tmp_path, invalid_line: str) -> None:
+    target = tmp_path / lockfile.LOCK_FILE
+    text = lockfile.render({"sample-package": "1.0"})
+    target.write_text(f"{text}{invalid_line}\n", encoding="utf-8", newline="\n")
+    assert lockfile.read(target) == {}
+
+
+def test_failed_replace_preserves_previous_lock(tmp_path, monkeypatch) -> None:
+    target = tmp_path / lockfile.LOCK_FILE
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nrequires-python = "==3.15.2"\n', encoding="utf-8"
+    )
+    monkeypatch.setattr(lockfile.config, "REPO", tmp_path)
+    monkeypatch.setattr(
+        lockfile,
+        "sys",
+        SimpleNamespace(
+            platform="win32", version_info=sys.version_info, implementation=sys.implementation
+        ),
+    )
+    lockfile.write({"sample-package": "1.0"})
+    previous = target.read_bytes()
+
+    def deny_replace(self: Path, destination: Path) -> Path:
+        raise PermissionError(destination)
+
+    with monkeypatch.context() as denied:
+        denied.setattr(Path, "replace", deny_replace)
+        with pytest.raises(PermissionError):
+            lockfile.write({"sample-package": "2.0"})
+    assert target.read_bytes() == previous
+    assert {path.name for path in tmp_path.iterdir()} == {"pyproject.toml", lockfile.LOCK_FILE}
+
+
+@pytest.mark.parametrize("direct_mismatch", [True, False])
+def test_installed_versions_must_satisfy_active_requirements(
+    tmp_path, monkeypatch, direct_mismatch: bool
+) -> None:
+    root = "situated-ai-lock-fixture-root"
+    child = "situated-ai-lock-fixture-child"
+    declaration = f"{root}>=2" if direct_mismatch else root
+    _project_dependencies(tmp_path, monkeypatch, declaration)
+    _installed_metadata(tmp_path, root, "1.0", f"{child}>=2")
+    _installed_metadata(tmp_path, child, "1.0")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    with pytest.raises(RuntimeError, match=rf"{root if direct_mismatch else child}.*>=2"):
+        lockfile.resolve()
+
+
+def test_resolver_reads_version_and_requirements_from_same_distribution(
+    tmp_path, monkeypatch
+) -> None:
+    name = "situated-ai-lock-moving-root"
+    first_child = "situated-ai-lock-first-child"
+    later_child = "situated-ai-lock-later-child"
+    _project_dependencies(tmp_path, monkeypatch, name)
+    selected = _installed_metadata(tmp_path, name, "1.0", first_child)
+    replacement = _installed_metadata(tmp_path, name, "2.0", later_child)
+    _installed_metadata(tmp_path, first_child, "1.0")
+    _installed_metadata(tmp_path, later_child, "2.0")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    observed = iter((selected, replacement))
+
+    class ReplacingDistributionFinder:
+        def find_distributions(self, context: DistributionFinder.Context) -> Iterator[Distribution]:
+            if context.name == name:
+                yield Distribution.at(next(observed, replacement))
+
+    monkeypatch.setattr(sys, "meta_path", [ReplacingDistributionFinder(), *sys.meta_path])
+    assert lockfile.resolve() == {first_child: "1.0", name: "1.0"}
+
+
 @pytest.mark.parametrize(
     ("marker", "expected"),
     [
@@ -116,57 +214,70 @@ def test_差异检测能认出三种情况() -> None:
 
 
 @pytest.mark.parametrize("error", [OSError("metadata unreadable"), ValueError("bad metadata")])
-def test_dependency_metadata_failure_is_not_an_empty_closure(monkeypatch, error: Exception) -> None:
-    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["fixture"])
-    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
+def test_dependency_metadata_failure_is_not_an_empty_closure(
+    tmp_path, monkeypatch, error: Exception
+) -> None:
+    _project_dependencies(tmp_path, monkeypatch, "fixture")
 
-    def broken_requires(_name: str) -> list[str]:
-        raise error
+    class BrokenDistribution:
+        version = "1.0"
 
-    monkeypatch.setattr(lockfile, "requires", broken_requires)
+        @property
+        def requires(self) -> list[str]:
+            raise error
+
+    monkeypatch.setattr(lockfile, "distribution", lambda _name: BrokenDistribution())
     with pytest.raises(type(error), match=str(error)):
         lockfile.resolve()
 
 
-def test_missing_direct_dependency_is_not_an_empty_closure(monkeypatch) -> None:
-    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["fixture"])
+def test_missing_direct_dependency_is_not_an_empty_closure(tmp_path, monkeypatch) -> None:
+    _project_dependencies(tmp_path, monkeypatch, "fixture")
 
-    def missing(_name: str) -> str:
-        raise lockfile.PackageNotFoundError("fixture")
+    def missing(_name: str) -> Distribution:
+        raise PackageNotFoundError("fixture")
 
-    monkeypatch.setattr(lockfile, "version", missing)
+    monkeypatch.setattr(lockfile, "distribution", missing)
     with pytest.raises(RuntimeError, match="直接依赖未安装"):
         lockfile.resolve()
 
 
-def test_known_empty_dependency_metadata_is_valid(monkeypatch) -> None:
-    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["fixture"])
-    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
-    monkeypatch.setattr(lockfile, "requires", lambda _name: None)
-    assert lockfile.resolve() == {"fixture": "1.0"}
+def test_known_empty_dependency_metadata_is_valid(tmp_path, monkeypatch) -> None:
+    name = "situated-ai-lock-empty"
+    _project_dependencies(tmp_path, monkeypatch, name)
+    _installed_metadata(tmp_path, name, "1.0")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    assert lockfile.resolve() == {name: "1.0"}
 
 
-def test_missing_active_transitive_dependency_rejects_incomplete_lock(monkeypatch) -> None:
-    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["root"])
-
-    def installed(name: str) -> str:
-        if name == "child":
-            raise lockfile.PackageNotFoundError(name)
-        return "1.0"
-
-    monkeypatch.setattr(lockfile, "version", installed)
-    monkeypatch.setattr(lockfile, "requires", lambda name: ["child"] if name == "root" else [])
-    with pytest.raises(RuntimeError, match=r"依赖闭包成员未安装.*child"):
+def test_missing_active_transitive_dependency_rejects_incomplete_lock(
+    tmp_path, monkeypatch
+) -> None:
+    root = "situated-ai-lock-root"
+    child = "situated-ai-lock-missing-child"
+    _project_dependencies(tmp_path, monkeypatch, root)
+    _installed_metadata(tmp_path, root, "1.0", child)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    with pytest.raises(RuntimeError, match=rf"依赖闭包成员未安装.*{child}"):
         lockfile.resolve()
 
 
-def test_extras_reached_after_base_visit_extend_closure_and_cycles_terminate(monkeypatch) -> None:
-    monkeypatch.setattr(lockfile, "direct_requirements", lambda: ["root", "shared"])
-    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
-    metadata = {
-        "root": ["shared[feature]"],
-        "shared": ["root", "optional; extra == 'feature'", "inactive; python_version < '3.0'"],
-        "optional": ["shared[feature]"],
-    }
-    monkeypatch.setattr(lockfile, "requires", lambda name: metadata[name])
-    assert lockfile.resolve() == {"optional": "1.0", "root": "1.0", "shared": "1.0"}
+def test_extras_reached_after_base_visit_extend_closure_and_cycles_terminate(
+    tmp_path, monkeypatch
+) -> None:
+    root = "situated-ai-lock-cycle"
+    shared = "situated-ai-lock-shared"
+    optional = "situated-ai-lock-optional"
+    _project_dependencies(tmp_path, monkeypatch, root, shared)
+    _installed_metadata(tmp_path, root, "1.0", f"{shared}[feature]")
+    _installed_metadata(
+        tmp_path,
+        shared,
+        "1.0",
+        root,
+        f"{optional}; extra == 'feature'",
+        "inactive; python_version < '3.0'",
+    )
+    _installed_metadata(tmp_path, optional, "1.0", f"{shared}[feature]")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    assert lockfile.resolve() == {optional: "1.0", root: "1.0", shared: "1.0"}

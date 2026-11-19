@@ -1,0 +1,235 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "contracts": [
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "missing_base_candidate_score",
+      "capability": "exact_default_initializer",
+      "consumer": "0x1417573f0",
+      "numeric_member": "0x390",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x14175741d",
+      "nonempty_expression_branch": "0x141757435",
+      "default_load": "0x141757426",
+      "default_global": "0x145c1f628",
+      "result_store": "0x14175742d",
+      "result_return": "0x141757571",
+      "define_namespace": "NAI",
+      "define_key": "COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_field": "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_source": "common/defines/00_ai.txt",
+      "define_line": 1146,
+      "default_value": 1,
+      "define_setter": "0x14119b680",
+      "define_global_write": "0x14119b6b6",
+      "define_binding": "0x14119b6d0",
+      "define_registration": "0x14119b6f0",
+      "actual_call": "0x14164e836",
+      "nonpositive_rejection": "0x14165e5b3",
+      "source_requirement": "exactly_missing_ai_weight_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_nonpositive_requirement": "preserve_native_score_and_rejection"
+    }
+  ],
+  "script_hashes": {
+    "common/company_types/99_basic_companies.txt": "5d26de2e95a3631bb3c8dcaac03f839d60dbc8269badd7e3e036cce9e20b9809",
+    "common/defines/00_ai.txt": "a1c49bb95f9c3cd57375253fce7026ff90f5ca11635f61bfca95799ca029eff8"
+  },
+  "parent_scope_manifest": {
+    "path": "research/situated/1.15.2/engine-company.json",
+    "sha256": "823989284f7d5d7de9142bda4689a0136726ae3f7a4e21ccf2316c565e9eb0f6"
+  },
+  "implicit_companies": [
+    {
+      "id": "company_basic_agriculture_1",
+      "line": 1
+    },
+    {
+      "id": "company_basic_agriculture_2",
+      "line": 60
+    },
+    {
+      "id": "company_basic_fabrics",
+      "line": 122
+    },
+    {
+      "id": "company_basic_colonial_plantations_1",
+      "line": 182
+    },
+    {
+      "id": "company_basic_colonial_plantations_2",
+      "line": 240
+    },
+    {
+      "id": "company_basic_silk_and_dye",
+      "line": 301
+    },
+    {
+      "id": "company_basic_wine_and_fruit",
+      "line": 350
+    },
+    {
+      "id": "company_basic_fishing",
+      "line": 398
+    },
+    {
+      "id": "company_basic_forestry",
+      "line": 458
+    },
+    {
+      "id": "company_basic_oil",
+      "line": 509
+    },
+    {
+      "id": "company_basic_gold_mining",
+      "line": 552
+    },
+    {
+      "id": "company_basic_metal_mining",
+      "line": 596
+    },
+    {
+      "id": "company_basic_mineral_mining",
+      "line": 647
+    },
+    {
+      "id": "company_basic_food",
+      "line": 695
+    },
+    {
+      "id": "company_basic_paper",
+      "line": 753
+    },
+    {
+      "id": "company_basic_home_goods",
+      "line": 808
+    },
+    {
+      "id": "company_basic_textiles",
+      "line": 868
+    },
+    {
+      "id": "company_basic_steel",
+      "line": 924
+    },
+    {
+      "id": "company_basic_metalworks",
+      "line": 980
+    },
+    {
+      "id": "company_basic_shipyards",
+      "line": 1037
+    },
+    {
+      "id": "company_basic_chemicals",
+      "line": 1081
+    },
+    {
+      "id": "company_basic_motors",
+      "line": 1141
+    },
+    {
+      "id": "company_basic_munitions",
+      "line": 1190
+    },
+    {
+      "id": "company_basic_electrics",
+      "line": 1250
+    },
+    {
+      "id": "company_basic_weapons",
+      "line": 1295
+    },
+    {
+      "id": "company_construction_power_bloc",
+      "line": 1356
+    }
+  ],
+  "limits": [
+    "The executable empty-expression fallback is authorized for exactly absent ai_weight only; explicit empty definitions must remain rejected.",
+    "Define native value must match pinned 1; nonpositive explicit scores keep native rejection.",
+    "Static binary/native-source evidence is not runtime observation."
+  ],
+  "observations": [
+    {
+      "label": "company empty expression branch and default load",
+      "va": "0x141757416",
+      "rva": "0x1757416",
+      "file_offset": "0x1756816",
+      "size": 31,
+      "sha256": "9145ecc37c9b0e3e4d87ff76e080b715098ddf88c908d5513d4d2b0150fdf9c0"
+    },
+    {
+      "label": "company numeric evaluator",
+      "va": "0x1417573f0",
+      "rva": "0x17573f0",
+      "file_offset": "0x17567f0",
+      "size": 417,
+      "sha256": "1846f6bb0ffd03b5a38bfa774a00db05be5f06218613de1665ed4afd4ac9645a"
+    },
+    {
+      "label": "define typed setter and exact global write",
+      "va": "0x14119b680",
+      "rva": "0x119b680",
+      "file_offset": "0x119aa80",
+      "size": 67,
+      "sha256": "9302e1db2872e14b8b5786ac05f4775b6b7ab715538220bbe325e0083b981922"
+    },
+    {
+      "label": "define namespace/key/global bridge",
+      "va": "0x14119b6d0",
+      "rva": "0x119b6d0",
+      "file_offset": "0x119aad0",
+      "size": 29,
+      "sha256": "26a016803af10910296059d50803823beff983f9aa7c44bbdb4299c275cbe2bd"
+    },
+    {
+      "label": "define namespace/key/global registration",
+      "va": "0x14119b6f0",
+      "rva": "0x119b6f0",
+      "file_offset": "0x119aaf0",
+      "size": 26,
+      "sha256": "2100949bc4dd665b56c4a068787404f0d6725480e4c7f1c21754cca23d33f40f"
+    },
+    {
+      "label": "NAI namespace NUL literal",
+      "va": "0x14470cdfc",
+      "rva": "0x470cdfc",
+      "file_offset": "0x470bdfc",
+      "size": 4,
+      "sha256": "d54c2f18e513a851307d0039d61cca4fe51e3e44dc424e6ec4e1c8cba91dab35"
+    },
+    {
+      "label": "company default key NUL literal",
+      "va": "0x144716928",
+      "rva": "0x4716928",
+      "file_offset": "0x4715928",
+      "size": 33,
+      "sha256": "9a9cab5dc333678188e535f7293578bc66dd2b1aa68bd377315a9db55b0eee91"
+    }
+  ],
+  "reviewed_chain": [
+    "The expression member +0xa8 of the company numeric field is checked before evaluation. At 0x141757426 the empty branch reads the NAI global and stores the result, while a nonempty expression enters the native evaluator.",
+    "The setter at 0x14119b680 and both exact key registrations reference the same score global. The current NAI scalar is 1 and 26 checked company definitions omit the field.",
+    "The parent company verification records the later signed nonpositive score guard."
+  ]
+}

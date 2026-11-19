@@ -11,6 +11,10 @@ import tempfile
 import zipfile
 from collections import Counter
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = REPO / "src" / "pdx"
@@ -26,13 +30,15 @@ def source_modules(source: Path = SOURCE) -> set[str]:
     }
 
 
+def _package_modules(names: Iterable[str]) -> set[str]:
+    return {name for name in names if name.startswith("pdx/") and name.endswith(".py")}
+
+
 def wheel_modules(wheel: Path) -> set[str]:
     """Return package Python module paths from a built wheel."""
 
     with zipfile.ZipFile(wheel) as archive:
-        return {
-            name for name in archive.namelist() if name.startswith("pdx/") and name.endswith(".py")
-        }
+        return _package_modules(archive.namelist())
 
 
 def missing_modules(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
@@ -44,21 +50,21 @@ def missing_modules(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
 def wheel_issues(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
     """Check exact module membership, bytes, ZIP integrity and duplicate paths."""
     expected = source_modules(source)
-    actual = wheel_modules(wheel)
-    issues = [f"missing: {name}" for name in sorted(expected - actual)]
-    issues.extend(f"unexpected: {name}" for name in sorted(actual - expected))
     with zipfile.ZipFile(wheel) as archive:
-        issues.extend(
-            f"duplicate: {name}" for name, count in Counter(archive.namelist()).items() if count > 1
-        )
+        counts = Counter(archive.namelist())
+        actual = _package_modules(counts)
+        issues = [f"missing: {name}" for name in expected - actual]
+        issues.extend(f"unexpected: {name}" for name in actual - expected)
+        issues.extend(f"duplicate: {name}" for name, count in counts.items() if count > 1)
         damaged = archive.testzip()
-        if damaged is not None:
+        if damaged is None:
+            issues.extend(
+                f"changed: {name}"
+                for name in expected & actual
+                if archive.read(name) != (source.parent / name).read_bytes()
+            )
+        else:
             issues.append(f"corrupt: {damaged}")
-        issues.extend(
-            f"changed: {name}"
-            for name in sorted(expected & actual)
-            if archive.read(name) != (source.parent / name).read_bytes()
-        )
     return tuple(sorted(issues))
 
 

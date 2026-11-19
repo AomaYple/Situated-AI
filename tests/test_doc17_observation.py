@@ -30,8 +30,9 @@ def dna_source(tmp_path, monkeypatch):
     return partial
 
 
-def test_current_doc17_accounts_for_partial_without_counting_it(dna_source):
-    with version_contracts.select_version("1.15.1"):
+@pytest.mark.parametrize("version", ["1.15.1", version_contracts.CURRENT_VERSION])
+def test_doc17_accounts_for_partial_without_counting_it(dna_source, version):
+    with version_contracts.select_version(version):
         fields = next(s for s in doc17.doc_table_specs() if s.name.startswith("doc17 字段表1 "))
         assert dict(fields.cells()) == {
             "portrait_info": {2: "1"},
@@ -58,7 +59,13 @@ def test_current_doc17_accounts_for_partial_without_counting_it(dna_source):
 )
 def test_current_doc17_rejects_unverified_incomplete_sources(dna_source, name, raw):
     dna_source.with_name(name).write_bytes(raw)
-    with version_contracts.select_version("1.15.1"), pytest.raises(ParseError, match=escape(name)):
+    with pytest.raises(ParseError, match=escape(name)):
+        doc17._overview_counts()
+
+
+def test_current_doc17_rejects_a_missing_reviewed_source(dna_source):
+    dna_source.unlink()
+    with pytest.raises(ParseError, match=r"缺少冻结 DNA 来源.*partial\.txt"):
         doc17._overview_counts()
 
 

@@ -1,7 +1,7 @@
 """具体付费动员的材料权衡，保留编队 ROOT 与所属国家角色。
 
-Freeze complete original bytes and ASTs, derive ordinary joint-program inputs,
-and retain native utility multiplication, monetary costs, eligibility and effects.
+Bind original source and AST digests, derive joint-program inputs, and retain
+native utility multiplication, monetary costs, eligibility and effects.
 No evaluator, lifecycle state, or engine-runtime claim is introduced here.
 """
 
@@ -12,7 +12,7 @@ import json
 import math
 import tomllib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from . import config, decision_rules, version_contracts
 from .model import Assignment, Block, Scalar
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 BASELINE = config.REPO / "research/situated/mobilization-opportunities.json"
 BASELINE_SHA256 = "b731aa77f0c58d5123b748978f825b1980572b988afa2e78ff8d23e62f0000eb"
 BASELINE_115 = config.REPO / "research/situated/1.15.0/mobilization-opportunities.json"
+BASELINE_SHA256_1152 = "46a17a140bd2a7e38acdc2faed1d8838238353d07a8175ae60c67f8a2247257b"
 BASELINE_SHA256_1151 = "8ad52353d98d0a38dd500ea30e0ca6c26281628ed18f9e55ebc1c6a2e9446681"
 BASELINE_SHA256_115 = "7085339294016d23d2e78d7cd85954f3a8328d71fdf599b05c13659f8591777d"
 
@@ -33,7 +34,7 @@ def baseline_path() -> Path:
     """Select a reviewed artifact without rewriting the historical baseline."""
     return (
         version_contracts.research_path("situated", BASELINE_115.name)
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
         else BASELINE_115
         if version_contracts.is_115()
         else BASELINE
@@ -41,6 +42,8 @@ def baseline_path() -> Path:
 
 
 def baseline_sha256() -> str:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return BASELINE_SHA256_1152
     if version_contracts.active_version() == "1.15.1":
         return BASELINE_SHA256_1151
     return BASELINE_SHA256_115 if version_contracts.is_115() else BASELINE_SHA256
@@ -60,6 +63,10 @@ _BASKETS = {
 _RECOVERY = {
     "mobilization_option_first_aid": "0.20",
     "mobilization_option_field_hospitals": "0.40",
+}
+_RECOVERY_1152 = {
+    "mobilization_option_first_aid": "0.10",
+    "mobilization_option_field_hospitals": "0.20",
 }
 # 只处理原版有已证非零效用且具有直接投入的可选项。未按编制缩放的
 # 武器加成取决于实际单位组成；没有组成观测时保留原版货币比较，不猜数量。
@@ -161,7 +168,11 @@ def _node(root: Block, *path: str) -> Assignment:
 
 
 def _record(node: Assignment) -> dict[str, Any]:
-    return {"line": node.line, "ast": _ast(node), "sha256": _digest(_ast(node))}
+    ast = _ast(node)
+    record: dict[str, Any] = {"line": node.line, "sha256": _digest(ast)}
+    if version_contracts.active_version() != version_contracts.CURRENT_VERSION:
+        record["ast"] = ast
+    return record
 
 
 def read_inputs(game: Path) -> dict[str, bytes]:
@@ -179,6 +190,8 @@ def read_inputs(game: Path) -> dict[str, bytes]:
 def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
     if set(inputs) != _REQUIRED or any(not isinstance(raw, bytes) for raw in inputs.values()):
         raise ValueError("动员原件集合漂移或不是完整原始字节")
+    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    recovery_rates = _RECOVERY_1152 if current else _RECOVERY
     texts = {source: normalized_text(raw.decode("utf-8-sig")) for source, raw in inputs.items()}
     doc = texts[_DOC]
     if not all(
@@ -261,7 +274,7 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
         if _ast(upkeep.value) != _ast(_one(expected, "x").value):
             raise ValueError("医疗动员真实材料/原始系数漂移")
         recovery = _node(native, identity, "unit_modifier")
-        expected = parse_text(f"x = {{ unit_recovery_rate_add = {_RECOVERY[identity]} }}").root
+        expected = parse_text(f"x = {{ unit_recovery_rate_add = {recovery_rates[identity]} }}").root
         if _ast(recovery.value) != _ast(_one(expected, "x").value):
             raise ValueError("医疗动员原版恢复率漂移")
         if _ast(_node(native, identity, "group").value) != ["scalar", "medic_support", False]:
@@ -273,18 +286,21 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
             "weight": _record(weight),
             "goods": dict(basket),
             "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
-            "recovery_rate": _RECOVERY[identity],
+            "recovery_rate": recovery_rates[identity],
             "sections": {item.key: _record(item) for item in definition.value.assignments()},
         }
-    return {
-        "schema": 1,
+    data = {
+        "schema": 2 if current else 1,
         "contract": dict(_CONTRACT),
         "sources": {
             source: hashlib.sha256(text.encode()).hexdigest()
             for source, text in sorted(texts.items())
         },
         "originals": {
-            source: {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": raw.hex()}
+            source: {
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                **({} if current else {"bytes": raw.hex()}),
+            }
             for source, raw in sorted(inputs.items())
         },
         "scope_evidence": {"owner_block": _record(owner), "owner_is_country": _record(country)},
@@ -296,10 +312,17 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
         "candidates": dict(sorted(candidates.items())),
         "native_identities": [item.key for item in definitions],
     }
+    if current:
+        data["candidates"] = _candidate_catalog(data, native, trees[_MODIFIER])
+    return data
 
 
 def _validate(data: dict[str, Any]) -> dict[str, Any]:
-    """Reparse all evidence from raw originals, including complete candidate ASTs."""
+    """Validate current evidence or reparse the historical original sources."""
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        if hashlib.sha256(_canonical(data).encode()).hexdigest() != baseline_sha256():
+            raise ValueError("当前动员权威证据漂移")
+        return data
     try:
         if set(data) != {
             "schema",
@@ -354,20 +377,28 @@ def verify_game(game: Path) -> dict[str, Any]:
 
 
 def candidate_catalog(baseline: Mapping[str, Any] | None = None) -> dict[str, dict[str, Any]]:
-    """从冻结的完整原文派生新候选，不重写原始医疗证据或扩大读取许可。"""
+    """Return the reviewed military formation candidates and their material evidence."""
     data = load_baseline() if baseline is None else _validate(dict(baseline))
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return cast("dict[str, dict[str, Any]]", data["candidates"])
     native = parse_text(bytes.fromhex(data["originals"][SOURCE]["bytes"]).decode("utf-8-sig"))
     modifiers = parse_text(bytes.fromhex(data["originals"][_MODIFIER]["bytes"]).decode("utf-8-sig"))
     if native.errors or modifiers.errors:
         raise ValueError("动员完整原文或效用原件解析失败")
+    return _candidate_catalog(data, native.root, modifiers.root)
+
+
+def _candidate_catalog(
+    data: Mapping[str, Any], native: Block, modifiers: Block
+) -> dict[str, dict[str, Any]]:
     result = {
         identity: {**row, "utility_evidence": dict(data["utility_evidence"])}
         for identity, row in data["candidates"].items()
     }
     for short, basket in _ADDITIONAL_BASKETS.items():
         identity = f"mobilization_option_{short}"
-        definition = _node(native.root, identity)
-        upkeep = _node(native.root, identity, "upkeep_modifier")
+        definition = _node(native, identity)
+        upkeep = _node(native, identity, "upkeep_modifier")
         expected = parse_text(
             "x = { "
             + " ".join(f"goods_input_{good}_add = {quantity}" for good, quantity in basket.items())
@@ -376,8 +407,8 @@ def candidate_catalog(baseline: Mapping[str, Any] | None = None) -> dict[str, di
         if _ast(upkeep.value) != _ast(_one(expected, "x").value):
             raise ValueError(f"动员直接材料合同漂移：{identity}")
         modifier, amount, coefficient = _UTILITY[short]
-        effect = _node(native.root, identity, "unit_modifier", modifier)
-        utility = _node(modifiers.root, modifier, "game_data", "ai_value")
+        effect = _node(native, identity, "unit_modifier", modifier)
+        utility = _node(modifiers, modifier, "game_data", "ai_value")
         for node, text in ((effect, amount), (utility, coefficient)):
             if not isinstance(node.value, Scalar) or node.value.quoted or node.value.text != text:
                 raise ValueError(f"动员候选非零原版效用证据漂移：{identity}")
@@ -388,7 +419,7 @@ def candidate_catalog(baseline: Mapping[str, Any] | None = None) -> dict[str, di
             "source": SOURCE,
             "field": f"{identity}.ai_weight",
             "definition": _record(definition),
-            "weight": _record(_node(native.root, identity, "ai_weight")),
+            "weight": _record(_node(native, identity, "ai_weight")),
             "goods": dict(basket),
             "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
             "sections": {item.key: _record(item) for item in definition.value.assignments()},
@@ -541,7 +572,7 @@ def derive(
             [{"fact": "mobilization_default", "op": "=", "value": True}],
             "所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出",
         )
-        for good in row["goods"]:
+        for good in _ALL_BASKETS[identity]:
             balance = {"fact": f"mobilization_{good}_balance", "op": "<", "value": 0.0}
             cause = f"mobilization_material_{good}_pressure"
             rule(

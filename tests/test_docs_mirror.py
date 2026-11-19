@@ -49,14 +49,15 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.unit
 
 #: 官方 .md 的篇数。1.14.3 实测 92（game 91 + jomini 1）；1.14.4 实测 94（game 93 + jomini 1）。
-EXPECTED_DOCS = {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100}[active_version()]
+EXPECTED_DOCS = {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100, "1.15.2": 100}
 
 
 def test_清单存在且可读() -> None:
     data = docs_mirror.load_manifest()
     assert data, f"读不到 {docs_mirror.MANIFEST_NAME} —— 跑 `v3 mirror write` 生成"
     got = docs_mirror.entries(data)
-    assert len(got) == EXPECTED_DOCS, f"清单里有 {len(got)} 篇，预期 {EXPECTED_DOCS}"
+    expected = EXPECTED_DOCS[active_version()]
+    assert len(got) == expected, f"清单里有 {len(got)} 篇，预期 {expected}"
     assert data.get("版本"), "清单必须记录生成时的游戏版本，否则不知道它属于哪一版"
 
 

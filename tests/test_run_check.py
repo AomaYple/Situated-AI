@@ -10,12 +10,14 @@ from types import SimpleNamespace
 
 import pytest
 
+from pdx import version_contracts
 from tools.ci import run_check
 
 
 @pytest.fixture(autouse=True)
 def _dispatch_tests_use_supported_interpreter(monkeypatch):
     """命令分发测试不依赖工作区虚拟环境。"""
+    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
     monkeypatch.setattr(run_check, "interpreter", lambda: Path(sys.executable))
     monkeypatch.setattr(run_check, "ensure_supported_interpreter", lambda *_args: None)
 
@@ -90,6 +92,11 @@ def test_profiles_preserve_arguments_and_exit_status(monkeypatch, profile):
     assert calls[0][1]["cwd"] == run_check.ROOT
     assert calls[0][1]["check"] is False
     assert calls[0][1]["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
+    if profile in {"test", "test-offline"}:
+        assert (
+            calls[0][1]["env"][version_contracts.ENVIRONMENT_VARIABLE]
+            == version_contracts.CURRENT_VERSION
+        )
     assert calls[0][1]["env"]["PYTHONPATH"].split(os.pathsep) == [
         str(run_check.ROOT / "src"),
         str(run_check.ROOT),
@@ -129,11 +136,11 @@ def test_python_package_uses_existing_module_and_preserves_exit_status(monkeypat
     assert options["check"] is False
 
 
-@pytest.mark.parametrize("profile", ["1.15.1", None])
+@pytest.mark.parametrize("profile", [version_contracts.CURRENT_VERSION, None])
 def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
     monkeypatch, profile
 ):
-    selected = profile or "1.15.1"
+    selected = profile or version_contracts.CURRENT_VERSION
     calls = []
 
     def run(argv, **kwargs):
@@ -155,7 +162,9 @@ def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
     ]
 
 
-@pytest.mark.parametrize("extra", [["--profile", "1.15.0"], ["--unknown"], ["--profile"]])
+@pytest.mark.parametrize(
+    "extra", [["--profile", "1.15.0"], ["--profile", "1.15.1"], ["--unknown"], ["--profile"]]
+)
 def test_baseline_rejects_ignored_or_unsupported_arguments(monkeypatch, extra):
     monkeypatch.setattr(sys, "argv", ["run_check.py", "baseline", *extra])
     monkeypatch.setattr(
@@ -187,19 +196,30 @@ def test_nested_python_import_does_not_leave_bytecode(tmp_path, monkeypatch):
     assert not (tmp_path / "__pycache__").exists()
 
 
-@pytest.mark.parametrize("selected", ["1.14.5", "1.15.0", "", "unknown", "1.16.0"])
+@pytest.mark.parametrize("selected", ["1.14.5", "1.15.0", "1.15.1", "", "unknown", "1.16.0"])
 @pytest.mark.parametrize("explicit", [False, True])
 def test_baseline_rejects_invalid_environment_before_launch(monkeypatch, selected, explicit):
     monkeypatch.setenv("V3_CONTRACT_PROFILE", selected)
-    monkeypatch.setattr(
-        sys, "argv", ["run_check.py", "baseline", *(["--profile", "1.15.1"] if explicit else [])]
-    )
+    arguments = ["run_check.py", "baseline"]
+    if explicit:
+        arguments.extend(["--profile", version_contracts.CURRENT_VERSION])
+    monkeypatch.setattr(sys, "argv", arguments)
     monkeypatch.setattr(
         run_check.subprocess, "run", lambda *_args, **_kwargs: pytest.fail("launch")
     )
     with pytest.raises(SystemExit) as caught:
         run_check.main()
     assert caught.value.code == 2
+
+
+@pytest.mark.parametrize("command", ["test", "test-offline"])
+def test_pytest_routes_reject_historical_environment_before_launch(monkeypatch, command):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+    monkeypatch.setattr(sys, "argv", ["run_check.py", command])
+    monkeypatch.setattr(
+        run_check.subprocess, "run", lambda *_args, **_kwargs: pytest.fail("launch")
+    )
+    assert run_check.main() == 2
 
 
 def test_interpreter_rejects_non_exact_project_requirement(tmp_path) -> None:

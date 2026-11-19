@@ -1889,7 +1889,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		institution_schools = {
 			value = 10
 
-	# SITAI POLICY 1.15.1 BEGIN a0-pol-schools
+	# SITAI POLICY 1.15.2 BEGIN a0-pol-schools
 		add = {
 			value = 0
 			# effect school-admin-pressure; bridges school-administration
@@ -1907,7 +1907,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			min = -4
 			max = 4
 		}
-	# SITAI POLICY 1.15.1 END a0-pol-schools
+	# SITAI POLICY 1.15.2 END a0-pol-schools
 }
 		institution_police = {
 			value = 10
@@ -2912,6 +2912,25 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 
 			if = {
 				limit = {
+					c:RUS ?= this
+					has_variable = ecumenical_question_var
+					scope:target_state.state_region = {
+						is_homeland = cu:greek
+					}
+					scope:target_country = {
+						NOT = {
+							country_has_state_religion = rel:orthodox
+						}
+					}
+				}
+				add = {
+					value = 50
+					desc = "STATE_VALUE_ECUMENICAL_QUESTION"
+				}
+			}
+
+			if = {
+				limit = {
 					has_journal_entry = je_eastern_question_austria
 					scope:target_state = { state_region = s:STATE_BOSNIA }
 				}
@@ -3882,13 +3901,13 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 						}
 					}
 
-					value = 50
-
-					add = {
-						value = scope:target_country.gdp
-						divide = 200000
-						max = 50
+					scope:target_country = {
+						every_scope_state = {
+							add = ai_state_value:root
+						}
 					}
+
+					multiply = ai_subject_value_state_value_fraction
 				}
 
 				if = {

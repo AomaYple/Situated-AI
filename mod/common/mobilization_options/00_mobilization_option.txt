@@ -887,8 +887,8 @@ mobilization_option_chemical_weapons = {
 	}
 	unit_modifier = {
 		unit_offense_add = 20
-		unit_kill_rate_add = 0.3
-		unit_recovery_rate_add = -0.2
+		unit_kill_rate_add = 0.2
+		unit_recovery_rate_add = -0.1
 	}
 	ai_weight = {
 		value = 1
@@ -1291,7 +1291,7 @@ mobilization_option_first_aid = {
 		goods_input_liquor_add = 2
 	}
 	unit_modifier = {
-		unit_recovery_rate_add = 0.20
+		unit_recovery_rate_add = 0.10
 	}
 	ai_weight = {
 		value = 1
@@ -1380,7 +1380,7 @@ mobilization_option_field_hospitals = {
 		goods_input_tools_add = 1
 	}
 	unit_modifier = {
-		unit_recovery_rate_add = 0.40
+		unit_recovery_rate_add = 0.20
 	}
 	ai_weight = {
 		value = 1

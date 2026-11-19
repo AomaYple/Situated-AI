@@ -1,4 +1,4 @@
-"""Support tails and offline report inputs belong to the explicitly selected native version."""
+"""Keep native support verification at the installed source boundary."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any, cast
 import pytest
 import test_support_native_binding as support_fixtures
 
-from pdx import config, decision_report, decisions, version_contracts
+from pdx import config, decision_report, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import audit, compiler
@@ -63,38 +63,36 @@ def test_continuous_audit_rejects_the_other_versions_native_tail(output_version,
             audit._production_continuous_bindings(generated)
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
-def test_offline_report_binds_the_selected_native_bytes_and_support_line(version, monkeypatch):
-    expected_path = config.REPO / "research/vanilla-ai" / version / "00_default_strategy.txt"
-    expected = expected_path.read_text(encoding="utf-8")
-    captured = []
-    original = decisions.metadata_payload
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0", "1.15.1"])
+def test_offline_report_refuses_retired_native_contracts(version, monkeypatch):
+    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
+    with (
+        version_contracts.select_version(version),
+        pytest.raises(ValueError, match=f"当前仅维护 {version_contracts.CURRENT_VERSION}"),
+    ):
+        decision_report.source_metadata()
 
-    def metadata_payload(*args, **kwargs):
-        captured.append(kwargs["baseline"])
-        return original(*args, **kwargs)
 
-    monkeypatch.setattr(decisions, "metadata_payload", metadata_payload)
-    with version_contracts.select_version(version):
-        metadata = decision_report.source_metadata()
-        assert captured == [expected]
-        assert (
-            metadata["source_fingerprint"]["baseline_sha256"]
-            == hashlib.sha256(expected.encode()).hexdigest()
-        )
-        parsed = parse_text(captured[0])
-        strategy = parsed.root.first("ai_strategy_default")
-        assert strategy is not None
-        assert isinstance(strategy.value, Block)
-        support = strategy.value.first("diplomatic_play_support")
-        assert support is not None
-        lines = captured[0].splitlines()
-        actor_line = next(
-            line
-            for line in range(support.line - 1, 0, -1)
-            if lines[line - 1].strip() == "# root = supporting country doing the AI evaluation"
-        )
-        context = compiler.support_evaluation_context()
-        assert context.actor_scope is not None
-        assert context.actor_scope.source == expected_path.relative_to(config.REPO).as_posix()
-        assert context.actor_scope.line == actor_line
+@pytest.mark.integration
+def test_current_support_context_binds_locked_installed_source_and_line():
+    source = version_contracts.DEFAULT_STRATEGY_SOURCE
+    raw = (config.GAME / source).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == version_contracts.contract().default_strategy_sha256
+    text = raw.decode("utf-8-sig")
+    parsed = parse_text(text)
+    strategy = parsed.root.first("ai_strategy_default")
+    assert strategy is not None
+    assert isinstance(strategy.value, Block)
+    support = strategy.value.first("diplomatic_play_support")
+    assert support is not None
+    lines = text.splitlines()
+    actor_line = next(
+        line
+        for line in range(support.line - 1, 0, -1)
+        if lines[line - 1].strip() == "# root = supporting country doing the AI evaluation"
+    )
+    context = compiler.support_evaluation_context()
+    assert compiler.declared_support_evaluation_context() == context
+    assert context.actor_scope is not None
+    assert context.actor_scope.source == source
+    assert context.actor_scope.line == actor_line

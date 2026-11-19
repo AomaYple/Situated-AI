@@ -63,6 +63,21 @@ def test_wheel_validation_rejects_duplicate_entries(tmp_path: Path) -> None:
     assert python_package.wheel_issues(wheel, source) == ("duplicate: pdx/__init__.py",)
 
 
+def test_wheel_validation_reports_corrupt_python_module(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "pdx"
+    source.mkdir(parents=True)
+    data = b"UNIQUE_MODULE_SOURCE = 'original'"
+    (source / "__init__.py").write_bytes(data)
+    wheel = tmp_path / "candidate.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr("pdx/__init__.py", data)
+    content = wheel.read_bytes()
+    assert content.count(data) == 1
+    wheel.write_bytes(content.replace(data, data.replace(b"original", b"corrupt!")))
+
+    assert python_package.wheel_issues(wheel, source) == ("corrupt: pdx/__init__.py",)
+
+
 def test_build_uses_disposable_source_and_disables_nested_bytecode(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -5,22 +5,23 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from pdx import config, decisions, distribution, version_contracts
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-@pytest.fixture(autouse=True)
-def selected_version(request):
-    version = "1.15.0" if "isolated_output_apis" in request.node.name else "1.15.1"
-    with version_contracts.select_version(version):
-        yield
+# Current R2 bureaucracy evidence, outside the legacy compatibility read set.
+R2_READER_SOURCE = "common/scripted_buttons/scripted_buttons.md"
+R2_DRIFT_MESSAGE = r"R2 reader authority: source drift .*scripted_buttons\.md"
 
 
 @pytest.fixture(scope="module")
 def complete_inputs():
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         return distribution.package_inputs(include_engineering_metadata=True)
 
 
@@ -31,8 +32,9 @@ def standard_tree(tmp_path, monkeypatch, complete_inputs):
     # Reuse a complete, genuinely generated input bundle. The final live
     # verifier, source lock, exact tree check and archive validator stay real.
     monkeypatch.setattr(distribution, "package_inputs", lambda **_kwargs: complete_inputs)
-    distribution.write_standard_outputs()
-    return target
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        distribution.write_standard_outputs()
+        yield target
 
 
 @pytest.mark.integration
@@ -69,7 +71,7 @@ def test_standard_rejects_unowned_same_prefix_file(standard_tree, monkeypatch, t
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("damage", ["exe", "native", "source", "output", "lock"])
+@pytest.mark.parametrize("damage", ["exe", "native", "r2-reader", "source", "output", "lock"])
 def test_final_standard_zip_boundary_rejects_drift(standard_tree, tmp_path, monkeypatch, damage):
     destination = tmp_path / "packages/candidate.zip"
     destination.parent.mkdir()
@@ -79,6 +81,7 @@ def test_final_standard_zip_boundary_rejects_drift(standard_tree, tmp_path, monk
     target = {
         "exe": config.GAME.parent / "binaries/victoria3.exe",
         "native": config.GAME / "common/ai_strategies/00_default_strategy.txt",
+        "r2-reader": config.GAME / R2_READER_SOURCE,
         "source": config.REPO / "src/pdx/situated/compiler.py",
         "output": standard_tree / distribution.METADATA_NAME,
         "lock": standard_tree / "generation-lock.json",
@@ -99,7 +102,8 @@ def test_final_standard_zip_boundary_rejects_drift(standard_tree, tmp_path, monk
         return result
 
     monkeypatch.setattr(distribution, "_validate_archive", drift_after_validation)
-    with pytest.raises(ValueError, match=r"漂移|不一致"):
+    expected_error = R2_DRIFT_MESSAGE if damage == "r2-reader" else r"漂移|不一致"
+    with pytest.raises(ValueError, match=expected_error):
         distribution.package(destination)
     assert changed
     assert destination.read_bytes() == b"previous complete ZIP"
@@ -107,18 +111,18 @@ def test_final_standard_zip_boundary_rejects_drift(standard_tree, tmp_path, monk
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("damage", ["exe", "native"])
+@pytest.mark.parametrize("damage", ["exe", "native", "r2-reader"])
 def test_final_standard_generation_live_drift_rolls_back(
     standard_tree, tmp_path, monkeypatch, damage
 ):
     before = {path: path.read_bytes() for path in standard_tree.rglob("*") if path.is_file()}
     view = tmp_path / "changed-view"
     view.write_bytes(b"changed after generation lock validation\n")
-    target = (
-        config.GAME.parent / "binaries/victoria3.exe"
-        if damage == "exe"
-        else config.GAME / "common/ai_strategies/00_default_strategy.txt"
-    )
+    target = {
+        "exe": config.GAME.parent / "binaries/victoria3.exe",
+        "native": config.GAME / "common/ai_strategies/00_default_strategy.txt",
+        "r2-reader": config.GAME / R2_READER_SOURCE,
+    }[damage]
     opened = Path.open
     changed = False
 
@@ -134,10 +138,13 @@ def test_final_standard_generation_live_drift_rolls_back(
         changed = True
 
     monkeypatch.setattr(distribution, "check_generation_lock", drift_after_lock)
-    with pytest.raises(ValueError, match=r"漂移|不一致"):
+    expected_error = R2_DRIFT_MESSAGE if damage == "r2-reader" else r"漂移|不一致"
+    with pytest.raises(ValueError, match=expected_error):
         distribution.write_standard_outputs()
     assert changed
-    assert {path: path.read_bytes() for path in before} == before
+    assert {
+        path: path.read_bytes() for path in standard_tree.rglob("*") if path.is_file()
+    } == before
 
 
 @pytest.mark.integration
@@ -180,7 +187,8 @@ def test_change_during_final_live_verification_rolls_back(
 @pytest.mark.skipif(os.name != "nt", reason="Windows junction contract")
 @pytest.mark.parametrize("placement", ["root", "parent", "nested"])
 @pytest.mark.parametrize(
-    "entrypoint", ["scan", "compatibility-write", "profile-write", "profile-check"]
+    "entrypoint",
+    ["scan", "compatibility-write", "standard-write", "profile-write", "profile-check"],
 )
 def test_isolated_output_apis_reject_real_junction(tmp_path, monkeypatch, placement, entrypoint):
     external = tmp_path / "external"
@@ -210,17 +218,24 @@ def test_isolated_output_apis_reject_real_junction(tmp_path, monkeypatch, placem
         monkeypatch.setattr(distribution, "check_profile_installation", lambda profile: profile)
         monkeypatch.setattr(distribution, "profile_outputs", lambda *_args, **_kwargs: files)
         monkeypatch.setattr(distribution, "profile_generation_lock", lambda *_args: "{}\n")
-        profile = distribution.production_profile.load_profile(
-            distribution.production_profile.BASELINE_ROOT
+        context = (
+            "1.15.0" if entrypoint == "compatibility-write" else version_contracts.CURRENT_VERSION
         )
-        operation = {
-            "scan": lambda: distribution._profile_directory_files(root),
-            "compatibility-write": distribution.write_compatibility_outputs,
-            "profile-write": lambda: distribution.write_profile_outputs(profile, root=root),
-            "profile-check": lambda: distribution.check_profile_outputs(profile, root=root),
-        }[entrypoint]
-        with pytest.raises(ValueError, match="重解析点"):
-            operation()
+        with version_contracts.select_version(context):
+            operation: Callable[[], object]
+            if entrypoint == "compatibility-write":
+                operation = distribution.write_compatibility_outputs
+            else:
+                profile = distribution.production_profile.declared_profile()
+                operations: dict[str, Callable[[], object]] = {
+                    "scan": lambda: distribution._profile_directory_files(root),
+                    "standard-write": distribution.write_standard_outputs,
+                    "profile-write": lambda: distribution.write_profile_outputs(profile, root=root),
+                    "profile-check": lambda: distribution.check_profile_outputs(profile, root=root),
+                }
+                operation = operations[entrypoint]
+            with pytest.raises(ValueError, match="重解析点"):
+                operation()
         assert preserved_file.read_bytes() == b"external original\n"
         assert list(external.iterdir()) == [preserved_file]
     finally:

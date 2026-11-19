@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from pdx import version_contracts
+from pdx import config, version_contracts
 from pdx.model import Assignment, Block
 from pdx.parser import parse_text
 
@@ -79,9 +79,8 @@ def production_bindings(
 ) -> tuple[NetworkProgramBinding, ...]:
     """Bind only the finite R2 programs present in this exact candidate.
 
-    Frozen source bytes establish reader authority even for evidence files that
-    are outside the AI inventory. Any independently supplied copy must agree.
-    The full-package caller separately verifies the installed reader authority.
+    Verified source bytes establish reader authority even for evidence files
+    outside the AI inventory. Any independently supplied copy must agree.
     Missing R2 metadata cannot hide a marked output; unmarked modifications
     receive no proof and remain subject to the ordinary native audit.
     """
@@ -103,7 +102,8 @@ def production_bindings(
         if marked:
             raise ValueError("R2 output exists without its candidate declaration")
         return ()
-    if version_contracts.active_version() != "1.15.1":
+    version = version_contracts.active_version()
+    if version not in {"1.15.1", version_contracts.CURRENT_VERSION}:
         raise ValueError("complete R2 native audit requires the current release contract")
     selected = document.get("configuration")
     if not isinstance(selected, dict):
@@ -114,17 +114,24 @@ def production_bindings(
     configuration = ProfileConfiguration(selected["core"], frozenset(domains), selected["mode"])
     if _canonical(configuration.identity()) != _canonical(selected):
         raise ValueError("R2 resolved configuration differs from the strict contract")
-    baseline = production_profile.baseline_root()
+    if version == version_contracts.CURRENT_VERSION:
+        baseline = config.ROOT
+        evidence_root = baseline
+        r2_reader_authority.verify_installation(baseline)
+    else:
+        baseline = production_profile.baseline_root(version)
+        evidence_root = r2_reader_authority.frozen_root(version)
+        r2_reader_authority.verify_frozen(evidence_root)
     profile = production_profile.load_profile(baseline)
-    r2_reader_authority.verify_frozen()
-    evidence_root = r2_reader_authority.frozen_root()
     evidence = {}
     for evidence_path, expected_sha256 in r2_reader_authority.source_hashes().items():
         if not evidence_path.startswith("game/"):
             continue
         source = evidence_path.removeprefix("game/")
-        frozen = (evidence_root / evidence_path).read_bytes()
-        if source in native_sources and native_sources[source] != frozen:
+        original_evidence = (evidence_root / evidence_path).read_bytes()
+        if hashlib.sha256(original_evidence).hexdigest() != expected_sha256:
+            raise ValueError(f"R2 native reader evidence differs: {source}")
+        if source in native_sources and native_sources[source] != original_evidence:
             raise ValueError(f"R2 supplied native reader evidence differs: {source}")
         evidence[source] = expected_sha256
     programs = {
@@ -160,7 +167,10 @@ def production_bindings(
     for row in profile.declarations:
         source = row.source.removeprefix("game/")
         original_bytes = (baseline / row.source).read_bytes()
-        if native_sources.get(source) != original_bytes:
+        if (
+            hashlib.sha256(original_bytes).hexdigest() != evidence[source]
+            or native_sources.get(source) != original_bytes
+        ):
             raise ValueError(f"R2 native write-point bytes are missing or changed: {source}")
         original = original_bytes.decode("utf-8-sig")
         content = text(generated[source])
@@ -175,8 +185,8 @@ def production_bindings(
         program = programs[row.id]
         overlay = network_profile.render_program(program)
         marker = re.compile(
-            rf"\n\t# SITAI POLICY 1\.15\.1 BEGIN {re.escape(row.id)}\n"
-            rf"(?P<body>[\s\S]*?)\t# SITAI POLICY 1\.15\.1 END {re.escape(row.id)}\n"
+            rf"\n\t# SITAI POLICY {re.escape(version)} BEGIN {re.escape(row.id)}\n"
+            rf"(?P<body>[\s\S]*?)\t# SITAI POLICY {re.escape(version)} END {re.escape(row.id)}\n"
         )
         matches = list(marker.finditer(content))
         if (

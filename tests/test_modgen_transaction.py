@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -89,7 +88,8 @@ def generation(tmp_path, monkeypatch):
     monkeypatch.setattr(cli.distribution, "verify_compatibility_installation", lambda: None)
     monkeypatch.setattr(cli.distribution, "generation_lock", lambda _files: "new-lock\n")
 
-    def build(*, configuration):
+    def build(*, profile, configuration):
+        assert profile == cli.distribution.production_profile.declared_profile()
         assert configuration == cli.profile_configuration.ProfileConfiguration()
         # Production's normal strict readers see only canonical new ledgers.
         assert binding.read_bytes() == b"new-bindings\n"
@@ -167,24 +167,34 @@ def test_every_generation_failure_leaves_original_artifacts_unchanged(
     assert _tree(root) == initial
 
 
-@pytest.mark.parametrize("failure_index", [1, 2, 3, 4])
+@pytest.mark.parametrize(
+    "failed_output",
+    [
+        "decisions/action_bindings.toml",
+        "decisions/domain_actions.toml",
+        "common/new.txt",
+        "generation-lock.json",
+    ],
+)
 def test_replace_failure_restores_prior_ledgers_outputs_and_deleted_stale_files(
-    generation, monkeypatch, failure_index
+    generation, monkeypatch, failed_output
 ):
     root, initial, _, _ = generation
-    original = os.replace
-    calls = 0
+    original = Path.replace
+    failed_target = root / failed_output
+    injected = False
 
     def fail_once(source, target):
-        nonlocal calls
-        calls += 1
-        if calls == failure_index:
+        nonlocal injected
+        if target == failed_target and not injected:
+            injected = True
             raise PermissionError("injected replacement failure")
         return original(source, target)
 
-    monkeypatch.setattr(os, "replace", fail_once)
+    monkeypatch.setattr(Path, "replace", fail_once)
     result = _run()
     assert result.exit_code == 1, result.output
+    assert injected
     assert "injected replacement failure" in result.output
     assert _tree(root) == initial
 
@@ -194,13 +204,15 @@ def test_failure_restores_missing_ledger_existence(generation, monkeypatch):
     binding.unlink()
     initial.pop("decisions/action_bindings.toml")
 
-    def fail(*, configuration):
+    def fail(*, profile, configuration):
+        assert profile == cli.distribution.production_profile.declared_profile()
         assert configuration == cli.profile_configuration.ProfileConfiguration()
         raise OSError("missing-artifact build failure")
 
     monkeypatch.setattr(cli.distribution, "package_inputs", fail)
     result = _run()
-    assert result.exit_code == 1
+    assert result.exit_code == 1, result.output
+    assert "missing-artifact build failure" in result.output
     assert _tree(root) == initial
 
 

@@ -22,7 +22,7 @@ decree_road_maintenance = {
 	ai_weight = {
 		value = 25
 
-	# SITAI POLICY 1.15.1 BEGIN a0-econ-road
+	# SITAI POLICY 1.15.2 BEGIN a0-econ-road
 		if = { limit = { exists = scope:country scope:country = { is_ai = yes } }
 			add = {
 				value = 0
@@ -36,7 +36,7 @@ decree_road_maintenance = {
 				max = 4
 			}
 		}
-	# SITAI POLICY 1.15.1 END a0-econ-road
+	# SITAI POLICY 1.15.2 END a0-econ-road
 
 		if = {
 			limit = {
@@ -273,10 +273,12 @@ decree_promote_social_mobility = {
 		custom_tooltip = {
 			text = tsarpoints_decree_not_upgraded_tt
 			NOT = { has_variable = tsarpoints_upgraded_promote_social_mobility }
+			NOT = { overlord ?= { has_variable = tsarpoints_upgraded_promote_social_mobility } }
 		}
 	}
 
 	state_trigger = {
+		NOT = { has_decree = decree_promote_social_mobility_tsarpoints }
 		NOT = {
 			AND = {
 				owner ?= {
@@ -506,11 +508,15 @@ decree_promote_social_mobility_tsarpoints = {
 	country_trigger = {
 		custom_tooltip = {
 			text = tsarpoints_decree_upgraded_tt
-			has_variable = tsarpoints_upgraded_promote_social_mobility
+			OR = {
+				has_variable = tsarpoints_upgraded_promote_social_mobility
+				overlord ?= { has_variable = tsarpoints_upgraded_promote_social_mobility }
+			}
 		}
 	}
 
 	state_trigger = {
+		NOT = { has_decree = decree_promote_social_mobility }
 		NOT = {
 			AND = {
 				owner ?= {
@@ -687,8 +693,13 @@ decree_promote_national_values = {
 		custom_tooltip = {
 			text = tsarpoints_decree_not_upgraded_tt
 			NOT = { has_variable = tsarpoints_upgraded_promote_national_values }
+			NOT = { overlord ?= { has_variable = tsarpoints_upgraded_promote_national_values } }
 		}
 		NOT = { has_law_or_variant = law_type:law_multicultural }
+	}
+
+	state_trigger = {
+		NOT = { has_decree = decree_promote_national_values_tsarpoints }
 	}
 
 	modifier = {
@@ -1119,9 +1130,16 @@ decree_promote_national_values_tsarpoints = {
 	country_trigger = {
 		custom_tooltip = {
 			text = tsarpoints_decree_upgraded_tt
-			has_variable = tsarpoints_upgraded_promote_national_values
+			OR = {
+				has_variable = tsarpoints_upgraded_promote_national_values
+				overlord ?= { has_variable = tsarpoints_upgraded_promote_national_values }
+			}
 		}
 		NOT = { has_law_or_variant = law_type:law_multicultural }
+	}
+
+	state_trigger = {
+		NOT = { has_decree = decree_promote_national_values }
 	}
 
 	modifier = {
@@ -1500,6 +1518,7 @@ decree_encourage_manufacturing_industry = {
 		custom_tooltip = {
 			text = tsarpoints_decree_not_upgraded_tt
 			NOT = { has_variable = tsarpoints_upgraded_encourage_manufacturing_industry }
+			NOT = { overlord ?= { has_variable = tsarpoints_upgraded_encourage_manufacturing_industry } }
 		}
 	}
 
@@ -1507,6 +1526,7 @@ decree_encourage_manufacturing_industry = {
 		manufacturies
 	}
 	state_trigger = {
+		NOT = { has_decree = decree_encourage_manufacturing_industry_tsarpoints }
 		NOR = {
 			state_has_decree_variant = { DECREE = decree_encourage_agricultural_industry }
 			state_has_decree_variant = { DECREE = decree_encourage_resource_industry }
@@ -1608,7 +1628,10 @@ decree_encourage_manufacturing_industry_tsarpoints = {
 	country_trigger = {
 		custom_tooltip = {
 			text = tsarpoints_decree_upgraded_tt
-			has_variable = tsarpoints_upgraded_encourage_manufacturing_industry
+			OR = {
+				has_variable = tsarpoints_upgraded_encourage_manufacturing_industry
+				overlord ?= { has_variable = tsarpoints_upgraded_encourage_manufacturing_industry }
+			}
 		}
 	}
 
@@ -1616,6 +1639,7 @@ decree_encourage_manufacturing_industry_tsarpoints = {
 		manufacturies
 	}
 	state_trigger = {
+		NOT = { has_decree = decree_encourage_manufacturing_industry }
 		NOR = {
 			state_has_decree_variant = { DECREE = decree_encourage_agricultural_industry }
 			state_has_decree_variant = { DECREE = decree_encourage_resource_industry }
@@ -1707,6 +1731,7 @@ decree_encourage_agricultural_industry = {
 		custom_tooltip = {
 			text = tsarpoints_decree_not_upgraded_tt
 			NOT = { has_variable = tsarpoints_upgraded_encourage_agricultural_industry }
+			NOT = { overlord ?= { has_variable = tsarpoints_upgraded_encourage_agricultural_industry } }
 		}
 	}
 
@@ -1714,6 +1739,7 @@ decree_encourage_agricultural_industry = {
 		enclosure
 	}
 	state_trigger = {
+		NOT = { has_decree = decree_encourage_agricultural_industry_tsarpoints }
 		NOR = {
 			state_has_decree_variant = { DECREE = decree_encourage_manufacturing_industry }
 			state_has_decree_variant = { DECREE = decree_encourage_resource_industry }
@@ -1831,7 +1857,10 @@ decree_encourage_agricultural_industry_tsarpoints = {
 	country_trigger = {
 		custom_tooltip = {
 			text = tsarpoints_decree_upgraded_tt
-			has_variable = tsarpoints_upgraded_encourage_agricultural_industry
+			OR = {
+				has_variable = tsarpoints_upgraded_encourage_agricultural_industry
+				overlord ?= { has_variable = tsarpoints_upgraded_encourage_agricultural_industry }
+			}
 		}
 	}
 
@@ -1839,6 +1868,7 @@ decree_encourage_agricultural_industry_tsarpoints = {
 		enclosure
 	}
 	state_trigger = {
+		NOT = { has_decree = decree_encourage_agricultural_industry }
 		NOR = {
 			state_has_decree_variant = { DECREE = decree_encourage_manufacturing_industry }
 			state_has_decree_variant = { DECREE = decree_encourage_resource_industry }
@@ -1946,6 +1976,7 @@ decree_encourage_resource_industry = {
 		custom_tooltip = {
 			text = tsarpoints_decree_not_upgraded_tt
 			NOT = { has_variable = tsarpoints_upgraded_encourage_resource_industry }
+			NOT = { overlord ?= { has_variable = tsarpoints_upgraded_encourage_resource_industry } }
 		}
 	}
 
@@ -1953,6 +1984,7 @@ decree_encourage_resource_industry = {
 		shaft_mining
 	}
 	state_trigger = {
+		NOT = { has_decree = decree_encourage_resource_industry_tsarpoints }
 		NOR = {
 			state_has_decree_variant = { DECREE = decree_encourage_manufacturing_industry }
 			state_has_decree_variant = { DECREE = decree_encourage_agricultural_industry }
@@ -2076,7 +2108,10 @@ decree_encourage_resource_industry_tsarpoints = {
 	country_trigger = {
 		custom_tooltip = {
 			text = tsarpoints_decree_upgraded_tt
-			has_variable = tsarpoints_upgraded_encourage_resource_industry
+			OR = {
+				has_variable = tsarpoints_upgraded_encourage_resource_industry
+				overlord ?= { has_variable = tsarpoints_upgraded_encourage_resource_industry }
+			}
 		}
 	}
 
@@ -2084,6 +2119,7 @@ decree_encourage_resource_industry_tsarpoints = {
 		shaft_mining
 	}
 	state_trigger = {
+		NOT = { has_decree = decree_encourage_resource_industry }
 		NOR = {
 			state_has_decree_variant = { DECREE = decree_encourage_manufacturing_industry }
 			state_has_decree_variant = { DECREE = decree_encourage_agricultural_industry }
@@ -2197,10 +2233,12 @@ decree_greener_grass_campaign = {
 		custom_tooltip = {
 			text = tsarpoints_decree_not_upgraded_tt
 			NOT = { has_variable = tsarpoints_upgraded_greener_grass_campaign }
+			NOT = { overlord ?= { has_variable = tsarpoints_upgraded_greener_grass_campaign } }
 		}
 	}
 
 	state_trigger = {
+		NOT = { has_decree = decree_greener_grass_campaign_tsarpoints }
 		is_isolated_from_market = no
 	}
 	modifier = {
@@ -2360,11 +2398,15 @@ decree_greener_grass_campaign_tsarpoints = {
 	country_trigger = {
 		custom_tooltip = {
 			text = tsarpoints_decree_upgraded_tt
-			has_variable = tsarpoints_upgraded_greener_grass_campaign
+			OR = {
+				has_variable = tsarpoints_upgraded_greener_grass_campaign
+				overlord ?= { has_variable = tsarpoints_upgraded_greener_grass_campaign }
+			}
 		}
 	}
 
 	state_trigger = {
+		NOT = { has_decree = decree_greener_grass_campaign }
 		is_isolated_from_market = no
 	}
 	modifier = {
@@ -2469,7 +2511,12 @@ decree_enlistment_efforts = {
 		custom_tooltip = {
 			text = tsarpoints_decree_not_upgraded_tt
 			NOT = { has_variable = tsarpoints_upgraded_enlistment_efforts }
+			NOT = { overlord ?= { has_variable = tsarpoints_upgraded_enlistment_efforts } }
 		}
+	}
+
+	state_trigger = {
+		NOT = { has_decree = decree_enlistment_efforts_tsarpoints }
 	}
 
 	modifier = {
@@ -2548,8 +2595,15 @@ decree_enlistment_efforts_tsarpoints = {
 	country_trigger = {
 		custom_tooltip = {
 			text = tsarpoints_decree_upgraded_tt
-			has_variable = tsarpoints_upgraded_enlistment_efforts
+			OR = {
+				has_variable = tsarpoints_upgraded_enlistment_efforts
+				overlord ?= { has_variable = tsarpoints_upgraded_enlistment_efforts }
+			}
 		}
+	}
+
+	state_trigger = {
+		NOT = { has_decree = decree_enlistment_efforts }
 	}
 
 	modifier = {

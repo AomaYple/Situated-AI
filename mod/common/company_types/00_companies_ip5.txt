@@ -39,6 +39,10 @@ company_dobrush_paper = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_MOGILEV
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_MOGILEV
 			building = building_paper_mill
@@ -235,6 +239,10 @@ company_russo-baltic_wagon_factory = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_RIGA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_RIGA
 			building = building_automotive_industry
@@ -348,6 +356,10 @@ company_maslosoyuz = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_EAST_GALICIA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_EAST_GALICIA
 			building = building_livestock_ranch
@@ -465,6 +477,10 @@ company_kreenholmi_manufaktuur = {
 
 	possible = {
 		has_technology_researched = mechanized_workshops
+		any_scope_state = {
+			state_region = s:STATE_TALINN
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_TALINN
 			building = building_textile_mill
@@ -549,6 +565,8 @@ company_kharitonenko_and_son = {
 	icon = "gfx/interface/icons/company_icons/historical_company_icons/company_kharitonenko_i_sin.dds"
 	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_farm_wheat.dds"
 
+	category = aristocrat_owned
+
 	flavored_company = yes
 
 	preferred_headquarters = { STATE_KHARKOV }
@@ -588,6 +606,10 @@ company_kharitonenko_and_son = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_KHARKOV
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_KHARKOV
 			building = building_wheat_farm
@@ -687,6 +709,10 @@ company_fiskars = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_UUSIMAA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_UUSIMAA
 			building = building_tooling_workshop
@@ -805,6 +831,10 @@ company_poznanski_cotton_products = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_GREATER_POLAND
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_GREATER_POLAND
 			building = building_textile_mill
@@ -914,6 +944,10 @@ company_resita_works = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_BANAT
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_BANAT
 			building = building_tooling_workshop
@@ -1042,9 +1076,13 @@ company_malaxa = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_WALLACHIA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_WALLACHIA
-			building = building_automotive_industry
+			building = building_motor_industry
 			levels >= 5
 			is_incorporated = yes
 		}
@@ -1063,7 +1101,7 @@ company_malaxa = {
 	}
 
 	ai_construction_targets = {
-		building_automotive_industry = {
+		building_motor_industry = {
 			level = 5
 			state_trigger = {
 				state_region = s:STATE_WALLACHIA

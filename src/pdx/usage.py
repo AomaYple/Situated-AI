@@ -584,13 +584,14 @@ def _doc14_specs() -> list[KeyedTableSpec]:
                 # current PM AST. A retired key must not keep its old count.
                 # Historical tables retain their original preservation contract.
                 allow_drop=(
-                    version_contracts.active_version() == "1.15.1"
+                    version_contracts.active_version()
+                    in {"1.15.1", version_contracts.CURRENT_VERSION}
                     and d == "production_methods"
                     and header == "| 字段 | 实测次数 | 首现位置 | 语义 |"
                 ),
             )
         )
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         out.append(
             KeyedTableSpec(
                 name="doc14 PM/PMG AI 字段",

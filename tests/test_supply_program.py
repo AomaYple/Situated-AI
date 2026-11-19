@@ -215,9 +215,8 @@ def test_production_compiler_contains_each_configured_enum_once():
         writer.supply_program is program for writer, program in zip(rows, programs, strict=True)
     )
     assert all(writer.owner == "supply_plan" for writer in rows)
-    merged = (
-        {"radios", "telephones", "oil"} if version_contracts.active_version() == "1.15.1" else set()
-    )
+    version = version_contracts.active_version()
+    merged = {"radios", "telephones", "oil"} if version in {"1.15.1", "1.15.2"} else set()
     operations = {}
     for writer in rows:
         assert writer.supply_program is not None

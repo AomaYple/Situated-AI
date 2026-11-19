@@ -10,11 +10,11 @@ from __future__ import annotations
 import hashlib
 import math
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, cast
 
-from pdx import decision_rules, version_contracts
+from pdx import config, decision_rules, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 
@@ -206,16 +206,28 @@ READERS_1151 = {
 
 
 def readers() -> dict[str, ReaderCapability]:
-    return READERS_1151 if native.expected_version() == "1.15.1" else READERS
+    selected = native.expected_version()
+    if selected == version_contracts.CURRENT_VERSION:
+        return {
+            **READERS_1151,
+            "school-agenda": replace(READERS_1151["school-agenda"], line=139),
+            "population": replace(READERS_1151["population"], line=5595),
+        }
+    return READERS_1151 if selected == "1.15.1" else READERS
 
 
 def source_path(version: str | None = None) -> Path:
     selected = (
         native.expected_version() if version is None else version_contracts.active_version(version)
     )
-    if selected not in {"1.15.0", "1.15.1"}:
-        raise ValueError("R2 declaration 仅支持 1.15.0 与 1.15.1")
-    return SOURCE if selected == "1.15.0" else SOURCE.with_name("action_network_1151.toml")
+    names = {
+        "1.15.0": SOURCE,
+        "1.15.1": SOURCE.with_name("action_network_1151.toml"),
+        version_contracts.CURRENT_VERSION: SOURCE.with_name("action_network_1152.toml"),
+    }
+    if selected not in names:
+        raise ValueError(f"R2 declaration 不支持 {selected}")
+    return names[selected]
 
 
 def _fields(
@@ -300,7 +312,11 @@ def compile_profile(
 ) -> tuple[net.NetworkProgram, ...]:
     """Create one symbolic program per physical consumer, with one policy source."""
     source = source_path(profile.game_version) if source is None else Path(source)
-    authority.verify_frozen()
+    if profile.game_version == version_contracts.CURRENT_VERSION:
+        if profile != native.declared_profile():
+            raise ValueError("R2 profile differs from current script declaration")
+    else:
+        authority.verify_frozen()
     if {
         name: capability.source for name, capability in readers().items()
     } != authority.reader_sources():
@@ -965,8 +981,12 @@ def compose(
     """
     from .native_treatments import _digest  # noqa: PLC0415
 
-    baseline = native.baseline_root(profile.game_version)
-    native.verify_baseline(baseline)
+    if profile.game_version == version_contracts.CURRENT_VERSION:
+        baseline = config.ROOT
+        authority.verify_installation(baseline)
+    else:
+        baseline = native.baseline_root(profile.game_version)
+        native.verify_baseline(baseline)
     programs = compile_profile(profile, configuration=configuration)
     by_consumer = {item.network.actions[0].definition.consumer_id: item for item in programs}
     if len(by_consumer) != len(programs):

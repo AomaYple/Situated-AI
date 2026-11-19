@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 from argparse import Namespace
@@ -13,63 +13,108 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from conftest import configure_current_identity
 
-from pdx import covgate
+from pdx import covgate, version_contracts
 from tools.ci import test_suite
 
 
-def test_profile_identity_records_verified_live_inputs_and_binary(tmp_path, monkeypatch):
-    from pdx import config
+@pytest.fixture
+def synthetic_profile_installation(tmp_path, monkeypatch):
     from pdx.situated import production_profile, r2_reader_authority
 
     installation = tmp_path / "installation"
-    shutil.copytree(production_profile.baseline_root(), installation)
-    shutil.copytree(r2_reader_authority.frozen_root(), installation, dirs_exist_ok=True)
+    configure_current_identity(installation, monkeypatch)
+    declaration = production_profile.declaration_path()
+    data, consumers = production_profile._load_declaration(declaration)
+    for relative in r2_reader_authority.source_hashes():
+        path = installation / relative
+        if not path.is_file():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"# synthetic reader input\n")
+    for consumer in consumers:
+        path = installation / consumer.source
+        *ancestors, field = (consumer.definition, *consumer.field)
+        lines = [f"{key} = {{" for key in ancestors]
+        lines.extend([""] * (consumer.baseline_line - len(lines) - 1))
+        lines.extend([f"{field} = {{}}", *("}" for _ in ancestors)])
+        path.write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+
+    for item in (*data["identity"], *data["input"]):
+        raw = (installation / item["path"]).read_bytes()
+        item["sha256"] = hashlib.sha256(raw).hexdigest()
+        if "value" in item:
+            item["value"] = raw.decode("utf-8").strip()
+    monkeypatch.setattr(production_profile, "_load_declaration", lambda _path: (data, consumers))
+    source_hashes = {
+        relative: hashlib.sha256((installation / relative).read_bytes()).hexdigest()
+        for relative in r2_reader_authority.source_hashes()
+    }
+    monkeypatch.setattr(r2_reader_authority, "CURRENT_SOURCE_SHA256", source_hashes)
+
     binary = installation / "binaries/victoria3.exe"
-    binary.write_bytes(b"identity only; not an engine scope proof")
-    monkeypatch.setattr(config, "ROOT", installation)
-    identity = test_suite.capture_game_identity(tmp_path, "1.15.1")
-    assert identity["profile"] == "1.15.1"
-    assert identity["checksum"] == "79da2ab6b2f3b5a78c820ca38470f843"
-    assert identity["version"]["caligula_branch"] == "release/1.15.1"
+    binary.write_bytes(b"synthetic executable identity")
+    return installation
+
+
+def test_profile_identity_records_verified_live_inputs_and_binary(
+    tmp_path, synthetic_profile_installation
+):
+    from pdx.situated import production_profile, r2_reader_authority
+
+    installation = synthetic_profile_installation
+    binary = installation / "binaries/victoria3.exe"
+    checksum = (installation / "binaries/checksum.txt").read_text(encoding="utf-8").strip()
+    identity = test_suite.capture_game_identity(tmp_path, version_contracts.CURRENT_VERSION)
+    assert identity["profile"] == version_contracts.CURRENT_VERSION
+    assert identity["checksum"] == checksum
+    assert identity["version"]["caligula_branch"] == f"release/{version_contracts.CURRENT_VERSION}"
     assert identity["profile_source_hashes"] == dict(
         production_profile.load_profile(installation).source_hashes
     )
+    declaration = production_profile.declaration_path()
+    assert (
+        identity["profile_declaration_sha256"]
+        == hashlib.sha256(declaration.read_bytes()).hexdigest()
+    )
     assert identity["installation"] == str(installation.resolve())
-    assert identity["executable"]["bytes"] == binary.stat().st_size
+    assert identity["executable"] == {
+        "bytes": binary.stat().st_size,
+        "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+    }
     assert identity["verified"] is True
-    assert identity["reader_authority"] == r2_reader_authority.verify_frozen()
+    assert identity["reader_authority"] == r2_reader_authority.verify_installation(installation)
     assert json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8")) == identity
 
 
-@pytest.mark.parametrize("broken", ["version", "checksum", "input", "missing_binary"])
-def test_profile_identity_fails_closed_and_preserves_failure(tmp_path, monkeypatch, broken):
-    from pdx import config
-    from pdx.situated import production_profile
-
-    installation = tmp_path / "installation"
-    shutil.copytree(production_profile.baseline_root(), installation)
-    binary = installation / "binaries/victoria3.exe"
-    binary.write_bytes(b"identity only")
-    target = {
-        "version": installation / "caligula_branch.txt",
-        "checksum": installation / "binaries/checksum.txt",
-        "input": installation / "game/common/decrees/00_decree.txt",
-        "missing_binary": binary,
-    }[broken]
-    if broken == "missing_binary":
+@pytest.mark.parametrize(
+    ("relative", "diagnostic"),
+    [
+        ("caligula_branch.txt", "SHA-256 漂移"),
+        ("binaries/checksum.txt", "SHA-256 漂移"),
+        ("game/common/decrees/00_decree.txt", "SHA-256 漂移"),
+        ("game/common/ai_strategies/01_admin_strategies.txt", "source drift"),
+        ("binaries/victoria3.exe", "完整版本验收缺少实际游戏 EXE"),
+    ],
+)
+def test_profile_identity_fails_closed_and_preserves_failure(
+    tmp_path, synthetic_profile_installation, relative, diagnostic
+):
+    target = synthetic_profile_installation / relative
+    if target.suffix == ".exe":
         target.unlink()
     else:
         target.write_bytes(b"drift")
-    monkeypatch.setattr(config, "ROOT", installation)
-    with pytest.raises(ValueError, match="完整验收输入身份核对失败"):
-        test_suite.capture_game_identity(tmp_path, "1.15.1")
+    with pytest.raises(ValueError, match=f"完整验收输入身份核对失败.*{diagnostic}"):
+        test_suite.capture_game_identity(tmp_path, version_contracts.CURRENT_VERSION)
     report = json.loads((tmp_path / "game-input.json").read_text(encoding="utf-8"))
     assert report["verified"] is False
-    assert report["error"]
+    assert diagnostic in report["error"]
+    if target.suffix != ".exe":
+        assert relative in report["error"]
 
 
-@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "", "unknown"])
+@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.1", "", "unknown"])
 def test_full_acceptance_rejects_unsupported_profile_before_launch(tmp_path, monkeypatch, profile):
     monkeypatch.setattr(test_suite, "execute", lambda *_args: pytest.fail("launch"))
     with pytest.raises(SystemExit) as caught:
@@ -352,7 +397,14 @@ def test_real_xdist_workers_and_children_preserve_utf8_capture_with_encoding_ove
     monkeypatch.setenv("PYTHONIOENCODING", "cp936")
     out = test_suite.create_run_dir(tmp_path / "reports")
     summary = test_suite.execute(
-        out, Namespace(timeout_s=45, quiet=True, allow_concurrent=True, profile="1.15.1"), []
+        out,
+        Namespace(
+            timeout_s=45,
+            quiet=True,
+            allow_concurrent=True,
+            profile=version_contracts.CURRENT_VERSION,
+        ),
+        [],
     )
     assert summary["exit_code"] == 0, (out / "pytest.log").read_text(encoding="utf-8")
     reports = json.loads((out / "collection.json").read_text(encoding="utf-8"))["reports"]
@@ -401,13 +453,14 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
         "    enable_utf8_stdio()\n"
         "    assert 'SITAI_TEST_COLLECTION' not in os.environ\n"
         "    assert 'MEMBASELINE_OUT' not in os.environ\n"
-        "    assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.1'\n"
+        f"    assert os.environ['V3_CONTRACT_PROFILE'] == {version_contracts.CURRENT_VERSION!r}\n"
         "    child = subprocess.run([sys.executable, '-c',\n"
         "        \"import os; assert 'SITAI_TEST_COLLECTION' not in os.environ; \"\n"
         "        \"assert 'MEMBASELINE_OUT' not in os.environ; assert 'COVERAGE_FILE' not in os.environ\"], check=False)\n"
         "    assert child.returncode == 0\n"
         "    child = subprocess.run([sys.executable, '-c',\n"
-        "        \"import os; assert os.environ['V3_CONTRACT_PROFILE'] == '1.15.1'\"], check=False)\n"
+        f"        \"import os; assert os.environ['V3_CONTRACT_PROFILE'] == "
+        f'{version_contracts.CURRENT_VERSION!r}"], check=False)\n'
         "    assert child.returncode == 0\n"
         "    if value == 1:\n"
         "        child = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', '-n0',\n"
@@ -443,7 +496,14 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     monkeypatch.setattr(test_suite.mem.TreeSampler, "sample_once", sample_and_release_workers)
     out = test_suite.create_run_dir(tmp_path / "reports")
     summary = test_suite.execute(
-        out, Namespace(timeout_s=30, quiet=True, allow_concurrent=True, profile="1.15.1"), []
+        out,
+        Namespace(
+            timeout_s=30,
+            quiet=True,
+            allow_concurrent=True,
+            profile=version_contracts.CURRENT_VERSION,
+        ),
+        [],
     )
     collection = json.loads((out / "collection.json").read_text(encoding="utf-8"))
     assert len(collection["nodeids"]) == 2
@@ -471,7 +531,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     assert len(collection["workers"]) == workers
     assert "environment_sha256" in summary
     assert summary["environment"]["V3_CONTRACT_PROFILE"]["present"]
-    assert summary["game_input"]["profile"] == "1.15.1"
+    assert summary["game_input"]["profile"] == version_contracts.CURRENT_VERSION
     assert summary["versions"]["pytest-xdist"]
     assert len(list(out.glob("inproc-full-*.json"))) == workers + 1
     # 假装继承外层 worker 也必须创建独立 master 证据。
@@ -796,7 +856,7 @@ def test_test_subprocess_environment_isolated_and_restored(monkeypatch):
     assert all(os.environ[name] == "outer-evidence" for name in names)
 
 
-@pytest.mark.parametrize("selected", ["1.14.5", "1.15.0", "", "unknown"])
+@pytest.mark.parametrize("selected", ["1.14.5", "1.15.0", "1.15.1", "", "unknown"])
 @pytest.mark.parametrize("explicit", [False, True])
 def test_full_acceptance_rejects_invalid_environment_without_creating_output(
     tmp_path, monkeypatch, selected, explicit
@@ -805,14 +865,14 @@ def test_full_acceptance_rejects_invalid_environment_without_creating_output(
     monkeypatch.setattr(test_suite, "execute", lambda *_args: pytest.fail("launch"))
     arguments = ["--output-root", str(tmp_path)]
     if explicit:
-        arguments.extend(["--profile", "1.15.1"])
+        arguments.extend(["--profile", version_contracts.CURRENT_VERSION])
     with pytest.raises(SystemExit) as caught:
         test_suite.main(arguments)
     assert caught.value.code == 2
     assert not list(tmp_path.iterdir())
 
 
-@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "", "unknown"])
+@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.1", "", "unknown"])
 def test_direct_identity_capture_rejects_noncurrent_before_read_or_write(tmp_path, profile) -> None:
     with pytest.raises(ValueError, match="未支持的原版合同版本"):
         test_suite.capture_game_identity(tmp_path, profile)

@@ -76,7 +76,7 @@ def artifacts(tmp_path_factory: pytest.TempPathFactory, ga, ma, ca) -> dict[str,
 def test_artifact_digests(artifacts, data_regression, ga) -> None:
     """每个产物的字节数与 sha256 必须与冻结值一致。"""
     version = active_version()
-    if version in {"1.15.0", "1.15.1"}:
+    if version in {"1.15.0", "1.15.1", "1.15.2"}:
         snap = verify.latest_compact_snapshot()
         assert snap is not None
         snap.require_version()
@@ -109,6 +109,7 @@ def test_artifact_digests(artifacts, data_regression, ga) -> None:
         "1.14.5": None,
         "1.15.0": "test_artifact_digests_115",
         "1.15.1": "test_artifact_digests_1151",
+        "1.15.2": "test_artifact_digests_1152",
     }[version]
     data_regression.check(digests, basename=basename)
 

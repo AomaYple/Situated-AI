@@ -1,0 +1,251 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "reviewed_chain": [
+    "CTechnologyType RTTI selects the parser at +0x1a8. The ai_weight atom 0x53ce selects the numeric interface at +0x68, whose expression payload at +0x70 is evaluated in the native candidate consumer.",
+    "A checked Country lookup supplies Country tag 5 and its actor ID. The candidate definition is the numeric expression owner. Native eligibility, cost adjustment, randomization and maximum comparison remain downstream.",
+    "Current NAI registrations bind TECH_COST_PENALTY_FACTOR and TECH_RANDOM_FACTOR to the exact globals read by the cost and randomization paths."
+  ],
+  "consumer": {
+    "directory": "technology",
+    "field": "ai_weight",
+    "actor_scope": "country",
+    "target_scope": "definition_only:technology",
+    "operation": "base_candidate_score",
+    "capability": "direct"
+  },
+  "contract": {
+    "parser": "0x1418d5af0",
+    "parser_receiver": "0x1a8",
+    "numeric_member": "0x68",
+    "numeric_expression": "0x70",
+    "ai_consumer": "0x1415e9d70",
+    "country_lookup": "0x1407322c0",
+    "country_tag": 5,
+    "evaluation": "0x1415ea010",
+    "eligibility": "0x1415e9f62",
+    "cost": "0x1415ea0f4",
+    "randomizer": "0x141628870",
+    "max_update": "0x1415ea406",
+    "cost_define_global": "0x145c1fbd8",
+    "random_define_global": "0x145c1fde0"
+  },
+  "script_hashes": {
+    "common/technology/technologies/10_production.txt": "bf06da72b53ade802dfb9195b57c60e22bba87f87fdc9d55f899d7aeddf67bdd",
+    "common/technology/technologies/20_military.txt": "2cfa62bd29ffb9b23bed2bbc35f9bf6c403cfd3fe2493525920dddd8f45eeac8",
+    "common/technology/technologies/30_society.txt": "204340e2ff81f31d5bceddb36824566d57fa2be941dc2ba90407d56be75176dc",
+    "common/defines/00_ai.txt": "a1c49bb95f9c3cd57375253fce7026ff90f5ca11635f61bfca95799ca029eff8"
+  },
+  "limits": [
+    "Runtime is unknown. Static evidence authorizes only the observed technology definition candidate formula with country actor.",
+    "No technology saved scope, generic getter, balance, performance or long-run behavior is authorized.",
+    "Bounded static inspection does not claim all possible indirect callers or arbitrary inlined paths."
+  ],
+  "observations": [
+    {
+      "label": "technology parser RTTI",
+      "va": "0x144ce1f38",
+      "rva": "0x4ce1f38",
+      "file_offset": "0x4ce0f38",
+      "size": 24,
+      "sha256": "fe603b0990152c44370229d5728e8c4ae0e9ae8a81fae3a8ac598956c566c3f4"
+    },
+    {
+      "label": "technology type name",
+      "va": "0x14546d3e0",
+      "rva": "0x546d3e0",
+      "file_offset": "0x546b7e0",
+      "size": 24,
+      "sha256": "cab50ad8365a1935b777092e37a60969900241196833600358a64d99c1bb8d7b"
+    },
+    {
+      "label": "technology parser vtable",
+      "va": "0x1447b8000",
+      "rva": "0x47b8000",
+      "file_offset": "0x47b7000",
+      "size": 48,
+      "sha256": "d051a9390151c9befef3a9cfbbc1df9412a6cecc5b9c0436aaf78a0df8876bd8"
+    },
+    {
+      "label": "technology adjustor thunk",
+      "va": "0x140849098",
+      "rva": "0x849098",
+      "file_offset": "0x848498",
+      "size": 12,
+      "sha256": "7df3b541100f02d60ccb0cb795e9ac95c89b358c0ed3fd7130bf05e39e021894"
+    },
+    {
+      "label": "ai_weight atom",
+      "va": "0x1449ae2b0",
+      "rva": "0x49ae2b0",
+      "file_offset": "0x49ad2b0",
+      "size": 16,
+      "sha256": "2a4a379966c9055f562f92dc13d835c367ce4352648efeeb43dd68ff88ce1b9f"
+    },
+    {
+      "label": "ai_weight literal",
+      "va": "0x1449775b0",
+      "rva": "0x49775b0",
+      "file_offset": "0x49765b0",
+      "size": 10,
+      "sha256": "d5a73d678401ef883db36e3c23d5e1ff66bbc270c1f5fc2a0c19c3336b22eb46"
+    },
+    {
+      "label": "technology constructor",
+      "va": "0x1418d5910",
+      "rva": "0x18d5910",
+      "file_offset": "0x18d4d10",
+      "size": 415,
+      "sha256": "bb84ca5f96cf41c003be9a9cca427b99e9ccdcbe6da0eda8dcd5cb56cb3fbe81"
+    },
+    {
+      "label": "technology parser ai_weight comparison",
+      "va": "0x1418d5e49",
+      "rva": "0x18d5e49",
+      "file_offset": "0x18d5249",
+      "size": 24,
+      "sha256": "d18516348ac97b5e13bde906a3787292144de2cb42706f9816c686d41ef65c04"
+    },
+    {
+      "label": "technology parser numeric receiver",
+      "va": "0x1418d5f2f",
+      "rva": "0x18d5f2f",
+      "file_offset": "0x18d532f",
+      "size": 24,
+      "sha256": "2835884c96c46ce9ab6e1d09fbc90c8715751ce26fd35640c1eda6d688a6d6a7"
+    },
+    {
+      "label": "country wrapper RTTI",
+      "va": "0x144cf1728",
+      "rva": "0x4cf1728",
+      "file_offset": "0x4cf0728",
+      "size": 24,
+      "sha256": "a56cb265df9941ff3861ff271e8723b0c65ed00c2be103a8ce28b57cbe38d8a4"
+    },
+    {
+      "label": "country wrapper name",
+      "va": "0x14580e368",
+      "rva": "0x580e368",
+      "file_offset": "0x580c768",
+      "size": 51,
+      "sha256": "eadb4d50c3234a749233cf6fdf3a8d70e6ab02ef910ea2ae196e712c1d95ee3f"
+    },
+    {
+      "label": "country wrapper vtable",
+      "va": "0x1447dd328",
+      "rva": "0x47dd328",
+      "file_offset": "0x47dc328",
+      "size": 56,
+      "sha256": "c5692cf648a5c9106129f20ca46af6826233aaeadff7d79c183832ef648fb3bf"
+    },
+    {
+      "label": "country tag getter",
+      "va": "0x1417b6650",
+      "rva": "0x17b6650",
+      "file_offset": "0x17b5a50",
+      "size": 6,
+      "sha256": "21faa16607cb70438711aab3fa582829af50aa15d5946524996fc7aa8a8e4e6d"
+    },
+    {
+      "label": "country checked lookup",
+      "va": "0x1407322c0",
+      "rva": "0x7322c0",
+      "file_offset": "0x7316c0",
+      "size": 178,
+      "sha256": "40c94efa569d3c43ace0f80b5ff3ea8d5a913a86ae5737d03bdedfcbe8b27b78"
+    },
+    {
+      "label": "country lookup name",
+      "va": "0x14546a4b8",
+      "rva": "0x546a4b8",
+      "file_offset": "0x54688b8",
+      "size": 15,
+      "sha256": "1025ac96a4a1b9f703088dae45f2a0868f4caac1aaf7cc2b224f6662ae519c16"
+    },
+    {
+      "label": "technology actual AI scoring caller",
+      "va": "0x1415e9d70",
+      "rva": "0x15e9d70",
+      "file_offset": "0x15e9170",
+      "size": 2169,
+      "sha256": "552ffa2935cbda9cc3e96785c0edf9672cfa49ee4b7bfd4d21dbd0eba77087a0"
+    },
+    {
+      "label": "cost define key",
+      "va": "0x144711b80",
+      "rva": "0x4711b80",
+      "file_offset": "0x4710b80",
+      "size": 25,
+      "sha256": "59eb58e740f3d281fc7f4598fd06e62b9a8ce4be36fd292023c414df106bdc59"
+    },
+    {
+      "label": "cost define registration",
+      "va": "0x141108e40",
+      "rva": "0x1108e40",
+      "file_offset": "0x1108240",
+      "size": 26,
+      "sha256": "1db281c0b85f27be54dddc606d665be33e9d7fe4487b2bc6cc992de72bde263a"
+    },
+    {
+      "label": "random define key",
+      "va": "0x144711ba0",
+      "rva": "0x4711ba0",
+      "file_offset": "0x4710ba0",
+      "size": 19,
+      "sha256": "aefc5b23a4ee5f67e1dc42c1791493a6593af8dab60fdc558f70b4c58cb0d492"
+    },
+    {
+      "label": "random define registration",
+      "va": "0x141108910",
+      "rva": "0x1108910",
+      "file_offset": "0x1107d10",
+      "size": 26,
+      "sha256": "21e9beae398eb8496b2c9322115405ee91a3a051c2e6578a4cffd3e53bce1c0d"
+    },
+    {
+      "label": "NAI literal",
+      "va": "0x14470cdfc",
+      "rva": "0x470cdfc",
+      "file_offset": "0x470bdfc",
+      "size": 4,
+      "sha256": "d54c2f18e513a851307d0039d61cca4fe51e3e44dc424e6ec4e1c8cba91dab35"
+    },
+    {
+      "label": "randomizer positive checks",
+      "va": "0x141628870",
+      "rva": "0x1628870",
+      "file_offset": "0x1627c70",
+      "size": 36,
+      "sha256": "8d687b47ecc98935f5f944b82aa9d2d8092e0c38c15c895fd93a8657469f95f1"
+    },
+    {
+      "label": "randomizer nonpositive result",
+      "va": "0x141628c8f",
+      "rva": "0x1628c8f",
+      "file_offset": "0x162808f",
+      "size": 22,
+      "sha256": "fbccd25f400b5e5a35a566645cbb679ec07aadf5e82c2f20b6be943f94f8d81b"
+    }
+  ],
+  "reference_sites": [
+    "0x1418d5e49",
+    "0x1417b6650",
+    "0x1415ea010"
+  ]
+}

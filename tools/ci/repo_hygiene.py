@@ -138,6 +138,16 @@ def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
             relative = path.relative_to(root)
             if _excluded(relative):
                 continue
+            # mutmut 在运行目录下保留可继续使用的隔离源码和运行结果，仅报告。
+            if relative.parts == ("mutants",) and stat.S_ISDIR(info.st_mode):
+                violations.append(
+                    {
+                        "path": relative.as_posix(),
+                        "kind": "mutation_artifact",
+                        "detail": "mutmut 隔离源码与运行结果目录",
+                    }
+                )
+                continue
             if _is_root_cache(relative):
                 violations.append(
                     {

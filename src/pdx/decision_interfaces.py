@@ -40,12 +40,14 @@ SCRIPTED_PREDICATE_1151_SHA256 = "ae30c39e5c282adb827f5121c4b283f3b96087e5634e89
 
 
 def scripted_predicate_path() -> Path:
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         return version_contracts.research_path("situated", "scripted-predicate.json")
     return SCRIPTED_PREDICATE_115 if version_contracts.is_115() else SCRIPTED_PREDICATE_SOURCE
 
 
 def scripted_predicate_sha256() -> str:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return "bd38a586125271089d95f5e0e461490a40eb78ec0c522c23860e0f8d91baa7c3"
     if version_contracts.active_version() == "1.15.1":
         return SCRIPTED_PREDICATE_1151_SHA256
     return (
@@ -62,14 +64,19 @@ def scripted_trigger_snapshot() -> bytes:
     if hashlib.sha256(raw).hexdigest() != expected_hash:
         raise ValueError("原版脚本布尔谓词冻结证据漂移")
     data = json.loads(raw)
-    if data.get("reader") != {
+    if data.get("baseline") != f"victoria3-{version}" or data.get("reader") != {
         "engine": "any_insurrection_ongoing",
         "origin": "scripted_trigger",
         "scope": "root",
         "result": "boolean",
         "unit": "boolean",
         "source": "common/scripted_triggers/00_scripted_triggers.txt",
-        "line": {"1.14.5": 1117, "1.15.0": 1243, "1.15.1": 1244}[version],
+        "line": {
+            "1.14.5": 1117,
+            "1.15.0": 1243,
+            "1.15.1": 1244,
+            version_contracts.CURRENT_VERSION: 1244,
+        }[version],
         "definition": (
             "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
         ),
@@ -932,10 +939,15 @@ def _configuration_writers(
                 "market",
             )
 
-    if version_contracts.active_version() == "1.15.1":
+    version = version_contracts.active_version()
+    if version in {"1.15.1", version_contracts.CURRENT_VERSION}:
         from .situated import network_profile, production_profile  # noqa: PLC0415
 
-        profile = production_profile.load_profile(production_profile.baseline_root())
+        profile = (
+            production_profile.declared_profile()
+            if version == version_contracts.CURRENT_VERSION
+            else production_profile.load_profile(production_profile.baseline_root(version))
+        )
         # The native declaration alone is not a Mod writer. Confirm that the
         # current policy actually compiles the consumer before recording its
         # withdrawal; the six retired school rules never reappear as writers.
@@ -1088,7 +1100,7 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
             STATE_DEVASTATION_SOURCE: "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4",
             "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
         }
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         from . import decision_adapters  # noqa: PLC0415
 
         authority_sources = decision_adapters.native_authority_115()["sources"]

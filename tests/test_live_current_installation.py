@@ -1,12 +1,12 @@
-"""Live CLI admits the reviewed 1.15.1 installation and its platform aliases."""
+"""The live CLI enforces the current installation identity and accepts launcher platform paths."""
 
 from __future__ import annotations
 
 import json
-import shutil
 from typing import TYPE_CHECKING
 
 import pytest
+from conftest import configure_current_identity
 from typer.testing import CliRunner
 
 from pdx import (
@@ -18,7 +18,6 @@ from pdx import (
     political_surface,
     version_contracts,
 )
-from pdx.situated import r2_reader_authority
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -28,8 +27,8 @@ if TYPE_CHECKING:
 @pytest.fixture
 def installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "installation"
-    shutil.copytree(r2_reader_authority.frozen_root("1.15.1"), root)
-    monkeypatch.setattr(config, "ROOT", root)
+    configure_current_identity(root, monkeypatch)
+    (root / "game").mkdir()
     monkeypatch.setattr(config, "GAME", root / "game")
     monkeypatch.setattr(config, "OUT", tmp_path / "out")
     return root
@@ -104,17 +103,18 @@ def test_live_csv_accepts_launcher_platform_paths(installation: Path, exe: str) 
     assert "Sample" in result.output
 
 
-@pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "unknown"])
+@pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "1.15.1", "unknown"])
 def test_explicit_current_does_not_override_old_online_environment(
     environment: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, environment)
     target = tmp_path / "package.zip"
     result = CliRunner().invoke(
-        cli.app, ["package", "--profile", "1.15.1", "--output", str(target)]
+        cli.app,
+        ["package", "--profile", version_contracts.CURRENT_VERSION, "--output", str(target)],
     )
     assert result.exit_code == cli.EXIT_FAILED, result.output
-    assert "合同版本" in result.output
+    assert f"合同版本：{environment!r}" in result.output
     assert not target.exists()
 
 

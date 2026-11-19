@@ -273,10 +273,14 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
         "treaty_category_scores.economy",
     )
     school_field = "institution_scores.institution_schools"
-    if version_contracts.active_version() != "1.15.1":
+    has_r2_school_writer = version_contracts.active_version() in {
+        "1.15.1",
+        version_contracts.CURRENT_VERSION,
+    }
+    if not has_r2_school_writer:
         fields += (school_field,)
     result = decision_rules.evaluate(policy, values, is_ai=True)
-    if version_contracts.active_version() == "1.15.1":
+    if has_r2_school_writer:
         # The current school consumer has one R2 additive writer. The retired
         # legacy multipliers must not survive in this rule-only evaluator.
         assert school_field not in result

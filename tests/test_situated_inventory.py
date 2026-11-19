@@ -20,9 +20,17 @@ def structure_inventory_has_no_live_game(request, monkeypatch, tmp_path):
         monkeypatch.setattr(config, "GAME", tmp_path / "unavailable-game")
 
 
+@pytest.fixture(scope="module")
+def offline_inventory(tmp_path_factory: pytest.TempPathFactory) -> inventory.SurfaceInventory:
+    """Compute the default offline inventory for assertions that only read it."""
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(config, "GAME", tmp_path_factory.mktemp("inventory") / "game")
+        return inventory.discover()
+
+
 @pytest.mark.integration
 def test_k0_inventory_has_stable_scope_and_verified_production_witnesses() -> None:
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         first = inventory.discover()
         second = inventory.discover()
     assert first.scope_hash == second.scope_hash
@@ -35,27 +43,25 @@ def test_k0_inventory_has_stable_scope_and_verified_production_witnesses() -> No
     assert any(item.evidence_state == "production_witnessed" for item in first.surfaces)
 
 
-def test_k0_inventory_contains_legacy_rules_consumers_and_cards() -> None:
-    result = inventory.discover()
+def test_k0_inventory_contains_legacy_rules_consumers_and_cards(offline_inventory) -> None:
+    result = offline_inventory
     kinds = {item.kind for item in result.surfaces}
     assert kinds == {"legacy_rule", "consumer_contract", "action_card"}
     # Compare every downstream identity with the complete upstream policy inputs.
     # The helper separately checks the independent authored TOML subset.
-    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == len(
-        production_policy_sources().rules
-    )
+    expected = production_policy_sources().rules
+    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == len(expected)
     assert {
         (item.source, item.definition, item.field)
         for item in result.surfaces
         if item.kind == "legacy_rule"
-    } == production_policy_sources().rules
+    } == expected
     assert sum(item.kind == "consumer_contract" for item in result.surfaces) >= 8
     assert sum(item.kind == "action_card" for item in result.surfaces) >= 11
 
 
-def test_k0_migration_preserves_every_current_production_rule() -> None:
-    result = inventory.discover()
-    migration = inventory.migration(inventory=result)
+def test_k0_migration_preserves_every_current_production_rule(offline_inventory) -> None:
+    migration = inventory.migration(inventory=offline_inventory)
     assert len(migration.rows) == len(production_policy_sources().rules)
     assert migration.missing_old_rules == ()
     assert migration.duplicate_owners == ()
@@ -67,11 +73,11 @@ def test_k0_migration_preserves_every_current_production_rule() -> None:
     assert all(row.binding_id for row in migration.rows)
 
 
-def test_k0_json_contract_is_recomputable(tmp_path) -> None:
+def test_k0_json_contract_is_recomputable(tmp_path, offline_inventory) -> None:
     inventory_path, migration_path = inventory.write(tmp_path)
     payload = json.loads(inventory_path.read_text(encoding="utf-8"))
     migration_payload = json.loads(migration_path.read_text(encoding="utf-8"))
-    assert payload["scope_hash"] == inventory.discover().scope_hash
+    assert payload["scope_hash"] == offline_inventory.scope_hash
     assert payload["discovered_count"] == sum(payload["status_counts"].values())
     assert len(migration_payload["rows"]) == len(production_policy_sources().rules)
 
@@ -80,12 +86,9 @@ def test_k0_equivalent_baseline_at_another_path_preserves_legacy_rule_denominato
     baseline = tmp_path / "baseline.txt"
     baseline.write_bytes(inventory.BASELINE.read_bytes())
     result = inventory.discover(baseline=baseline)
-    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == len(
-        production_policy_sources().rules
-    )
-    assert len(inventory.migration(baseline=baseline, inventory=result).rows) == len(
-        production_policy_sources().rules
-    )
+    expected = len(production_policy_sources().rules)
+    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == expected
+    assert len(inventory.migration(baseline=baseline, inventory=result).rows) == expected
 
 
 def test_k0_invalid_alternate_baseline_keeps_strict_model_validation(tmp_path) -> None:
@@ -97,7 +100,7 @@ def test_k0_invalid_alternate_baseline_keeps_strict_model_validation(tmp_path) -
 
 def test_current_inventory_keeps_failed_generation_pending(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         result = inventory.discover()
     assert result.status_counts == {"pending": result.discovered_count}
     assert all(surface.evidence_state != "production_witnessed" for surface in result.surfaces)
@@ -106,7 +109,7 @@ def test_current_inventory_keeps_failed_generation_pending(monkeypatch, tmp_path
 def test_historical_inventory_cannot_borrow_current_mod_tree(monkeypatch, tmp_path):
     # This is the actual current tree, not invented historical evidence.
     metadata = json.loads((config.REPO / "mod/.metadata/metadata.json").read_text(encoding="utf-8"))
-    assert metadata["supported_game_version"] == "1.15.1"
+    assert metadata["supported_game_version"] == version_contracts.CURRENT_VERSION
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
     with version_contracts.select_version("1.14.5"):
         result = inventory.discover()

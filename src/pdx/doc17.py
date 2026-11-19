@@ -82,8 +82,8 @@ FROZEN_PARTIAL_DNA_SHA256 = {
 }
 
 
-def _current_observation() -> bool:
-    return version_contracts.active_version() == "1.15.1"
+def _complete_file_observation() -> bool:
+    return version_contracts.active_version() in {"1.15.1", "1.15.2"}
 
 
 # ────────────────────────── 口径 1：字段出现次数 ──────────────────────────
@@ -166,10 +166,10 @@ def _doc17_field_specs() -> list[KeyedTableSpec]:
         KeyedTableSpec(
             name=f"doc17 字段表{n} {d}",
             header="| 字段 | 官方 `.md` | 完整 `.txt` 实测次数 | 说明 |"
-            if n == 1 and _current_observation()
+            if n == 1 and _complete_file_observation()
             else header,
             cells=_dna_field_rows
-            if n == 1 and _current_observation()
+            if n == 1 and _complete_file_observation()
             else _field_rows(d, col, within=within, zero_keys=zero),
             occurrence=occ,
             append_new=False,
@@ -568,17 +568,27 @@ def _overview_sources(
     name: str, identities: dict[str, SourceIdentity] | None = None
 ) -> Iterator[tuple[Path, ParsedFile | None]]:
     """Yield current complete ASTs and explicitly identified missing ASTs."""
-    current = _current_observation()
-    for path in _overview_paths(name):
+    complete_only = _complete_file_observation()
+    paths = _overview_paths(name)
+    if complete_only and name == "dna_data":
+        missing = FROZEN_PARTIAL_DNA_SHA256.keys() - {
+            path.relative_to(config.GAME / "common").as_posix() for path in paths
+        }
+        if missing:
+            raise ParseError(
+                "doc17 缺少冻结 DNA 来源：" + ", ".join(sorted(missing)),
+                str(config.GAME / "common/dna_data"),
+            )
+    for path in paths:
         relative = path.relative_to(config.GAME).as_posix()
         frozen = FROZEN_PARTIAL_DNA_SHA256.get(relative.removeprefix("common/"))
-        if identities is not None or (current and frozen is not None):
+        if identities is not None or (complete_only and frozen is not None):
             raw = path.read_bytes()
             digest = hashlib.sha256(raw).hexdigest()
             parsed = parse_bytes(raw, str(path))
             if identities is not None:
                 identities[f"game/{relative}"] = (digest, len(raw), parsed.parse_status)
-            if current and frozen is not None:
+            if complete_only and frozen is not None:
                 if digest != frozen or parsed.parse_status != "partial":
                     raise ParseError(
                         "doc17 DNA 来源 SHA-256 或部分解析状态不同于冻结原件", str(path)
@@ -587,7 +597,7 @@ def _overview_sources(
                 continue
         else:
             parsed = parse_cached(path)
-        if current:
+        if complete_only:
             parsed.require_complete()
         yield path, parsed
 
@@ -671,7 +681,7 @@ def _overview_table_rows(
             files = f"{len(blocks) - len(eras)} + `eras/`{len(eras)}"
             era_keys = sum(len(blocks[path]) for path in eras)
             keys = f"{sum(map(len, blocks.values())) - era_keys:,} + {era_keys}"
-        elif name == "dna_data" and _current_observation():
+        elif name == "dna_data" and _complete_file_observation():
             files += f"（{len(blocks)} 完整，{partial_count} 部分）"
         result.append((f"`{name}`", {2: files, 3: keys}))
     return result
@@ -906,7 +916,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
                 KeyedTableSpec(
                     name="doc17 §0 目录总览",
                     header="| # | 目录 | .txt | 顶层定义键（完整文件） | 官方 `.md` | 一句话用途 |"
-                    if _current_observation()
+                    if _complete_file_observation()
                     else "| # | 目录 | .txt | 顶层定义键 |",
                     cells=_overview_table_rows,
                     key_column=1,

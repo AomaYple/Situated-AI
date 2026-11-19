@@ -44,26 +44,86 @@ _POSIX_DIR_FD_OPEN_SUPPORTED = os.open in os.supports_dir_fd
 PDX_RESOURCE_CATEGORIES = {
     ".bindings": "editor_data",
     ".compound": "asset_entity_dna",
+    ".curves": "editor_data",
     ".editordata": "editor_data",
     ".heightmap": "map_data",
     ".lines": "asset_entity_dna",
     ".map": "map_data",
     ".particle2": "asset_entity_dna",
     ".schematic": "asset_entity_dna",
+    ".skin": "asset_entity_dna",
     ".smv": "asset_entity_dna",
+    ".terrain": "map_data",
     ".vertical_borders": "map_data",
+}
+MAP_ADJACENCIES = "game/map_data/adjacencies.csv"
+DEFAULT_STRATEGY_ANCHOR = "game/common/ai_strategies/00_default_strategy.txt"
+SCRIPT_VALUES_INFO = "jomini/common/script_values/_script_values.info"
+EXTENSIONLESS_BODY_RESOURCE = "game/gfx/models/portraits/male_body/male_body"
+PYTHON_TOOL_SOURCE = "game/script.py"
+DEVELOPER_XML_ROOTS = {
+    "binaries/d3d12memalloc.natvis": "http://schemas.microsoft.com/vstudio/debugger/natvis/2010 AutoVisualizer",
+    "binaries/victoria3.exe.manifest": "urn:schemas-microsoft-com:asm.v1 assembly",
+    "binaries/victoria3_win_console.exe.manifest": "urn:schemas-microsoft-com:asm.v1 assembly",
+}
+_PATH_CATEGORIES = {
+    SCRIPT_VALUES_INFO: "documentation",
+    EXTENSIONLESS_BODY_RESOURCE: "asset_entity_dna",
+    PYTHON_TOOL_SOURCE: "tooling_source",
+    "clausewitz/cw_flow_graphs.anchor": "editor_data",
+    "game/game_flow_graphs.anchor": "editor_data",
+    "game/gfx/cursors/.xnviewsort": "editor_data",
+    "game/dlc/dlc014_ip3/gfx/map/city_data/city_centerpiece/balkan_centerpieces_old": "documentation",
+    **dict.fromkeys(DEVELOPER_XML_ROOTS, "structured_configuration"),
+}
+DEVELOPER_TEXT_PATHS = frozenset(
+    path
+    for path, category in _PATH_CATEGORIES.items()
+    if category in {"documentation", "editor_data"}
+)
+STRUCTURED_JSON_SUFFIXES = frozenset({".json", ".meta"})
+FLAT_PDX_RESOURCE_SUFFIXES = frozenset({".skin", ".terrain"})
+_FLAT_RESOURCE_PATHS = {
+    ".skin": ("game/gfx/skins/*.skin", "game/dlc/*/gfx/skins/*.skin"),
+    ".terrain": ("game/gfx/map/terrain/*.terrain",),
 }
 _CATEGORIES = {
     "gui": {".gui", ".layout"},
-    "asset_entity_dna": {".asset", ".entity", ".dna", ".mesh", ".anim", ".gfx"},
+    "asset_entity_dna": {".asset", ".entity", ".dna", ".mesh", ".anim", ".gfx", ".mb"},
     "localization": {".yml", ".yaml"},
     "structured_configuration": {".json", ".csv", ".toml", ".ini", ".cfg", ".xml"},
     "documentation": {".md", ".rst", ".html", ".htm", ".pdf", ".rtf"},
-    "image_map": {".png", ".dds", ".tga", ".bmp", ".jpg", ".jpeg", ".tif", ".tiff"},
+    "shader_source": {".shader", ".fxh"},
+    "image_map": {
+        ".png",
+        ".dds",
+        ".tga",
+        ".bmp",
+        ".jpg",
+        ".jpeg",
+        ".tif",
+        ".tiff",
+        ".ani",
+        ".cur",
+        ".ico",
+        ".jpf",
+        ".psd",
+    },
     "font": {".ttf", ".otf", ".woff", ".woff2"},
-    "audio_video": {".wav", ".ogg", ".mp3", ".flac", ".opus", ".mp4", ".webm", ".bik"},
+    "audio_video": {
+        ".wav",
+        ".ogg",
+        ".mp3",
+        ".flac",
+        ".opus",
+        ".mp4",
+        ".webm",
+        ".bik",
+        ".bk2",
+        ".bank",
+    },
     "container": {".zip", ".7z", ".rar", ".pak", ".tar", ".gz", ".bz2", ".xz"},
-    "binary": {".exe", ".dll", ".so", ".dylib", ".bin", ".pdb"},
+    "binary": {".exe", ".dll", ".so", ".dylib", ".bin", ".pdb", ".lib", ".exp", ".dmp"},
     "pdx_script": {".txt", ".font", ".settings", ".profile", ".shortcuts", ".dlc"},
 }
 
@@ -274,6 +334,18 @@ def classify_path(relative: str) -> str:
     if path.name.casefold().startswith(("license", "licence", "copying", "copyright", "readme")):
         return "documentation"
     suffix = path.suffix.casefold()
+    relative = "/".join(parts)
+    if relative in _PATH_CATEGORIES:
+        return _PATH_CATEGORIES[relative]
+    if relative in {MAP_ADJACENCIES, "game/map_data/nodes.dat"} or suffix == ".splnet":
+        return "map_data"
+    if suffix == ".meta" and "gfx" in parts[:-1]:
+        return "structured_configuration"
+    resource_paths = _FLAT_RESOURCE_PATHS.get(suffix)
+    if resource_paths and not any(
+        PurePosixPath(relative).full_match(rule) for rule in resource_paths
+    ):
+        return "unknown"
     for category, suffixes in _CATEGORIES.items():
         if suffix in suffixes:
             return category
@@ -856,6 +928,16 @@ def inventory_installation(
         installation=True,
         chunk_size=chunk_size,
         verified=verified,
+    )
+
+
+def matches_default_strategy(scan: InventoryScan, expected_sha256: str) -> bool:
+    return any(
+        record.path == DEFAULT_STRATEGY_ANCHOR
+        and record.read_status == "read"
+        and not record.diagnostics
+        and record.sha256 == expected_sha256
+        for record in scan.records
     )
 
 

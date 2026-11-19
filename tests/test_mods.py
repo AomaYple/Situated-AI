@@ -125,18 +125,16 @@ def test_分析保留完整metadata并解析非txt脚本和本地化(tmp_path) -
     assert info.localization_keys["example_key"] == ("l_english",)
 
 
-#: doc 12 的两处版本分布：§7 的表（给人看的）与 §9 第 1 条的散文（给结论看的）。
-#: 它们**曾经互相矛盾**（表写 `1.13*` 8 / 空 10，散文写 9 / 9），而且两边都没有看守，
-#: 所以只能靠人偶然发现。这条用例把「表 == 现场」钉死，散文那一侧由 §7 反向引用。
-_DOC12 = config.DOCS / "12-真实mod解剖与改造面地图.md"
-_HISTORICAL_DOC12 = config.REPO / "docs/victoria3-modding/12-真实mod解剖与改造面地图.md"
+_DOC12_NAME = "12-真实mod解剖与改造面地图.md"
+_DOC12 = config.docs_root(version_contracts.CURRENT_VERSION) / _DOC12_NAME
+_HISTORICAL_DOC12 = config.HISTORICAL_DOCS / _DOC12_NAME
+_SUMMARY_SOURCE_VERSION = "1.15.1"
 _VER_ROW = re.compile(r"^(1\.[\d.*]*|空)$")
 _CONTENT_ROOTS = {"common", "localization", "events", "gfx", "gui", "map_data"}
 
 
-def _doc12_version_table(text: str | None = None) -> dict[str, int]:
+def _doc12_version_table(text: str) -> dict[str, int]:
     """解析 doc 12 §7 那张 `supported_game_version` 分布表。"""
-    text = _DOC12.read_text(encoding="utf-8") if text is None else text
     assert "## 7. 版本兼容性观察" in text, "doc 12 的 §7 标题变了，这条用例要跟着改"
     section = text.split("## 7. 版本兼容性观察", 1)[1].split("## 8.", 1)[0]
     out: dict[str, int] = {}
@@ -152,37 +150,42 @@ def _doc12_version_table(text: str | None = None) -> dict[str, int]:
 
 
 def test_doc12_版本分布表与现场一致() -> None:
-    """**本机快照类数字也要有看守**（B83 的教训：没有看守的分布数会安静地烂掉）。
+    """核对文档保留的分布快照，并从现场 metadata 独立复算订阅分布。"""
+    text = _DOC12.read_text(encoding="utf-8")
+    source = config.docs_root(_SUMMARY_SOURCE_VERSION) / _DOC12_NAME
+    heading = f"> **历史 {_SUMMARY_SOURCE_VERSION} 机器扫描摘要**"
+    introduction = text.partition("\n## ")[0]
+    summary_lines = [line for line in introduction.splitlines() if line.startswith(heading)]
+    assert len(summary_lines) == 1
+    summary_counts = _scan_summary_counts(summary_lines[0])
+    assert summary_counts == _scan_summary_counts(text)
+    assert summary_counts == _scan_summary_counts(source.read_text(encoding="utf-8"))
+    assert "第 1–9 节保留 1.14.5 时点" in text
+    assert "历史表格、目录覆盖率、前缀用量、去重路径和重叠结论不描述当前订阅集合" in text
+    historical = _doc12_version_table(_HISTORICAL_DOC12.read_text(encoding="utf-8"))
+    assert historical
+    assert _doc12_version_table(text) == historical
 
-    跳过条件：本机没有可发现的 mod（CI 上没有 Workshop 内容）—— 这条测的是
-    「文档与**这台机器**一致」，没有 mod 就没有可比的东西，跳过而不是假装通过。
-    """
     scanned = mods.analyse_all()
     if not scanned:
         pytest.skip("本机没有可发现的 mod，无从对照（CI 环境正常）")
-    if version_contracts.is_115():
-        text = _DOC12.read_text(encoding="utf-8")
-        _assert_current_summary(text, scanned)
-        versions, _duplicated = _assert_raw_scan(scanned)
-        assert Counter(m.supported_game_version or "空" for m in scanned) == versions
-        assert "第 1–9 节保留 1.14.5 时点" in text
-        assert "历史表格、目录覆盖率、前缀用量、去重路径和重叠结论不描述当前订阅集合" in text
-        assert _doc12_version_table(text) == _doc12_version_table(
-            _HISTORICAL_DOC12.read_text(encoding="utf-8")
-        )
-        return
-    live = Counter(m.supported_game_version or "空" for m in scanned)
-    if not live:
-        pytest.skip("本机没有可发现的 mod，无从对照（CI 环境正常）")
-
-    got = _doc12_version_table()
-    assert got, "§7 那张版本分布表没解析到任何行（表格被改过？）"
-    assert got == dict(live), f"doc 12 §7 与现场不符：文档 {got}，现场 {dict(live)}"
-    assert sum(got.values()) == len(mods.analyse_all())
+    versions, _duplicated = _assert_raw_scan(scanned)
+    assert Counter(m.supported_game_version or "空" for m in scanned) == versions
+    assert sum(versions.values()) == len(scanned)
 
 
 def test_doc12_重复路径结论与现场一致() -> None:
     """文档必须区分全量路径重复与游戏内容路径重复。"""
+    text = _DOC12.read_text(encoding="utf-8")
+    section = text.split("## 2.", 1)[1].split("### 2.1", 1)[0]
+    assert "历史 1.14.5 订阅快照" in section
+    assert "游戏内容目录零重叠" in section
+    assert "全量重复项集中在缩略图、说明文件和 IDE 元数据" in section
+    historical = _HISTORICAL_DOC12.read_text(encoding="utf-8")
+    historical_section = historical.split("## 2.", 1)[1].split("### 2.1", 1)[0]
+    assert "全量相对路径中被 2 个及以上 mod 提供的路径数 = 8" in historical_section
+    assert "游戏内容目录中被 2 个及以上 mod 提供的路径数 = 0" in historical_section
+
     live = mods.analyse_all()
     if not live:
         pytest.skip("本机没有可发现的 mod，无从对照（CI 环境正常）")
@@ -191,45 +194,26 @@ def test_doc12_重复路径结论与现场一致() -> None:
         for rel in (*info.overrides, *info.additions):
             paths.setdefault(rel, []).append(info.target)
     duplicated = {rel: owners for rel, owners in paths.items() if len(owners) > 1}
-    content_roots = {"common", "localization", "events", "gfx", "gui", "map_data"}
     duplicated_content = {
-        rel: owners for rel, owners in duplicated.items() if rel.split("/", 1)[0] in content_roots
+        rel: owners for rel, owners in duplicated.items() if rel.split("/", 1)[0] in _CONTENT_ROOTS
     }
-    text = _DOC12.read_text(encoding="utf-8")
-    if version_contracts.is_115():
-        _assert_current_summary(text, live)
-        _versions, raw_duplicates = _assert_raw_scan(live)
-        assert {rel: len(owners) for rel, owners in duplicated.items()} == raw_duplicates
-        assert {rel: len(owners) for rel, owners in duplicated_content.items()} == {
-            rel: count
-            for rel, count in raw_duplicates.items()
-            if rel.split("/", 1)[0] in _CONTENT_ROOTS
-        }
-        # These are retained historical observations, never current scan totals.
-        historical_section = text.split("## 2.", 1)[1].split("### 2.1", 1)[0]
-        assert "历史 1.14.5 订阅快照" in historical_section
-        assert "全量相对路径中被 2 个及以上 mod 提供的路径数 = 8" in historical_section
-        assert "游戏内容目录中被 2 个及以上 mod 提供的路径数 = 0" in historical_section
-        return
-    assert "全量相对路径中被 2 个及以上 mod 提供的路径数 = 8" in text
-    assert "游戏内容目录中被 2 个及以上 mod 提供的路径数 = 0" in text
-    if not live:
-        pytest.skip("本机没有可发现的 mod，无从对照（CI 环境正常）")
-    assert len(duplicated) == 8
-    assert not duplicated_content
+    _versions, raw_duplicates = _assert_raw_scan(live)
+    assert {rel: len(owners) for rel, owners in duplicated.items()} == raw_duplicates
+    assert {rel: len(owners) for rel, owners in duplicated_content.items()} == {
+        rel: count
+        for rel, count in raw_duplicates.items()
+        if rel.split("/", 1)[0] in _CONTENT_ROOTS
+    }
 
 
-def _assert_current_summary(text: str, scanned: list[mods.ModInfo]) -> None:
-    """Current markers are unique and describe this scan, not the historical tables."""
-    assert "当前 1.15.1 机器扫描摘要" in text
-    for key, expected in (
-        ("mod.total", len(scanned)),
-        ("mod.files", sum(info.files for info in scanned)),
-    ):
+def _scan_summary_counts(text: str) -> dict[str, int]:
+    counts = {}
+    for key in ("mod.total", "mod.files"):
         assert text.count(f"<!--claim:{key}-->") == 1
         values = re.findall(rf"([\d,]+)<!--claim:{re.escape(key)}-->", text)
         assert len(values) == 1
-        assert int(values[0].replace(",", "")) == expected
+        counts[key] = int(values[0].replace(",", ""))
+    return counts
 
 
 def _assert_raw_scan(scanned: list[mods.ModInfo]) -> tuple[Counter, dict[str, int]]:
@@ -295,15 +279,16 @@ def test_current_mod_statistics_keep_content_and_noncontent_collisions_separate(
         {"README.md": 2, "common/shared.txt": 2} if content_collision else {"README.md": 2}
     )
     assert mods.aggregate_prefixes(scanned) == {"INJECT": 1, "REPLACE": 1, "INJECT_OR_CREATE": 1}
-    summary = "当前 1.15.1 机器扫描摘要 3<!--claim:mod.total--> 6<!--claim:mod.files-->"
-    _assert_current_summary(summary, scanned)
+    summary = "3<!--claim:mod.total--> 6<!--claim:mod.files-->"
+    expected_counts = {"mod.total": len(scanned), "mod.files": sum(info.files for info in scanned)}
+    assert _scan_summary_counts(summary) == expected_counts
     for damaged in (
         summary.replace("3<!--claim:mod.total-->", "2<!--claim:mod.total-->"),
         summary.replace("6<!--claim:mod.files-->", "9<!--claim:mod.files-->"),
         summary + "3<!--claim:mod.total-->",
     ):
         with pytest.raises(AssertionError):
-            _assert_current_summary(damaged, scanned)
+            assert _scan_summary_counts(damaged) == expected_counts
     scanned[0].files += 1
     with pytest.raises(AssertionError):
         _assert_raw_scan(scanned)

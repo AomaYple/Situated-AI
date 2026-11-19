@@ -1,0 +1,493 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "script_hashes": {
+    "common/treaty_articles/01_defensive_pact.txt": "949b3d29d35c254f8f24c740f4a4b1b88bb28bf749afbd071dc94665442d7a86",
+    "common/treaty_articles/00_alliance.txt": "88be63a8fbe81d8473936e7091539d45f2a9b102c8758270d26f5d9ae277e571",
+    "common/treaty_articles/02_guarantee_independence.txt": "44ab6fbebbaa04df60bd52cf4e0202b5ec6f752d5185cbf491258ccf578c237e",
+    "common/ai_strategies/00_default_strategy.txt": "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
+    "common/script_values/ai_script_values.txt": "4d240dfafd42bf1c57e9893e5d2a4a2802720aa23bb63977758302fa34254fdf",
+    "common/character_interactions/01_additional_interactions.txt": "a36ecfbddbc8a4454393f832e0a0bc02d43afe73320185896520ba6312f0386f",
+    "common/script_values/ep2_japan_values.txt": "35079fcfddcd356b38f73c50bdc8f7196a9093d134f40f6421084762f0eac8cc",
+    "common/script_values/command_values.txt": "de47b59fc4c24594b3cc526cd3ad702444315f511048a04657537e34043cb177"
+  },
+  "reader": {
+    "engine": "num_defensive_pacts",
+    "actor": "country",
+    "scope": "root",
+    "unit": "treaty_article_count",
+    "kind": "number",
+    "minimum": 0,
+    "parameters": [],
+    "argument": null,
+    "consumer": "ai_strategy_default.wanted_army_size"
+  },
+  "rtti": [
+    {
+      "type_name": ".?AVCNumDefensivePactsLink@?A0x6faa48a8@@",
+      "type_descriptor": "0x14597c6f8",
+      "locator": "0x144e53160",
+      "vftable": "0x144915940",
+      "subobject_offset": "0x0",
+      "getter": "0x14298e070"
+    },
+    {
+      "type_name": ".?AVCTreatyArticleType@@",
+      "type_descriptor": "0x14545c308",
+      "locator": "0x144c074e8",
+      "vftable": "0x144701880",
+      "subobject_offset": "0xcd0",
+      "parser_thunk": "0x140849534",
+      "parser": "0x140f44250"
+    },
+    {
+      "type_name": ".?AV?$CJominiScriptScopeObject@VCCountry@@@@",
+      "type_descriptor": "0x14580e358",
+      "locator": "0x144cf1728",
+      "vftable": "0x1447dd328",
+      "subobject_offset": "0x0",
+      "tag_getter": "0x1417b6650"
+    }
+  ],
+  "flag_map": {
+    "flags": [
+      "0x4379",
+      "0x59e2",
+      "0x5f2d",
+      "0x37c8",
+      "0x554a",
+      "0x37c9",
+      "0x37ca",
+      "0x37cb",
+      "0x37cd",
+      "0x37ce",
+      "0x5a95",
+      "0x37ef",
+      "0x37ed",
+      "0x37ee",
+      "0x5e99",
+      "0x5cf4",
+      "0x5cfd",
+      "0x6388",
+      "0x629b",
+      "0x5bd4",
+      "0x6381",
+      "0x637f",
+      "0x6380",
+      "0x6206",
+      "0x6205",
+      "0x60dc",
+      "0x60df",
+      "0x60de",
+      "0x616e",
+      "0x6885",
+      "0x53cf",
+      "0x53d0",
+      "0x61fe",
+      "0x65b5",
+      "0x5b90"
+    ],
+    "is_defensive_pact_atom": "0x59e2",
+    "is_defensive_pact_index": 1,
+    "parser_subobject_offset": "0xcd0",
+    "parser_flags_signed_offset": "-0xc00",
+    "complete_object_flags_offset": "0xd0",
+    "country_treaty_array": "0x448",
+    "country_treaty_length": "0x454",
+    "treaty_article_array": "0x10",
+    "treaty_article_length": "0x1c",
+    "article_definition": "0x18",
+    "count_scale": 100000
+  },
+  "parent_scope_manifest": {
+    "path": "research/situated/1.15.2/engine-strategy.json",
+    "sha256": "e69c31f2cd10bcfa36d51c819aa86117bd69f3f4e6a079e29acffe20d3e5d384",
+    "consumer": "wanted_army_size",
+    "consumer_va": "0x14184b0ed",
+    "member": "0x1840"
+  },
+  "positive_native_guard": {
+    "readers": [
+      {
+        "engine": "wanted_army_size_script_value",
+        "scope": "root",
+        "kind": "number",
+        "unit": "barracks_levels"
+      },
+      {
+        "engine": "wanted_marines_size_script_value",
+        "scope": "root",
+        "kind": "number",
+        "unit": "barracks_levels"
+      }
+    ],
+    "comparison": "ROOT.wanted_army_size_script_value > ROOT.wanted_marines_size_script_value",
+    "native_consumer": "wanted_army_size_script_value minus wanted_marines_size_script_value",
+    "references": [
+      {
+        "source": "common/ai_strategies/00_default_strategy.txt",
+        "lines": [
+          6073,
+          6074,
+          6075
+        ]
+      },
+      {
+        "source": "common/script_values/ai_script_values.txt",
+        "lines": [
+          147,
+          353
+        ]
+      },
+      {
+        "source": "common/character_interactions/01_additional_interactions.txt",
+        "lines": [
+          819,
+          1111
+        ]
+      },
+      {
+        "source": "common/script_values/ep2_japan_values.txt",
+        "lines": [
+          242,
+          257
+        ]
+      },
+      {
+        "source": "common/script_values/command_values.txt",
+        "lines": [
+          238
+        ]
+      }
+    ],
+    "boundary": "Read the original named scripted values only; never recursively read the modified strategy target. The values measure requested barracks levels, not a converted military battalion count. Their difference must be positive before any new discount; zero and negative native base remain outside it.",
+    "versioned_unit_correction": {
+      "historical_declaration_unit": "battalions",
+      "current_unit": "barracks_levels",
+      "conversion": null,
+      "reason": "Current original script comments define wanted_army_size_script_value as levels of barracks and current strategy consumes the two named values directly. The PE consumer evaluates their numeric expression without an intervening battalion conversion. This is a version-specific declaration correction, not a claim that the units are interchangeable."
+    },
+    "rhs_grammar_evidence": [
+      "authority >= ROOT.patronize_authority_cost at current line819; original named value definition at242",
+      "authority >= ROOT.ostracize_authority_cost at current line1111; original named value definition at257",
+      "Quoted dynamic numeric RHS in current command_values.txt line238"
+    ]
+  },
+  "native_value_definitions": [
+    {
+      "source": "common/script_values/ai_script_values.txt",
+      "name": "wanted_army_size_script_value",
+      "line": 147,
+      "ast_sha256": "a1dad874b7e99b0375cfb92fa52cb2c332bf9c40cd104b1cff7c9593be2489fd"
+    },
+    {
+      "source": "common/script_values/ai_script_values.txt",
+      "name": "wanted_marines_size_script_value",
+      "line": 353,
+      "ast_sha256": "25f712175dd19bf4463fb8f4ae055110aa15ae6fa9d91d734c8c58c4c89807a0"
+    }
+  ],
+  "limits": [
+    "Static binary and native source evidence only; runtime remains unknown.",
+    "Current Country-associated treaty article count, not deduplicated by partner.",
+    "No additional active, draft, suspended or ratification filter is established.",
+    "No fulfilment, military strength, reachability, safety or runtime quality claim.",
+    "Only own Country root; no authorization of arbitrary foreign-country information.",
+    "Historical scripted-effect and India-button references no longer witness the current named values and are not reused as current authority."
+  ],
+  "reviewed_chain": [
+    "The current own-name registration installs the typed Country getter. The result has the numeric signature and counts qualifying treaty articles with scale 100000.",
+    "The getter checks Country tag 5, resolves each treaty and each treaty article, and increments for the definition bit at +0xd0. The current flags parser resolves is_defensive_pact independently to bit index 1.",
+    "The two scripted value bodies match their AST digests at the current source locations. The current strategy directly subtracts the marine value from the army value in barracks levels."
+  ],
+  "observations": [
+    {
+      "label": "reader_literal",
+      "va": "0x144923088",
+      "rva": "0x4923088",
+      "file_offset": "0x4922088",
+      "size": 20,
+      "sha256": "125a1f8838ba040cfa7ed6f281fd9633e574b6e36c366e1b4b08bb45100f12b8"
+    },
+    {
+      "label": "registered_documentation",
+      "va": "0x144923020",
+      "rva": "0x4923020",
+      "file_offset": "0x4922020",
+      "size": 103,
+      "sha256": "81b066dac160fa40b6b334aefa7b85bc69e33d6f556fa77fd5c808083db1e112"
+    },
+    {
+      "label": "current_link_rtti",
+      "va": "0x14597c708",
+      "rva": "0x597c708",
+      "file_offset": "0x597ab08",
+      "size": 41,
+      "sha256": "28cd6719c6ba043f01492ffd6a11c5af0e3c569285fd8c85a117427dc93ebc66"
+    },
+    {
+      "label": "current_link_locator",
+      "va": "0x144e53160",
+      "rva": "0x4e53160",
+      "file_offset": "0x4e52160",
+      "size": 24,
+      "sha256": "bd5519558f4baaf5d44064a057ca69fb143b2b40c32b689d0261c4c1bc8f01fd"
+    },
+    {
+      "label": "current_link_vtable",
+      "va": "0x144915938",
+      "rva": "0x4915938",
+      "file_offset": "0x4914938",
+      "size": 72,
+      "sha256": "d1beffc9e9f8753c87d7c35365cb77a065616fd21d279a2cab496fa5c61f7820"
+    },
+    {
+      "label": "registration_literal_and_vtable",
+      "va": "0x1404bbe3a",
+      "rva": "0x4bbe3a",
+      "file_offset": "0x4bb23a",
+      "size": 117,
+      "sha256": "71be3cbbe4db7a5f71919e46a4e8e427bffeaa17156460c7a6b6ad741dd5b29b"
+    },
+    {
+      "label": "registration_signature_and_insertion",
+      "va": "0x1404bbf04",
+      "rva": "0x4bbf04",
+      "file_offset": "0x4bb304",
+      "size": 17,
+      "sha256": "6e01a5314fcf2b5b28aa00a2fa1dae791187b6431036988ee3790f8f25428d95"
+    },
+    {
+      "label": "complete_country_pact_getter",
+      "va": "0x14298e070",
+      "rva": "0x298e070",
+      "file_offset": "0x298d470",
+      "size": 240,
+      "sha256": "8ab7de9fa8ae118f18f5208c1ede99e82571eec2d7f07fd2b30348e977101050"
+    },
+    {
+      "label": "country_required_input_signature",
+      "va": "0x141956ca0",
+      "rva": "0x1956ca0",
+      "file_offset": "0x19560a0",
+      "size": 19,
+      "sha256": "17a7c9f3fc3d87e20326ed639d8608293bd9bc017a2d4de9233ead53708c548f"
+    },
+    {
+      "label": "numeric_result_signature",
+      "va": "0x14298ca70",
+      "rva": "0x298ca70",
+      "file_offset": "0x298be70",
+      "size": 19,
+      "sha256": "02831eba4669d9454c560dfd069f21c952a59296cfd9de80ddb0094268d85b9e"
+    },
+    {
+      "label": "country_scope_rtti",
+      "va": "0x14580e368",
+      "rva": "0x580e368",
+      "file_offset": "0x580c768",
+      "size": 42,
+      "sha256": "80f59ebd5a84b23b3f5ce50cbb5e74f5efbc2124cb4d5c11fb89225e6d27ed8c"
+    },
+    {
+      "label": "country_scope_locator",
+      "va": "0x144cf1728",
+      "rva": "0x4cf1728",
+      "file_offset": "0x4cf0728",
+      "size": 24,
+      "sha256": "a56cb265df9941ff3861ff271e8723b0c65ed00c2be103a8ce28b57cbe38d8a4"
+    },
+    {
+      "label": "country_scope_vtable",
+      "va": "0x1447dd320",
+      "rva": "0x47dd320",
+      "file_offset": "0x47dc320",
+      "size": 24,
+      "sha256": "c4a3ac34e748a57c1342c24662043eae75f28746b7d881a653cdf24d2d107d25"
+    },
+    {
+      "label": "country_scope_tag",
+      "va": "0x1417b6650",
+      "rva": "0x17b6650",
+      "file_offset": "0x17b5a50",
+      "size": 6,
+      "sha256": "21faa16607cb70438711aab3fa582829af50aa15d5946524996fc7aa8a8e4e6d"
+    },
+    {
+      "label": "country_lookup_type",
+      "va": "0x1407322e2",
+      "rva": "0x7322e2",
+      "file_offset": "0x7316e2",
+      "size": 12,
+      "sha256": "a02b7ff04753db3eeaa06f7be92707793e1b5b7114c91cf9b0dc527de8e047ec"
+    },
+    {
+      "label": "country_type_name",
+      "va": "0x14546a4c0",
+      "rva": "0x546a4c0",
+      "file_offset": "0x54688c0",
+      "size": 14,
+      "sha256": "044f6b91e42317d615bdab82beb210f66a99e837d7290f7167d6209a715f63cd"
+    },
+    {
+      "label": "treaty_lookup_type",
+      "va": "0x1409831a2",
+      "rva": "0x9831a2",
+      "file_offset": "0x9825a2",
+      "size": 12,
+      "sha256": "67d74fa5360e6718e3810a43e83ae60db3272db676ccee93409a8a46719651e6"
+    },
+    {
+      "label": "treaty_type_name",
+      "va": "0x1456bd770",
+      "rva": "0x56bd770",
+      "file_offset": "0x56bbb70",
+      "size": 13,
+      "sha256": "f079a20bd0bdaee36cea459cb3efcc285a13d3529601c0905b170efe51a15ada"
+    },
+    {
+      "label": "article_lookup_type",
+      "va": "0x140981e42",
+      "rva": "0x981e42",
+      "file_offset": "0x981242",
+      "size": 12,
+      "sha256": "92a16ef78359f72aa7187b00b7041eab15313a57afe9bd36929f3180f7c5f5a4"
+    },
+    {
+      "label": "article_type_name",
+      "va": "0x145689e18",
+      "rva": "0x5689e18",
+      "file_offset": "0x5688218",
+      "size": 20,
+      "sha256": "f6b64d10c1ceaf1b6ffb2014d357c3d600fe397eefe1bea340fc011245960c4c"
+    },
+    {
+      "label": "treaty_definition_rtti",
+      "va": "0x14545c318",
+      "rva": "0x545c318",
+      "file_offset": "0x545a718",
+      "size": 23,
+      "sha256": "a482d6bbb4d95a1dac8668a30031a35377dad879992d9046a5df2ad624737a9a"
+    },
+    {
+      "label": "treaty_parser_locator",
+      "va": "0x144c074e8",
+      "rva": "0x4c074e8",
+      "file_offset": "0x4c064e8",
+      "size": 24,
+      "sha256": "fecf7c3a4ef3318c8c9f698b7825efdfff31b0d8aad96303161dca50efbd3ccf"
+    },
+    {
+      "label": "treaty_parser_vtable",
+      "va": "0x144701878",
+      "rva": "0x4701878",
+      "file_offset": "0x4700878",
+      "size": 48,
+      "sha256": "045a7fad58c0617b06a47361a425f607d4678e136b3ac392dcfb91b49dafb924"
+    },
+    {
+      "label": "treaty_parser_thunk",
+      "va": "0x140849534",
+      "rva": "0x849534",
+      "file_offset": "0x848934",
+      "size": 12,
+      "sha256": "cb35c4341aee4b2f5365f0d09211a3dc76746eb827d0a25581f3f1b4d86c2007"
+    },
+    {
+      "label": "treaty_parser_receiver",
+      "va": "0x140f44250",
+      "rva": "0xf44250",
+      "file_offset": "0xf43650",
+      "size": 43,
+      "sha256": "1ffe30359c33bcba67847c37b8741e36952df120b7a19642de2f46f2a6aed12b"
+    },
+    {
+      "label": "flags_parser_dispatch",
+      "va": "0x140f4429b",
+      "rva": "0xf4429b",
+      "file_offset": "0xf4369b",
+      "size": 19,
+      "sha256": "d0a63847b1cf59dd3b113a9f57b8eb6a470789ecd708def062923a30995e7ebd"
+    },
+    {
+      "label": "flags_parser_branch_setup",
+      "va": "0x140f44452",
+      "rva": "0xf44452",
+      "file_offset": "0xf43852",
+      "size": 91,
+      "sha256": "9412cdb4b7f9efc8e44574c9bdbc5b8f7e11daa5fd1b48a55045a2358457cf82"
+    },
+    {
+      "label": "flags_atom_entry",
+      "va": "0x144997b80",
+      "rva": "0x4997b80",
+      "file_offset": "0x4996b80",
+      "size": 16,
+      "sha256": "f0b2ee22df0b4f29eb9457d893a020f5e95468d5b9c32679524ab084655134f8"
+    },
+    {
+      "label": "flags_literal",
+      "va": "0x14495d80c",
+      "rva": "0x495d80c",
+      "file_offset": "0x495c80c",
+      "size": 6,
+      "sha256": "e14d5a63e5efd35f5f028ad10c54cd468c67f5e1f4575c52fa2b39dd042f2474"
+    },
+    {
+      "label": "flag_table_with_defensive_index1",
+      "va": "0x144701510",
+      "rva": "0x4701510",
+      "file_offset": "0x4700510",
+      "size": 140,
+      "sha256": "2b44fb922586d007e3805534920d42c734b8b543411b3d03e5ae8f9cd8a074f8"
+    },
+    {
+      "label": "defensive_pact_atom_entry",
+      "va": "0x1449b4310",
+      "rva": "0x49b4310",
+      "file_offset": "0x49b3310",
+      "size": 16,
+      "sha256": "c2c38818a5383685f0cf0a38177480e259a608b3f3526ffea946263a96cbefcf"
+    },
+    {
+      "label": "defensive_pact_literal",
+      "va": "0x14497f5c0",
+      "rva": "0x497f5c0",
+      "file_offset": "0x497e5c0",
+      "size": 18,
+      "sha256": "938a1e436f5e021ccc1445d75f8062762233ac89f8b57c8de5bb082033d49d4b"
+    },
+    {
+      "label": "flag_parser_table_search_and_bit_write",
+      "va": "0x140f444ad",
+      "rva": "0xf444ad",
+      "file_offset": "0xf438ad",
+      "size": 104,
+      "sha256": "2a5dc9b3cf08c63101c53b12d57f959463cbb093de80496fdfe37e4525993986"
+    },
+    {
+      "label": "wanted_army_country_context_and_consumer",
+      "va": "0x14184b0b6",
+      "rva": "0x184b0b6",
+      "file_offset": "0x184a4b6",
+      "size": 60,
+      "sha256": "e189338ca87271933ff797d4fee4078f6f5c593ff136f7a180d5cdfd7ceb7576"
+    }
+  ]
+}

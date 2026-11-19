@@ -159,8 +159,8 @@ def _validate_table_values(metadata: dict[str, object], tables: object) -> None:
 
 
 def load(snap: Snapshot) -> dict[str, list[str]]:
-    """Check this derivative against its precise frozen source projection."""
-    snap.require_version(require_current(active_version()))
+    """Check the archived derivative against its precise frozen source projection."""
+    snap.require_version()
     path = _path()
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))

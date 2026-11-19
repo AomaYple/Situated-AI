@@ -64,10 +64,11 @@ def production_sources(
             identities.add((source, rule_id, field))
     from pdx import version_contracts
 
-    if (
-        information == _ROOT / _INFORMATION_SOURCE
-        and version_contracts.active_version() == "1.15.1"
-    ):
+    version = version_contracts.active_version()
+    if information == _ROOT / _INFORMATION_SOURCE and version in {
+        "1.15.1",
+        version_contracts.CURRENT_VERSION,
+    }:
         # The authored file preserves historical bytes; the current consumer
         # retires exactly these six multipliers in favor of one R2 school writer.
         retired = {
@@ -79,10 +80,12 @@ def production_sources(
             "school_administrative_pressure",
         }
         receipt = json.loads(
-            (_ROOT / "research/situated/1.15.1/migration-retentions.json").read_text(
-                encoding="utf-8"
-            )
-        )["school_policy_migration"]
+            version_contracts.research_path(
+                "situated", "migration-retentions.json", version
+            ).read_text(encoding="utf-8")
+        )
+        assert receipt["version"] == version
+        receipt = receipt["school_policy_migration"]
         assert set(receipt["replacement_bridge_ids"]) == retired
         assert receipt["successor"]["consumer"] == "a0-pol-schools"
         assert receipt["successor"]["operation"] == "add"

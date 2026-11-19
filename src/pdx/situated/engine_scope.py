@@ -127,9 +127,19 @@ def _verified_manifest(
         if stream.tell() != data["exe"]["bytes"]:
             raise ValueError(f"{label}的文件长度不一致")
         for point in data["observations"]:
-            expected = bytes.fromhex(point["bytes"])
             stream.seek(int(point["file_offset"], 16))
-            if stream.read(len(expected)) != expected:
+            if "bytes" in point:
+                expected = bytes.fromhex(point["bytes"])
+                matches = stream.read(len(expected)) == expected
+            else:
+                size = point["size"]
+                if type(size) is not int or size <= 0:
+                    raise ValueError(f"{label}观察范围不合法：{point['label']}")
+                actual = stream.read(size)
+                matches = (
+                    len(actual) == size and hashlib.sha256(actual).hexdigest() == point["sha256"]
+                )
+            if not matches:
                 raise ValueError(f"{label}字节不一致：{point['label']}")
     verified = all(
         source in inputs and hashlib.sha256(inputs[source]).hexdigest() == digest
@@ -688,6 +698,14 @@ def _company_score_contract() -> dict[str, str]:
             "parser_receiver": "0x598",
             "nonpositive_rejection": "0x141641350",
         },
+        "1.15.2": {
+            "consumer": "0x1417573f0",
+            "actual_call": "0x14164e836",
+            "numeric_member": "0x390",
+            "parser": "0x141755340",
+            "parser_receiver": "0x598",
+            "nonpositive_rejection": "0x14165e5b3",
+        },
         "1.15.1": {
             "consumer": "0x14174a9d0",
             "actual_call": "0x141643f66",
@@ -873,6 +891,51 @@ def company_default_snapshot() -> bytes:
             define_binding="0x141191a90",
             define_registration="0x141191ab0",
         )
+    if version_contracts.active_version() == "1.15.2":
+        expected.update(
+            empty_expression_branch="0x14175741d",
+            nonempty_expression_branch="0x141757435",
+            default_load="0x141757426",
+            default_global="0x145c1f628",
+            result_store="0x14175742d",
+            result_return="0x141757571",
+            define_line=1146,
+            define_setter="0x14119b680",
+            define_global_write="0x14119b6b6",
+            define_binding="0x14119b6d0",
+            define_registration="0x14119b6f0",
+        )
+        reviewed_lines = (
+            1,
+            60,
+            122,
+            182,
+            240,
+            301,
+            350,
+            398,
+            458,
+            509,
+            552,
+            596,
+            647,
+            695,
+            753,
+            808,
+            868,
+            924,
+            980,
+            1037,
+            1081,
+            1141,
+            1190,
+            1250,
+            1295,
+            1356,
+        )
+        identities = tuple(
+            (key, line) for (key, _), line in zip(identities, reviewed_lines, strict=True)
+        )
     if data.get("contracts") != [expected] or data.get("implicit_companies") != [
         {"id": key, "line": line} for key, line in identities
     ]:
@@ -1041,6 +1104,8 @@ def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
     )
     if version_contracts.active_version() == "1.15.1":
         references = ("0x1415f2729", "0x141807c10", "0x141805294")
+    if version_contracts.active_version() == "1.15.2":
+        references = tuple(data["reference_sites"])
     return LawScopeEvidence(
         True,
         hashes,
@@ -1076,6 +1141,8 @@ def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologySc
     )
     if version_contracts.active_version() == "1.15.1":
         references = ("0x1418c9309", "0x1417a9cc0", "0x1415dfdf0")
+    if version_contracts.active_version() == "1.15.2":
+        references = tuple(data["reference_sites"])
     return TechnologyScopeEvidence(
         True,
         hashes,

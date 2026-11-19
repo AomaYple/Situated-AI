@@ -372,7 +372,7 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
         "institution_scores.institution_police": 6,
         "institution_scores.institution_colonial_affairs": 2,
     }
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", "1.15.2"}:
         school = "institution_scores.institution_schools"
         expected.pop(school)
         assert all(row.field.removeprefix("ai_strategy_default.") != school for row in selected)
@@ -391,18 +391,26 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
 
 @pytest.fixture(scope="module")
 def numeric_production():
-    return _numeric_production()
+    native = "ai_strategy_default = { wanted_construction_output = { value = 100 } }\n"
+    policy = replace(
+        decision_rules.load(), baseline_sha256=hashlib.sha256(native.encode()).hexdigest()
+    )
+    return _numeric_production(native, policy)
+
+
+@pytest.fixture(scope="module")
+def installed_numeric_production():
+    return _numeric_production(compiler.baseline_text(), decision_rules.load())
 
 
 @pytest.fixture(params=("1.14.5", "1.15.0"))
 def historical_numeric_production(request):
     with version_contracts.select_version(request.param):
-        yield _numeric_production()
+        yield _numeric_production(compiler.baseline_text(), decision_rules.load())
 
 
-def _numeric_production():
+def _numeric_production(native, policy):
     source = "common/ai_strategies/00_default_strategy.txt"
-    policy = decision_rules.load()
     rules = tuple(
         rule
         for rule in policy.rules
@@ -410,7 +418,7 @@ def _numeric_production():
     )
     assert {rule.id for rule in rules} == (
         {"fiscal_construction_guard"}
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() in {"1.15.1", "1.15.2"}
         else {"fiscal_construction_guard", "remaining_school_catchup_need"}
     )
     keys = frozenset(key for rule in rules for key in rule.input_keys())
@@ -424,7 +432,6 @@ def _numeric_production():
     )
     model = compiler.load_model()
     compiled, _ = compiler.compile_policy(policy, "mod/decisions/information.toml", model)
-    native = compiler.baseline_path().read_text(encoding="utf-8")
     generated = decision_rules.patch(
         native,
         compiled,
@@ -515,8 +522,11 @@ def _syntax(node):
     return tuple(_syntax(item) for item in node.items)
 
 
-def test_generated_native_target_arithmetic_and_institution_values_survive(numeric_production):
-    _, _, native, generated = numeric_production
+@pytest.mark.integration
+def test_generated_native_target_arithmetic_and_institution_values_survive(
+    installed_numeric_production,
+):
+    _, _, native, generated = installed_numeric_production
     stripped = re.sub(
         r"(?m)^\s*# SITAI BEGIN information:[^\n]+\n.*?^\s*# SITAI END information:[^\n]+\n",
         "\n",

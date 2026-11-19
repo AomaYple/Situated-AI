@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from pdx.version_contracts import select_version
+from pdx.version_contracts import CURRENT_VERSION, select_version
 from tools.ci import architecture_inventory as a0
 from tools.ci import migration_dispositions as migration
 
@@ -352,7 +352,7 @@ def test_historical_denominator_ignores_a_current_ambient_profile(monkeypatch):
 
 
 def test_current_inventory_includes_current_declarations():
-    current = a0.migration_inventory(version="1.15.1")
+    current = a0.migration_inventory(version=CURRENT_VERSION)
     expected = {
         path.relative_to(a0.ROOT).as_posix() for path in (a0.ROOT / "mod/decisions").glob("*.toml")
     }

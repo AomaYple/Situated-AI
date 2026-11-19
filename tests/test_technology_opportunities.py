@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 import technology_query_reference as technology_reference
 
-from pdx import decision_rules
+from pdx import config, decision_rules
 from pdx.situated import pdx_eval, programs
 
 SOURCE = "common/technology/technologies/30_society.txt"
@@ -420,6 +420,44 @@ def _query_values(technology, purpose, country):
     return technology_reference.evaluate(spec, country), pdx_eval.condition(
         parsed.root, {"ROOT": country}
     )
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("technology", "purpose", "collections"),
+    [
+        ("analytical_philosophy", "knowledge_ready", ("owned_buildings",)),
+        ("watertube_boiler", "labor_ready", ("owned_states", "owned_state_buildings")),
+        ("mechanized_farming", "labor", ("owned_states", "owned_state_buildings")),
+    ],
+)
+def test_selected_technology_query_compiles_installed_sources(technology, purpose, collections):
+    module = _module()
+    query = module.TechnologyUseQuery(technology, purpose)
+    sources = module.required_query_sources(query)
+    inputs = {source: (config.GAME / source).read_text(encoding="utf-8-sig") for source in sources}
+    compiled = module.compile_query(query, inputs)
+    assert compiled.expression == module.render_query(query)
+    assert compiled.local_collections == collections
+    assert tuple(dict(compiled.source_hashes)) == sources
+    assert compiled.references
+
+
+@pytest.mark.integration
+def test_technology_query_rejects_missing_and_drifting_company_scope_evidence():
+    module = _module()
+    query = module.TechnologyUseQuery("watertube_boiler", "labor_ready")
+    source = "common/company_types/00_companies_soi.txt"
+    other_inputs = {
+        path: (config.GAME / path).read_text(encoding="utf-8-sig")
+        for path in module.required_query_sources(query)
+        if path != source
+    }
+    with pytest.raises(ValueError, match="科技查询缺少必需原版来源"):
+        module.compile_query(query, other_inputs)
+    changed = (config.GAME / source).read_text(encoding="utf-8-sig") + "\n# drift\n"
+    with pytest.raises(ValueError, match="科技查询原版来源漂移"):
+        module.compile_query(query, {**other_inputs, source: changed})
 
 
 def _building_object(building, method="", level=1, occupancy=1):

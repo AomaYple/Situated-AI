@@ -142,7 +142,7 @@ def test_input_inventory_rejects_noncurrent_contract_or_installation_before_scan
 
     assert result.exit_code == cli.EXIT_USAGE, result.output
     assert result.stdout == ""
-    assert "1.15.1" in result.stderr
+    assert version_contracts.CURRENT_VERSION in result.stderr
 
 
 @pytest.mark.parametrize(
@@ -180,7 +180,10 @@ def test_input_inventory_binds_preflight_identity_to_the_scan(
         elif change == "launcher":
             launcher = root / "launcher/launcher-settings.json"
             launcher.write_bytes(
-                launcher.read_bytes().replace(b'"rawVersion": "1.15.1"', b'"rawVersion": "1.15.0"')
+                launcher.read_bytes().replace(
+                    f'"rawVersion": "{version_contracts.CURRENT_VERSION}"'.encode(),
+                    b'"rawVersion": "0.0.0"',
+                )
             )
         else:
             (root / "caligula_rev.txt").write_bytes(b"replaced revision")

@@ -22,17 +22,22 @@ def test_current_reader_has_independent_executable_and_native_source_identity():
     assert len(data["script_hashes"]) == 8
     assert data["flag_map"]["is_defensive_pact_index"] == 1
     hashes = dict(engine_reader_115.verify_game(config.GAME))
-    assert hashes["@engine/binaries/victoria3.exe"] == (
-        engine_scope_115.EXE_SHA256_1151
-        if version_contracts.active_version() == "1.15.1"
-        else engine_scope_115.EXE_SHA256
-    )
+    assert hashes["@engine/binaries/victoria3.exe"] == engine_scope_115.executable_identity()[0]
+
+
+@pytest.fixture
+def reader_manifest_registry():
+    return {
+        "1.15.0": engine_scope_115.MANIFESTS,
+        "1.15.1": engine_scope_115.MANIFESTS_1151,
+        "1.15.2": engine_scope_115.MANIFESTS_1152,
+    }[version_contracts.active_version()]
 
 
 def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_history(monkeypatch):
     original = decision_rules.SOURCE.read_bytes()
     historical = tomllib.loads(original.decode())
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
     current = decision_rules.load()
     readers = {reader.key: reader for reader in current.readers}
     for key in ("native_army_capacity", "native_marine_capacity"):
@@ -56,7 +61,7 @@ def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_hi
 
 
 def test_current_discovery_never_opens_historical_getter_manifest(monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
     monkeypatch.setattr(
         decision_interfaces, "_LJ10_EVIDENCE", config.REPO / "absent-old-proof.json"
     )
@@ -69,7 +74,9 @@ def test_current_discovery_never_opens_historical_getter_manifest(monkeypatch):
     "damage",
     ["foreign-scope", "wrong-unit", "active-runtime", "old-exe", "flag-index", "old-strategy"],
 )
-def test_rebound_reader_evidence_cannot_expand_permission(tmp_path, monkeypatch, damage):
+def test_rebound_reader_evidence_cannot_expand_permission(
+    tmp_path, monkeypatch, reader_manifest_registry, damage
+):
     data = json.loads(engine_reader_115.snapshot())
     if damage == "foreign-scope":
         data["reader"]["scope"] = "target_country"
@@ -87,11 +94,7 @@ def test_rebound_reader_evidence_cannot_expand_permission(tmp_path, monkeypatch,
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        (
-            engine_scope_115.MANIFESTS_1151
-            if version_contracts.active_version() == "1.15.1"
-            else engine_scope_115.MANIFESTS
-        ),
+        reader_manifest_registry,
         "defensive-pact-reader",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -100,27 +103,23 @@ def test_rebound_reader_evidence_cannot_expand_permission(tmp_path, monkeypatch,
 
 
 @pytest.mark.parametrize(
-    ("section", "field", "impostor"),
+    ("section", "field", "conversion"),
     [
-        ("flag_map", "is_defensive_pact_index", True),
-        ("flag_map", "is_defensive_pact_index", 1.0),
-        ("exe", "bytes", float(engine_scope_115.EXE_BYTES)),
+        ("flag_map", "is_defensive_pact_index", bool),
+        ("flag_map", "is_defensive_pact_index", float),
+        ("exe", "bytes", float),
     ],
 )
 def test_rebound_reader_integer_identity_rejects_equal_nonintegers(
-    tmp_path, monkeypatch, section, field, impostor
+    tmp_path, monkeypatch, reader_manifest_registry, section, field, conversion
 ):
     data = json.loads(engine_reader_115.snapshot())
-    data[section][field] = impostor
+    data[section][field] = conversion(data[section][field])
     raw = json.dumps(data).encode()
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        (
-            engine_scope_115.MANIFESTS_1151
-            if version_contracts.active_version() == "1.15.1"
-            else engine_scope_115.MANIFESTS
-        ),
+        reader_manifest_registry,
         "defensive-pact-reader",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -157,7 +156,6 @@ def test_broad_online_generation_checks_current_reader_closure(monkeypatch):
 
     monkeypatch.setattr(engine_reader_115, "verify_game", reject)
     # Keep the preceding real scope/source guards aligned with this installation.
-    # A 1.15.0 contract against 1.15.1 bytes must fail before reaching the reader.
     with version_contracts.select_version(installed_version):
         assert version_contracts.is_115()
         with pytest.raises(ValueError, match="current reader drift"):

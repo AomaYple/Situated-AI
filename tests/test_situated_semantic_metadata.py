@@ -5,7 +5,14 @@ import json
 import pytest
 from _situated_sources import production_policy_sources
 
-from pdx import config, decisions, distribution, version_contracts
+from pdx import (
+    config,
+    decision_adapters,
+    decision_rules,
+    decisions,
+    distribution,
+    version_contracts,
+)
 from pdx.situated import action_instances, lowering
 from pdx.situated.compiler import load_model
 
@@ -46,6 +53,7 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
 
     numeric_calls = []
     ast_calls = []
+    rules = production_policy_sources().rules
     collect_numeric = lowering.witnesses
     collect_ast = lowering.ast_witnesses
 
@@ -62,14 +70,12 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
         return result
 
     def witness(instances, generated):
-        assert len([item for item in instances if item.kind == "rule_action"]) == len(
-            production_policy_sources().rules
-        )
+        assert len([item for item in instances if item.kind == "rule_action"]) == len(rules)
         assert {
             (item.source, item.rule_id, item.consumer_field)
             for item in instances
             if item.kind == "rule_action"
-        } == production_policy_sources().rules
+        } == rules
         assert generated is numeric_calls[-1]
         assert isinstance(generated, tuple)
         assert all(item.source.endswith(".txt") for item in generated)
@@ -91,8 +97,9 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
 
 
 def _assert_legacy_contract(witness) -> None:
-    assert witness["expected"] == len(production_policy_sources().rules)
-    assert witness["count"] == len(production_policy_sources().rules)
+    expected = len(production_policy_sources().rules)
+    assert witness["expected"] == expected
+    assert witness["count"] == expected
     assert witness["missing"] == []
     assert witness["mismatches"] == []
     assert witness["duplicate_ids"] == []
@@ -105,11 +112,9 @@ def test_current_frozen_tree_contains_its_own_legacy_behavior_witness_contract()
         path.relative_to(production).as_posix(): path.read_text(encoding="utf-8")
         for path in (production / "common").rglob("*.txt")
     }
-    # mod/ is the current complete release tree; its metadata must use the same identity.
-    with version_contracts.select_version("1.15.1"):
-        _assert_legacy_contract(
-            action_instances.behavior_witness_contract(load_model().action_instances, files)
-        )
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        instances = action_instances.build(decision_rules.load(), decision_adapters.load(), ())
+        _assert_legacy_contract(action_instances.behavior_witness_contract(instances, files))
 
 
 @pytest.mark.integration

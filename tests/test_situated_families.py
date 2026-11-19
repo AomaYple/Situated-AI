@@ -134,10 +134,9 @@ def test_every_production_instance_has_a_family_and_scope() -> None:
     information = decision_rules.load()
     adapters = decision_adapters.load()
     instances = build(information, adapters)
-    assert len(instances) == len(production_policy_sources().rules)
-    assert {
-        (item.source, item.rule_id, item.consumer_field) for item in instances
-    } == production_policy_sources().rules
+    rules = production_policy_sources().rules
+    assert len(instances) == len(rules)
+    assert {(item.source, item.rule_id, item.consumer_field) for item in instances} == rules
     assert all(item.family_id in FAMILIES for item in instances)
     assert all(item.actor_scope and item.target_scope for item in instances)
     families = {item.family_id for item in instances}
@@ -145,44 +144,42 @@ def test_every_production_instance_has_a_family_and_scope() -> None:
     assert not [item for item in instances if item.family_id == "temporal"]
 
 
-@pytest.mark.integration
-def test_instance_witness_contract_is_complete_for_generated_rules() -> None:
+@pytest.fixture(scope="module")
+def generated_witness_inputs():
+    from pdx import country_state, decisions
+
     information = decision_rules.load()
     adapters = decision_adapters.load()
     instances = build(information, adapters)
-    from pdx import country_state, decisions
-
     generated = decisions.build(
         information_rules=information,
         consumer_adapters=adapters,
         country_policy=country_state.load(),
         extensions=decisions.load_extensions(profile="release"),
     )
-    contract = witness_contract(
-        instances, {name: text for name, text in generated.items() if name.endswith(".txt")}
-    )
-    assert contract["count"] == len(production_policy_sources().rules)
-    assert contract["witnessed_count"] == len(production_policy_sources().rules)
+    return instances, {name: text for name, text in generated.items() if name.endswith(".txt")}
+
+
+@pytest.mark.integration
+def test_instance_witness_contract_is_complete_for_generated_rules(
+    generated_witness_inputs,
+) -> None:
+    instances, texts = generated_witness_inputs
+    contract = witness_contract(instances, texts)
+    expected = len(production_policy_sources().rules)
+    assert contract["count"] == expected
+    assert contract["witnessed_count"] == expected
     assert contract["missing"] == []
 
 
 @pytest.mark.integration
-def test_behavior_witness_contract_matches_each_generated_legacy_operation_and_value() -> None:
-    information = decision_rules.load()
-    adapters = decision_adapters.load()
-    instances = build(information, adapters)
-    from pdx import country_state, decisions
-
-    generated = decisions.build(
-        information_rules=information,
-        consumer_adapters=adapters,
-        country_policy=country_state.load(),
-        extensions=decisions.load_extensions(profile="release"),
-    )
-    contract = behavior_witness_contract(
-        instances, {name: text for name, text in generated.items() if name.endswith(".txt")}
-    )
-    assert contract["count"] == len(production_policy_sources().rules)
-    assert contract["expected"] == len(production_policy_sources().rules)
+def test_behavior_witness_contract_matches_each_generated_legacy_operation_and_value(
+    generated_witness_inputs,
+) -> None:
+    instances, texts = generated_witness_inputs
+    contract = behavior_witness_contract(instances, texts)
+    expected = len(production_policy_sources().rules)
+    assert contract["count"] == expected
+    assert contract["expected"] == expected
     assert contract["missing"] == []
     assert contract["mismatches"] == []

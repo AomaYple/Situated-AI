@@ -1,9 +1,11 @@
 """S3 local army/navy targets: observed war need, capacity tiers and default cost."""
 
 from dataclasses import replace
+from hashlib import sha256
 
 import pytest
 from _frozen_reader_words import frozen_reader_words
+from conftest import NEEDS_GAME
 
 from pdx import country_state, decision_rules
 from pdx.model import Assignment, Block, Scalar
@@ -13,6 +15,15 @@ from pdx.situated import compiler, pdx_eval
 pytestmark = pytest.mark.unit
 INFO = "mod/decisions/information.toml"
 FIELDS = ("wanted_army_size", "wanted_navy_size")
+TEST_STRATEGY = """\
+ai_strategy_default = {
+    wanted_army_size = {
+        value = wanted_army_size_script_value
+        subtract = wanted_marines_size_script_value
+    }
+    wanted_navy_size = { value = wanted_navy_size_script_value }
+}
+"""
 
 
 def _values(**changes):
@@ -37,7 +48,13 @@ def _values(**changes):
 
 @pytest.fixture(scope="module")
 def production():
-    original = decision_rules.load()
+    source = decision_rules.load()
+    return _compile_production(
+        TEST_STRATEGY, replace(source, baseline_sha256=sha256(TEST_STRATEGY.encode()).hexdigest())
+    )
+
+
+def _compile_production(native, original):
     rules = tuple(rule for rule in original.rules if ".".join(rule.field) in FIELDS)
     keys = {key for rule in rules for key in rule.input_keys()}
     selected = replace(
@@ -50,7 +67,6 @@ def production():
     )
     model = compiler.load_model()
     compiled = compiler.compile_policy(selected, INFO, model)[0]
-    native = compiler.baseline_path().read_text(encoding="utf-8")
     generated = decision_rules.patch(
         native,
         compiled,
@@ -232,8 +248,18 @@ def test_complete_native_numeric_consumers_preserve_subtraction_and_zero(
     assert actual == pytest.approx(expected)
 
 
-def test_both_numeric_consumers_keep_native_getters_and_one_bounded_write(production):
-    policy, native, generated = production
+def test_both_numeric_consumers_keep_getters_and_one_bounded_write(production):
+    _assert_native_numeric_consumers(*production)
+
+
+@pytest.mark.integration
+@NEEDS_GAME
+def test_current_installation_numeric_consumers_preserve_native_getters():
+    production = _compile_production(compiler.baseline_text(), decision_rules.load())
+    _assert_native_numeric_consumers(*production)
+
+
+def _assert_native_numeric_consumers(policy, native, generated):
     for field in FIELDS:
         before, after = _entry(native, field), _entry(generated, field)
         assert _tree(before.value) == tuple(

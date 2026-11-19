@@ -1113,7 +1113,7 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
             "implicit_weight": 26,
             "primary_buildings": 49,
         },
-        "1.15.1": {
+        version_contracts.CURRENT_VERSION: {
             "companies": 231,
             "explicit_weight": 205,
             "implicit_weight": 26,

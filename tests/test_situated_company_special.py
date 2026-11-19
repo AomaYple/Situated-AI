@@ -197,8 +197,13 @@ def test_current_exe_and_scripts_match_independent_default_witnesses(evidence):
     assert hashlib.sha256(raw).hexdigest() == evidence["exe"]["sha256"]
     for row in evidence["observations"]:
         start = int(row["file_offset"], 16)
-        expected = bytes.fromhex(row["bytes"])
-        assert raw[start : start + len(expected)] == expected
+        if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+            window = raw[start : start + row["size"]]
+            assert len(window) == row["size"]
+            assert hashlib.sha256(window).hexdigest() == row["sha256"]
+        else:
+            expected = bytes.fromhex(row["bytes"])
+            assert raw[start : start + len(expected)] == expected
     for source, expected_sha in evidence["script_hashes"].items():
         assert hashlib.sha256((config.GAME / source).read_bytes()).hexdigest() == expected_sha
 
@@ -258,7 +263,7 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
     migrated_shipyards = {"company_ap_moller", "company_sudamericana_de_vapores"}
     if current:
         expected -= migrated_shipyards
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         # Anchorage now supplies local services; every base-port PM produces
         # goods, so the port recipe includes merchant-marine market outputs.
         expected -= {"company_white_star_line", *MIXED_SPECIAL}
@@ -268,10 +273,13 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
         if row["explicit_weight"] and not row["market_outputs"]
     }
     assert actual == expected
-    assert (
-        len(actual)
-        == {"1.14.5": 25, "1.15.0": 23, "1.15.1": 19}[version_contracts.active_version()]
-    )
+    expected_count = {
+        "1.14.5": 25,
+        "1.15.0": 23,
+        "1.15.1": 19,
+        version_contracts.CURRENT_VERSION: 19,
+    }
+    assert len(actual) == expected_count[version_contracts.active_version()]
     for building, names in SPECIAL_GROUPS.items():
         for name in names:
             if current and name in migrated_shipyards:
@@ -296,7 +304,10 @@ def test_special_population_has_real_primary_sectors_not_extension_inventions(na
 )
 def test_special_recipe_exclusions_have_independent_native_causes(native, company, good, reason):
     _inputs, profiles = native
-    if version_contracts.active_version() == "1.15.1" and company == "company_white_star_line":
+    if (
+        version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
+        and company == "company_white_star_line"
+    ):
         good, reason = "services", "local_good_requires_state_market_evidence"
     assert any(
         row["good"] == good and row["reason"] == reason for row in profiles[company]["native_only"]
@@ -318,7 +329,7 @@ def test_merchant_marine_and_versioned_port_outputs_retain_native_options(native
     # White Star remains a real port consumer in both versions. The two
     # current shipyard companies are checked independently above.
     port = profiles["company_white_star_line"]["base_recipes"][0]
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         # Independent exact AST witnesses for the newly productive anchorage,
         # all four native base methods, and the local-services exclusion.
         methods = parse_text(inputs["common/production_methods/11_private_infrastructure.txt"]).root

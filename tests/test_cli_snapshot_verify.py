@@ -32,15 +32,15 @@ pytestmark = pytest.mark.unit
 def test_streamed_comparison_matches_complete_json_text(first, second):
     encoded = json.dumps(first, ensure_ascii=False, indent=1, sort_keys=True)
     other = json.dumps(second, ensure_ascii=False, indent=1, sort_keys=True)
-    assert cli._matches_json_text(encoded, second) is (encoded == other)
+    assert cli._matches_json_text(first, second) is (encoded == other)
 
 
-@pytest.mark.parametrize("expected", ["", '{"a": []}\n', '{"a": []}extra'])
-def test_streamed_comparison_checks_complete_encoded_length(expected):
-    value: dict[str, list[object]] = {"a": []}
-    assert cli._matches_json_text(expected, value) is (
-        expected == json.dumps(value, ensure_ascii=False, indent=1, sort_keys=True)
-    )
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [({}, {"a": []}), ({"a": []}, {"a": [], "b": []}), ({"a": ["long"]}, {"a": ["tiny"]})],
+)
+def test_streamed_comparison_checks_complete_encoded_length(first, second):
+    assert not cli._matches_json_text(first, second)
 
 
 @pytest.mark.parametrize("error", ["unsupported", "circular"])
@@ -53,7 +53,15 @@ def test_initial_difference_does_not_hide_later_encoding_error(error):
     with pytest.raises((TypeError, ValueError)) as complete:
         json.dumps(value, ensure_ascii=False, indent=1, sort_keys=True)
     with pytest.raises(type(complete.value), match=str(complete.value)):
-        cli._matches_json_text('{"a": "other"}', value)
+        cli._matches_json_text({"a": "other"}, value)
+
+
+def test_first_encoding_error_takes_precedence_after_second_starts():
+    first = {"a": [], "z": object()}
+    second: dict[str, list[object]] = {"a": []}
+    second["a"].append(second)
+    with pytest.raises(TypeError, match="not JSON serializable"):
+        cli._matches_json_text(first, second)
 
 
 @pytest.mark.parametrize("equal", [True, False])

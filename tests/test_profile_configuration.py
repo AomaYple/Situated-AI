@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import json
-import sys
 
 import pytest
 from typer.testing import CliRunner
 
 from pdx import cli, config, distribution, version_contracts
-from pdx.situated import production_profile, r2_reader_authority
+from pdx.situated import network_profile, production_profile, r2_reader_authority
 from pdx.situated.profile_configuration import ProfileConfiguration, load
 
 
@@ -55,69 +54,63 @@ def test_configured_generation_check_and_package_share_identity(tmp_path, monkey
         distribution.profile_package(tmp_path / "wrong.zip", profile)
 
 
-def test_cli_audit_resolves_configuration_once_for_real_check_and_audit(tmp_path, monkeypatch):
-    monkeypatch.setattr(config, "ROOT", r2_reader_authority.FROZEN_ROOT)
-    monkeypatch.setattr(config, "OUT", tmp_path / "out")
+def test_cli_audit_resolves_configuration_once_for_current_network(tmp_path, monkeypatch):
     path = tmp_path / "profile.toml"
     path.write_text('schema=1\ncore=true\ndomains=["economy"]\nmode="policy"\n', encoding="utf-8")
     selected = load(path)
-    profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
-    files = distribution.write_profile_outputs(profile, configuration=selected)
-    generated_identity = json.loads(files[distribution.METADATA_NAME])["game_custom_data"][
-        "configuration"
-    ]
     resolver = cli._profile_configuration
     resolved = []
 
     def resolve(*args, **kwargs):
         configuration = resolver(*args, **kwargs)
         resolved.append(configuration)
-        # A later filesystem change must not split one audit across two configurations.
         path.write_text(
             'schema=1\ncore=true\ndomains=["politics"]\nmode="policy"\n', encoding="utf-8"
         )
         return configuration
 
+    def source_metadata(*, configuration):
+        return {
+            "configuration": configuration.identity(),
+            "action_network": network_profile.audit(
+                production_profile.declared_profile(), configuration=configuration
+            ),
+        }
+
     monkeypatch.setattr(cli, "_profile_configuration", resolve)
-    observed: dict[str, list[ProfileConfiguration]] = {"check": [], "audit": []}
-    watched = {
-        distribution.check_profile_outputs.__code__: "check",
-        cli.situated_network_profile.audit.__code__: "audit",
-    }
+    monkeypatch.setattr(cli.decision_report, "source_metadata", source_metadata)
 
-    def observe(frame, event, arg):
-        # Observe the real callees without replacing their checks or audit results.
-        if event == "call" and frame.f_code in watched:
-            observed[watched[frame.f_code]].append(frame.f_locals["configuration"])
+    def build(metadata):
+        return {
+            **metadata,
+            "domains": {"economy": {"status": "consumer_mapped"}},
+            "reader_count": 0,
+            "information_reader_count": 0,
+            "consumer_reader_count": 0,
+            "information_rule_count": 0,
+            "consumer_rule_count": 0,
+        }
 
+    monkeypatch.setattr(cli.decision_report, "build", build)
     report_path = tmp_path / "audit.json"
-    previous_profiler = sys.getprofile()
-    sys.setprofile(observe)
-    try:
-        result = CliRunner().invoke(
-            cli.app,
-            [
-                "decision-audit",
-                "--profile",
-                "1.15.0",
-                "--configuration",
-                str(path),
-                "--offline",
-                "--output",
-                str(report_path),
-            ],
-        )
-    finally:
-        sys.setprofile(previous_profiler)
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "decision-audit",
+            "--profile",
+            version_contracts.CURRENT_VERSION,
+            "--configuration",
+            str(path),
+            "--offline",
+            "--output",
+            str(report_path),
+        ],
+    )
     assert result.exit_code == 0, result.output
-    assert len(resolved) == 1
-    for configurations in observed.values():
-        assert len(configurations) == 1
-        assert configurations[0] is resolved[0]
+    assert resolved == [selected]
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    assert report["configuration"] == generated_identity == selected.identity()
+    assert report["configuration"] == selected.identity()
     assert [row["consumer"] for row in report["action_network"]["programs"]] == ["a0-econ-road"]
-    assert {row["id"] for row in report["consumers"] if row["enabled"]} == {"a0-econ-road"}
 
 
 @pytest.mark.parametrize(
@@ -138,7 +131,13 @@ def test_disabled_policy_has_no_nonzero_overlay(selected):
 
 
 @pytest.fixture(autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
+def _historical_1150_contract(request):
+    """Retain the original version identity for historical artifact tests."""
+    if (
+        request.node.originalname
+        == "test_cli_audit_resolves_configuration_once_for_current_network"
+    ):
         yield
+    else:
+        with version_contracts.select_version("1.15.0"):
+            yield

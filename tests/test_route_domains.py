@@ -4,21 +4,43 @@ from __future__ import annotations
 
 import re
 from dataclasses import replace
+from hashlib import sha256
 
 import pytest
 from _frozen_reader_words import frozen_reader_words
+from conftest import NEEDS_GAME
 from test_situated_joint_witnesses import _facts
 from test_situated_social_governance_joint import _overlay
 
 from pdx import country_state, decision_adapters, decision_rules
+from pdx.model import Block
+from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
 
 INFO = "mod/decisions/information.toml"
+TEST_STRATEGY = """\
+ai_strategy_default = {
+    revolution_aversion = {
+        value = 3
+        if = { limit = { always = yes } add = 2 }
+    }
+    wanted_army_size = {
+        value = wanted_army_size_script_value
+        subtract = wanted_marines_size_script_value
+    }
+}
+"""
 
 
 @pytest.fixture(scope="module")
 def production():
     source = decision_rules.load()
+    return _compile_production(
+        TEST_STRATEGY, replace(source, baseline_sha256=sha256(TEST_STRATEGY.encode()).hexdigest())
+    )
+
+
+def _compile_production(native, source):
     model = compiler.load_model()
     # This witness exercises these two consumers. The complete information
     # policy is generated separately by the integration writer oracle.
@@ -38,7 +60,6 @@ def production():
     )
     policy, _ = compiler.compile_policy(selected, INFO, model)
     adapters = decision_adapters.load()
-    native = compiler.baseline_path().read_text(encoding="utf-8")
     words = frozen_reader_words(native)
     generated = decision_rules.patch(
         native,
@@ -171,3 +192,38 @@ def test_same_cause_crisis_tiers_do_not_stack_and_player_unknown_remain_native(p
         assert pdx_eval.select(overlay, {}).operation is None
         assert pdx_eval.select(overlay, _facts(policy, values, is_ai=False)).operation is None
     assert not re.search(r"set_variable|remove_variable", generated)
+
+
+@pytest.mark.integration
+@NEEDS_GAME
+def test_current_installation_routes_keep_original_consumer_bodies():
+    native = compiler.baseline_text()
+    _source, policy, generated, _adapters, _model = _compile_production(
+        native, decision_rules.load()
+    )
+    restored = re.sub(
+        r"(?ms)^\s*# SITAI BEGIN information:[^\n]+\n.*?^\s*# SITAI END information:[^\n]+\n",
+        "\n",
+        generated,
+    )
+    assert [line for line in restored.splitlines() if line.strip()] == [
+        line for line in native.splitlines() if line.strip()
+    ]
+    original = parse_text(native).root.first("ai_strategy_default")
+    patched = parse_text(generated).root.first("ai_strategy_default")
+    assert original is not None
+    assert isinstance(original.value, Block)
+    assert patched is not None
+    assert isinstance(patched.value, Block)
+    for field in ("revolution_aversion", "wanted_army_size"):
+        before = original.value.first(field)
+        after = patched.value.first(field)
+        assert before is not None
+        assert isinstance(before.value, Block)
+        assert after is not None
+        assert isinstance(after.value, Block)
+        assert len(after.value.items) == len(before.value.items) + 1
+        observed = pdx_eval.select(
+            _overlay(generated, field), _facts(policy, _values({"war": True, "insurrection": True}))
+        )
+        assert observed.delta == pytest.approx(1.2)

@@ -21,24 +21,25 @@ from pdx.situated import production_profile as native
 from pdx.situated.profile_configuration import ProfileConfiguration, validate_coverage
 
 
-@pytest.fixture(autouse=True)
-def current_version():
+@pytest.fixture
+def historical_profile():
     with version_contracts.select_version("1.15.1"):
-        yield
+        yield native.load_profile(native.baseline_root())
 
 
-@pytest.fixture
-def profile():
-    return native.load_profile(native.baseline_root())
-
-
-@pytest.fixture
-def school(profile):
-    return next(
-        program
-        for program in network.compile_profile(profile)
-        if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
-    )
+@pytest.fixture(params=["1.15.1", version_contracts.CURRENT_VERSION])
+def school(request):
+    with version_contracts.select_version(request.param):
+        profile = (
+            native.declared_profile()
+            if request.param == version_contracts.CURRENT_VERSION
+            else native.load_profile(native.baseline_root())
+        )
+        yield next(
+            program
+            for program in network.compile_profile(profile)
+            if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
+        )
 
 
 @pytest.mark.parametrize(
@@ -91,7 +92,8 @@ def test_school_missing_optional_fiscal_fact_retains_independent_admin_capacity(
     assert _score(_parsed(network.render_program(school, available=available)), facts) == 2.25
 
 
-def test_composition_preserves_native_bytes_and_existing_unrelated_writers(profile):
+def test_composition_preserves_native_bytes_and_existing_unrelated_writers(historical_profile):
+    profile = historical_profile
     files = {
         row.source.removeprefix("game/"): (
             (native.baseline_root() / row.source).read_text(encoding="utf-8-sig")
@@ -154,7 +156,9 @@ def test_configuration_mapping_covers_actual_legacy_declarations():
 @pytest.mark.parametrize(
     "configuration", [ProfileConfiguration(core=False), ProfileConfiguration(mode="neutral")]
 )
-def test_disabled_configuration_withdraws_all_legacy_extensions_and_r2(profile, configuration):
+def test_disabled_configuration_withdraws_all_legacy_extensions_and_r2(
+    historical_profile, configuration
+):
     assert (
         configuration.enabled_domains
         == configuration.legacy_domains
@@ -173,7 +177,7 @@ def test_disabled_configuration_withdraws_all_legacy_extensions_and_r2(profile, 
         )
     )
     files: dict[str, str] = {}
-    audit = network.compose(files, profile, configuration=configuration)
+    audit = network.compose(files, historical_profile, configuration=configuration)
     assert all(row["enabled"] is False for row in cast("list[dict[str, object]]", audit["writers"]))
     assert all("SITAI POLICY" not in text for text in files.values())
 
@@ -189,7 +193,7 @@ def test_historical_configuration_identity_retains_exact_four_keys():
 
 
 @pytest.mark.parametrize("disabled", ["economy", "politics", "diplomacy"])
-def test_domain_switch_controls_legacy_modules_and_r2_consumer(profile, disabled):
+def test_domain_switch_controls_legacy_modules_and_r2_consumer(historical_profile, disabled):
     selected = ProfileConfiguration(
         domains=frozenset({"economy", "politics", "diplomacy"} - {disabled})
     )
@@ -201,7 +205,7 @@ def test_domain_switch_controls_legacy_modules_and_r2_consumer(profile, disabled
     assert extensions.security_enabled is (disabled != "diplomacy")
     assert extensions.diplomacy_enabled is (disabled != "diplomacy")
     files: dict[str, str] = {}
-    audit = network.compose(files, profile, configuration=selected)
+    audit = network.compose(files, historical_profile, configuration=selected)
     expected_disabled = {
         "economy": "a0-econ-road",
         "politics": "a0-pol-schools",
@@ -258,9 +262,10 @@ def test_complete_disabled_package_has_only_fiscal_state_cleanup(selected):
 
 
 @pytest.mark.integration
-def test_complete_default_package_contains_three_unique_current_writers_and_legacy_modules(profile):
-    # Keep all installation, native identity, reader authority, historical
-    # migration and final complete-composition checks active at this boundary.
+def test_complete_default_package_contains_three_unique_current_writers_and_legacy_modules():
+    # Keep the actual current installation, reader authority, migration and
+    # complete composition checks active at this boundary.
+    profile = native.declared_profile()
     policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
     assert policy.enabled
     assert all(
@@ -273,18 +278,18 @@ def test_complete_default_package_contains_three_unique_current_writers_and_lega
         )
     )
     metadata = json.loads(files[distribution.METADATA_NAME])
-    assert metadata["supported_game_version"] == "1.15.1"
+    assert metadata["supported_game_version"] == version_contracts.CURRENT_VERSION
     assert metadata["enabled_modules"]
     assert metadata["default_field_owners"]
     assert "common/scripted_effects/sitai_fiscal_effects.txt" in files
     for row in profile.declarations:
         text = files[row.source.removeprefix("game/")]
         assert isinstance(text, str)
-        assert text.count(f"SITAI POLICY 1.15.1 BEGIN {row.id}") == 1
-        assert text.count(f"SITAI POLICY 1.15.1 END {row.id}") == 1
+        assert text.count(f"SITAI POLICY {profile.game_version} BEGIN {row.id}") == 1
+        assert text.count(f"SITAI POLICY {profile.game_version} END {row.id}") == 1
 
 
-@pytest.mark.parametrize("name", ["1.15.2", "1.16.0", "../1.15.1", "research/vanilla-ai/1.15.1"])
+@pytest.mark.parametrize("name", ["1.15.3", "1.16.0", "../1.15.1", "research/vanilla-ai/1.15.1"])
 def test_future_and_path_profile_values_fail_closed(name):
     with pytest.raises(ValueError):
         cli._production_profile(name, offline=True)
@@ -308,11 +313,11 @@ def test_default_and_explicit_current_cli_use_identical_full_package_route(monke
     monkeypatch.setattr(distribution, "profile_package", historical_route)
     output = tmp_path / "current.zip"
     runner = CliRunner()
-    for arguments in ([], ["--profile", "1.15.1"]):
+    for arguments in ([], ["--profile", version_contracts.CURRENT_VERSION]):
         result = runner.invoke(cli.app, ["package", "--output", str(output), *arguments])
         assert result.exit_code == 0, result.output
     assert len(calls) == 2
     assert calls[0] == calls[1]
     assert len(checked) == 2
     assert checked[0] == checked[1]
-    assert checked[0].game_version == "1.15.1"
+    assert checked[0].game_version == version_contracts.CURRENT_VERSION

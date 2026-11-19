@@ -9,7 +9,7 @@
 v3 information-catalog --raw-root <raw根> --epoch <已提交epoch的SHA-256> --output-dir <本机新目录>
 ```
 
-三个选项须一起提供，需要本机已有 Victoria 3 1.15.1 的 schema 3 已提交 raw epoch。保全目录须处于提交时登记的位置。命令从该分母回读原件，并生成研究目录和 SQLite 出现位置索引。部分解析、失败、不可用和未知处置都在结果中登记。%LOCALAPPDATA% 记录只保留来源指纹和处置。
+三个选项须一起提供，需要本机已有来自当前锁定底本 Victoria 3 1.15.2 的 schema 3 已提交 raw epoch。保全目录须处于提交时登记的位置。命令从该分母回读原件，并生成研究目录和 SQLite 出现位置索引。部分解析、失败、不可用和未知处置都在结果中登记。%LOCALAPPDATA% 记录只保留来源指纹和处置。
 
 输出目录的父目录须存在，输出目录本身须尚未创建。以 `COMPLETE.json` 核对 epoch 与两份结果的 SHA-256。结果留在本机，仓库内输出须放入 Git 忽略路径。
 
@@ -32,17 +32,18 @@ v3 information-catalog --raw-root <raw根> --epoch <已提交epoch的SHA-256> --
 | 历史实施计划（仅参考） | [处境行动决策内核实施计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
 | 历史 A2 架构检查与逐项证据 | [架构重设计结果](design/exec/架构重设计-结果.md)、[架构阶段收据](design/exec/架构阶段收据.json)；局部通过不等于阶段完成 |
-| 当前交付与历史版本证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.2.0交付结果](design/exec/3.2.0-交付结果.md)；历史内核与分层收据由执行索引导航 |
+| 当前交付与历史版本证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.3.0 交付结果](design/exec/3.3.0-交付结果.md)；历史内核与分层收据由执行索引导航 |
 | 创意工坊文案（Steam BBCode，发布前核对固定包） | [全部 11 种语言](publishing/README.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
-| Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |
+| Victoria 3 当前知识库 | [Victoria 3 1.15.2 知识库](victoria3-modding-1.15.2/README.md) |
+| Victoria 3 历史知识库 | [1.15.1](victoria3-modding-1.15.1/README.md)、[1.15.0](victoria3-modding-1.15.0/README.md)、[1.14.5](victoria3-modding/README.md) |
 
 ## 目录职责
 
 - `docs/principles/`：持续工程和产品约束。
 - `docs/design/`：当前产品设计、计划和执行结果。
 - `docs/publishing/`：面向玩家的发布材料；正文只维护功能、使用、兼容性和语言信息。
-- `docs/victoria3-modding/`：由锁定游戏文件整理的研究知识库，版本和来源以各页说明为准。
+- `docs/victoria3-modding-1.15.2/` 收录当前锁定版本的研究知识库。各历史目录保留原底本和采集时点。
 
 ## 文档维护边界
 
@@ -50,8 +51,8 @@ v3 information-catalog --raw-root <raw根> --epoch <已提交epoch的SHA-256> --
 |---|---|---|
 | 规则与贡献流程 | `AGENTS.md`、`CONTRIBUTING.md`、`SECURITY.md`、`docs/principles/` | 人工评审；不在导航页复制 |
 | 产品设计、计划、状态和结果 | `docs/design/` | 只在对应权威页更新，结果页记录证据类型 |
-| 原版机械统计、指纹和索引 | `docs/design/02-*.md`、`docs/victoria3-modding/08-目录全量清单.md`、`13-common全量键名索引.md` 等生成目标 | 使用仓库 Python CLI 生成或核对，禁止手改生成数据 |
-| Victoria 3 研究正文 | `docs/victoria3-modding/` | 保留历史采集值，但必须标明底本版本、快照时点和证据边界 |
+| 原版机械统计、指纹和索引 | `docs/design/02-*.md`、`docs/victoria3-modding-1.15.2/08-目录全量清单.md`、`13-common全量键名索引.md` 等生成目标 | 使用仓库 Python CLI 生成或核对，禁止手改生成数据 |
+| Victoria 3 研究正文 | `docs/victoria3-modding-1.15.2/` 及上表的历史目录 | 保留历史采集值，但必须标明底本版本、快照时点和证据边界 |
 
 ## 生成文档维护
 

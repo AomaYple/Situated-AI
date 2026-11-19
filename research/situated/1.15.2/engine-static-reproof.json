@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "version": "1.15.2",
+  "runtime": "unknown",
+  "platform": "Windows x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "discovery": {
+    "tool": "tools/ci/engine_discovery.py",
+    "sha256": "bc9feb9460a3630adebd9faa141db5a66749ee612d7370a767ae67eb6b9589f8",
+    "capstone": "5.0.7",
+    "capstone_dll_sha256": "46b7c385efe50db4def8aa99aa351c44ea28b1f3c2ccbc4ca41dbb2a02340e39",
+    "rtti_names_checked": 15,
+    "strategy_atom_paths": 33,
+    "aligned_direct_calls_checked": 17,
+    "current_discovery_sha256": "c300e615cfdabfaf8592f6bebd25c7b97120665a9267df994a83ac5caf755830"
+  },
+  "reproduction": {
+    "tool": "tools/ci/engine_evidence.py",
+    "manifests": [
+      {
+        "path": "research/situated/1.15.2/engine-building-default.json",
+        "sha256": "23250372ee02d3f81212e4b6798c064a33718735eff9d5a5209b1e9c33828765",
+        "observations_reproduced": 37
+      },
+      {
+        "path": "research/situated/1.15.2/engine-company-default.json",
+        "sha256": "64cbcade0e0b939bc16ded10a6e33f82045a085b59b4dbf9073ef318b7636025",
+        "observations_reproduced": 7
+      },
+      {
+        "path": "research/situated/1.15.2/engine-company.json",
+        "sha256": "823989284f7d5d7de9142bda4689a0136726ae3f7a4e21ccf2316c565e9eb0f6",
+        "observations_reproduced": 20
+      },
+      {
+        "path": "research/situated/1.15.2/engine-country-definition.json",
+        "sha256": "4d5547de4078b1136e7703fa4d577d0ebcb40cc899bb2ba77b27164a777bd24b",
+        "observations_reproduced": 31
+      },
+      {
+        "path": "research/situated/1.15.2/engine-defensive-pact-reader.json",
+        "sha256": "bd5a7c845ae7282499fcbf2a80233690c81e0a9951a97a1054d5e647d2b8e087",
+        "observations_reproduced": 34
+      },
+      {
+        "path": "research/situated/1.15.2/engine-law.json",
+        "sha256": "1e7c0e640d6cde80fcece6951bb26c3ff26b5bbb3eb8daae7c582517e265cec7",
+        "observations_reproduced": 19
+      },
+      {
+        "path": "research/situated/1.15.2/engine-strategy.json",
+        "sha256": "e69c31f2cd10bcfa36d51c819aa86117bd69f3f4e6a079e29acffe20d3e5d384",
+        "observations_reproduced": 307
+      },
+      {
+        "path": "research/situated/1.15.2/engine-technology.json",
+        "sha256": "1ef8906bcd28f941e8ebb3b6e00030ed73bb0ffd632be295b0c8e812fff5a6ab",
+        "observations_reproduced": 23
+      }
+    ],
+    "observations_total": 478
+  },
+  "production_verification": {
+    "tested_integrated_commit": "a5cda87169cf012271e9db244db5593ff539961f",
+    "native_adapter_sha256": "2d34f3718737321d1f510ee8e2ebfe280d1680a75acc517d1829c0a85fee2750",
+    "entrypoints": [
+      "engine_scope.verify_strategy_game",
+      "engine_scope.verify_company_game",
+      "engine_scope.verify_company_defaults_game",
+      "engine_scope.country_evidence",
+      "engine_scope.law_evidence",
+      "engine_scope.technology_evidence",
+      "engine_building_115.verify_game",
+      "engine_reader_115.verify_game"
+    ],
+    "verified": true,
+    "strategy_consumers": 33,
+    "authorized_missing_building_fields": 11,
+    "authorized_missing_company_fields": 26,
+    "reader_verified_source_identities": 13
+  },
+  "scope": "静态证据覆盖清单中列出的解析、语义成员、作用域与调用点。使用实际 Steam 安装逐点复读 PE 范围与原版输入，运行期状态为 unknown。"
+}

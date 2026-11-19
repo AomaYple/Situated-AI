@@ -42,7 +42,12 @@ SOURCE_SHA256 = {
 }
 
 SOURCE_SHA256_1151 = {
-    **version_contracts.INSTALLATION_IDENTITY_SHA256,
+    "binaries/checksum.txt": "2dc9ed5946fe105d8143a3eebdd7a9d6417f0333ee468a3b81892a6ab6c60325",
+    "caligula_branch.txt": "b9ed9070caf21333852ae4c658359e3babd04b9625dcf7146f6b32d99b45a565",
+    "caligula_rev.txt": "9cb420ce9ae7ddde03ae8ced02cf2da9fcb7fe70b311877be6c98717e7a38b98",
+    "clausewitz_branch.txt": "563a1baf6a4b11be321c25dbef63a2f9ffd6d3bf0888f3c74116579ac966508f",
+    "clausewitz_rev.txt": "7b01c7e17e500a28904d6f00d5dcbbcaa6d5b23ac6ae55d8a9f4d176797697fd",
+    "launcher/launcher-settings.json": "e5719ec975d35fed526338c7e2176baeda126ad55a2bea38869d17f4a1a20d99",
     "game/common/ai_strategies/00_default_strategy.txt": "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba",
     "game/common/ai_strategies/01_admin_strategies.txt": "1ad973d0398acced05da72f6fe49e7b08d0a9c02f5406a694c69d789c4d6bffe",
     "game/common/ai_strategies/03_political_strategies.txt": "2b0b83d06cc4ef8fb1bc58902ca4f90cf0723838afef6d81854e301f5f7c62f4",
@@ -61,6 +66,23 @@ SOURCE_SHA256_1151["game/common/journal_entries/06_portugal_politics.txt"] = (
 )
 
 
+CURRENT_SOURCE_SHA256 = {
+    **version_contracts.INSTALLATION_IDENTITY_SHA256,
+    "game/common/ai_strategies/00_default_strategy.txt": "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
+    "game/common/ai_strategies/01_admin_strategies.txt": "1ad973d0398acced05da72f6fe49e7b08d0a9c02f5406a694c69d789c4d6bffe",
+    "game/common/ai_strategies/03_political_strategies.txt": "89b9878d2d8a7166549dcd62d6855de6a59eb6d4e4913823cc7a554f753dfab6",
+    "game/common/alert_types/00_alert_types.txt": "74cbfaa21e54a8ca96be89aedf50b290baad2ca51e18825ceae70caad51a514a",
+    "game/common/decrees/00_decree.txt": "0116013dac7fd94fe6c4f2bf6d5e0cb7220cdebb94827ad4ba5bffb500f25721",
+    "game/common/diplomatic_actions/00_relations_actions.txt": "6cd5d572ae976a2e1f4f4af5c81fb577ed4804bace442e6fa31bace09881749b",
+    "game/common/diplomatic_actions/01_expel_diplomats.txt": "634b87f8eb3a55d4742e5bf724d6b993c570736765898a97070cebea75893d4f",
+    "game/common/diplomatic_actions/diplomatic_action.md": "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
+    "game/common/journal_entries/06_portugal_politics.txt": "6b985f022065b56cca0ee6cb4bb238b662a0edb3ff7fb124b50154d0274788da",
+    "game/common/journal_entries/08_tsarpoints.txt": "c118f0c75460674c0bc435dd45751ee21c2a484749d3816b21da915ff53715e0",
+    "game/common/scripted_buttons/scripted_buttons.md": "596e62f265e277b5a7e9881d1f319ddea0af4189befc76eb9b96eba52a989b26",
+    "game/common/scripted_triggers/05_tsarpoints_scripted_triggers.txt": "4d22469ebc817d730a0c5789b6e5bdfb0edc3087f417beb4e06f3322e3b98868",
+}
+
+
 def frozen_root(version: str | None = None) -> Path:
     selected = (
         production_profile.expected_version()
@@ -73,9 +95,11 @@ def frozen_root(version: str | None = None) -> Path:
 
 
 def source_hashes() -> dict[str, str]:
-    return (
-        SOURCE_SHA256_1151 if production_profile.expected_version() == "1.15.1" else SOURCE_SHA256
-    )
+    return {
+        "1.15.0": SOURCE_SHA256,
+        "1.15.1": SOURCE_SHA256_1151,
+        version_contracts.CURRENT_VERSION: CURRENT_SOURCE_SHA256,
+    }[production_profile.expected_version()]
 
 
 # Keep consumer policy out of this module. This maps the audited reader names
@@ -94,7 +118,7 @@ READER_SOURCES = {
 
 
 def reader_sources() -> dict[str, str]:
-    if production_profile.expected_version() != "1.15.1":
+    if production_profile.expected_version() == "1.15.0":
         return READER_SOURCES
     return {
         **READER_SOURCES,

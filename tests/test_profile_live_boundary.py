@@ -6,6 +6,7 @@ It tests filesystem/version contracts, never game execution or sampled values.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -67,33 +68,33 @@ def test_profile_rejects_unowned_same_prefix_file(installation, monkeypatch, tim
     assert {path for path in root.rglob("*") if path.is_file()} == set(before) | {unowned}
 
 
-@pytest.mark.parametrize("selected", [None, "1.14.5", "1.15.0", "unknown"])
-def test_cli_historical_profile_requires_explicit_read_only_selection(monkeypatch, selected):
+@pytest.mark.parametrize("selected", [None, "1.14.5", "1.15.0", "1.15.1", "unknown"])
+def test_cli_offline_profile_asserts_current_without_installation(monkeypatch, selected):
     if selected is None:
         monkeypatch.delenv("V3_CONTRACT_PROFILE", raising=False)
     else:
         monkeypatch.setenv("V3_CONTRACT_PROFILE", selected)
-    with version_contracts.select_version("1.15.0"):
-        frozen = native.load_profile(native.BASELINE_ROOT)
-    assert cli._production_profile("1.15.0", offline=True) == frozen
-    if selected is not None:
+    with pytest.raises(ValueError, match="合同版本"):
+        cli._production_profile("1.15.0", offline=True)
+    if selected is None:
+        cli._production_profile(None, offline=True)
+    else:
         with pytest.raises(ValueError, match="合同版本"):
             cli._production_profile(None, offline=True)
-    else:
-        assert cli._production_profile(None, offline=True) is None
 
 
-def test_fresh_cli_import_preserves_explicit_profile_over_unknown_environment():
+def test_fresh_cli_does_not_allow_explicit_current_to_hide_unknown_environment():
     environment = {**os.environ, "V3_CONTRACT_PROFILE": "unknown"}
     code = (
         "from pdx import cli\n"
-        "assert cli._production_profile('1.15.0', offline=True) is not None\n"
-        "try:\n"
-        "    cli._production_profile(None, offline=True)\n"
-        "except ValueError as error:\n"
-        "    assert '合同版本' in str(error)\n"
-        "else:\n"
-        "    raise AssertionError('implicit unknown profile must fail')\n"
+        "from pdx.version_contracts import CURRENT_VERSION\n"
+        "for profile in (None, CURRENT_VERSION):\n"
+        "    try:\n"
+        "        cli._production_profile(profile, offline=True)\n"
+        "    except ValueError as error:\n"
+        "        assert '合同版本' in str(error)\n"
+        "    else:\n"
+        "        raise AssertionError('unknown profile environment must fail')\n"
     )
     result = subprocess.run(
         [sys.executable, "-B", "-X", "utf8", "-c", code],
@@ -119,11 +120,6 @@ def test_online_profile_requires_every_installed_identity_and_reader_source(
         target.write_bytes(target.read_bytes() + b"\n# unreviewed installed bytes\n")
     with pytest.raises(ValueError, match="R2 reader authority"):
         distribution.check_profile_installation(native.load_profile(native.BASELINE_ROOT))
-    # Absence/drift in an installation cannot contaminate the independent
-    # offline contract or force a live read in CI.
-    assert cli._production_profile("1.15.0", offline=True) == native.load_profile(
-        native.BASELINE_ROOT
-    )
 
 
 @pytest.mark.parametrize(
@@ -141,7 +137,21 @@ def test_every_online_entry_fails_before_writing_when_installed_inputs_are_inval
     arguments, damage, tmp_path, monkeypatch
 ):
     current = tmp_path / "current-installation"
-    shutil.copytree(authority.frozen_root("1.15.1"), current)
+    sources = {
+        "launcher/launcher-settings.json": json.dumps(
+            {"gameId": "victoria3", "rawVersion": version_contracts.CURRENT_VERSION}
+        ).encode(),
+        "game/common/diplomatic_actions/01_expel_diplomats.txt": b"example = { always = yes }\n",
+    }
+    for name, raw in sources.items():
+        path = current / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+    monkeypatch.setattr(
+        authority,
+        "CURRENT_SOURCE_SHA256",
+        {name: hashlib.sha256(raw).hexdigest() for name, raw in sources.items()},
+    )
     monkeypatch.setattr(config, "ROOT", current)
     monkeypatch.setattr(config, "GAME", current / "game")
     monkeypatch.setattr(config, "OUT", tmp_path / "out")
@@ -160,14 +170,17 @@ def test_every_online_entry_fails_before_writing_when_installed_inputs_are_inval
             target.write_text(json.dumps(document), encoding="utf-8")
         else:
             target.write_bytes(target.read_bytes() + b"\n# installed drift\n")
-    with version_contracts.select_version("1.15.1"):
-        result = CliRunner().invoke(cli.app, [*arguments, "--profile", "1.15.1"])
+    result = CliRunner().invoke(
+        cli.app, [*arguments, "--profile", version_contracts.CURRENT_VERSION]
+    )
     assert result.exit_code == 1, result.output
     assert "R2 reader authority" in result.output
     assert not config.OUT.exists()
 
 
-def test_historical_artifact_checks_need_no_installation(installation, tmp_path, monkeypatch):
+def test_historical_outputs_stay_read_only_and_cli_rejects_their_profile(
+    installation, tmp_path, monkeypatch
+):
     runner = CliRunner()
     profile = native.load_profile(native.BASELINE_ROOT)
     assert distribution.check_profile_installation(profile) == native.load_profile(installation)
@@ -178,13 +191,15 @@ def test_historical_artifact_checks_need_no_installation(installation, tmp_path,
         if path.is_file()
     }
     monkeypatch.setattr(config, "ROOT", tmp_path / "absent-installation")
+    assert distribution.check_profile_outputs(profile)
     for arguments in (
         ["modgen", "--check"],
         ["modguard", "--offline"],
         ["decision-audit", "--offline", "--output", str(tmp_path / "offline-audit.json")],
     ):
         result = runner.invoke(cli.app, [*arguments, "--profile", "1.15.0"])
-        assert result.exit_code == 0, result.output
+        assert result.exit_code == 1, result.output
+        assert "当前仅维护" in result.output
     assert {path: path.read_bytes() for path in before} == before
 
 
@@ -357,10 +372,10 @@ def test_profile_generation_binds_source_before_compilation(installation, tmp_pa
 @pytest.fixture(autouse=True)
 def _historical_1150_contract(request):
     """Keep archived witnesses exact; environment-resolution tests need no override."""
-    if (
-        request.node.originalname
-        == "test_cli_historical_profile_requires_explicit_read_only_selection"
-    ):
+    if request.node.originalname in {
+        "test_cli_offline_profile_asserts_current_without_installation",
+        "test_every_online_entry_fails_before_writing_when_installed_inputs_are_invalid",
+    }:
         yield
     else:
         with version_contracts.select_version("1.15.0"):

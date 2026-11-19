@@ -11,36 +11,56 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
+import re
 import stat
 import tempfile
 import zipfile
 from collections import defaultdict
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
+from xml.parsers import expat
 
 from . import ai_surface, config, political_surface, version_contracts
+from .binary_headers import BINARY_HEADER_SUFFIXES, HEADER_BYTES, binary_header
 from .cache import parse_cached
 from .capability_catalog import FileDisposition, LayeredCatalog, OccurrenceWriter, base_frontier
-from .committed_raw import read_source, verified_catalog_inputs, verified_source
+from .committed_raw import (
+    read_record,
+    read_source,
+    verified_catalog_inputs,
+    verified_record,
+    verified_source,
+)
 from .input_contracts import ArtifactRef, InputContractError, ParseStatus
-from .input_inventory import PDX_RESOURCE_CATEGORIES, classify_path
+from .input_inventory import (
+    DEVELOPER_TEXT_PATHS,
+    DEVELOPER_XML_ROOTS,
+    EXTENSIONLESS_BODY_RESOURCE,
+    FLAT_PDX_RESOURCE_SUFFIXES,
+    MAP_ADJACENCIES,
+    PDX_RESOURCE_CATEGORIES,
+    STRUCTURED_JSON_SUFFIXES,
+    classify_path,
+)
 from .localization import SUFFIXES, parse_loc_entries_with_lines
-from .model import Block, ParseError
+from .model import Assignment, Block, ParseError, Scalar
 from .parser import parse_bytes
 from .scan import FileEntry, walk_files
+from .structured_csv import parse_map_table
 from .structured_json import parse_json
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
     from typing import BinaryIO
 
-    from .input_contracts import InputIdentity, InputInventory
+    from .input_contracts import CaptureCheck, InputIdentity, InputInventory, InventoryRecord
     from .model import ParsedFile
 
 
@@ -271,11 +291,18 @@ class ResearchInformationCatalog(InformationCatalog):
     """Canonical raw research report with independent source dispositions."""
 
     layered: LayeredCatalog = field(kw_only=True)
+    final_installation_check: CaptureCheck | None = field(default=None, kw_only=True)
     format_version: int = 2
 
     def to_dict(self) -> dict[str, object]:
         result = InformationCatalog.to_dict(self)
-        result["分层目录"] = self.layered.to_dict()
+        layers = self.layered.to_dict()
+        if self.final_installation_check is not None:
+            layers["installation_verification"] = {
+                "input_identity_capture_check_scope": "initial_inventory",
+                "final_inventory": asdict(self.final_installation_check),
+            }
+        result["分层目录"] = layers
         return result
 
     def _serialized_items(self) -> list[dict[str, object]]:
@@ -781,22 +808,72 @@ def _build_from_raw(
     ):
         raise ValueError("派生索引必须位于原始来源根之外")
     with verified_catalog_inputs(identity, inventory, raw_root=raw_root):
-        return _build_raw_index(identity, inventory, index_path, raw_root)
+        return _build_research_index(identity, inventory, index_path, raw_root)
 
 
-def _build_raw_index(
-    identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path
+_DEVELOPER_XML_BYTE_LIMIT = 1024 * 1024
+
+
+def _developer_xml_elements(
+    raw: bytes, expected_root: str
+) -> tuple[list[tuple[int, str]], str | None]:
+    parser = expat.ParserCreate(encoding="UTF-8", namespace_separator=" ")
+    elements: list[tuple[int, str]] = []
+    name_length = 0
+
+    def record_element(name: str, _attributes: dict[str, str]) -> None:
+        nonlocal name_length
+        if not elements and name != expected_root:
+            raise ValueError("developer_xml_unexpected_root")
+        # Expanded namespace names can be much larger than the source tags.
+        name_length += len(name)
+        if name_length > _DEVELOPER_XML_BYTE_LIMIT:
+            raise ValueError("developer_xml_element_name_budget_exceeded")
+        elements.append((parser.CurrentLineNumber, name))
+
+    def refuse_doctype(*_args: object) -> None:
+        raise ValueError("developer_xml_doctype_refused")
+
+    parser.StartElementHandler = record_element
+    parser.StartDoctypeDeclHandler = refuse_doctype
+    try:
+        parser.Parse(raw, True)
+    except expat.ExpatError as error:
+        return [], f"developer_xml_syntax_failed:{error.lineno}:{error.offset}"
+    except ValueError as error:
+        return [], str(error)
+    return elements, None
+
+
+def _build_research_index(
+    identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path | None
 ) -> ResearchInformationCatalog:
     items: list[InformationItem] = []
     dispositions: list[FileDisposition] = []
-    with OccurrenceWriter(index_path, identity, inventory) as writer:
+    installation = Path(identity.installation_root)
+
+    def read(
+        record: InventoryRecord, *, retain: bool, prefix_size: int | None = None
+    ) -> bytes | None:
+        if raw_root is not None:
+            return read_source(record, raw_root=raw_root, retain=retain, prefix_size=prefix_size)
+        return read_record(
+            record, root=installation, relative=record.path, retain=retain, prefix_size=prefix_size
+        )
+
+    with OccurrenceWriter(
+        index_path, identity, inventory, metadata_only=raw_root is None
+    ) as writer:
         for record in inventory.records:
+            raw_status = "unknown"
+            if record.read_status == "read":
+                raw_status = "proven" if raw_root is not None else "observed"
             if record.path.partition("/")[0].casefold() == "%localappdata%":
-                read_source(record, raw_root=raw_root, retain=False)
+                read(record, retain=False)
                 row = FileDisposition(
                     path=record.path,
                     category=record.category,
-                    raw_status="proven" if record.read_status == "read" else "unknown",
+                    raw_status=raw_status,
                     decode_status="not_attempted",
                     parse_status="not_attempted",
                     semantic_status="unknown",
@@ -808,8 +885,12 @@ def _build_raw_index(
                 continue
             suffix = Path(record.path).suffix.casefold()
             resource_category = PDX_RESOURCE_CATEGORIES.get(suffix)
+            relative = record.path.casefold()
+            if relative == EXTENSIONLESS_BODY_RESOURCE:
+                resource_category = "asset_entity_dna"
             category = record.category
-            if resource_category is not None and category == "unknown":
+            map_table = relative == MAP_ADJACENCIES
+            if category == "unknown" or map_table or suffix in FLAT_PDX_RESOURCE_SUFFIXES:
                 # 历史盘点的类别属于已提交原件，更新只写入派生处置。
                 category = classify_path(record.path)
             pdx_resource = resource_category is not None and category == resource_category
@@ -819,14 +900,23 @@ def _build_raw_index(
                 or pdx_resource
             )
             localization = category == "localization"
-            document = category == "documentation" and suffix in {
-                ".md",
-                ".rst",
-                ".txt",
-                ".html",
-                ".htm",
+            developer_text = relative in DEVELOPER_TEXT_PATHS
+            document = category == "documentation" and (
+                suffix in {".md", ".rst", ".txt", ".html", ".htm"} or developer_text
+            )
+            structured_json = (
+                category == "structured_configuration" and suffix in STRUCTURED_JSON_SUFFIXES
+            )
+            xml_root = DEVELOPER_XML_ROOTS.get(relative)
+            read_xml = xml_root is not None and (record.size or 0) <= _DEVELOPER_XML_BYTE_LIMIT
+            shader_source = category == "shader_source"
+            python_tool = category == "tooling_source"
+            binary_probe = suffix in BINARY_HEADER_SUFFIXES and category in {
+                "asset_entity_dna",
+                "image_map",
             }
-            structured_json = category == "structured_configuration" and suffix == ".json"
+            header = None
+            csv_result = None
             json_result = None
             zip_container = (
                 category == "container" and suffix == ".zip" and record.read_status == "read"
@@ -834,20 +924,30 @@ def _build_raw_index(
             raw = (
                 None
                 if zip_container
-                else read_source(
+                else read(
                     record,
-                    raw_root=raw_root,
-                    retain=script or localization or document or structured_json,
+                    retain=script
+                    or localization
+                    or document
+                    or structured_json
+                    or read_xml
+                    or developer_text
+                    or map_table
+                    or shader_source
+                    or python_tool
+                    or binary_probe,
+                    prefix_size=HEADER_BYTES if binary_probe else None,
                 )
             )
-            raw_status = "proven" if record.read_status == "read" else "unknown"
             domain = record.path.rpartition("/")[0] or "."
             diagnostics = tuple(f"{d.code}: {d.message}" for d in record.diagnostics)
+            locator_diagnostics = [diagnostic.code for diagnostic in record.diagnostics]
             parsed = None
             entries: list[tuple[str, str, int]] = []
             language = "?"
             members: list[dict[str, object]] = []
-            document_lines: list[tuple[int, str]] = []
+            text_lines: list[tuple[int, str]] = []
+            xml_elements: list[tuple[int, str]] = []
             decode_status = "not_attempted"
             parse_status: ParseStatus = "not_attempted"
             disposition = "research_only"
@@ -860,27 +960,84 @@ def _build_raw_index(
                     # 通用 parser 也接受裸标量。这些资料的完整结构至少须包含一块。
                     if b"\x00" in raw:
                         parsed.errors.append("pdx_resource_contains_nul")
+                        locator_diagnostics.append("pdx_resource_contains_nul")
+                    elif suffix in FLAT_PDX_RESOURCE_SUFFIXES:
+                        if not parsed.root.items or any(
+                            not isinstance(item, Assignment)
+                            or not isinstance(item.value, Scalar)
+                            or item.op != "="
+                            for item in parsed.root.items
+                        ):
+                            parsed.errors.append("pdx_resource_expected_flat_scalar_assignments")
+                            locator_diagnostics.append(
+                                "pdx_resource_expected_flat_scalar_assignments"
+                            )
                     elif parsed.max_depth == 0:
                         parsed.errors.append("pdx_resource_missing_top_level_block")
+                        locator_diagnostics.append("pdx_resource_missing_top_level_block")
                 parse_status = parsed.parse_status
                 decode_status = "failed" if parsed.decoding_error else "complete"
                 diagnostics += tuple(parsed.errors)
+                locator_diagnostics.extend(
+                    f"{entry['kind']}:{entry['line']}:{entry['column']}"
+                    for entry in parsed.diagnostics
+                )
                 if parsed.decoding_error is not None:
                     diagnostics += (parsed.decoding_error,)
+                    locator_diagnostics.append("pdx_decode_failed")
                     reason = "pdx_decode_failed"
                 elif parse_status != "complete":
                     reason = "shared_parser_incomplete"
                 else:
                     reason = "PDX syntax and full occurrence index; exact engine semantics require separate evidence"
+            elif map_table and raw is not None:
+                csv_result = parse_map_table(raw)
+                decode_status, parse_status = csv_result.decode_status, csv_result.parse_status
+                diagnostics += csv_result.diagnostics
+                for message in csv_result.diagnostics:
+                    location = re.match(r"^csv_[a-z_]+(?::[0-9]+(?=:))?", message)
+                    if location:
+                        locator_diagnostics.append(location[0])
+                reason = (
+                    "map CSV rows and cells indexed; map interpretation requires separate evidence"
+                )
             elif structured_json and raw is not None:
                 json_result = parse_json(raw)
                 decode_status, parse_status = json_result.decode_status, json_result.parse_status
                 diagnostics += json_result.diagnostics
+                locator_diagnostics.extend(
+                    message.partition(":")[0] for message in json_result.diagnostics
+                )
                 reason = (
                     "complete ordered JSON tree; engine semantics and Unicode interoperability unproven"
                     if parse_status == "complete"
                     else "structured_json_decode_or_parse_failed"
                 )
+            elif xml_root is not None:
+                if raw is None:
+                    reason = "developer_xml_byte_budget_exceeded"
+                    locator_diagnostics.append(reason)
+                    diagnostics += (reason,)
+                else:
+                    try:
+                        raw.decode("utf-8-sig")
+                    except UnicodeDecodeError as error:
+                        decode_status, parse_status = "failed", "failed"
+                        reason = "developer_xml_decode_failed"
+                        diagnostic = f"{reason}:byte:{error.start}"
+                        diagnostics += (diagnostic,)
+                        locator_diagnostics.append(diagnostic)
+                    else:
+                        decode_status = "complete"
+                        xml_elements, error_code = _developer_xml_elements(raw, xml_root)
+                        if error_code is None:
+                            parse_status = "complete"
+                            reason = "well-formed developer XML and element locations indexed"
+                        else:
+                            parse_status = "failed"
+                            reason = "developer_xml_parse_failed"
+                            diagnostics += (error_code,)
+                            locator_diagnostics.append(error_code)
             elif localization and raw is not None:
                 unconsumed: list[tuple[int, str]] = []
                 try:
@@ -889,6 +1046,7 @@ def _build_raw_index(
                     decode_status, parse_status = "failed", "failed"
                     diagnostics += (str(error),)
                     reason = "localization_decode_failed"
+                    locator_diagnostics.append(f"localization_decode_failed:byte:{error.start}")
                 else:
                     decode_status = "complete"
                     language, entries = parse_loc_entries_with_lines(
@@ -898,28 +1056,70 @@ def _build_raw_index(
                     reason = "all localization languages indexed; engine loading and GUI presentation unproven"
                     if unconsumed or language == "?":
                         diagnostics += (f"language={language}; unconsumed={unconsumed}",)
+                        locator_diagnostics.extend(
+                            f"localization_unconsumed_line:{line}" for line, _ in unconsumed
+                        )
+                        if language == "?":
+                            locator_diagnostics.append("localization_unknown_language")
             elif zip_container:
-                with verified_source(record, raw_root=raw_root) as stream:
+                stream_context = (
+                    verified_source(record, raw_root=raw_root)
+                    if raw_root is not None
+                    else verified_record(record, root=installation, relative=record.path)
+                )
+                with stream_context as stream:
                     try:
                         members, errors = _zip_members(stream)
                     except zipfile.BadZipFile as error:
                         parse_status, reason = "failed", "invalid_zip_container"
                         diagnostics += (str(error),)
+                        locator_diagnostics.append("invalid_zip_container")
                     else:
                         parse_status = "partial" if errors else "complete"
                         reason = "safe ZIP metadata mapping; member content/export/license not established"
                         diagnostics += errors
-            elif document and raw is not None:
+                        locator_diagnostics.extend(
+                            f"{message.rpartition(':')[2]}:member:{message.partition(':')[0]}"
+                            for message in errors
+                        )
+            elif (document or shader_source or python_tool or developer_text) and raw is not None:
                 try:
                     text = raw.decode("utf-8-sig")
                 except UnicodeDecodeError as error:
                     decode_status, parse_status = "failed", "failed"
                     diagnostics += (str(error),)
-                    reason = "document_decode_failed_no_declared_alternative_codec"
+                    format_name = "document" if document else category
+                    reason = f"{format_name}_decode_failed_no_declared_alternative_codec"
+                    locator_diagnostics.append(f"{format_name}_decode_failed:byte:{error.start}")
                 else:
-                    decode_status, parse_status = "complete", "not_applicable"
-                    document_lines = list(enumerate(text.splitlines(), 1))
-                    reason = "full document line index; source version bound to epoch; engine export not executed"
+                    decode_status = "complete"
+                    text_lines = list(enumerate(text.splitlines(), 1))
+                    if document:
+                        parse_status = "not_applicable"
+                        reason = "full document line index; source version bound to epoch; engine export not executed"
+                    elif python_tool:
+                        try:
+                            ast.parse(text, filename=record.path)
+                        except (SyntaxError, RecursionError) as error:
+                            parse_status = "failed"
+                            reason = "tooling_python_syntax_failed"
+                            syntax_location = (
+                                f":{error.lineno}:{error.offset}"
+                                if isinstance(error, SyntaxError)
+                                else ""
+                            )
+                            diagnostics += (f"{reason}{syntax_location}",)
+                            locator_diagnostics.append(f"{reason}{syntax_location}")
+                        else:
+                            parse_status = "complete"
+                            reason = "Python syntax and source line index; tool not executed"
+                    elif developer_text:
+                        reason = "developer text lines indexed; editor format not interpreted"
+                    else:
+                        reason = "shader source lines indexed; mixed PDX/shader grammar pending"
+            elif binary_probe and raw is not None:
+                header = binary_header(suffix, raw)
+                reason = f"binary_header_{header['status']}; payload parser unavailable"
             elif category in {"image_map", "font", "audio_video", "binary"}:
                 parse_status = "not_applicable"
                 reason = "binary/media raw engineering input; no text reader or engine observation inferred"
@@ -934,6 +1134,8 @@ def _build_raw_index(
                     "unresolved",
                     "unknown format retained; discovery cannot be silently excluded",
                 )
+            if raw_root is None:
+                diagnostics = tuple(locator_diagnostics)
             row = FileDisposition(
                 record.path,
                 category,
@@ -947,13 +1149,19 @@ def _build_raw_index(
             )
             dispositions.append(row)
             writer.add_source(record, row)
+            if header is not None:
+                writer.add_details(record.path, binary_header=header)
             if localization:
                 writer.add_details(record.path, localization_language=language)
             writer.add_container_members(record.path, members)
+            if csv_result is not None:
+                writer.add_map_table(record, csv_result)
             if json_result is not None:
                 writer.add_structured_json(record, json_result)
             if parsed is not None:
                 writer.add_parsed(record, parsed)
+                if raw_root is None:
+                    continue
                 if parsed.parse_status == "complete":
                     items.extend(
                         _parsed_script_items(
@@ -974,17 +1182,18 @@ def _build_raw_index(
                         )
                     )
             elif record.sha256 is not None:
-                items.append(
-                    InformationItem(
-                        id=_item_id(domain, "__source__", record.path),
-                        domain=domain,
-                        name="__source__",
-                        source=record.path,
-                        source_sha256=record.sha256,
-                        source_line=None,
-                        notes=reason,
+                if raw_root is not None:
+                    items.append(
+                        InformationItem(
+                            id=_item_id(domain, "__source__", record.path),
+                            domain=domain,
+                            name="__source__",
+                            source=record.path,
+                            source_sha256=record.sha256,
+                            source_line=None,
+                            notes=reason,
+                        )
                     )
-                )
                 for ordinal, (key, value, line) in enumerate(entries):
                     writer.add(
                         record.path,
@@ -999,19 +1208,33 @@ def _build_raw_index(
                         line=line,
                         parse_status=parse_status,
                     )
-                for line, text in document_lines:
+                for line, text in text_lines:
                     writer.add(
                         record.path,
                         record.sha256 or "",
                         address=(line,),
                         path=("line", str(line)),
-                        kind="document_line",
+                        kind="document_line" if document else "source_line",
                         key=None,
                         operator=None,
                         scalar=text,
                         quoted=True,
                         line=line,
-                        parse_status="not_applicable",
+                        parse_status=parse_status,
+                    )
+                for ordinal, (line, name) in enumerate(xml_elements):
+                    writer.add(
+                        record.path,
+                        record.sha256,
+                        address=(ordinal,),
+                        path=("xml_element", str(ordinal)),
+                        kind="xml_element",
+                        key=name,
+                        operator=None,
+                        scalar=None,
+                        quoted=False,
+                        line=line,
+                        parse_status=parse_status,
                     )
         index = writer.publish()
     rows = tuple(dispositions)
@@ -1021,7 +1244,9 @@ def _build_raw_index(
             "build_id": identity.build_id,
             "branch": identity.branch,
         },
-        roots={"raw": str(raw_root)},
+        roots={"raw": str(raw_root)}
+        if raw_root is not None
+        else {"installation": str(installation)},
         items=tuple(items),
         layered=LayeredCatalog(
             identity, inventory, rows, index, base_frontier(identity, rows), raw_root

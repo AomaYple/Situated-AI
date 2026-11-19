@@ -380,7 +380,7 @@ def test_explicit_auxiliary_opt_ins_and_ir_drift_are_checked_per_source():
         "wartime_navy_capacity": ("net_surplus", "bureaucracy"),
         "wartime_navy_fiscal_capacity": ("net_surplus",),
     }
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         # These legacy opt-ins migrate to the single additive R2 school writer.
         for key in (
             "remaining_school_administrative",

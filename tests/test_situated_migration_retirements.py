@@ -7,7 +7,8 @@ from dataclasses import replace
 
 import pytest
 
-from pdx.situated import decision_ir, migration_baseline
+from pdx import version_contracts
+from pdx.situated import compiler, decision_ir, migration_baseline
 
 pytestmark = pytest.mark.unit
 
@@ -329,6 +330,12 @@ def native_retention_case(tmp_path, published_bundle):
 
 def test_exact_native_restoration_is_not_business_implementation(native_retention_case):
     validate_case(native_retention_case)
+
+
+@pytest.mark.integration
+def test_current_installed_strategy_preserves_the_retired_native_fields():
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        migration_baseline.verify_default_strategy_retention(compiler.baseline_text())
 
 
 @pytest.mark.parametrize(

@@ -2,8 +2,8 @@
 
 Native proposal_weight is already a multiplier on article inclusion. We retain
 its ordered benefits, zeroes and tails and add one bounded joint preference.
-Directed transfers have no inferred donor/recipient role. Raw native sources in
-the artifact make offline validation self-contained; no game runtime is implied.
+Directed transfers have no inferred donor/recipient role. Current offline
+validation uses pinned source digests and AST identities.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 BASELINE = config.REPO / "research/situated/treaty-opportunities.json"
 BASELINE_SHA256 = "705c51d333ddde9f0f84791e885ad5ac67a7d0e21e32f993cccf231bbcc546cc"
 BASELINE_115 = config.REPO / "research/situated/1.15.0/treaty-opportunities.json"
+BASELINE_SHA256_1152 = "df697a32de06a90e6447b85404a5b2427a99045726c531773fcf0422150bc997"
 BASELINE_SHA256_1151 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
 BASELINE_SHA256_115 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
 
@@ -37,7 +38,7 @@ def baseline_path() -> Path:
     """Select a reviewed artifact without rewriting the historical baseline."""
     return (
         version_contracts.research_path("situated", BASELINE_115.name)
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
         else BASELINE_115
         if version_contracts.is_115()
         else BASELINE
@@ -45,6 +46,8 @@ def baseline_path() -> Path:
 
 
 def baseline_sha256() -> str:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return BASELINE_SHA256_1152
     if version_contracts.active_version() == "1.15.1":
         return BASELINE_SHA256_1151
     return BASELINE_SHA256_115 if version_contracts.is_115() else BASELINE_SHA256
@@ -195,12 +198,15 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
     if not inputs.keys() >= _REQUIRED:
         raise ValueError("条约资料缺少ROOT/共同影响力成本/读取器原件")
     texts: dict[str, str] = {}
+    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
     originals = {}
     for source, raw in sorted(inputs.items()):
         if not isinstance(raw, bytes) or (not _article_source(source) and source not in _REQUIRED):
             raise ValueError("条约资料包含未授权来源或不是原始字节")
         texts[source] = normalized_text(raw.decode("utf-8-sig"))
-        originals[source] = {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": raw.hex()}
+        originals[source] = {"sha256": hashlib.sha256(raw).hexdigest()}
+        if not current:
+            originals[source]["bytes"] = raw.hex()
     doc = texts[_DOC]
     if not all(
         marker in doc
@@ -315,7 +321,7 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
     if not candidates:
         raise ValueError("条约候选定义缺失")
     return {
-        "schema": 1,
+        "schema": 2 if current else 1,
         "contract": dict(_CONTRACT),
         "sources": {
             source: hashlib.sha256(text.encode()).hexdigest() for source, text in texts.items()
@@ -328,6 +334,10 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
 
 def _validate(data: dict[str, Any]) -> dict[str, Any]:
     """Rebuild every metadata field from frozen native bytes, never trust tags."""
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        if hashlib.sha256(_canonical(data).encode()).hexdigest() != baseline_sha256():
+            raise ValueError("当前条约权威证据漂移")
+        return data
     try:
         if set(data) != {
             "schema",

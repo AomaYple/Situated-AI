@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 BASELINE = config.REPO / "research/situated/equipment-opportunities.json"
 BASELINE_SHA256 = "b5138db9717db003e5415708faadae1f91088e8e8f18ca661b0df800a4fa67ae"
 BASELINE_115 = config.REPO / "research/situated/1.15.0/equipment-opportunities.json"
+BASELINE_SHA256_1152 = "ddd631f43ffeb10af33c60e14d969d93b4bdd39d43f8c06df5de1a93a7db108b"
 BASELINE_SHA256_1151 = "be63d96d87ccbd6fbd9242d4c19b5cbd94473b54bd9e902d1fa5dc1643ac60f4"
 BASELINE_SHA256_115 = "f971f5f2aea6ba802e30480b68ff539757a20dc64746b16e705a7f65a71596d5"
 
@@ -37,7 +38,7 @@ def baseline_path() -> Path:
     """Select a reviewed artifact without rewriting the historical baseline."""
     return (
         version_contracts.research_path("situated", BASELINE_115.name)
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
         else BASELINE_115
         if version_contracts.is_115()
         else BASELINE
@@ -45,6 +46,8 @@ def baseline_path() -> Path:
 
 
 def baseline_sha256() -> str:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return BASELINE_SHA256_1152
     if version_contracts.active_version() == "1.15.1":
         return BASELINE_SHA256_1151
     return BASELINE_SHA256_115 if version_contracts.is_115() else BASELINE_SHA256

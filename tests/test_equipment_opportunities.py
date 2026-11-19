@@ -83,6 +83,19 @@ def game(tmp_path):
     return root
 
 
+def _pin_fixture_baseline(monkeypatch, path):
+    version = equipment_opportunities.version_contracts.active_version()
+    digest_attribute = {
+        "1.14.5": "BASELINE_SHA256",
+        "1.15.0": "BASELINE_SHA256_115",
+        "1.15.1": "BASELINE_SHA256_1151",
+        "1.15.2": "BASELINE_SHA256_1152",
+    }[version]
+    monkeypatch.setattr(
+        equipment_opportunities, digest_attribute, hashlib.sha256(path.read_bytes()).hexdigest()
+    )
+
+
 @pytest.fixture
 def baseline(game, tmp_path, monkeypatch):
     monkeypatch.setattr(
@@ -91,15 +104,7 @@ def baseline(game, tmp_path, monkeypatch):
         lambda: tmp_path / "baseline.json",
     )
     path = equipment_opportunities.write_baseline(game)
-    monkeypatch.setattr(
-        equipment_opportunities,
-        "BASELINE_SHA256_1151"
-        if equipment_opportunities.version_contracts.active_version() == "1.15.1"
-        else "BASELINE_SHA256_115"
-        if equipment_opportunities.version_contracts.is_115()
-        else "BASELINE_SHA256",
-        hashlib.sha256(path.read_bytes()).hexdigest(),
-    )
+    _pin_fixture_baseline(monkeypatch, path)
     return equipment_opportunities.load_baseline()
 
 
@@ -512,15 +517,7 @@ def test_repinning_source_hash_does_not_hide_changed_ast_materials(game, baselin
     baseline["sources"][SOURCE] = hashlib.sha256(changed.encode()).hexdigest()
     frozen = equipment_opportunities.baseline_path()
     frozen.write_text(equipment_opportunities._canonical(baseline), encoding="utf-8", newline="\n")
-    monkeypatch.setattr(
-        equipment_opportunities,
-        "BASELINE_SHA256_1151"
-        if equipment_opportunities.version_contracts.active_version() == "1.15.1"
-        else "BASELINE_SHA256_115"
-        if equipment_opportunities.version_contracts.is_115()
-        else "BASELINE_SHA256",
-        hashlib.sha256(frozen.read_bytes()).hexdigest(),
-    )
+    _pin_fixture_baseline(monkeypatch, frozen)
     assert equipment_opportunities.load_baseline() == baseline
     with pytest.raises(ValueError, match="AST"):
         equipment_opportunities.verify_game(game)
@@ -550,15 +547,7 @@ def test_offline_identity_and_structural_faults_fail_closed(baseline, monkeypatc
             baseline["candidates"]["ship_a"]["ordinary_goods"] = ["artillery", "coal", "steel"]
         text = equipment_opportunities._canonical(baseline)
     path.write_text(text, encoding="utf-8", newline="\n")
-    monkeypatch.setattr(
-        equipment_opportunities,
-        "BASELINE_SHA256_1151"
-        if equipment_opportunities.version_contracts.active_version() == "1.15.1"
-        else "BASELINE_SHA256_115"
-        if equipment_opportunities.version_contracts.is_115()
-        else "BASELINE_SHA256",
-        hashlib.sha256(path.read_bytes()).hexdigest(),
-    )
+    _pin_fixture_baseline(monkeypatch, path)
     with pytest.raises(ValueError):
         equipment_opportunities.load_baseline()
 

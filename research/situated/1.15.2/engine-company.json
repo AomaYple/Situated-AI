@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "contracts": [
+    {
+      "field": "ai_will_do",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "eligibility",
+      "capability": "direct",
+      "parser": "0x141755340",
+      "parser_receiver": "0x598",
+      "trigger_member": "0x318",
+      "parser_interface_member": "0x320",
+      "consumer": "0x141757260",
+      "actual_call": "0x14164e818",
+      "false_result": "zero_candidate_score"
+    },
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "base_candidate_score",
+      "capability": "direct",
+      "parser": "0x141755340",
+      "parser_receiver": "0x598",
+      "numeric_member": "0x390",
+      "consumer": "0x1417573f0",
+      "actual_call": "0x14164e836",
+      "nonpositive_rejection": "0x14165e5b3"
+    }
+  ],
+  "script_hashes": {
+    "common/company_types/00_companies_africa.txt": "de4ce506ceca1c0f95ab3f8d0c32db95533c88566a1ad08f8d5b8cbca88c2933",
+    "common/company_types/00_companies_americas.txt": "4774c47faf7e5da2a71ad4a41ef55b6e4dadfc53cc3d6c09f483ff84deec880f",
+    "common/company_types/00_companies_asia.txt": "499cc009ac2932b5d3b4125c765d408234158d81a9fcf0391431f23db5779be1",
+    "common/company_types/00_companies_austria_hungary.txt": "0eb37e5d314bb1d2a017af51ed1d5a7f663bc52ab24590dbaab115d18701d784",
+    "common/company_types/00_companies_china.txt": "27cb7d9b422bdab439f9a34c7886c8bb6e2a754a9bbfcfb3dc346c1e8a653ddd",
+    "common/company_types/00_companies_cots.txt": "613564e46b951d65493e59f604ef3f4323186d96a4e7718b9a4440465eab24d5",
+    "common/company_types/00_companies_ep2.txt": "60c4a700cb2959707429d69c119a547b946c7fc4b02a6ef7029e2225bd5a820e",
+    "common/company_types/00_companies_europe.txt": "6a20e18bb665f3b6247f7a8f130bcb544a56ddd1d813ef454596c2e53e92b0bc",
+    "common/company_types/00_companies_france.txt": "dd14c8acb0db050a9e019fb946527e511cd4b038764af4cee90f57f7513d8c7f",
+    "common/company_types/00_companies_germany.txt": "4c102d2eace3f421989d05314f099860554aa34868a46ca35c83b8831729371e",
+    "common/company_types/00_companies_great_britain.txt": "811e14577f6ed871c3c78d27712e3f23f3b06d62b3717a8dca9d161a12f40ae2",
+    "common/company_types/00_companies_ip2.txt": "7c2ff68098dc2f0885d091046a715e96c29be692d092ae8aa39e3322bb0570e6",
+    "common/company_types/00_companies_ip3.txt": "e688d789baa1f568a288109addfaa72a6a63f964b6653a04aa8a06a5d0a65a4e",
+    "common/company_types/00_companies_ip4.txt": "934fe18a13505639eaf14a10fa15728e4e51c7c2632af4ac1e136e101581ce37",
+    "common/company_types/00_companies_ip5.txt": "e404db663e68c8361ba7471e0ebe8f204ddb133c49d7d8df4ecaebebf0e0819d",
+    "common/company_types/00_companies_italy.txt": "94816adf2a2a27b529638a1e6a7463d35cd11f7f6ebd8b526ea09bde5ecc18d7",
+    "common/company_types/00_companies_japan.txt": "a41fbadb8648c6674a73cab2c8a28d7350536048c28a2b59e78e0299c22b2f59",
+    "common/company_types/00_companies_mp1.txt": "533e84f1abf86213cd78b4f503f5200431715942f41a3029d1793c7d9950c9c2",
+    "common/company_types/00_companies_russia.txt": "d3d6ccb1cf4898c72439b12846391837bd664f22340ab8821c961427dc55b142",
+    "common/company_types/00_companies_soi.txt": "444525738d878a89c816d1dd12cf0431770fe486dc56a7d6b6091906b123d0b3",
+    "common/company_types/00_companies_totally_normal.txt": "1a79e1682343c1df8d69e42d48575ee80b553cb587a9b23c2847c5e5e257d80e",
+    "common/company_types/00_companies_usa.txt": "89dac3525f4f67b5130c29b28fcb502915b5d3e471c62bfee1496d2f489f7ba9",
+    "common/company_types/99_basic_companies.txt": "5d26de2e95a3631bb3c8dcaac03f839d60dbc8269badd7e3e036cce9e20b9809"
+  },
+  "reviewed_chain": [
+    "CCompanyType RTTI selects the parser at +0x598. The ai_will_do atom 0x29df selects trigger interface +0x320 and storage +0x318. The ai_weight atom 0x53ce selects numeric member +0x390.",
+    "The wrapper calls eligibility at 0x14164e818 before scoring at 0x14164e836 with the same Country context. The definition supplies expression storage.",
+    "The current selection call at 0x14165e5a8 writes the score to [rsp+0x30]. The signed less-or-equal jump at 0x14165e5b3 skips a zero or negative score."
+  ],
+  "limits": [
+    "No named company scope is authorized.",
+    "No company charter or construction-target scope is authorized.",
+    "No runtime execution or successful engine loading is claimed."
+  ],
+  "observations": [
+    {
+      "label": "company parser RTTI",
+      "va": "0x144cc1308",
+      "rva": "0x4cc1308",
+      "file_offset": "0x4cc0308",
+      "size": 24,
+      "sha256": "2c2fa1ce8f57649c6a100838e3671aeb55a572aa3e88b7f1b943a988ad4b6b73"
+    },
+    {
+      "label": "company type name",
+      "va": "0x1456b7580",
+      "rva": "0x56b7580",
+      "file_offset": "0x56b5980",
+      "size": 18,
+      "sha256": "2412f3ddba25669daf4ebe947fc7ad20606bf5a61f16aeffcd6c06697f0bd493"
+    },
+    {
+      "label": "company parser vtable",
+      "va": "0x1447882b0",
+      "rva": "0x47882b0",
+      "file_offset": "0x47872b0",
+      "size": 48,
+      "sha256": "c1e8451d557cd7d096709903cbc91325a2e58f7948ddd9463346a34b61a6e980"
+    },
+    {
+      "label": "company constructor",
+      "va": "0x141754f60",
+      "rva": "0x1754f60",
+      "file_offset": "0x1754360",
+      "size": 917,
+      "sha256": "456d95c5e2a3c7619383442bc6c70deae904b5ecd997022375c33e1232a2fb19"
+    },
+    {
+      "label": "company field parser thunk",
+      "va": "0x140849c28",
+      "rva": "0x849c28",
+      "file_offset": "0x849028",
+      "size": 12,
+      "sha256": "c886ce19622d64edfbd3c7953ac146fa08a026350b5619b471922963bf838747"
+    },
+    {
+      "label": "company field parser",
+      "va": "0x141755340",
+      "rva": "0x1755340",
+      "file_offset": "0x1754740",
+      "size": 1690,
+      "sha256": "7e619b216a6ded0e321ff321e9c4bee5223dd16908859bebe62407835be7c418"
+    },
+    {
+      "label": "company eligibility evaluator",
+      "va": "0x141757260",
+      "rva": "0x1757260",
+      "file_offset": "0x1756660",
+      "size": 399,
+      "sha256": "e0e9af0a711208191300fdc33062f9231abdc9933f34259ff7529df79b9d38ee"
+    },
+    {
+      "label": "company numeric evaluator and missing-expression default",
+      "va": "0x1417573f0",
+      "rva": "0x17573f0",
+      "file_offset": "0x17567f0",
+      "size": 417,
+      "sha256": "1846f6bb0ffd03b5a38bfa774a00db05be5f06218613de1665ed4afd4ac9645a"
+    },
+    {
+      "label": "actual company scoring wrapper",
+      "va": "0x14164e7d0",
+      "rva": "0x164e7d0",
+      "file_offset": "0x164dbd0",
+      "size": 112,
+      "sha256": "20fd1f8746dcf73e01395eda7dea11e6b2e9a8564eb614dcc7e9544a5015df9b"
+    },
+    {
+      "label": "company AI selection country lookup and positive-score guard",
+      "va": "0x14165e380",
+      "rva": "0x165e380",
+      "file_offset": "0x165d780",
+      "size": 1862,
+      "sha256": "2a58879b342567fecca37401ec166ef31466eaae416440ffb9ad4505d014fda3"
+    },
+    {
+      "label": "Country scoped object type name",
+      "va": "0x14580e368",
+      "rva": "0x580e368",
+      "file_offset": "0x580c768",
+      "size": 43,
+      "sha256": "5898b2dfc1e4a4c4bc5f801ba471fd1077fc4656813e4ea62f2b64e871e8d27f"
+    },
+    {
+      "label": "Country scoped object RTTI",
+      "va": "0x144cf1728",
+      "rva": "0x4cf1728",
+      "file_offset": "0x4cf0728",
+      "size": 24,
+      "sha256": "a56cb265df9941ff3861ff271e8723b0c65ed00c2be103a8ce28b57cbe38d8a4"
+    },
+    {
+      "label": "Country scoped object vtable",
+      "va": "0x1447dd328",
+      "rva": "0x47dd328",
+      "file_offset": "0x47dc328",
+      "size": 56,
+      "sha256": "c5692cf648a5c9106129f20ca46af6826233aaeadff7d79c183832ef648fb3bf"
+    },
+    {
+      "label": "Country scope tag getter",
+      "va": "0x1417b6650",
+      "rva": "0x17b6650",
+      "file_offset": "0x17b5a50",
+      "size": 6,
+      "sha256": "21faa16607cb70438711aab3fa582829af50aa15d5946524996fc7aa8a8e4e6d"
+    },
+    {
+      "label": "CCountry checked lookup",
+      "va": "0x1407322c0",
+      "rva": "0x7322c0",
+      "file_offset": "0x7316c0",
+      "size": 178,
+      "sha256": "40c94efa569d3c43ace0f80b5ff3ea8d5a913a86ae5737d03bdedfcbe8b27b78"
+    },
+    {
+      "label": "CCountry lookup type name",
+      "va": "0x14546a4b8",
+      "rva": "0x546a4b8",
+      "file_offset": "0x54688b8",
+      "size": 15,
+      "sha256": "1025ac96a4a1b9f703088dae45f2a0868f4caac1aaf7cc2b224f6662ae519c16"
+    },
+    {
+      "label": "ai_will_do atom id and string pointer",
+      "va": "0x1449a0d80",
+      "rva": "0x49a0d80",
+      "file_offset": "0x499fd80",
+      "size": 16,
+      "sha256": "6f174eb7f2ce00d57c158df8f0fa48edc8fac1d002d2b18bb3f89f4b6f2ac173"
+    },
+    {
+      "label": "ai_will_do NUL literal",
+      "va": "0x144966b90",
+      "rva": "0x4966b90",
+      "file_offset": "0x4965b90",
+      "size": 11,
+      "sha256": "4a12060b9594d06c66bf90975f4d20fa83f83825f7a9370d6b7e9cd5e9b96fd8"
+    },
+    {
+      "label": "ai_weight atom id and string pointer",
+      "va": "0x1449ae2b0",
+      "rva": "0x49ae2b0",
+      "file_offset": "0x49ad2b0",
+      "size": 16,
+      "sha256": "2a4a379966c9055f562f92dc13d835c367ce4352648efeeb43dd68ff88ce1b9f"
+    },
+    {
+      "label": "ai_weight NUL literal",
+      "va": "0x1449775b0",
+      "rva": "0x49775b0",
+      "file_offset": "0x49765b0",
+      "size": 10,
+      "sha256": "d5a73d678401ef883db36e3c23d5e1ff66bbc270c1f5fc2a0c19c3336b22eb46"
+    }
+  ]
+}

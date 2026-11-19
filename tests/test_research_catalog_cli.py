@@ -5,11 +5,13 @@ import hashlib
 import json
 import os
 import sqlite3
+import struct
 import subprocess
 import sys
 import zipfile
 from contextlib import closing
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
@@ -17,8 +19,13 @@ from types import SimpleNamespace
 import pytest
 from typer.testing import CliRunner, Result
 
-from pdx import cli, config, research_output, version_contracts
-from pdx.capability_catalog import indexed_lines, indexed_parsed_file, structured_json_source
+from pdx import cli, config, research_catalog, research_output, version_contracts
+from pdx.capability_catalog import (
+    OccurrenceWriter,
+    indexed_lines,
+    indexed_parsed_file,
+    structured_json_source,
+)
 from pdx.committed_raw import open_committed_capture
 from pdx.information_catalog import _build_from_raw
 from pdx.input_contracts import (
@@ -47,6 +54,15 @@ _IDENTITY_SOURCE = {
 }
 _EXTERNAL_REF = "identity-sources/steam-appmanifest.acf"
 _FORMATS = tuple(PDX_RESOURCE_CATEGORIES)
+_STRATEGY_ANCHOR = "game/common/ai_strategies/00_default_strategy.txt"
+
+
+def _graphics_resource(suffix: str) -> str:
+    if suffix == ".skin":
+        return "game/dlc/sample/gfx/skins/sample.skin"
+    if suffix == ".terrain":
+        return "game/gfx/map/terrain/sample.terrain"
+    return f"game/gfx/sample{suffix}"
 
 
 @pytest.fixture(autouse=True)
@@ -78,6 +94,7 @@ def _committed_fixture(
     *,
     version: str = version_contracts.CURRENT_VERSION,
     drift: bool = False,
+    extra_sources: dict[str, bytes] | None = None,
 ) -> tuple[Path, Path, str, int]:
     installation = tmp_path / "installation"
     store = tmp_path / "raw"
@@ -100,7 +117,15 @@ def _committed_fixture(
         "game/common/example/score.txt": b"# lookup\nentry = { value = score }",
         "game/documents.zip": _zip_sample(),
     }
-    sources.update({f"game/gfx/sample{ext}": b"resource = { setting = yes }" for ext in _FORMATS})
+    sources.update(
+        {
+            _graphics_resource(ext): b"resource = { setting = yes }"
+            if ext not in {".skin", ".terrain"}
+            else b"setting = yes"
+            for ext in _FORMATS
+        }
+    )
+    sources.update(extra_sources or {})
     if drift:
         sources["caligula_rev.txt"] = b"another-build"
 
@@ -244,6 +269,209 @@ def test_research_options_require_complete_group(option: str, tmp_path: Path) ->
     assert "同时提供" in result.output
 
 
+def test_analyze_research_uses_committed_denominator_and_reports_formats(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _root, raw, epoch, count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            "game/dlc/sample/gfx/skins/one.skin": b"folder = shape",
+            "game/dlc/sample/gfx/skins/two.skin": b"shape = {",
+        },
+    )
+    monkeypatch.setattr(config, "GAME", tmp_path / "absent-game")
+    output = tmp_path / "analysis"
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "analyze",
+            "--raw-root",
+            str(raw),
+            "--epoch",
+            epoch,
+            "--output-dir",
+            str(output),
+            "--no-mods",
+            "--quiet",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    catalog = json.loads((output / "information-catalog.json").read_bytes())["分层目录"]
+    formats = catalog["coverage_by_format"]
+    assert sum(row["sources"] for row in formats) == count
+    skins = next(row for row in formats if row["suffix"] == ".skin")
+    assert skins == {
+        "category": "asset_entity_dna",
+        "suffix": ".skin",
+        "sources": 3,
+        "bytes": 36,
+        "decode_status": {"complete": 3},
+        "parse_status": {"complete": 2, "partial": 1},
+    }
+    assert catalog["coverage"][-1]["denominator_status"] == "unknown"
+
+
+def test_analyze_research_refuses_to_skip_writing(capture, tmp_path: Path) -> None:
+    _root, raw, epoch, _count = capture
+    output = tmp_path / "analysis"
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "analyze",
+            "--raw-root",
+            str(raw),
+            "--epoch",
+            epoch,
+            "--output-dir",
+            str(output),
+            "--no-write",
+        ],
+    )
+    assert result.exit_code == 2
+    assert "--no-write" in result.output
+    assert not output.exists()
+
+
+@pytest.fixture
+def live_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    root = tmp_path / "game-installation"
+    version = version_contracts.CURRENT_VERSION
+    sources = {
+        **_IDENTITY_SOURCE,
+        "launcher/launcher-settings.json": json.dumps(
+            {"gameId": "victoria3", "rawVersion": version, "version": version}
+        ).encode(),
+        "game/common/ample/sample.txt": b'sample_key = { key = "synthetic_value_do_not_index" }',
+        "game/config.json": b'{"key":"synthetic_value_do_not_index"}',
+        "game/docs/example.md": b"synthetic_value_do_not_index",
+        _STRATEGY_ANCHOR: b"locked_default_strategy = {}",
+    }
+    for name, data in sources.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    monkeypatch.setattr(config, "ROOT", root)
+    monkeypatch.setitem(
+        version_contracts.VERSION_SPECS,
+        version,
+        replace(
+            version_contracts.contract(version),
+            default_strategy_sha256=_sha(sources[_STRATEGY_ANCHOR]),
+        ),
+    )
+    return root
+
+
+def test_analyze_installation_binds_full_denominator_and_publishes_only_locators(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    catalog = json.loads(data)["分层目录"]
+    assert all(row["raw"] is None for row in catalog["input_inventory"]["records"])
+    assert {row["path"] for row in catalog["dispositions"]} == {
+        path.relative_to(live_installation).as_posix()
+        for path in live_installation.rglob("*")
+        if path.is_file()
+    }
+    assert b"synthetic_value_do_not_index" not in data
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute("SELECT count(scalar) FROM occurrences").fetchone() == (0,)
+        assert database.execute(
+            "SELECT line FROM occurrences WHERE key='sample_key'"
+        ).fetchone() == (1,)
+    assert b"synthetic_value_do_not_index" not in (output / "occurrences.sqlite").read_bytes()
+    assert catalog["coverage"][0]["layer"] == "source_bytes"
+    assert catalog["coverage"][-1]["denominator_status"] == "unknown"
+
+
+def test_analyze_installation_refuses_drift_after_indexing(
+    tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    publish = OccurrenceWriter.publish
+
+    def publish_then_edit(writer):
+        index = publish(writer)
+        (live_installation / "game/common/ample/sample.txt").write_bytes(b"sample_key = fresh")
+        return index
+
+    monkeypatch.setattr(OccurrenceWriter, "publish", publish_then_edit)
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 1, result.output
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("changed", [None, b"drift = {}"])
+def test_analyze_installation_requires_locked_default_strategy(
+    tmp_path: Path, live_installation: Path, changed: bytes | None
+) -> None:
+    anchor = live_installation / _STRATEGY_ANCHOR
+    if changed is None:
+        anchor.unlink()
+    else:
+        anchor.write_bytes(changed)
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 1, result.output
+    assert "00_default_strategy.txt" in "".join(result.output.splitlines())
+    assert not output.exists()
+
+
+def test_analyze_installation_records_final_verification_after_indexing(
+    tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    times = tuple(
+        datetime.fromisoformat(f"2026-11-19T00:00:0{second}+00:00") for second in range(3)
+    )
+    events: list[str] = []
+    inventory_installation = research_catalog.inventory_installation
+
+    def read_clock(_time_zone):
+        instant = times[sum(event == "clock" for event in events)]
+        events.append("clock")
+        return instant
+
+    def record_scan(*args, **kwargs):
+        result = inventory_installation(*args, **kwargs)
+        events.append("scan")
+        return result
+
+    monkeypatch.setattr(research_catalog, "datetime", SimpleNamespace(now=read_clock))
+    monkeypatch.setattr(research_catalog, "inventory_installation", record_scan)
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    layer = json.loads(data)["分层目录"]
+    marker = json.loads((output / "COMPLETE.json").read_bytes())
+    assert events == ["clock", "scan", "clock", "scan", "clock"]
+    check = layer["installation_verification"]
+    assert check["input_identity_capture_check_scope"] == "initial_inventory"
+    assert layer["input_identity"]["end"]["checked_at"] == times[1].isoformat()
+    assert check["final_inventory"]["checked_at"] == times[2].isoformat()
+    assert check["final_inventory"]["file_set_sha256"] == marker["file_set_sha256"]
+    assert marker["files"]["information-catalog.json"] == _sha(data)
+
+
+def test_analyze_installation_records_parser_locations_without_source_value(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    path = "game/common/ample/malformed.txt"
+    (live_installation / path).write_bytes(b"\nblock = { x = secret_synthetic_string\n")
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    dispos = json.loads(data)["分层目录"]["dispositions"]
+    row = next(row for row in dispos if row["path"] == path)
+    assert row["parse_status"] == "partial"
+    assert "unclosed_block:2:9" in row["diagnostics"]
+    assert b"secret_synthetic_string" not in data
+
+
 def test_committed_research_preserves_denominator_without_local_state_values(
     capture: tuple[Path, Path, str, int], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -319,7 +547,7 @@ def test_formats_diagnostics_and_locators_use_the_same_committed_denominator(
     rows = {row.path: row for row in layer.dispositions}
     assert layer.index.file_count == len(rows) == count
     for extension in _FORMATS:
-        source = f"game/gfx/sample{extension}"
+        source = _graphics_resource(extension)
         assert rows[source].category == PDX_RESOURCE_CATEGORIES[extension]
         assert rows[source].parse_status == "complete"
         assert layer.index.find(source=source, key="setting")[0].line == 1
@@ -344,6 +572,302 @@ def test_formats_diagnostics_and_locators_use_the_same_committed_denominator(
             "# original document",
             "line 2",
         ]
+
+
+def test_map_table_preserves_order_empty_cells_and_physical_source_lines(tmp_path: Path) -> None:
+    table = "game/map_data/adjacencies.csv"
+    _root, raw, epoch, count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            table: b'\xef\xbb\xbfFrom;To;Comment\r\nx;y;"first;line\r\nsecond"\r\ny;;\r\n'
+        },
+    )
+    output = tmp_path / "research-output"
+    result = _invoke(raw, epoch, output)
+    assert result.exit_code == 0, result.output
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute("SELECT count(*) FROM sources").fetchone()[0] == count
+        assert database.execute(
+            "SELECT parse_status FROM sources WHERE path=?", (table,)
+        ).fetchone() == ("complete",)
+        assert database.execute(
+            "SELECT kind, line FROM occurrences WHERE source=? AND parent_id IS NULL ORDER BY line",
+            (table,),
+        ).fetchall() == [("csv_header", 1), ("csv_row", 2), ("csv_row", 4)]
+        assert database.execute(
+            """SELECT c.key, c.scalar, p.line FROM occurrences c
+            JOIN occurrences p ON p.id=c.parent_id WHERE c.source=? AND p.kind='csv_row'
+            ORDER BY p.line, c.address""",
+            (table,),
+        ).fetchall() == [
+            ("From", "x", 2),
+            ("To", "y", 2),
+            ("Comment", "first;line\r\nsecond", 2),
+            ("From", "y", 4),
+            ("To", "", 4),
+            ("Comment", "", 4),
+        ]
+
+
+def test_map_table_reports_lexical_and_width_gaps(tmp_path: Path) -> None:
+    table = "game/map_data/adjacencies.csv"
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path, extra_sources={table: b'From;To\nx;y;extra\nz;"open\n'}
+    )
+    output = tmp_path / "research-output"
+    result = _invoke(raw, epoch, output)
+    assert result.exit_code == 0, result.output
+    catalog = json.loads((output / "information-catalog.json").read_bytes())["分层目录"]
+    disposition = next(row for row in catalog["dispositions"] if row["path"] == table)
+    assert disposition["parse_status"] == "partial"
+    assert disposition["semantic_status"] == "unknown"
+    assert any("csv_row_width:2:" in value for value in disposition["diagnostics"])
+    assert any("csv_syntax:3:" in value for value in disposition["diagnostics"])
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute(
+            "SELECT scalar FROM occurrences WHERE source=? AND kind='csv_cell' AND line=2 ORDER BY address",
+            (table,),
+        ).fetchall() == [("x",), ("y",), ("extra",)]
+
+
+@pytest.mark.parametrize(
+    ("body", "message", "recovered"),
+    [
+        (b"From,To\nx,y\n", "csv_header_fields", "x,y"),
+        (b"From;To;To\nx;y;z\n", "csv_duplicate_header", "z"),
+        (b"From;To;\nx;y;z\n", "csv_empty_header", "z"),
+        (b"From;To\nx;\x00y\n", "csv_nul:2:", "\x00y"),
+        (b'From;To\nx;"bad"z\ny;ok\n', "csv_syntax:2:", "ok"),
+    ],
+)
+def test_map_table_retains_recoverable_cells_when_reporting_format_gaps(
+    tmp_path: Path, body: bytes, message: str, recovered: str
+) -> None:
+    table = "game/map_data/adjacencies.csv"
+    _root, raw, epoch, _count = _committed_fixture(tmp_path, extra_sources={table: body})
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    row = next(row for row in layer.dispositions if row.path == table)
+    assert row.parse_status == "partial"
+    assert any(value.startswith(message) for value in row.diagnostics)
+    assert any(hit.kind == "csv_cell" for hit in layer.index.find(source=table, scalar=recovered))
+
+
+def test_graphics_flat_formats_reject_loose_nodes_and_unverified_locations(tmp_path: Path) -> None:
+    skin = _graphics_resource(".skin")
+    terrain = _graphics_resource(".terrain")
+    outside = "other/sample.skin"
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            skin: b"folder = shape orphan",
+            terrain: b"detail_scale = 1 { nested = yes }",
+            outside: b"name = standalone",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    rows = {row.path: row for row in layer.dispositions}
+    assert rows[skin].parse_status == rows[terrain].parse_status == "partial"
+    assert layer.index.find(source=skin, key="folder")[0].parse_status == "partial"
+    assert rows[outside].category == "unknown"
+    assert layer.index.find(source=outside) == ()
+
+
+def test_graphics_resources_distinguish_pdx_json_source_and_binary(tmp_path: Path) -> None:
+    skin, terrain, curves, metadata, shader, mesh, animation = (
+        _graphics_resource(suffix)
+        for suffix in (".skin", ".terrain", ".curves", ".meta", ".fxh", ".mesh", ".anim")
+    )
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            skin: b"folder = sample",
+            terrain: b"detail_scale = 1",
+            curves: b"{ type = linear }",
+            metadata: b'{"input_needs": ["one", "two"]}',
+            shader: b'Includes = { "shared.fxh" }\n[[float f() { return a + 1; }]]',
+            mesh: b"@@b@!\x08pdxasseti\x02\x00\x00\x00\x01\x00\x00\x00",
+            animation: b"\x00\xff",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    rows = {row.path: row for row in layer.dispositions}
+    for source, key in ((skin, "folder"), (terrain, "detail_scale"), (curves, "type")):
+        assert rows[source].parse_status == "complete"
+        assert layer.index.find(source=source, key=key)[0].line == 1
+    document = structured_json_source(layer, metadata)
+    assert len(document.members((), "input_needs")) == 1
+    assert rows[shader].decode_status == "complete"
+    assert rows[shader].parse_status == "not_attempted"
+    shader_hit = layer.index.search_text("return a", source=shader)[0]
+    assert (shader_hit.kind, shader_hit.line) == ("source_line", 2)
+    for source in (mesh, animation):
+        assert rows[source].category == "asset_entity_dna"
+        assert rows[source].parse_status == "not_attempted"
+        assert rows[source].semantic_status == "unknown"
+        assert layer.index.find(source=source) == ()
+
+
+def test_research_detects_known_developer_sources_without_generalizing_suffixes(
+    tmp_path: Path,
+) -> None:
+    docs = "jomini/common/script_values/_script_values.info"
+    body = "game/gfx/models/portraits/male_body/male_body"
+    tool = "game/script.py"
+    other = "other/unknown.info"
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            docs: b"First line\nAn explanation with braces { here.",
+            body: b"mesh = { name = sample }",
+            tool: b'raise RuntimeError("would fail if executed")\n',
+            other: b"unknown content",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    rows = {row.path: row for row in layer.dispositions}
+    assert rows[docs].category == "documentation"
+    assert rows[docs].parse_status == "not_applicable"
+    assert layer.index.search_text("An explanation", source=docs)[0].line == 2
+    assert rows[body].category == "asset_entity_dna"
+    assert rows[body].parse_status == "complete"
+    assert layer.index.find(source=body, key="name")[0].line == 1
+    assert rows[tool].category == "tooling_source"
+    assert rows[tool].parse_status == "complete"
+    assert layer.index.search_text("raise RuntimeError", source=tool)[0].line == 1
+    assert rows[other].disposition == "unresolved"
+
+
+def test_analyze_installation_indexes_developer_xml_and_text_by_path(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    source = "binaries/victoria3.exe.manifest"
+    malformed = "binaries/victoria3_win_console.exe.manifest"
+    unsafe = "binaries/D3D12MemAlloc.natvis"
+    anchor = "game/game_flow_graphs.anchor"
+    notes = "game/gfx/cursors/.XnViewSort"
+    old_asset = "game/dlc/dlc014_ip3/gfx/map/city_data/city_centerpiece/balkan_centerpieces_old"
+    other = "game/unrecognized.manifest"
+    for path, content in {
+        source: b'<assembly xmlns="urn:schemas-microsoft-com:asm.v1">\n'
+        b'  <assemblyIdentity name="private_synthetic_manifest_value"/>\n</assembly>',
+        malformed: b'<assembly xmlns="urn:schemas-microsoft-com:asm.v1"><incomplete>',
+        unsafe: b"<!DOCTYPE AutoVisualizer><AutoVisualizer/>",
+        anchor: b"../unfollowed_editor_reference\n",
+        notes: b"private_synthetic_sort_value\n",
+        old_asset: b"# obsolete asset notes\n",
+        other: b"<assembly/>",
+    }.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    rows = {row["path"]: row for row in json.loads(data)["分层目录"]["dispositions"]}
+
+    assert rows[source]["category"] == "structured_configuration"
+    assert (rows[source]["decode_status"], rows[source]["parse_status"]) == ("complete", "complete")
+    assert rows[malformed]["parse_status"] == "failed"
+    assert rows[malformed]["diagnostics"][0].startswith("developer_xml_syntax_failed:")
+    assert rows[unsafe]["parse_status"] == "failed"
+    assert rows[unsafe]["diagnostics"] == ["developer_xml_doctype_refused"]
+    assert rows[other]["disposition"] == "unresolved"
+    for path in (anchor, notes, old_asset):
+        assert rows[path]["disposition"] == "research_only"
+        assert rows[path]["decode_status"] == "complete"
+    assert rows[anchor]["parse_status"] == "not_attempted"
+    assert rows[old_asset]["parse_status"] == "not_applicable"
+    assert all(rows[path]["semantic_status"] == "unknown" for path in (source, anchor, old_asset))
+
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute(
+            "SELECT line, scalar FROM occurrences WHERE source=? AND key=?",
+            (source, "urn:schemas-microsoft-com:asm.v1 assemblyIdentity"),
+        ).fetchone() == (2, None)
+        for path, kind in (
+            (anchor, "source_line"),
+            (notes, "source_line"),
+            (old_asset, "document_line"),
+        ):
+            assert database.execute(
+                "SELECT kind, line, scalar FROM occurrences WHERE source=?", (path,)
+            ).fetchall() == [(kind, 1, None)]
+        assert database.execute(
+            "SELECT count(*) FROM occurrences WHERE source IN (?, ?, ?)", (malformed, unsafe, other)
+        ).fetchone() == (0,)
+    assert b"private_synthetic_manifest_value" not in data
+    assert b"private_synthetic_sort_value" not in data
+
+
+def test_binary_headers_record_observed_metadata_and_leave_payload_unparsed(tmp_path: Path) -> None:
+    texture = "game/gfx/synthetic.dds"
+    truncated = "game/gfx/truncated.dds"
+    mesh = "game/gfx/shape.mesh"
+    animation = "game/gfx/action.anim"
+    header = bytearray(128)
+    struct.pack_into("<4s7I", header, 0, b"DDS ", 124, 0x2100F, 64, 128, 512, 0, 5)
+    struct.pack_into("<II4s", header, 76, 32, 4, b"DXT1")
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            texture: bytes(header),
+            truncated: b"DDS ",
+            mesh: b"@@b@!\x08pdxasseti\x02\x00\x00\x00\x01\x00\x00\x00",
+            animation: b"not a binary header",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    for source in (texture, truncated, mesh, animation):
+        info = layer.index.source_metadata(source)
+        assert info["disposition"]["parse_status"] == "not_attempted"
+        assert info["disposition"]["semantic_status"] == "unknown"
+    metadata = layer.index.source_metadata(texture)["binary_header"]
+    assert (metadata["status"], metadata["width"], metadata["height"], metadata["fourcc"]) == (
+        "observed",
+        128,
+        64,
+        "DXT1",
+    )
+    assert layer.index.source_metadata(truncated)["binary_header"]["status"] == "truncated"
+    assert layer.index.source_metadata(mesh)["binary_header"]["status"] == "observed"
+    assert layer.index.source_metadata(animation)["binary_header"]["status"] == "signature_mismatch"
 
 
 def test_research_refuses_tampered_external_identity_object(
@@ -432,7 +956,10 @@ def test_research_rejects_wrong_or_noncommitted_epoch(
 
 @pytest.mark.parametrize(
     ("version", "drift", "message"),
-    [("1.15.0", False, "当前仅维护 1.15.1"), ("1.15.1", True, "caligula_rev.txt")],
+    [
+        ("1.15.0", False, f"当前仅维护 {version_contracts.CURRENT_VERSION}"),
+        (version_contracts.CURRENT_VERSION, True, "caligula_rev.txt"),
+    ],
 )
 def test_research_rejects_unreviewed_captured_installation(
     tmp_path: Path, version: str, drift: bool, message: str

@@ -12,7 +12,7 @@ from typing import NamedTuple
 
 import pytest
 
-from pdx import config, version_contracts
+from pdx import config, law_opportunities, version_contracts
 from pdx import native_authority_capture as capture
 from pdx import technology_opportunities as technology
 from pdx.situated import (
@@ -25,12 +25,19 @@ from pdx.situated import (
 
 pytestmark = pytest.mark.unit
 
-KINDS = ("parameters", "retentions-native-subset", "compatibility", "technology-catalog")
+KINDS = (
+    "parameters",
+    "retentions-native-subset",
+    "compatibility",
+    "technology-catalog",
+    "law-catalog",
+)
 STRATEGY = "common/ai_strategies/00_default_strategy.txt"
 TECHNOLOGY = "common/technology/technologies/30_society.txt"
+LAW = "common/laws/test_laws.txt"
 
 
-def test_module_cli_help_exposes_four_real_candidates_without_requiring_installation():
+def test_module_cli_help_exposes_real_candidates_without_requiring_installation():
     result = subprocess.run(
         [sys.executable, "-B", "-X", "utf8", "-m", "pdx.native_authority_capture", "--help"],
         capture_output=True,
@@ -66,7 +73,7 @@ def sandbox(tmp_path, monkeypatch):
 
     def verify(root):
         assert root == installation
-        assert version_contracts.active_version() == "1.15.1"
+        assert version_contracts.active_version() == version_contracts.CURRENT_VERSION
         verified.append(root)
         return {"runtime": "unknown"}
 
@@ -80,7 +87,7 @@ def sandbox(tmp_path, monkeypatch):
 def _argv(installation, kind, output):
     return [
         "--profile",
-        "1.15.1",
+        version_contracts.CURRENT_VERSION,
         "--installation",
         str(installation),
         "--kind",
@@ -103,7 +110,7 @@ def test_cli_requires_every_selection_even_when_environment_has_current_profile(
     assert not sandbox.candidate_root.exists()
 
 
-@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.2"])
+@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.1", "1.15.3"])
 def test_cli_rejects_noncurrent_explicit_profile_before_reads_or_writes(sandbox, profile):
     _repo, installation, verified, _candidate_root = sandbox
     args = _argv(installation, "parameters", sandbox.candidate_root / "capture/parameters.json")
@@ -115,7 +122,7 @@ def test_cli_rejects_noncurrent_explicit_profile_before_reads_or_writes(sandbox,
     assert not sandbox.candidate_root.exists()
 
 
-@pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "unknown"])
+@pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "1.15.1", "unknown"])
 def test_cli_rejects_stale_environment_for_explicit_current_capture(
     sandbox, monkeypatch, capsys, environment
 ):
@@ -157,17 +164,16 @@ def native_inputs(sandbox, monkeypatch):
         ),
         "common/script_values/war_support_values.txt": "war_support = { value = 1 }\n",
         TECHNOLOGY: "banking = { era = era_1 category = society ai_weight = { value = 1 } }\n",
+        LAW: "law_test = { ai_enact_weight_modifier = { value = 1 } }\n",
     }
     for source, text in inputs.items():
         path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
-    baseline_root = repo / "research/vanilla-ai/1.15.1"
-    baseline_root.mkdir(parents=True)
-    for source in (STRATEGY, "common/script_values/war_support_values.txt"):
-        (baseline_root / Path(source).name).write_text(inputs[source], encoding="utf-8")
     monkeypatch.setattr(
-        version_contracts, "research_path", lambda _category, name: baseline_root / name
+        version_contracts,
+        "read_default_strategy",
+        lambda root: (root / STRATEGY).read_text(encoding="utf-8-sig"),
     )
     monkeypatch.setattr(
         vanilla_inventory, "_PARAMETER_EVIDENCE_HASHES", {STRATEGY: "historical-hash-unused"}
@@ -196,14 +202,21 @@ def native_inputs(sandbox, monkeypatch):
     monkeypatch.setattr(migration_baseline, "_VERSION_115_SOURCE", historical)
     catalog = technology.inventory({TECHNOLOGY: inputs[TECHNOLOGY]}, {"banking": TECHNOLOGY})
     catalog["legacy_rules"] = []
-    template = repo / "technology_historical.toml"
+    template = repo / "technology_current.toml"
     template.write_text(
         "schema = 1\ncatalog_json = '''"
         + json.dumps(catalog)
         + "'''\n\n[parameters]\nreviewed = 7\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr(technology, "PARAMETERS_115", template)
+    monkeypatch.setattr(technology, "PARAMETERS_CURRENT", template)
+    monkeypatch.setattr(
+        law_opportunities,
+        "_load_policy",
+        lambda: {"sources": {LAW: ""}, "candidates": {"law_test": LAW}},
+    )
+    monkeypatch.setattr(law_opportunities, "native_retained_candidates", dict)
+    monkeypatch.setattr(law_opportunities, "_verify_mechanisms", lambda _roots: None)
     return inputs
 
 
@@ -212,7 +225,7 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
     sandbox, native_inputs, capsys, kind
 ):
     _repo, installation, verified, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     with version_contracts.select_version("1.15.0"):
         assert capture.main(_argv(installation, kind, output)) == 0
@@ -232,9 +245,16 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
             json.loads(data["catalog_json"])["sources"][TECHNOLOGY]
             == hashlib.sha256(native_inputs[TECHNOLOGY].encode()).hexdigest()
         )
+    elif kind == "law-catalog":
+        data = tomllib.loads(output.read_text(encoding="utf-8"))
+        assert data == {
+            "schema": 1,
+            "game_version": version_contracts.CURRENT_VERSION,
+            "sources": {LAW: hashlib.sha256(native_inputs[LAW].encode()).hexdigest()},
+        }
     else:
         data = json.loads(output.read_bytes())
-        assert data["version"] == "1.15.1"
+        assert data["version"] == version_contracts.CURRENT_VERSION
         assert data["runtime"] == "unknown"
         if kind == "parameters":
             assert data["sources"] == {
@@ -244,6 +264,8 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
             assert data["capture_scope"] == "native_retention_subset_not_full_migration_contract"
             assert set(data["retentions"]) == {"retained"}
             assert "school_policy_migration" not in data
+            digest = hashlib.sha256(native_inputs[STRATEGY].encode()).hexdigest()
+            assert data["source_sha256"] == data["source_normalized_sha256"] == digest
         else:
             assert set(data["fields"]) == compatibility_115.FIELDS
             assert set(data["hooks"]) == compatibility_115.HOOKS
@@ -252,7 +274,7 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
 @pytest.mark.parametrize("kind", KINDS)
 def test_candidate_is_idempotent_but_never_replaces_different_bytes(sandbox, native_inputs, kind):
     _repo, installation, _, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     args = _argv(installation, kind, output)
     assert capture.main(args) == 0
@@ -326,17 +348,18 @@ def test_cli_rejects_output_inside_installation_even_under_tools_out(sandbox):
 @pytest.mark.parametrize("kind", KINDS)
 def test_direct_capture_rejects_historical_context_before_identity_or_output(sandbox, kind):
     _repo, installation, verified, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "candidate" / (kind + suffix)
     functions = {
         "parameters": capture.capture_parameters,
         "retentions-native-subset": capture.capture_retentions,
         "compatibility": capture.capture_compatibility,
-        "technology-catalog": technology.write_catalog_1151,
+        "technology-catalog": technology.write_catalog,
+        "law-catalog": law_opportunities.write_catalog,
     }
     with (
         version_contracts.select_version("1.15.0"),
-        pytest.raises(ValueError, match="只接受当前"),
+        pytest.raises(ValueError, match="当前仅维护"),
     ):
         functions[kind](installation / "game", output=output)
     assert verified == []
@@ -346,7 +369,7 @@ def test_direct_capture_rejects_historical_context_before_identity_or_output(san
 @pytest.mark.parametrize("kind", KINDS)
 def test_installation_drift_fails_before_any_candidate_is_created(sandbox, monkeypatch, kind):
     repo, installation, _, _candidate_root = sandbox
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     # Use the real verifier against an incomplete installation, not a fake success.
     monkeypatch.undo()
@@ -410,7 +433,8 @@ def test_source_redirect_fails_even_after_installation_identity_check(
     sandbox, native_inputs, monkeypatch, kind
 ):
     repo, installation, verified, _candidate_root = sandbox
-    source = installation / "game" / (TECHNOLOGY if kind == "technology-catalog" else STRATEGY)
+    sources = {"technology-catalog": TECHNOLOGY, "law-catalog": LAW}
+    source = installation / "game" / sources.get(kind, STRATEGY)
     actual_resolve = Path.resolve
 
     def redirected_resolve(path, *args, **kwargs):
@@ -419,7 +443,7 @@ def test_source_redirect_fails_even_after_installation_identity_check(
         return actual_resolve(path, *args, **kwargs)
 
     monkeypatch.setattr(Path, "resolve", redirected_resolve)
-    suffix = ".toml" if kind == "technology-catalog" else ".json"
+    suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
     assert capture.main(_argv(installation, kind, output)) == 1
     assert verified == [installation]

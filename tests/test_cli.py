@@ -34,19 +34,17 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 import sys
 import sysconfig
 from pathlib import Path
 
 import pytest
-from conftest import NEEDS_GAME
+from conftest import NEEDS_GAME, configure_current_identity
 from typer.testing import CliRunner
 
-from pdx import cli, config, verify
-from pdx.situated import r2_reader_authority
-from pdx.version_contracts import CURRENT_VERSION
+from pdx import cli, config, decisions, verify
+from pdx.version_contracts import CURRENT_VERSION, ENVIRONMENT_VARIABLE
 
 pytestmark = pytest.mark.cli
 
@@ -156,6 +154,39 @@ def test_verify_json_落盘(tmp_path) -> None:
     assert summary["失败"] == 0
 
 
+@pytest.mark.parametrize(
+    "profile", [[], ["--profile", CURRENT_VERSION]], ids=["default", "explicit"]
+)
+def test_decision_audit_offline_uses_current_source_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, profile: list[str]
+) -> None:
+    missing = tmp_path / "missing-installation"
+    monkeypatch.delenv(ENVIRONMENT_VARIABLE, raising=False)
+    monkeypatch.setattr(config, "ROOT", missing)
+    monkeypatch.setattr(config, "GAME", missing / "game")
+
+    def need_no_native_input(*_args, **_kwargs):
+        pytest.fail("离线决策审计读取了生产原件")
+
+    monkeypatch.setattr(decisions, "baseline_path", need_no_native_input)
+    monkeypatch.setattr(decisions, "load_situated_model", need_no_native_input)
+    output = tmp_path / "audit.json"
+    result = _invoke("decision-audit", "--offline", "--output", str(output), *profile)
+    assert result.exit_code == 0, result.output
+    report = json.loads(output.read_bytes())
+    assert report["supported_game_version"] == CURRENT_VERSION
+    assert report["evidence"] == "static_source_contract_only"
+    assert report["behavior_verified"] is False
+    network = report["action_network"]
+    assert network["native_inputs"] == "declared_write_points_and_digests"
+    assert network["runtime"] == "unknown"
+    assert {program["consumer"] for program in network["programs"]} == {
+        "a0-econ-road",
+        "a0-pol-schools",
+        "a0-dip-relations",
+    }
+
+
 # ── crosscheck（引擎交叉验证）────────────────────────────────
 #: 夹具里的 Workshop mod 目录名。**故意不用本机那个 ``3007678964``**（Ultra Historical
 #: Warfare 的覆盖版）：断言里出现这个名字，就说明读数来自夹具、不是宿主机装了什么。
@@ -214,12 +245,7 @@ def _crosscheck_fixture(
     """
     root = base / "game"
     (root / "gui").mkdir(parents=True)
-    shutil.copytree(
-        r2_reader_authority.frozen_root(CURRENT_VERSION),
-        base,
-        dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("game", r2_reader_authority.MANIFEST_NAME),
-    )
+    configure_current_identity(base, monkeypatch)
     (root / "gui" / "panel.gui").write_text(vanilla, encoding="utf-8")
 
     workshop = base / "workshop"
@@ -233,7 +259,6 @@ def _crosscheck_fixture(
     (userdir / "mod").mkdir()  # 本地 mod：空的
 
     monkeypatch.setattr(config, "GAME", root)
-    monkeypatch.setattr(config, "ROOT", base)
     monkeypatch.setattr(config, "WORKSHOP", workshop)
     monkeypatch.setattr(config, "LOCAL_MODS", userdir / "mod")
     monkeypatch.setattr(config, "USERDIR", userdir)
@@ -600,6 +625,40 @@ def test_check_outputs_缺产物时返回2(tmp_path, monkeypatch) -> None:
     r = _invoke("check-outputs")
     assert r.exit_code == 2, r.output
     assert "缺少产物" in r.output or "analyze" in r.output
+
+
+@pytest.mark.parametrize("missing_field", [False, True], ids=["matching", "missing-field"])
+def test_check_outputs_核验落盘产物(tmp_path, monkeypatch, missing_field) -> None:
+    game = {"common": {"laws": {"顶层条目数": 4}}}
+    mods = {"概览": {"mod 数": 2}}
+    if not missing_field:
+        mods["概览"]["文件总计"] = 7
+    for attr, name, product in (
+        ("OUT_GAME", "游戏本体.json", game),
+        ("OUT_MODS", "mod.json", mods),
+        ("OUT_CROSS", "交叉.json", {}),
+    ):
+        root = tmp_path / attr
+        root.mkdir()
+        (root / name).write_text(json.dumps(product, ensure_ascii=False), encoding="utf-8")
+        monkeypatch.setattr(config, attr, root)
+    claims = [
+        verify.Claim("law.entries", "fixture.md", "原版法律条目数", "dir_entries", "laws", 4),
+        verify.Claim("mod.total", "fixture.md", "已分析 Mod 数", "mods_total", "", 2),
+        verify.Claim("mod.files", "fixture.md", "已分析 Mod 文件数", "mods_files", "", 7),
+        verify.Claim("env.branch", "fixture.md", "原版分支", "game_version_field", "", "release"),
+    ]
+    monkeypatch.setattr(verify, "CLAIMS", claims)
+
+    r = _invoke("check-outputs")
+    assert "产物可核验 3 / 4 条断言" in r.output
+    if missing_field:
+        assert r.exit_code == 1, r.output
+        assert "不一致 1 条" in r.output
+        assert "产物中该字段缺失" in r.output
+    else:
+        assert r.exit_code == 0, r.output
+        assert "产物与断言注册表完全一致" in r.output
 
 
 @NEEDS_GAME

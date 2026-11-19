@@ -12,12 +12,13 @@ import sqlite3
 import tempfile
 from collections import Counter
 from contextlib import contextmanager, suppress
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .committed_raw import read_source, validate_inputs, verified_catalog_inputs
 from .input_contracts import UnknownFrontier, dumps_contract
+from .input_inventory import STRUCTURED_JSON_SUFFIXES
 from .model import Assignment, Block, ParsedFile, Scalar
 from .parser import PREFIXES
 from .references import SCRIPT_SYMBOL_CATEGORIES, script_symbol_references
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from .input_contracts import InputIdentity, InputInventory, InventoryRecord, ParseStatus
+    from .structured_csv import CsvResult
 
 
 INDEX_SCHEMA = 3
@@ -58,10 +60,12 @@ def implementation_digest() -> str:
         "capability_catalog.py",
         "committed_raw.py",
         "references.py",
+        "structured_csv.py",
         "structured_json.py",
         "research_catalog.py",
         "research_output.py",
         "native_rename.py",
+        "binary_headers.py",
     )
     return hashlib.sha256(
         _json([(name, _digest(root / name)) for name in names]).encode()
@@ -286,8 +290,16 @@ class OccurrenceIndex:
 class OccurrenceWriter:
     """一次构建事务；异常或中断不发布候选，也不覆盖上一次索引。"""
 
-    def __init__(self, path: Path, identity: InputIdentity, inventory: InputInventory) -> None:
+    def __init__(
+        self,
+        path: Path,
+        identity: InputIdentity,
+        inventory: InputInventory,
+        *,
+        metadata_only: bool = False,
+    ) -> None:
         self.path, self.identity, self.inventory = path, identity, inventory
+        self.metadata_only = metadata_only
         self.implementation = implementation_digest()
         self.count = self.files = 0
         self.connection: sqlite3.Connection
@@ -406,7 +418,7 @@ class OccurrenceWriter:
                 kind,
                 key,
                 operator,
-                scalar,
+                None if self.metadata_only else scalar,
                 int(quoted),
                 line,
                 parse_status,
@@ -418,7 +430,14 @@ class OccurrenceWriter:
         return occurrence_id
 
     def add_structured_json(self, record: InventoryRecord, result: JsonResult) -> None:
-        self.add_details(record.path, structured_json=_json_details(result))
+        if not self.metadata_only:
+            self.add_details(record.path, structured_json=_json_details(result))
+        else:
+            document = result.document
+            self.add_details(
+                record.path,
+                structured_json_node_count=0 if document is None else len(document.nodes),
+            )
         if result.document is not None:
             assert record.sha256 is not None
             assert result.root_line is not None
@@ -438,31 +457,70 @@ class OccurrenceWriter:
                 value_line=result.root_line,
             )
 
+    def add_map_table(self, record: InventoryRecord, result: CsvResult) -> None:
+        assert record.sha256 is not None
+        header = result.rows[0].cells if result.rows else ()
+        self.add_details(
+            record.path,
+            structured_csv={
+                "delimiter": ";",
+                "columns": len(header),
+                "header": () if self.metadata_only else header,
+                "rows_read": len(result.rows),
+            },
+        )
+        for ordinal, row in enumerate(result.rows):
+            path = ("row", str(ordinal))
+            parent = self.add(
+                record.path,
+                record.sha256,
+                address=(ordinal,),
+                path=path,
+                kind="csv_row" if ordinal else "csv_header",
+                key=None,
+                operator=None,
+                scalar=None,
+                quoted=False,
+                line=row.line,
+                parse_status=result.parse_status,
+                value_kind="csv_row",
+            )
+            for column, cell in enumerate(row.cells):
+                key = header[column] if column < len(header) else None
+                self.add(
+                    record.path,
+                    record.sha256,
+                    address=(ordinal, column),
+                    path=(*path, str(column)),
+                    kind="csv_cell",
+                    key=key,
+                    operator=None,
+                    scalar=cell,
+                    quoted=False,
+                    line=row.line,
+                    parse_status=result.parse_status,
+                    parent=parent,
+                    value_kind="csv_text",
+                )
+
     def add_parsed(self, record: InventoryRecord, parsed: ParsedFile) -> None:
         assert record.sha256 is not None
-        row = self.connection.execute(
-            "SELECT details FROM source_details WHERE source=?", (record.path,)
-        ).fetchone()
-        details = json.loads(row[0])
-        details["parser"] = {
-            name: getattr(parsed, name)
-            for name in (
-                "encoding",
-                "had_bom",
-                "errors",
-                "max_depth",
-                "unconsumed_tokens",
-                "diagnostics",
-                "token_count",
-                "decoding_error",
-            )
-        }
-        # 输入 reader 已逐字节验证这份 record，原样保留来源而不再读取原件。
-        details["parser"]["raw_sha256"] = record.sha256
-        details["parser"]["raw_size"] = record.size
-        self.connection.execute(
-            "UPDATE source_details SET details=? WHERE source=?", (_json(details), record.path)
-        )
+        if not self.metadata_only:
+            details = {
+                name: getattr(parsed, name)
+                for name in (
+                    "encoding",
+                    "had_bom",
+                    "errors",
+                    "max_depth",
+                    "unconsumed_tokens",
+                    "diagnostics",
+                    "token_count",
+                    "decoding_error",
+                )
+            }
+            details.update(raw_sha256=record.sha256, raw_size=record.size)
+            self.add_details(record.path, parser=details)
         # 显式栈保留匿名块、裸标量与重复赋值；不让目录遍历比共享 parser 更易栈溢出。
         stack: list[
             tuple[Assignment | Block | Scalar, tuple[int, ...], tuple[str, ...], str | None]
@@ -613,6 +671,16 @@ class LayerCoverage:
         return self.known / self.total
 
 
+@dataclass(slots=True)
+class _FormatCoverage:
+    category: str
+    suffix: str
+    sources: int = 0
+    bytes: int = 0
+    decode_status: Counter[str] = field(default_factory=Counter)
+    parse_status: Counter[str] = field(default_factory=Counter)
+
+
 @dataclass(frozen=True, slots=True)
 class LayeredCatalog:
     identity: InputIdentity
@@ -620,7 +688,7 @@ class LayeredCatalog:
     dispositions: tuple[FileDisposition, ...]
     index: OccurrenceIndex
     frontier: tuple[UnknownFrontier, ...]
-    raw_root: Path
+    raw_root: Path | None
 
     def __post_init__(self) -> None:
         validate_inputs(self.identity, self.inventory)
@@ -634,9 +702,15 @@ class LayeredCatalog:
             len(self.inventory.records),
         ):
             raise ValueError("分层目录与索引 epoch/分母不相同")
-        with verified_catalog_inputs(self.identity, self.inventory, raw_root=self.raw_root):
-            if any(row.raw_status != "proven" for row in self.dispositions):
-                raise ValueError("完整 raw 分母存在未验证的逐项处置")
+        if self.raw_root is None:
+            if any(record.raw is not None for record in self.inventory.records) or any(
+                row.raw_status != "observed" for row in self.dispositions
+            ):
+                raise ValueError("现场来源目录必须逐项核验且不声明原件保全")
+        else:
+            with verified_catalog_inputs(self.identity, self.inventory, raw_root=self.raw_root):
+                if any(row.raw_status != "proven" for row in self.dispositions):
+                    raise ValueError("完整 raw 分母存在未验证的逐项处置")
 
     @property
     def epoch_id(self) -> str:
@@ -645,7 +719,7 @@ class LayeredCatalog:
     @property
     def coverage(self) -> tuple[LayerCoverage, ...]:
         total = len(self.dispositions)
-        raw = sum(row.raw_status == "proven" for row in self.dispositions)
+        raw = sum(row.raw_status in {"proven", "observed"} for row in self.dispositions)
         parsed = sum(row.parse_status == "complete" for row in self.dispositions)
         na = sum(row.parse_status == "not_applicable" for row in self.dispositions)
         denominator = (
@@ -660,7 +734,14 @@ class LayeredCatalog:
             else "partial"
         )
         return (
-            LayerCoverage("raw", unit, total, raw, total - raw, denominator_status=denominator),
+            LayerCoverage(
+                "raw" if self.raw_root is not None else "source_bytes",
+                unit,
+                total,
+                raw,
+                total - raw,
+                denominator_status=denominator,
+            ),
             LayerCoverage(
                 "decode_parse",
                 unit,
@@ -682,6 +763,29 @@ class LayeredCatalog:
             LayerCoverage("production", "consumer_closures", 0, 0, 0, denominator_status="unknown"),
         )
 
+    def _coverage_by_format(self) -> list[dict[str, object]]:
+        formats: dict[tuple[str, str], _FormatCoverage] = {}
+        for record, disposition in zip(self.inventory.records, self.dispositions, strict=True):
+            key = (disposition.category, Path(record.path).suffix.casefold())
+            row = formats.get(key)
+            if row is None:
+                row = formats[key] = _FormatCoverage(*key)
+            row.sources += 1
+            row.bytes += record.size or 0
+            row.decode_status[disposition.decode_status] += 1
+            row.parse_status[disposition.parse_status] += 1
+        return [
+            {
+                "category": row.category,
+                "suffix": row.suffix,
+                "sources": row.sources,
+                "bytes": row.bytes,
+                "decode_status": dict(row.decode_status),
+                "parse_status": dict(row.parse_status),
+            }
+            for _, row in sorted(formats.items())
+        ]
+
     def to_dict(self) -> dict[str, object]:
         counts = Counter(row.disposition for row in self.dispositions)
         return {
@@ -690,9 +794,13 @@ class LayeredCatalog:
             "input_identity": json.loads(dumps_contract(self.identity)),
             "input_inventory": json.loads(dumps_contract(self.inventory)),
             "coverage": [{**asdict(row), "ratio": row.ratio} for row in self.coverage],
+            "coverage_by_format": self._coverage_by_format(),
             "disposition_counts": dict(sorted(counts.items())),
             "dispositions": [asdict(row) for row in self.dispositions],
             "index": self.index.to_dict(),
+            "index_projection": "full_private_index"
+            if self.raw_root is not None
+            else "source_locators",
             "unknown_frontier": [asdict(row) for row in self.frontier],
         }
 
@@ -722,6 +830,8 @@ def structured_json_source(layered: LayeredCatalog, source: str) -> JsonDocument
     Leaf coordinates remain unknown. A source-level root is indexed in SQLite;
     individual fields are queried through the validated typed document, not SQL.
     """
+    if layered.raw_root is None:
+        raise ValueError("现场索引只含来源定位，JSON 原文需从已核验安装读取")
     validate_inputs(layered.identity, layered.inventory)
     try:
         ordinal = next(
@@ -731,8 +841,8 @@ def structured_json_source(layered: LayeredCatalog, source: str) -> JsonDocument
         raise KeyError(source) from None
     record, disposition = layered.inventory.records[ordinal], layered.dispositions[ordinal]
     if (
-        record.category != "structured_configuration"
-        or Path(source).suffix.casefold() != ".json"
+        disposition.category != "structured_configuration"
+        or Path(source).suffix.casefold() not in STRUCTURED_JSON_SUFFIXES
         or disposition.path != source
         or disposition.parse_status != "complete"
         or disposition.decode_status != "complete"

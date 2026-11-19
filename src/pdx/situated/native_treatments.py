@@ -607,7 +607,7 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
             return "dynamic_numeric"
     elif family == "decrees":
         if (
-            version_contracts.active_version() == "1.15.1"
+            version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
             and surface.source == "common/decrees/00_decree.txt"
             and surface.definition == "decree_road_maintenance"
             and field == "ai_weight"
@@ -2146,12 +2146,7 @@ class _Dependencies:
             if evidence.get("schema") != 1 or (
                 version_contracts.is_115()
                 and (
-                    hashlib.sha256(evidence_raw).hexdigest()
-                    != (
-                        country_interfaces.EVIDENCE_1151_SHA256
-                        if version_contracts.active_version() == "1.15.1"
-                        else country_interfaces.EVIDENCE_115_SHA256
-                    )
+                    hashlib.sha256(evidence_raw).hexdigest() != country_interfaces.evidence_sha256()
                     or evidence.get("baseline_version") != version_contracts.active_version()
                 )
             ):
@@ -2977,7 +2972,7 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
             return {}
         native_stances = {stance.good: stance for stance in plan.native_stances}
         if native_stances:
-            reviewed = supply_program.native_stances_1151()
+            reviewed = supply_program.native_stances()
             if (
                 plan.native_stances != reviewed
                 or (set(before.value.keys()) & set(plan.goods)) != native_stances.keys()
@@ -3018,12 +3013,13 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
                 start, end = supply_program.block_span(
                     native_text, ("ai_strategy_default", "goods_stances", good)
                 )
-                if len(original) != 1 or native_text[start:end] != stance.body:
+                native_body = native_text[start:end]
+                if len(original) != 1 or not stance.matches(native_body):
                     return {}
                 trigger_start, trigger_end = supply_program.block_span(
-                    stance.body, ("<anonymous>", "trigger")
+                    native_body, ("<anonymous>", "trigger")
                 )
-                native_trigger = stance.body[trigger_start:trigger_end]
+                native_trigger = native_body[trigger_start:trigger_end]
                 # Independent expected shape: exactly one value, complete native
                 # trigger as the first AND, and the independently scoped scarcity
                 # trigger as the second. Do not call the production compose/render.

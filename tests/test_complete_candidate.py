@@ -57,7 +57,9 @@ def test_外部配置超大整数按配置错误拒绝(tmp_path):
         decisions.load_extensions(source)
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0", "1.15.1"])
+@pytest.mark.parametrize(
+    "version", ["1.14.5", "1.15.0", "1.15.1", version_contracts.CURRENT_VERSION]
+)
 def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, version):
     from typer.testing import CliRunner
 
@@ -66,41 +68,31 @@ def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, ve
     calls = []
 
     def capture(destination, **_kwargs):
-        calls.append(("historical", destination))
+        calls.append(destination)
         return destination
 
-    def capture_profile(destination, profile, *, configuration=None):
-        from pdx.situated.profile_configuration import ProfileConfiguration
+    def capture_profile(*_args, **_kwargs):
+        pytest.fail("打包命令进入了历史候选分支")
 
-        assert profile.game_version == "1.15.0"
-        assert configuration == ProfileConfiguration()
-        calls.append(("current", destination))
-        return destination
+    # Exercise the real version selection and declaration without a live install.
+    from pdx.situated import production_profile
 
-    # This is a dispatch unit witness. Live installation validation is covered
-    # independently by test_profile_live_boundary; resolve frozen identity here.
-    from pdx import cli
-
-    resolve = cli._production_profile
-
-    def frozen_profile(name):
-        version_contracts.require_current(name)
-        return resolve(name, offline=True)
-
-    monkeypatch.setattr(cli, "_production_profile", frozen_profile)
+    checked: list[production_profile.ProductionProfile] = []
+    monkeypatch.setattr(distribution, "check_profile_installation", checked.append)
     monkeypatch.setattr(distribution, "package", capture)
     monkeypatch.setattr(distribution, "profile_package", capture_profile)
     runner = CliRunner()
     output = tmp_path / "release.zip"
     with version_contracts.select_version(version):
         result = runner.invoke(app, ["package", "--profile", version, "--output", str(output)])
-    if version == "1.15.1":
+    if version == version_contracts.CURRENT_VERSION:
         assert result.exit_code == 0, result.output
-        assert calls == [("historical", output)]
+        assert calls == [output]
+        assert checked == [production_profile.declared_profile()]
     else:
         assert result.exit_code == 1, result.output
         assert "合同版本" in result.output
-        assert calls == []
+        assert calls == checked == []
 
 
 @pytest.mark.parametrize(
@@ -130,9 +122,33 @@ def test_外部配置拒绝非有限越界和未知字段(tmp_path, mutation):
 
 
 @pytest.mark.integration
-def test_正式候选包含所有生产模块且不修改生成源():
-    baseline_before = decisions.BASELINE.read_bytes()
-    before = decisions.build()
+def test_正式候选包含所有生产模块且不修改生成源(tmp_path):
+    baseline = decisions.baseline_path()
+    baseline_before = baseline.read_bytes()
+    expected = {}
+    # Store the first build outside the repository so its large output can be
+    # released before constructing the release candidate and building again.
+    for index, (name, text) in enumerate(decisions.build().items()):
+        target = tmp_path / str(index)
+        target.write_text(text, encoding="utf-8", newline="")
+        expected[name] = target
+    del text
+
+    _assert_release_candidate_package()
+
+    rebuilt = decisions.build()
+    assert rebuilt.keys() == expected.keys()
+    for name, text in rebuilt.items():
+        # Compare the exact bytes without loading a second copy of each output.
+        with expected[name].open("rb") as source:
+            for start in range(0, len(text), 64 * 1024):
+                chunk = text[start : start + 64 * 1024].encode("utf-8")
+                assert source.read(len(chunk)) == chunk, name
+            assert not source.read(1), name
+    assert baseline.read_bytes() == baseline_before
+
+
+def _assert_release_candidate_package():
     policy, extra, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
     assert set(metadata["enabled_modules"]) == {
@@ -146,16 +162,13 @@ def test_正式候选包含所有生产模块且不修改生成源():
         "consumer_adapters",
         "country_state",
     }
-    assert metadata["status"] == (
-        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
-    )
+    assert metadata["status"] == "released"
+    assert metadata["supported_game_version"] == version_contracts.CURRENT_VERSION
     assert policy.aggression == 0
     assert extra.security_enabled
     assert extra.economy_enabled
     assert extra.diplomacy_enabled
     assert decisions.load_extensions(profile="release") == extra
-    assert decisions.build() == before
-    assert decisions.BASELINE.read_bytes() == baseline_before
     patched = files["common/ai_strategies/00_default_strategy.txt"]
     assert "# SITAI BEGIN " in patched
     assert "# SITAI END " in patched

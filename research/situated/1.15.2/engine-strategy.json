@@ -1,0 +1,3888 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "reviewed_chain": [
+    "Current CAIStrategy RTTI identifies parser subobject +0x20d8. Current literals, atoms and token dispatch establish the 33 parse receivers. The two jump index tables and their target arrays are read as PE data.",
+    "The typed CAIStrategyDataBase current registration and loader construct and append the strategy definition pointers. The selector applies possible before weight and keeps the native false and nonpositive paths.",
+    "Each wrapper preserves its exact member and typed Country or target context. The current native default and active call sites establish field-specific aggregation. The economic spending-balance caller retains its additive result after the surrounding native function changed.",
+    "Law, diplomatic play, State and StrategicRegion type identities come from current RTTI and virtual slots. Unprojected contexts retain their declared status.",
+    "Institution and stance sources were read from the current installation, whose hashes and definition identities are recorded."
+  ],
+  "script_hashes": {
+    "common/ai_strategies/00_default_strategy.txt": "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
+    "common/ai_strategies/01_admin_strategies.txt": "1ad973d0398acced05da72f6fe49e7b08d0a9c02f5406a694c69d789c4d6bffe",
+    "common/ai_strategies/02_diplomatic_strategies.txt": "59da0f8446088e090e426f75032b271af7624f02dc4b06a292bb7d8a44f0b9b9",
+    "common/ai_strategies/02_subject_diplomatic_strategies.txt": "ba259d0a320e3e27f7fa6a713e55adb18a715123d792217b080716d7d76299e7",
+    "common/ai_strategies/03_political_strategies.txt": "89b9878d2d8a7166549dcd62d6855de6a59eb6d4e4913823cc7a554f753dfab6"
+  },
+  "consumers": {
+    "weight": {
+      "actor_scope": "country",
+      "target_scope": "definition_only:ai_strategy",
+      "operation": "base_candidate_score",
+      "capability": "direct",
+      "unit": "candidate_score",
+      "consumer_va": "0x1416737f4",
+      "parser_va": "0x141847b40",
+      "member_offset": "0xb8"
+    },
+    "possible": {
+      "actor_scope": "country",
+      "target_scope": "definition_only:ai_strategy",
+      "operation": "eligibility",
+      "capability": "direct",
+      "unit": "predicate",
+      "consumer_va": "0x1416735eb",
+      "parser_va": "0x141847b21",
+      "member_offset": "0x40"
+    },
+    "wanted_army_size": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_army_size_target",
+      "capability": "direct",
+      "unit": "barracks_levels",
+      "consumer_va": "0x14184b0ed",
+      "parser_va": "0x1418486c7",
+      "member_offset": "0x1840"
+    },
+    "recklessness": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_strength_estimate_multiplier",
+      "capability": "direct",
+      "unit": "multiplier",
+      "consumer_va": "0x14184c11f",
+      "parser_va": "0x141848634",
+      "member_offset": "0x10c0"
+    },
+    "max_progressiveness": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "override_progressiveness_limit",
+      "capability": "direct",
+      "unit": "progressiveness",
+      "consumer_va": "0x14184dd0d",
+      "parser_va": "0x14184871b",
+      "member_offset": "0xa98"
+    },
+    "max_regressiveness": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "override_regressiveness_limit",
+      "capability": "direct",
+      "unit": "regressiveness",
+      "consumer_va": "0x14184de9d",
+      "parser_va": "0x141848730",
+      "member_offset": "0xb58"
+    },
+    "change_law_chance": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "first_nonzero_active_change_law_chance_else_default",
+      "capability": "direct",
+      "unit": "percentage_points",
+      "consumer_va": "0x14184d83d",
+      "parser_va": "0x141848745",
+      "member_offset": "0xc18"
+    },
+    "wargoal_maneuvers_fraction": {
+      "actor_scope": "country",
+      "target_scope": "scope:enemy_country=country",
+      "operation": "additive_maneuvers_fraction",
+      "capability": "direct",
+      "unit": "fraction",
+      "consumer_va": "0x14184e9ef",
+      "parser_va": "0x14184875a",
+      "member_offset": "0x798"
+    },
+    "obligation_value": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_obligation_valuation",
+      "capability": "direct",
+      "unit": "valuation",
+      "consumer_va": "0x14184c47f",
+      "parser_va": "0x141848649",
+      "member_offset": "0x1240"
+    },
+    "min_law_chance_to_pass": {
+      "actor_scope": "country",
+      "target_scope": "scope:law=law",
+      "operation": "override_pass_chance_threshold",
+      "capability": "direct",
+      "unit": "pass_chance",
+      "consumer_va": "0x14184db83",
+      "parser_va": "0x141848706",
+      "member_offset": "0x9d8"
+    },
+    "revolution_aversion": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "override_revolution_aversion",
+      "capability": "direct",
+      "unit": "daily_stop_tendency",
+      "consumer_va": "0x14184d9cd",
+      "parser_va": "0x1418486f1",
+      "member_offset": "0x918"
+    },
+    "subject_value": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_subject_valuation",
+      "capability": "direct",
+      "unit": "valuation",
+      "consumer_va": "0x14184c8ff",
+      "parser_va": "0x14184865e",
+      "member_offset": "0x1300"
+    },
+    "become_subject_value": {
+      "actor_scope": "country",
+      "target_scope": "scope:overlord=country",
+      "operation": "additive_subject_valuation",
+      "capability": "direct",
+      "unit": "valuation",
+      "consumer_va": "0x14184caaf",
+      "parser_va": "0x141848673",
+      "member_offset": "0x13c0"
+    },
+    "wanted_construction_output": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_construction_output_target",
+      "capability": "direct",
+      "unit": "construction_output",
+      "consumer_va": "0x14184d3e0",
+      "parser_va": "0x1418486b2",
+      "member_offset": "0x16c0"
+    },
+    "institution_scores": {
+      "actor_scope": "country",
+      "target_scope": "definition_only:institution_type",
+      "operation": "additive_score",
+      "capability": "direct",
+      "unit": "score",
+      "definition_key": "resolved institution definition pointer; not a named script scope",
+      "consumer_va": "0x14184b89a",
+      "parser_va": "0x141848620",
+      "member_offset": "0x3f0"
+    },
+    "wargoal_scores": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country;scope:target_state=state",
+      "operation": "additive_score",
+      "capability": "direct",
+      "unit": "score",
+      "child_projection": "exact enum child numeric body",
+      "consumer_va": "0x14184a74a",
+      "parser_va": "0x141848085",
+      "member_offset": "0x1d8"
+    },
+    "secret_goal_scores": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_score",
+      "capability": "direct",
+      "unit": "score",
+      "child_projection": "exact enum child.score only; trigger remains native filter",
+      "consumer_va": "0x14184a55d",
+      "parser_va": "0x1418482b3",
+      "member_offset": "0x2c0"
+    },
+    "wanted_navy_size": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_navy_size_target",
+      "capability": "direct",
+      "unit": "naval_administration_levels",
+      "consumer_va": "0x14162fd67",
+      "parser_va": "0x1418486dc",
+      "member_offset": "0x1a80"
+    },
+    "ship_construction_output_multiplier": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_ship_construction_output_multiplier",
+      "capability": "direct",
+      "unit": "multiplier",
+      "consumer_va": "0x14163048b",
+      "parser_va": "0x141848a28",
+      "member_offset": "0x1c00"
+    },
+    "aggression": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_aggression",
+      "capability": "direct",
+      "unit": "play_start_tendency",
+      "consumer_va": "0x14184c2cf",
+      "parser_va": "0x14184837c",
+      "member_offset": "0x1180"
+    },
+    "nationalization_desire": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_nationalization_desire",
+      "capability": "direct",
+      "unit": "desire",
+      "consumer_va": "0x14184ed2d",
+      "parser_va": "0x1418488bc",
+      "member_offset": "0xd98"
+    },
+    "max_active_stances": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_active_stance_limit",
+      "capability": "direct",
+      "unit": "count",
+      "consumer_va": "0x14184eebc",
+      "parser_va": "0x141848b8a",
+      "member_offset": "0x4b8"
+    },
+    "wanted_marines": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_marine_size_target",
+      "capability": "direct",
+      "unit": "barracks_levels",
+      "consumer_va": "0x14184b27d",
+      "parser_va": "0x1418489bf",
+      "member_offset": "0x1900"
+    },
+    "economic_vs_government_spending_balance": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_spending_balance",
+      "capability": "direct",
+      "unit": "debt_threshold_ratio",
+      "consumer_va": "0x14184d6ad",
+      "parser_va": "0x1418489aa",
+      "member_offset": "0x1780"
+    },
+    "target_marine_formation_size": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_marine_formation_size_target",
+      "capability": "direct",
+      "unit": "units_per_formation",
+      "consumer_va": "0x14184b40d",
+      "parser_va": "0x1418489d4",
+      "member_offset": "0x19c0"
+    },
+    "unacceptable_infamy_level": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "first_positive_infamy_limit_override",
+      "capability": "direct",
+      "unit": "infamy",
+      "consumer_va": "0x14184af5d",
+      "parser_va": "0x14184828f",
+      "member_offset": "0x1000"
+    },
+    "undesirable_infamy_level": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "first_positive_infamy_limit_override",
+      "capability": "direct",
+      "unit": "infamy",
+      "consumer_va": "0x14184adcd",
+      "parser_va": "0x1418482a1",
+      "member_offset": "0xf40"
+    },
+    "diplomatic_play_neutrality": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_positive_active_neutrality",
+      "capability": "direct",
+      "unit": "score",
+      "consumer_va": "0x14184e69c",
+      "parser_va": "0x141848688",
+      "member_offset": "0x628"
+    },
+    "diplomatic_play_boldness": {
+      "actor_scope": "country",
+      "target_scope": "scope:diplomatic_play=diplomatic_play",
+      "operation": "native_randomized_additive_boldness",
+      "capability": "direct",
+      "unit": "score",
+      "consumer_va": "0x14184e50a",
+      "parser_va": "0x14184869d",
+      "member_offset": "0x6e0"
+    },
+    "treaty_category_scores": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_treaty_category_score",
+      "capability": "direct",
+      "unit": "score",
+      "child_projection": "exact enum child numeric body",
+      "consumer_va": "0x14184a909",
+      "parser_va": "0x141847c0f",
+      "member_offset": "0x1f0"
+    },
+    "strategic_region_stance_type_scores": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_region=strategic_region;scope:region_score=scalar",
+      "operation": "additive_region_stance_score",
+      "capability": "direct",
+      "unit": "score",
+      "definition_key": "resolved strategic region stance definition pointer; not a named script scope",
+      "child_projection": "exact stance definition child numeric body",
+      "consumer_va": "0x14184f28a",
+      "parser_va": "0x1418488f0",
+      "member_offset": "0x490"
+    },
+    "wanted_num_supply_ships": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_supply_ship_count_target",
+      "capability": "direct",
+      "unit": "ships",
+      "consumer_va": "0x14162ffef",
+      "parser_va": "0x1418489e9",
+      "member_offset": "0x1b40"
+    },
+    "max_ship_design_complexity": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_ship_design_complexity_limit",
+      "capability": "direct",
+      "unit": "modification_levels",
+      "consumer_va": "0x14167cc2b",
+      "parser_va": "0x141848a13",
+      "member_offset": "0x1d80"
+    }
+  },
+  "rtti": {
+    "type_descriptor_va": "0x1456910b8",
+    "parser_col_va": "0x144cd8eb8",
+    "parser_vftable_va": "0x1447ac850",
+    "parser_subobject": "0x20d8",
+    "parser_thunk_va": "0x140849d30",
+    "parser_va": "0x141847900",
+    "constructor_va": "0x141846b10"
+  },
+  "scalar_dispatch": {
+    "weight": {
+      "atom": "0x14499be80",
+      "literal": "0x144961e38",
+      "token": "0x251",
+      "branch": "0x141847b40",
+      "member": "0xb8"
+    },
+    "possible": {
+      "atom": "0x1449966a0",
+      "literal": "0x14495b920",
+      "token": "0x520",
+      "branch": "0x141847abd",
+      "member": "0x40"
+    },
+    "wanted_army_size": {
+      "atom": "0x1449b6910",
+      "literal": "0x1449839f8",
+      "token": "0x5c56",
+      "branch": "0x1418486c7",
+      "member": "0x1840",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 110,
+        "target_index": 13
+      }
+    },
+    "recklessness": {
+      "atom": "0x1449b6630",
+      "literal": "0x144983870",
+      "token": "0x5c28",
+      "branch": "0x141848634",
+      "member": "0x10c0",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 64,
+        "target_index": 12
+      }
+    },
+    "max_progressiveness": {
+      "atom": "0x1449b63e0",
+      "literal": "0x1449828d0",
+      "token": "0x5c02",
+      "branch": "0x14184871b",
+      "member": "0xa98",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 26,
+        "target_index": 1
+      }
+    },
+    "max_regressiveness": {
+      "atom": "0x1449b63f0",
+      "literal": "0x144982850",
+      "token": "0x5c03",
+      "branch": "0x141848730",
+      "member": "0xb58",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 27,
+        "target_index": 2
+      }
+    },
+    "change_law_chance": {
+      "atom": "0x1449b6400",
+      "literal": "0x144982838",
+      "token": "0x5c04",
+      "branch": "0x141848745",
+      "member": "0xc18",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 28,
+        "target_index": 3
+      }
+    },
+    "wargoal_maneuvers_fraction": {
+      "atom": "0x1449b65a0",
+      "literal": "0x144983970",
+      "token": "0x5c1f",
+      "branch": "0x14184875a",
+      "member": "0x798",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 55,
+        "target_index": 8
+      }
+    },
+    "obligation_value": {
+      "atom": "0x1449b65b0",
+      "literal": "0x144983958",
+      "token": "0x5c20",
+      "branch": "0x141848649",
+      "member": "0x1240",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 56,
+        "target_index": 9
+      }
+    },
+    "min_law_chance_to_pass": {
+      "atom": "0x1449b65c0",
+      "literal": "0x1449838c0",
+      "token": "0x5c21",
+      "branch": "0x141848706",
+      "member": "0x9d8",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 57,
+        "target_index": 10
+      }
+    },
+    "revolution_aversion": {
+      "atom": "0x1449b65d0",
+      "literal": "0x1449838a8",
+      "token": "0x5c22",
+      "branch": "0x1418486f1",
+      "member": "0x918",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 58,
+        "target_index": 11
+      }
+    },
+    "subject_value": {
+      "atom": "0x1449b6d00",
+      "literal": "0x144983488",
+      "token": "0x5c95",
+      "branch": "0x14184865e",
+      "member": "0x1300",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 173,
+        "target_index": 15
+      }
+    },
+    "become_subject_value": {
+      "atom": "0x1449b6d10",
+      "literal": "0x1449834c8",
+      "token": "0x5c96",
+      "branch": "0x141848673",
+      "member": "0x13c0",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 174,
+        "target_index": 16
+      }
+    },
+    "wanted_construction_output": {
+      "atom": "0x1449b6d30",
+      "literal": "0x144983440",
+      "token": "0x5c98",
+      "branch": "0x1418486b2",
+      "member": "0x16c0",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 176,
+        "target_index": 17
+      }
+    },
+    "institution_scores": {
+      "atom": "0x1449b6450",
+      "literal": "0x144982820",
+      "token": "0x5c09",
+      "branch": "0x141848620",
+      "member": "0x3f0",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 33,
+        "target_index": 4
+      }
+    },
+    "wargoal_scores": {
+      "atom": "0x1449af880",
+      "literal": "0x144979be0",
+      "token": "0x5532",
+      "branch": "0x141848085",
+      "member": "0x1d8"
+    },
+    "secret_goal_scores": {
+      "atom": "0x1449af930",
+      "literal": "0x14497a108",
+      "token": "0x553d",
+      "branch": "0x1418482b3",
+      "member": "0x2c0"
+    },
+    "wanted_navy_size": {
+      "atom": "0x1449b6920",
+      "literal": "0x144983a50",
+      "token": "0x5c57",
+      "branch": "0x1418486dc",
+      "member": "0x1a80",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 111,
+        "target_index": 14
+      }
+    },
+    "ship_construction_output_multiplier": {
+      "atom": "0x1449bc3c0",
+      "literal": "0x14498ba88",
+      "token": "0x622a",
+      "branch": "0x141848a28",
+      "member": "0x1c00"
+    },
+    "aggression": {
+      "atom": "0x1449b3f90",
+      "literal": "0x14497fb20",
+      "token": "0x59a4",
+      "branch": "0x14184837c",
+      "member": "0x1180"
+    },
+    "nationalization_desire": {
+      "atom": "0x1449b8b90",
+      "literal": "0x144986c08",
+      "token": "0x5f2f",
+      "branch": "0x1418488bc",
+      "member": "0xd98"
+    },
+    "max_active_stances": {
+      "atom": "0x1449bc490",
+      "literal": "0x14498b8f8",
+      "token": "0x6237",
+      "branch": "0x141848b8a",
+      "member": "0x4b8"
+    },
+    "wanted_marines": {
+      "atom": "0x1449bc1e0",
+      "literal": "0x14498aa40",
+      "token": "0x620b",
+      "branch": "0x1418489bf",
+      "member": "0x1900",
+      "jump_table": {
+        "index_table": "0x141848dc4",
+        "target_table": "0x141848da4",
+        "table_index": 124,
+        "target_index": 3
+      }
+    },
+    "economic_vs_government_spending_balance": {
+      "atom": "0x1449bba20",
+      "literal": "0x144989ee8",
+      "token": "0x618f",
+      "branch": "0x1418489aa",
+      "member": "0x1780",
+      "jump_table": {
+        "index_table": "0x141848dc4",
+        "target_table": "0x141848da4",
+        "table_index": 0,
+        "target_index": 0
+      }
+    },
+    "target_marine_formation_size": {
+      "atom": "0x1449bc230",
+      "literal": "0x14498aa20",
+      "token": "0x6210",
+      "branch": "0x1418489d4",
+      "member": "0x19c0",
+      "jump_table": {
+        "index_table": "0x141848dc4",
+        "target_table": "0x141848da4",
+        "table_index": 129,
+        "target_index": 4
+      }
+    },
+    "unacceptable_infamy_level": {
+      "atom": "0x1449afd70",
+      "literal": "0x144979b18",
+      "token": "0x5581",
+      "branch": "0x14184828f",
+      "member": "0x1000"
+    },
+    "undesirable_infamy_level": {
+      "atom": "0x1449afd60",
+      "literal": "0x144979650",
+      "token": "0x5580",
+      "branch": "0x1418482a1",
+      "member": "0xf40"
+    },
+    "diplomatic_play_neutrality": {
+      "atom": "0x1449b6580",
+      "literal": "0x144983938",
+      "token": "0x5c1d",
+      "branch": "0x141848688",
+      "member": "0x628",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 53,
+        "target_index": 6
+      }
+    },
+    "diplomatic_play_boldness": {
+      "atom": "0x1449b6560",
+      "literal": "0x144982680",
+      "token": "0x5c1b",
+      "branch": "0x14184869d",
+      "member": "0x6e0",
+      "jump_table": {
+        "index_table": "0x141848cf0",
+        "target_table": "0x141848ca4",
+        "table_index": 51,
+        "target_index": 5
+      }
+    },
+    "treaty_category_scores": {
+      "atom": "0x1449aae20",
+      "literal": "0x1449731d0",
+      "token": "0x37d3",
+      "branch": "0x141847c0f",
+      "member": "0x1f0"
+    },
+    "strategic_region_stance_type_scores": {
+      "atom": "0x1449bac50",
+      "literal": "0x1449898e8",
+      "token": "0x60b0",
+      "branch": "0x1418488f0",
+      "member": "0x490"
+    },
+    "wanted_num_supply_ships": {
+      "atom": "0x1449bc3b0",
+      "literal": "0x14498bab0",
+      "token": "0x6229",
+      "branch": "0x1418489e9",
+      "member": "0x1b40",
+      "jump_table": {
+        "index_table": "0x141848dc4",
+        "target_table": "0x141848da4",
+        "table_index": 154,
+        "target_index": 6
+      }
+    },
+    "max_ship_design_complexity": {
+      "atom": "0x1449bc390",
+      "literal": "0x14498ba68",
+      "token": "0x6227",
+      "branch": "0x141848a13",
+      "member": "0x1d80",
+      "jump_table": {
+        "index_table": "0x141848dc4",
+        "target_table": "0x141848da4",
+        "table_index": 152,
+        "target_index": 5
+      }
+    }
+  },
+  "scope_key_registrations": {
+    "target_country": {
+      "literal_va": "0x1446b0670",
+      "registration_va": "0x1400128b0",
+      "global_va": "0x145ce3dc8"
+    },
+    "overlord": {
+      "literal_va": "0x1446b08f8",
+      "registration_va": "0x1400136f0",
+      "global_va": "0x145ce3ffc"
+    },
+    "enemy_country": {
+      "literal_va": "0x1446b09c0",
+      "registration_va": "0x140013d50",
+      "global_va": "0x145ce3b18"
+    },
+    "law": {
+      "literal_va": "0x1446a6a84",
+      "registration_va": "0x140014110",
+      "global_va": "0x145ce3b78"
+    },
+    "diplomatic_play": {
+      "literal_va": "0x1446a8750",
+      "registration_va": "0x140012490",
+      "global_va": "0x145ce3d28"
+    },
+    "target_state": {
+      "literal_va": "0x1446b0798",
+      "registration_va": "0x140012c70",
+      "global_va": "0x145ce3e44"
+    },
+    "target_region": {
+      "literal_va": "0x1446b0638",
+      "registration_va": "0x140012790",
+      "global_va": "0x145ce3990"
+    },
+    "region_score": {
+      "literal_va": "0x1446b0ee0",
+      "registration_va": "0x1400158b0",
+      "global_va": "0x145ce3c0c"
+    }
+  },
+  "strategy_score_keys": {
+    "wargoal_scores": [
+      "annex_country",
+      "ban_slavery",
+      "break_enforced_treaties",
+      "colonization_rights",
+      "conquer_state",
+      "contain_threat",
+      "demand_no_strait_closure",
+      "demand_no_tolls",
+      "demand_strait_access",
+      "demand_toll_exemption",
+      "enforce_treaty_article",
+      "force_nationalization",
+      "foreign_investment_rights",
+      "humiliation",
+      "increase_autonomy",
+      "independence",
+      "join_power_bloc",
+      "leave_power_bloc",
+      "liberate_country",
+      "liberate_subject",
+      "make_subject",
+      "open_market",
+      "reduce_autonomy",
+      "regime_change",
+      "release_as_subject",
+      "return_state",
+      "revoke_all_claims",
+      "revoke_claim",
+      "secession",
+      "take_treaty_port",
+      "transfer_subject",
+      "unification",
+      "unification_leadership",
+      "custom"
+    ],
+    "treaty_category_scores": [
+      "economy",
+      "trade",
+      "military",
+      "military_defense",
+      "ideology",
+      "expansion",
+      "power_bloc",
+      "other",
+      "none"
+    ],
+    "secret_goal_scores": [
+      "none",
+      "befriend",
+      "reconcile",
+      "protect",
+      "antagonize",
+      "conquer",
+      "dominate",
+      "comply",
+      "defy"
+    ]
+  },
+  "strategy_enum_atoms": {
+    "wargoal_scores": {
+      "annex_country": {
+        "token": "0x434b",
+        "atom_va": "0x1449abbb0",
+        "literal_va": "0x1449752f8"
+      },
+      "ban_slavery": {
+        "token": "0x5551",
+        "atom_va": "0x1449afa70",
+        "literal_va": "0x144979ef0"
+      },
+      "break_enforced_treaties": {
+        "token": "0x6266",
+        "atom_va": "0x1449bc740",
+        "literal_va": "0x14498bb48"
+      },
+      "colonization_rights": {
+        "token": "0x5c29",
+        "atom_va": "0x1449b6640",
+        "literal_va": "0x1449837e8"
+      },
+      "conquer_state": {
+        "token": "0x5421",
+        "atom_va": "0x1449ae7a0",
+        "literal_va": "0x144978a48"
+      },
+      "contain_threat": {
+        "token": "0x54d5",
+        "atom_va": "0x1449af2e0",
+        "literal_va": "0x144978d50"
+      },
+      "demand_no_strait_closure": {
+        "token": "0x6403",
+        "atom_va": "0x1449be0e0",
+        "literal_va": "0x14498dce8"
+      },
+      "demand_no_tolls": {
+        "token": "0x6402",
+        "atom_va": "0x1449be0d0",
+        "literal_va": "0x14498dd08"
+      },
+      "demand_strait_access": {
+        "token": "0x6400",
+        "atom_va": "0x1449be0b0",
+        "literal_va": "0x14498dd98"
+      },
+      "demand_toll_exemption": {
+        "token": "0x6401",
+        "atom_va": "0x1449be0c0",
+        "literal_va": "0x14498dd80"
+      },
+      "enforce_treaty_article": {
+        "token": "0x60dd",
+        "atom_va": "0x1449baf20",
+        "literal_va": "0x144989028"
+      },
+      "force_nationalization": {
+        "token": "0x5d20",
+        "atom_va": "0x1449b2be0",
+        "literal_va": "0x14497e070"
+      },
+      "foreign_investment_rights": {
+        "token": "0x33d8",
+        "atom_va": "0x1449aa0d0",
+        "literal_va": "0x144972c78"
+      },
+      "humiliation": {
+        "token": "0x554e",
+        "atom_va": "0x1449afa40",
+        "literal_va": "0x144979fa0"
+      },
+      "increase_autonomy": {
+        "token": "0x5c9d",
+        "atom_va": "0x1449b6d80",
+        "literal_va": "0x1447c32b0"
+      },
+      "independence": {
+        "token": "0x2c8d",
+        "atom_va": "0x1449a34b0",
+        "literal_va": "0x14496a3f0"
+      },
+      "join_power_bloc": {
+        "token": "0x5f2c",
+        "atom_va": "0x1449b8b60",
+        "literal_va": "0x14485d698"
+      },
+      "leave_power_bloc": {
+        "token": "0x5f43",
+        "atom_va": "0x1449b8cd0",
+        "literal_va": "0x1447ce670"
+      },
+      "liberate_country": {
+        "token": "0x2b38",
+        "atom_va": "0x1449a2170",
+        "literal_va": "0x144968ea0"
+      },
+      "liberate_subject": {
+        "token": "0x5438",
+        "atom_va": "0x1449ae910",
+        "literal_va": "0x144978898"
+      },
+      "make_subject": {
+        "token": "0x6268",
+        "atom_va": "0x1449bc760",
+        "literal_va": "0x14498bb78"
+      },
+      "open_market": {
+        "token": "0x2c18",
+        "atom_va": "0x1449a2e40",
+        "literal_va": "0x1449692d8"
+      },
+      "reduce_autonomy": {
+        "token": "0x5c9c",
+        "atom_va": "0x1449b6d70",
+        "literal_va": "0x1449833b8"
+      },
+      "regime_change": {
+        "token": "0x554d",
+        "atom_va": "0x1449afa30",
+        "literal_va": "0x1447c30c8"
+      },
+      "release_as_subject": {
+        "token": "0x6275",
+        "atom_va": "0x1449bc830",
+        "literal_va": "0x14498b418"
+      },
+      "return_state": {
+        "token": "0x54d3",
+        "atom_va": "0x1449af2c0",
+        "literal_va": "0x144979368"
+      },
+      "revoke_all_claims": {
+        "token": "0x5bf1",
+        "atom_va": "0x1449b6300",
+        "literal_va": "0x144982400"
+      },
+      "revoke_claim": {
+        "token": "0x54d6",
+        "atom_va": "0x1449af2f0",
+        "literal_va": "0x144978d40"
+      },
+      "secession": {
+        "token": "0x559e",
+        "atom_va": "0x1449aff30",
+        "literal_va": "0x144979930"
+      },
+      "take_treaty_port": {
+        "token": "0x5437",
+        "atom_va": "0x1449ae900",
+        "literal_va": "0x144978858"
+      },
+      "transfer_subject": {
+        "token": "0x54ed",
+        "atom_va": "0x1449af460",
+        "literal_va": "0x144978b18"
+      },
+      "unification": {
+        "token": "0x5447",
+        "atom_va": "0x1449aea00",
+        "literal_va": "0x144978130"
+      },
+      "unification_leadership": {
+        "token": "0x59c7",
+        "atom_va": "0x1449b4160",
+        "literal_va": "0x14497f280"
+      },
+      "custom": {
+        "token": "0x454",
+        "atom_va": "0x144996110",
+        "literal_va": "0x14495bea8"
+      }
+    },
+    "treaty_category_scores": {
+      "economy": {
+        "token": "0x2977",
+        "atom_va": "0x1449a0770",
+        "literal_va": "0x14476b798"
+      },
+      "trade": {
+        "token": "0x281b",
+        "atom_va": "0x14499f350",
+        "literal_va": "0x144842b48"
+      },
+      "military": {
+        "token": "0x2978",
+        "atom_va": "0x1449a0780",
+        "literal_va": "0x144829328"
+      },
+      "military_defense": {
+        "token": "0x37d0",
+        "atom_va": "0x1449aae00",
+        "literal_va": "0x144973258"
+      },
+      "ideology": {
+        "token": "0x2a0e",
+        "atom_va": "0x1449a1040",
+        "literal_va": "0x14480e7a0"
+      },
+      "expansion": {
+        "token": "0x37d1",
+        "atom_va": "0x1449aae10",
+        "literal_va": "0x1449731e8"
+      },
+      "power_bloc": {
+        "token": "0x5d14",
+        "atom_va": "0x1449b74e0",
+        "literal_va": "0x1446b0720"
+      },
+      "other": {
+        "token": "0x2973",
+        "atom_va": "0x1449a0730",
+        "literal_va": "0x1446a71d4"
+      },
+      "none": {
+        "token": "0x165",
+        "atom_va": "0x14499b050",
+        "literal_va": "0x1446a5d84"
+      }
+    },
+    "secret_goal_scores": {
+      "none": {
+        "token": "0x165",
+        "atom_va": "0x14499b050",
+        "literal_va": "0x1446a5d84"
+      },
+      "befriend": {
+        "token": "0x2cb3",
+        "atom_va": "0x1449a3710",
+        "literal_va": "0x144969c70"
+      },
+      "reconcile": {
+        "token": "0x553c",
+        "atom_va": "0x1449af920",
+        "literal_va": "0x14497a120"
+      },
+      "protect": {
+        "token": "0x2cb1",
+        "atom_va": "0x1449a36f0",
+        "literal_va": "0x144969cd8"
+      },
+      "antagonize": {
+        "token": "0x2cb2",
+        "atom_va": "0x1449a3700",
+        "literal_va": "0x144969c80"
+      },
+      "conquer": {
+        "token": "0x3009",
+        "atom_va": "0x1449a67a0",
+        "literal_va": "0x14496dcc8"
+      },
+      "dominate": {
+        "token": "0x5531",
+        "atom_va": "0x1449af870",
+        "literal_va": "0x144979c28"
+      },
+      "comply": {
+        "token": "0x5e35",
+        "atom_va": "0x1449b8570",
+        "literal_va": "0x144985478"
+      },
+      "defy": {
+        "token": "0x5e36",
+        "atom_va": "0x1449b8580",
+        "literal_va": "0x14498540c"
+      }
+    }
+  },
+  "institution_definition_sources": {
+    "common/institutions/00_institutions.txt": "9d3b8474e2e99a34cd23cc38343253b850d0b2991a0f9418c85577c68c8ece2b"
+  },
+  "stance_definition_sources": {
+    "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt": "add54c251b0fb2a37a6038b308ed9e67709d44f7ec0a5aac0bc03346afccb91d"
+  },
+  "native_unprojected_contexts": {
+    "wargoal_scores": {
+      "diplomatic_play": {
+        "status": "unprojected_unknown",
+        "scope_tag": "0x1c",
+        "key_va": "0x145ce3d28",
+        "registration_va": "0x14184a730",
+        "condition": "play id != -1",
+        "reader_authorization": false
+      }
+    }
+  },
+  "strategy_field_merges": {
+    "secret_goal_scores": {
+      "function": "0x1416293a0",
+      "default_call": "0x141629415",
+      "active_call": "0x141629455",
+      "operation": "additive_score",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "wargoal_scores": {
+      "function": "0x141634380",
+      "default_call": "0x1416344ad",
+      "active_call": "0x141634508",
+      "operation": "additive_score",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "treaty_category_scores": {
+      "function": "0x141618940",
+      "default_call": "0x1416189d4",
+      "active_call": "0x1416189fa",
+      "operation": "additive_treaty_category_score",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "undesirable_infamy_level": {
+      "function": "0x14162c500",
+      "default_call": "0x14162c585",
+      "active_call": "0x14162c5ae",
+      "operation": "first_positive_infamy_limit_override",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "unacceptable_infamy_level": {
+      "function": "0x14162c7c0",
+      "default_call": "0x14162c845",
+      "active_call": "0x14162c86e",
+      "operation": "first_positive_infamy_limit_override",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "wanted_army_size": {
+      "function": "0x14162efe0",
+      "default_call": "0x14162f064",
+      "active_call": "0x14162f09e",
+      "operation": "additive_army_size_target",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "wanted_marines": {
+      "function": "0x14162f130",
+      "default_call": "0x14162f1b4",
+      "active_call": "0x14162f1ee",
+      "operation": "additive_marine_size_target",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "target_marine_formation_size": {
+      "function": "0x14162fa00",
+      "default_call": "0x14162fa84",
+      "active_call": "0x14162fabe",
+      "operation": "additive_marine_formation_size_target",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "institution_scores": {
+      "function": "0x141640330",
+      "default_call": "0x1416403c0",
+      "active_call": "0x1416403f1",
+      "operation": "additive_score",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "recklessness": {
+      "function": "0x14162e750",
+      "default_call": "0x14162e83a",
+      "active_call": "0x14162e86d",
+      "operation": "additive_strength_estimate_multiplier",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "aggression": {
+      "function": "0x14162cc10",
+      "default_call": "0x14162cca1",
+      "active_call": "0x14162ccd2",
+      "operation": "additive_aggression",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "obligation_value": {
+      "function": "0x14162cdd0",
+      "default_call": "0x14162ce58",
+      "active_call": "0x14162ce91",
+      "operation": "additive_obligation_valuation",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "subject_value": {
+      "function": "0x14162d180",
+      "default_call": "0x14162d212",
+      "active_call": "0x14162d241",
+      "operation": "additive_subject_valuation",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "become_subject_value": {
+      "function": "0x14162d480",
+      "default_call": "0x14162d51b",
+      "active_call": "0x14162d551",
+      "operation": "additive_subject_valuation",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "wanted_construction_output": {
+      "function": "0x14162e8d0",
+      "default_call": "0x14162e9af",
+      "active_call": "0x14162e9da",
+      "operation": "additive_construction_output_target",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "economic_vs_government_spending_balance": {
+      "function": "0x14165f6a0",
+      "default_call": "0x14165fbab",
+      "active_call": "0x14165fbdd",
+      "operation": "additive_spending_balance",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "change_law_chance": {
+      "function": "0x1415fc630",
+      "default_call": "0x1415fc81c",
+      "active_call": "0x1415fc7bd",
+      "operation": "first_nonzero_active_change_law_chance_else_default",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission",
+      "active_nonzero_exit": "0x1415fc7cc",
+      "selection": "First nonzero active result exits the loop at 0x1415fcbe5; only all-zero active results evaluate the default strategy. Zero is not summed and the active result may be negative."
+    },
+    "revolution_aversion": {
+      "function": "0x14163dae0",
+      "default_call": "0x14163db45",
+      "active_call": "0x14163db8e",
+      "operation": "override_revolution_aversion",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "min_law_chance_to_pass": {
+      "function": "0x14163de40",
+      "default_call": "0x14163dea3",
+      "active_call": "0x14163df0e",
+      "operation": "override_pass_chance_threshold",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "max_progressiveness": {
+      "function": "0x1415fc630",
+      "default_call": "0x1415fc975",
+      "active_call": "0x1415fc99d",
+      "operation": "override_progressiveness_limit",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "max_regressiveness": {
+      "function": "0x1415fc630",
+      "default_call": "0x1415fca41",
+      "active_call": "0x1415fca6d",
+      "operation": "override_regressiveness_limit",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "diplomatic_play_boldness": {
+      "function": "0x14163b380",
+      "default_call": "0x14163b3b7",
+      "active_call": "0x14163b419",
+      "operation": "native_randomized_additive_boldness",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "diplomatic_play_neutrality": {
+      "function": "0x141639ca0",
+      "default_call": "0x141639cec",
+      "active_call": "0x141639df9",
+      "operation": "additive_positive_active_neutrality",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "wargoal_maneuvers_fraction": {
+      "function": "0x1415e4a40",
+      "default_call": "0x1415e4d62",
+      "active_call": "0x1415e4d90",
+      "operation": "additive_maneuvers_fraction",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "nationalization_desire": {
+      "function": "0x1415f2a20",
+      "default_call": "0x1415f2b36",
+      "active_call": "0x1415f2b5b",
+      "operation": "additive_nationalization_desire",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "max_active_stances": {
+      "function": "0x14164f7a0",
+      "default_call": "0x14164f7fb",
+      "active_call": "0x14164f846",
+      "operation": "additive_active_stance_limit",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "strategic_region_stance_type_scores": {
+      "function": "0x14164f480",
+      "default_call": "0x14164f592",
+      "active_call": "0x14164f62d",
+      "operation": "additive_region_stance_score",
+      "native_tail": "retained in complete observed caller; no generic runtime getter permission"
+    },
+    "wanted_navy_size": {
+      "function": "0x14162fcc0",
+      "default_call": "0x14162fd67",
+      "active_call": "0x14162fdbd",
+      "add_va": "0x14162fdc2",
+      "operation": "additive_navy_size_target"
+    },
+    "wanted_num_supply_ships": {
+      "function": "0x14162fe50",
+      "default_call": "0x14162ffef",
+      "active_call": "0x1416301a2",
+      "operation": "additive_supply_ship_count_target"
+    },
+    "ship_construction_output_multiplier": {
+      "function": "0x141630380",
+      "default_call": "0x14163048b",
+      "active_call": "0x141630563",
+      "operation": "additive_ship_construction_output_multiplier"
+    },
+    "max_ship_design_complexity": {
+      "function": "0x14167c430",
+      "default_call": "0x14167cc2b",
+      "active_call": "0x14167cdcf",
+      "operation": "additive_ship_design_complexity_limit"
+    }
+  },
+  "law_instance_type": {
+    "scope_tag": "0x31",
+    "native_type": "CCountryLaw",
+    "type_descriptor_va": "0x1456961f8",
+    "link_type_descriptor_va": "0x1459806e0",
+    "link_col_va": "0x144e417a0",
+    "link_vftable_va": "0x1449132e0",
+    "link_method_va": "0x142999100",
+    "resolver_va": "0x140982cb0",
+    "law_type_output_tag": "0x32"
+  },
+  "diplomatic_play_instance_type": {
+    "scope_tag": "0x1c",
+    "native_type": "CDiplomaticPlay",
+    "type_descriptor_va": "0x145690ba8",
+    "link_type_descriptor_va": "0x145979ae0",
+    "link_col_va": "0x144e4e3a8",
+    "link_vftable_va": "0x1449159b8",
+    "link_method_va": "0x142998a50",
+    "resolver_va": "0x1409820e0"
+  },
+  "strategic_region_type": {
+    "scope_tag": "0x52",
+    "native_database": "CStrategicRegionsDatabase",
+    "link_type_descriptor_va": "0x1459790a0",
+    "link_col_va": "0x144e452d8",
+    "link_vftable_va": "0x1449100b0",
+    "link_method_va": "0x1429c88e0",
+    "resolver_va": "0x1409a2140",
+    "id_member": "0x10"
+  },
+  "limits": [
+    "Runtime remains unknown. Only each exact listed field and actor/target contract is authorized.",
+    "Definitions select exact enum or map entries; no arbitrary definition object saved scope or generic getter is authorized.",
+    "Native eligibility, randomization, clamps, conversions, rounding, fallback and final game effects remain native; bounded static inspection does not claim arbitrary indirect callers."
+  ],
+  "institution_definitions": {
+    "institution_colonial_affairs": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 1
+    },
+    "institution_social_security": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 9
+    },
+    "institution_workplace_safety": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 18
+    },
+    "institution_schools": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 26
+    },
+    "institution_police": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 31
+    },
+    "institution_health_system": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 39
+    },
+    "institution_home_affairs": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 44
+    }
+  },
+  "stance_definitions": {
+    "stance_none": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 3
+    },
+    "stance_conquer_region": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 7
+    },
+    "stance_protect_region": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 14
+    },
+    "stance_colonize_region": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 21
+    }
+  },
+  "observations": [
+    {
+      "label": "CAIStrategy parser RTTI COL current subobject 0x20d8",
+      "va": "0x144cd8eb8",
+      "rva": "0x4cd8eb8",
+      "file_offset": "0x4cd7eb8",
+      "size": 24,
+      "sha256": "2fdd615f9958e3d65ddfe388f05b1d17d84ec9eed3f1c9b1a96ec67c9586e12b"
+    },
+    {
+      "label": "CAIStrategy current type descriptor",
+      "va": "0x1456910b8",
+      "rva": "0x56910b8",
+      "file_offset": "0x568f4b8",
+      "size": 48,
+      "sha256": "2961c68deeb62765968aa234e169293ed357e0d8d86b57041a7206139abc1b80"
+    },
+    {
+      "label": "CAIStrategy parser vtable current",
+      "va": "0x1447ac848",
+      "rva": "0x47ac848",
+      "file_offset": "0x47ab848",
+      "size": 56,
+      "sha256": "4fa1eb59f7f12e987376b6a3ab443d8aaba94be0fa53292de63b4c7ba3bdb221"
+    },
+    {
+      "label": "CAIStrategy parser adjustor thunk current",
+      "va": "0x140849d30",
+      "rva": "0x849d30",
+      "file_offset": "0x849130",
+      "size": 12,
+      "sha256": "aae7c10e6b5b9e57be0c65a0006b36c54af1fd3b9175d091a6a177a142e4d4b6"
+    },
+    {
+      "label": "CAIStrategy complete constructor exact member initialization",
+      "va": "0x141846b10",
+      "rva": "0x1846b10",
+      "file_offset": "0x1845f10",
+      "size": 2793,
+      "sha256": "c0c574515daae73801a5d3a81b74fa46fc85734c4824b88c6fcf660532226157"
+    },
+    {
+      "label": "CAIStrategy complete parser all 33 token paths and jump tables",
+      "va": "0x141847900",
+      "rva": "0x1847900",
+      "file_offset": "0x1846d00",
+      "size": 5471,
+      "sha256": "e7e65e037f7a0ab197343909dd6cf88f623e83345b1a859cdc94d3e7942be260"
+    },
+    {
+      "label": "weight: exact current literal",
+      "va": "0x144961e38",
+      "rva": "0x4961e38",
+      "file_offset": "0x4960e38",
+      "size": 7,
+      "sha256": "d6f74b1c7d39bb56e27779412a9e76f4ce8d24f81d5e164af93ab1da251f9545"
+    },
+    {
+      "label": "weight: exact current atom token and pointer",
+      "va": "0x14499be80",
+      "rva": "0x499be80",
+      "file_offset": "0x499ae80",
+      "size": 16,
+      "sha256": "f79f4fce50d9d491fa7ba5c0c95a50105ea338cb7c541861aa67b365a86358fb"
+    },
+    {
+      "label": "possible: exact current literal",
+      "va": "0x14495b920",
+      "rva": "0x495b920",
+      "file_offset": "0x495a920",
+      "size": 9,
+      "sha256": "b6ede03db016534a3f4bf93076aa084daf1992db7b772216ca84253f75a120cf"
+    },
+    {
+      "label": "possible: exact current atom token and pointer",
+      "va": "0x1449966a0",
+      "rva": "0x49966a0",
+      "file_offset": "0x49956a0",
+      "size": 16,
+      "sha256": "74f4e1ecca74ba9d0a261d2e1197338db4d9c5979990ebdbdfeb40c69acdfb11"
+    },
+    {
+      "label": "wanted_army_size: exact current literal",
+      "va": "0x1449839f8",
+      "rva": "0x49839f8",
+      "file_offset": "0x49829f8",
+      "size": 17,
+      "sha256": "93feeb0e47c3abd2a8398c4a991e352c169d12f15f9b33153a228b3185484528"
+    },
+    {
+      "label": "wanted_army_size: exact current atom token and pointer",
+      "va": "0x1449b6910",
+      "rva": "0x49b6910",
+      "file_offset": "0x49b5910",
+      "size": 16,
+      "sha256": "e59925a81083b1d5f73e1d92ba96ce0f7a5ed59a136c5fd312a199cfebc76ffe"
+    },
+    {
+      "label": "recklessness: exact current literal",
+      "va": "0x144983870",
+      "rva": "0x4983870",
+      "file_offset": "0x4982870",
+      "size": 13,
+      "sha256": "d3367971ea86e8c8b7bf09fc1205b12a573822d2145a398942f8b441b50ac3a8"
+    },
+    {
+      "label": "recklessness: exact current atom token and pointer",
+      "va": "0x1449b6630",
+      "rva": "0x49b6630",
+      "file_offset": "0x49b5630",
+      "size": 16,
+      "sha256": "8d164a0a25bbfb3f6fdce73cb8fcb9fbee84cd4c306dcdbc00d600ca340c07ac"
+    },
+    {
+      "label": "max_progressiveness: exact current literal",
+      "va": "0x1449828d0",
+      "rva": "0x49828d0",
+      "file_offset": "0x49818d0",
+      "size": 20,
+      "sha256": "e96a2739d62c7ed2f0caa4bda8f4b8d204187f03e5b71fc787d90ccad16cc983"
+    },
+    {
+      "label": "max_progressiveness: exact current atom token and pointer",
+      "va": "0x1449b63e0",
+      "rva": "0x49b63e0",
+      "file_offset": "0x49b53e0",
+      "size": 16,
+      "sha256": "a2993f62235df7b3a35dbfbfe65ec967508ed604e0531f9708a83b80d376c1f5"
+    },
+    {
+      "label": "max_regressiveness: exact current literal",
+      "va": "0x144982850",
+      "rva": "0x4982850",
+      "file_offset": "0x4981850",
+      "size": 19,
+      "sha256": "1c30130702d8d4040bce5f0118a1ba0fe12af66fd8580dbe8cdfcbef4a09d4cc"
+    },
+    {
+      "label": "max_regressiveness: exact current atom token and pointer",
+      "va": "0x1449b63f0",
+      "rva": "0x49b63f0",
+      "file_offset": "0x49b53f0",
+      "size": 16,
+      "sha256": "5b58d1790a3e34beeaadf4ddc23286130be8265b7c00b30f9ba0fef72a0cb180"
+    },
+    {
+      "label": "change_law_chance: exact current literal",
+      "va": "0x144982838",
+      "rva": "0x4982838",
+      "file_offset": "0x4981838",
+      "size": 18,
+      "sha256": "57e739415aa12b528992029f10fb1a95eb9caddd3c26a4c39ab9a9991cc0725e"
+    },
+    {
+      "label": "change_law_chance: exact current atom token and pointer",
+      "va": "0x1449b6400",
+      "rva": "0x49b6400",
+      "file_offset": "0x49b5400",
+      "size": 16,
+      "sha256": "9ed9f0cdc262ce7880ef371eb6787b229382328225876b3b10ef2d8492c77da2"
+    },
+    {
+      "label": "wargoal_maneuvers_fraction: exact current literal",
+      "va": "0x144983970",
+      "rva": "0x4983970",
+      "file_offset": "0x4982970",
+      "size": 27,
+      "sha256": "4845da9f82c51889e5c1d2c53c8ccc02080ab92382af556508005d47d4ee68f7"
+    },
+    {
+      "label": "wargoal_maneuvers_fraction: exact current atom token and pointer",
+      "va": "0x1449b65a0",
+      "rva": "0x49b65a0",
+      "file_offset": "0x49b55a0",
+      "size": 16,
+      "sha256": "ef538f04be659ace42e513d4facd86be5904b5942ffa1998847cebaaf844d5e7"
+    },
+    {
+      "label": "obligation_value: exact current literal",
+      "va": "0x144983958",
+      "rva": "0x4983958",
+      "file_offset": "0x4982958",
+      "size": 17,
+      "sha256": "30cedecf8dadc3e8254dbfc3161d0bd1daf55edce84d714cd7a54411ab6ea47b"
+    },
+    {
+      "label": "obligation_value: exact current atom token and pointer",
+      "va": "0x1449b65b0",
+      "rva": "0x49b65b0",
+      "file_offset": "0x49b55b0",
+      "size": 16,
+      "sha256": "f0da1559e493fcd9ba84b8a3eaf8471bc166ffa9da3adae3e01b0a500045b38c"
+    },
+    {
+      "label": "min_law_chance_to_pass: exact current literal",
+      "va": "0x1449838c0",
+      "rva": "0x49838c0",
+      "file_offset": "0x49828c0",
+      "size": 23,
+      "sha256": "4cb4cfc5963eaae5d719d92fef5c5282e0828118bfcb1c538483845af1e4dd38"
+    },
+    {
+      "label": "min_law_chance_to_pass: exact current atom token and pointer",
+      "va": "0x1449b65c0",
+      "rva": "0x49b65c0",
+      "file_offset": "0x49b55c0",
+      "size": 16,
+      "sha256": "c25da39e7aa12e0cb621b08aad7661566556ef39b5af748a9c538cdac6280825"
+    },
+    {
+      "label": "revolution_aversion: exact current literal",
+      "va": "0x1449838a8",
+      "rva": "0x49838a8",
+      "file_offset": "0x49828a8",
+      "size": 20,
+      "sha256": "b026e0a512b8bb210ade6178170b1ddde8c7460bb5349e320a7c167150faf0a7"
+    },
+    {
+      "label": "revolution_aversion: exact current atom token and pointer",
+      "va": "0x1449b65d0",
+      "rva": "0x49b65d0",
+      "file_offset": "0x49b55d0",
+      "size": 16,
+      "sha256": "ea8fcf90b34e41a37263de2ca267431793cf0d38d26525c85939d4fbdab18e60"
+    },
+    {
+      "label": "subject_value: exact current literal",
+      "va": "0x144983488",
+      "rva": "0x4983488",
+      "file_offset": "0x4982488",
+      "size": 14,
+      "sha256": "5a7f7ea3ffa33cabf4df45ff848134d1e87cca0410cf8671ae8ea8d500dbef1a"
+    },
+    {
+      "label": "subject_value: exact current atom token and pointer",
+      "va": "0x1449b6d00",
+      "rva": "0x49b6d00",
+      "file_offset": "0x49b5d00",
+      "size": 16,
+      "sha256": "8f9a1fe571fbe36984f7ac0295a38c5a488dd1a4908de2a86aea9c8ffddf3251"
+    },
+    {
+      "label": "become_subject_value: exact current literal",
+      "va": "0x1449834c8",
+      "rva": "0x49834c8",
+      "file_offset": "0x49824c8",
+      "size": 21,
+      "sha256": "6458504f059d26d12682a68b12581b47977875d3f0b33dc65625326c2c69ab78"
+    },
+    {
+      "label": "become_subject_value: exact current atom token and pointer",
+      "va": "0x1449b6d10",
+      "rva": "0x49b6d10",
+      "file_offset": "0x49b5d10",
+      "size": 16,
+      "sha256": "2c502f6c245627f28195b61986ade0389bd7d7a5e68f3b8ee05646869ef0e24e"
+    },
+    {
+      "label": "wanted_construction_output: exact current literal",
+      "va": "0x144983440",
+      "rva": "0x4983440",
+      "file_offset": "0x4982440",
+      "size": 27,
+      "sha256": "7fbb5e4a414ea4f15b34932df2b880f2d26e9dbf65f66ee410191c0aff1d0fdf"
+    },
+    {
+      "label": "wanted_construction_output: exact current atom token and pointer",
+      "va": "0x1449b6d30",
+      "rva": "0x49b6d30",
+      "file_offset": "0x49b5d30",
+      "size": 16,
+      "sha256": "5785052e8a65c45457d3d48f98e736872102ed12c70492f5ed750a52e48879bb"
+    },
+    {
+      "label": "institution_scores: exact current literal",
+      "va": "0x144982820",
+      "rva": "0x4982820",
+      "file_offset": "0x4981820",
+      "size": 19,
+      "sha256": "1e3e5267f66991635e2f893ce4e75667551a4e524d8bd8eda4b0020aa10ddfa8"
+    },
+    {
+      "label": "institution_scores: exact current atom token and pointer",
+      "va": "0x1449b6450",
+      "rva": "0x49b6450",
+      "file_offset": "0x49b5450",
+      "size": 16,
+      "sha256": "611db501b907b20e36414c3fb9e1d87a161679ba359f79e64bf8e080b2ed2798"
+    },
+    {
+      "label": "wargoal_scores: exact current literal",
+      "va": "0x144979be0",
+      "rva": "0x4979be0",
+      "file_offset": "0x4978be0",
+      "size": 15,
+      "sha256": "1c6511225e0a271a4f9c3963e7e5c1733eaf242fdaa1a5357cecacb8acb174c0"
+    },
+    {
+      "label": "wargoal_scores: exact current atom token and pointer",
+      "va": "0x1449af880",
+      "rva": "0x49af880",
+      "file_offset": "0x49ae880",
+      "size": 16,
+      "sha256": "af105f0990ceb7b95632d9e17b46b1fe4fa289442257b012d7792b6dc8630f2a"
+    },
+    {
+      "label": "secret_goal_scores: exact current literal",
+      "va": "0x14497a108",
+      "rva": "0x497a108",
+      "file_offset": "0x4979108",
+      "size": 19,
+      "sha256": "7c133419441e61bbb49642bb201ae0c8fe0d530b22db25f99c1b111c52f00f7d"
+    },
+    {
+      "label": "secret_goal_scores: exact current atom token and pointer",
+      "va": "0x1449af930",
+      "rva": "0x49af930",
+      "file_offset": "0x49ae930",
+      "size": 16,
+      "sha256": "785ba6a4b884e84b24f270ecd4f09792d202e3968e489e917a5c5dad7349392c"
+    },
+    {
+      "label": "wanted_navy_size: exact current literal",
+      "va": "0x144983a50",
+      "rva": "0x4983a50",
+      "file_offset": "0x4982a50",
+      "size": 17,
+      "sha256": "367216f570ccfcfc2727b7d89e0058342e8811d098f4372a3a7b8046d1b7103f"
+    },
+    {
+      "label": "wanted_navy_size: exact current atom token and pointer",
+      "va": "0x1449b6920",
+      "rva": "0x49b6920",
+      "file_offset": "0x49b5920",
+      "size": 16,
+      "sha256": "9dc9f85ddba3f1094906a425f375781dee6749ef3838ecc449aafbfcbd4c05b6"
+    },
+    {
+      "label": "ship_construction_output_multiplier: exact current literal",
+      "va": "0x14498ba88",
+      "rva": "0x498ba88",
+      "file_offset": "0x498aa88",
+      "size": 36,
+      "sha256": "606606656a9b649cbabd64092d0f74ec10288f4ec3fa941d466d9ab71a54e1ec"
+    },
+    {
+      "label": "ship_construction_output_multiplier: exact current atom token and pointer",
+      "va": "0x1449bc3c0",
+      "rva": "0x49bc3c0",
+      "file_offset": "0x49bb3c0",
+      "size": 16,
+      "sha256": "cef4805c78d0fbe172df0d0724b25927d13488335480ce9127931e22b5f52f45"
+    },
+    {
+      "label": "aggression: exact current literal",
+      "va": "0x14497fb20",
+      "rva": "0x497fb20",
+      "file_offset": "0x497eb20",
+      "size": 11,
+      "sha256": "de085b4c7f60f7894467a1d543c5d5b6df5a385696e7f9019dd67fc1ba1f60b2"
+    },
+    {
+      "label": "aggression: exact current atom token and pointer",
+      "va": "0x1449b3f90",
+      "rva": "0x49b3f90",
+      "file_offset": "0x49b2f90",
+      "size": 16,
+      "sha256": "e6ca3d1f9ae9a85c6c2ca467f3191e0ec8a8abb97148a2cdede637c10d9a8a2c"
+    },
+    {
+      "label": "nationalization_desire: exact current literal",
+      "va": "0x144986c08",
+      "rva": "0x4986c08",
+      "file_offset": "0x4985c08",
+      "size": 23,
+      "sha256": "9910e17f595b5e4bf3a59a7258f6db33a9a531e330396e63475ea91f61551dd8"
+    },
+    {
+      "label": "nationalization_desire: exact current atom token and pointer",
+      "va": "0x1449b8b90",
+      "rva": "0x49b8b90",
+      "file_offset": "0x49b7b90",
+      "size": 16,
+      "sha256": "0c0fcbc2cfd43d0f1dd8a358eb753f56ea73441c0a03b45150ed058bd50f4f94"
+    },
+    {
+      "label": "max_active_stances: exact current literal",
+      "va": "0x14498b8f8",
+      "rva": "0x498b8f8",
+      "file_offset": "0x498a8f8",
+      "size": 19,
+      "sha256": "4df5acd20d569ae5a1afc727ef032f15c99f5b63781793473770b7ded7aacb3f"
+    },
+    {
+      "label": "max_active_stances: exact current atom token and pointer",
+      "va": "0x1449bc490",
+      "rva": "0x49bc490",
+      "file_offset": "0x49bb490",
+      "size": 16,
+      "sha256": "06ddb33c524bb76aacd65f05d555a0d2530892c6f628ec4578a2b2b3de8a451c"
+    },
+    {
+      "label": "wanted_marines: exact current literal",
+      "va": "0x14498aa40",
+      "rva": "0x498aa40",
+      "file_offset": "0x4989a40",
+      "size": 15,
+      "sha256": "66618b415616ae4f3709d71fe3fd3e69d1c18febcbb4578dfeeefd08361c65c4"
+    },
+    {
+      "label": "wanted_marines: exact current atom token and pointer",
+      "va": "0x1449bc1e0",
+      "rva": "0x49bc1e0",
+      "file_offset": "0x49bb1e0",
+      "size": 16,
+      "sha256": "96cca3df646f4faa805cf2a094477659fc52b3a414844d3f5c009047d58da2cc"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: exact current literal",
+      "va": "0x144989ee8",
+      "rva": "0x4989ee8",
+      "file_offset": "0x4988ee8",
+      "size": 40,
+      "sha256": "f5215c14aaa1322224d08a4b5a860de9e5e5d218685b8bd1d3c3b7bad7956ede"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: exact current atom token and pointer",
+      "va": "0x1449bba20",
+      "rva": "0x49bba20",
+      "file_offset": "0x49baa20",
+      "size": 16,
+      "sha256": "d979b25c194150b4ab48a1625aa0fa388abd03d6487fd11c9cea65d6b0164042"
+    },
+    {
+      "label": "target_marine_formation_size: exact current literal",
+      "va": "0x14498aa20",
+      "rva": "0x498aa20",
+      "file_offset": "0x4989a20",
+      "size": 29,
+      "sha256": "9276e0210e398ac757b0badceb3f710013a211e2b2375468d60540c440840ae8"
+    },
+    {
+      "label": "target_marine_formation_size: exact current atom token and pointer",
+      "va": "0x1449bc230",
+      "rva": "0x49bc230",
+      "file_offset": "0x49bb230",
+      "size": 16,
+      "sha256": "858671fb66a68a95234d281857a038af4c150283febd04ba5e2f9274562d82ab"
+    },
+    {
+      "label": "unacceptable_infamy_level: exact current literal",
+      "va": "0x144979b18",
+      "rva": "0x4979b18",
+      "file_offset": "0x4978b18",
+      "size": 26,
+      "sha256": "f49148d9cf2cfcaf42fa99137a627695d9c79c10b75f90c032a79dd13f7c93ea"
+    },
+    {
+      "label": "unacceptable_infamy_level: exact current atom token and pointer",
+      "va": "0x1449afd70",
+      "rva": "0x49afd70",
+      "file_offset": "0x49aed70",
+      "size": 16,
+      "sha256": "eb7463f11313a494145152ac72691cdc6be5963cd161f2013bf6ecec935a47f2"
+    },
+    {
+      "label": "undesirable_infamy_level: exact current literal",
+      "va": "0x144979650",
+      "rva": "0x4979650",
+      "file_offset": "0x4978650",
+      "size": 25,
+      "sha256": "286874068f61d7e5ee96b2bca2b824adba84b2d0f4f550be111f3eeed52e3ca2"
+    },
+    {
+      "label": "undesirable_infamy_level: exact current atom token and pointer",
+      "va": "0x1449afd60",
+      "rva": "0x49afd60",
+      "file_offset": "0x49aed60",
+      "size": 16,
+      "sha256": "78f72e441dc6b4fd0f61f320788cb0691a87aeb0884a68a87f953e43948d38e6"
+    },
+    {
+      "label": "diplomatic_play_neutrality: exact current literal",
+      "va": "0x144983938",
+      "rva": "0x4983938",
+      "file_offset": "0x4982938",
+      "size": 27,
+      "sha256": "9595fd4b0c7e22ea56638dcf84a229509175cfa76c1d9f42917be1170881699a"
+    },
+    {
+      "label": "diplomatic_play_neutrality: exact current atom token and pointer",
+      "va": "0x1449b6580",
+      "rva": "0x49b6580",
+      "file_offset": "0x49b5580",
+      "size": 16,
+      "sha256": "60dd93f7c2a147fdcc574711cad3e364a5f6d4388f46371bd47ad1d57a504825"
+    },
+    {
+      "label": "diplomatic_play_boldness: exact current literal",
+      "va": "0x144982680",
+      "rva": "0x4982680",
+      "file_offset": "0x4981680",
+      "size": 25,
+      "sha256": "6b0b2cae25f3bd2fee50163ea9d3e96c1702b9c46f34e5e59ef9c4629ead7148"
+    },
+    {
+      "label": "diplomatic_play_boldness: exact current atom token and pointer",
+      "va": "0x1449b6560",
+      "rva": "0x49b6560",
+      "file_offset": "0x49b5560",
+      "size": 16,
+      "sha256": "0f5dae9c9ab4b4c48b91cbbfa735dcaa0e52ddb04b4bf9754149c91e4581d963"
+    },
+    {
+      "label": "treaty_category_scores: exact current literal",
+      "va": "0x1449731d0",
+      "rva": "0x49731d0",
+      "file_offset": "0x49721d0",
+      "size": 23,
+      "sha256": "717adfe955f2c518363ddbbf507e8200f65f208744c0069930e965dadb05fc6a"
+    },
+    {
+      "label": "treaty_category_scores: exact current atom token and pointer",
+      "va": "0x1449aae20",
+      "rva": "0x49aae20",
+      "file_offset": "0x49a9e20",
+      "size": 16,
+      "sha256": "7adc1e53af6aa9b672c2cf770b99fb7e40032403d9c66ce951a0b03da4e2062c"
+    },
+    {
+      "label": "strategic_region_stance_type_scores: exact current literal",
+      "va": "0x1449898e8",
+      "rva": "0x49898e8",
+      "file_offset": "0x49888e8",
+      "size": 36,
+      "sha256": "e095be7b7ad8d47b551f67dccd3def30bd589c739ed069863cad67537f6a4f58"
+    },
+    {
+      "label": "strategic_region_stance_type_scores: exact current atom token and pointer",
+      "va": "0x1449bac50",
+      "rva": "0x49bac50",
+      "file_offset": "0x49b9c50",
+      "size": 16,
+      "sha256": "e456247c52506733df4ee4e2fe141ead37ab8f5188bf4254d35e54af99498ae7"
+    },
+    {
+      "label": "wanted_num_supply_ships: exact current literal",
+      "va": "0x14498bab0",
+      "rva": "0x498bab0",
+      "file_offset": "0x498aab0",
+      "size": 24,
+      "sha256": "be26160e5366482b4814b4c9938ebc09ccf626729e476fa48e092aab9422b95f"
+    },
+    {
+      "label": "wanted_num_supply_ships: exact current atom token and pointer",
+      "va": "0x1449bc3b0",
+      "rva": "0x49bc3b0",
+      "file_offset": "0x49bb3b0",
+      "size": 16,
+      "sha256": "f6a26598a20e63e7968f859d7716db3eef442330c3d4ced0fd0a6a63e4d83cf3"
+    },
+    {
+      "label": "max_ship_design_complexity: exact current literal",
+      "va": "0x14498ba68",
+      "rva": "0x498ba68",
+      "file_offset": "0x498aa68",
+      "size": 27,
+      "sha256": "1dc745b4db2e2ea00b9e13c64044fad4eb127c1fbd0f954c3c06a5248ea61b3f"
+    },
+    {
+      "label": "max_ship_design_complexity: exact current atom token and pointer",
+      "va": "0x1449bc390",
+      "rva": "0x49bc390",
+      "file_offset": "0x49bb390",
+      "size": 16,
+      "sha256": "dbf54dcfc516d0e6162296c355c9fc7e618253a2cc5b6da8bdc83de43b84ed29"
+    },
+    {
+      "label": "secret_goal_scores: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184a460",
+      "rva": "0x184a460",
+      "file_offset": "0x1849860",
+      "size": 314,
+      "sha256": "4c5f05cc2189c41d073ba0d463889f70cbd2ca5bef79d1c2b037f81cd9e7ca27"
+    },
+    {
+      "label": "wargoal_scores: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184a5a0",
+      "rva": "0x184a5a0",
+      "file_offset": "0x18499a0",
+      "size": 703,
+      "sha256": "1f53b3b75c40e418883913b78793f4d096d17bc0d346e0d77d0ca9beed5d3fd0"
+    },
+    {
+      "label": "treaty_category_scores: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184a860",
+      "rva": "0x184a860",
+      "file_offset": "0x1849c60",
+      "size": 404,
+      "sha256": "6ac7cb4ca43c4d2f6371449fa32a6e737c0bca7f5b572a91d9cec90bd7523796"
+    },
+    {
+      "label": "undesirable_infamy_level: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184ad30",
+      "rva": "0x184ad30",
+      "file_offset": "0x184a130",
+      "size": 393,
+      "sha256": "bf0358bb13b31bafde1cf2c4112f1a6d6396262eb1c232b97ddfc477027adba7"
+    },
+    {
+      "label": "unacceptable_infamy_level: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184aec0",
+      "rva": "0x184aec0",
+      "file_offset": "0x184a2c0",
+      "size": 393,
+      "sha256": "3eb044e35441085c3b58f9ab65bcb8bcdf5e4e22bb51a79547dc8db23de5b719"
+    },
+    {
+      "label": "wanted_army_size: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184b050",
+      "rva": "0x184b050",
+      "file_offset": "0x184a450",
+      "size": 393,
+      "sha256": "6af74fc14ed7aadeb26b9c0b478b809f86aa2842ce6827c7e45efe900b78dc9e"
+    },
+    {
+      "label": "wanted_marines: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184b1e0",
+      "rva": "0x184b1e0",
+      "file_offset": "0x184a5e0",
+      "size": 393,
+      "sha256": "6cdf30745bede96648cd15eb088602b854e0e38c6cca9955c0867d12ba979b9c"
+    },
+    {
+      "label": "target_marine_formation_size: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184b370",
+      "rva": "0x184b370",
+      "file_offset": "0x184a770",
+      "size": 393,
+      "sha256": "2526fa3a30e92bdcc789f8faa4f8a7c1b1b3ed95abe4bdfeddd3425da649bcc4"
+    },
+    {
+      "label": "institution_scores: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184b6d0",
+      "rva": "0x184b6d0",
+      "file_offset": "0x184aad0",
+      "size": 514,
+      "sha256": "8413e7e92b7d0b852876a2c93e80bdb580b91ede4ec70ad5aecfcf3c83a5ab0e"
+    },
+    {
+      "label": "recklessness: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184c060",
+      "rva": "0x184c060",
+      "file_offset": "0x184b460",
+      "size": 426,
+      "sha256": "7e4d57c6d03f88ffd9def965d7b9636119d396c8b9d52bcaa69ea3c539f0b7b0"
+    },
+    {
+      "label": "aggression: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184c210",
+      "rva": "0x184c210",
+      "file_offset": "0x184b610",
+      "size": 426,
+      "sha256": "acc6ffc5b128cb9e8c96f7e916d1d5c65e6948e5a0fb362d26c103f96a9b6dd7"
+    },
+    {
+      "label": "obligation_value: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184c3c0",
+      "rva": "0x184c3c0",
+      "file_offset": "0x184b7c0",
+      "size": 426,
+      "sha256": "7a031283e24f1231a32350313f2b2d946dd29f68e236621170737ca082a6c04c"
+    },
+    {
+      "label": "subject_value: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184c840",
+      "rva": "0x184c840",
+      "file_offset": "0x184bc40",
+      "size": 426,
+      "sha256": "e34330144186c0323a6c4f4b06e6310b891ad109aa1b301d493a71ed9f3eb709"
+    },
+    {
+      "label": "become_subject_value: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184c9f0",
+      "rva": "0x184c9f0",
+      "file_offset": "0x184bdf0",
+      "size": 426,
+      "sha256": "e4ef6c05514a495f2287a1b155ec757db284977bb2b8b79b60e630889ed387b2"
+    },
+    {
+      "label": "wanted_construction_output: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184d2b0",
+      "rva": "0x184d2b0",
+      "file_offset": "0x184c6b0",
+      "size": 857,
+      "sha256": "74e139b36690767efe8dd2eff95b7809a909dce7936e172aa0a6e75ce9ecc2a2"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184d610",
+      "rva": "0x184d610",
+      "file_offset": "0x184ca10",
+      "size": 393,
+      "sha256": "38ebeb95718519c0e00d6d03d11288e27ee7e638eeebf47fe834ae65ca19c4b3"
+    },
+    {
+      "label": "change_law_chance: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184d7a0",
+      "rva": "0x184d7a0",
+      "file_offset": "0x184cba0",
+      "size": 393,
+      "sha256": "1186e42ab269b8f858b90478e44a12c3574a067bcc426cb8ba8c42f71a7dd8ee"
+    },
+    {
+      "label": "revolution_aversion: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184d930",
+      "rva": "0x184d930",
+      "file_offset": "0x184cd30",
+      "size": 393,
+      "sha256": "7ad1db6d321e862118c20ed543b506deab2e0b305c4d74b792a93de86005918a"
+    },
+    {
+      "label": "min_law_chance_to_pass: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184dac0",
+      "rva": "0x184dac0",
+      "file_offset": "0x184cec0",
+      "size": 430,
+      "sha256": "fa6be36862f1a8a0393530d284503c01bd8ffc52ff7300ebcf8352c64af6f2ee"
+    },
+    {
+      "label": "max_progressiveness: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184dc70",
+      "rva": "0x184dc70",
+      "file_offset": "0x184d070",
+      "size": 393,
+      "sha256": "1c9b0a90051d0d1b14123e586004de635661d87451d6bc99fac4d2c404b05fa3"
+    },
+    {
+      "label": "max_regressiveness: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184de00",
+      "rva": "0x184de00",
+      "file_offset": "0x184d200",
+      "size": 393,
+      "sha256": "74e05ede99e677de3edb75899d0f44249fe34c18dc207080ba123f1cde3f489f"
+    },
+    {
+      "label": "diplomatic_play_boldness: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184e440",
+      "rva": "0x184e440",
+      "file_offset": "0x184d840",
+      "size": 438,
+      "sha256": "1fc42e5c5987982b376056296cb2d0f9c986516590c328182c6295743ea34143"
+    },
+    {
+      "label": "diplomatic_play_neutrality: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184e600",
+      "rva": "0x184e600",
+      "file_offset": "0x184da00",
+      "size": 387,
+      "sha256": "a6b579ede4097293ec1988f0b7c2eafd5e294b7ecd0e14ef7074e87bf58ba90f"
+    },
+    {
+      "label": "wargoal_maneuvers_fraction: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184e930",
+      "rva": "0x184e930",
+      "file_offset": "0x184dd30",
+      "size": 426,
+      "sha256": "813910b7e39a6618ddebc666d1eca7cc999d89ab6fc40780aa0e68130250b976"
+    },
+    {
+      "label": "nationalization_desire: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184ec90",
+      "rva": "0x184ec90",
+      "file_offset": "0x184e090",
+      "size": 393,
+      "sha256": "600a47f2f655f8839801c24984bff9fde1d49d5efef91cc5fa9b655d264afe99"
+    },
+    {
+      "label": "max_active_stances: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184ee20",
+      "rva": "0x184ee20",
+      "file_offset": "0x184e220",
+      "size": 387,
+      "sha256": "fa4fc34f5166786023bcd322750d4845c3fd8f9d1930079c9d96c393c23ca3ca"
+    },
+    {
+      "label": "strategic_region_stance_type_scores: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14184efb0",
+      "rva": "0x184efb0",
+      "file_offset": "0x184e3b0",
+      "size": 784,
+      "sha256": "de25c2f00691e81710c5a6c18b37a1e012170df2e17367ed5416ed482e21310f"
+    },
+    {
+      "label": "wanted_navy_size: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14162fcc0",
+      "rva": "0x162fcc0",
+      "file_offset": "0x162f0c0",
+      "size": 387,
+      "sha256": "2294dca79cc81bf7b62b67ea592a5ffa1fc9f45ec6d0b9166a1b050e0b65d31a"
+    },
+    {
+      "label": "wanted_num_supply_ships: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14162fe50",
+      "rva": "0x162fe50",
+      "file_offset": "0x162f250",
+      "size": 1317,
+      "sha256": "19ea6316780c65e1c9fff8f1cb0ba847e4744f2f9585e7b4867c7dcd2349f628"
+    },
+    {
+      "label": "ship_construction_output_multiplier: complete current consumer country tuple exact member and evaluator",
+      "va": "0x141630380",
+      "rva": "0x1630380",
+      "file_offset": "0x162f780",
+      "size": 1039,
+      "sha256": "ef89544885f89f90ffac087e4f56cf5b67728c0b0eef0df9dc7fedbc38317e3e"
+    },
+    {
+      "label": "max_ship_design_complexity: complete current consumer country tuple exact member and evaluator",
+      "va": "0x14167c430",
+      "rva": "0x167c430",
+      "file_offset": "0x167b830",
+      "size": 5282,
+      "sha256": "41999dda29a5be00bb29c3a73dbbf0ba912f39de065963ce065272c9109f716f"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x140873510",
+      "rva": "0x873510",
+      "file_offset": "0x872910",
+      "size": 3210,
+      "sha256": "fd19a4bb30dbcb784e6246a425c72941c5ea32b64ad59c57f5950235b1e10406"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x1415e4a40",
+      "rva": "0x15e4a40",
+      "file_offset": "0x15e3e40",
+      "size": 3878,
+      "sha256": "f89781a002a56141ddb08c8bc6ee3baa4e5b34c9d6b4b1753b1eaecf0466900d"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x1415f2a20",
+      "rva": "0x15f2a20",
+      "file_offset": "0x15f1e20",
+      "size": 2218,
+      "sha256": "b6941feb98c50489897b9ab8a0efd9d3b22c7dd1851f4ab553e44a9fa68fe69f"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x1415fc630",
+      "rva": "0x15fc630",
+      "file_offset": "0x15fba30",
+      "size": 2966,
+      "sha256": "05c1eae50c4068236d6091c22e65010323a1e0941308700cc65d15e6760a0e9c"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x141618940",
+      "rva": "0x1618940",
+      "file_offset": "0x1617d40",
+      "size": 470,
+      "sha256": "0d65a4cfe4c3c6544aaa995297c9a493915bd3a8350bc087af389110768b39fe"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x1416293a0",
+      "rva": "0x16293a0",
+      "file_offset": "0x16287a0",
+      "size": 502,
+      "sha256": "033a26df4f8d29e43c19ba922526a11022f718cfddd7721a665f3d9d2c3fd26c"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162c500",
+      "rva": "0x162c500",
+      "file_offset": "0x162b900",
+      "size": 694,
+      "sha256": "eefb11aeca28c7e16a5c285c48de55735950ace1a24fa00e5f1f65206a9bf5b5"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162c7c0",
+      "rva": "0x162c7c0",
+      "file_offset": "0x162bbc0",
+      "size": 694,
+      "sha256": "648ff526c524fd4c021b8a5b529f79094c618779cbb825f7218f15cd966aa881"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162cc10",
+      "rva": "0x162cc10",
+      "file_offset": "0x162c010",
+      "size": 445,
+      "sha256": "a0ff3ae788bd443d0d5461b6aa46abc9d8087dd4ef122667bcb0ea71a169d6d0"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162cdd0",
+      "rva": "0x162cdd0",
+      "file_offset": "0x162c1d0",
+      "size": 491,
+      "sha256": "380a66a0c0e4863182e8a0395246164aca38904ccd3027b75c4b61a863f08d08"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162d180",
+      "rva": "0x162d180",
+      "file_offset": "0x162c580",
+      "size": 272,
+      "sha256": "7aeb18429251802850c0970f02f15fff13f98689f38c37deb597c2270807653e"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162d480",
+      "rva": "0x162d480",
+      "file_offset": "0x162c880",
+      "size": 718,
+      "sha256": "3da0faf6ab5fc99d5f7d0a2b1ff41a52842c1786f0a919d269f8769232aa071b"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162e750",
+      "rva": "0x162e750",
+      "file_offset": "0x162db50",
+      "size": 377,
+      "sha256": "1ba46dc51f6c528bddc09255821053f09810c5f033cdda0e34c50b2fcb40a8d6"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162e8d0",
+      "rva": "0x162e8d0",
+      "file_offset": "0x162dcd0",
+      "size": 344,
+      "sha256": "64bb03cca7f664d1d30ab0182951d733451b49bcfac75fbd60af95ae18950aed"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162efe0",
+      "rva": "0x162efe0",
+      "file_offset": "0x162e3e0",
+      "size": 323,
+      "sha256": "9eb69a329003bd09516dd0da4e94f11de5b88da81afe989032fad864282412ab"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162f130",
+      "rva": "0x162f130",
+      "file_offset": "0x162e530",
+      "size": 323,
+      "sha256": "a109b62564759750c09027da67974938ab53af317c4f03f6c29bf3f9004ad5fe"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14162fa00",
+      "rva": "0x162fa00",
+      "file_offset": "0x162ee00",
+      "size": 331,
+      "sha256": "88b1ac5da8d2b18fa84bcb003ab8d7b1aca5a5c8784647ed3c6b98cfc1535164"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x141634380",
+      "rva": "0x1634380",
+      "file_offset": "0x1633780",
+      "size": 1437,
+      "sha256": "523ad1413d56aba4a9d0b6322a5423ba4105620dbd96f3d55e460d9ef5163b06"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x141639ca0",
+      "rva": "0x1639ca0",
+      "file_offset": "0x16390a0",
+      "size": 5856,
+      "sha256": "19df29e8fbb634d9857a31dbf32585cda80d5f291703e0bd6c4f629b463b911b"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14163b380",
+      "rva": "0x163b380",
+      "file_offset": "0x163a780",
+      "size": 2909,
+      "sha256": "f545f8bd59fd6c13c4daf7c6832a704d93db577812bff519b72d82aad1a9e7c3"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14163dae0",
+      "rva": "0x163dae0",
+      "file_offset": "0x163cee0",
+      "size": 863,
+      "sha256": "4ddfa5af09473a58729f3dc15891410c8616e02a1998c4f6d977160e31dbc9e0"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14163de40",
+      "rva": "0x163de40",
+      "file_offset": "0x163d240",
+      "size": 729,
+      "sha256": "c3c9ce1c80a5429afb150d01356cea755a714df4af3cdbb00b548d7038e290cc"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x141640330",
+      "rva": "0x1640330",
+      "file_offset": "0x163f730",
+      "size": 686,
+      "sha256": "ba9ec90873e03a3cf8c150e0b8df2b74c859d337be936087bfc4426f39767ef6"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14164f480",
+      "rva": "0x164f480",
+      "file_offset": "0x164e880",
+      "size": 541,
+      "sha256": "c94216dca4497581f1fc3eb11d3d0be28ed95432908c5a09dc55ee2517a54395"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14164f7a0",
+      "rva": "0x164f7a0",
+      "file_offset": "0x164eba0",
+      "size": 241,
+      "sha256": "4e4f7395b8d4d307fe044877d5fa2222f50f42b3f23057824c641a3cf92eb7c2"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14165f6a0",
+      "rva": "0x165f6a0",
+      "file_offset": "0x165eaa0",
+      "size": 4785,
+      "sha256": "e542e6f311838734b77488dce340919c8d78cbd3625687f1d0c2143f0dc4689f"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x14167d900",
+      "rva": "0x167d900",
+      "file_offset": "0x167cd00",
+      "size": 420,
+      "sha256": "267749b70c237fa43b797bbb7b4cb82a9a753e09e81ecac1fab1b6a22fcba438"
+    },
+    {
+      "label": "actual default active strategy caller and retained native tail",
+      "va": "0x1416e4810",
+      "rva": "0x16e4810",
+      "file_offset": "0x16e3c10",
+      "size": 39,
+      "sha256": "ce9adefabbab02c7876ce3427b399aee98e9d8ee6f7a6e05315ccc61d8903b00"
+    },
+    {
+      "label": "current strategy selector possible weight nonpositive rejection random max and activation",
+      "va": "0x141673480",
+      "rva": "0x1673480",
+      "file_offset": "0x1672880",
+      "size": 1600,
+      "sha256": "ad94e533999c433d137ff86d2e5b21d9d0f6896055e8b1eac8bd91cc711760a9"
+    },
+    {
+      "label": "typed strategy database singleton creation and registration",
+      "va": "0x140772360",
+      "rva": "0x772360",
+      "file_offset": "0x771760",
+      "size": 203,
+      "sha256": "980599ff1e3cc08857affc3b7f0dff3f502b100156fcb8bcb796c236647c0463"
+    },
+    {
+      "label": "typed strategy database accessor",
+      "va": "0x1407d2d20",
+      "rva": "0x7d2d20",
+      "file_offset": "0x7d2120",
+      "size": 376,
+      "sha256": "e25f65287d2b66958b0af028e60ad30c70a599caeca5d9a9940938a693c1ec87"
+    },
+    {
+      "label": "strategy database loader ctor and candidate pointer array append",
+      "va": "0x141880a20",
+      "rva": "0x1880a20",
+      "file_offset": "0x187fe20",
+      "size": 953,
+      "sha256": "bb89976d1cd24b3162cb56ba52f2c7cb393e85a3c75d22d22fa560059f4ca9a5"
+    },
+    {
+      "label": "typed CAIStrategyDataBase descriptor",
+      "va": "0x1457f65c0",
+      "rva": "0x57f65c0",
+      "file_offset": "0x57f49c0",
+      "size": 56,
+      "sha256": "f09aaaaa59eb6029775b80bcaedae0bb48c7b057742df9c18c263c972fac2b8f"
+    },
+    {
+      "label": "typed CAIStrategyDataBase primary COL",
+      "va": "0x144cd51e8",
+      "rva": "0x4cd51e8",
+      "file_offset": "0x4cd41e8",
+      "size": 24,
+      "sha256": "b16f9ac742d215ad7209aa3199b5cffc33a7b8f1dce6c824b32e84623c19be3d"
+    },
+    {
+      "label": "typed CAIStrategyDataBase primary vtable",
+      "va": "0x1447aadc8",
+      "rva": "0x47aadc8",
+      "file_offset": "0x47a9dc8",
+      "size": 64,
+      "sha256": "549600c9eca38e3c22ecf4133d0c54c2b4aed2373ab46636398d61cc5b23d12b"
+    },
+    {
+      "label": "country scope wrapper RTTI COL",
+      "va": "0x144cf1728",
+      "rva": "0x4cf1728",
+      "file_offset": "0x4cf0728",
+      "size": 24,
+      "sha256": "a56cb265df9941ff3861ff271e8723b0c65ed00c2be103a8ce28b57cbe38d8a4"
+    },
+    {
+      "label": "country scope wrapper RTTI name",
+      "va": "0x14580e368",
+      "rva": "0x580e368",
+      "file_offset": "0x580c768",
+      "size": 64,
+      "sha256": "19487b61c90461dd3b15396831b7b22d75d40008518ea9deaa096fbe423af6db"
+    },
+    {
+      "label": "country scope wrapper vtable",
+      "va": "0x1447dd320",
+      "rva": "0x47dd320",
+      "file_offset": "0x47dc320",
+      "size": 64,
+      "sha256": "0c054a1673d12939eb33e8505259310924cee5a3e517cb4c94e43ef3da87989a"
+    },
+    {
+      "label": "country scope tag getter returns tag5",
+      "va": "0x1417b6650",
+      "rva": "0x17b6650",
+      "file_offset": "0x17b5a50",
+      "size": 32,
+      "sha256": "5cb0cacd5428d71698bb466e9ea7ae0a4a25f2ae80626fd9ad28d6938b9c5a5a"
+    },
+    {
+      "label": "checked CCountry reference resolver",
+      "va": "0x1407322c0",
+      "rva": "0x7322c0",
+      "file_offset": "0x7316c0",
+      "size": 178,
+      "sha256": "40c94efa569d3c43ace0f80b5ff3ea8d5a913a86ae5737d03bdedfcbe8b27b78"
+    },
+    {
+      "label": "CCountry resolver RTTI name",
+      "va": "0x14546a4b8",
+      "rva": "0x546a4b8",
+      "file_offset": "0x54688b8",
+      "size": 16,
+      "sha256": "65f80647c35edc859adcd822b52b323f87ef10416b0343e87f2055db3c0d3e26"
+    },
+    {
+      "label": "numeric wrapper",
+      "va": "0x140860710",
+      "rva": "0x860710",
+      "file_offset": "0x85fb10",
+      "size": 309,
+      "sha256": "c7d0e9f85674ba5a916a48807731c97663b847161161620e61e0c422d67e8f0c"
+    },
+    {
+      "label": "numeric expression scope forwarding",
+      "va": "0x140985ec0",
+      "rva": "0x985ec0",
+      "file_offset": "0x9852c0",
+      "size": 237,
+      "sha256": "f1dcf70aa26309cf33a33b211b9ffd7d567334a9dc873b5be2d3fd5ca0336e12"
+    },
+    {
+      "label": "boolean wrapper",
+      "va": "0x140985dc0",
+      "rva": "0x985dc0",
+      "file_offset": "0x9851c0",
+      "size": 249,
+      "sha256": "ae35a6703acfe95d9bbb2c3ea369f17b7dc07d4dc3f788c42bb8068a4f9a8ff3"
+    },
+    {
+      "label": "integer numeric wrapper",
+      "va": "0x14148b8a0",
+      "rva": "0x148b8a0",
+      "file_offset": "0x148aca0",
+      "size": 288,
+      "sha256": "00d8d05af6d4a0456ad06224a24b9b3b36ee67936f275ea9c6d7ce5e41152800"
+    },
+    {
+      "label": "target_country: exact scope key name",
+      "va": "0x1446b0670",
+      "rva": "0x46b0670",
+      "file_offset": "0x46af670",
+      "size": 15,
+      "sha256": "bd005b31631f7ea4028ad21e6f28d8c265029bc7133a1b3977d0ab1803b51cc5"
+    },
+    {
+      "label": "target_country: current name key registration",
+      "va": "0x1400128b0",
+      "rva": "0x128b0",
+      "file_offset": "0x11cb0",
+      "size": 91,
+      "sha256": "a584ee555dd66a38c70e5d99111f9d21305fae03b30b46257f756bc98ddf84c1"
+    },
+    {
+      "label": "overlord: exact scope key name",
+      "va": "0x1446b08f8",
+      "rva": "0x46b08f8",
+      "file_offset": "0x46af8f8",
+      "size": 9,
+      "sha256": "d3ec3b51073c97be8c4f3c831683dfdbc7ce4c254f1494e851397073072a4a46"
+    },
+    {
+      "label": "overlord: current name key registration",
+      "va": "0x1400136f0",
+      "rva": "0x136f0",
+      "file_offset": "0x12af0",
+      "size": 91,
+      "sha256": "e3596ae0a7cb0199e01e1b91ab8933b200be446179be764ac0153adfa8193fc8"
+    },
+    {
+      "label": "enemy_country: exact scope key name",
+      "va": "0x1446b09c0",
+      "rva": "0x46b09c0",
+      "file_offset": "0x46af9c0",
+      "size": 14,
+      "sha256": "ed26f9647643adef23eb97021cef8b004000186b8b73a6dafa6f57b38e4ce637"
+    },
+    {
+      "label": "enemy_country: current name key registration",
+      "va": "0x140013d50",
+      "rva": "0x13d50",
+      "file_offset": "0x13150",
+      "size": 91,
+      "sha256": "955dbe799f864b27683a7fdf0f7e6b8de1b0b912ce7baaa84329a95727cdce63"
+    },
+    {
+      "label": "law: exact scope key name",
+      "va": "0x1446a6a84",
+      "rva": "0x46a6a84",
+      "file_offset": "0x46a5a84",
+      "size": 4,
+      "sha256": "3de19ffa9d536138ac927a9da97d60ded67e2d36735abbd065cb4d6e3e05805e"
+    },
+    {
+      "label": "law: current name key registration",
+      "va": "0x140014110",
+      "rva": "0x14110",
+      "file_offset": "0x13510",
+      "size": 91,
+      "sha256": "c031282c117b8394ec3f37ecd202536a090e499283e424555353d2a97767e056"
+    },
+    {
+      "label": "diplomatic_play: exact scope key name",
+      "va": "0x1446a8750",
+      "rva": "0x46a8750",
+      "file_offset": "0x46a7750",
+      "size": 16,
+      "sha256": "0b700fd192adeec9e10c3cbf8b510a9e810a7331c787eeb1f5a8e074e340913c"
+    },
+    {
+      "label": "diplomatic_play: current name key registration",
+      "va": "0x140012490",
+      "rva": "0x12490",
+      "file_offset": "0x11890",
+      "size": 91,
+      "sha256": "b2021d837af4440d0ee78de6a7e535efc56d8222567d8dfbb575aa2d0508bd5d"
+    },
+    {
+      "label": "target_state: exact scope key name",
+      "va": "0x1446b0798",
+      "rva": "0x46b0798",
+      "file_offset": "0x46af798",
+      "size": 13,
+      "sha256": "c16e529230a935c80f261df2da0376834cd3bb8010d5a3fe150fcbf6f7ad41eb"
+    },
+    {
+      "label": "target_state: current name key registration",
+      "va": "0x140012c70",
+      "rva": "0x12c70",
+      "file_offset": "0x12070",
+      "size": 91,
+      "sha256": "1325c4262625cb10dc87d275cd6d937d68c8dc9e7a96ae890b9a02d457bc6cb6"
+    },
+    {
+      "label": "target_region: exact scope key name",
+      "va": "0x1446b0638",
+      "rva": "0x46b0638",
+      "file_offset": "0x46af638",
+      "size": 14,
+      "sha256": "6b69e44285df51bcca91a36ffe6d18c5919f436546190d3ef21e4b77dc69caa4"
+    },
+    {
+      "label": "target_region: current name key registration",
+      "va": "0x140012790",
+      "rva": "0x12790",
+      "file_offset": "0x11b90",
+      "size": 91,
+      "sha256": "39a4a285cf545c5e4ced98c944302179aac1a9beebf5fcb5bfd27389218958c1"
+    },
+    {
+      "label": "region_score: exact scope key name",
+      "va": "0x1446b0ee0",
+      "rva": "0x46b0ee0",
+      "file_offset": "0x46afee0",
+      "size": 13,
+      "sha256": "6342a340f6ea5b230d9f639b82a46f5309e07ff5ed39132eb5374a131bf4d11d"
+    },
+    {
+      "label": "region_score: current name key registration",
+      "va": "0x1400158b0",
+      "rva": "0x158b0",
+      "file_offset": "0x14cb0",
+      "size": 91,
+      "sha256": "ad1ff80110cdc77c843162e777ebbec997de445db656ab810515853b2d23c264"
+    },
+    {
+      "label": "secret goal map parser",
+      "va": "0x1418444c0",
+      "rva": "0x18444c0",
+      "file_offset": "0x18438c0",
+      "size": 386,
+      "sha256": "481fea5fcd1e323bd833168eee3d97c25c4ebf30ccdd2e553bd1fc03e5130e6a"
+    },
+    {
+      "label": "secret goal enum key dispatch and exact entry allocation",
+      "va": "0x141844650",
+      "rva": "0x1844650",
+      "file_offset": "0x1843a50",
+      "size": 713,
+      "sha256": "714fa6722a729663b58b887f7d9194765b879f9c0097c64e7557a7d3f92c7ad0"
+    },
+    {
+      "label": "secret goal child score and native trigger parser",
+      "va": "0x14187ea80",
+      "rva": "0x187ea80",
+      "file_offset": "0x187de80",
+      "size": 566,
+      "sha256": "0a2dca55e1726417d7578163862134262fb7a479b98416472fb4c1389369a11f"
+    },
+    {
+      "label": "wargoal current 34 token enum and child numeric parser",
+      "va": "0x141845160",
+      "rva": "0x1845160",
+      "file_offset": "0x1844560",
+      "size": 700,
+      "sha256": "e61d074843dcc5e8e00eee92a3d2395f092dbfb40af4575cc8f19db536ce1273"
+    },
+    {
+      "label": "wargoal exact map parser delegate",
+      "va": "0x14186c200",
+      "rva": "0x186c200",
+      "file_offset": "0x186b600",
+      "size": 564,
+      "sha256": "76522b9099a52ca7860cedab9a8afa6e281fdf6bfaef5db89f94e99ef52c54f8"
+    },
+    {
+      "label": "treaty map parser",
+      "va": "0x141845420",
+      "rva": "0x1845420",
+      "file_offset": "0x1844820",
+      "size": 372,
+      "sha256": "82735bb73b998b4e108a7f815a76fe330f21acdb2a05385542cdff8c94c0f8a9"
+    },
+    {
+      "label": "treaty exact 9 token enum and child numeric parser",
+      "va": "0x1418455a0",
+      "rva": "0x18455a0",
+      "file_offset": "0x18449a0",
+      "size": 531,
+      "sha256": "ccbb0a6506eece95c5aeb48303293c2f97b555e7b30a54e488f322b61cee1349"
+    },
+    {
+      "label": "institution score map parser",
+      "va": "0x141844db0",
+      "rva": "0x1844db0",
+      "file_offset": "0x18441b0",
+      "size": 360,
+      "sha256": "03f0a906fcfce2ea6074d7fe5753fb528b4d6f38c81811a98d57c83cfe87dada"
+    },
+    {
+      "label": "institution actual definition key resolver and numeric child",
+      "va": "0x141844f20",
+      "rva": "0x1844f20",
+      "file_offset": "0x1844320",
+      "size": 574,
+      "sha256": "f110885a532eec5c9bde8c126e05faee9278a67b959879a38ab65e4d964577bc"
+    },
+    {
+      "label": "stance score map parser",
+      "va": "0x14184f640",
+      "rva": "0x184f640",
+      "file_offset": "0x184ea40",
+      "size": 360,
+      "sha256": "4ac8241b14599bc03fee4acd2055434b75360cb10865e637bbdb72c8fe1f67ae"
+    },
+    {
+      "label": "stance actual definition key resolver and numeric child",
+      "va": "0x14184f7b0",
+      "rva": "0x184f7b0",
+      "file_offset": "0x184ebb0",
+      "size": 574,
+      "sha256": "0a642522915cbc3cc6c049c27bd75eb32fb183613574b609d921457b4fa938fd"
+    },
+    {
+      "label": "institution exact hash definition resolver",
+      "va": "0x1409a3a70",
+      "rva": "0x9a3a70",
+      "file_offset": "0x9a2e70",
+      "size": 188,
+      "sha256": "221bb0a4da009264a081555bded4c8461617e33e5e53247369acb01ef7e3fa26"
+    },
+    {
+      "label": "stance exact hash definition resolver",
+      "va": "0x1407e7850",
+      "rva": "0x7e7850",
+      "file_offset": "0x7e6c50",
+      "size": 188,
+      "sha256": "7e2aafca9e14f8d1217d2eea89133bbb1d8078c68d4d4ba937d3ced5b96498c0"
+    },
+    {
+      "label": "wargoal_scores: current exact enum token table",
+      "va": "0x1447b7840",
+      "rva": "0x47b7840",
+      "file_offset": "0x47b6840",
+      "size": 136,
+      "sha256": "847f00a51b8c01b9c8088cd6c3d531fe1bb17a268ca24b807e7ae77b5f85a73f"
+    },
+    {
+      "label": "treaty_category_scores: current exact enum token table",
+      "va": "0x1447010e0",
+      "rva": "0x47010e0",
+      "file_offset": "0x47000e0",
+      "size": 36,
+      "sha256": "f66e78fc82e6a0eac73312be7352d97a0a26124bde0daa4728f6592a0dc35d89"
+    },
+    {
+      "label": "wargoal_scores.annex_country: current exact enum atom",
+      "va": "0x1449abbb0",
+      "rva": "0x49abbb0",
+      "file_offset": "0x49aabb0",
+      "size": 16,
+      "sha256": "6245cdc0bd70f3a609da4bb0e9ede55550c52ec81703b3fe9679017425f89e45"
+    },
+    {
+      "label": "wargoal_scores.annex_country: current exact enum literal",
+      "va": "0x1449752f8",
+      "rva": "0x49752f8",
+      "file_offset": "0x49742f8",
+      "size": 14,
+      "sha256": "543a0160da0e20aef5742fd0a0cf05337aa5db10428eac946cc33cc76c94e18d"
+    },
+    {
+      "label": "wargoal_scores.ban_slavery: current exact enum atom",
+      "va": "0x1449afa70",
+      "rva": "0x49afa70",
+      "file_offset": "0x49aea70",
+      "size": 16,
+      "sha256": "b1988c5649d59863032aa8da380b1484a21fa5fb202ef2dfeb99279f886fcc87"
+    },
+    {
+      "label": "wargoal_scores.ban_slavery: current exact enum literal",
+      "va": "0x144979ef0",
+      "rva": "0x4979ef0",
+      "file_offset": "0x4978ef0",
+      "size": 12,
+      "sha256": "ba4b4459ab3dbf4241bd2aea562de041ccd3facf6e260db9c32136b408a56ec9"
+    },
+    {
+      "label": "wargoal_scores.break_enforced_treaties: current exact enum atom",
+      "va": "0x1449bc740",
+      "rva": "0x49bc740",
+      "file_offset": "0x49bb740",
+      "size": 16,
+      "sha256": "3f3cdc54b8bb04d9ddfdee8d1939a2f2b082eb6dbb2e2b6bdf4bc51ec2582187"
+    },
+    {
+      "label": "wargoal_scores.break_enforced_treaties: current exact enum literal",
+      "va": "0x14498bb48",
+      "rva": "0x498bb48",
+      "file_offset": "0x498ab48",
+      "size": 24,
+      "sha256": "ea4c08058ae70b6bbca7916ff234be0251c89d0df203553a2769ba1448e812fa"
+    },
+    {
+      "label": "wargoal_scores.colonization_rights: current exact enum atom",
+      "va": "0x1449b6640",
+      "rva": "0x49b6640",
+      "file_offset": "0x49b5640",
+      "size": 16,
+      "sha256": "1b2f428fa2e187a77a1392a2c5fae27cdd99bc491e04999dcc4cf87e605051ae"
+    },
+    {
+      "label": "wargoal_scores.colonization_rights: current exact enum literal",
+      "va": "0x1449837e8",
+      "rva": "0x49837e8",
+      "file_offset": "0x49827e8",
+      "size": 20,
+      "sha256": "6e220073e79ff78123a0826ac9689669d0d9a4878b2a97473a38b0b17042e33f"
+    },
+    {
+      "label": "wargoal_scores.conquer_state: current exact enum atom",
+      "va": "0x1449ae7a0",
+      "rva": "0x49ae7a0",
+      "file_offset": "0x49ad7a0",
+      "size": 16,
+      "sha256": "6eded0bb861f56e9d8e0255f7b33911e1b98a154dfd3984b8c90c7fe15ac3a53"
+    },
+    {
+      "label": "wargoal_scores.conquer_state: current exact enum literal",
+      "va": "0x144978a48",
+      "rva": "0x4978a48",
+      "file_offset": "0x4977a48",
+      "size": 14,
+      "sha256": "7590998a0a48e03f91338785965d175e111da09a0d8258b84c948411f0c1d49f"
+    },
+    {
+      "label": "wargoal_scores.contain_threat: current exact enum atom",
+      "va": "0x1449af2e0",
+      "rva": "0x49af2e0",
+      "file_offset": "0x49ae2e0",
+      "size": 16,
+      "sha256": "160f376651d823d7545017ba0b34ef35576c6efdc59760195d6c1c2b2bbf0826"
+    },
+    {
+      "label": "wargoal_scores.contain_threat: current exact enum literal",
+      "va": "0x144978d50",
+      "rva": "0x4978d50",
+      "file_offset": "0x4977d50",
+      "size": 15,
+      "sha256": "c1eca764a46dac0027df23147cc4eb37fae967ca5adaaf08ad1ced0e355b1757"
+    },
+    {
+      "label": "wargoal_scores.demand_no_strait_closure: current exact enum atom",
+      "va": "0x1449be0e0",
+      "rva": "0x49be0e0",
+      "file_offset": "0x49bd0e0",
+      "size": 16,
+      "sha256": "73274e716802b01c0ce121fc734ff98a0f9eded901a69cb0b1722fbb2a813015"
+    },
+    {
+      "label": "wargoal_scores.demand_no_strait_closure: current exact enum literal",
+      "va": "0x14498dce8",
+      "rva": "0x498dce8",
+      "file_offset": "0x498cce8",
+      "size": 25,
+      "sha256": "376b5271a7b67c10163f1b2741e860f26bc04945247f9d10f6235f449bc1ca74"
+    },
+    {
+      "label": "wargoal_scores.demand_no_tolls: current exact enum atom",
+      "va": "0x1449be0d0",
+      "rva": "0x49be0d0",
+      "file_offset": "0x49bd0d0",
+      "size": 16,
+      "sha256": "488210f21ee742f48245b4334043447479079c5c9252ade1e0e6982adc0a10fa"
+    },
+    {
+      "label": "wargoal_scores.demand_no_tolls: current exact enum literal",
+      "va": "0x14498dd08",
+      "rva": "0x498dd08",
+      "file_offset": "0x498cd08",
+      "size": 16,
+      "sha256": "622701c79204a0bae0d6abd9f4dd5a7165fc1a8dcbdc37097c451b85059db68d"
+    },
+    {
+      "label": "wargoal_scores.demand_strait_access: current exact enum atom",
+      "va": "0x1449be0b0",
+      "rva": "0x49be0b0",
+      "file_offset": "0x49bd0b0",
+      "size": 16,
+      "sha256": "31ce3bd9da62b4b6d256a5912b2cb2237e697c241788f53a3412b12e8f6c2848"
+    },
+    {
+      "label": "wargoal_scores.demand_strait_access: current exact enum literal",
+      "va": "0x14498dd98",
+      "rva": "0x498dd98",
+      "file_offset": "0x498cd98",
+      "size": 21,
+      "sha256": "93ac02edabb88fda2790104441720672186fa5695770c93c94639e2b209bcb7c"
+    },
+    {
+      "label": "wargoal_scores.demand_toll_exemption: current exact enum atom",
+      "va": "0x1449be0c0",
+      "rva": "0x49be0c0",
+      "file_offset": "0x49bd0c0",
+      "size": 16,
+      "sha256": "03ab9d5e9f1d9c46d61633ea7729f7be4308c39ea9e29539dd591af33c9650ab"
+    },
+    {
+      "label": "wargoal_scores.demand_toll_exemption: current exact enum literal",
+      "va": "0x14498dd80",
+      "rva": "0x498dd80",
+      "file_offset": "0x498cd80",
+      "size": 22,
+      "sha256": "0be0ccf1b0150f5ff7777b0cd1e337b4dec8322f2991cf904031bcd73f7ec7b3"
+    },
+    {
+      "label": "wargoal_scores.enforce_treaty_article: current exact enum atom",
+      "va": "0x1449baf20",
+      "rva": "0x49baf20",
+      "file_offset": "0x49b9f20",
+      "size": 16,
+      "sha256": "904148564da7ae4e8fa4052195625bd1773daf70e0f3e7be6dd48c40430fab29"
+    },
+    {
+      "label": "wargoal_scores.enforce_treaty_article: current exact enum literal",
+      "va": "0x144989028",
+      "rva": "0x4989028",
+      "file_offset": "0x4988028",
+      "size": 23,
+      "sha256": "fdc03700e586e04ab8ddb4fd1e2a67a190035ed2260ebd63ed4f1191a721fd1c"
+    },
+    {
+      "label": "wargoal_scores.force_nationalization: current exact enum atom",
+      "va": "0x1449b2be0",
+      "rva": "0x49b2be0",
+      "file_offset": "0x49b1be0",
+      "size": 16,
+      "sha256": "5507b7a561263886558d63a3202104a5af2546532a2d266ad1ce52bd39bf7e54"
+    },
+    {
+      "label": "wargoal_scores.force_nationalization: current exact enum literal",
+      "va": "0x14497e070",
+      "rva": "0x497e070",
+      "file_offset": "0x497d070",
+      "size": 22,
+      "sha256": "cd403b7a2e9b49dd9122d0a132cdda8df75d543f23938c59a08609018544b558"
+    },
+    {
+      "label": "wargoal_scores.foreign_investment_rights: current exact enum atom",
+      "va": "0x1449aa0d0",
+      "rva": "0x49aa0d0",
+      "file_offset": "0x49a90d0",
+      "size": 16,
+      "sha256": "0443064b72eee68b791eb339bc813c026cdb93f72e000de8628e22d3c01de68a"
+    },
+    {
+      "label": "wargoal_scores.foreign_investment_rights: current exact enum literal",
+      "va": "0x144972c78",
+      "rva": "0x4972c78",
+      "file_offset": "0x4971c78",
+      "size": 26,
+      "sha256": "adc52715595c793c1156f92a8d9284719ca8f146075937427335428c8a8c7df6"
+    },
+    {
+      "label": "wargoal_scores.humiliation: current exact enum atom",
+      "va": "0x1449afa40",
+      "rva": "0x49afa40",
+      "file_offset": "0x49aea40",
+      "size": 16,
+      "sha256": "76c2a29ae16c2ace60f3b816cc860502016194be4e677c79f074f7ff023f4eeb"
+    },
+    {
+      "label": "wargoal_scores.humiliation: current exact enum literal",
+      "va": "0x144979fa0",
+      "rva": "0x4979fa0",
+      "file_offset": "0x4978fa0",
+      "size": 12,
+      "sha256": "8e64e2a5e6a410cf42891fd67290f7338c49d4b6ed060d1c3e818ebdade1f6bf"
+    },
+    {
+      "label": "wargoal_scores.increase_autonomy: current exact enum atom",
+      "va": "0x1449b6d80",
+      "rva": "0x49b6d80",
+      "file_offset": "0x49b5d80",
+      "size": 16,
+      "sha256": "eb9cf2bde7370672b4579a17001e06d719b7d12f472323220bdae907b0955b5b"
+    },
+    {
+      "label": "wargoal_scores.increase_autonomy: current exact enum literal",
+      "va": "0x1447c32b0",
+      "rva": "0x47c32b0",
+      "file_offset": "0x47c22b0",
+      "size": 18,
+      "sha256": "96314c6751897417e302d23abf12cef0749b56bac946108d32c61eee774e90f4"
+    },
+    {
+      "label": "wargoal_scores.independence: current exact enum atom",
+      "va": "0x1449a34b0",
+      "rva": "0x49a34b0",
+      "file_offset": "0x49a24b0",
+      "size": 16,
+      "sha256": "ac5f5206cd8c7cf54c4209b8e5ae7b5d7892ffde5b9e16c42df62328c6b17cd9"
+    },
+    {
+      "label": "wargoal_scores.independence: current exact enum literal",
+      "va": "0x14496a3f0",
+      "rva": "0x496a3f0",
+      "file_offset": "0x49693f0",
+      "size": 13,
+      "sha256": "8d4050218f458f219850ad5545b5c4db6dc4fd69342cc0249ce7469c85685cde"
+    },
+    {
+      "label": "wargoal_scores.join_power_bloc: current exact enum atom",
+      "va": "0x1449b8b60",
+      "rva": "0x49b8b60",
+      "file_offset": "0x49b7b60",
+      "size": 16,
+      "sha256": "02c4c7e60d7f26bd1466347b6d0100e7d686b757016bd0d1945ddee0c6f6c104"
+    },
+    {
+      "label": "wargoal_scores.join_power_bloc: current exact enum literal",
+      "va": "0x14485d698",
+      "rva": "0x485d698",
+      "file_offset": "0x485c698",
+      "size": 16,
+      "sha256": "639a54592ec7f5a1c67992c2c24a58103568569c271e0c33deca0afb811c966d"
+    },
+    {
+      "label": "wargoal_scores.leave_power_bloc: current exact enum atom",
+      "va": "0x1449b8cd0",
+      "rva": "0x49b8cd0",
+      "file_offset": "0x49b7cd0",
+      "size": 16,
+      "sha256": "7bcf95769d8398bc95335e1e3df347b2845decbc3287f56d6072892e60daacba"
+    },
+    {
+      "label": "wargoal_scores.leave_power_bloc: current exact enum literal",
+      "va": "0x1447ce670",
+      "rva": "0x47ce670",
+      "file_offset": "0x47cd670",
+      "size": 17,
+      "sha256": "834fe62b0467693839b13f56944c491fa813503f819857fcc8b51fad92a05dca"
+    },
+    {
+      "label": "wargoal_scores.liberate_country: current exact enum atom",
+      "va": "0x1449a2170",
+      "rva": "0x49a2170",
+      "file_offset": "0x49a1170",
+      "size": 16,
+      "sha256": "251ad9de926270fa0c9744e4b39cb141723957ea81476979ff3a295a6803cfa3"
+    },
+    {
+      "label": "wargoal_scores.liberate_country: current exact enum literal",
+      "va": "0x144968ea0",
+      "rva": "0x4968ea0",
+      "file_offset": "0x4967ea0",
+      "size": 17,
+      "sha256": "f75b2682cb0bd0d796c79ff4c30df58dc688e6bffcc023a6093084378b3a08af"
+    },
+    {
+      "label": "wargoal_scores.liberate_subject: current exact enum atom",
+      "va": "0x1449ae910",
+      "rva": "0x49ae910",
+      "file_offset": "0x49ad910",
+      "size": 16,
+      "sha256": "c2ec48af9615217d39fe2e95e02a1ce88045dc8327b607aa6600067255f0135c"
+    },
+    {
+      "label": "wargoal_scores.liberate_subject: current exact enum literal",
+      "va": "0x144978898",
+      "rva": "0x4978898",
+      "file_offset": "0x4977898",
+      "size": 17,
+      "sha256": "bbd5645cb24812adbe57c9ec383ea93c843e70103fb5b0afe74076437214f71f"
+    },
+    {
+      "label": "wargoal_scores.make_subject: current exact enum atom",
+      "va": "0x1449bc760",
+      "rva": "0x49bc760",
+      "file_offset": "0x49bb760",
+      "size": 16,
+      "sha256": "c49ded2f1ec0288b7f3e967e8d9231ee84ff3fd54203c6782f2acfcc575569d9"
+    },
+    {
+      "label": "wargoal_scores.make_subject: current exact enum literal",
+      "va": "0x14498bb78",
+      "rva": "0x498bb78",
+      "file_offset": "0x498ab78",
+      "size": 13,
+      "sha256": "eaa2b53459b51885c0e9ba17bd93e24435151ef605505f3f54753115359fa7e3"
+    },
+    {
+      "label": "wargoal_scores.open_market: current exact enum atom",
+      "va": "0x1449a2e40",
+      "rva": "0x49a2e40",
+      "file_offset": "0x49a1e40",
+      "size": 16,
+      "sha256": "a99f67b9b5cec523625f900762dd8d786c2cefca23d4c7c1dd618664d28b63ab"
+    },
+    {
+      "label": "wargoal_scores.open_market: current exact enum literal",
+      "va": "0x1449692d8",
+      "rva": "0x49692d8",
+      "file_offset": "0x49682d8",
+      "size": 12,
+      "sha256": "92b780d2ae081966619188b13de5dc725ee82063621b760c5e8eadee4707f115"
+    },
+    {
+      "label": "wargoal_scores.reduce_autonomy: current exact enum atom",
+      "va": "0x1449b6d70",
+      "rva": "0x49b6d70",
+      "file_offset": "0x49b5d70",
+      "size": 16,
+      "sha256": "a46a90c9151abdc4308e3eb563ee02130b3186c8e281ea629b2da509839ffbc4"
+    },
+    {
+      "label": "wargoal_scores.reduce_autonomy: current exact enum literal",
+      "va": "0x1449833b8",
+      "rva": "0x49833b8",
+      "file_offset": "0x49823b8",
+      "size": 16,
+      "sha256": "baf17aa05842f265e64967c238f247c9857c2bf61416475b29f1e27eae05fde6"
+    },
+    {
+      "label": "wargoal_scores.regime_change: current exact enum atom",
+      "va": "0x1449afa30",
+      "rva": "0x49afa30",
+      "file_offset": "0x49aea30",
+      "size": 16,
+      "sha256": "d9690d5d47781d2415f6f4aff660a0f9721066940a1c55bc9431cbaacc6c788c"
+    },
+    {
+      "label": "wargoal_scores.regime_change: current exact enum literal",
+      "va": "0x1447c30c8",
+      "rva": "0x47c30c8",
+      "file_offset": "0x47c20c8",
+      "size": 14,
+      "sha256": "b4687e4bf180c1aa74bea6049bc3a64e40c29501b6c961399d7734b301267e9b"
+    },
+    {
+      "label": "wargoal_scores.release_as_subject: current exact enum atom",
+      "va": "0x1449bc830",
+      "rva": "0x49bc830",
+      "file_offset": "0x49bb830",
+      "size": 16,
+      "sha256": "e66148647c3a5dbea89da526b21275dfceb84738e16318a2864964e753511f6e"
+    },
+    {
+      "label": "wargoal_scores.release_as_subject: current exact enum literal",
+      "va": "0x14498b418",
+      "rva": "0x498b418",
+      "file_offset": "0x498a418",
+      "size": 19,
+      "sha256": "a75c7e34c5c294b68588bfa8e6d743c073f4eef6003f428011638f82b91312c5"
+    },
+    {
+      "label": "wargoal_scores.return_state: current exact enum atom",
+      "va": "0x1449af2c0",
+      "rva": "0x49af2c0",
+      "file_offset": "0x49ae2c0",
+      "size": 16,
+      "sha256": "b471a56a9c8b7f41700cb1c8d7949879bb1f5a002beef392075e04cff354a727"
+    },
+    {
+      "label": "wargoal_scores.return_state: current exact enum literal",
+      "va": "0x144979368",
+      "rva": "0x4979368",
+      "file_offset": "0x4978368",
+      "size": 13,
+      "sha256": "906c2e34f0d3dd887296f8897df91365b61a01e41a1f5daebb1610a66cda5987"
+    },
+    {
+      "label": "wargoal_scores.revoke_all_claims: current exact enum atom",
+      "va": "0x1449b6300",
+      "rva": "0x49b6300",
+      "file_offset": "0x49b5300",
+      "size": 16,
+      "sha256": "7f4f11307f5025bd6a04af9075961ec14b74d3596c27a07347a11c78407724be"
+    },
+    {
+      "label": "wargoal_scores.revoke_all_claims: current exact enum literal",
+      "va": "0x144982400",
+      "rva": "0x4982400",
+      "file_offset": "0x4981400",
+      "size": 18,
+      "sha256": "d52c247f5785814125790f9cb2c6a9f5856cd16ef1a83c00cb50dc7248cdca78"
+    },
+    {
+      "label": "wargoal_scores.revoke_claim: current exact enum atom",
+      "va": "0x1449af2f0",
+      "rva": "0x49af2f0",
+      "file_offset": "0x49ae2f0",
+      "size": 16,
+      "sha256": "6ed7fed01bf65e1fdff5d720801031269930f6ec0bc3de08ce853c59a0bec156"
+    },
+    {
+      "label": "wargoal_scores.revoke_claim: current exact enum literal",
+      "va": "0x144978d40",
+      "rva": "0x4978d40",
+      "file_offset": "0x4977d40",
+      "size": 13,
+      "sha256": "458431022908c5f251b3b3a7fb187a2e366e1e57c2b7faeb94ddc7bba941289f"
+    },
+    {
+      "label": "wargoal_scores.secession: current exact enum atom",
+      "va": "0x1449aff30",
+      "rva": "0x49aff30",
+      "file_offset": "0x49aef30",
+      "size": 16,
+      "sha256": "3c8d2c50dc2d0d3101b8e76467998653ada3f7ee0c613d550ea7711a0f069262"
+    },
+    {
+      "label": "wargoal_scores.secession: current exact enum literal",
+      "va": "0x144979930",
+      "rva": "0x4979930",
+      "file_offset": "0x4978930",
+      "size": 10,
+      "sha256": "adc8b7a5a73365992a5838792baf19a8de751529e35b440c91f4b13762e56f6c"
+    },
+    {
+      "label": "wargoal_scores.take_treaty_port: current exact enum atom",
+      "va": "0x1449ae900",
+      "rva": "0x49ae900",
+      "file_offset": "0x49ad900",
+      "size": 16,
+      "sha256": "a7161e63dbf3a817e48211f44e1eec913b12bcfb80c1c9ddc65133ab9daea7f7"
+    },
+    {
+      "label": "wargoal_scores.take_treaty_port: current exact enum literal",
+      "va": "0x144978858",
+      "rva": "0x4978858",
+      "file_offset": "0x4977858",
+      "size": 17,
+      "sha256": "eb4ed595a50f478710292788e620c25cc45e20da2a15221cad4529b5ec108704"
+    },
+    {
+      "label": "wargoal_scores.transfer_subject: current exact enum atom",
+      "va": "0x1449af460",
+      "rva": "0x49af460",
+      "file_offset": "0x49ae460",
+      "size": 16,
+      "sha256": "116f4e64729f5f7f43ebbe196ce323d213153591af847731ddf66e34343526ba"
+    },
+    {
+      "label": "wargoal_scores.transfer_subject: current exact enum literal",
+      "va": "0x144978b18",
+      "rva": "0x4978b18",
+      "file_offset": "0x4977b18",
+      "size": 17,
+      "sha256": "0b509a402e4deed96a1e4a8be3d2a919d2279849febaf8d9922891bb63c1dbdd"
+    },
+    {
+      "label": "wargoal_scores.unification: current exact enum atom",
+      "va": "0x1449aea00",
+      "rva": "0x49aea00",
+      "file_offset": "0x49ada00",
+      "size": 16,
+      "sha256": "4729c70c8f17a0fd3046c4009ebc681c74e733055c6c585ab1c7cce194a0a285"
+    },
+    {
+      "label": "wargoal_scores.unification: current exact enum literal",
+      "va": "0x144978130",
+      "rva": "0x4978130",
+      "file_offset": "0x4977130",
+      "size": 12,
+      "sha256": "db54dacbbe9e74674784cfa982174f6db27fc37478e6fcc708e380f99438cd09"
+    },
+    {
+      "label": "wargoal_scores.unification_leadership: current exact enum atom",
+      "va": "0x1449b4160",
+      "rva": "0x49b4160",
+      "file_offset": "0x49b3160",
+      "size": 16,
+      "sha256": "e77e3dbbdd0a2f22f5be72081cf84e18112a327a142e926eb9f1fbd8894d2cfb"
+    },
+    {
+      "label": "wargoal_scores.unification_leadership: current exact enum literal",
+      "va": "0x14497f280",
+      "rva": "0x497f280",
+      "file_offset": "0x497e280",
+      "size": 23,
+      "sha256": "ca40ed051ca13dfd3ddae255e0861cecf4bd4a37082c3a6e34c0d5ae0eca33ce"
+    },
+    {
+      "label": "wargoal_scores.custom: current exact enum atom",
+      "va": "0x144996110",
+      "rva": "0x4996110",
+      "file_offset": "0x4995110",
+      "size": 16,
+      "sha256": "4c250dc0378a76c416aed4c2deb448cb4dc550898ca808799f537ba7d67d605b"
+    },
+    {
+      "label": "wargoal_scores.custom: current exact enum literal",
+      "va": "0x14495bea8",
+      "rva": "0x495bea8",
+      "file_offset": "0x495aea8",
+      "size": 7,
+      "sha256": "6b435adcf9b736e8a2b8ba7b8256648b24fc3419a2aded13f8a689360a9a163e"
+    },
+    {
+      "label": "treaty_category_scores.economy: current exact enum atom",
+      "va": "0x1449a0770",
+      "rva": "0x49a0770",
+      "file_offset": "0x499f770",
+      "size": 16,
+      "sha256": "4e9b14fd220aba9cb9fd1766d304a00e682b45d3b0350baeef1e9dfc71d2b065"
+    },
+    {
+      "label": "treaty_category_scores.economy: current exact enum literal",
+      "va": "0x14476b798",
+      "rva": "0x476b798",
+      "file_offset": "0x476a798",
+      "size": 8,
+      "sha256": "3baea9402845032eb62c482056de995bddb7822cb26a7bedaf2cbfc4e385d089"
+    },
+    {
+      "label": "treaty_category_scores.trade: current exact enum atom",
+      "va": "0x14499f350",
+      "rva": "0x499f350",
+      "file_offset": "0x499e350",
+      "size": 16,
+      "sha256": "bf0f1aa7d55d89f749f78e1102a90ef14bc0c6628daf8a80553f8d04839c8657"
+    },
+    {
+      "label": "treaty_category_scores.trade: current exact enum literal",
+      "va": "0x144842b48",
+      "rva": "0x4842b48",
+      "file_offset": "0x4841b48",
+      "size": 6,
+      "sha256": "1b803f666e0214b8c4d35de7bcd6f37387b4936b92687c6d177bda78deb9478c"
+    },
+    {
+      "label": "treaty_category_scores.military: current exact enum atom",
+      "va": "0x1449a0780",
+      "rva": "0x49a0780",
+      "file_offset": "0x499f780",
+      "size": 16,
+      "sha256": "2b7d50569647e7ebe4c3a4330a79a0ac6ed7805896025453e329ceea6593008d"
+    },
+    {
+      "label": "treaty_category_scores.military: current exact enum literal",
+      "va": "0x144829328",
+      "rva": "0x4829328",
+      "file_offset": "0x4828328",
+      "size": 9,
+      "sha256": "4e28b13f85131eca4b216c3a211b2ce5509ce365c7e50843ebc7c7551fcaa0cb"
+    },
+    {
+      "label": "treaty_category_scores.military_defense: current exact enum atom",
+      "va": "0x1449aae00",
+      "rva": "0x49aae00",
+      "file_offset": "0x49a9e00",
+      "size": 16,
+      "sha256": "8825ce72df1279e04c84dea6071edafab7d072243ea4030d9ecba95f5ee1e2f5"
+    },
+    {
+      "label": "treaty_category_scores.military_defense: current exact enum literal",
+      "va": "0x144973258",
+      "rva": "0x4973258",
+      "file_offset": "0x4972258",
+      "size": 17,
+      "sha256": "592d04aea1ee5fb0591e9d11f2f76ca5ed96760ab48fd2fda33c92f0dba038c1"
+    },
+    {
+      "label": "treaty_category_scores.ideology: current exact enum atom",
+      "va": "0x1449a1040",
+      "rva": "0x49a1040",
+      "file_offset": "0x49a0040",
+      "size": 16,
+      "sha256": "ffbdc488adbc8386101cc506b407dbac1d0a4063f84d2de6160bec5bcd5a18c7"
+    },
+    {
+      "label": "treaty_category_scores.ideology: current exact enum literal",
+      "va": "0x14480e7a0",
+      "rva": "0x480e7a0",
+      "file_offset": "0x480d7a0",
+      "size": 9,
+      "sha256": "ad063171383a7fced939c38a55a1042d674b3338f4a7b06fa1f218665acd3685"
+    },
+    {
+      "label": "treaty_category_scores.expansion: current exact enum atom",
+      "va": "0x1449aae10",
+      "rva": "0x49aae10",
+      "file_offset": "0x49a9e10",
+      "size": 16,
+      "sha256": "0472596837284932f2f3a635d8c227d2c5f879f8428ef7e29e06cac3560f285e"
+    },
+    {
+      "label": "treaty_category_scores.expansion: current exact enum literal",
+      "va": "0x1449731e8",
+      "rva": "0x49731e8",
+      "file_offset": "0x49721e8",
+      "size": 10,
+      "sha256": "8b651af6b81b266ab4474e25e26ea997beb1bb6ca448620bc76ee40e58be9ad4"
+    },
+    {
+      "label": "treaty_category_scores.power_bloc: current exact enum atom",
+      "va": "0x1449b74e0",
+      "rva": "0x49b74e0",
+      "file_offset": "0x49b64e0",
+      "size": 16,
+      "sha256": "a18cfc9b699aeae94681d4e73999ed392d52be6f42c8cb87fd2aeba5f64b3d7e"
+    },
+    {
+      "label": "treaty_category_scores.power_bloc: current exact enum literal",
+      "va": "0x1446b0720",
+      "rva": "0x46b0720",
+      "file_offset": "0x46af720",
+      "size": 11,
+      "sha256": "55a70c0c98cb1082db61dc0562808d03ba71bfeedb02aecdf59a058212aafbd0"
+    },
+    {
+      "label": "treaty_category_scores.other: current exact enum atom",
+      "va": "0x1449a0730",
+      "rva": "0x49a0730",
+      "file_offset": "0x499f730",
+      "size": 16,
+      "sha256": "b0fa48af6a4985ed2624b58395d6a2be684b809101c17bd6f618ed792da985c6"
+    },
+    {
+      "label": "treaty_category_scores.other: current exact enum literal",
+      "va": "0x1446a71d4",
+      "rva": "0x46a71d4",
+      "file_offset": "0x46a61d4",
+      "size": 6,
+      "sha256": "ad078230adfc0e57aaeed46440b311ad29ee9902c33ed27a8ca1aef2e1ddacc8"
+    },
+    {
+      "label": "treaty_category_scores.none: current exact enum atom",
+      "va": "0x14499b050",
+      "rva": "0x499b050",
+      "file_offset": "0x499a050",
+      "size": 16,
+      "sha256": "8a7bb65f1e4ff6f152f9f8410880d1bc18996aa04d36bb9d9342480dd3d50169"
+    },
+    {
+      "label": "treaty_category_scores.none: current exact enum literal",
+      "va": "0x1446a5d84",
+      "rva": "0x46a5d84",
+      "file_offset": "0x46a4d84",
+      "size": 5,
+      "sha256": "fdbb9db68f1db204d7823d5cbd2ff3eee530677fc945b6304356e1c6658b9ca2"
+    },
+    {
+      "label": "secret_goal_scores.none: current exact enum atom",
+      "va": "0x14499b050",
+      "rva": "0x499b050",
+      "file_offset": "0x499a050",
+      "size": 16,
+      "sha256": "8a7bb65f1e4ff6f152f9f8410880d1bc18996aa04d36bb9d9342480dd3d50169"
+    },
+    {
+      "label": "secret_goal_scores.none: current exact enum literal",
+      "va": "0x1446a5d84",
+      "rva": "0x46a5d84",
+      "file_offset": "0x46a4d84",
+      "size": 5,
+      "sha256": "fdbb9db68f1db204d7823d5cbd2ff3eee530677fc945b6304356e1c6658b9ca2"
+    },
+    {
+      "label": "secret_goal_scores.befriend: current exact enum atom",
+      "va": "0x1449a3710",
+      "rva": "0x49a3710",
+      "file_offset": "0x49a2710",
+      "size": 16,
+      "sha256": "b18cc4ab468597c8443481df356dd7bd9ca30c36a159e4ab4ff126bcecb25266"
+    },
+    {
+      "label": "secret_goal_scores.befriend: current exact enum literal",
+      "va": "0x144969c70",
+      "rva": "0x4969c70",
+      "file_offset": "0x4968c70",
+      "size": 9,
+      "sha256": "c56f0b765199f6455604b0550817ba1d18abfd983848b7cb85bcc6ff95a00e1d"
+    },
+    {
+      "label": "secret_goal_scores.reconcile: current exact enum atom",
+      "va": "0x1449af920",
+      "rva": "0x49af920",
+      "file_offset": "0x49ae920",
+      "size": 16,
+      "sha256": "9d57ef62717f4f1ef81bfb34daf1891f78a012dcf0498b5c3b6920e2df0d9494"
+    },
+    {
+      "label": "secret_goal_scores.reconcile: current exact enum literal",
+      "va": "0x14497a120",
+      "rva": "0x497a120",
+      "file_offset": "0x4979120",
+      "size": 10,
+      "sha256": "58a7ebe549a63c3295876395fc544ddd3d0fc33753cd687ab94059d460342ee1"
+    },
+    {
+      "label": "secret_goal_scores.protect: current exact enum atom",
+      "va": "0x1449a36f0",
+      "rva": "0x49a36f0",
+      "file_offset": "0x49a26f0",
+      "size": 16,
+      "sha256": "6153b93132d0bfdcc36431b88611406691235f05a7db4d144d4c529a3beaff0f"
+    },
+    {
+      "label": "secret_goal_scores.protect: current exact enum literal",
+      "va": "0x144969cd8",
+      "rva": "0x4969cd8",
+      "file_offset": "0x4968cd8",
+      "size": 8,
+      "sha256": "9d7badd1cedb5503966fec37a7a322fe4ebe9ed9becf5ac14a32b297b4e8520a"
+    },
+    {
+      "label": "secret_goal_scores.antagonize: current exact enum atom",
+      "va": "0x1449a3700",
+      "rva": "0x49a3700",
+      "file_offset": "0x49a2700",
+      "size": 16,
+      "sha256": "ff8cd161a5af524542fc24118ed8dea8cc56dec19f75a9a3a1a52e1337d9577d"
+    },
+    {
+      "label": "secret_goal_scores.antagonize: current exact enum literal",
+      "va": "0x144969c80",
+      "rva": "0x4969c80",
+      "file_offset": "0x4968c80",
+      "size": 11,
+      "sha256": "02aed2672eb99d53a5e56a060ece049f1a434bf6035a0adb6e51bc584c3d4e0d"
+    },
+    {
+      "label": "secret_goal_scores.conquer: current exact enum atom",
+      "va": "0x1449a67a0",
+      "rva": "0x49a67a0",
+      "file_offset": "0x49a57a0",
+      "size": 16,
+      "sha256": "5afe912f39f96ec3b2001f5bb6f5cb281462c9f277bb5dafc0dd191bf95d4dc0"
+    },
+    {
+      "label": "secret_goal_scores.conquer: current exact enum literal",
+      "va": "0x14496dcc8",
+      "rva": "0x496dcc8",
+      "file_offset": "0x496ccc8",
+      "size": 8,
+      "sha256": "06ca21ad5f0283429ddf03511343c89300b55f4a87298afb445a73021c9e4a78"
+    },
+    {
+      "label": "secret_goal_scores.dominate: current exact enum atom",
+      "va": "0x1449af870",
+      "rva": "0x49af870",
+      "file_offset": "0x49ae870",
+      "size": 16,
+      "sha256": "77c9bbd4f8cfb3a80f2a0c8a9a278640533f3dff661a837798a53327a74d284c"
+    },
+    {
+      "label": "secret_goal_scores.dominate: current exact enum literal",
+      "va": "0x144979c28",
+      "rva": "0x4979c28",
+      "file_offset": "0x4978c28",
+      "size": 9,
+      "sha256": "92560458a05229309256a6baae6f3819ede14d31615427c71ed5bbd2a8b8f4d3"
+    },
+    {
+      "label": "secret_goal_scores.comply: current exact enum atom",
+      "va": "0x1449b8570",
+      "rva": "0x49b8570",
+      "file_offset": "0x49b7570",
+      "size": 16,
+      "sha256": "061773cf49970ce33848acf49cbd23095e9609427fb6593f2c8fb561c160bcf5"
+    },
+    {
+      "label": "secret_goal_scores.comply: current exact enum literal",
+      "va": "0x144985478",
+      "rva": "0x4985478",
+      "file_offset": "0x4984478",
+      "size": 7,
+      "sha256": "5056bfdc292fa504f855a9ee13ad50e9014f916391ea627c9f6a339a1f8875b1"
+    },
+    {
+      "label": "secret_goal_scores.defy: current exact enum atom",
+      "va": "0x1449b8580",
+      "rva": "0x49b8580",
+      "file_offset": "0x49b7580",
+      "size": 16,
+      "sha256": "1af0d0ae745f5cbbda2e6c9b0fc30dfef05793de0219c6d33f4fb6481a5eb7a1"
+    },
+    {
+      "label": "secret_goal_scores.defy: current exact enum literal",
+      "va": "0x14498540c",
+      "rva": "0x498540c",
+      "file_offset": "0x498440c",
+      "size": 5,
+      "sha256": "6e13f2befb099018486e420aa2a0b12f043086768cfbcf3fe6ea32e4b425d65b"
+    },
+    {
+      "label": "law_instance_type: type_descriptor_va",
+      "va": "0x1456961f8",
+      "rva": "0x56961f8",
+      "file_offset": "0x56945f8",
+      "size": 34,
+      "sha256": "191c0f2fbf81dd2fe8c875a64c0cd52ca8279377ba41f132b1de211ff7653448"
+    },
+    {
+      "label": "law_instance_type: link_type_descriptor_va",
+      "va": "0x1459806e0",
+      "rva": "0x59806e0",
+      "file_offset": "0x597eae0",
+      "size": 35,
+      "sha256": "9b90f6a3c8e47ef27378ec5d68a48f2f689b212db1ccf260a47b1077030590fd"
+    },
+    {
+      "label": "law_instance_type: link_col_va",
+      "va": "0x144e417a0",
+      "rva": "0x4e417a0",
+      "file_offset": "0x4e407a0",
+      "size": 24,
+      "sha256": "4674ec225544870273408d2cb8c6f2273a8a9bc92bb92a8674fc476a9e421e39"
+    },
+    {
+      "label": "law_instance_type: link_vftable_va",
+      "va": "0x1449132d8",
+      "rva": "0x49132d8",
+      "file_offset": "0x49122d8",
+      "size": 64,
+      "sha256": "972ec8767c8c6bd87ce9e869469ed30cf804d318d1ce16dc205fbf3846424409"
+    },
+    {
+      "label": "law_instance_type: link_method_va",
+      "va": "0x142999100",
+      "rva": "0x2999100",
+      "file_offset": "0x2998500",
+      "size": 123,
+      "sha256": "ead3c311bd98d76a92b2c02f8132ea88aa3bd16313f37e86b522171cf732360c"
+    },
+    {
+      "label": "law_instance_type: resolver_va",
+      "va": "0x140982cb0",
+      "rva": "0x982cb0",
+      "file_offset": "0x9820b0",
+      "size": 178,
+      "sha256": "8a3f540df3d9aa51dfaef0cfd69b2a371e3f587c823daeee484ec072658a8657"
+    },
+    {
+      "label": "diplomatic_play_instance_type: type_descriptor_va",
+      "va": "0x145690ba8",
+      "rva": "0x5690ba8",
+      "file_offset": "0x568efa8",
+      "size": 38,
+      "sha256": "f05d3f3337343025bda56c72b548c80f36270ffd0abbfb33dfc13407f30bf39f"
+    },
+    {
+      "label": "diplomatic_play_instance_type: link_type_descriptor_va",
+      "va": "0x145979ae0",
+      "rva": "0x5979ae0",
+      "file_offset": "0x5977ee0",
+      "size": 45,
+      "sha256": "29fde1ad9ed7e96d1f4e8b05293cd4394e53afe24c457e9b71499c8580082a68"
+    },
+    {
+      "label": "diplomatic_play_instance_type: link_col_va",
+      "va": "0x144e4e3a8",
+      "rva": "0x4e4e3a8",
+      "file_offset": "0x4e4d3a8",
+      "size": 24,
+      "sha256": "b0e543fd97ea4c5141a2f9417ac170465f77e5ec14953356fcb7cf4e9c7e4406"
+    },
+    {
+      "label": "diplomatic_play_instance_type: link_vftable_va",
+      "va": "0x1449159b0",
+      "rva": "0x49159b0",
+      "file_offset": "0x49149b0",
+      "size": 64,
+      "sha256": "7f76c14697de7d6f301c36f47881e1da0312551c9d18ca403267b6041908ab3f"
+    },
+    {
+      "label": "diplomatic_play_instance_type: link_method_va",
+      "va": "0x142998a50",
+      "rva": "0x2998a50",
+      "file_offset": "0x2997e50",
+      "size": 90,
+      "sha256": "beb091ca920678dd671a0b374be3203f20669fdabb73193660c0a3db43eebeb3"
+    },
+    {
+      "label": "diplomatic_play_instance_type: resolver_va",
+      "va": "0x1409820e0",
+      "rva": "0x9820e0",
+      "file_offset": "0x9814e0",
+      "size": 178,
+      "sha256": "a2663a901e3dd021aec19e2ac67d26d2c59690f68cf37251bc7ef7492ebdcd91"
+    },
+    {
+      "label": "strategic_region_type: link_type_descriptor_va",
+      "va": "0x1459790a0",
+      "rva": "0x59790a0",
+      "file_offset": "0x59774a0",
+      "size": 86,
+      "sha256": "2dce3e3aa2977e3acefd1c11c8a8fd03d6676c1c7e1de8b3e9b7a134fa9746c1"
+    },
+    {
+      "label": "strategic_region_type: link_col_va",
+      "va": "0x144e452d8",
+      "rva": "0x4e452d8",
+      "file_offset": "0x4e442d8",
+      "size": 24,
+      "sha256": "6988e8937c9b803aaf50dbc79481932c3fc06a679a9ec5da8aefaa7cffe69332"
+    },
+    {
+      "label": "strategic_region_type: link_vftable_va",
+      "va": "0x1449100a8",
+      "rva": "0x49100a8",
+      "file_offset": "0x490f0a8",
+      "size": 64,
+      "sha256": "fba7f71c37f27bfc281e18cf73d19a37729fbcc20765236917e763fbfef67b69"
+    },
+    {
+      "label": "strategic_region_type: link_method_va",
+      "va": "0x1429c88e0",
+      "rva": "0x29c88e0",
+      "file_offset": "0x29c7ce0",
+      "size": 235,
+      "sha256": "f2ba8f7c6b256b163cd05c450f41f1366ecffbb1483245a06d460395ca7f1be0"
+    },
+    {
+      "label": "strategic_region_type: resolver_va",
+      "va": "0x1409a2140",
+      "rva": "0x9a2140",
+      "file_offset": "0x9a1540",
+      "size": 188,
+      "sha256": "5efddd8a6f1c4f93ff6a867bcd51b9f7aa54df0a6e61be8de838bbe8a32e7a23"
+    },
+    {
+      "label": "state scope current typed descriptor .?AVCState@@",
+      "va": "0x145465b58",
+      "rva": "0x5465b58",
+      "file_offset": "0x5463f58",
+      "size": 29,
+      "sha256": "e3ed9b3081037675d12d984d7498dadc31c72fb1e56906400b7d9db110e1de0d"
+    },
+    {
+      "label": "state scope current typed descriptor .?AV?$CJominiScriptScopeObject@VCState@@@@",
+      "va": "0x14580a800",
+      "rva": "0x580a800",
+      "file_offset": "0x5808c00",
+      "size": 59,
+      "sha256": "b3c07b88f47cc06b8850620c61ef37d3a93824c82b5746ece3e70b0bbc1678d2"
+    },
+    {
+      "label": "state scope typed COL tag4c",
+      "va": "0x144cee5c8",
+      "rva": "0x4cee5c8",
+      "file_offset": "0x4ced5c8",
+      "size": 24,
+      "sha256": "add03a0c90c92fb635a519a26bb633df35007ac80a6fb1b9a3bd6fb46a13b30c"
+    },
+    {
+      "label": "state scope typed vtable tag4c",
+      "va": "0x1447e13c8",
+      "rva": "0x47e13c8",
+      "file_offset": "0x47e03c8",
+      "size": 64,
+      "sha256": "1aa6e8a6bf0b91b181c78cfa44beed21c80aec5180a315ed19543797d1054b9b"
+    },
+    {
+      "label": "state scope getter outputs tag4c",
+      "va": "0x1417d7f90",
+      "rva": "0x17d7f90",
+      "file_offset": "0x17d7390",
+      "size": 32,
+      "sha256": "2105664e5e34706ad47c87627ecc88a60b405266b8da3bda759441b64665ec2b"
+    },
+    {
+      "label": "typed map definition lookup explicit diagnostic",
+      "va": "0x144796cc0",
+      "rva": "0x4796cc0",
+      "file_offset": "0x4795cc0",
+      "size": 47,
+      "sha256": "2081e51baa8e4ca194c726043aa35f1685897b1cc6e1367cf529b6470e0b050a"
+    },
+    {
+      "label": "typed map definition lookup explicit diagnostic",
+      "va": "0x144797430",
+      "rva": "0x4797430",
+      "file_offset": "0x4796430",
+      "size": 42,
+      "sha256": "9a428146a33560dc6aeb7a2dbb446d90a441a53a28538c3ac673fa7b55c4fa7f"
+    }
+  ]
+}

@@ -61,7 +61,8 @@ def standard_tree(tmp_path, monkeypatch):
 
     monkeypatch.setattr(distribution, "generation_lock", lock)
     monkeypatch.setattr(distribution, "verify_compatibility_installation", lambda: None)
-    with version_contracts.select_version("1.15.1"):
+    monkeypatch.setattr(distribution, "check_profile_installation", lambda profile: profile)
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         yield target, ledger
 
 
@@ -77,6 +78,23 @@ def _write_standard_with_shared_ledger(ledger):
     with GenerationTransaction() as transaction:
         transaction.replace({ledger: b"new-ledger\n"})
         distribution.write_standard_outputs(transaction=transaction)
+
+
+def test_final_profile_recheck_restores_production_and_ledger(standard_tree, monkeypatch):
+    target, ledger = standard_tree
+    before = _tree(target)
+
+    def check_profile(profile):
+        assert profile.game_version == version_contracts.CURRENT_VERSION
+        assert (target / "common/current.txt").read_bytes() == b"new-production\n"
+        assert ledger.read_bytes() == b"new-ledger\n"
+        raise ValueError("R2 reader source drift")
+
+    monkeypatch.setattr(distribution, "check_profile_installation", check_profile)
+    with pytest.raises(ValueError, match="R2 reader source drift"):
+        _write_standard_with_shared_ledger(ledger)
+    assert _tree(target) == before
+    assert ledger.read_bytes() == b"old-ledger\n"
 
 
 @contextmanager
@@ -383,7 +401,7 @@ def test_current_cli_keeps_generated_ledgers_in_standard_writer_transaction(tmp_
         raise ValueError("final-current-boundary-drift")
 
     monkeypatch.setattr(distribution, "write_standard_outputs", reject)
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         result = CliRunner().invoke(cli.app, ["modgen", "--write"])
     assert called
     assert result.exit_code == 1, result.output

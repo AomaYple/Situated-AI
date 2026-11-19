@@ -34,11 +34,10 @@ def test_joint_variant_witness_decodes_decimal_neutral_without_binary_rounding()
 
 def test_ir_is_stable_and_complete_for_all_production_rules():
     items = ir.from_rules(_all_rules())
-    assert len(items) == len(production_policy_sources().rules)
-    assert len({item.action_id for item in items}) == len(production_policy_sources().rules)
-    assert {
-        (item.source, item.action_id, item.field) for item in items
-    } == production_policy_sources().rules
+    expected = production_policy_sources().rules
+    assert len(items) == len(expected)
+    assert len({item.action_id for item in items}) == len(expected)
+    assert {(item.source, item.action_id, item.field) for item in items} == expected
     assert all(item.vanilla_tail for item in items)
 
 
@@ -67,29 +66,9 @@ def test_ast_witness_checks_write_through_exact_unconditional_lowering(body, exp
     assert lowering.ast_mismatches({"sample.txt": text}) == expected
 
 
-@pytest.mark.integration
-def test_generated_production_text_is_independently_parseable():
-    info = decision_rules.load()
-    adapters = decision_adapters.load()
-    country_policy = country_state.load()
-    generated = {
-        name: text
-        for name, text in decisions.build(
-            information_rules=info,
-            consumer_adapters=adapters,
-            country_policy=country_policy,
-            extensions=decisions.load_extensions(profile="release"),
-        ).items()
-        if name.endswith(".txt")
-    }
-    witness = lowering.witnesses(generated)
-    assert witness
-    assert not lowering.mismatches(ir.from_rules(_all_rules()), generated)
-
-
-@pytest.mark.integration
-def test_generated_action_blocks_have_independent_ast_shape():
-    generated = {
+@pytest.fixture(scope="module")
+def generated_texts():
+    return {
         name: text
         for name, text in decisions.build(
             information_rules=decision_rules.load(),
@@ -99,7 +78,18 @@ def test_generated_action_blocks_have_independent_ast_shape():
         ).items()
         if name.endswith(".txt")
     }
-    witnesses = lowering.ast_witnesses(generated)
+
+
+@pytest.mark.integration
+def test_generated_production_text_is_independently_parseable(generated_texts):
+    witness = lowering.witnesses(generated_texts)
+    assert witness
+    assert not lowering.mismatches(ir.from_rules(_all_rules()), generated_texts)
+
+
+@pytest.mark.integration
+def test_generated_action_blocks_have_independent_ast_shape(generated_texts):
+    witnesses = lowering.ast_witnesses(generated_texts)
     assert witnesses
-    assert lowering.ast_mismatches(generated) == ()
+    assert lowering.ast_mismatches(generated_texts) == ()
     assert all(item.parsed and item.has_limit and item.has_write for item in witnesses)

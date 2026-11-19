@@ -8,6 +8,7 @@ from typing import Any, cast
 import pytest
 
 from pdx import (
+    config,
     decision_adapters,
     decision_interfaces,
     decision_rules,
@@ -24,15 +25,26 @@ pytestmark = pytest.mark.unit
 
 @pytest.fixture(autouse=True)
 def current_version():
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         yield
 
 
 @pytest.mark.parametrize(
     "configuration", [ProfileConfiguration(core=False), ProfileConfiguration(mode="neutral")]
 )
-def test_all_disabled_coverage_retains_complete_native_denominator(configuration):
-    baseline = decisions.baseline_path().read_text(encoding="utf-8-sig")
+@pytest.mark.parametrize(
+    "installed",
+    [False, pytest.param(True, marks=pytest.mark.integration)],
+    ids=["fixture", "installed"],
+)
+def test_all_disabled_coverage_retains_complete_native_denominator(configuration, installed):
+    if installed:
+        version_contracts.verify_installation_identity(config.GAME.parent)
+        baseline = decisions.baseline_text()
+    else:
+        baseline = (
+            "ai_strategy_default={icon=x undesirable_infamy_level={value=1} institution_scores={}}"
+        )
     rows = decision_interfaces.coverage(baseline, {}, configuration=configuration)
     root = parse_text(baseline).top_assignments[0].value
     assert isinstance(root, Block)

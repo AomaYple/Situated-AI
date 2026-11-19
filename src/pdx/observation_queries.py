@@ -101,7 +101,19 @@ SOURCE_HASHES_1151 = {
 }
 
 
+SOURCE_HASHES_1152 = {
+    **SOURCE_HASHES_1151,
+    "common/laws/00_citizenship.txt": "129adadee3f099092182a73d7eb9fa95963b066de0c4353aee3657ba8ac0dcea",
+    "common/laws/02_labour_associations.txt": "049f5bc288f67639f332d003a9dfb47c4bcbd398fc27d97ef02e90bf5d2e1f9f",
+    "common/laws/00_distribution_of_power.txt": "b01b007d987a17ade3b05ad51334f2b1fc0773eee8728b237a4a714a9f3f2dbd",
+    "common/scripted_triggers/00_ai_triggers.txt": "8b22f9ba99b4babc8c0465d892ab888cce0a51d1d350e80ba9a1448a7fe53be1",
+    "common/journal_entries/00_communism.txt": "65b4623541d2411f54f460092dcb94bf95d38f6289fbf01217aa180f746c3485",
+}
+
+
 def source_hashes() -> dict[str, str]:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return SOURCE_HASHES_1152
     if version_contracts.active_version() == "1.15.1":
         return SOURCE_HASHES_1151
     return SOURCE_HASHES_115 if version_contracts.is_115() else SOURCE_HASHES

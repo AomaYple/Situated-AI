@@ -56,13 +56,14 @@ def expected_version() -> str:
 
 def declaration_path(version: str | None = None) -> Path:
     selected = expected_version() if version is None else version_contracts.active_version(version)
-    if selected not in {"1.15.0", "1.15.1"}:
-        raise ValueError("production profile 仅支持 1.15.0 与 1.15.1")
-    return (
-        DECLARATION
-        if selected == EXPECTED_VERSION
-        else ROOT / "mod/decisions/architecture_1151.toml"
-    )
+    names = {
+        "1.15.0": DECLARATION,
+        "1.15.1": DECLARATION.with_name("architecture_1151.toml"),
+        version_contracts.CURRENT_VERSION: DECLARATION.with_name("architecture_1152.toml"),
+    }
+    if selected not in names:
+        raise ValueError(f"production profile 不支持 {selected}")
+    return names[selected]
 
 
 def baseline_root(version: str | None = None) -> Path:
@@ -213,8 +214,8 @@ def _load_declaration(path: Path) -> tuple[dict[str, Any], tuple[ConsumerDeclara
         or data.get("profile") != "situated-ai/production/1.15"
     ):
         raise _fail("root", "schema/profile 不匹配")
-    if data.get("game_version") not in {"1.15.0", "1.15.1"}:
-        raise _fail("game_version", "必须锁定 1.15.0")
+    if data.get("game_version") not in {"1.15.0", "1.15.1", version_contracts.CURRENT_VERSION}:
+        raise _fail("game_version", "必须为已声明的原版版本")
     identities = data.get("identity")
     inputs = data.get("input")
     rows = data.get("consumer")
@@ -236,7 +237,7 @@ def _load_declaration(path: Path) -> tuple[dict[str, Any], tuple[ConsumerDeclara
         _sha(row.get("sha256"), f"identity[{index}].sha256")
         if rel.endswith("launcher-settings.json"):
             if row.get("raw_version") != data["game_version"]:
-                raise _fail(f"identity[{index}].raw_version", "必须为 1.15.0")
+                raise _fail(f"identity[{index}].raw_version", "必须与声明版本一致")
         elif "value" not in row:
             raise _fail(f"identity[{index}]", "非 launcher 身份必须声明 value")
     input_rows: list[dict[str, Any]] = []
@@ -345,7 +346,7 @@ def _verify_native(
                 type(document) is not dict
                 or document.get("rawVersion") != declaration_data["game_version"]
             ):
-                raise _fail(rel, "rawVersion 不是 1.15.0")
+                raise _fail(rel, "rawVersion 与声明版本不一致")
         elif rel.endswith("_rev.txt") or rel == "binaries/checksum.txt":
             text = raw.decode("utf-8-sig").strip()
             expected = next(
@@ -358,7 +359,7 @@ def _verify_native(
             expected = next(
                 item["value"] for item in declaration_data["identity"] if item["path"] == rel
             )
-            if text != expected or declaration_data["game_version"] not in text:
+            if text != expected:
                 raise _fail(rel, "branch 身份与声明不一致")
     for row in rows:
         raw = (installation / Path(*row.source.split("/"))).read_bytes()
@@ -504,6 +505,24 @@ def load_profile(installation: Path, declaration: Path | None = None) -> Product
     declaration = declaration_path() if declaration is None else Path(declaration)
     data, rows = _load_declaration(declaration)
     hashes = _verify_native(Path(installation), data, rows)
+    return _profile(data, rows, hashes)
+
+
+def declared_profile() -> ProductionProfile:
+    """Build the current static contract without opening installed scripts."""
+    version_contracts.require_current()
+    data, rows = _load_declaration(declaration_path())
+    if data["game_version"] != version_contracts.CURRENT_VERSION:
+        raise _fail("game_version", "当前生产声明版本不匹配")
+    hashes = tuple((item["path"], item["sha256"]) for item in (*data["identity"], *data["input"]))
+    return _profile(data, rows, hashes)
+
+
+def _profile(
+    data: dict[str, Any],
+    rows: tuple[ConsumerDeclaration, ...],
+    hashes: tuple[tuple[str, str], ...],
+) -> ProductionProfile:
     values = {item["path"]: item.get("value", "") for item in data["identity"]}
     build_id = f"caligula:{values.get('caligula_rev.txt', '')};clausewitz:{values.get('clausewitz_rev.txt', '')}"
     capabilities = tuple(
@@ -1175,9 +1194,9 @@ def _insert_policy(text: str, row: ConsumerDeclaration, program_text: str) -> st
 
 def strip_policy(text: str, row: ConsumerDeclaration) -> str:
     marker = re.compile(
-        rf"\n\t# SITAI POLICY 1\.15\.[01] BEGIN {re.escape(row.id)}\n"
+        rf"\n\t# SITAI POLICY 1\.15\.[012] BEGIN {re.escape(row.id)}\n"
         r"[\s\S]*?"
-        rf"\t# SITAI POLICY 1\.15\.[01] END {re.escape(row.id)}\n"
+        rf"\t# SITAI POLICY 1\.15\.[012] END {re.escape(row.id)}\n"
     )
     restored, count = marker.subn("", text)
     if count != 1:
@@ -1331,9 +1350,9 @@ def _insert_neutral(text: str, row: ConsumerDeclaration, program_text: str) -> s
 
 def strip_neutral(text: str, row: ConsumerDeclaration) -> str:
     marker = re.compile(
-        rf"\n\t# SITAI PROFILE 1\.15\.[01] BEGIN {re.escape(row.id)}\n"
+        rf"\n\t# SITAI PROFILE 1\.15\.[012] BEGIN {re.escape(row.id)}\n"
         r"[\s\S]*?"
-        rf"\t# SITAI PROFILE 1\.15\.[01] END {re.escape(row.id)}\n"
+        rf"\t# SITAI PROFILE 1\.15\.[012] END {re.escape(row.id)}\n"
     )
     restored, count = marker.subn("", text)
     if count != 1:

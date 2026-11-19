@@ -39,7 +39,9 @@ from __future__ import annotations
 
 import json
 import time
+from collections import deque
 from dataclasses import asdict
+from itertools import zip_longest
 
 # Path 必须能**在运行期**导入：typer 用 ``inspect.signature(eval_str=True)``
 # 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError（已实测）。
@@ -99,7 +101,6 @@ from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
 from pdx.situated import bindings as situated_bindings
 from pdx.situated import domain_coverage as situated_domain_coverage
 from pdx.situated import inventory as situated_inventory
-from pdx.situated import network_profile as situated_network_profile
 from pdx.situated import production_profile as situated_production_profile
 from pdx.situated import profile_configuration
 
@@ -315,8 +316,27 @@ def _profile_run(
     return ga, ma, ca, profiler
 
 
+def _research_inputs(
+    raw_root: Path | None, epoch: str | None, output_dir: Path | None
+) -> tuple[Path, str, Path] | None:
+    if raw_root is None and epoch is None and output_dir is None:
+        return None
+    if raw_root is None or epoch is None or output_dir is None:
+        _fail("规范研究模式须同时提供 --raw-root、--epoch 和 --output-dir")
+    return raw_root, epoch, output_dir
+
+
+def _write_research_catalog(raw_root: Path, epoch: str, output_dir: Path) -> None:
+    try:
+        marker = research_catalog.write(raw_root, epoch, output_dir)
+    except (OSError, ValueError) as exc:
+        _fail(f"规范研究构建失败：{exc}", EXIT_FAILED)
+    console.print(f"[green]规范研究目录已写入[/] {escape(str(marker.parent))}")
+
+
 @app.command("analyze")
 def analyze_cmd(
+    ctx: typer.Context,
     mods: Annotated[
         bool, typer.Option("--mods/--no-mods", help="分析全部 mod（关闭则只看游戏本体）")
     ] = True,
@@ -330,13 +350,51 @@ def analyze_cmd(
     profile: Annotated[
         bool, typer.Option("--profile", help="用 pyinstrument 输出调用树剖析")
     ] = False,
+    raw_root: Annotated[
+        Path | None, typer.Option("--raw-root", help="完整安装研究模式的只读 raw 根")
+    ] = None,
+    epoch: Annotated[
+        str | None, typer.Option("--epoch", help="已提交 raw epoch 的 SHA-256")
+    ] = None,
+    output_dir: Annotated[
+        Path | None, typer.Option("--output-dir", help="研究结果的本机新目录")
+    ] = None,
+    installation: Annotated[
+        bool, typer.Option("--installation", help="只读全量分析 V3_ROOT 并保存来源位置")
+    ] = False,
 ) -> None:
-    """全量分析游戏本体与全部 mod。
+    """分析已提交的完整游戏安装，或生成现场原版及 Mod 概览。
 
-    三段流水线默认全做：游戏本体 → mod → 交叉分析。--no-mods 只分析游戏
-    本体；--no-cross 保留 mod 分析但不做覆盖关系交叉。--profile 用
-    pyinstrument 输出调用树（仍然落盘），--quiet 关掉进度行。
+    完整安装研究同时使用 --raw-root、--epoch、--output-dir，生成逐文件处置和
+    SQLite 出现位置索引。现场概览默认依次分析原版、Mod 和交叉关系，可用
+    --no-mods、--no-cross、--no-write 或 --profile 调整，--quiet 关闭进度行。
     """
+    if installation:
+        if raw_root is not None or epoch is not None or output_dir is None:
+            _fail("--installation 须提供 --output-dir，且与 --raw-root / --epoch 互斥")
+        research = None
+    else:
+        research = _research_inputs(raw_root, epoch, output_dir)
+    if installation or research is not None:
+        if not write or profile:
+            _fail("完整安装研究模式不能使用 --no-write 或 --profile")
+        if any(
+            enabled
+            and (origin := ctx.get_parameter_source(name)) is not None
+            and origin.name == "COMMANDLINE"
+            for name, enabled in (("mods", mods), ("cross", cross))
+        ):
+            _fail("完整安装研究模式不接受 --mods 或 --cross")
+        if research is not None:
+            _write_research_catalog(*research)
+        else:
+            assert output_dir is not None
+            try:
+                marker = research_catalog.write_installation(config.ROOT, output_dir)
+            except (OSError, ValueError) as exc:
+                _fail(f"现场研究构建失败：{exc}", EXIT_FAILED)
+            console.print(f"[green]安装研究目录已写入[/] {escape(str(marker.parent))}")
+        return
     _require_game()
     started = time.perf_counter()
 
@@ -396,20 +454,18 @@ def input_inventory_cmd() -> None:
         raise typer.Exit(EXIT_USAGE) from exc
     contract = version_contracts.contract(version_contracts.CURRENT_VERSION)
     scan = input_inventory.inventory_installation(verified.root, verified=verified)
-    version_source = "game/common/ai_strategies/00_default_strategy.txt"
-    version_matched = any(
-        record.path == version_source
-        and record.read_status == "read"
-        and not record.diagnostics
-        and record.sha256 == contract.default_strategy_sha256
-        for record in scan.records
+    version_matched = input_inventory.matches_default_strategy(
+        scan, contract.default_strategy_sha256
     )
     payload = {
         "schema": 1,
         "evidence_kind": "static_check",
         "scan_status": scan.scan_status,
         "expected_version": contract.version,
-        "version_anchor": {"path": version_source, "matched": version_matched},
+        "version_anchor": {
+            "path": input_inventory.DEFAULT_STRATEGY_ANCHOR,
+            "matched": version_matched,
+        },
         "file_set_sha256": scan.file_set_sha256,
         "summary": asdict(scan.summary),
         "blocked_directories": scan.blocked_directories,
@@ -506,9 +562,8 @@ def information_catalog_cmd(
     后续按权威实施计划逐步核对；静态登记不等于运行期行为通过。
     """
 
-    if any(value is not None for value in (raw_root, epoch, output_dir)):
-        if raw_root is None or epoch is None or output_dir is None:
-            _fail("规范研究模式须同时提供 --raw-root、--epoch 和 --output-dir")
+    research = _research_inputs(raw_root, epoch, output_dir)
+    if research is not None:
         localization_source = ctx.get_parameter_source("localization")
         if (
             any(
@@ -526,11 +581,7 @@ def information_catalog_cmd(
             or (localization_source is not None and localization_source.name == "COMMANDLINE")
         ):
             _fail("规范研究模式不能混用现场目录、候选或本地化选项")
-        try:
-            marker = research_catalog.write(raw_root, epoch, output_dir)
-        except (OSError, ValueError) as exc:
-            _fail(f"规范研究构建失败：{exc}", EXIT_FAILED)
-        console.print(f"[green]规范研究目录已写入[/] {escape(str(marker.parent))}")
+        _write_research_catalog(*research)
         return
 
     if candidate_metadata is not None and candidate_production:
@@ -1148,18 +1199,21 @@ def snap_diff(
         )
 
 
-def _matches_json_text(expected: str, value: Any) -> bool:
-    """Compare the complete encoded text without retaining a second JSON copy."""
+def _matches_json_text(first: Any, second: Any) -> bool:
+    """Compare the two canonical JSON encodings without materializing either."""
     encoder = json.JSONEncoder(ensure_ascii=False, indent=1, sort_keys=True)
-    offset = 0
+    first_chunks = encoder.iterencode(first)
     matches = True
-    for chunk in encoder.iterencode(value):
-        if not expected.startswith(chunk, offset):
-            matches = False
-        offset += len(chunk)
-    # Consume every chunk even after a mismatch so later encoding errors retain
-    # the same failure behavior as json.dumps of the complete second snapshot.
-    return matches and offset == len(expected)
+    try:
+        for left, right in zip_longest(first_chunks, encoder.iterencode(second)):
+            if left != right:
+                matches = False
+    except TypeError, ValueError, RecursionError:
+        # Complete the first encoding if the second raises. An error on the
+        # first still takes precedence, as with encoding the values in order.
+        deque(first_chunks, maxlen=0)
+        raise
+    return matches
 
 
 @snapshot_app.command("verify")
@@ -1172,9 +1226,8 @@ def snap_verify() -> None:
     console.print("构建快照两次并比较 …")
     first = snapshot.build()
     second = snapshot.build()
-    da = json.dumps(first.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
 
-    if _matches_json_text(da, second.to_dict()):
+    if _matches_json_text(first.to_dict(), second.to_dict()):
         total = sum(len(names) for body in first.sections.values() for names in body.values())
         console.print("[green]✅ 两次构建结果完全一致 —— 快照是确定性的[/]")
         console.print(f"   域 {len(first.sections)} 个，条目总计 {total:,}")
@@ -1343,7 +1396,7 @@ def refresh_cmd(
         console.print(f"  [red]❌[/] {escape(d.describe())}")
     for r in failed[:10]:
         console.print(
-            f"  [red]❌[/] [{escape(r.claim.id)}] 期望 {escape(str(r.claim.expected))} 实得 {escape(str(r.actual))}"
+            f"  [red]❌[/] {escape(f'[{r.claim.id}]')} 期望 {escape(str(r.claim.expected))} 实得 {escape(str(r.actual))}"
         )
     if failed or drift or marker_issues:
         console.print(
@@ -2210,20 +2263,24 @@ def strings_cmd(
 
 @app.command("lock")
 def lock_cmd(
-    write: bool = typer.Option(False, "--write", help="按当前环境重写 requirements.lock"),
+    write: bool = typer.Option(
+        False, "--write", help="从 Windows CPython 环境重写 requirements.lock"
+    ),
 ) -> None:
-    """依赖锁：把本机解析出来的依赖版本组合写成可核对的文件。
+    """核对已安装的运行期和 `dev` 依赖闭包。
 
-    `pyproject.toml` 里全是下限（`typer>=0.27`）—— 下限保证装得上，
-    **不保证装出来是同一套**：CI 与本地、今天与三个月后解析出的
-    pytest / ruff / hypothesis 版本可能不同，于是「代码一行没改却一边红」
-    就会发生。这个命令沿 `Requires-Dist` 展开本机已安装的闭包，
-    `--write` 写成 `requirements.lock`；不带参数时与锁**对账**（有差异退出码 1）。
-
-    为什么不引 pip-tools / uv：那是又一个要装、要维护、要联网解析的工具，
-    而本仓库只有 15 条直接依赖，标准库的 `importlib.metadata` 就够了。
-    口径与边界（含「标记保守求值」这条）见 `pdx.lockfile`。
+    从 `pyproject.toml` 的声明出发，按环境标记沿已安装包的
+    `Requires-Dist` 展开闭包，并核对版本约束。默认与 `requirements.lock` 对账，
+    有差异时退出码为 1。Windows 开发环境可用 `--write` 更新锁文件。
     """
+    if write:
+        try:
+            count = lockfile.write()
+        except (OSError, RuntimeError, ValueError) as exc:
+            _fail(f"依赖锁写入失败：{exc}", EXIT_FAILED)
+        console.print(f"[green]已写入 {lockfile.LOCK_FILE}：{count} 条[/]")
+        return
+
     try:
         lockfile.validate_python_version()
     except (ModuleNotFoundError, RuntimeError, ValueError) as exc:
@@ -2232,10 +2289,6 @@ def lock_cmd(
         actual = lockfile.resolve()
     except (OSError, RuntimeError, ValueError) as exc:
         _fail(f"依赖锁生成失败：{exc}", EXIT_FAILED)
-    if write:
-        count = lockfile.write(actual)
-        console.print(f"[green]已写入 {lockfile.LOCK_FILE}：{count} 条[/]")
-        return
 
     locked = lockfile.read()
     if not locked:
@@ -2778,41 +2831,11 @@ def _modgen_verify_sources() -> None:
     technology_opportunities.verify_inputs(inputs)
 
 
-def _production_profile(
-    name: str | None,
-    *,
-    offline: bool = False,
-    context: typer.Context | None = None,
-):
-    """Require reviewed installed originals for every online production entry.
-
-    Offline checks retain the reproducible frozen input contract. Online calls
-    verify both that contract and the complete installed identity/reader closure;
-    a missing installation never silently selects the frozen copy instead.
-    """
-    selected = version_contracts.active_version(name)
-    historical = offline and name == "1.15.0"
-    if not historical:
-        version_contracts.require_current(name)
-    if name is not None and context is not None:
-        scope = version_contracts.select_version(selected)
-        scope.__enter__()
-        context.call_on_close(lambda: scope.__exit__(None, None, None))
-    # A direct helper call has no command lifetime: select only while resolving,
-    # then restore its caller's context. Typer supplies the actual command's
-    # Context above; its vendored Click globals are distinct from click globals.
-    with version_contracts.select_version(selected):
-        if selected == "1.15.1":
-            situated_production_profile.verify_baseline()
-            if not offline:
-                frozen = situated_production_profile.load_profile(
-                    situated_production_profile.baseline_root()
-                )
-                distribution.check_profile_installation(frozen)
-            # The current profile uses the complete standard generation path.
-            return None
-        situated_production_profile.verify_baseline()
-        return situated_production_profile.load_profile(situated_production_profile.baseline_root())
+def _production_profile(name: str | None, *, offline: bool = False) -> None:
+    """Assert the current production release before any historical input can be opened."""
+    version_contracts.require_current(name)
+    if not offline:
+        distribution.check_profile_installation(situated_production_profile.declared_profile())
 
 
 def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutral"] = "policy"):
@@ -2824,13 +2847,9 @@ def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutra
 
 @app.command("modgen")
 def modgen_cmd(
-    context: typer.Context,
     write: Annotated[bool, typer.Option("--write", help="生成唯一正式 Mod 的仓库产物")] = False,
     check: Annotated[bool, typer.Option("--check", help="逐字节核对生成物，不写盘")] = False,
-    profile: Annotated[
-        str | None,
-        typer.Option("--profile", help="生产版本 1.15.1；仅 --check 可显式核对 1.15.0 历史产物"),
-    ] = None,
+    profile: Annotated[str | None, typer.Option("--profile", help="断言当前生产版本")] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
     ] = None,
@@ -2839,14 +2858,7 @@ def modgen_cmd(
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
-        selected_profile = _production_profile(
-            profile, offline=check and profile == "1.15.0", context=context
-        )
-        if selected_profile is not None:
-            resolved = _profile_configuration(configuration)
-            distribution.check_profile_outputs(selected_profile, configuration=resolved)
-            console.print("[green]1.15.0 历史产物与 profile lock 逐字节一致[/]")
-            return
+        _production_profile(profile)
         if not (config.GAME / "common").is_dir():
             raise ValueError(f"缺少锁定游戏原件：{config.GAME / 'common'}")
         if write:
@@ -2902,7 +2914,7 @@ def package_cmd(
     output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = (
         distribution.DEFAULT_PACKAGE_PATH
     ),
-    profile: Annotated[str | None, typer.Option("--profile", help="生产版本断言：1.15.1")] = None,
+    profile: Annotated[str | None, typer.Option("--profile", help="断言当前生产版本")] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
     ] = None,
@@ -2970,25 +2982,15 @@ def citations_cmd(
 
 @app.command("modguard")
 def modguard_cmd(
-    context: typer.Context,
     offline: Annotated[bool, typer.Option("--offline", help="从入库快照核对原版接口")] = False,
-    profile: Annotated[
-        str | None,
-        typer.Option("--profile", help="生产版本 1.15.1；仅 --offline 可显式核对 1.15.0 历史产物"),
-    ] = None,
+    profile: Annotated[str | None, typer.Option("--profile", help="断言当前生产版本")] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
     ] = None,
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
-        selected_profile = _production_profile(profile, offline=offline, context=context)
-        if selected_profile is not None:
-            distribution.check_profile_outputs(
-                selected_profile, configuration=_profile_configuration(configuration)
-            )
-            console.print("[green]1.15.0 profile 身份、底本、policy 接线和隔离产物检查通过[/]")
-            return
+        _production_profile(profile, offline=offline)
         if offline:
             distribution.check_generation_lock()
             policy, extensions = distribution.production_configuration(
@@ -3036,7 +3038,6 @@ def modguard_cmd(
 
 @app.command("decision-audit")
 def decision_audit_cmd(
-    context: typer.Context,
     output: Annotated[
         Path | None,
         typer.Option("--output", help="情境决策报告 JSON 输出路径；默认写入 tools/out/ci/"),
@@ -3044,67 +3045,21 @@ def decision_audit_cmd(
     offline: bool = typer.Option(
         False,
         "--offline",
-        help="只使用入库源和锁定底本；适用于无游戏目录的 CI 静态合同检查",
+        help="从入库生产源和原版声明核对静态合同；适用于无游戏目录的 CI",
     ),
-    profile: Annotated[
-        str | None,
-        typer.Option("--profile", help="生产版本 1.15.1；仅 --offline 可显式审计 1.15.0 历史产物"),
-    ] = None,
+    profile: Annotated[str | None, typer.Option("--profile", help="断言当前生产版本")] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
     ] = None,
 ) -> None:
     """核对情境决策合同并生成可解释报告。
 
-    默认复用一次生产构建得到的 engineering metadata；``--offline`` 使用入库源和
-    锁定底本构造同一份静态合同，供无游戏目录的 CI 使用。它不启动游戏，也不把合同
-    通过升级为 AI 行为或平衡通过。
+    默认复用一次生产构建得到的 engineering metadata。``--offline`` 从入库生产源和
+    原版声明核对静态合同，供无游戏目录的 CI 使用。AI 行为和平衡仍需实机验收。
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
-        selected_profile = _production_profile(profile, offline=offline, context=context)
-        if selected_profile is not None:
-            resolved = _profile_configuration(configuration)
-            profile_files = distribution.check_profile_outputs(
-                selected_profile, configuration=resolved
-            )
-            metadata = json.loads(profile_files[distribution.METADATA_NAME])
-            custom = metadata.get("game_custom_data", {})
-            policy_name = custom.get("policy") if isinstance(custom, dict) else None
-            resolved_identity = custom.get("configuration") if isinstance(custom, dict) else None
-            metadata = {
-                "schema": 1,
-                "evidence": "generated_1.15_profile_contract",
-                "profile": "situated-ai/production/1.15",
-                "game_version": selected_profile.game_version,
-                "build_id": selected_profile.build_id,
-                "policy": policy_name,
-                "configuration": resolved_identity,
-                "action_network": situated_network_profile.audit(
-                    selected_profile, configuration=resolved
-                ),
-                "generated_output": str(distribution.profile_output_root()),
-                "consumers": [
-                    {
-                        "id": row.id,
-                        "enabled": isinstance(resolved_identity, dict)
-                        and row.domain in resolved_identity.get("enabled_domains", []),
-                        "source": row.source,
-                        "definition": row.definition,
-                        "field": list(row.field),
-                        "actor": row.actor,
-                        "target": row.target,
-                        "operation": row.operation,
-                        "neutral": row.neutral,
-                        "native_contract_bounds": list(row.bounds),
-                    }
-                    for row in selected_profile.declarations
-                ],
-            }
-            report = metadata
-            _write_json(target, report)
-            console.print("[green]1.15.0 profile 静态审计通过[/]")
-            return
+        _production_profile(profile, offline=offline)
         if offline:
             metadata = decision_report.source_metadata(
                 configuration=_profile_configuration(configuration)

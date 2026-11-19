@@ -69,6 +69,12 @@ def _country_state_module():
     return importlib.import_module("pdx.country_state")
 
 
+_FISCAL_REFERENCE_SOURCE = "common/script_values/war_support_values.txt"
+_FISCAL_REFERENCE_SHA256 = "8e1a3504ad54d7539f70f9932c88f5a287481a99def88cf39ec8abbf11a31243"
+_FISCAL_REFERENCE_WORDS = frozenset(
+    {"credit", "weeks_until_bankruptcy", "in_default", "taking_loans"}
+)
+
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
 PRODUCT = config.REPO / "mod"
 _HISTORICAL_PRODUCT = PRODUCT
@@ -82,6 +88,15 @@ def baseline_path() -> Path:
         if version_contracts.is_115() and BASELINE == _HISTORICAL_BASELINE
         else BASELINE
     )
+
+
+def baseline_text() -> str:
+    path = baseline_path()
+    if path == situated_compiler.baseline_path() and (
+        version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    ):
+        return situated_compiler.baseline_text()
+    return path.read_text(encoding="utf-8")
 
 
 def product_path() -> Path:
@@ -864,7 +879,13 @@ def load(source: Path = SOURCE) -> Policy:
     if version_contracts.is_115() and source.resolve() == SOURCE.resolve():
         from .situated import compatibility_115, engine_scope  # noqa: PLC0415
 
-        authority = compatibility_115.snapshot()
+        current_release = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+        authority = (
+            compatibility_115.declaration() if current_release else compatibility_115.snapshot()
+        )
+        source_identity = raw + authority
+        if not current_release:
+            source_identity += engine_scope.strategy_snapshot()
         current = json.loads(authority)
         policy = replace(
             policy,
@@ -877,9 +898,7 @@ def load(source: Path = SOURCE) -> Policy:
                 else "released",
                 parent=f"vanilla-{version_contracts.active_version()}",
             ),
-            source_sha256=hashlib.sha256(
-                raw + authority + engine_scope.strategy_snapshot()
-            ).hexdigest(),
+            source_sha256=hashlib.sha256(source_identity).hexdigest(),
         )
     return policy
 
@@ -1062,17 +1081,22 @@ def patch_default(
 def source_fingerprint(
     policy: Policy,
     extensions: Extensions,
-    baseline: str,
+    baseline: str | None,
     country_policy: CountryPolicy | None = None,
     *,
     situated_model: situated_compiler.SituatedModel | None = None,
 ) -> dict[str, str]:
     """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
 
+    if baseline is None and version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        baseline_sha256 = version_contracts.contract().baseline_strategy_sha256
+    else:
+        source = baseline if baseline is not None else baseline_text()
+        baseline_sha256 = hashlib.sha256(normalized_text(source).encode()).hexdigest()
     result = {
         "fiscal_source_sha256": policy.source_sha256,
         "extensions_source_sha256": extensions.source_sha256,
-        "baseline_sha256": hashlib.sha256(normalized_text(baseline).encode()).hexdigest(),
+        "baseline_sha256": baseline_sha256,
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
     if situated_model is None:
@@ -1168,6 +1192,7 @@ def metadata_payload(
     complete_localization: bool = False,
     country_policy: CountryPolicy | None = None,
     situated_model: situated_compiler.SituatedModel | None = None,
+    fingerprint: dict[str, str] | None = None,
 ) -> dict[str, object]:
     policy = policy or load()
     extensions = extensions or load_extensions()
@@ -1215,10 +1240,12 @@ def metadata_payload(
         "platform_notes": policy.package.platform_notes,
         "module_contract": module_lifecycle_contract(policy, extensions, country_policy),
         "information_contract": information_contract(),
-        "source_fingerprint": source_fingerprint(
+        "source_fingerprint": fingerprint
+        if fingerprint is not None
+        else source_fingerprint(
             policy,
             extensions,
-            baseline if baseline is not None else baseline_path().read_text(encoding="utf-8"),
+            baseline,
             country_policy,
             situated_model=situated_model,
         ),
@@ -1271,7 +1298,7 @@ def build(
 
         compatibility_115.verify_game(config.GAME)
     policy = policy or load()
-    baseline = baseline if baseline is not None else baseline_path().read_text(encoding="utf-8")
+    baseline = baseline if baseline is not None else baseline_text()
     extensions = extensions or load_extensions()
     if configuration is not None:
         if information_rules is not None:
@@ -1716,13 +1743,17 @@ def build(
             strategic_generator_sha256=strategic_contract["generator_sha256"],
         )
     if (
-        version_contracts.active_version() == "1.15.1"
+        version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
         and information_rules is not None
         and consumer_adapters is not None
     ):
         from .situated import network_profile, production_profile  # noqa: PLC0415
 
-        profile = production_profile.load_profile(production_profile.baseline_root())
+        profile = (
+            production_profile.declared_profile()
+            if version_contracts.active_version() == version_contracts.CURRENT_VERSION
+            else production_profile.load_profile(production_profile.baseline_root())
+        )
         metadata["action_network"] = network_profile.compose(
             files, profile, configuration=configuration
         )
@@ -1948,17 +1979,22 @@ def validate(
         }
     if extensions.diplomacy_enabled:
         interfaces |= {"recklessness", "in_default", "taking_loans"}
-    # 财政值属于独立的原版 script value 参考，而不是四个通用词汇目录。
-    fiscal_words = vocabulary_dir(baseline_path().parent) if policy.enabled else set()
+    # 财政值分别由当前锁定脚本的引用和快照词汇支持。
+    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    fiscal_words: set[str] = set()
     if policy.enabled:
-        fiscal_words |= {"credit", "weeks_until_bankruptcy"}
+        if current:
+            fiscal_words.update(_FISCAL_REFERENCE_WORDS)
+        else:
+            fiscal_words.update(vocabulary_dir(baseline_path().parent))
+            fiscal_words.update(("credit", "weeks_until_bankruptcy"))
     if vocabulary is None:
         vocabulary_words: set[str] = set()
         vocabulary_uncovered = True
     else:
         vocabulary_words = vocabulary
         vocabulary_uncovered = False
-    key_words = vocabulary_dir(baseline_path().parent)
+    key_words: set[str] = set()
     variable_words: set[str] = set()
     variable_uncovered = False
     script_value_interfaces = interfaces & {"economic_dependence"}
@@ -2039,8 +2075,16 @@ def validate(
     else:
         # 兼容以往只检查通用词汇的调用，但把底本自带证据与自产物词汇分开；
         # 新模块所需接口不会被“所有目标词都存在于目标里”这件事验证。
+        if not current:
+            key_words = vocabulary_dir(baseline_path().parent)
         vocabulary_uncovered = True
 
+    if current and (snapshot is not None or game is not None):
+        # These source assignments have independent, build-specific coverage.
+        from .situated import compatibility_115  # noqa: PLC0415
+
+        key_words.update(compatibility_115.FIELDS)
+        key_words.add("is_adjacent_to_country")  # Default strategy, line 2438 in 1.15.2.
     evidence_words = vocabulary_words | key_words | variable_words | fiscal_words
     ordinary_interfaces = interfaces - script_value_interfaces
     issues = [
@@ -2059,16 +2103,32 @@ def validate(
     if variable_uncovered and "has_variable" in interfaces:
         issues.append("原版变量写入快照缺失；变量 API 检查未覆盖，不算通过")
     if game is not None:
-        path = game / "common/ai_strategies/00_default_strategy.txt"
-        if not path.is_file() or normalized_text(
-            path.read_text(encoding="utf-8-sig")
-        ) != baseline_path().read_text(encoding="utf-8"):
-            issues.append("本机默认策略与锁定底本不一致，需重审版本")
+        if current:
+            try:
+                version_contracts.read_default_strategy(game)
+            except ValueError as exc:
+                issues.append(str(exc))
+        else:
+            path = game / version_contracts.DEFAULT_STRATEGY_SOURCE
+            if (
+                not path.is_file()
+                or normalized_text(path.read_text(encoding="utf-8-sig")) != baseline_text()
+            ):
+                issues.append("本机默认策略与锁定底本不一致，需重审版本")
     if game is not None and policy.enabled:
-        path = game / "common/script_values/war_support_values.txt"
-        reference = baseline_path().parent / "war_support_values.txt"
-        if not path.is_file() or normalized_text(
-            path.read_text(encoding="utf-8-sig")
-        ) != reference.read_text(encoding="utf-8"):
+        path = game / _FISCAL_REFERENCE_SOURCE
+        if current:
+            matches = (
+                path.is_file()
+                and not path.is_symlink()
+                and path.resolve() == path.absolute()
+                and hashlib.sha256(path.read_bytes()).hexdigest() == _FISCAL_REFERENCE_SHA256
+            )
+        else:
+            reference = baseline_path().parent / "war_support_values.txt"
+            matches = path.is_file() and normalized_text(
+                path.read_text(encoding="utf-8-sig")
+            ) == reference.read_text(encoding="utf-8")
+        if not matches:
             issues.append("本机财政接口参考与锁定底本不一致，需重审版本")
     return issues

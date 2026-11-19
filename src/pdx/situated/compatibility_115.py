@@ -10,17 +10,19 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any, cast
 
-from pdx import version_contracts
+from pdx import config, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_bytes
+from pdx.textio import normalized_text
 
-from . import engine_scope
+from . import engine_scope, migration_baseline
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 SOURCE = engine_scope.REPO / "research/situated/1.15.0/compatibility-production.json"
 SHA256 = "f979697ed4bc2750a130f605d60cf2de0b4d2e6123b7a4e9eda0dd39b570e562"
+CURRENT_SHA256 = "10ab73a7890c4d0da10d9367560fdfe2269e8e4125d3e6329dd02a95ed16afc5"
 SHA256_1151 = "8f73b4f6ffb5cde8accb8e272b6c62c312afd132f5f19b381ee7ac35675683f4"
 FIELDS = frozenset(
     {
@@ -56,17 +58,21 @@ def _ordinary_digest(root: Block, name: str, row: dict[str, Any]) -> None:
         raise ValueError(f"1.15 完整兼容生成原版 AST 漂移：{name}")
 
 
-def snapshot() -> bytes:
-    """Verify the current native fields and separately proven binary scope."""
+def declaration() -> bytes:
+    """Load the exact reviewed script declaration without accessing installed bytes."""
+    version = version_contracts.active_version()
     source = (
-        version_contracts.research_path("situated", "compatibility-production.json")
-        if version_contracts.active_version() == "1.15.1"
-        else SOURCE
+        SOURCE
+        if version == "1.15.0"
+        else version_contracts.research_path("situated", "compatibility-production.json")
     )
     raw = source.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != (
-        SHA256_1151 if version_contracts.active_version() == "1.15.1" else SHA256
-    ):
+    expected = {
+        "1.15.0": SHA256,
+        "1.15.1": SHA256_1151,
+        version_contracts.CURRENT_VERSION: CURRENT_SHA256,
+    }[version]
+    if hashlib.sha256(raw).hexdigest() != expected:
         raise ValueError("1.15 完整兼容生成来源合同漂移")
     data = json.loads(raw)
     if (
@@ -79,19 +85,38 @@ def snapshot() -> bytes:
         or set(data["hooks"]) != HOOKS
     ):
         raise ValueError("1.15 完整兼容生成身份或范围漂移")
+    return raw
+
+
+def snapshot(*, game: Path | None = None) -> bytes:
+    """Verify the current native fields and separately proven binary scope."""
+    raw = declaration()
+    data = json.loads(raw)
     binary = json.loads(engine_scope.strategy_snapshot())
     if binary["script_hashes"].get(data["strategy_source"]) != data["strategy_source_sha256"]:
         raise ValueError("1.15 完整兼容策略与独立引擎证据来源不一致")
     for field in FIELDS - {"diplomatic_play_support"}:
         if binary["consumers"][field]["actor_scope"] != "country":
             raise ValueError(f"1.15 完整兼容策略没有国家对象证据：{field}")
-    from .compiler import baseline_path, support_evaluation_context  # noqa: PLC0415
+    from .compiler import (  # noqa: PLC0415
+        baseline_path,
+        support_evaluation_context,
+        verify_default_strategy_projection,
+    )
 
-    support = support_evaluation_context()
-    if support.actor_scope is None or support.actor_scope.kind != "country":
-        raise ValueError("1.15 完整兼容支持字段缺少独立原版文档对象证据")
-
-    baseline = baseline_path().read_bytes()
+    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    game = config.GAME if game is None else game
+    if current:
+        text = version_contracts.read_default_strategy(game)
+        verify_default_strategy_projection(text)
+        migration_baseline.verify_default_strategy_retention(text)
+        migration_baseline.verify_school_replacement_output(game.parent, text)
+        baseline = text.encode("utf-8")
+    else:
+        support = support_evaluation_context()
+        if support.actor_scope is None or support.actor_scope.kind != "country":
+            raise ValueError("1.15 完整兼容支持字段缺少独立原版文档对象证据")
+        baseline = baseline_path().read_bytes()
     if hashlib.sha256(baseline).hexdigest() != data["baseline_sha256"]:
         raise ValueError("1.15 完整兼容策略底本字节漂移")
     parsed = parse_bytes(baseline, path=data["strategy_source"])
@@ -100,19 +125,25 @@ def snapshot() -> bytes:
         raise ValueError("1.15 完整兼容策略定义不唯一或无法解析")
     for field, row in data["fields"].items():
         _ordinary_digest(definitions[0].value, field, row)
-    reference = baseline_path().parent / "war_support_values.txt"
-    if hashlib.sha256(reference.read_bytes()).hexdigest() != data["fiscal_reference_sha256"]:
+    if current:
+        reference = game / data["fiscal_reference_source"]
+        reference_bytes = normalized_text(reference.read_bytes().decode("utf-8-sig")).encode(
+            "utf-8"
+        )
+    else:
+        reference_bytes = (baseline_path().parent / "war_support_values.txt").read_bytes()
+    if hashlib.sha256(reference_bytes).hexdigest() != data["fiscal_reference_sha256"]:
         raise ValueError("1.15 财政原版参考字节漂移")
     return raw
 
 
-def contract() -> dict[str, Any]:
-    return cast("dict[str, Any]", json.loads(snapshot()))
+def contract(*, game: Path | None = None) -> dict[str, Any]:
+    return cast("dict[str, Any]", json.loads(snapshot(game=game)))
 
 
 def verify_game(game: Path) -> None:
     """Generation requires actual source bytes and exact country hook ASTs."""
-    data = contract()
+    data = contract(game=game)
     if not engine_scope.verify_strategy_game(game).verified:
         raise ValueError("1.15 完整兼容生成缺少当前真实 EXE 的策略作用域证明")
     for source, expected in (

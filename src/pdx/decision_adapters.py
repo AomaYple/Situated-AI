@@ -74,7 +74,7 @@ class InitialValue:
 
 @dataclass(frozen=True, slots=True)
 class SupplyPlan:
-    """追加供给偏好；精确1.15.1三商品合成原生或AI稀缺的同一枚举。"""
+    """追加供给偏好，三项已锁商品合成原生或 AI 稀缺的同一枚举。"""
 
     source: str
     goods: tuple[str, ...]
@@ -114,12 +114,14 @@ class AdapterSet:
 def native_authority_path() -> Path:
     return (
         version_contracts.research_path("situated", "consumer-adapters.json")
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
         else NATIVE_AUTHORITY_115
     )
 
 
 def native_authority_sha256() -> str:
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        return "2d34f3718737321d1f510ee8e2ebfe280d1680a75acc517d1829c0a85fee2750"
     return (
         NATIVE_AUTHORITY_1151_SHA256
         if version_contracts.active_version() == "1.15.1"
@@ -280,7 +282,10 @@ def native_authority_115() -> dict[str, Any]:
     raw = native_authority_path().read_bytes()
     if hashlib.sha256(raw).hexdigest() != native_authority_sha256():
         raise ValueError("1.15 adapter authority: frozen declaration drift")
-    return cast("dict[str, Any]", json.loads(raw))
+    data = cast("dict[str, Any]", json.loads(raw))
+    if data["game_version"] != version_contracts.active_version():
+        raise ValueError("原版消费者 AST 声明版本不符")
+    return data
 
 
 def writes(
@@ -441,7 +446,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         laws = law_opportunities.derive(data)
         _merge_derivation(data, laws, "具体法律处境机会")
         law_digest = hashlib.sha256(
-            law_opportunities.PARAMETERS.read_bytes()
+            law_opportunities.policy_bytes()
             + b"\0generator:"
             + Path(law_opportunities.__file__).read_bytes()
         ).hexdigest()
@@ -738,8 +743,9 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             item["source"],
             tuple(sorted(item["goods"])),
             float(item["price_threshold"]),
-            supply_program.native_stances_1151()
-            if source == SOURCE and version_contracts.active_version() == "1.15.1"
+            supply_program.native_stances()
+            if source == SOURCE
+            and version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
             else (),
         )
     scalar_values = []
@@ -955,9 +961,7 @@ def _supply_patch(
             start, end = supply_program.block_span(
                 text, ("ai_strategy_default", "goods_stances", good)
             )
-            if text[start:end] != program.native_stance.body:
-                raise ValueError(f"供给合成原版立场精确字节漂移：{good}")
-            replacements.append((start, end, program.composed_body()))
+            replacements.append((start, end, program.composed_body(native_body=text[start:end])))
         elif goods_stances.value.first(good) is not None:
             raise ValueError(f"商品供给计划不能覆写原版立场或引用未知商品：{good}")
     for start, end, replacement in sorted(replacements, reverse=True):

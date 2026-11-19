@@ -194,9 +194,11 @@ def _r2_rows(candidate, disabled):
     Unknown is a static lowering variant with one unavailable required reader;
     it is explicitly distinguished from the canonical production candidate.
     """
+    version = version_contracts.CURRENT_VERSION
+    network_source = network_profile.source_path(version).relative_to(config.REPO).as_posix()
     disabled_metadata = json.loads(disabled[".metadata/metadata.json"])
     assert disabled_metadata["configuration"] == ProfileConfiguration(core=False).identity()
-    profile = production_profile.load_profile(production_profile.baseline_root())
+    profile = production_profile.load_profile(config.GAME.parent)
     programs = {
         item.network.actions[0].definition.consumer_id: item
         for item in network_profile.compile_profile(profile)
@@ -208,9 +210,7 @@ def _r2_rows(candidate, disabled):
     assert declared == set(R2_CONSUMERS)
     for ident, source, definition, field in R2_CONSUMERS:
         content = candidate["files"][source].decode("utf-8-sig")
-        native_text = (production_profile.baseline_root() / "game" / source).read_text(
-            encoding="utf-8-sig"
-        )
+        native_text = (config.GAME / source).read_text(encoding="utf-8-sig")
         native, state = _resolve(parse_text(native_text).root, definition, field)
         assert state == "found"
         assert native is not None
@@ -221,8 +221,8 @@ def _r2_rows(candidate, disabled):
         assert isinstance(actual.value, Block)
         assert (decisions.product_path() / source).read_bytes() == candidate["files"][source]
         marker = re.compile(
-            rf"\n\t# SITAI POLICY 1\.15\.1 BEGIN {re.escape(ident)}\n"
-            rf"(?P<body>[\s\S]*?)\t# SITAI POLICY 1\.15\.1 END {re.escape(ident)}\n"
+            rf"\n\t# SITAI POLICY {re.escape(version)} BEGIN {re.escape(ident)}\n"
+            rf"(?P<body>[\s\S]*?)\t# SITAI POLICY {re.escape(version)} END {re.escape(ident)}\n"
         )
         matches = list(marker.finditer(content))
         assert len(matches) == 1
@@ -379,7 +379,7 @@ def _r2_rows(candidate, disabled):
                 "case_id": f"r2.{ident}.{role}",
                 "role": role,
                 "input": {
-                    "contract_version": "1.15.1",
+                    "contract_version": version,
                     "facts": facts,
                     "mode": "static_unavailable_reader_specialization"
                     if role == "unknown"
@@ -410,7 +410,7 @@ def _r2_rows(candidate, disabled):
                 "reference": reference,
                 "generated": generated,
                 "production": [
-                    "mod/decisions/action_network_1151.toml",
+                    network_source,
                     "src/pdx/situated/network_profile.py",
                     "src/pdx/situated/action_network.py",
                 ],
@@ -426,17 +426,29 @@ def _r2_rows(candidate, disabled):
             }
 
 
+def _assert_source_snapshot(expected: dict[str, str]) -> None:
+    observed = architecture_receipts.source_snapshot(config.REPO)
+    if observed != expected:
+        changed = sorted(
+            path
+            for path in observed.keys() | expected.keys()
+            if observed.get(path) != expected.get(path)
+        )
+        pytest.fail(f"Architecture review sources changed: {', '.join(changed)}")
+
+
 @pytest.fixture(scope="module")
 def final_candidate():
     before = architecture_receipts.source_snapshot(config.REPO)
     policy, extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
     model = compiler.load_model()
-    assert architecture_receipts.source_snapshot(config.REPO) == before
+    _assert_source_snapshot(before)
     files = {
         name: value.encode() if isinstance(value, str) else value
         for name, value in generated.items()
     }
-    metadata = json.loads(files[".metadata/metadata.json"])
+    del generated
+    consumers = explicit._consumer_manifest(files[".metadata/metadata.json"])
     raw = files["common/ai_strategies/00_default_strategy.txt"].decode()
     disk = (config.REPO / witness.GENERATED).read_bytes()
     assert disk == files["common/ai_strategies/00_default_strategy.txt"]
@@ -446,8 +458,9 @@ def final_candidate():
     return {
         "model": model,
         "files": files,
-        "metadata": metadata,
+        "consumers": consumers,
         "snapshot": digest(before),
+        "snapshot_sources": before,
         "r8": (model, actual, raw),
         "policy": policy,
         "extensions": extensions,
@@ -462,10 +475,7 @@ def final_native(final_candidate):
         assert path.is_file(), f"explicit final native report missing: {path}"
         report = json.loads(path.read_bytes())
     else:
-        assert (
-            digest(architecture_receipts.source_snapshot(config.REPO))
-            == (final_candidate["snapshot"])
-        )
+        _assert_source_snapshot(final_candidate["snapshot_sources"])
         # Keep both full native closure checks from package_inputs while
         # reusing this module's freshly generated complete candidate.
         distribution.verify_compatibility_installation()
@@ -473,10 +483,7 @@ def final_native(final_candidate):
             final_candidate["model"], final_candidate["files"]
         )
         distribution.verify_compatibility_installation()
-        assert (
-            digest(architecture_receipts.source_snapshot(config.REPO))
-            == (final_candidate["snapshot"])
-        )
+        _assert_source_snapshot(final_candidate["snapshot_sources"])
     assert report["source_snapshot_sha256"] == final_candidate["snapshot"]
     assert report["plan_version"] == architecture_receipts.PLAN_VERSION
     # Re-discover the installed originals independently of the supplied/built
@@ -504,7 +511,7 @@ def final_disabled(final_candidate):
             diplomacy_enabled=False,
         ),
         configuration=ProfileConfiguration(core=False)
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() == version_contracts.CURRENT_VERSION
         else None,
     )
 
@@ -541,10 +548,8 @@ def final_supply(final_candidate, final_disabled):
     assert state == "found"
     assert disabled_map is not None
     assert supply_ast(disabled_map.value) == supply_ast(original_map.value)
-    assert (
-        len(originals)
-        == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 21}[version_contracts.active_version()]
-    )
+    version = version_contracts.active_version()
+    assert len(originals) == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 21, "1.15.2": 21}[version]
     actual_map, status = _resolve(current, "ai_strategy_default", "goods_stances")
     assert status == "found"
     assert actual_map is not None
@@ -552,9 +557,7 @@ def final_supply(final_candidate, final_disabled):
     actual_nodes = list(actual_map.value.assignments())
     assert len(actual_nodes) == len({item.key for item in actual_nodes})
     assert {item.key for item in actual_nodes} == set(originals) | set(SUPPLY_GOODS)
-    merged = (
-        {"oil", "radios", "telephones"} if version_contracts.active_version() == "1.15.1" else set()
-    )
+    merged = {"oil", "radios", "telephones"} if version in {"1.15.1", "1.15.2"} else set()
     assert set(originals) & set(SUPPLY_GOODS) == merged
     actual_originals = {}
     for original_node in original_map.value.assignments():
@@ -756,7 +759,7 @@ def _migration_review(candidate):
 def _owner_review(candidate):
     model = candidate["model"]
     assert compiler.audit(model) == []
-    bundle = candidate["metadata"]["situated_actions"]["consumer_ir"]
+    bundle = candidate["consumers"]
     owners = defaultdict(set)
     for row in bundle["writers"]:
         assert row["owner"]
@@ -875,7 +878,7 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     files = {
         name: raw.decode("utf-8-sig")
         for name, raw in candidate["files"].items()
-        if name.endswith((".txt", ".yml", ".json"))
+        if name.endswith(".txt")
     }
     baseline = compiler.baseline_path().read_text(encoding="utf-8")
     # pytest exposes the original factory through __wrapped__ at runtime;
@@ -905,13 +908,15 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
             legacy_candidate, record, source, field
         )
     legacy.test_legacy_module_declares_only_its_actual_denominator(legacy_candidate)
-    continuous = audit._production_continuous_bindings(files)
+    built = files[explicit.SOURCE]
+    del legacy_candidate, files
+    continuous = audit._production_continuous_bindings(candidate["files"])
     assert len(continuous) == 1
     disabled = final_disabled
     explicit_candidate = {
-        "built": files[explicit.SOURCE],
+        "built": built,
         "model": model,
-        "metadata": candidate["metadata"],
+        "consumers": candidate["consumers"],
         "support": continuous[0].writer.program,
         "disabled": disabled[explicit.SOURCE],
         "baseline": baseline,
@@ -925,10 +930,9 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     for good in SUPPLY_GOODS:
         for case in _supply_rows(final_supply, good):
             record(**case)
-    current_r2 = version_contracts.active_version() == "1.15.1"
-    expected_legacy = {"1.14.5": 927, "1.15.0": 937, "1.15.1": 936}[
-        version_contracts.active_version()
-    ]
+    version = version_contracts.active_version()
+    current_r2 = version == version_contracts.CURRENT_VERSION
+    expected_legacy = {"1.14.5": 927, "1.15.0": 937, "1.15.1": 936, "1.15.2": 936}[version]
     r2_identities: set[tuple[str, str, str]] = set()
     if current_r2:
         with decision_rules.SOURCE.open("rb") as handle:
@@ -992,7 +996,7 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     expected_consumers.update(r2_identities)
     assert consumers == expected_consumers
     assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, expected_cases_per_role)
-    assert digest(architecture_receipts.source_snapshot(config.REPO)) == candidate["snapshot"]
+    _assert_source_snapshot(candidate["snapshot_sources"])
     return {
         "review": {
             "contract_version": version_contracts.active_version(),

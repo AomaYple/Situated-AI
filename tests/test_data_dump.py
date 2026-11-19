@@ -16,11 +16,12 @@ mod 作者据此无法回答「默认值是多少」「这个块里能写什么�
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 from conftest import NEEDS_GAME
 
-from pdx import config
+from pdx import cache, config
 from pdx.analyze import dump_node, to_data_dict
 from pdx.parser import parse_text
 
@@ -104,12 +105,19 @@ def test_列表里嵌套块() -> None:
 
 
 # ── 产物 ────────────────────────────────────────────────────
+@pytest.fixture(scope="module")
+def data_dump() -> dict[str, Any]:
+    """共用完整转储，构建结束后释放解析树的缓存引用。"""
+    with cache.memo_lifetime():
+        return to_data_dict()
+
+
 @NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
-def test_产物含值而不只是字段名() -> None:
+def test_产物含值而不只是字段名(data_dump: dict[str, Any]) -> None:
     """核心断言：随便挑一个条目，必须能看到**值**。"""
-    data = to_data_dict()["数据"]
+    data = data_dump["数据"]
     body = data["game"]["common/buildings/08_monuments.txt"]
     # 文件顶层正常时是字典
     assert isinstance(body, dict)
@@ -126,8 +134,8 @@ def test_产物含值而不只是字段名() -> None:
 @NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
-def test_产物覆盖全部三个内容根与全部脚本目录() -> None:
-    data = to_data_dict()["数据"]
+def test_产物覆盖全部三个内容根与全部脚本目录(data_dump: dict[str, Any]) -> None:
+    data = data_dump["数据"]
     assert set(data) == {"game", "jomini", "clausewitz"}
     tops = {k.split("/")[0] for k in data["game"]}
     for must in ("common", "events", "gui", "gfx", "map_data", "dlc"):
@@ -137,9 +145,9 @@ def test_产物覆盖全部三个内容根与全部脚本目录() -> None:
 @NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
-def test_产物规模与条目数相称() -> None:
+def test_产物规模与条目数相称(data_dump: dict[str, Any]) -> None:
     """防止「产物在但内容空」这种假通过。"""
-    data = to_data_dict()["数据"]
+    data = data_dump["数据"]
     files = sum(len(v) for v in data.values())
     entries = sum(len(body) for root in data.values() for body in root.values())
     assert files > 5_000, f"只覆盖 {files} 个文件"
@@ -149,13 +157,13 @@ def test_产物规模与条目数相称() -> None:
 @NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
-def test_文件层级的重复键也不被压掉() -> None:
+def test_文件层级的重复键也不被压掉(data_dump: dict[str, Any]) -> None:
     """实测 european.txt 顶层有 383 个同名的 variation。
 
     这条防的是一个具体的 bug：dump_node 里做了重复检测，但 to_data_dict
     在文件层级**又自己写了一遍字典推导式**绕过了它，于是顶层重复照样被压。
     """
-    data = to_data_dict()["数据"]
+    data = data_dump["数据"]
     key = "gfx/portraits/accessory_variations/european.txt"
     body = data["game"][key]
     assert isinstance(body, list), "顶层有重复键时必须退回保序列表"
@@ -216,10 +224,9 @@ def test_字符串里的井号不算注释() -> None:
 @NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
-def test_真实语料里能取到条目注释() -> None:
+def test_真实语料里能取到条目注释(data_dump: dict[str, Any]) -> None:
     """注释此前被整体丢弃；现在必须真能取到内容而不只是空壳。"""
-    data = to_data_dict()
-    idx = data["索引"]["game"]["common/buildings/08_monuments.txt"]
+    idx = data_dump["索引"]["game"]["common/buildings/08_monuments.txt"]
     with_comment = {k: v for k, v in idx.items() if "注释" in v}
     assert with_comment, "这份文件里应当有带注释的条目"
     for v in with_comment.values():
@@ -257,9 +264,9 @@ def test_表格数据被解析() -> None:
 @NEEDS_GAME
 @pytest.mark.integration
 @pytest.mark.slow
-def test_产物可被JSON往返() -> None:
+def test_产物可被JSON往返(data_dump: dict[str, Any]) -> None:
     """必须是纯 JSON 可序列化的结构 —— 不能混进 AST 对象。"""
-    data = to_data_dict()["数据"]
+    data = data_dump["数据"]
     # 挑 law 目录下真实存在的第一个文件，不写死文件名
     key = next(k for k in data["game"] if k.startswith("common/laws/"))
     sample = data["game"][key]
