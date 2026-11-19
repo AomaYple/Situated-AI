@@ -10,7 +10,7 @@ import sys
 import pytest
 
 from pdx import config, docgen, docs_mirror, snapshot, tables_offline, vanilla_index, verify
-from pdx.version_contracts import active_version, is_115, select_version
+from pdx.version_contracts import CURRENT_VERSION, active_version, is_115, select_version
 
 
 def test_documentation_and_complete_claim_registry_switch_at_call_time():
@@ -57,40 +57,32 @@ def test_invalid_profile_fails_at_default_operation_in_a_fresh_process():
     assert "未支持的原版合同版本" in result.stderr
 
 
-def test_fresh_cli_explicit_profile_has_priority_over_an_unknown_environment():
-    results = []
-    for selected in ("1.15.0", "unknown"):
-        environment = os.environ.copy()
-        environment["V3_CONTRACT_PROFILE"] = selected
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-B",
-                "-X",
-                "utf8",
-                "-m",
-                "pdx.cli",
-                "modguard",
-                "--profile",
-                "1.15.0",
-                "--offline",
-            ],
-            cwd=config.REPO,
-            env=environment,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            check=False,
-        )
-        results.append(result)
-    # The production lock can legitimately be unavailable during this migration.
-    # Both fresh CLI calls must reach the same explicit profile contract result.
-    assert (results[0].returncode, results[0].stdout, results[0].stderr) == (
-        results[1].returncode,
-        results[1].stdout,
-        results[1].stderr,
+@pytest.mark.parametrize("selected", ["1.15.0", "unknown"])
+def test_fresh_cli_rejects_bad_environment_with_explicit_current_profile(selected):
+    environment = os.environ.copy()
+    environment["V3_CONTRACT_PROFILE"] = selected
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-B",
+            "-X",
+            "utf8",
+            "-m",
+            "pdx.cli",
+            "modguard",
+            "--profile",
+            CURRENT_VERSION,
+            "--offline",
+        ],
+        cwd=config.REPO,
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
     )
-    assert "未支持的原版合同版本" not in results[1].stdout + results[1].stderr
+    assert result.returncode == 1
+    assert f"未支持的在线原版合同版本：{selected!r}" in result.stdout + result.stderr
 
 
 def test_snapshot_selection_never_falls_back_to_a_different_version(tmp_path, monkeypatch):
