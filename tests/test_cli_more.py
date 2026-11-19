@@ -16,9 +16,10 @@ import json
 
 import pytest
 from _helpers import run_cli as _run
-from conftest import NEEDS_GAME
+from conftest import NEEDS_GAME, configure_current_identity
 
-from pdx import config
+from pdx import config, docgen, verify
+from pdx.doc_tables import TableSpec
 
 pytestmark = pytest.mark.unit
 
@@ -91,11 +92,73 @@ def test_mirror_check_一致() -> None:
     assert "一致" in result.output
 
 
-@NEEDS_GAME
-def test_refresh_dry_run_只报告() -> None:
+@pytest.mark.parametrize("workshop_drift", [False, True], ids=["matching", "workshop-drift"])
+def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> None:
+    installation = tmp_path / "installation"
+    game = installation / "game"
+    game.mkdir(parents=True)
+    configure_current_identity(installation, monkeypatch)
+    monkeypatch.setattr(config, "GAME", game)
+
+    workshop = tmp_path / "workshop"
+    scripts = workshop / "123" / "common" / "scripted_triggers"
+    scripts.mkdir(parents=True)
+    (scripts / "baseline.txt").write_text(
+        "REPLACE_OR_CREATE:fixture_one = { always = yes }\n", encoding="utf-8"
+    )
+    if workshop_drift:
+        (scripts / "drift.txt").write_text(
+            "REPLACE_OR_CREATE:fixture_two = { always = yes }\n", encoding="utf-8"
+        )
+    monkeypatch.setattr(config, "WORKSHOP", workshop)
+    monkeypatch.setattr(config, "LOCAL_MODS", tmp_path / "local-mods")
+
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    document = docs / "workshop.md"
+    documented_files = 9 if workshop_drift else 1
+    document.write_text(
+        f"内容文件 {documented_files}<!--claim:mod.files--> 个。\n\n"
+        "| 统计项 | 数量 |\n"
+        "| --- | --- |\n"
+        "| 内容文件 | 1 |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config, "docs_root", lambda: docs)
+    monkeypatch.setattr(
+        verify,
+        "CLAIMS",
+        [
+            verify.Claim("mod.files", document.name, "内容文件", "mods_files", "", 1),
+            verify.Claim("pfx.mods_total", document.name, "前缀总数", "mods_prefix_total", "", 1),
+            verify.Claim(
+                "pfx.replace_or_create",
+                document.name,
+                "REPLACE_OR_CREATE 前缀",
+                "prefix_in_mods",
+                "REPLACE_OR_CREATE",
+                1,
+            ),
+        ],
+    )
+    table = TableSpec("fixture", "| 统计项 |", lambda: ["| 内容文件 | 1 |"])
+    monkeypatch.setattr(docgen, "targets", lambda: (docgen.DocTarget(document, (table,)),))
+
+    before = document.read_bytes()
     result = _run("refresh", "--dry-run")
-    assert result.exit_code == 0, result.output
-    assert "全部一致" in result.output or "需要改" in result.output
+    assert document.read_bytes() == before
+    assert "生成表与文档一致" in result.output
+    if workshop_drift:
+        assert result.exit_code == 1, result.output
+        assert "1 处需要改" in result.output
+        assert "断言 0 / 3 通过" in result.output
+        for claim_id in ("mod.files", "pfx.mods_total", "pfx.replace_or_create"):
+            assert f"[{claim_id}] 期望 1 实得 2" in result.output
+    else:
+        assert result.exit_code == 0, result.output
+        assert "0 处需要改" in result.output
+        assert "断言 3 / 3 通过" in result.output
+        assert "全部一致" in result.output
 
 
 def test_verify_fix_在一致时早退() -> None:

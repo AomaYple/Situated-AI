@@ -1396,7 +1396,7 @@ def refresh_cmd(
         console.print(f"  [red]❌[/] {escape(d.describe())}")
     for r in failed[:10]:
         console.print(
-            f"  [red]❌[/] [{escape(r.claim.id)}] 期望 {escape(str(r.claim.expected))} 实得 {escape(str(r.actual))}"
+            f"  [red]❌[/] {escape(f'[{r.claim.id}]')} 期望 {escape(str(r.claim.expected))} 实得 {escape(str(r.actual))}"
         )
     if failed or drift or marker_issues:
         console.print(
