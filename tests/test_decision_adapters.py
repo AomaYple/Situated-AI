@@ -60,16 +60,17 @@ def test_current_native_authority_recapture_reproduces_reviewed_bytes_twice(tmp_
 def test_current_native_authority_recapture_rejects_existing_drift_without_overwriting(
     tmp_path, monkeypatch
 ):
-    reviewed = decision_adapters.NATIVE_AUTHORITY_115.read_bytes()
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        reviewed = decision_adapters.native_authority_path().read_bytes()
     destination = tmp_path / "native-authority.json"
     damaged = reviewed + b"\n"
     destination.write_bytes(damaged)
     preserved_file = tmp_path / "keep.txt"
     preserved_file.write_bytes(b"existing evidence must survive")
     before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
-    monkeypatch.setattr(decision_adapters, "NATIVE_AUTHORITY_115", destination)
+    monkeypatch.setattr(decision_adapters, "native_authority_path", lambda: destination)
     with (
-        version_contracts.select_version("1.15.0"),
+        version_contracts.select_version(version_contracts.CURRENT_VERSION),
         pytest.raises(ValueError, match="frozen declaration drift"),
     ):
         decision_adapters.write_native_authority_115(config.GAME)
@@ -1162,7 +1163,7 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
         )
         if (
             name == "common/ai_strategies/00_default_strategy.txt"
-            and version_contracts.active_version() == "1.15.1"
+            and version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
         ):
             # Independently peel the three reviewed stance unions. Retain the
             # original AND bytes before restoring the original complete body;
