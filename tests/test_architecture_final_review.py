@@ -198,7 +198,7 @@ def _r2_rows(candidate, disabled):
     network_source = network_profile.source_path(version).relative_to(config.REPO).as_posix()
     disabled_metadata = json.loads(disabled[".metadata/metadata.json"])
     assert disabled_metadata["configuration"] == ProfileConfiguration(core=False).identity()
-    profile = production_profile.load_profile(production_profile.baseline_root())
+    profile = production_profile.load_profile(config.GAME.parent)
     programs = {
         item.network.actions[0].definition.consumer_id: item
         for item in network_profile.compile_profile(profile)
@@ -210,9 +210,7 @@ def _r2_rows(candidate, disabled):
     assert declared == set(R2_CONSUMERS)
     for ident, source, definition, field in R2_CONSUMERS:
         content = candidate["files"][source].decode("utf-8-sig")
-        native_text = (production_profile.baseline_root() / "game" / source).read_text(
-            encoding="utf-8-sig"
-        )
+        native_text = (config.GAME / source).read_text(encoding="utf-8-sig")
         native, state = _resolve(parse_text(native_text).root, definition, field)
         assert state == "found"
         assert native is not None

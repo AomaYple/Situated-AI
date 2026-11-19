@@ -24,6 +24,7 @@ GOV = "common/buildings/07_government.txt"
 TECH = "common/technology/technologies/10_production.txt"
 STRATEGY = "common/ai_strategies/00_default_strategy.txt"
 INFO = "information"
+ADDITIVE_SCHOOL_VERSIONS = {"1.15.1", "1.15.2"}
 FIELDS = {
     INDUSTRY: {"building_tooling_workshop.ai_value", "building_furniture_manufactory.ai_value"},
     MINES: {"building_iron_mine.ai_value"},
@@ -101,11 +102,12 @@ def _values(policy, **changes):
 
 
 def _scores(policies, changes, fields):
+    version = version_contracts.active_version()
     result = []
     for source, field in fields:
         policy = policies[source]
         if (
-            version_contracts.active_version() == "1.15.1"
+            version in ADDITIVE_SCHOOL_VERSIONS
             and field == "institution_scores.institution_schools"
             and policy.consumer_programs
         ):
@@ -114,7 +116,7 @@ def _scores(policies, changes, fields):
             result.append(
                 10
                 + action_network.evaluate_network(
-                    _current_school(),
+                    _current_school(version),
                     {k: v for k, v in _school_facts(changes).items() if k != "ai"},
                 ).total
             )
@@ -202,7 +204,7 @@ LJ03_CASES = [
 
 
 # A new additive school consumer changes only the school component. Keep both
-# literal tables: the 1.15.1 policy is not asserted equivalent to the old multiplier.
+# literal tables for the additive and historical multiplier policies.
 LJ03_CURRENT_CASES = [
     ({}, (12, 2400, 1.2)),
     ({"literacy": 0.5, "state_owner_literacy": 0.5}, (10, 2000, 1.2)),
@@ -216,7 +218,8 @@ LJ03_CURRENT_CASES = [
 
 
 def _lj03_cases():
-    return LJ03_CURRENT_CASES if version_contracts.active_version() == "1.15.1" else LJ03_CASES
+    version = version_contracts.active_version()
+    return LJ03_CURRENT_CASES if version in ADDITIVE_SCHOOL_VERSIONS else LJ03_CASES
 
 
 @pytest.mark.parametrize(("changes", "expected"), _lj03_cases())
@@ -440,11 +443,12 @@ def test_engine_observations_keep_parameter_queries_independent(
 
 def _pdx_scores(policies, generated, changes, fields, *, is_ai=True):
     _, files = generated
+    version = version_contracts.active_version()
     scores = []
     for source, field in fields:
         values = _values(policies[source], **changes)
         if (
-            version_contracts.active_version() == "1.15.1"
+            version in ADDITIVE_SCHOOL_VERSIONS
             and field == "institution_scores.institution_schools"
         ):
             from test_network_profile import _parsed, _score
@@ -454,7 +458,8 @@ def _pdx_scores(policies, generated, changes, fields, *, is_ai=True):
             assert field not in {".".join(rule.field) for rule in policies[source].rules}
             school_facts = _school_facts(changes, is_ai=is_ai)
             rendered = network_profile.render_program(
-                _current_school(), available=tuple(key for key in school_facts if key != "ai")
+                _current_school(version),
+                available=tuple(key for key in school_facts if key != "ai"),
             )
             scores.append(10 + _score(_parsed(rendered), school_facts))
             continue
@@ -661,11 +666,16 @@ def test_all_depth_links_disabled_retain_exact_native_and_source_selection_canno
 
 
 @cache
-def _current_school():
+def _current_school(version: str):
     from pdx.situated import network_profile, production_profile
 
-    assert version_contracts.active_version() == "1.15.1"
-    profile = production_profile.load_profile(production_profile.baseline_root())
+    if version == version_contracts.CURRENT_VERSION:
+        profile = production_profile.declared_profile()
+    else:
+        assert version == "1.15.1"
+        profile = production_profile.load_profile(
+            production_profile.baseline_root(version), production_profile.declaration_path(version)
+        )
     return next(
         program
         for program in network_profile.compile_profile(profile)

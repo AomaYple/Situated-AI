@@ -372,7 +372,7 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
         "institution_scores.institution_police": 6,
         "institution_scores.institution_colonial_affairs": 2,
     }
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", "1.15.2"}:
         school = "institution_scores.institution_schools"
         expected.pop(school)
         assert all(row.field.removeprefix("ai_strategy_default.") != school for row in selected)
@@ -410,7 +410,7 @@ def _numeric_production():
     )
     assert {rule.id for rule in rules} == (
         {"fiscal_construction_guard"}
-        if version_contracts.active_version() == "1.15.1"
+        if version_contracts.active_version() in {"1.15.1", "1.15.2"}
         else {"fiscal_construction_guard", "remaining_school_catchup_need"}
     )
     keys = frozenset(key for rule in rules for key in rule.input_keys())
