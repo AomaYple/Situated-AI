@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from . import ai_surface, config, political_surface, version_contracts
+from .binary_headers import BINARY_HEADER_SUFFIXES, HEADER_BYTES, binary_header
 from .cache import parse_cached
 from .capability_catalog import FileDisposition, LayeredCatalog, OccurrenceWriter, base_frontier
 from .committed_raw import (
@@ -804,10 +805,14 @@ def _build_research_index(
     dispositions: list[FileDisposition] = []
     installation = Path(identity.installation_root)
 
-    def read(record: InventoryRecord, *, retain: bool) -> bytes | None:
+    def read(
+        record: InventoryRecord, *, retain: bool, prefix_size: int | None = None
+    ) -> bytes | None:
         if raw_root is not None:
-            return read_source(record, raw_root=raw_root, retain=retain)
-        return read_record(record, root=installation, relative=record.path, retain=retain)
+            return read_source(record, raw_root=raw_root, retain=retain, prefix_size=prefix_size)
+        return read_record(
+            record, root=installation, relative=record.path, retain=retain, prefix_size=prefix_size
+        )
 
     with OccurrenceWriter(
         index_path, identity, inventory, metadata_only=raw_root is None
@@ -856,6 +861,11 @@ def _build_research_index(
                 category == "structured_configuration" and suffix in STRUCTURED_JSON_SUFFIXES
             )
             shader_source = category == "shader_source"
+            binary_probe = suffix in BINARY_HEADER_SUFFIXES and category in {
+                "asset_entity_dna",
+                "image_map",
+            }
+            header = None
             csv_result = None
             json_result = None
             zip_container = (
@@ -871,7 +881,9 @@ def _build_research_index(
                     or document
                     or structured_json
                     or map_table
-                    or shader_source,
+                    or shader_source
+                    or binary_probe,
+                    prefix_size=HEADER_BYTES if binary_probe else None,
                 )
             )
             domain = record.path.rpartition("/")[0] or "."
@@ -978,6 +990,9 @@ def _build_research_index(
                         reason = "full document line index; source version bound to epoch; engine export not executed"
                     else:
                         reason = "shader source lines indexed; mixed PDX/shader grammar pending"
+            elif binary_probe and raw is not None:
+                header = binary_header(suffix, raw)
+                reason = f"binary_header_{header['status']}; payload parser unavailable"
             elif category in {"image_map", "font", "audio_video", "binary"}:
                 parse_status = "not_applicable"
                 reason = "binary/media raw engineering input; no text reader or engine observation inferred"
@@ -1007,6 +1022,8 @@ def _build_research_index(
             )
             dispositions.append(row)
             writer.add_source(record, row)
+            if header is not None:
+                writer.add_details(record.path, binary_header=header)
             if localization:
                 writer.add_details(record.path, localization_language=language)
             writer.add_container_members(record.path, members)

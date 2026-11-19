@@ -380,23 +380,34 @@ def read_source(
     *,
     raw_root: Path,
     retain: bool,
+    prefix_size: int | None = None,
 ) -> bytes | None:
     """安全流式核对同一份源字节；仅格式 reader 需要时常驻单文件。"""
     if record.read_status != "read":
         return None
-    return read_record(record, root=raw_root, relative=_object_path(record), retain=retain)
+    return read_record(
+        record, root=raw_root, relative=_object_path(record), retain=retain, prefix_size=prefix_size
+    )
 
 
 def read_record(
-    record: InventoryRecord, *, root: Path, relative: str, retain: bool
+    record: InventoryRecord,
+    *,
+    root: Path,
+    relative: str,
+    retain: bool,
+    prefix_size: int | None = None,
 ) -> bytes | None:
     hasher, size, chunks = hashlib.sha256(), 0, []
     with open_inventory_source(root, relative) as stream:
         for chunk in iter(lambda: stream.read(_CHUNK), b""):
             hasher.update(chunk)
-            size += len(chunk)
             if retain:
-                chunks.append(chunk)
+                if prefix_size is None:
+                    chunks.append(chunk)
+                elif size < prefix_size:
+                    chunks.append(chunk[: prefix_size - size])
+            size += len(chunk)
     if (size, hasher.hexdigest()) != (record.size, record.sha256):
         raise InputContractError("source_mismatch", f"原字节大小/摘要不符：{record.path}")
     return b"".join(chunks) if retain else None

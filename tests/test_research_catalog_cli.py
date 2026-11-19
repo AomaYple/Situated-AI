@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import struct
 import subprocess
 import sys
 import zipfile
@@ -646,6 +647,47 @@ def test_graphics_resources_distinguish_pdx_json_source_and_binary(tmp_path: Pat
         assert rows[source].parse_status == "not_attempted"
         assert rows[source].semantic_status == "unknown"
         assert layer.index.find(source=source) == ()
+
+
+def test_binary_headers_record_observed_metadata_and_leave_payload_unparsed(tmp_path: Path) -> None:
+    texture = "game/gfx/synthetic.dds"
+    truncated = "game/gfx/truncated.dds"
+    mesh = "game/gfx/shape.mesh"
+    animation = "game/gfx/action.anim"
+    header = bytearray(128)
+    struct.pack_into("<4s7I", header, 0, b"DDS ", 124, 0x2100F, 64, 128, 512, 0, 5)
+    struct.pack_into("<II4s", header, 76, 32, 4, b"DXT1")
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            texture: bytes(header),
+            truncated: b"DDS ",
+            mesh: b"@@b@!\x08pdxasseti\x02\x00\x00\x00\x01\x00\x00\x00",
+            animation: b"not a binary header",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    for source in (texture, truncated, mesh, animation):
+        info = layer.index.source_metadata(source)
+        assert info["disposition"]["parse_status"] == "not_attempted"
+        assert info["disposition"]["semantic_status"] == "unknown"
+    metadata = layer.index.source_metadata(texture)["binary_header"]
+    assert (metadata["status"], metadata["width"], metadata["height"], metadata["fourcc"]) == (
+        "observed",
+        128,
+        64,
+        "DXT1",
+    )
+    assert layer.index.source_metadata(truncated)["binary_header"]["status"] == "truncated"
+    assert layer.index.source_metadata(mesh)["binary_header"]["status"] == "observed"
+    assert layer.index.source_metadata(animation)["binary_header"]["status"] == "signature_mismatch"
 
 
 def test_research_refuses_tampered_external_identity_object(

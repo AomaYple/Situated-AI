@@ -65,6 +65,7 @@ def implementation_digest() -> str:
         "research_catalog.py",
         "research_output.py",
         "native_rename.py",
+        "binary_headers.py",
     )
     return hashlib.sha256(
         _json([(name, _digest(root / name)) for name in names]).encode()
