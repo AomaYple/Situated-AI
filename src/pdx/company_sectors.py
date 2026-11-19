@@ -62,11 +62,12 @@ _JOB = re.compile(r"building_employment_([a-z_]+)_add\Z")
 
 
 def baseline_path() -> Path:
+    version = version_contracts.active_version()
     return (
         version_contracts.research_path("situated", BASELINE_115.name)
-        if version_contracts.active_version() == "1.15.1"
+        if version != "1.15.0" and version_contracts.is_115(version)
         else BASELINE_115
-        if version_contracts.is_115()
+        if version == "1.15.0"
         else BASELINE
     )
 
@@ -903,15 +904,16 @@ def read_inputs(game: Path) -> dict[str, str]:
 
 def write_baseline(game: Path) -> Path:
     """Explicit production step; never called by model loading or import."""
+    if version_contracts.is_115():
+        from .situated import r2_reader_authority  # noqa: PLC0415
+
+        r2_reader_authority.verify_installation(game.parent)
     inputs = read_inputs(game)
     data = derive(inputs, parameters=load_parameters())
     destination = baseline_path()
     destination.parent.mkdir(parents=True, exist_ok=True)
     frozen = _freeze(data)
     if version_contracts.is_115():
-        from .situated import r2_reader_authority  # noqa: PLC0415
-
-        r2_reader_authority.verify_installation(game.parent)
         frozen = {
             "schema": 3,
             "game_version": version_contracts.active_version(),
