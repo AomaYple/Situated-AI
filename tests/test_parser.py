@@ -212,6 +212,11 @@ class TestKnownCounts(unittest.TestCase):
                 "modifier_type_definitions": 2476,
                 "static_modifiers": 6487,
             },
+            "1.15.2": {
+                **self.EXPECTED_115,
+                "modifier_type_definitions": 2477,
+                "static_modifiers": 6490,
+            },
         }[active_version()]
         for name, want in expected.items():
             with self.subTest(directory=name):
