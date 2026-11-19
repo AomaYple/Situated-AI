@@ -5,11 +5,12 @@ from __future__ import annotations
 import copy
 import hashlib
 import re
+from dataclasses import replace
 from typing import Any
 
 import pytest
 
-from pdx import config, decision_rules
+from pdx import config, decision_rules, version_contracts
 from pdx import treaty_opportunities as treaty
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
@@ -19,6 +20,20 @@ from pdx.textio import normalized_text
 pytestmark = pytest.mark.unit
 DOC = "common/treaty_articles/treaty_articles.md"
 GETTER = "common/diplomatic_actions/01_expel_diplomats.txt"
+ARTICLE = "common/treaty_articles/test.txt"
+SYNTHETIC_DOC = b"""### evaluation_chance (default: 0)
+Gets evaluated before anything else, if 0 the AI will never use it.
+Only has root scope for the country we're looking at.
+
+### proposal_weight
+Multiplier on AI score for including an article in a treaty they are composing, root is composing AI country
+proposal_weight = { script value }
+
+## cost (default: 0)
+How much is deducted from the influence pool of every party to a treaty
+containing an article of this type.
+"""
+SYNTHETIC_GETTER = b"expel_diplomats = { ai = { will_propose = { influence < 200 } } }"
 
 
 @pytest.fixture(scope="module")
@@ -31,11 +46,18 @@ def raw():
     return {"sources": {}, "readers": {}, "rules": []}
 
 
-def _source(baseline, identity):
+@pytest.fixture(scope="module")
+def installed_inputs(baseline):
+    if not config.GAME.is_dir():
+        pytest.skip("需要当前锁定的游戏安装")
+    game = config.verified_game_root()
+    assert treaty.verify_game(game) == baseline
+    return treaty.read_inputs(game)
+
+
+def _source(baseline, identity, inputs):
     source = baseline["candidates"][identity]["source"]
-    return normalized_text(
-        bytes.fromhex(baseline["originals"][source]["bytes"]).decode("utf-8-sig")
-    )
+    return normalized_text(inputs[source].decode("utf-8-sig"))
 
 
 def _policy(derived, candidate):
@@ -60,8 +82,7 @@ def _policy(derived, candidate):
     return programs.enable(policy, source=source)
 
 
-def _patch(baseline, candidate, policy, *, enabled=True):
-    text = _source(baseline, candidate)
+def _patch(text, policy, *, enabled=True):
     return decision_rules.patch(
         text,
         policy,
@@ -101,13 +122,19 @@ def _joint(raw, baseline, changes, expected, *, candidate="alliance", is_ai=True
     values = {reader.key: changes.get(reader.key) for reader in policy.readers}
     domains = frozenset({"diplomacy"}) if enabled else frozenset()
     result = decision_rules.evaluate(policy, values, is_ai=is_ai, enabled_domains=domains)
-    selected = result.get(
-        f"{candidate}.ai.{'evaluation_chance' if candidate in treaty._EVALUATION else 'proposal_weight'}"
-    )
+    leaf = "evaluation_chance" if candidate in treaty._EVALUATION else "proposal_weight"
+    selected = result.get(f"{candidate}.ai.{leaf}")
     assert (selected[1] if selected else 1.0) == pytest.approx(expected)
-    text = _patch(baseline, candidate, policy, enabled=enabled)
+    # The installed-source tests below check real native tails and ownership.
+    row = baseline["candidates"][candidate]
+    source = (
+        f"{candidate} = {{ kind = {row['kind']} cost = {row['cost']} "
+        f"ai = {{ {leaf} = {{ value = 1 }} }} }}\n"
+    )
+    policy = replace(policy, baseline_sha256=hashlib.sha256(source.encode()).hexdigest())
+    text = _patch(source, policy, enabled=enabled)
     if not enabled:
-        assert text == _source(baseline, candidate)
+        assert text == source
         return
     observations = _facts(changes, is_ai=is_ai)
     actual = pdx_eval.select(_overlay(text, candidate), observations)
@@ -224,11 +251,16 @@ def _tree(node):
         "no_strait_closure",
     ],
 )
-def test_real_native_parser_preserves_complete_article_and_ordered_tail(raw, baseline, candidate):
-    original = _source(baseline, candidate)
+@pytest.mark.integration
+def test_real_native_parser_preserves_complete_article_and_ordered_tail(
+    raw, baseline, installed_inputs, candidate
+):
+    original = _source(baseline, candidate, installed_inputs)
     parsed = parse_text(original)
     assert not parsed.errors
-    patched = _patch(baseline, candidate, _policy(treaty.derive(raw, baseline), candidate))
+    policy = _policy(treaty.derive(raw, baseline), candidate)
+    patched = _patch(original, policy)
+    assert _patch(original, policy, enabled=False) == original
     # Removing only our one writer recovers every original AST node: inputs,
     # ratification, score, source/target logic, actual cost, effect and tail.
     stripped = re.sub(
@@ -243,12 +275,14 @@ def test_real_native_parser_preserves_complete_article_and_ordered_tail(raw, bas
     ("grievance", "native_zero", "expected"),
     [(0, False, 0.8), (10, False, 1.12), (30, False, 1.76), (30, True, 0.0)],
 )
+@pytest.mark.integration
 def test_real_strait_native_add_and_terminal_zero_survive_joint_cost(
-    raw, baseline, grievance, native_zero, expected
+    raw, baseline, installed_inputs, grievance, native_zero, expected
 ):
     """Supply native predicate/formula outcomes; do not claim to emulate them."""
     candidate = "toll_exemption"
-    patched = _patch(baseline, candidate, _policy(treaty.derive(raw, baseline), candidate))
+    original = _source(baseline, candidate, installed_inputs)
+    patched = _patch(original, _policy(treaty.derive(raw, baseline), candidate))
     definition = parse_text(patched).root.first(candidate)
     assert definition is not None
     assert isinstance(definition.value, Block)
@@ -302,12 +336,16 @@ def test_zero_cost_ship_transfer_and_missing_fields_are_not_initialized(raw, bas
     )
 
 
-def test_influence_getter_has_exact_native_country_path_and_raw_identity(baseline):
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.1", version_contracts.CURRENT_VERSION])
+def test_influence_getter_has_exact_native_country_path_and_raw_identity(version):
+    with version_contracts.select_version(version):
+        baseline = treaty.load_baseline()
+    uses_115 = version_contracts.is_115(version)
     proof = baseline["getter_evidence"]
     assert proof == {
         "engine": "influence",
         "kind": "number",
-        "line": 153 if treaty.version_contracts.is_115() else 142,
+        "line": 153 if uses_115 else 142,
         "path": ["expel_diplomats", "ai", "will_propose", "OR", "AND", "OR", "influence"],
         "scope": "root",
         "source": GETTER,
@@ -315,17 +353,19 @@ def test_influence_getter_has_exact_native_country_path_and_raw_identity(baselin
     }
     assert baseline["originals"][GETTER]["sha256"] == (
         "634b87f8eb3a55d4742e5bf724d6b993c570736765898a97070cebea75893d4f"
-        if treaty.version_contracts.is_115()
+        if uses_115
         else "c8c7d92a001edd3341897aa34f6265fb0d9f15de02c178d40b1df7ce98a08df3"
     )
     assert baseline["sources"][GETTER] == (
         "a1187db53529e92f733775a5d51746d7c6fc0dac8b15e6cf8b2e139298afc678"
-        if treaty.version_contracts.is_115()
+        if uses_115
         else "9bca63b14f0811d7381a658a567a3a84247242157275ed5a85b05857b47622fb"
     )
 
 
-def test_offline_uses_frozen_originals_and_preserves_inputs(raw, baseline, monkeypatch):
+def test_offline_uses_pinned_receipt_and_preserves_inputs(raw, baseline, monkeypatch):
+    assert baseline["schema"] == 2
+    assert all(set(row) == {"sha256"} for row in baseline["originals"].values())
     before = copy.deepcopy((raw, baseline))
     expected = treaty.derive(raw, baseline)
 
@@ -353,10 +393,8 @@ def test_source_conflict_and_duplicate_native_definition_fail_closed(raw, baseli
     raw["sources"][source] = "0" * 64
     with pytest.raises(ValueError, match="来源"):
         treaty.derive(raw, baseline)
-    inputs = {name: bytes.fromhex(row["bytes"]) for name, row in baseline["originals"].items()}
-    inputs["dlc/test/in_game/common/treaty_articles/duplicate.txt"] = (
-        b"alliance = { kind = mutual }"
-    )
+    inputs = _simple_inputs("alliance = { kind = mutual }")
+    inputs["dlc/test/in_game/common/treaty_articles/duplicate.txt"] = inputs[ARTICLE]
     with pytest.raises(ValueError, match="唯一"):
         treaty._inventory(inputs)
 
@@ -364,10 +402,11 @@ def test_source_conflict_and_duplicate_native_definition_fail_closed(raw, baseli
 @pytest.mark.parametrize(
     "mutation", ["metadata", "scope", "getter_path", "raw_sha", "original_bytes", "extra_key"]
 )
-def test_repin_cannot_hide_metadata_or_byte_inconsistency(
-    baseline, tmp_path, monkeypatch, mutation
+def test_historical_repin_cannot_hide_metadata_or_byte_inconsistency(
+    tmp_path, monkeypatch, mutation
 ):
-    data = copy.deepcopy(baseline)
+    with version_contracts.select_version("1.15.1"):
+        data = treaty._inventory(_simple_inputs("alliance = { kind = mutual cost = 10 }"))
     if mutation == "metadata":
         data["candidates"]["alliance"]["cost"] = "0"
     elif mutation == "scope":
@@ -380,48 +419,37 @@ def test_repin_cannot_hide_metadata_or_byte_inconsistency(
         data["originals"][GETTER]["bytes"] += "20"
     else:
         data["candidates"]["alliance"]["target_country"] = True
-    path = tmp_path / "baseline.json"
-    path.write_text(treaty._canonical(data), encoding="utf-8", newline="\n")
-    monkeypatch.setattr(
-        treaty,
-        "baseline_path",
-        lambda: path,
-    )
-    monkeypatch.setattr(
-        treaty,
-        "BASELINE_SHA256_1151"
-        if treaty.version_contracts.active_version() == "1.15.1"
-        else "BASELINE_SHA256_115"
-        if treaty.version_contracts.is_115()
-        else "BASELINE_SHA256",
-        hashlib.sha256(path.read_bytes()).hexdigest(),
-    )
-    with pytest.raises(ValueError):
-        treaty.load_baseline()
+    with version_contracts.select_version("1.15.1"):
+        _pin_receipt(tmp_path, monkeypatch, data)
+        with pytest.raises(ValueError, match="冻结"):
+            treaty.load_baseline()
 
 
 @pytest.mark.parametrize(
     "literal", ["-1", '"10"', "yes", "some_script_value", "{ value = 10 }", "nan", "inf"]
 )
-def test_unknown_or_malformed_native_cost_never_becomes_zero(baseline, literal):
-    inputs = {
-        DOC: bytes.fromhex(baseline["originals"][DOC]["bytes"]),
-        GETTER: bytes.fromhex(baseline["originals"][GETTER]["bytes"]),
-        "common/treaty_articles/test.txt": f"alliance = {{ kind = mutual cost = {literal} ai = {{ proposal_weight = {{ value = 1 }} }} }}".encode(),
-    }
+def test_unknown_or_malformed_native_cost_never_becomes_zero(literal):
+    inputs = _simple_inputs(
+        f"alliance = {{ kind = mutual cost = {literal} ai = {{ proposal_weight = {{ value = 1 }} }} }}"
+    )
     with pytest.raises(ValueError, match="成本"):
         treaty._inventory(inputs)
 
 
-def _simple_inputs(baseline, text):
-    return {
-        DOC: bytes.fromhex(baseline["originals"][DOC]["bytes"]),
-        GETTER: bytes.fromhex(baseline["originals"][GETTER]["bytes"]),
-        "common/treaty_articles/test.txt": text.encode(),
-    }
+def _simple_inputs(text):
+    return {DOC: SYNTHETIC_DOC, GETTER: SYNTHETIC_GETTER, ARTICLE: text.encode()}
 
 
-def test_omitted_cost_scalar_empty_and_unreviewed_fields_keep_native(raw, baseline):
+def _pin_receipt(tmp_path, monkeypatch, data):
+    path = tmp_path / "baseline.json"
+    raw = treaty._canonical(data).encode()
+    path.write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(treaty, "baseline_path", lambda: path)
+    monkeypatch.setattr(treaty, "baseline_sha256", lambda: digest)
+
+
+def test_omitted_cost_scalar_empty_and_unreviewed_fields_keep_native(raw, tmp_path, monkeypatch):
     text = """
     alliance = { kind = mutual ai = { proposal_weight = { value = 1 } } }
     defensive_pact = { kind = mutual cost = 100 ai = { proposal_weight = {} } }
@@ -430,7 +458,8 @@ def test_omitted_cost_scalar_empty_and_unreviewed_fields_keep_native(raw, baseli
     unknown_article = { kind = mutual cost = 20 ai = { proposal_weight = { value = 1 } } }
     missing = { kind = mutual cost = 20 }
     """
-    frozen = treaty._inventory(_simple_inputs(baseline, text))
+    frozen = treaty._inventory(_simple_inputs(text))
+    _pin_receipt(tmp_path, monkeypatch, frozen)
     assert frozen["candidates"]["alliance"]["cost"] == "0"
     assert frozen["candidates"]["alliance"]["cost_line"] == 0
     derived = treaty.derive(raw, frozen)
@@ -457,34 +486,49 @@ def test_omitted_cost_scalar_empty_and_unreviewed_fields_keep_native(raw, baseli
         "alliance = { kind = mutual cost = 10",
     ],
 )
-def test_ambiguous_or_unparseable_article_identity_is_an_error(baseline, text):
+def test_ambiguous_or_unparseable_article_identity_is_an_error(text):
     with pytest.raises(ValueError):
-        treaty._inventory(_simple_inputs(baseline, text))
+        treaty._inventory(_simple_inputs(text))
 
 
-def test_reviewed_mutual_article_cannot_become_directed_by_repinning(raw, baseline):
+def test_reviewed_mutual_article_cannot_become_directed_by_repinning(raw, tmp_path, monkeypatch):
     frozen = treaty._inventory(
         _simple_inputs(
-            baseline,
-            "alliance = { kind = directed cost = 10 ai = { proposal_weight = { value = 1 } } }",
+            "alliance = { kind = directed cost = 10 ai = { proposal_weight = { value = 1 } } }"
         )
     )
+    _pin_receipt(tmp_path, monkeypatch, frozen)
     with pytest.raises(ValueError, match="kind"):
         treaty.derive(raw, frozen)
 
 
 @pytest.mark.parametrize(
     "mutation",
-    ["new_file", "missing_file", "tail", "cost", "getter_scope", "scope_doc", "dlc_duplicate"],
+    [
+        "new_file",
+        "missing_file",
+        "tail",
+        "cost",
+        "raw_only",
+        "getter_scope",
+        "scope_doc",
+        "dlc_duplicate",
+        "repinned_metadata",
+    ],
 )
-def test_production_gate_reinventories_full_native_source_set(baseline, tmp_path, mutation):
-    for source, row in baseline["originals"].items():
-        path = tmp_path / source
+def test_production_gate_reinventories_full_native_source_set(tmp_path, monkeypatch, mutation):
+    inputs = _simple_inputs(
+        "alliance = { kind = mutual cost = 150 ai = { proposal_weight = { value = 1 add = 3 } } }"
+    )
+    frozen = treaty._inventory(inputs)
+    _pin_receipt(tmp_path, monkeypatch, frozen)
+    game = tmp_path / "game"
+    for source, data in inputs.items():
+        path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes.fromhex(row["bytes"]))
-    assert treaty.verify_game(tmp_path) == baseline
-    source = baseline["candidates"]["alliance"]["source"]
-    path = tmp_path / source
+        path.write_bytes(data)
+    assert treaty.verify_game(game) == frozen
+    path = game / ARTICLE
     if mutation == "new_file":
         path.with_name("extra.txt").write_text("# additional input\n", encoding="utf-8")
     elif mutation == "missing_file":
@@ -497,23 +541,27 @@ def test_production_gate_reinventories_full_native_source_set(baseline, tmp_path
             else text.replace("cost = 150", "cost = 151", 1),
             encoding="utf-8",
         )
+    elif mutation == "raw_only":
+        path.write_bytes(b"\xef\xbb\xbf" + inputs[ARTICLE])
+    elif mutation == "repinned_metadata":
+        frozen["candidates"]["alliance"]["cost"] = "0"
+        _pin_receipt(tmp_path, monkeypatch, frozen)
     elif mutation == "getter_scope":
-        text = (tmp_path / GETTER).read_text(encoding="utf-8-sig")
-        (tmp_path / GETTER).write_text(
-            text.replace("influence < 200", "scope:target_country = { influence < 200 }"),
-            encoding="utf-8",
+        (game / GETTER).write_bytes(
+            inputs[GETTER].replace(
+                b"influence < 200", b"scope:target_country = { influence < 200 }"
+            )
         )
     elif mutation == "scope_doc":
-        text = (tmp_path / DOC).read_text(encoding="utf-8-sig")
-        (tmp_path / DOC).write_text(
-            text.replace("root is composing AI country", "root is unknown"), encoding="utf-8"
+        (game / DOC).write_bytes(
+            inputs[DOC].replace(b"root is composing AI country", b"root is unknown")
         )
     else:
-        shadow = tmp_path / "dlc/test/in_game/common/treaty_articles/shadow.txt"
+        shadow = game / "dlc/test/in_game/common/treaty_articles/shadow.txt"
         shadow.parent.mkdir(parents=True)
         shadow.write_text("alliance = { kind = mutual }", encoding="utf-8")
     with pytest.raises(ValueError):
-        treaty.verify_game(tmp_path)
+        treaty.verify_game(game)
 
 
 @pytest.mark.parametrize(
@@ -537,10 +585,12 @@ def test_parameters_reject_wrong_direction_or_unbounded_joint_cost(raw, baseline
         treaty.derive(raw, baseline, parameters=params)
 
 
-def test_live_installed_sources_match_frozen_originals_when_available(baseline):
-    if not (config.GAME / DOC).is_file():
-        pytest.skip("锁定原版安装不可用；离线证据已单独覆盖")
-    assert treaty.verify_game(config.GAME) == baseline
+@pytest.mark.integration
+def test_live_installed_sources_match_pinned_receipt(baseline, installed_inputs):
+    assert {
+        name: {"sha256": hashlib.sha256(raw).hexdigest()} for name, raw in installed_inputs.items()
+    } == baseline["originals"]
+    assert set(installed_inputs) == set(baseline["sources"])
 
 
 @pytest.mark.parametrize(
@@ -581,20 +631,20 @@ def test_evaluation_probability_has_exact_root_capacity_cost(
 )
 @pytest.mark.parametrize("russian_agenda", [False, True])
 @pytest.mark.parametrize("journal_agenda", [False, True])
+@pytest.mark.integration
 def test_evaluation_preserves_real_native_rank_add_zero_and_input_tail(
-    raw, baseline, candidate, native, expected, russian_agenda, journal_agenda
+    raw, baseline, installed_inputs, candidate, native, expected, russian_agenda, journal_agenda
 ):
+    original = _source(baseline, candidate, installed_inputs)
     policy = _policy(treaty.derive(raw, baseline), candidate)
-    text = _patch(baseline, candidate, policy)
+    text = _patch(original, policy)
     restored = re.sub(
         r"^[ \t]*# SITAI BEGIN information:[^\n]+\n.*?^[ \t]*# SITAI END information:[^\n]+\n?",
         "",
         text,
         flags=re.MULTILINE | re.DOTALL,
     )
-    assert treaty._ast(parse_text(restored).root) == treaty._ast(
-        parse_text(_source(baseline, candidate)).root
-    )
+    assert treaty._ast(parse_text(restored).root) == treaty._ast(parse_text(original).root)
     definition = parse_text(text).root.first(candidate)
     assert definition is not None
     assert isinstance(definition.value, Block)
@@ -662,7 +712,7 @@ def test_evaluation_preserves_real_native_rank_add_zero_and_input_tail(
     )
 
 
-def test_evaluation_contract_contexts_and_documentation_are_independent(raw, baseline):
+def test_evaluation_contract_contexts_and_documentation_are_independent(baseline):
     from pdx.situated import compiler
 
     contexts = compiler._frozen_treaty_contexts()
@@ -673,7 +723,7 @@ def test_evaluation_contract_contexts_and_documentation_are_independent(raw, bas
         assert context.actor_scope is not None
         assert context.actor_scope.kind == "country"
         assert context.targets == context.auxiliary_scopes == ()
-    inputs = {source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()}
+    inputs = _simple_inputs("alliance = { kind = mutual }")
     inputs[DOC] = inputs[DOC].replace(
         b"Only has root scope for the country we're looking at.", b"Unknown root scope."
     )
