@@ -254,8 +254,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", required=True, type=Path, help="tools/out 内显式候选文件路径")
     args = parser.parse_args(argv)
     try:
-        version_contracts.require_current(args.profile)
         with version_contracts.select_version(args.profile):
+            version_contracts.require_current()
             game = args.installation / "game"
             if args.kind == "parameters":
                 output = capture_parameters(game, output=args.output)

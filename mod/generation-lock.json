@@ -66,7 +66,7 @@
     "src/pdx/model.py": "3e548a74a5bf37e8c32eb8e316f37b6080888d795949a0617aeab831a76460f7",
     "src/pdx/modifiers.py": "406157afa32e339581da423e0f3ab872417b0743f40ebb21e3b35b0965897911",
     "src/pdx/mods.py": "eec39f32d2178d20b5dba50504b85ee71c97b4515a6afce800217fc6d47cfe49",
-    "src/pdx/native_authority_capture.py": "b114aa6590685963a4493c4ba0c39e1ce8d459de13743c4d7a42aa0824a464c1",
+    "src/pdx/native_authority_capture.py": "956ccf4d40dffd071a23344fc02c11afbd4b87a3042edb3d9c6285649ed6858d",
     "src/pdx/normalize_repo.py": "c5228efc19ebe228d7c5f57ba14e3b71a121058476a163340c33521c59186c24",
     "src/pdx/observation_queries.py": "cefb7acbc4dc80accf1281e17d50584b0bb0522963f7daa9290d8811057e6f21",
     "src/pdx/observe.py": "73439fab539898106c5999977ba4c6e63d0026eeef350ee6681bb82d07599804",

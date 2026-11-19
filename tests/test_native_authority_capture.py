@@ -115,6 +115,21 @@ def test_cli_rejects_noncurrent_explicit_profile_before_reads_or_writes(sandbox,
     assert not sandbox.candidate_root.exists()
 
 
+@pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "unknown"])
+def test_cli_rejects_stale_environment_for_explicit_current_capture(
+    sandbox, monkeypatch, capsys, environment
+):
+    _repo, installation, verified, _candidate_root = sandbox
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, environment)
+    output = sandbox.candidate_root / "capture/parameters.json"
+    with version_contracts.select_version("1.15.0"):
+        assert capture.main(_argv(installation, "parameters", output)) == 1
+        assert version_contracts.active_version() == "1.15.0"
+    assert "合同版本" in capsys.readouterr().err
+    assert verified == []
+    assert not sandbox.candidate_root.exists()
+
+
 def test_cli_rejects_unknown_kind_before_reads_or_writes(sandbox):
     _repo, installation, verified, _candidate_root = sandbox
     with pytest.raises(SystemExit) as exc:

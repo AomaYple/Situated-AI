@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, cast
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, config, decision_adapters, decisions, distribution
-from pdx.situated import audit
+from pdx import cli, config, decision_adapters, decisions, distribution, version_contracts
+from pdx.situated import audit, r2_reader_authority
 from pdx.situated.action_instances import ActionInstance
 from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface
 
@@ -225,8 +225,21 @@ def test_upstream_verification_failures_propagate_without_legacy_fallback(
         audit.native_report()
 
 
+@pytest.fixture
+def cli_installation(pipeline, monkeypatch):
+    root = pipeline.game.parent
+    originals = r2_reader_authority.frozen_root("1.15.1")
+    for relative in version_contracts.INSTALLATION_IDENTITY_SHA256:
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((originals / relative).read_bytes())
+    monkeypatch.setattr(config, "ROOT", root)
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+
+
+@pytest.mark.usefixtures("cli_installation")
 def test_cli_native_option_runs_real_pipeline_and_does_not_call_legacy_report(
-    pipeline, tmp_path, monkeypatch
+    tmp_path, monkeypatch
 ):
     monkeypatch.setattr(audit, "report", lambda: pytest.fail("legacy report called"))
     monkeypatch.setattr(cli.situated, "load_model", lambda: pytest.fail("legacy contract called"))
@@ -241,9 +254,8 @@ def test_cli_native_option_runs_real_pipeline_and_does_not_call_legacy_report(
     assert not payload["business_complete"]
 
 
-def test_cli_native_error_is_nonzero_and_does_not_overwrite_previous_report(
-    pipeline, tmp_path, monkeypatch
-):
+@pytest.mark.usefixtures("cli_installation")
+def test_cli_native_error_is_nonzero_and_does_not_overwrite_previous_report(tmp_path, monkeypatch):
     def fail(*, include_engineering_metadata=False):
         assert include_engineering_metadata is True
         raise ValueError("native fingerprint drift")
