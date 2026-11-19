@@ -27,6 +27,7 @@ from .input_contracts import (
     InventoryRecord,
     dumps_contract,
     file_set_digest,
+    is_contract_path,
 )
 
 if TYPE_CHECKING:
@@ -246,14 +247,6 @@ def _handle_state(descriptor: int) -> _State:
     return observed
 
 
-def _relative_is_valid(path: str) -> bool:
-    return bool(path) and not (
-        PurePosixPath(path).is_absolute()
-        or any(part in {"", ".", ".."} for part in path.split("/"))
-        or any(character in path for character in ("\\", ":", "\x00"))
-    )
-
-
 def _check_components(path: Path) -> None:
     """从卷根检查全部父组件，不能先 resolve 而掩盖链接来源。"""
     for component in (*reversed(path.parents), path):
@@ -269,7 +262,7 @@ def _root_path(root: Path) -> Path:
 
 def classify_path(relative: str) -> str:
     """分类只是文件格式启发式，不声称解析、语义或合法脚本能力。"""
-    if not _relative_is_valid(relative):
+    if not is_contract_path(relative):
         raise ValueError(f"不是可登记的相对 POSIX 路径：{relative!r}")
     path = PurePosixPath(relative)
     parts = tuple(part.casefold() for part in path.parts)
@@ -313,7 +306,7 @@ def _enumerate(root: Path) -> _Enumeration:
                 )
             for entry in sorted(entries, key=lambda entry: entry.name):
                 child_relative = entry.name if relative == "." else f"{relative}/{entry.name}"
-                if not _relative_is_valid(child_relative):
+                if not is_contract_path(child_relative):
                     result.entries[child_relative] = _Entry(
                         "unknown",
                         None,
@@ -541,7 +534,7 @@ def open_inventory_source(root: Path, relative: str) -> Iterator[BinaryIO]:
     无安全打开能力/路径歧义/漂移抛 InputContractError；真实权限、打开或
     读取 OSError 原样传递。这里只核验一次读取会话，不创建 epoch 或快照。
     """
-    if not _relative_is_valid(relative):
+    if not is_contract_path(relative):
         raise InputContractError("invalid_path", f"不是安全相对 POSIX 路径：{relative!r}")
     try:
         root = _root_path(root)
@@ -657,7 +650,7 @@ def _scan(
     records = {
         relative: _record(relative, entry, source_layer, root, chunk_size, read_authorized)
         for relative, entry in sorted(start.entries.items())
-        if _relative_is_valid(relative)
+        if is_contract_path(relative)
     }
     diagnostics = list(start.diagnostics)
     for relative, record in records.items():
@@ -684,7 +677,7 @@ def _scan(
         )
         problem = _diagnostic(code, relative, "开始/结束枚举的路径或状态不同")
         diagnostics.append(problem)
-        if initial is None and final is not None and _relative_is_valid(relative):
+        if initial is None and final is not None and is_contract_path(relative):
             records[relative] = InventoryRecord(
                 relative,
                 final.state.size if final.kind == "file" and final.state else None,

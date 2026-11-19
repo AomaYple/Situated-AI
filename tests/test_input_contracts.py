@@ -192,7 +192,8 @@ def test_duplicate_json_keys_are_not_last_writer_wins() -> None:
 
 
 @pytest.mark.parametrize(
-    "path", ["/absolute", "../escape", "a/../b", "a\\b", "C:/drive", "a//b", "a/./b"]
+    "path",
+    ["/absolute", "../escape", "a/../b", "a\\b", "C:/drive", "a//b", "a/./b", "bad-\udcff.txt"],
 )
 def test_artifact_paths_cannot_escape_or_change_platform_meaning(path: str) -> None:
     with pytest.raises(contracts.InputContractError, match="invalid_path"):

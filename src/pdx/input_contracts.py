@@ -24,6 +24,7 @@ ParseStatus = Literal["not_attempted", "failed", "partial", "complete", "not_app
 ProofStatus = Literal["proven", "unknown", "unsupported", "not_implemented", "not_applicable"]
 EvidenceKind = Literal["static_check", "snapshot", "simulation", "runtime", "inference"]
 EdgeRelation = Literal["binds", "reads", "depends_on", "generates", "packages"]
+_INVALID_PATH_CHARACTER = re.compile(r"[\\:\x00\ud800-\udfff]")
 
 
 class InputContractError(ValueError):
@@ -52,16 +53,17 @@ def _digest(value: str) -> None:
         _fail("invalid_digest", "摘要必须是小写 SHA-256")
 
 
-def _path(value: str) -> None:
-    path = PurePosixPath(value)
-    if (
-        not value
-        or "\\" in value
-        or ":" in value
-        or path.is_absolute()
+def is_contract_path(value: str) -> bool:
+    """判断路径是否可跨平台解释并写入规范 UTF-8 合同。"""
+    return bool(value) and not (
+        _INVALID_PATH_CHARACTER.search(value) is not None
+        or PurePosixPath(value).is_absolute()
         or any(part in {"", ".", ".."} for part in value.split("/"))
-        or "\x00" in value
-    ):
+    )
+
+
+def _path(value: str) -> None:
+    if not is_contract_path(value):
         _fail("invalid_path", f"相对 POSIX 路径无效：{value!r}")
 
 

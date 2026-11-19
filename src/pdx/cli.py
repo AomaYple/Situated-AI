@@ -412,9 +412,12 @@ def input_inventory_cmd() -> None:
         "file_set_sha256": scan.file_set_sha256,
         "summary": asdict(scan.summary),
         "blocked_directories": scan.blocked_directories,
-        "unrecorded_paths": sorted(
-            set(scan.observed_paths).difference(record.path for record in scan.records)
-        ),
+        "unrecorded_paths": [
+            path.encode("unicode_escape").decode("ascii")
+            for path in sorted(
+                set(scan.observed_paths).difference(record.path for record in scan.records)
+            )
+        ],
         "diagnostic_codes": sorted({diagnostic.code for diagnostic in scan.diagnostics}),
         "records": [
             {
