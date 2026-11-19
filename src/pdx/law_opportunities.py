@@ -17,11 +17,14 @@ from typing import TYPE_CHECKING, Any
 from . import config, version_contracts
 from .model import Block, Scalar
 from .parser import parse_text
+from .textio import normalized_text
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from pathlib import Path
 
 PARAMETERS = config.REPO / "mod/decisions/law_opportunities.toml"
+SOURCE_LOCK_CURRENT = PARAMETERS.with_name("law_opportunities_1152.toml")
 
 SOURCE_HASHES_115 = {
     "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
@@ -85,7 +88,7 @@ POLICING_EFFECTS = {
 }
 
 
-def load() -> dict[str, Any]:
+def _load_policy() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
     if (
         set(data) != {"schema", "tuning", "sources", "candidates"}
@@ -129,21 +132,79 @@ def load() -> dict[str, Any]:
         raise ValueError("具体法律候选与锁定原版来源不一致")
     if any(not re.fullmatch(r"law_[a-z_]+", law) for law in data["candidates"]):
         raise ValueError("具体法律候选身份无效")
-    if version_contracts.is_115():
+    return data
+
+
+def load() -> dict[str, Any]:
+    data = _load_policy()
+    version = version_contracts.active_version()
+    if version == version_contracts.CURRENT_VERSION:
+        lock = tomllib.loads(SOURCE_LOCK_CURRENT.read_text(encoding="utf-8"))
+        sources = lock.get("sources")
+        if (
+            set(lock) != {"schema", "game_version", "sources"}
+            or type(lock["schema"]) is not int
+            or lock["schema"] != 1
+            or lock["game_version"] != version
+            or not isinstance(sources, dict)
+            or set(sources) != set(data["sources"])
+            or any(
+                not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                for digest in sources.values()
+            )
+        ):
+            raise ValueError("具体法律机会当前原版来源锁无效")
+        data["sources"] = sources
+    elif version_contracts.is_115():
         data["sources"] = dict(SOURCE_HASHES_115)
     return data
 
 
+def policy_bytes() -> bytes:
+    """Bind the policy and its selected native source lock to the adapter fingerprint."""
+    policy = PARAMETERS.read_bytes()
+    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        policy += b"\0native_sources:" + SOURCE_LOCK_CURRENT.read_bytes()
+    return policy
+
+
+def write_catalog(game: Path, *, output: Path) -> Path:
+    """Capture a native source lock after checking reviewed dispositions and mechanisms."""
+    from .native_authority_capture import (  # noqa: PLC0415
+        _prepare_capture,
+        _source_bytes,
+        _write_candidate,
+    )
+
+    game, output = _prepare_capture(game, output, suffix=".toml")
+    data = _load_policy()
+    inputs = {
+        source: normalized_text(_source_bytes(game, source).decode("utf-8-sig"))
+        for source in data["sources"]
+    }
+    sources = {
+        source: hashlib.sha256(text.encode("utf-8")).hexdigest() for source, text in inputs.items()
+    }
+    data["sources"] = sources
+    _verify_inputs(inputs, data)
+    lines = ["schema = 1", f'game_version = "{version_contracts.CURRENT_VERSION}"', "", "[sources]"]
+    lines.extend(f'"{source}" = "{digest}"' for source, digest in sorted(sources.items()))
+    return _write_candidate(output, "\n".join(lines) + "\n")
+
+
 def verify_inputs(inputs: Mapping[str, str]) -> None:
     """Prove complete native consumer identities, not just discovered words."""
-    data = load()
+    _verify_inputs(inputs, load())
+
+
+def _verify_inputs(inputs: Mapping[str, str], data: Mapping[str, Any]) -> None:
     found = {}
     roots = {}
     for source, digest in data["sources"].items():
         text = inputs.get(source)
         if text is None or hashlib.sha256(text.encode("utf-8")).hexdigest() != digest:
             raise ValueError(f"具体法律机会原版来源漂移：{source}")
-        parsed = parse_text(text)
+        parsed = parse_text(text, path=source)
         if parsed.errors:
             raise ValueError(f"具体法律机会原版无法解析：{source}")
         roots[source] = parsed.root

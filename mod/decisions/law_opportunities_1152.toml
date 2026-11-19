@@ -1,0 +1,13 @@
+schema = 1
+game_version = "1.15.2"
+
+[sources]
+"common/laws/00_church_and_state.txt" = "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50"
+"common/laws/00_citizenship.txt" = "129adadee3f099092182a73d7eb9fa95963b066de0c4353aee3657ba8ac0dcea"
+"common/laws/01_economic_system.txt" = "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194"
+"common/laws/01_land_reform.txt" = "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174"
+"common/laws/01_policing.txt" = "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e"
+"common/laws/01_taxation.txt" = "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae"
+"common/laws/01_trade_policy.txt" = "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3"
+"common/laws/02_labour_associations.txt" = "049f5bc288f67639f332d003a9dfb47c4bcbd398fc27d97ef02e90bf5d2e1f9f"
+"common/laws/02_migration.txt" = "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5"

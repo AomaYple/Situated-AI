@@ -235,6 +235,30 @@ def test_115_new_consumers_are_counted_and_explicitly_retain_native_policy():
         assert law_opportunities.native_retained_candidates() == {}
 
 
+def test_current_law_source_lock_preserves_the_historical_policy_and_pins():
+    base = law_opportunities.PARAMETERS.read_bytes()
+    with version_contracts.select_version("1.14.5"):
+        original = law_opportunities.load()
+        assert law_opportunities.policy_bytes() == base
+    with version_contracts.select_version("1.15.1"):
+        previous = law_opportunities.load()
+        retained = law_opportunities.native_retained_candidates()
+        assert law_opportunities.policy_bytes() == base
+        assert previous["sources"] != original["sources"]
+    with version_contracts.select_version("1.15.2"):
+        current = law_opportunities.load()
+        assert law_opportunities.native_retained_candidates() == retained
+        assert law_opportunities.policy_bytes() == (
+            base + b"\0native_sources:" + law_opportunities.SOURCE_LOCK_CURRENT.read_bytes()
+        )
+    assert {key for key in current if current[key] != previous[key]} == {"sources"}
+    assert {
+        source
+        for source, digest in current["sources"].items()
+        if digest != previous["sources"][source]
+    } == {"common/laws/00_citizenship.txt", "common/laws/02_labour_associations.txt"}
+
+
 @pytest.mark.integration
 @pytest.mark.parametrize(
     ("source", "old", "new", "message"),

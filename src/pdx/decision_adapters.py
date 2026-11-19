@@ -446,7 +446,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         laws = law_opportunities.derive(data)
         _merge_derivation(data, laws, "具体法律处境机会")
         law_digest = hashlib.sha256(
-            law_opportunities.PARAMETERS.read_bytes()
+            law_opportunities.policy_bytes()
             + b"\0generator:"
             + Path(law_opportunities.__file__).read_bytes()
         ).hexdigest()
