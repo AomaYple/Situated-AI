@@ -18,6 +18,10 @@ _MARKER = re.compile(
     r"^\s*#\s+(?:(?:ACTION\s+)?([a-z][a-z0-9_]*)|([a-z][a-z0-9_]*))\s+\[[a-z][a-z0-9_]*\];"
 )
 _WRITE = re.compile(r"\b(multiply|add)\s*=\s*(?:\{\s*value\s*=\s*)?(-?[0-9]+(?:\.[0-9]+)?)")
+# Repeated contributions are short. Bound both key length and entry count so
+# unique consumer programs cannot turn witness extraction into an AST cache.
+_AST_CACHE_BLOCK_LIMIT = 512
+_AST_CACHE_MAX_ENTRIES = 2048
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,9 +106,24 @@ def _transparent_write(item: Assignment) -> bool:
     return isinstance(always, Scalar) and always.text == "yes" and _transparent_write(writes[0])
 
 
+def _ast_shape(block: str, path: str) -> tuple[bool, bool, int]:
+    parsed = parse_text(block, path=path)
+    if parsed.errors:
+        raise ValueError(f"行动 AST 无法解析：{path}")
+    root = next((item for item in parsed.root.assignments() if item.key in {"if", "else_if"}), None)
+    if root is None or not isinstance(root.value, Block):
+        return False, False, 0
+    assignments = list(root.value.assignments())
+    has_limit = any(item.key == "limit" and item.is_block for item in assignments)
+    has_write = any(_transparent_write(item) for item in assignments)
+    nested = sum(1 for item in assignments if item.key in {"if", "else_if"} and item.is_block)
+    return has_limit, has_write, nested
+
+
 def ast_witnesses(texts: dict[str, str]) -> tuple[ASTWitness, ...]:
     """从生成文本 AST 独立检查 action 块的 limit/write 结构。"""
 
+    shapes: dict[str, tuple[bool, bool, int]] = {}
     result: list[ASTWitness] = []
     for source, text in sorted(texts.items()):
         lines = text.splitlines()
@@ -114,22 +133,13 @@ def ast_witnesses(texts: dict[str, str]) -> tuple[ASTWitness, ...]:
                 continue
             action_id = marker.group(1) or marker.group(2)
             block = _block_text(lines, index + 1)
-            parsed = parse_text(block, path=f"{source}:{index + 1}")
-            if parsed.errors:
-                raise ValueError(f"行动 AST 无法解析：{source}:{index + 1}")
-            root = next(
-                (item for item in parsed.root.assignments() if item.key in {"if", "else_if"}), None
-            )
-            if root is None or not isinstance(root.value, Block):
-                result.append(ASTWitness(action_id, source, False, False, 0, True))
-                continue
-            assignments = list(root.value.assignments())
-            has_limit = any(item.key == "limit" and item.is_block for item in assignments)
-
-            has_write = any(_transparent_write(item) for item in assignments)
-            nested = sum(
-                1 for item in assignments if item.key in {"if", "else_if"} and item.is_block
-            )
+            cacheable = len(block) <= _AST_CACHE_BLOCK_LIMIT
+            shape = shapes.get(block) if cacheable else None
+            if shape is None:
+                shape = _ast_shape(block, f"{source}:{index + 1}")
+                if cacheable and len(shapes) < _AST_CACHE_MAX_ENTRIES:
+                    shapes[block] = shape
+            has_limit, has_write, nested = shape
             result.append(ASTWitness(action_id, source, has_limit, has_write, nested, True))
     return tuple(result)
 
@@ -147,8 +157,7 @@ def _ast_mismatches(found: tuple[ASTWitness, ...]) -> tuple[str, ...]:
 def witnesses(texts: dict[str, str]) -> tuple[LoweringWitness, ...]:
     result: list[LoweringWitness] = []
     for source, text in sorted(texts.items()):
-        parsed = parse_text(text)
-        if parsed.errors:
+        if parse_text(text).errors:
             raise ValueError(f"PDX 产物无法解析：{source}")
         lines = text.splitlines()
         program_operation: str | None = None

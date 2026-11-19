@@ -63,6 +63,28 @@ def test_numeric_and_ast_error_reducers_keep_missing_wrong_value_and_no_limit():
     assert lowering._ast_mismatches(lowering.ast_witnesses(bad)) == ("same",)
 
 
+def test_ast_reuses_exact_short_block_within_call_and_keeps_each_location(monkeypatch):
+    parse_text = lowering.parse_text
+    paths: list[str] = []
+
+    def parse(block, path):
+        paths.append(path)
+        return parse_text(block, path=path)
+
+    monkeypatch.setattr(lowering, "parse_text", parse)
+    texts = {"b.txt": "\n" + _text().replace("# same", "# other"), "a.txt": _text()}
+    assert lowering.ast_witnesses(texts) == (
+        lowering.ASTWitness("same", "a.txt", True, True, 0, True),
+        lowering.ASTWitness("other", "b.txt", True, True, 0, True),
+    )
+    assert paths == ["a.txt:1"]
+
+    texts["b.txt"] = texts["b.txt"].removesuffix("}")
+    with pytest.raises(ValueError, match=r"行动 AST 无法解析：b\.txt:2$"):
+        lowering.ast_witnesses(texts)
+    assert paths == ["a.txt:1", "a.txt:1", "b.txt:2"]
+
+
 def test_public_mismatches_consumes_ir_before_invalid_text_and_last_duplicate_wins():
     def invalid_ir():
         raise RuntimeError("IR iteration fails first")
