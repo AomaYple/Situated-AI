@@ -1,0 +1,522 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "evidence_kind": "binary_static",
+  "baseline": "victoria3-1.15.2-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36",
+    "bytes": 100280440,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.15.2",
+    "caligula_rev": "57c82c481d97c664d528ab619f36e06cd9c8bfa6",
+    "clausewitz_branch": "caligula/release/1.15.x",
+    "clausewitz_rev": "35f286865593779221412642de8021e382f223ca"
+  },
+  "runtime": "unknown",
+  "derivation": "Current PE symbol and registration anchors, decoded current instruction operands, and checked correspondence of bounded historical windows. The installed executable and script sources provide the current byte identities.",
+  "contracts": [
+    {
+      "field": "ai_value",
+      "actor": "state",
+      "actor_owner": "country",
+      "target": "definition_only:building_type",
+      "operation": "missing_base_candidate_score",
+      "capability": "exact_default_initializer",
+      "consumer": "0x14185acb0",
+      "parser": "0x141857630",
+      "parser_subobject": "0x870",
+      "numeric_member": "0x560",
+      "parser_atom": "0x53c8",
+      "parser_field_branch": "0x141857e2a",
+      "selected_definition_member": "0x158",
+      "selection": "valid_template_else_self",
+      "selection_branch": "0x14185ace7",
+      "selected_numeric_address": "0x14185acf5",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x14185ad03",
+      "nonempty_evaluator": "0x140860710",
+      "evaluation_call": "0x14185ad98",
+      "scope_tag": "0x4c",
+      "scope_identity_member": "state+0x8",
+      "scope_tag_rtti": ".?AV?$CJominiScriptScopeObject@VCState@@@@",
+      "actual_call": "0x141667c7c",
+      "actual_state_owner_check": "0x141667a50",
+      "result_store": "0x14185ad1f",
+      "result_return": "0x14185ae64",
+      "default_value": 1000,
+      "define_source": "common/defines/00_ai.txt",
+      "default_branches": [
+        {
+          "define": "NAI.PRODUCTION_BUILDING_BASE_VALUE",
+          "line": 813,
+          "value": 1000,
+          "global": "0x145c1ee30",
+          "setter": "0x14114d6a0",
+          "write": "0x14114d6d6",
+          "binding": "0x14114d6f0",
+          "registration": "0x14114d710",
+          "load": "0x14185ad10"
+        },
+        {
+          "define": "NAI.GOVERNMENT_BUILDING_BASE_VALUE",
+          "line": 756,
+          "value": 1000,
+          "global": "0x145c1ef58",
+          "setter": "0x14113c7a0",
+          "write": "0x14113c7d6",
+          "binding": "0x14113c7f0",
+          "registration": "0x14113c810",
+          "load": "0x14185ad17"
+        }
+      ],
+      "source_requirement": "exactly_missing_ai_value_in_eleven_frozen_native_definitions_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_numeric_requirement": "preserve_complete_native_expression",
+      "selection_invariant": "Selection uses only template validity before examining selected ai_value; the ai_value parser touches only self+0x560, so adding a numeric expression cannot change template selection.",
+      "template_invariant": "The observed dynamic HQ and regional HQ generators create a separate named database definition, store its template at +0x158, and copy ordinary metadata. Scoring evaluates exactly one selected definition, never recursively scores the template or adds both numeric fields. If selected template is one of the eleven, its initialized score is evaluated once; otherwise that path retains its original expression or default. The dynamic definition itself is not an initializer target.",
+      "default_equivalence": "Both native empty-expression branches load exactly 1000, independently of building-group flags. An initialized selected field therefore replaces its native 1000 with value=1000 before any allowed overlay. This grants no claim that an unselected field can influence an actual score."
+    }
+  ],
+  "script_hashes": {
+    "common/buildings/01_industry.txt": "a8513a22f17b76d119adc1c56de6fe4d4aa0c09ecaaa0c76b6ccf9841f9c7a3b",
+    "common/buildings/02_agro.txt": "beb46c80cdbf75d91eec7f9078508657894ab1db6be6f07aff324dd20a231c23",
+    "common/buildings/04_plantations.txt": "fa57b7a2ffc59b4074a7ec425f8626f407062c7c05079b396d7caef9d2034046",
+    "common/buildings/09_misc_resource.txt": "35cd32a26048973da45b79c00c30fb473dcbf4e57591a436dc769ec6d8f2f6b7",
+    "common/defines/00_ai.txt": "a1c49bb95f9c3cd57375253fce7026ff90f5ca11635f61bfca95799ca029eff8"
+  },
+  "native_authority": {
+    "path": "research/situated/1.15.2/consumer-adapters.json",
+    "sha256": "2d34f3718737321d1f510ee8e2ebfe280d1680a75acc517d1829c0a85fee2750"
+  },
+  "implicit_buildings": [
+    {
+      "source": "common/buildings/01_industry.txt",
+      "field": "building_arms_industry.ai_value",
+      "parent": {
+        "ast_sha256": "09d4a5c3ab81555f96691c1db134ef0e1fa7a237fa05805784f888c2f1af77f0",
+        "line": 665,
+        "path": "building_arms_industry"
+      }
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "field": "building_artillery_foundry.ai_value",
+      "parent": {
+        "ast_sha256": "d13936362e0d26cb39b0fc2520d385c164664fce98bdad7ab23b7359fe153eb2",
+        "line": 689,
+        "path": "building_artillery_foundry"
+      }
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "field": "building_livestock_ranch.ai_value",
+      "parent": {
+        "ast_sha256": "34bd6ff92f3df2a68d8ed08606f257b4523846781014be13485e374c752e939c",
+        "line": 218,
+        "path": "building_livestock_ranch"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_banana_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "2b8cf1a35ef97e4c6767455125616ae5529f34257d70e158aa09ffebc77bdc97",
+        "line": 280,
+        "path": "building_banana_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_coffee_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "e5c4b8850987716fe367065f2a4587ab7898a08100b3288ade7a8396295b87bf",
+        "line": 3,
+        "path": "building_coffee_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "field": "building_sugar_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "dff9fee1898e55a158b76023c44ae2a3c3d0912ef14f0873aa447dc5431d72a2",
+        "line": 257,
+        "path": "building_sugar_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_fishing_wharf.ai_value",
+      "parent": {
+        "ast_sha256": "78f2972fe44fee015bbfce032b2b5c2de7ebe7c44317e0a488e9b6d01492287c",
+        "line": 44,
+        "path": "building_fishing_wharf"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_logging_camp.ai_value",
+      "parent": {
+        "ast_sha256": "15c4d8424cd2d76065f3d3223dbd8e9e6e6b23845abc90db06c15426e9ac9a66",
+        "line": 1,
+        "path": "building_logging_camp"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_oil_rig.ai_value",
+      "parent": {
+        "ast_sha256": "2075accd204879a7283c4e61e82c4fab853f99812163bb03f0a42ab8e164c9a3",
+        "line": 89,
+        "path": "building_oil_rig"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_rubber_plantation.ai_value",
+      "parent": {
+        "ast_sha256": "eb5644d6df40893d85336e92b6d66aa3d8b8ea07585d559c3211999420a528ae",
+        "line": 20,
+        "path": "building_rubber_plantation"
+      }
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "field": "building_whaling_station.ai_value",
+      "parent": {
+        "ast_sha256": "3254d4b5f6975efb37294ee6f8912b9b334fe537c8cc4cc2bca45705be8d2094",
+        "line": 64,
+        "path": "building_whaling_station"
+      }
+    }
+  ],
+  "dynamic_templates": [
+    {
+      "kind": "headquarters",
+      "factory": "0x141861480",
+      "functor_vtable": "0x1447aa1c8",
+      "functor_thunk": "0x141882f20",
+      "builder": "0x141861650",
+      "template_write": "0x1418616a3",
+      "rtti": "0x1454b1140",
+      "type_name": ".?AV<lambda_1>@?1??FindOrCreateDynamicHQBuildingType@CBuildingDatabase@@QEAAAEBVCBuildingType@@AEBVCCompanyType@@@Z@"
+    },
+    {
+      "kind": "regional_headquarters",
+      "builder": "0x141861d90",
+      "template_write": "0x141861de3"
+    }
+  ],
+  "limits": [
+    "Static binary and exact source evidence only; runtime remains unknown.",
+    "No script building target or arbitrary foreign country scope permission.",
+    "No initializer permission for explicit empty, scalar or block ai_value, new definitions, or dynamic HQ definitions.",
+    "The proof preserves selection and adds at most one overlay to the selected field; it does not promise that every initialized field is selected for every candidate."
+  ],
+  "reviewed_chain": [
+    "CBuildingType parsing binds ai_value to +0x560 in the current subobject. The current scoring path chooses the valid template at +0x158 or the original definition before examining score contents.",
+    "The empty branch reads either native define value 1000. Each key registration and write binds the exact global read by its branch. The installed AST confirms the eleven absent fields.",
+    "The owner lookup now reads the State owner ID at +0xeb0. The scoring function evaluates the selected expression once in its State tuple, preserving current State tag 0x4c and ID +0x8.",
+    "Both dynamic headquarters builders set template metadata at +0x158. Dynamic definitions retain their separate identities and are outside the initializer contract."
+  ],
+  "observations": [
+    {
+      "label": "building_type_rtti_name",
+      "va": "0x145695358",
+      "rva": "0x5695358",
+      "file_offset": "0x5693758",
+      "size": 25,
+      "sha256": "e0cf042eb7c1b86158550b6b4c1e83fa9a88c666df386cf088fd0db2cb4ef23f"
+    },
+    {
+      "label": "building_parser_locator",
+      "va": "0x144cd7f60",
+      "rva": "0x4cd7f60",
+      "file_offset": "0x4cd6f60",
+      "size": 24,
+      "sha256": "72dae57bd2efa5ae8bee39cb66e54560261697b6ed40d40433bd67dd3b333d41"
+    },
+    {
+      "label": "building_parser_vtable",
+      "va": "0x1447ab888",
+      "rva": "0x47ab888",
+      "file_offset": "0x47aa888",
+      "size": 48,
+      "sha256": "d4530e685306ae071e1c6ab9012c1b3b27710b7526b84c9e9b6c6b83c800e65a"
+    },
+    {
+      "label": "building_parser_thunk",
+      "va": "0x140849b5c",
+      "rva": "0x849b5c",
+      "file_offset": "0x848f5c",
+      "size": 12,
+      "sha256": "4d700d7aed3a7821668d0941d4fae111c26743b615e0fa07dac70bac5123551d"
+    },
+    {
+      "label": "building_constructor_identity",
+      "va": "0x141856c79",
+      "rva": "0x1856c79",
+      "file_offset": "0x1856079",
+      "size": 30,
+      "sha256": "570229861c02c1ec1fcfc4e455f3f058bf4f319efbf92b8558444a15b884b474"
+    },
+    {
+      "label": "building_constructor_invalid_template_sentinel",
+      "va": "0x141856dc5",
+      "rva": "0x1856dc5",
+      "file_offset": "0x18561c5",
+      "size": 21,
+      "sha256": "5dd12047bea00da4ab99e32caaf72c3b994dcad1dedf87347d77eb30900deabb"
+    },
+    {
+      "label": "building_constructor_numeric",
+      "va": "0x141856f50",
+      "rva": "0x1856f50",
+      "file_offset": "0x1856350",
+      "size": 56,
+      "sha256": "84c67186fa9e5e58bc9a469cc8aab8aca4c83d96e75696acbabd63c09807b231"
+    },
+    {
+      "label": "ai_value_literal",
+      "va": "0x144977650",
+      "rva": "0x4977650",
+      "file_offset": "0x4976650",
+      "size": 9,
+      "sha256": "20aed2a4535ed14c13291ccfb8299d3ea9124f300daecc75f8212ff5c72b9460"
+    },
+    {
+      "label": "ai_value_atom_entry",
+      "va": "0x1449ae250",
+      "rva": "0x49ae250",
+      "file_offset": "0x49ad250",
+      "size": 16,
+      "sha256": "91b77045bdb25d163fffe805ab5cb71848aacf84978c28f3151e53d9c58d817b"
+    },
+    {
+      "label": "ai_value_parser_dispatch",
+      "va": "0x141857bc5",
+      "rva": "0x1857bc5",
+      "file_offset": "0x1856fc5",
+      "size": 19,
+      "sha256": "a9813502f183f591dab5db998a75ba07d5ec7efad937a7ca69286f3dfd5e43cc"
+    },
+    {
+      "label": "ai_value_parser_member",
+      "va": "0x141857e2a",
+      "rva": "0x1857e2a",
+      "file_offset": "0x185722a",
+      "size": 18,
+      "sha256": "783cc44a5a069a0102b2892ae95ac4d577f5cb913863920c8981df42535dbfbc"
+    },
+    {
+      "label": "template_then_self_selection",
+      "va": "0x14185acd0",
+      "rva": "0x185acd0",
+      "file_offset": "0x185a0d0",
+      "size": 44,
+      "sha256": "7a39b83c12fb408149552ac252cc9fc9b4d55d5124bde8d4cd5576320eb1b313"
+    },
+    {
+      "label": "empty_score_both_defaults",
+      "va": "0x14185acfc",
+      "rva": "0x185acfc",
+      "file_offset": "0x185a0fc",
+      "size": 43,
+      "sha256": "999f95c9259bd086bce0eafe8616b553848a65638b12fba9eadecdde1fadfcb5"
+    },
+    {
+      "label": "actual_state_tuple",
+      "va": "0x14185ad64",
+      "rva": "0x185ad64",
+      "file_offset": "0x185a164",
+      "size": 57,
+      "sha256": "d001605ddd8a612bb020c85db812983566f6b2b7fdf787d22af494d1223e93f4"
+    },
+    {
+      "label": "state_scope_rtti",
+      "va": "0x14580a810",
+      "rva": "0x580a810",
+      "file_offset": "0x5808c10",
+      "size": 49,
+      "sha256": "d7b6a8be6d941597e0f30def332673e992669545684bf0a4adac158545e3331a"
+    },
+    {
+      "label": "state_scope_vtable",
+      "va": "0x1447e13c8",
+      "rva": "0x47e13c8",
+      "file_offset": "0x47e03c8",
+      "size": 24,
+      "sha256": "38222044e91a1d3ced52749d9dda49dc4657dab3ba8af1126302ba92b1253368"
+    },
+    {
+      "label": "state_scope_tag",
+      "va": "0x1417d7f90",
+      "rva": "0x17d7f90",
+      "file_offset": "0x17d7390",
+      "size": 6,
+      "sha256": "c1bfd67c25aaede1d9c48e76364717580dd0d77be888b35de50f4c0531c61c19"
+    },
+    {
+      "label": "production_define_literal",
+      "va": "0x1447145a0",
+      "rva": "0x47145a0",
+      "file_offset": "0x47135a0",
+      "size": 31,
+      "sha256": "63e8f5c6a9b6f83c735eba359d85aa701981439f2efe325f6c23646ec148a274"
+    },
+    {
+      "label": "government_define_literal",
+      "va": "0x144713740",
+      "rva": "0x4713740",
+      "file_offset": "0x4712740",
+      "size": 30,
+      "sha256": "49a9aa97c5718d5d851350fa23b8cb87f46698ab7b4a43adc21b87256607309d"
+    },
+    {
+      "label": "nai_namespace_literal",
+      "va": "0x14470cdfc",
+      "rva": "0x470cdfc",
+      "file_offset": "0x470bdfc",
+      "size": 4,
+      "sha256": "d54c2f18e513a851307d0039d61cca4fe51e3e44dc424e6ec4e1c8cba91dab35"
+    },
+    {
+      "label": "production_define_setter",
+      "va": "0x14114d6a0",
+      "rva": "0x114d6a0",
+      "file_offset": "0x114caa0",
+      "size": 67,
+      "sha256": "63bd25cd60b92a0c75fe616cdce61fc77cf6f80f2d0453769a9a42419edb20bb"
+    },
+    {
+      "label": "production_define_binding",
+      "va": "0x14114d6f0",
+      "rva": "0x114d6f0",
+      "file_offset": "0x114caf0",
+      "size": 29,
+      "sha256": "cb21b380aae4d84ca14784e8d5de6efadc8b3d6b5be3c4b57a523db3c260cd8b"
+    },
+    {
+      "label": "production_define_registration",
+      "va": "0x14114d710",
+      "rva": "0x114d710",
+      "file_offset": "0x114cb10",
+      "size": 26,
+      "sha256": "fff29aed8c10469c66755f0fa703888c5a1c082e56a5e212272136e2e77357c7"
+    },
+    {
+      "label": "government_define_setter",
+      "va": "0x14113c7a0",
+      "rva": "0x113c7a0",
+      "file_offset": "0x113bba0",
+      "size": 67,
+      "sha256": "b745d035fafb2464a342289deba9c7aebadd9f0dbca2f8095fd7a7235d30dc0d"
+    },
+    {
+      "label": "government_define_binding",
+      "va": "0x14113c7f0",
+      "rva": "0x113c7f0",
+      "file_offset": "0x113bbf0",
+      "size": 29,
+      "sha256": "9d5f081069c351b6675e2ed1c0f0e2d8eb81db8ec04aa8146c0f03a8c22bd776"
+    },
+    {
+      "label": "government_define_registration",
+      "va": "0x14113c810",
+      "rva": "0x113c810",
+      "file_offset": "0x113bc10",
+      "size": 26,
+      "sha256": "bd5e40e4f36aa61aada36ee39eac211826b7c51c114983c9146f22fa1f70fa93"
+    },
+    {
+      "label": "actual_candidate_state_owner",
+      "va": "0x141667a37",
+      "rva": "0x1667a37",
+      "file_offset": "0x1666e37",
+      "size": 30,
+      "sha256": "c3bba736ee39bf812a5c7d245dda19268891f007caaa220e7cbb2f23fb94b895"
+    },
+    {
+      "label": "actual_candidate_score_call",
+      "va": "0x141667c76",
+      "rva": "0x1667c76",
+      "file_offset": "0x1667076",
+      "size": 18,
+      "sha256": "e1dced1228939945e72a4fa2cf26697150fb9ba6c9b0d59587f70a446493c4a4"
+    },
+    {
+      "label": "dynamic_hq_factory_name",
+      "va": "0x144797798",
+      "rva": "0x4797798",
+      "file_offset": "0x4796798",
+      "size": 12,
+      "sha256": "8c82a2634a964383a30c60bf978523ea9f4f42dae7b4ad37023fddd06f58d10e"
+    },
+    {
+      "label": "dynamic_hq_factory_create",
+      "va": "0x141861540",
+      "rva": "0x1861540",
+      "file_offset": "0x1860940",
+      "size": 125,
+      "sha256": "91345d8ecdca6b453cc2c60f9ad68842ffee10673355ba2524789efec27b0bb7"
+    },
+    {
+      "label": "dynamic_hq_functor_vtable",
+      "va": "0x1447aa1c8",
+      "rva": "0x47aa1c8",
+      "file_offset": "0x47a91c8",
+      "size": 40,
+      "sha256": "e82d29e20b5f3c1ca6ed1505ca5bc1afa6abc1f5b1e2a99beb27de95f74fdb2a"
+    },
+    {
+      "label": "dynamic_hq_functor_thunk",
+      "va": "0x141882f20",
+      "rva": "0x1882f20",
+      "file_offset": "0x1882320",
+      "size": 12,
+      "sha256": "98f92ceace8b2006644122bc10fd1c5903522b7b4cd331134745b6243e62f0dd"
+    },
+    {
+      "label": "dynamic_hq_rtti",
+      "va": "0x1454b1140",
+      "rva": "0x54b1140",
+      "file_offset": "0x54af540",
+      "size": 121,
+      "sha256": "ff0c0b29bb74a70b1d87cf2a002a11555134c61da5b4fc53407e9bf55c3b6866"
+    },
+    {
+      "label": "dynamic_hq_template_write",
+      "va": "0x141861671",
+      "rva": "0x1861671",
+      "file_offset": "0x1860a71",
+      "size": 65,
+      "sha256": "17b8606daefe71d3b13a47fb4b520eece0875c2fb26e0c32c420e3b2ff0e03e5"
+    },
+    {
+      "label": "dynamic_regional_hq_template_write",
+      "va": "0x141861db1",
+      "rva": "0x1861db1",
+      "file_offset": "0x18611b1",
+      "size": 65,
+      "sha256": "7fbc022d416cbefe0bfd43b061c58f69d99047a4bfbdb046f5bf5d232811e99c"
+    },
+    {
+      "label": "score_returns_selected_result",
+      "va": "0x14185ae64",
+      "rva": "0x185ae64",
+      "file_offset": "0x185a264",
+      "size": 32,
+      "sha256": "7aa43b4ded0cf23ac2a0f51edbee5dac1e14b8738701d99e733c829e8d3092fe"
+    },
+    {
+      "label": "complete_selected_score_function",
+      "va": "0x14185acb0",
+      "rva": "0x185acb0",
+      "file_offset": "0x185a0b0",
+      "size": 468,
+      "sha256": "9170765e6a62f67968dbe697005c9bdeb11fed23e1f30333f1a19705d1cb8e0b"
+    }
+  ]
+}
