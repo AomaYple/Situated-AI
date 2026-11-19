@@ -73,9 +73,18 @@ SOURCE_HASHES_1151 = {
     "common/production_methods/11_private_infrastructure.txt": "6e7ad9c84c77cdc26af04c7c5a2037b49f96f8c06107a89a4db88b84d2150942",
 }
 
+SOURCE_HASHES_CURRENT = {
+    **SOURCE_HASHES_1151,
+    _COMPANY: "f17a0d2d696378ab835597e159b3b315881a8d9d9f66d5d352f59f6d755025bc",
+    _PRIVATE_BUILDING: "f3300c6bc42f09d15935d503f7182b5a1a866d570d855e1a06b3d9c51bb64d7e",
+}
+
 
 def source_hashes() -> dict[str, str]:
-    if version_contracts.active_version() == "1.15.1":
+    version = version_contracts.active_version()
+    if version == version_contracts.CURRENT_VERSION:
+        return SOURCE_HASHES_CURRENT
+    if version == "1.15.1":
         return SOURCE_HASHES_1151
     return SOURCE_HASHES_115 if version_contracts.is_115() else SOURCE_HASHES
 
