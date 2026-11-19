@@ -327,7 +327,7 @@ def _school_network_replacements(
         item["id"] for item in programs[0]["bridges"]
     }:
         raise ValueError("学校网络替代缺少已审精确桥")
-    files = {}
+    files: dict[str, str] = {}
     if current:
         network_profile.compose(files, profile)
     else:

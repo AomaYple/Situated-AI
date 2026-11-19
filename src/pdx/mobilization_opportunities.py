@@ -12,7 +12,7 @@ import json
 import math
 import tomllib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from . import config, decision_rules, version_contracts
 from .model import Assignment, Block, Scalar
@@ -380,7 +380,7 @@ def candidate_catalog(baseline: Mapping[str, Any] | None = None) -> dict[str, di
     """Return the reviewed military formation candidates and their material evidence."""
     data = load_baseline() if baseline is None else _validate(dict(baseline))
     if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return data["candidates"]
+        return cast("dict[str, dict[str, Any]]", data["candidates"])
     native = parse_text(bytes.fromhex(data["originals"][SOURCE]["bytes"]).decode("utf-8-sig"))
     modifiers = parse_text(bytes.fromhex(data["originals"][_MODIFIER]["bytes"]).decode("utf-8-sig"))
     if native.errors or modifiers.errors:

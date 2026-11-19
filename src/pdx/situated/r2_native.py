@@ -128,10 +128,10 @@ def production_bindings(
         if not evidence_path.startswith("game/"):
             continue
         source = evidence_path.removeprefix("game/")
-        original = (evidence_root / evidence_path).read_bytes()
-        if hashlib.sha256(original).hexdigest() != expected_sha256:
+        original_evidence = (evidence_root / evidence_path).read_bytes()
+        if hashlib.sha256(original_evidence).hexdigest() != expected_sha256:
             raise ValueError(f"R2 native reader evidence differs: {source}")
-        if source in native_sources and native_sources[source] != original:
+        if source in native_sources and native_sources[source] != original_evidence:
             raise ValueError(f"R2 supplied native reader evidence differs: {source}")
         evidence[source] = expected_sha256
     programs = {
