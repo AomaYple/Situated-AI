@@ -20,7 +20,7 @@ from .textio import normalized_text
 
 EVIDENCE = config.REPO / "research/vanilla-ai/1.14.5/country-interfaces.json"
 BASELINE = EVIDENCE.parent / "00_default_strategy.txt"
-EVIDENCE_1152_SHA256 = "2f7b0bd819b22469049fde5028509ec11ddf0db67904b4de34bafccf22722da2"
+EVIDENCE_1152_SHA256 = "46a8179cb9e83e2458551025a5c118722913531f57861865238a03c2acc6e9aa"
 EVIDENCE_1151_SHA256 = "2ac5941ca97be50f09220f3ac3765262aa5e7472b5434539d7658fae04b70ebb"
 EVIDENCE_115_SHA256 = "c2e1eec0205efaa2e4c04ff770db418a4d7bd5ebe2649301eabca3e9a861e006"
 

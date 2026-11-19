@@ -44514,7 +44514,6 @@
     "| `use_overlord_ruler` | 9 | bool | |",
     "| `annex_on_country_formation` | 9 | bool | |",
     "| `can_start_own_diplomatic_plays` | 9 | bool | |",
-    "| `breaks_if_subject_not_protected` | 9 | bool | |",
     "| `join_overlord_wars` | 9 | bool | |",
     "| `can_have_subjects` | 9 | bool | |",
     "| `overlord_must_be_higher_rank` | 9 | bool | |",
