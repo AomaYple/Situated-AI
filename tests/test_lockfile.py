@@ -18,11 +18,17 @@ from __future__ import annotations
 
 import json
 import sys
+from importlib.metadata import Distribution, PackageNotFoundError
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from pdx import lockfile
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from importlib.metadata import DistributionFinder
 
 pytestmark = pytest.mark.unit
 
@@ -32,6 +38,15 @@ def _project_dependencies(tmp_path, monkeypatch, *specs: str) -> None:
         f"[project]\ndependencies = {json.dumps(specs)}\n", encoding="utf-8"
     )
     monkeypatch.setattr(lockfile.config, "REPO", tmp_path)
+
+
+def _installed_metadata(directory: Path, name: str, version: str, *requires: str) -> Path:
+    installed = directory / f"{name.replace('-', '_')}-{version}.dist-info"
+    installed.mkdir(parents=True)
+    lines = ["Metadata-Version: 2.4", f"Name: {name}", f"Version: {version}"]
+    lines.extend(f"Requires-Dist: {requirement}" for requirement in requires)
+    (installed / "METADATA").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return installed
 
 
 def test_锁文件存在且可解析() -> None:
@@ -135,16 +150,34 @@ def test_installed_versions_must_satisfy_active_requirements(
     child = "situated-ai-lock-fixture-child"
     declaration = f"{root}>=2" if direct_mismatch else root
     _project_dependencies(tmp_path, monkeypatch, declaration)
-    for name in (root, child):
-        distribution = tmp_path / f"{name.replace('-', '_')}-1.0.dist-info"
-        distribution.mkdir()
-        metadata = f"Metadata-Version: 2.4\nName: {name}\nVersion: 1.0\n"
-        if name == root:
-            metadata += f"Requires-Dist: {child}>=2\n"
-        (distribution / "METADATA").write_text(metadata, encoding="utf-8")
+    _installed_metadata(tmp_path, root, "1.0", f"{child}>=2")
+    _installed_metadata(tmp_path, child, "1.0")
     monkeypatch.syspath_prepend(str(tmp_path))
     with pytest.raises(RuntimeError, match=rf"{root if direct_mismatch else child}.*>=2"):
         lockfile.resolve()
+
+
+def test_resolver_reads_version_and_requirements_from_same_distribution(
+    tmp_path, monkeypatch
+) -> None:
+    name = "situated-ai-lock-moving-root"
+    first_child = "situated-ai-lock-first-child"
+    later_child = "situated-ai-lock-later-child"
+    _project_dependencies(tmp_path, monkeypatch, name)
+    selected = _installed_metadata(tmp_path, name, "1.0", first_child)
+    replacement = _installed_metadata(tmp_path, name, "2.0", later_child)
+    _installed_metadata(tmp_path, first_child, "1.0")
+    _installed_metadata(tmp_path, later_child, "2.0")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    observed = iter((selected, replacement))
+
+    class ReplacingDistributionFinder:
+        def find_distributions(self, context: DistributionFinder.Context) -> Iterator[Distribution]:
+            if context.name == name:
+                yield Distribution.at(next(observed, replacement))
+
+    monkeypatch.setattr(sys, "meta_path", [ReplacingDistributionFinder(), *sys.meta_path])
+    assert lockfile.resolve() == {first_child: "1.0", name: "1.0"}
 
 
 @pytest.mark.parametrize(
@@ -177,12 +210,15 @@ def test_dependency_metadata_failure_is_not_an_empty_closure(
     tmp_path, monkeypatch, error: Exception
 ) -> None:
     _project_dependencies(tmp_path, monkeypatch, "fixture")
-    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
 
-    def broken_requires(_name: str) -> list[str]:
-        raise error
+    class BrokenDistribution:
+        version = "1.0"
 
-    monkeypatch.setattr(lockfile, "requires", broken_requires)
+        @property
+        def requires(self) -> list[str]:
+            raise error
+
+    monkeypatch.setattr(lockfile, "distribution", lambda _name: BrokenDistribution())
     with pytest.raises(type(error), match=str(error)):
         lockfile.resolve()
 
@@ -190,46 +226,50 @@ def test_dependency_metadata_failure_is_not_an_empty_closure(
 def test_missing_direct_dependency_is_not_an_empty_closure(tmp_path, monkeypatch) -> None:
     _project_dependencies(tmp_path, monkeypatch, "fixture")
 
-    def missing(_name: str) -> str:
-        raise lockfile.PackageNotFoundError("fixture")
+    def missing(_name: str) -> Distribution:
+        raise PackageNotFoundError("fixture")
 
-    monkeypatch.setattr(lockfile, "version", missing)
+    monkeypatch.setattr(lockfile, "distribution", missing)
     with pytest.raises(RuntimeError, match="直接依赖未安装"):
         lockfile.resolve()
 
 
 def test_known_empty_dependency_metadata_is_valid(tmp_path, monkeypatch) -> None:
-    _project_dependencies(tmp_path, monkeypatch, "fixture")
-    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
-    monkeypatch.setattr(lockfile, "requires", lambda _name: None)
-    assert lockfile.resolve() == {"fixture": "1.0"}
+    name = "situated-ai-lock-empty"
+    _project_dependencies(tmp_path, monkeypatch, name)
+    _installed_metadata(tmp_path, name, "1.0")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    assert lockfile.resolve() == {name: "1.0"}
 
 
 def test_missing_active_transitive_dependency_rejects_incomplete_lock(
     tmp_path, monkeypatch
 ) -> None:
-    _project_dependencies(tmp_path, monkeypatch, "root")
-
-    def installed(name: str) -> str:
-        if name == "child":
-            raise lockfile.PackageNotFoundError(name)
-        return "1.0"
-
-    monkeypatch.setattr(lockfile, "version", installed)
-    monkeypatch.setattr(lockfile, "requires", lambda name: ["child"] if name == "root" else [])
-    with pytest.raises(RuntimeError, match=r"依赖闭包成员未安装.*child"):
+    root = "situated-ai-lock-root"
+    child = "situated-ai-lock-missing-child"
+    _project_dependencies(tmp_path, monkeypatch, root)
+    _installed_metadata(tmp_path, root, "1.0", child)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    with pytest.raises(RuntimeError, match=rf"依赖闭包成员未安装.*{child}"):
         lockfile.resolve()
 
 
 def test_extras_reached_after_base_visit_extend_closure_and_cycles_terminate(
     tmp_path, monkeypatch
 ) -> None:
-    _project_dependencies(tmp_path, monkeypatch, "root", "shared")
-    monkeypatch.setattr(lockfile, "version", lambda _name: "1.0")
-    metadata = {
-        "root": ["shared[feature]"],
-        "shared": ["root", "optional; extra == 'feature'", "inactive; python_version < '3.0'"],
-        "optional": ["shared[feature]"],
-    }
-    monkeypatch.setattr(lockfile, "requires", lambda name: metadata[name])
-    assert lockfile.resolve() == {"optional": "1.0", "root": "1.0", "shared": "1.0"}
+    root = "situated-ai-lock-cycle"
+    shared = "situated-ai-lock-shared"
+    optional = "situated-ai-lock-optional"
+    _project_dependencies(tmp_path, monkeypatch, root, shared)
+    _installed_metadata(tmp_path, root, "1.0", f"{shared}[feature]")
+    _installed_metadata(
+        tmp_path,
+        shared,
+        "1.0",
+        root,
+        f"{optional}; extra == 'feature'",
+        "inactive; python_version < '3.0'",
+    )
+    _installed_metadata(tmp_path, optional, "1.0", f"{shared}[feature]")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    assert lockfile.resolve() == {optional: "1.0", root: "1.0", shared: "1.0"}

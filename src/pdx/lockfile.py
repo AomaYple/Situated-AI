@@ -27,7 +27,7 @@ import sys
 import tempfile
 import tomllib
 from dataclasses import dataclass
-from importlib.metadata import PackageNotFoundError, requires, version
+from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -129,6 +129,7 @@ def direct_requirements() -> list[str]:
 def resolve() -> dict[str, str]:
     """本机已安装的依赖闭包：``{规范化包名: 版本}``。"""
     pinned: dict[str, str] = {}
+    dependencies: dict[str, list[str]] = {}
     queue = _direct_requirements()
     direct_names = {normalize(requirement.name) for requirement in queue}
     expanded: dict[str, set[str]] = {}
@@ -138,10 +139,12 @@ def resolve() -> dict[str, str]:
         key = normalize(name)
         if key not in pinned:
             try:
-                pinned[key] = version(name)
+                installed_distribution = distribution(name)
             except PackageNotFoundError:
                 kind = "直接依赖" if key in direct_names else "依赖闭包成员"
                 raise RuntimeError(f"{kind}未安装，不能生成不完整锁：{name}") from None
+            pinned[key] = installed_distribution.version
+            dependencies[key] = installed_distribution.requires or []
         installed = pinned[key]
         if requirement.specifier and not requirement.specifier.contains(
             installed, prereleases=True
@@ -150,11 +153,9 @@ def resolve() -> dict[str, str]:
         contexts = {"", *requirement.extras} - expanded.get(key, set())
         if not contexts:
             continue
-        # Process newly requested extras even when the base distribution was
-        # already visited. Unknown metadata never proves an empty closure.
-        children = requires(name) or []
+        # 新请求的 extras 继续使用首次选定的分发元数据。
         expanded.setdefault(key, set()).update(contexts)
-        queue.extend(_active_requirements(children, extras=contexts))
+        queue.extend(_active_requirements(dependencies[key], extras=contexts))
     return dict(sorted(pinned.items()))
 
 
