@@ -495,7 +495,7 @@ class _NativeBindingProofs:
         ):
             baseline = module.load_baseline()
             derived = module.derive({"sources": {}, "readers": {}, "rules": []}, baseline)
-            inputs: dict[str, bytes] | None = {}
+            inputs: dict[str, bytes] = {}
             for source, original in baseline["originals"].items():
                 raw = self.sources.get(source)
                 # The locked event corroborates formation.owner=country outside
@@ -507,14 +507,14 @@ class _NativeBindingProofs:
                 ):
                     continue
                 if raw is None or self.inventory.source_hashes.get(source) != original["sha256"]:
-                    inputs = None
+                    inputs.clear()
                     break
                 inputs[source] = raw
             for row in derived["covered"]:
                 source, field = row["source"], row["field"]
                 definition, leaf = field.split(".", 1)
                 identity = (source, definition, leaf)
-                if inputs is None:
+                if not inputs:
                     contracts[identity] = None
                     continue
                 parsed = parse_bytes(inputs[source], path=source)
