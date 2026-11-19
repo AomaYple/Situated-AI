@@ -607,7 +607,7 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
             return "dynamic_numeric"
     elif family == "decrees":
         if (
-            version_contracts.active_version() == "1.15.1"
+            version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
             and surface.source == "common/decrees/00_decree.txt"
             and surface.definition == "decree_road_maintenance"
             and field == "ai_weight"
@@ -2146,12 +2146,7 @@ class _Dependencies:
             if evidence.get("schema") != 1 or (
                 version_contracts.is_115()
                 and (
-                    hashlib.sha256(evidence_raw).hexdigest()
-                    != (
-                        country_interfaces.EVIDENCE_1151_SHA256
-                        if version_contracts.active_version() == "1.15.1"
-                        else country_interfaces.EVIDENCE_115_SHA256
-                    )
+                    hashlib.sha256(evidence_raw).hexdigest() != country_interfaces.evidence_sha256()
                     or evidence.get("baseline_version") != version_contracts.active_version()
                 )
             ):

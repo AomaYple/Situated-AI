@@ -939,10 +939,15 @@ def _configuration_writers(
                 "market",
             )
 
-    if version_contracts.active_version() == "1.15.1":
+    version = version_contracts.active_version()
+    if version in {"1.15.1", version_contracts.CURRENT_VERSION}:
         from .situated import network_profile, production_profile  # noqa: PLC0415
 
-        profile = production_profile.load_profile(production_profile.baseline_root())
+        profile = (
+            production_profile.declared_profile()
+            if version == version_contracts.CURRENT_VERSION
+            else production_profile.load_profile(production_profile.baseline_root(version))
+        )
         # The native declaration alone is not a Mod writer. Confirm that the
         # current policy actually compiles the consumer before recording its
         # withdrawal; the six retired school rules never reappear as writers.
@@ -1095,7 +1100,7 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
             STATE_DEVASTATION_SOURCE: "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4",
             "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
         }
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         from . import decision_adapters  # noqa: PLC0415
 
         authority_sources = decision_adapters.native_authority_115()["sources"]

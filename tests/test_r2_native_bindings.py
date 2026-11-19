@@ -18,7 +18,7 @@ from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface, _ro
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def current_version():
     with version_contracts.select_version("1.15.1"):
         yield

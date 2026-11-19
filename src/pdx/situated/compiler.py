@@ -109,11 +109,14 @@ def support_evaluation_context() -> decision_ir.EvaluationContext:
     path = baseline_path()
     raw = path.read_bytes()
     data = json.loads(engine_scope.strategy_snapshot())
-    native_hash = data["script_hashes"]["common/ai_strategies/00_default_strategy.txt"]
-    if native_hash not in {
-        hashlib.sha256(raw).hexdigest(),
-        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
-    }:
+    native_hash = data["script_hashes"][version_contracts.DEFAULT_STRATEGY_SOURCE]
+    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    accepted_hashes = {hashlib.sha256(raw).hexdigest()}
+    if not current:
+        accepted_hashes.add(hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest())
+    if native_hash not in accepted_hashes or (
+        current and native_hash != version_contracts.contract().default_strategy_sha256
+    ):
         raise ValueError("支持程序原版底本与引擎证据不一致")
     parsed = parse_text(raw.decode("utf-8-sig"))
     definitions = parsed.root.all("ai_strategy_default")
@@ -147,7 +150,9 @@ def support_evaluation_context() -> decision_ir.EvaluationContext:
         for marker in comments
     ):
         raise ValueError("支持程序原版字段缺少精确独立上下文")
-    source = path.relative_to(REPO).as_posix()
+    source = (
+        version_contracts.DEFAULT_STRATEGY_SOURCE if current else path.relative_to(REPO).as_posix()
+    )
     actor, target, enemy = (comments[marker][0] for marker in markers[:3])
     return decision_ir.EvaluationContext(
         actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, actor),

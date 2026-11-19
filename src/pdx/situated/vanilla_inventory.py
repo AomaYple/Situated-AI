@@ -1836,7 +1836,7 @@ def _road_maintenance_scope(
     a home-state variable through scope:country. The deciding country is not
     inferred from state ownership. This adds no declaration to discovery.
     """
-    if version_contracts.active_version() != "1.15.1":
+    if version_contracts.active_version() not in {"1.15.1", version_contracts.CURRENT_VERSION}:
         return _Scope()
     from . import r2_reader_authority  # noqa: PLC0415
 

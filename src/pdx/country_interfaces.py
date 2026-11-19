@@ -25,6 +25,14 @@ EVIDENCE_1151_SHA256 = "2ac5941ca97be50f09220f3ac3765262aa5e7472b5434539d7658fae
 EVIDENCE_115_SHA256 = "c2e1eec0205efaa2e4c04ff770db418a4d7bd5ebe2649301eabca3e9a861e006"
 
 
+def evidence_sha256() -> str:
+    return {
+        "1.15.0": EVIDENCE_115_SHA256,
+        "1.15.1": EVIDENCE_1151_SHA256,
+        version_contracts.CURRENT_VERSION: EVIDENCE_1152_SHA256,
+    }[version_contracts.active_version()]
+
+
 def evidence_file() -> Path:
     """Choose current evidence at the call boundary, preserving historical overrides."""
     if version_contracts.is_115():
@@ -258,14 +266,8 @@ def extract(policy, root, sections):
 def validate(policy, *, root=None, snapshot=None, evidence_path=None):
     selected_path = evidence_file() if evidence_path is None else Path(evidence_path)
     raw = selected_path.read_bytes()
-    if version_contracts.is_115():
-        expected = {
-            "1.15.0": EVIDENCE_115_SHA256,
-            "1.15.1": EVIDENCE_1151_SHA256,
-            version_contracts.CURRENT_VERSION: EVIDENCE_1152_SHA256,
-        }[version_contracts.active_version()]
-        if hashlib.sha256(raw).hexdigest() != expected:
-            raise ValueError("国家接口当前权威证据漂移")
+    if version_contracts.is_115() and hashlib.sha256(raw).hexdigest() != evidence_sha256():
+        raise ValueError("国家接口当前权威证据漂移")
     evidence = json.loads(raw)
     if (
         not isinstance(evidence, dict)
