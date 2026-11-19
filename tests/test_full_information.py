@@ -1367,16 +1367,15 @@ def test_static_matrix_never_claims_execution_contract(tmp_path: Path):
 def current_school_program():
     from pdx.situated import network_profile, production_profile
 
-    with version_contracts.select_version("1.15.1"):
-        legacy = decision_rules.load()
-        assert ("institution_scores", "institution_schools") not in legacy.groups()
-        assert "literacy" not in {reader.key for reader in legacy.readers}
-        profile = production_profile.load_profile(production_profile.baseline_root())
-        return next(
-            program
-            for program in network_profile.compile_profile(profile)
-            if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
-        )
+    profile = production_profile.declared_profile()
+    legacy = decision_rules.load()
+    assert ("institution_scores", "institution_schools") not in legacy.groups()
+    assert "literacy" not in {reader.key for reader in legacy.readers}
+    return next(
+        program
+        for program in network_profile.compile_profile(profile)
+        if program.network.actions[0].definition.consumer_id == "a0-pol-schools"
+    )
 
 
 @pytest.mark.parametrize(
