@@ -14,12 +14,13 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import stat
 import tempfile
 import zipfile
 from collections import defaultdict
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -54,7 +55,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
     from typing import BinaryIO
 
-    from .input_contracts import InputIdentity, InputInventory, InventoryRecord
+    from .input_contracts import CaptureCheck, InputIdentity, InputInventory, InventoryRecord
     from .model import ParsedFile
 
 
@@ -285,11 +286,18 @@ class ResearchInformationCatalog(InformationCatalog):
     """Canonical raw research report with independent source dispositions."""
 
     layered: LayeredCatalog = field(kw_only=True)
+    final_installation_check: CaptureCheck | None = field(default=None, kw_only=True)
     format_version: int = 2
 
     def to_dict(self) -> dict[str, object]:
         result = InformationCatalog.to_dict(self)
-        result["分层目录"] = self.layered.to_dict()
+        layers = self.layered.to_dict()
+        if self.final_installation_check is not None:
+            layers["installation_verification"] = {
+                "input_identity_capture_check_scope": "initial_inventory",
+                "final_inventory": asdict(self.final_installation_check),
+            }
+        result["分层目录"] = layers
         return result
 
     def _serialized_items(self) -> list[dict[str, object]]:
@@ -888,6 +896,7 @@ def _build_research_index(
             )
             domain = record.path.rpartition("/")[0] or "."
             diagnostics = tuple(f"{d.code}: {d.message}" for d in record.diagnostics)
+            locator_diagnostics = [diagnostic.code for diagnostic in record.diagnostics]
             parsed = None
             entries: list[tuple[str, str, int]] = []
             language = "?"
@@ -905,6 +914,7 @@ def _build_research_index(
                     # 通用 parser 也接受裸标量。这些资料的完整结构至少须包含一块。
                     if b"\x00" in raw:
                         parsed.errors.append("pdx_resource_contains_nul")
+                        locator_diagnostics.append("pdx_resource_contains_nul")
                     elif suffix in FLAT_PDX_RESOURCE_SUFFIXES:
                         if not parsed.root.items or any(
                             not isinstance(item, Assignment)
@@ -913,13 +923,22 @@ def _build_research_index(
                             for item in parsed.root.items
                         ):
                             parsed.errors.append("pdx_resource_expected_flat_scalar_assignments")
+                            locator_diagnostics.append(
+                                "pdx_resource_expected_flat_scalar_assignments"
+                            )
                     elif parsed.max_depth == 0:
                         parsed.errors.append("pdx_resource_missing_top_level_block")
+                        locator_diagnostics.append("pdx_resource_missing_top_level_block")
                 parse_status = parsed.parse_status
                 decode_status = "failed" if parsed.decoding_error else "complete"
                 diagnostics += tuple(parsed.errors)
+                locator_diagnostics.extend(
+                    f"{entry['kind']}:{entry['line']}:{entry['column']}"
+                    for entry in parsed.diagnostics
+                )
                 if parsed.decoding_error is not None:
                     diagnostics += (parsed.decoding_error,)
+                    locator_diagnostics.append("pdx_decode_failed")
                     reason = "pdx_decode_failed"
                 elif parse_status != "complete":
                     reason = "shared_parser_incomplete"
@@ -929,6 +948,10 @@ def _build_research_index(
                 csv_result = parse_map_table(raw)
                 decode_status, parse_status = csv_result.decode_status, csv_result.parse_status
                 diagnostics += csv_result.diagnostics
+                for message in csv_result.diagnostics:
+                    location = re.match(r"^csv_[a-z_]+(?::[0-9]+(?=:))?", message)
+                    if location:
+                        locator_diagnostics.append(location[0])
                 reason = (
                     "map CSV rows and cells indexed; map interpretation requires separate evidence"
                 )
@@ -936,6 +959,9 @@ def _build_research_index(
                 json_result = parse_json(raw)
                 decode_status, parse_status = json_result.decode_status, json_result.parse_status
                 diagnostics += json_result.diagnostics
+                locator_diagnostics.extend(
+                    message.partition(":")[0] for message in json_result.diagnostics
+                )
                 reason = (
                     "complete ordered JSON tree; engine semantics and Unicode interoperability unproven"
                     if parse_status == "complete"
@@ -949,6 +975,7 @@ def _build_research_index(
                     decode_status, parse_status = "failed", "failed"
                     diagnostics += (str(error),)
                     reason = "localization_decode_failed"
+                    locator_diagnostics.append(f"localization_decode_failed:byte:{error.start}")
                 else:
                     decode_status = "complete"
                     language, entries = parse_loc_entries_with_lines(
@@ -958,6 +985,11 @@ def _build_research_index(
                     reason = "all localization languages indexed; engine loading and GUI presentation unproven"
                     if unconsumed or language == "?":
                         diagnostics += (f"language={language}; unconsumed={unconsumed}",)
+                        locator_diagnostics.extend(
+                            f"localization_unconsumed_line:{line}" for line, _ in unconsumed
+                        )
+                        if language == "?":
+                            locator_diagnostics.append("localization_unknown_language")
             elif zip_container:
                 stream_context = (
                     verified_source(record, raw_root=raw_root)
@@ -970,10 +1002,15 @@ def _build_research_index(
                     except zipfile.BadZipFile as error:
                         parse_status, reason = "failed", "invalid_zip_container"
                         diagnostics += (str(error),)
+                        locator_diagnostics.append("invalid_zip_container")
                     else:
                         parse_status = "partial" if errors else "complete"
                         reason = "safe ZIP metadata mapping; member content/export/license not established"
                         diagnostics += errors
+                        locator_diagnostics.extend(
+                            f"{message.rpartition(':')[2]}:member:{message.partition(':')[0]}"
+                            for message in errors
+                        )
             elif (document or shader_source) and raw is not None:
                 try:
                     text = raw.decode("utf-8-sig")
@@ -982,6 +1019,7 @@ def _build_research_index(
                     diagnostics += (str(error),)
                     format_name = "document" if document else "shader_source"
                     reason = f"{format_name}_decode_failed_no_declared_alternative_codec"
+                    locator_diagnostics.append(f"{format_name}_decode_failed:byte:{error.start}")
                 else:
                     decode_status = "complete"
                     text_lines = list(enumerate(text.splitlines(), 1))
@@ -1007,8 +1045,8 @@ def _build_research_index(
                     "unresolved",
                     "unknown format retained; discovery cannot be silently excluded",
                 )
-            if raw_root is None and diagnostics:
-                diagnostics = (f"diagnostic_count:{len(diagnostics)}",)
+            if raw_root is None:
+                diagnostics = tuple(locator_diagnostics)
             row = FileDisposition(
                 record.path,
                 category,

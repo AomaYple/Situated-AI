@@ -10,7 +10,8 @@ import subprocess
 import sys
 import zipfile
 from contextlib import closing
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
@@ -18,7 +19,7 @@ from types import SimpleNamespace
 import pytest
 from typer.testing import CliRunner, Result
 
-from pdx import cli, config, research_output, version_contracts
+from pdx import cli, config, research_catalog, research_output, version_contracts
 from pdx.capability_catalog import (
     OccurrenceWriter,
     indexed_lines,
@@ -53,6 +54,7 @@ _IDENTITY_SOURCE = {
 }
 _EXTERNAL_REF = "identity-sources/steam-appmanifest.acf"
 _FORMATS = tuple(PDX_RESOURCE_CATEGORIES)
+_STRATEGY_ANCHOR = "game/common/ai_strategies/00_default_strategy.txt"
 
 
 def _graphics_resource(suffix: str) -> str:
@@ -342,12 +344,21 @@ def live_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "game/common/ample/sample.txt": b'sample_key = { key = "synthetic_value_do_not_index" }',
         "game/config.json": b'{"key":"synthetic_value_do_not_index"}',
         "game/docs/example.md": b"synthetic_value_do_not_index",
+        _STRATEGY_ANCHOR: b"locked_default_strategy = {}",
     }
     for name, data in sources.items():
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
     monkeypatch.setattr(config, "ROOT", root)
+    monkeypatch.setitem(
+        version_contracts.VERSION_SPECS,
+        version,
+        replace(
+            version_contracts.contract(version),
+            default_strategy_sha256=_sha(sources[_STRATEGY_ANCHOR]),
+        ),
+    )
     return root
 
 
@@ -391,6 +402,74 @@ def test_analyze_installation_refuses_drift_after_indexing(
     result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
     assert result.exit_code == 1, result.output
     assert not output.exists()
+
+
+@pytest.mark.parametrize("changed", [None, b"drift = {}"])
+def test_analyze_installation_requires_locked_default_strategy(
+    tmp_path: Path, live_installation: Path, changed: bytes | None
+) -> None:
+    anchor = live_installation / _STRATEGY_ANCHOR
+    if changed is None:
+        anchor.unlink()
+    else:
+        anchor.write_bytes(changed)
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 1, result.output
+    assert "00_default_strategy.txt" in "".join(result.output.splitlines())
+    assert not output.exists()
+
+
+def test_analyze_installation_records_final_verification_after_indexing(
+    tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    times = tuple(
+        datetime.fromisoformat(f"2026-11-19T00:00:0{second}+00:00") for second in range(3)
+    )
+    events: list[str] = []
+    inventory_installation = research_catalog.inventory_installation
+
+    def read_clock(_time_zone):
+        instant = times[sum(event == "clock" for event in events)]
+        events.append("clock")
+        return instant
+
+    def record_scan(*args, **kwargs):
+        result = inventory_installation(*args, **kwargs)
+        events.append("scan")
+        return result
+
+    monkeypatch.setattr(research_catalog, "datetime", SimpleNamespace(now=read_clock))
+    monkeypatch.setattr(research_catalog, "inventory_installation", record_scan)
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    layer = json.loads(data)["分层目录"]
+    marker = json.loads((output / "COMPLETE.json").read_bytes())
+    assert events == ["clock", "scan", "clock", "scan", "clock"]
+    check = layer["installation_verification"]
+    assert check["input_identity_capture_check_scope"] == "initial_inventory"
+    assert layer["input_identity"]["end"]["checked_at"] == times[1].isoformat()
+    assert check["final_inventory"]["checked_at"] == times[2].isoformat()
+    assert check["final_inventory"]["file_set_sha256"] == marker["file_set_sha256"]
+    assert marker["files"]["information-catalog.json"] == _sha(data)
+
+
+def test_analyze_installation_records_parser_locations_without_source_value(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    path = "game/common/ample/malformed.txt"
+    (live_installation / path).write_bytes(b"\nblock = { x = secret_synthetic_string\n")
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    dispos = json.loads(data)["分层目录"]["dispositions"]
+    row = next(row for row in dispos if row["path"] == path)
+    assert row["parse_status"] == "partial"
+    assert "unclosed_block:2:9" in row["diagnostics"]
+    assert b"secret_synthetic_string" not in data
 
 
 def test_committed_research_preserves_denominator_without_local_state_values(

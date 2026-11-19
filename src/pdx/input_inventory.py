@@ -57,6 +57,7 @@ PDX_RESOURCE_CATEGORIES = {
     ".vertical_borders": "map_data",
 }
 MAP_ADJACENCIES = "game/map_data/adjacencies.csv"
+DEFAULT_STRATEGY_ANCHOR = "game/common/ai_strategies/00_default_strategy.txt"
 STRUCTURED_JSON_SUFFIXES = frozenset({".json", ".meta"})
 FLAT_PDX_RESOURCE_SUFFIXES = frozenset({".skin", ".terrain"})
 _FLAT_RESOURCE_PATHS = {
@@ -902,6 +903,16 @@ def inventory_installation(
         installation=True,
         chunk_size=chunk_size,
         verified=verified,
+    )
+
+
+def matches_default_strategy(scan: InventoryScan, expected_sha256: str) -> bool:
+    return any(
+        record.path == DEFAULT_STRATEGY_ANCHOR
+        and record.read_status == "read"
+        and not record.diagnostics
+        and record.sha256 == expected_sha256
+        for record in scan.records
     )
 
 

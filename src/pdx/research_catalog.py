@@ -17,7 +17,13 @@ from .input_contracts import (
     InputInventory,
     SnapshotProvenance,
 )
-from .input_inventory import _check_components, _root_path, inventory_installation
+from .input_inventory import (
+    DEFAULT_STRATEGY_ANCHOR,
+    _check_components,
+    _root_path,
+    inventory_installation,
+    matches_default_strategy,
+)
 from .research_output import open_local_evidence_output, validate_local_output
 
 
@@ -90,6 +96,7 @@ def write_installation(installation: Path, output_dir: Path) -> Path:
     root = _root_path(installation)
     _check_components(root)
     version = version_contracts.require_current()
+    expected_strategy = version_contracts.contract(version).default_strategy_sha256
     start_at = datetime.now(UTC).isoformat()
     verified = version_contracts.verify_installation_identity(root)
     staging_parent = Path(tempfile.gettempdir()).resolve(strict=True)
@@ -98,6 +105,8 @@ def write_installation(installation: Path, output_dir: Path) -> Path:
         scan = inventory_installation(root, verified=verified)
         if scan.scan_status != "complete" or scan.file_set_sha256 is None:
             raise ValueError(f"安装盘点不完整：{len(scan.diagnostics)} 项诊断")
+        if not matches_default_strategy(scan, expected_strategy):
+            raise ValueError(f"安装缺少当前锁定策略或其摘要漂移：{DEFAULT_STRATEGY_ANCHOR}")
         end_at = datetime.now(UTC).isoformat()
         references = tuple(
             ArtifactRef("installation", row.path, row.sha256) for row in verified.sources
@@ -124,7 +133,6 @@ def write_installation(installation: Path, output_dir: Path) -> Path:
         catalog = information_catalog._build_research_index(
             identity, inventory, staging / "occurrences.sqlite", raw_root=None
         )
-        files, encoded = _products(catalog, staging, destination.root)
         checked = inventory_installation(root, verified=verified)
         if checked.scan_status != "complete" or (
             checked.file_set_sha256,
@@ -132,4 +140,9 @@ def write_installation(installation: Path, output_dir: Path) -> Path:
             checked.observed_paths,
         ) != (scan.file_set_sha256, scan.directories, scan.observed_paths):
             raise ValueError("分析期间安装字节、文件或目录分母变化")
+        final_check = CaptureCheck(
+            datetime.now(UTC).isoformat(), identity_digest, scan.file_set_sha256, "stable"
+        )
+        catalog = replace(catalog, final_installation_check=final_check)
+        files, encoded = _products(catalog, staging, destination.root)
         return destination.publish(files, encoded, scratch=staging)

@@ -454,20 +454,18 @@ def input_inventory_cmd() -> None:
         raise typer.Exit(EXIT_USAGE) from exc
     contract = version_contracts.contract(version_contracts.CURRENT_VERSION)
     scan = input_inventory.inventory_installation(verified.root, verified=verified)
-    version_source = "game/common/ai_strategies/00_default_strategy.txt"
-    version_matched = any(
-        record.path == version_source
-        and record.read_status == "read"
-        and not record.diagnostics
-        and record.sha256 == contract.default_strategy_sha256
-        for record in scan.records
+    version_matched = input_inventory.matches_default_strategy(
+        scan, contract.default_strategy_sha256
     )
     payload = {
         "schema": 1,
         "evidence_kind": "static_check",
         "scan_status": scan.scan_status,
         "expected_version": contract.version,
-        "version_anchor": {"path": version_source, "matched": version_matched},
+        "version_anchor": {
+            "path": input_inventory.DEFAULT_STRATEGY_ANCHOR,
+            "matched": version_matched,
+        },
         "file_set_sha256": scan.file_set_sha256,
         "summary": asdict(scan.summary),
         "blocked_directories": scan.blocked_directories,
