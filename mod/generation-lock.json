@@ -88,7 +88,7 @@
     "src/pdx/situated/architecture_receipts.py": "7e64406ca592491e961185a47f1026a1fdc9a763fdc3a867538b12e3ea98c903",
     "src/pdx/situated/audit.py": "614084488e648fc436e1d3bbabceb837d8b924058621848182333e3a4a91f8b5",
     "src/pdx/situated/bindings.py": "ddf2b41961eac7c23b9fd9462a17757ee56fde195ecf443fa9667f81ce5d2f2c",
-    "src/pdx/situated/commitment.py": "035ca919f71c7de72fe7b42be36c277b98f843f3ac1bd4037287481958244b67",
+    "src/pdx/situated/commitment.py": "2e6ac3b56716216c47b0a4b3fada993cd390ab994c20df389ae9d648281fe50d",
     "src/pdx/situated/compatibility_115.py": "900387305a2ece2958fa3acc0a9b525f8e38e3a37cd6eea305b8745d523d0d62",
     "src/pdx/situated/compiler.py": "ccae49f43cdd7eaf0db00700914ccbcbff7c3a651d8383b85b37d1262b19b430",
     "src/pdx/situated/contracts.py": "c3a83cfd79385ab52a98d1f4a4f4d7b5a5595863a2b97ed0e413a3565edb745d",

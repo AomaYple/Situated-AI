@@ -50,14 +50,13 @@ Issues = "https://github.com/AomaYple/Situated-AI/issues"
 dev = [
     "types-psutil>=7.0",       # 跨平台性能测量库的类型桩
     # ── 测试框架与插件 ────────────────────────────────────
-    # pytest-benchmark 5.3.1 已修复 pytest 9.2 兼容；框架与插件共同升级并验证。
-    "pytest>=9.0,<9.3",
+    # pytest 9.2 内置 subtests；pytest-benchmark 5.3.1 与该版本兼容。
+    "pytest>=9.2,<9.3",
     "pytest-cov>=7.0",          # 覆盖率
     "pytest-benchmark>=5.3.1",  # 性能基准与回归门禁；包含 pytest 9.2 兼容修复
     "pytest-timeout>=2.4",      # 卡死的测试必须失败而非永久挂住
     "pytest-randomly>=5.0",     # 随机化执行顺序，暴露用例间隐式依赖
     "pytest-regressions>=2.11", # 黄金回归（冻结产物指纹）
-    "pytest-subtests>=0.15",    # 一个用例内的多组子断言
     "pytest-xdist>=3.8",        # 并行执行
     "hypothesis>=6.168",        # 属性测试与模糊测试
 
@@ -65,8 +64,8 @@ dev = [
     "pyinstrument>=5.1",        # 采样式剖析器，输出调用树
 
     # ── 静态检查 ──────────────────────────────────────────
-    "ruff==0.16.7",             # 与锁文件统一；升级需独立复核规则与格式变化
-    "mypy==2.3.1",              # 与锁文件统一；升级需独立复核类型检查结果变化
+    "ruff==0.17.5",             # 与锁文件统一；升级需独立复核规则与格式变化
+    "mypy==2.4.1",              # 与锁文件统一；升级需独立复核类型检查结果变化
 
     # ── 开发流程 ──────────────────────────────────────────
     "pre-commit>=4.0",          # 提交前自动跑 ruff/mypy

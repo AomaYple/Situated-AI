@@ -50,10 +50,14 @@ def derive(
             # 布尔承诺保留布尔单位；数值承诺保留原始数值，绝不静默归一化。
             known = False
             raw = None
-        elif known and isinstance(raw, (int, float)) and not isinstance(raw, bool):
-            if not math.isfinite(raw):
-                known = False
-                raw = None
+        elif (
+            known
+            and isinstance(raw, (int, float))
+            and not isinstance(raw, bool)
+            and not math.isfinite(raw)
+        ):
+            known = False
+            raw = None
         unit = str(spec.get("unit", "normalized"))
         binding_values = _bindings(spec)
         result.append(
