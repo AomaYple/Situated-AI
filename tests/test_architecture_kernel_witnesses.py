@@ -278,7 +278,7 @@ def test_s1_production_chain_has_one_canonical_writer_and_rejects_a_missing_link
         "root",
         "add",
     )
-    metadata = candidate["metadata"]["situated_actions"]["consumer_ir"]
+    metadata = candidate["consumers"]
     assert metadata["field_owners"][BALANCE] == writer.owner
     assert (
         len([item for item in metadata["writers"] if item["definition"] == "industrial_foundation"])

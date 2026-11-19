@@ -436,7 +436,8 @@ def final_candidate():
         name: value.encode() if isinstance(value, str) else value
         for name, value in generated.items()
     }
-    metadata = json.loads(files[".metadata/metadata.json"])
+    del generated
+    consumers = explicit._consumer_manifest(files[".metadata/metadata.json"])
     raw = files["common/ai_strategies/00_default_strategy.txt"].decode()
     disk = (config.REPO / witness.GENERATED).read_bytes()
     assert disk == files["common/ai_strategies/00_default_strategy.txt"]
@@ -446,7 +447,7 @@ def final_candidate():
     return {
         "model": model,
         "files": files,
-        "metadata": metadata,
+        "consumers": consumers,
         "snapshot": digest(before),
         "r8": (model, actual, raw),
         "policy": policy,
@@ -756,7 +757,7 @@ def _migration_review(candidate):
 def _owner_review(candidate):
     model = candidate["model"]
     assert compiler.audit(model) == []
-    bundle = candidate["metadata"]["situated_actions"]["consumer_ir"]
+    bundle = candidate["consumers"]
     owners = defaultdict(set)
     for row in bundle["writers"]:
         assert row["owner"]
@@ -875,7 +876,7 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     files = {
         name: raw.decode("utf-8-sig")
         for name, raw in candidate["files"].items()
-        if name.endswith((".txt", ".yml", ".json"))
+        if name.endswith(".txt")
     }
     baseline = compiler.baseline_path().read_text(encoding="utf-8")
     # pytest exposes the original factory through __wrapped__ at runtime;
@@ -905,13 +906,15 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
             legacy_candidate, record, source, field
         )
     legacy.test_legacy_module_declares_only_its_actual_denominator(legacy_candidate)
-    continuous = audit._production_continuous_bindings(files)
+    built = files[explicit.SOURCE]
+    del legacy_candidate, files
+    continuous = audit._production_continuous_bindings(candidate["files"])
     assert len(continuous) == 1
     disabled = final_disabled
     explicit_candidate = {
-        "built": files[explicit.SOURCE],
+        "built": built,
         "model": model,
-        "metadata": candidate["metadata"],
+        "consumers": candidate["consumers"],
         "support": continuous[0].writer.program,
         "disabled": disabled[explicit.SOURCE],
         "baseline": baseline,

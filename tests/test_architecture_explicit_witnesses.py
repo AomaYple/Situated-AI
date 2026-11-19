@@ -164,6 +164,19 @@ def _field(text, field):
     return _digest(node.value)
 
 
+def _consumer_manifest(raw: str | bytes) -> dict[str, Any]:
+    """Retain the metadata fields the witness assertions inspect after generation."""
+    bundle = json.loads(raw)["situated_actions"]["consumer_ir"]
+    return {
+        "writers": [
+            {field: row[field] for field in ("kind", "definition", "field", "owner")}
+            for row in bundle["writers"]
+        ],
+        "field_owners": bundle["field_owners"],
+        "support_program_writer_count": bundle["support_program_writer_count"],
+    }
+
+
 def _release_candidate_evidence():
     # This is the actual release-profile package builder and metadata, not a
     # test model whose program is silently substituted into production output.
@@ -175,10 +188,10 @@ def _release_candidate_evidence():
     assert len(continuous) == 1
     support = continuous[0].writer.program
     assert support is not None
-    metadata = json.loads(files[".metadata/metadata.json"])
+    consumers = _consumer_manifest(files[".metadata/metadata.json"])
     # Returning only the existing fixture evidence releases the complete output
     # mapping, including its large raw metadata, before another build starts.
-    return policy, extensions, built, metadata, support
+    return policy, extensions, built, consumers, support
 
 
 def _disabled_candidate_text(policy, extensions):
@@ -196,12 +209,12 @@ def _disabled_candidate_text(policy, extensions):
 
 @pytest.fixture(scope="module")
 def candidate():
-    policy, extensions, built, metadata, support = _release_candidate_evidence()
+    policy, extensions, built, consumers, support = _release_candidate_evidence()
     disabled = _disabled_candidate_text(policy, extensions)
     return {
         "built": built,
         "model": compiler.load_model(),
-        "metadata": metadata,
+        "consumers": consumers,
         "support": support,
         "disabled": disabled,
         "baseline": decisions.baseline_path().read_text(encoding="utf-8"),
@@ -437,7 +450,7 @@ def test_continuous_support_executes_actual_six_role_witnesses(candidate, archit
 
 def test_explicit_and_continuous_denominator_is_exact_and_separate(candidate):
     model = candidate["model"]
-    writers = candidate["metadata"]["situated_actions"]["consumer_ir"]["writers"]
+    writers = candidate["consumers"]["writers"]
     cards = [writer for writer in writers if writer["kind"] == "action_card"]
     assert len(cards) == 11
     assert {writer["definition"] for writer in cards} == {row[0] for row in CARDS}
@@ -492,7 +505,17 @@ def test_candidate_releases_full_outputs_before_the_next_heavy_stage(monkeypatch
         economy_enabled=True,
         diplomacy_enabled=True,
     )
-    metadata = {"situated_actions": {"consumer_ir": {"writers": ["actual-writer"]}}}
+    writer = {"kind": "action_card", "definition": "actual-writer", "field": "a", "owner": "b"}
+    consumers = {
+        "writers": [writer],
+        "field_owners": {"a": "b"},
+        "support_program_writer_count": 0,
+    }
+    metadata = {
+        "situated_actions": {
+            "consumer_ir": {**consumers, "writers": [{**writer, "program": ["full witness"]}]}
+        }
+    }
     references: dict[str, Any] = {}
     support = object()
     baseline = tmp_path / "baseline.txt"
@@ -546,7 +569,7 @@ def test_candidate_releases_full_outputs_before_the_next_heavy_stage(monkeypatch
     assert result == {
         "built": "actual production",
         "model": {"reference": "actual model"},
-        "metadata": metadata,
+        "consumers": consumers,
         "support": support,
         "disabled": "actual disabled",
         "baseline": "actual baseline",
