@@ -148,8 +148,30 @@ def test_偿债不会继续维持借款危机(weeks, active):
     )
 
 
-def test_默认策略原文只增加两个声明偏置(policy):
-    original = decisions.baseline_path().read_text(encoding="utf-8")
+@pytest.fixture(params=["synthetic", pytest.param("installed", marks=pytest.mark.integration)])
+def fiscal_strategy(request, policy):
+    if request.param == "installed":
+        raw = decisions.baseline_path().read_bytes()
+        assert (
+            hashlib.sha256(raw).hexdigest() == version_contracts.contract().default_strategy_sha256
+        )
+        return decisions.baseline_text(), policy
+    original = (
+        "# Synthetic strategy for fiscal insertion tests\n"
+        "ai_strategy_default = {\n"
+        "\taggression = {\n"
+        "\t\tvalue = 1\n"
+        "\t}\n"
+        "\tdiplomatic_play_neutrality = {\n"
+        "\t\tvalue = 2\n"
+        "\t}\n"
+        "}\n"
+    )
+    return original, replace(policy, baseline_sha256=hashlib.sha256(original.encode()).hexdigest())
+
+
+def test_默认策略原文只增加两个声明偏置(fiscal_strategy):
+    original, policy = fiscal_strategy
     patched = decisions.patch_default(original, policy)
     restored = re.sub(
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n",
@@ -166,21 +188,22 @@ def test_默认策略原文只增加两个声明偏置(policy):
     assert parse_text(patched).top_keys == parse_text(original).top_keys
 
 
-def test_底本任何漂移均拒绝生成(policy):
-    original = decisions.baseline_path().read_text(encoding="utf-8")
+def test_底本任何漂移均拒绝生成(fiscal_strategy):
+    original, policy = fiscal_strategy
     with pytest.raises(ValueError, match="哈希"):
         decisions.patch_default(original + "\n", policy)
 
 
-def test_零偏置对照逐字保留底本并且不调用国家条件(policy):
-    original = decisions.baseline_path().read_text(encoding="utf-8")
+def test_零偏置对照逐字保留底本并且不调用国家条件(fiscal_strategy):
+    original, policy = fiscal_strategy
     assert (
         decisions.patch_default(original, replace(policy, neutrality=0, aggression=0)) == original
     )
 
 
-def test_财政字段仅在有效root存在时调用国家触发器(policy):
-    patched = decisions.patch_default(decisions.baseline_path().read_text(encoding="utf-8"), policy)
+def test_财政字段仅在有效root存在时调用国家触发器(fiscal_strategy):
+    original, policy = fiscal_strategy
+    patched = decisions.patch_default(original, policy)
     tree = parse_text(patched)
     strategy = tree.top_assignments[0].value
     assert isinstance(strategy, Block)
@@ -586,13 +609,8 @@ def test_开关往返清理旧生成物且保留未知文件(tmp_path, historica
 @pytest.mark.parametrize(
     ("reform", "market"), [(False, False), (True, False), (False, True), (True, True)]
 )
-def test_关闭财政仍验证共享策略底本(tmp_path, policy, monkeypatch, reform, market):
-    monkeypatch.setattr(decisions, "load", lambda: replace(policy, enabled=False))
-    monkeypatch.setattr(
-        decisions,
-        "load_extensions",
-        lambda: decisions.Extensions(reform_enabled=reform, market_enabled=market),
-    )
+@pytest.mark.parametrize("drift", ["raw_bytes", "normalized_digest", "historical_text"])
+def test_关闭财政仍验证共享策略底本(tmp_path, monkeypatch, reform, market, drift):
     snapshot: dict[str, object] = {
         "域": {
             "vocabulary": {rel: [] for rel in decisions.VOCABULARY_DIRS},
@@ -600,12 +618,45 @@ def test_关闭财政仍验证共享策略底本(tmp_path, policy, monkeypatch, 
             "vanilla_variables": {rel: [] for rel in decisions.VARIABLE_POOL_DIRS},
         }
     }
-    strategy = tmp_path / "common/ai_strategies/00_default_strategy.txt"
+    strategy = tmp_path / version_contracts.DEFAULT_STRATEGY_SOURCE
     strategy.parent.mkdir(parents=True)
-    strategy.write_text("# 本机底本已漂移\n", encoding="utf-8", newline="\n")
-    issues = decisions.validate(set(), game=tmp_path, snapshot=snapshot)
-    assert "本机默认策略与锁定底本不一致，需重审版本" in issues
+    raw = b"# strategy fixture\r\n"
+    strategy.write_bytes(raw)
+    version = "1.14.5" if drift == "historical_text" else version_contracts.CURRENT_VERSION
+    with version_contracts.select_version(version):
+        policy = replace(decisions.load(), enabled=False)
+        if drift == "historical_text":
+            expected = "本机默认策略与锁定底本不一致，需重审版本"
+        else:
+            # Exercise each current digest gate independently with synthetic bytes.
+            baseline = b"# strategy fixture\n"
+            if drift == "raw_bytes":
+                pinned_raw, pinned_text = baseline, baseline
+                expected = f"当前原版默认策略原始字节漂移：{strategy}"
+            else:
+                pinned_raw, pinned_text = raw, b"# another strategy fixture\n"
+                expected = f"当前原版默认策略归一化摘要漂移：{strategy}"
+            monkeypatch.setitem(
+                version_contracts.VERSION_SPECS,
+                version,
+                replace(
+                    version_contracts.contract(),
+                    default_strategy_sha256=hashlib.sha256(pinned_raw).hexdigest(),
+                    baseline_strategy_sha256=hashlib.sha256(pinned_text).hexdigest(),
+                ),
+            )
+        issues = decisions.validate(
+            set(),
+            game=tmp_path,
+            snapshot=snapshot,
+            policy=policy,
+            extensions=decisions.Extensions(reform_enabled=reform, market_enabled=market),
+        )
+    assert expected in issues
     assert not any("本机财政接口参考" in issue for issue in issues)
+    assert {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()} == {
+        strategy: raw
+    }
 
 
 def test_指纹绑定实际替代源和生成器(tmp_path):
