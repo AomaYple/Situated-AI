@@ -80,6 +80,7 @@ from pdx import (
     lockfile,
     observe,
     political_surface,
+    research_catalog,
     situated,
     snapshot,
     tables_offline,
@@ -438,6 +439,16 @@ def input_inventory_cmd() -> None:
 
 @app.command("information-catalog")
 def information_catalog_cmd(
+    ctx: typer.Context,
+    raw_root: Annotated[
+        Path | None, typer.Option("--raw-root", help="规范研究模式的只读 raw 根")
+    ] = None,
+    epoch: Annotated[
+        str | None, typer.Option("--epoch", help="已提交 raw epoch 的 SHA-256")
+    ] = None,
+    output_dir: Annotated[
+        Path | None, typer.Option("--output-dir", help="研究结果的本机新目录")
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option("--output", help="能力目录 JSON 输出路径；默认写入 tools/out/game/"),
@@ -494,6 +505,33 @@ def information_catalog_cmd(
     运行时读取、行为质量和实机验证由用户在标准包上推进；本命令只登记静态能力，
     后续按权威实施计划逐步核对；静态登记不等于运行期行为通过。
     """
+
+    if any(value is not None for value in (raw_root, epoch, output_dir)):
+        if raw_root is None or epoch is None or output_dir is None:
+            _fail("规范研究模式须同时提供 --raw-root、--epoch 和 --output-dir")
+        localization_source = ctx.get_parameter_source("localization")
+        if (
+            any(
+                value is not None
+                for value in (
+                    output,
+                    localization_keys_output,
+                    consumer_matrix_output,
+                    candidate_metadata,
+                    candidate_coverage_output,
+                    candidate_dispositions_output,
+                )
+            )
+            or candidate_production
+            or (localization_source is not None and localization_source.name == "COMMANDLINE")
+        ):
+            _fail("规范研究模式不能混用现场目录、候选或本地化选项")
+        try:
+            marker = research_catalog.write(raw_root, epoch, output_dir)
+        except (OSError, ValueError) as exc:
+            _fail(f"规范研究构建失败：{exc}", EXIT_FAILED)
+        console.print(f"[green]规范研究目录已写入[/] {escape(str(marker.parent))}")
+        return
 
     if candidate_metadata is not None and candidate_production:
         console.print("[red]--candidate-metadata 与 --candidate-production 只能选一个[/]")

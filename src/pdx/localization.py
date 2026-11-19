@@ -152,15 +152,15 @@ class LocalizationReport:
 _PLACEHOLDER_RE = re.compile(r"\$([A-Za-z0-9_.-]+)\$")
 
 
-def _unquote_loc_value(raw: str) -> str:
-    """提取本地化值，保留 Paradox 转义而不误切含引号的文本。"""
+def _scan_loc_value(raw: str) -> tuple[str, bool]:
+    """提取值并记录引号是否闭合，兼容研究提取不丢弃原有部分值。"""
     value = raw.strip()
     if not value.startswith('"'):
-        return value.split(" #", 1)[0].rstrip()
+        return value.split(" #", 1)[0].rstrip(), True
     if "\\" not in value:
         # 本体绝大多数值没有转义；由字符串原语定位闭引号，保持未闭合行的原语义。
         end = value.find('"', 1)
-        return value[1:] if end == -1 else value[1:end]
+        return (value[1:], False) if end == -1 else (value[1:end], True)
     out: list[str] = []
     escaped = False
     for char in value[1:]:
@@ -171,14 +171,16 @@ def _unquote_loc_value(raw: str) -> str:
             out.append(char)
             escaped = True
         elif char == '"':
-            break
+            return "".join(out), True
         else:
             out.append(char)
-    return "".join(out)
+    return "".join(out), False
 
 
 def parse_loc_entries_with_lines(
     text: str,
+    *,
+    unconsumed_lines: list[tuple[int, str]] | None = None,
 ) -> tuple[str, list[tuple[str, str, int]]]:
     """解析本地化键、值和源行号，返回语言与出现记录。
 
@@ -202,7 +204,13 @@ def parse_loc_entries_with_lines(
         if m:
             key = m.group(1).strip()
             if key:
-                entries.append((key, _unquote_loc_value(m.group(3)), line_number))
+                value, closed = _scan_loc_value(m.group(3))
+                entries.append((key, value, line_number))
+                if not closed and unconsumed_lines is not None:
+                    unconsumed_lines.append((line_number, line))
+                continue
+        if unconsumed_lines is not None:
+            unconsumed_lines.append((line_number, line))
     return lang, entries
 
 

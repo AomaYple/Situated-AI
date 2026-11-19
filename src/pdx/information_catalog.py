@@ -14,7 +14,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import stat
 import tempfile
+import zipfile
 from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -24,12 +26,22 @@ from typing import TYPE_CHECKING
 
 from . import ai_surface, config, political_surface, version_contracts
 from .cache import parse_cached
+from .capability_catalog import FileDisposition, LayeredCatalog, OccurrenceWriter, base_frontier
+from .committed_raw import read_source, verified_catalog_inputs, verified_source
+from .input_contracts import ArtifactRef, InputContractError, ParseStatus
+from .input_inventory import PDX_RESOURCE_CATEGORIES, classify_path
 from .localization import SUFFIXES, parse_loc_entries_with_lines
 from .model import Block, ParseError
+from .parser import parse_bytes
 from .scan import FileEntry, walk_files
+from .structured_json import parse_json
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
+    from typing import BinaryIO
+
+    from .input_contracts import InputIdentity, InputInventory
+    from .model import ParsedFile
 
 
 class InformationStatus(StrEnum):
@@ -229,8 +241,11 @@ class InformationCatalog:
             # ``build`` 已按内容根、配置目录、路径和 AST 顺序产出确定性序列。
             # 这里不再对大目录的全部条目做一次全量排序，避免 C1 生成时的
             # 峰值内存和等待时间；ID 唯一性仍由 ``__post_init__`` 校验。
-            "条目": [item.to_dict() for item in self.items],
+            "条目": self._serialized_items(),
         }
+
+    def _serialized_items(self) -> list[dict[str, object]]:
+        return [item.to_dict() for item in self.items]
 
     def write(self, path: Path) -> None:
         """以 UTF-8 无 BOM、LF、原子替换方式写出目录。"""
@@ -249,6 +264,30 @@ class InformationCatalog:
             with suppress(FileNotFoundError):
                 Path(temporary).unlink()
             raise
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchInformationCatalog(InformationCatalog):
+    """Canonical raw research report with independent source dispositions."""
+
+    layered: LayeredCatalog = field(kw_only=True)
+    format_version: int = 2
+
+    def to_dict(self) -> dict[str, object]:
+        result = InformationCatalog.to_dict(self)
+        result["分层目录"] = self.layered.to_dict()
+        return result
+
+    def _serialized_items(self) -> list[dict[str, object]]:
+        statuses = {row.path: row.parse_status for row in self.layered.dispositions}
+        return [
+            {
+                **item.to_dict(),
+                "parse_status": statuses[item.source],
+                "capability_status": "unknown",
+            }
+            for item in self.items
+        ]
 
 
 def _item_id(domain: str, name: str, source: str = "") -> str:
@@ -309,58 +348,70 @@ def _script_items(
             # 解析器可能仍返回部分 AST。部分树不能冒充完整发现，避免把
             # 不完整输入的字段误写成可消费能力；完整失败项保留在目录中。
             continue
-        seen_entries: dict[str, int] = defaultdict(int)
-        for assignment in parsed.top_assignments:
-            if assignment.is_variable:
-                continue
-            seen_entries[assignment.key] += 1
-            occurrence = seen_entries[assignment.key]
-            entry_name = assignment.key if occurrence == 1 else f"{assignment.key}#{occurrence}"
-            names = (assignment.key, entry_name)
-            matched, impact, status = _consumer_matches(names, consumers)
-            base_id = _item_id(domain, entry_name, source)
+        items.extend(_parsed_script_items(parsed, source, domain, digest, consumers))
+    return items
+
+
+def _parsed_script_items(
+    parsed: ParsedFile,
+    source: str,
+    domain: str,
+    digest: str,
+    consumers: Mapping[str, tuple[tuple[str, ImpactLevel], ...]],
+) -> list[InformationItem]:
+    items: list[InformationItem] = []
+    seen_entries: dict[str, int] = defaultdict(int)
+    for assignment in parsed.top_assignments:
+        if assignment.is_variable:
+            continue
+        seen_entries[assignment.key] += 1
+        occurrence = seen_entries[assignment.key]
+        entry_name = assignment.key if occurrence == 1 else f"{assignment.key}#{occurrence}"
+        names = (assignment.key, entry_name)
+        matched, impact, status = _consumer_matches(names, consumers)
+        base_id = _item_id(domain, entry_name, source)
+        items.append(
+            InformationItem(
+                id=base_id,
+                domain=domain,
+                name=entry_name,
+                source=source,
+                source_sha256=digest,
+                source_line=assignment.line,
+                scope=_scope_for(domain),
+                status=status,
+                impact=impact,
+                consumers=matched,
+                notes="静态发现；运行时作用域和引擎读取成本未知，须在进入生产规则前单独核对",
+            )
+        )
+        if not isinstance(assignment.value, Block):
+            continue
+        seen_fields: dict[str, int] = defaultdict(int)
+        for field_assignment in assignment.value.assignments():
+            seen_fields[field_assignment.key] += 1
+            field_occurrence = seen_fields[field_assignment.key]
+            field_name = f"{entry_name}.{field_assignment.key}"
+            if field_occurrence > 1:
+                field_name += f"#{field_occurrence}"
+            field_matches, field_impact, field_status = _consumer_matches(
+                (field_assignment.key, field_name), consumers
+            )
             items.append(
                 InformationItem(
-                    id=base_id,
+                    id=_item_id(domain, field_name, source),
                     domain=domain,
-                    name=entry_name,
+                    name=field_name,
                     source=source,
                     source_sha256=digest,
-                    source_line=assignment.line,
+                    source_line=field_assignment.line,
                     scope=_scope_for(domain),
-                    status=status,
-                    impact=impact,
-                    consumers=matched,
-                    notes="静态发现；运行时作用域和引擎读取成本未知，须在进入生产规则前单独核对",
+                    status=field_status,
+                    impact=field_impact,
+                    consumers=field_matches,
+                    notes="第一层字段；嵌套值保留在原始脚本和 AST 产物中",
                 )
             )
-            if not isinstance(assignment.value, Block):
-                continue
-            seen_fields: dict[str, int] = defaultdict(int)
-            for field_assignment in assignment.value.assignments():
-                seen_fields[field_assignment.key] += 1
-                field_occurrence = seen_fields[field_assignment.key]
-                field_name = f"{entry_name}.{field_assignment.key}"
-                if field_occurrence > 1:
-                    field_name += f"#{field_occurrence}"
-                field_matches, field_impact, field_status = _consumer_matches(
-                    (field_assignment.key, field_name), consumers
-                )
-                items.append(
-                    InformationItem(
-                        id=_item_id(domain, field_name, source),
-                        domain=domain,
-                        name=field_name,
-                        source=source,
-                        source_sha256=digest,
-                        source_line=field_assignment.line,
-                        scope=_scope_for(domain),
-                        status=field_status,
-                        impact=field_impact,
-                        consumers=field_matches,
-                        notes="第一层字段；嵌套值保留在原始脚本和 AST 产物中",
-                    )
-                )
     return items
 
 
@@ -646,6 +697,332 @@ def _unsupported_localization_record(
         notes=f"本地化文件未形成键级目录：{reason}；键级本地化能力保持 unsupported",
     )
     return item.to_dict()
+
+
+def _zip_members(stream: BinaryIO) -> tuple[list[dict[str, object]], tuple[str, ...]]:
+    """只登记成熟 ZIP reader 的安全映射，不提取、不执行、不推断许可。"""
+    with zipfile.ZipFile(stream) as archive:
+        entries = archive.infolist()
+    counts: dict[str, int] = defaultdict(int)
+    for entry in entries:
+        counts[entry.filename.rstrip("/").casefold()] += 1
+    members, errors = [], []
+    for ordinal, entry in enumerate(entries):
+        member = entry.filename.rstrip("/")
+        reason = "safe_metadata_mapping_content_not_exported"
+        try:
+            ArtifactRef("evidence", member, "0" * 64)
+        except InputContractError:
+            reason = "unsafe_member_path"
+        if counts[member.casefold()] != 1:
+            reason = "duplicate_or_case_conflicting_member"
+        if stat.S_ISLNK(entry.external_attr >> 16):
+            reason = "symbolic_link_member_refused"
+        if entry.flag_bits & 1:
+            reason = "encrypted_member_no_read_permission"
+        safe = reason == "safe_metadata_mapping_content_not_exported"
+        if not safe:
+            errors.append(f"{ordinal}:{entry.filename}:{reason}")
+        members.append(
+            {
+                "ordinal": ordinal,
+                "path": entry.filename,
+                "size": entry.file_size,
+                "compressed_size": entry.compress_size,
+                "compression": entry.compress_type,
+                "directory": entry.is_dir(),
+                "safe_mapping": safe,
+                "reason": reason,
+                "content_status": "not_read",
+                "content_sha256": None,
+                "support_evidence": "python_standard_library_zipfile_metadata_only",
+            }
+        )
+    return members, tuple(errors)
+
+
+def _incomplete_script_item(
+    *, domain: str, source: str, digest: str, reason: str
+) -> InformationItem:
+    """登记完整输入缺口；解析失败不能证明引擎不支持。"""
+
+    return InformationItem(
+        id=_item_id(domain, "__parse_error__", source),
+        domain=domain,
+        name="__parse_error__",
+        source=source,
+        source_sha256=digest,
+        source_line=None,
+        scope=DEFAULT_SCOPE,
+        unit="parse_error",
+        update=DEFAULT_UPDATE,
+        visibility=DEFAULT_VISIBILITY,
+        status=InformationStatus.DISCOVERED,
+        impact=ImpactLevel.NO_CONSUMER,
+        notes=(
+            "来源文件未形成可审计 AST；不得把部分结果当作完整能力。"
+            f" {reason}；合法引擎读取能力保持 unknown，不能从部分树推导定义不存在"
+        ),
+    )
+
+
+def build_from_raw(
+    *,
+    identity: InputIdentity,
+    inventory: InputInventory,
+    index_path: Path,
+    raw_root: Path,
+) -> ResearchInformationCatalog:
+    """Project the committed canonical inventory without enumerating the live game."""
+    destination = index_path.resolve()
+    if any(
+        destination.is_relative_to(root.resolve())
+        for root in (raw_root, Path(identity.installation_root))
+    ):
+        raise ValueError("派生索引必须位于原始来源根之外")
+    with verified_catalog_inputs(identity, inventory, raw_root=raw_root):
+        return _build_raw_index(identity, inventory, index_path, raw_root)
+
+
+def _build_raw_index(
+    identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path
+) -> ResearchInformationCatalog:
+    items: list[InformationItem] = []
+    dispositions: list[FileDisposition] = []
+    with OccurrenceWriter(index_path, identity, inventory) as writer:
+        for record in inventory.records:
+            if record.path.partition("/")[0].casefold() == "%localappdata%":
+                read_source(record, raw_root=raw_root, retain=False)
+                row = FileDisposition(
+                    path=record.path,
+                    category=record.category,
+                    raw_status="proven" if record.read_status == "read" else "unknown",
+                    decode_status="not_attempted",
+                    parse_status="not_attempted",
+                    semantic_status="unknown",
+                    disposition="research_only",
+                    reason="local_state_not_projected",
+                )
+                dispositions.append(row)
+                writer.add_source(record, row)
+                continue
+            suffix = Path(record.path).suffix.casefold()
+            resource_category = PDX_RESOURCE_CATEGORIES.get(suffix)
+            category = record.category
+            if resource_category is not None and category == "unknown":
+                # 历史盘点的类别属于已提交原件，更新只写入派生处置。
+                category = classify_path(record.path)
+            pdx_resource = resource_category is not None and category == resource_category
+            script = category != "documentation" and (
+                suffix in config.SCRIPTABLE_SUFFIXES
+                or suffix in {".dna", ".entity", ".gfx", ".dlc"}
+                or pdx_resource
+            )
+            localization = category == "localization"
+            document = category == "documentation" and suffix in {
+                ".md",
+                ".rst",
+                ".txt",
+                ".html",
+                ".htm",
+            }
+            structured_json = category == "structured_configuration" and suffix == ".json"
+            json_result = None
+            zip_container = (
+                category == "container" and suffix == ".zip" and record.read_status == "read"
+            )
+            raw = (
+                None
+                if zip_container
+                else read_source(
+                    record,
+                    raw_root=raw_root,
+                    retain=script or localization or document or structured_json,
+                )
+            )
+            raw_status = "proven" if record.read_status == "read" else "unknown"
+            domain = record.path.rpartition("/")[0] or "."
+            diagnostics = tuple(f"{d.code}: {d.message}" for d in record.diagnostics)
+            parsed = None
+            entries: list[tuple[str, str, int]] = []
+            language = "?"
+            members: list[dict[str, object]] = []
+            document_lines: list[tuple[int, str]] = []
+            decode_status = "not_attempted"
+            parse_status: ParseStatus = "not_attempted"
+            disposition = "research_only"
+            reason = "format_reader_not_implemented; raw retained for engineering research"
+            if record.read_status != "read":
+                reason = "source_not_read"
+            elif script and raw is not None:
+                parsed = parse_bytes(raw, record.path)
+                if pdx_resource and parsed.parse_status == "complete":
+                    # 通用 parser 也接受裸标量。这些资料的完整结构至少须包含一块。
+                    if b"\x00" in raw:
+                        parsed.errors.append("pdx_resource_contains_nul")
+                    elif parsed.max_depth == 0:
+                        parsed.errors.append("pdx_resource_missing_top_level_block")
+                parse_status = parsed.parse_status
+                decode_status = "failed" if parsed.decoding_error else "complete"
+                diagnostics += tuple(parsed.errors)
+                reason = "PDX syntax and full occurrence index; exact engine semantics require separate evidence"
+                if parse_status != "complete":
+                    reason = "shared_parser_incomplete"
+            elif structured_json and raw is not None:
+                json_result = parse_json(raw)
+                decode_status, parse_status = json_result.decode_status, json_result.parse_status
+                diagnostics += json_result.diagnostics
+                reason = (
+                    "complete ordered JSON tree; engine semantics and Unicode interoperability unproven"
+                    if parse_status == "complete"
+                    else "structured_json_decode_or_parse_failed"
+                )
+            elif localization and raw is not None:
+                unconsumed: list[tuple[int, str]] = []
+                try:
+                    text = raw.decode("utf-8-sig")
+                except UnicodeDecodeError as error:
+                    decode_status, parse_status = "failed", "failed"
+                    diagnostics += (str(error),)
+                    reason = "localization_decode_failed"
+                else:
+                    decode_status = "complete"
+                    language, entries = parse_loc_entries_with_lines(
+                        text, unconsumed_lines=unconsumed
+                    )
+                    parse_status = "complete" if language != "?" and not unconsumed else "partial"
+                    reason = "all localization languages indexed; engine loading and GUI presentation unproven"
+                    if unconsumed or language == "?":
+                        diagnostics += (f"language={language}; unconsumed={unconsumed}",)
+            elif zip_container:
+                with verified_source(record, raw_root=raw_root) as stream:
+                    try:
+                        members, errors = _zip_members(stream)
+                    except zipfile.BadZipFile as error:
+                        parse_status, reason = "failed", "invalid_zip_container"
+                        diagnostics += (str(error),)
+                    else:
+                        parse_status = "partial" if errors else "complete"
+                        reason = "safe ZIP metadata mapping; member content/export/license not established"
+                        diagnostics += errors
+            elif document and raw is not None:
+                try:
+                    text = raw.decode("utf-8-sig")
+                except UnicodeDecodeError as error:
+                    decode_status, parse_status = "failed", "failed"
+                    diagnostics += (str(error),)
+                    reason = "document_decode_failed_no_declared_alternative_codec"
+                else:
+                    decode_status, parse_status = "complete", "not_applicable"
+                    document_lines = list(enumerate(text.splitlines(), 1))
+                    reason = "full document line index; source version bound to epoch; engine export not executed"
+            elif category in {"image_map", "font", "audio_video", "binary"}:
+                parse_status = "not_applicable"
+                reason = "binary/media raw engineering input; no text reader or engine observation inferred"
+            elif category == "documentation":
+                reason = "documentation raw retained; actual document version/export context not yet audited"
+            elif category == "container":
+                reason = (
+                    "container raw retained; safe member mapping and format/license support pending"
+                )
+            elif category == "unknown":
+                disposition, reason = (
+                    "unresolved",
+                    "unknown format retained; discovery cannot be silently excluded",
+                )
+            row = FileDisposition(
+                record.path,
+                category,
+                raw_status,
+                decode_status,
+                parse_status,
+                "unknown",
+                disposition,
+                reason,
+                diagnostics,
+            )
+            dispositions.append(row)
+            writer.add_source(record, row)
+            if localization:
+                writer.add_details(record.path, localization_language=language)
+            writer.add_container_members(record.path, members)
+            if json_result is not None:
+                writer.add_structured_json(record, json_result)
+            if parsed is not None:
+                writer.add_parsed(record, parsed)
+                if parsed.parse_status == "complete":
+                    items.extend(
+                        _parsed_script_items(
+                            parsed,
+                            source=record.path,
+                            domain=domain,
+                            digest=record.sha256 or "",
+                            consumers={},
+                        )
+                    )
+                else:
+                    items.append(
+                        _incomplete_script_item(
+                            domain=domain,
+                            source=record.path,
+                            digest=record.sha256 or "",
+                            reason="; ".join(diagnostics),
+                        )
+                    )
+            elif record.sha256 is not None:
+                items.append(
+                    InformationItem(
+                        id=_item_id(domain, "__source__", record.path),
+                        domain=domain,
+                        name="__source__",
+                        source=record.path,
+                        source_sha256=record.sha256,
+                        source_line=None,
+                        notes=reason,
+                    )
+                )
+                for ordinal, (key, value, line) in enumerate(entries):
+                    writer.add(
+                        record.path,
+                        record.sha256 or "",
+                        address=(ordinal,),
+                        path=(language, key),
+                        kind="localization",
+                        key=key,
+                        operator=None,
+                        scalar=value,
+                        quoted=True,
+                        line=line,
+                        parse_status=parse_status,
+                    )
+                for line, text in document_lines:
+                    writer.add(
+                        record.path,
+                        record.sha256 or "",
+                        address=(line,),
+                        path=("line", str(line)),
+                        kind="document_line",
+                        key=None,
+                        operator=None,
+                        scalar=text,
+                        quoted=True,
+                        line=line,
+                        parse_status="not_applicable",
+                    )
+        index = writer.publish()
+    rows = tuple(dispositions)
+    return ResearchInformationCatalog(
+        version={
+            "caligula_branch": f"release/{identity.version}",
+            "build_id": identity.build_id,
+            "branch": identity.branch,
+        },
+        roots={"raw": str(raw_root)},
+        items=tuple(items),
+        layered=LayeredCatalog(
+            identity, inventory, rows, index, base_frontier(identity, rows), raw_root
+        ),
+    )
 
 
 def build(
