@@ -872,6 +872,10 @@ company_ericsson = {
 
 	possible = {
 		has_technology_researched = telephone
+		any_scope_state = {
+			state_region = s:STATE_SVEALAND
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_SVEALAND
 			building = building_electrics_industry
@@ -1227,6 +1231,10 @@ company_aker_mek = {
 
 	possible = {
 		has_technology_researched = gantry_cranes
+		any_scope_state = {
+			state_region = s:STATE_EASTERN_NORWAY
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_EASTERN_NORWAY
 			building = building_shipyard
@@ -1345,6 +1353,10 @@ company_nokia = {
 
 	possible = {
 		has_technology_researched = atmospheric_engine
+		any_scope_state = {
+			state_region = s:STATE_UUSIMAA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_UUSIMAA
 			building = building_paper_mill
@@ -1461,6 +1473,10 @@ company_ursus = {
 
 	possible = {
 		has_technology_researched = combustion_engine
+		any_scope_state = {
+			state_region = s:STATE_GREATER_POLAND
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_GREATER_POLAND
 			building = building_motor_industry
@@ -1847,6 +1863,10 @@ company_altos_hornos_de_vizcaya = {
 
 	possible = {
 		has_technology_researched = steelworking
+		any_scope_state = {
+			state_region = s:STATE_BASQUE_COUNTRY
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_BASQUE_COUNTRY
 			building = building_steel_mill
@@ -1970,6 +1990,10 @@ company_duro_y_compania = {
 
 	possible = {
 		has_technology_researched = steelworking
+		any_scope_state = {
+			state_region = s:STATE_ASTURIAS
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_ASTURIAS
 			building = building_coal_mine
@@ -2097,6 +2121,10 @@ company_espana_industrial = {
 
 	possible = {
 		has_technology_researched = cotton_gin
+		any_scope_state = {
+			state_region = s:STATE_CATALONIA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_CATALONIA
 			building = building_textile_mill
@@ -2210,6 +2238,10 @@ company_trubia = {
 
 	possible = {
 		has_technology_researched = gunsmithing
+		any_scope_state = {
+			state_region = s:STATE_ASTURIAS
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_ASTURIAS
 			building = building_arms_industry
@@ -2323,6 +2355,10 @@ company_zastava = {
 
 	possible = {
 		has_technology_researched = gunsmithing
+		any_scope_state = {
+			state_region = s:STATE_WESTERN_SERBIA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_WESTERN_SERBIA
 			building = building_arms_industry
@@ -2582,6 +2618,10 @@ company_ap_moller = {
 	}
 
 	possible = {
+		any_scope_state = {
+			state_region = s:STATE_ZEALAND
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_ZEALAND
 			building = building_shipyard
@@ -2776,6 +2816,10 @@ company_romanian_star = {
 
 	possible = {
 		has_technology_researched = pumpjacks
+		any_scope_state = {
+			state_region = s:STATE_WALLACHIA
+			is_incorporated = yes
+		}
 		has_building_levels_in_state_region = {
 			region = STATE_WALLACHIA
 			building = building_oil_rig

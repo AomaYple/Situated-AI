@@ -179,8 +179,8 @@ ship_mod_frigate_guns_light = {
 		ship_critical_hit_chance_add = 0.1
 	}
 
-	construction_goods = { # 2140
-		goods_input_artillery_add = 22
+	construction_goods = { # 2000
+		goods_input_artillery_add = 20
 		goods_input_iron_add = 15
 	}
 
@@ -237,9 +237,9 @@ ship_mod_frigate_guns_medium = {
 		ship_vulnerability_add = 1
 	}
 
-	construction_goods = { # 5080
+	construction_goods = { # 5200
 		goods_input_artillery_add = 60
-		goods_input_iron_add = 22
+		goods_input_iron_add = 25
 	}
 
 	ai_weight = {
@@ -9687,9 +9687,8 @@ ship_mod_early_troop_ship_armor_light = {
 		ship_hit_points_max_add = 100
 	}
 
-	construction_goods = { # 1760
-		goods_input_hardwood_add = 25
-		goods_input_copper_add = 19
+	construction_goods = { # 1800
+		goods_input_hardwood_add = 45
 	}
 
 	ai_weight = {
@@ -9710,15 +9709,6 @@ ship_mod_early_troop_ship_armor_light = {
 			add = { value = 0
 				# equipment_ship_mod_early_troop_ship_armor_light_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
-				# equipment_ship_mod_early_troop_ship_armor_light_copper_opportunity [military]; 候选真实正投入copper已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
-			}
-			# GROUP program_7527ad61975d9a06_equipment_material_pressure_copper_negative
-			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_armor_light_copper_pressure [military]; 候选真实正投入copper高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_early_troop_ship_armor_light_copper_scarcity [military]; 候选真实正投入copper已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:copper mg:copper = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_7527ad61975d9a06_equipment_material_pressure_hardwood_negative
 			add = { value = 0
@@ -9727,7 +9717,7 @@ ship_mod_early_troop_ship_armor_light = {
 				# equipment_ship_mod_early_troop_ship_armor_light_hardwood_scarcity [military]; 候选真实正投入hardwood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			min = 0.5
+			min = 0.65
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_armor_light.ai_weight
@@ -9744,9 +9734,9 @@ ship_mod_early_troop_ship_armor_medium = {
 		ship_hit_points_max_add = 250
 	}
 
-	construction_goods = { # 3720
+	construction_goods = { # 3600
 		goods_input_hardwood_add = 45
-		goods_input_iron_add = 18
+		goods_input_iron_add = 15
 		goods_input_copper_add = 30
 	}
 
@@ -9874,12 +9864,13 @@ ship_mod_early_troop_ship_guns_light = {
 	clicksound = "event:/SFX/UI/ShipDesigner/shipdesigner_modification_guns_light"
 
 	modifier = {
-		ship_hull_damage_add = 5
+		ship_hull_damage_add = 7
 		ship_crew_damage_add = 2
 	}
 
-	construction_goods = { # 1260
-		goods_input_artillery_add = 18
+	construction_goods = { # 1100
+		goods_input_artillery_add = 10
+		goods_input_iron_add = 10
 	}
 
 	ai_weight = {
@@ -9898,8 +9889,10 @@ ship_mod_early_troop_ship_guns_light = {
 			}
 			# GROUP program_08d5d2a0926b4983_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_guns_light_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_guns_light_artillery_opportunity [military]; 候选真实正投入artillery已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_08d5d2a0926b4983_equipment_material_pressure_artillery_negative
 			add = { value = 0
@@ -9908,7 +9901,14 @@ ship_mod_early_troop_ship_guns_light = {
 				# equipment_ship_mod_early_troop_ship_guns_light_artillery_scarcity [military]; 候选真实正投入artillery已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			min = 0.65
+			# GROUP program_08d5d2a0926b4983_equipment_material_pressure_iron_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_guns_light_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_guns_light_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.5
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_guns_light.ai_weight
@@ -9921,13 +9921,14 @@ ship_mod_early_troop_ship_guns_medium = {
 	clicksound = "event:/SFX/UI/ShipDesigner/shipdesigner_modification_guns_medium"
 
 	modifier = {
-		ship_hull_damage_add = 15
+		ship_hull_damage_add = 14
 		ship_crew_damage_add = 5
 		ship_vulnerability_add = 10
 	}
 
-	construction_goods = { # 2450
-		goods_input_artillery_add = 35
+	construction_goods = { # 2000
+		goods_input_artillery_add = 20
+		goods_input_iron_add = 15
 	}
 
 	ai_weight = {
@@ -9946,8 +9947,10 @@ ship_mod_early_troop_ship_guns_medium = {
 			}
 			# GROUP program_d8fcd71f9fd94170_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_guns_medium_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_guns_medium_artillery_opportunity [military]; 候选真实正投入artillery已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_d8fcd71f9fd94170_equipment_material_pressure_artillery_negative
 			add = { value = 0
@@ -9956,7 +9959,14 @@ ship_mod_early_troop_ship_guns_medium = {
 				# equipment_ship_mod_early_troop_ship_guns_medium_artillery_scarcity [military]; 候选真实正投入artillery已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			min = 0.65
+			# GROUP program_d8fcd71f9fd94170_equipment_material_pressure_iron_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_guns_medium_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_guns_medium_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.5
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_guns_medium.ai_weight
@@ -9969,14 +9979,15 @@ ship_mod_early_troop_ship_guns_high = {
 	clicksound = "event:/SFX/UI/ShipDesigner/shipdesigner_modification_guns_heavy"
 
 	modifier = {
-		ship_hull_damage_add = 25
+		ship_hull_damage_add = 24
 		ship_crew_damage_add = 8
 		ship_critical_hit_chance_add = 0.05
 		ship_vulnerability_add = 20
 	}
 
-	construction_goods = { # 3500
-		goods_input_artillery_add = 50
+	construction_goods = { # 3600
+		goods_input_artillery_add = 40
+		goods_input_iron_add = 20
 	}
 
 	ai_weight = {
@@ -9995,8 +10006,10 @@ ship_mod_early_troop_ship_guns_high = {
 			}
 			# GROUP program_19ea4dd0c7233f98_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_guns_high_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_guns_high_artillery_opportunity [military]; 候选真实正投入artillery已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_19ea4dd0c7233f98_equipment_material_pressure_artillery_negative
 			add = { value = 0
@@ -10005,7 +10018,14 @@ ship_mod_early_troop_ship_guns_high = {
 				# equipment_ship_mod_early_troop_ship_guns_high_artillery_scarcity [military]; 候选真实正投入artillery已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			min = 0.65
+			# GROUP program_19ea4dd0c7233f98_equipment_material_pressure_iron_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_guns_high_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_guns_high_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.5
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_guns_high.ai_weight
@@ -10018,13 +10038,12 @@ ship_mod_early_troop_ship_propulsion_light = {
 	clicksound = "event:/SFX/UI/ShipDesigner/shipdesigner_modification_propulsion_light"
 
 	modifier = {
-		ship_movement_speed_add = 5.0
+		ship_movement_speed_add = 5
 	}
 
-	construction_goods = { # 3250
-		goods_input_fabric_add = 45
-		goods_input_hardwood_add = 25
-		goods_input_coal_add = 45
+	construction_goods = { # 2600
+		goods_input_fabric_add = 50
+		goods_input_hardwood_add = 40
 	}
 
 	ai_weight = {
@@ -10047,15 +10066,6 @@ ship_mod_early_troop_ship_propulsion_light = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_light_fabric_opportunity [military]; 候选真实正投入fabric已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
-				# equipment_ship_mod_early_troop_ship_propulsion_light_coal_opportunity [military]; 候选真实正投入coal已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
-			}
-			# GROUP program_ea14d57423b93177_equipment_material_pressure_coal_negative
-			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_propulsion_light_coal_pressure [military]; 候选真实正投入coal高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_early_troop_ship_propulsion_light_coal_scarcity [military]; 候选真实正投入coal已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
 			# GROUP program_ea14d57423b93177_equipment_material_pressure_fabric_negative
 			add = { value = 0
@@ -10084,13 +10094,14 @@ ship_mod_early_troop_ship_propulsion_medium = {
 	clicksound = "event:/SFX/UI/ShipDesigner/shipdesigner_modification_propulsion_medium"
 
 	modifier = {
-		ship_movement_speed_add = 8.0
+		ship_movement_speed_add = 7
 	}
 
-	construction_goods = { # 4250
-		goods_input_fabric_add = 25
-		goods_input_engines_add = 45
-		goods_input_coal_add = 35
+	construction_goods = { # 3900
+		goods_input_fabric_add = 30
+		goods_input_hardwood_add = 30
+		goods_input_engines_add = 15
+		goods_input_coal_add = 40
 	}
 
 	unlocking_technologies = { atmospheric_engine }
@@ -10111,8 +10122,10 @@ ship_mod_early_troop_ship_propulsion_medium = {
 			}
 			# GROUP program_7d72a921aa479d43_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_propulsion_medium_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_medium_fabric_opportunity [military]; 候选真实正投入fabric已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_medium_engines_opportunity [military]; 候选真实正投入engines已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_medium_coal_opportunity [military]; 候选真实正投入coal已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
@@ -10139,6 +10152,13 @@ ship_mod_early_troop_ship_propulsion_medium = {
 				# equipment_ship_mod_early_troop_ship_propulsion_medium_fabric_scarcity [military]; 候选真实正投入fabric已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
+			# GROUP program_7d72a921aa479d43_equipment_material_pressure_hardwood_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_propulsion_medium_hardwood_pressure [military]; 候选真实正投入hardwood高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_propulsion_medium_hardwood_scarcity [military]; 候选真实正投入hardwood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
 			min = 0.5
 			max = 1.08
 		} }
@@ -10152,13 +10172,14 @@ ship_mod_early_troop_ship_propulsion_high = {
 	clicksound = "event:/SFX/UI/ShipDesigner/shipdesigner_modification_propulsion_heavy"
 
 	modifier = {
-		ship_movement_speed_add = 10.0
+		ship_movement_speed_add = 10
 	}
 
-	construction_goods = { # 7220
-		goods_input_fabric_add = 16
-		goods_input_engines_add = 90
-		goods_input_coal_add = 50
+	construction_goods = { # 5700
+		goods_input_fabric_add = 30
+		goods_input_hardwood_add = 30
+		goods_input_engines_add = 35
+		goods_input_coal_add = 60
 	}
 
 	unlocking_technologies = { watertube_boiler }
@@ -10179,8 +10200,10 @@ ship_mod_early_troop_ship_propulsion_high = {
 			}
 			# GROUP program_f818d69728523f6e_equipment_material_opportunity_positive
 			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_propulsion_high_hardwood_opportunity [military]; 候选真实正投入hardwood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_high_fabric_opportunity [military]; 候选真实正投入fabric已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_high_engines_opportunity [military]; 候选真实正投入engines已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_propulsion_high_coal_opportunity [military]; 候选真实正投入coal已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
@@ -10207,6 +10230,13 @@ ship_mod_early_troop_ship_propulsion_high = {
 				# equipment_ship_mod_early_troop_ship_propulsion_high_fabric_scarcity [military]; 候选真实正投入fabric已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
+			# GROUP program_f818d69728523f6e_equipment_material_pressure_hardwood_negative
+			add = { value = 0
+				# equipment_ship_mod_early_troop_ship_propulsion_high_hardwood_pressure [military]; 候选真实正投入hardwood高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_ship_mod_early_troop_ship_propulsion_high_hardwood_scarcity [military]; 候选真实正投入hardwood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
 			min = 0.5
 			max = 1.08
 		} }
@@ -10224,9 +10254,8 @@ ship_mod_early_troop_ship_range_light = {
 		ship_supply_capacity_add = 25
 	}
 
-	construction_goods = { # 2200
-		goods_input_groceries_add = 30
-		goods_input_grain_add = 65
+	construction_goods = { # 2000
+		goods_input_grain_add = 100
 	}
 
 	ai_weight = {
@@ -10246,10 +10275,8 @@ ship_mod_early_troop_ship_range_light = {
 			}
 			# GROUP program_4464f572abeb2bb6_equipment_material_opportunity_positive
 			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_range_light_groceries_opportunity [military]; 候选真实正投入groceries已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_range_light_grain_opportunity [military]; 候选真实正投入grain已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_4464f572abeb2bb6_equipment_material_pressure_grain_negative
 			add = { value = 0
@@ -10258,14 +10285,7 @@ ship_mod_early_troop_ship_range_light = {
 				# equipment_ship_mod_early_troop_ship_range_light_grain_scarcity [military]; 候选真实正投入grain已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			# GROUP program_4464f572abeb2bb6_equipment_material_pressure_groceries_negative
-			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_range_light_groceries_pressure [military]; 候选真实正投入groceries高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_early_troop_ship_range_light_groceries_scarcity [military]; 候选真实正投入groceries已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = -0.1 }
-			}
-			min = 0.5
+			min = 0.65
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_range_light.ai_weight
@@ -10284,9 +10304,8 @@ ship_mod_early_troop_ship_range_medium = {
 		ship_supply_efficiency_add = 0.05
 	}
 
-	construction_goods = { # 3250
-		goods_input_groceries_add = 65
-		goods_input_grain_add = 65
+	construction_goods = { # 3000
+		goods_input_grain_add = 150
 	}
 
 	ai_weight = {
@@ -10306,10 +10325,8 @@ ship_mod_early_troop_ship_range_medium = {
 			}
 			# GROUP program_3fa4c9f234e8cf0d_equipment_material_opportunity_positive
 			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_range_medium_groceries_opportunity [military]; 候选真实正投入groceries已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_range_medium_grain_opportunity [military]; 候选真实正投入grain已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_3fa4c9f234e8cf0d_equipment_material_pressure_grain_negative
 			add = { value = 0
@@ -10318,14 +10335,7 @@ ship_mod_early_troop_ship_range_medium = {
 				# equipment_ship_mod_early_troop_ship_range_medium_grain_scarcity [military]; 候选真实正投入grain已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			# GROUP program_3fa4c9f234e8cf0d_equipment_material_pressure_groceries_negative
-			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_range_medium_groceries_pressure [military]; 候选真实正投入groceries高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_early_troop_ship_range_medium_groceries_scarcity [military]; 候选真实正投入groceries已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = -0.1 }
-			}
-			min = 0.5
+			min = 0.65
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_range_medium.ai_weight
@@ -10344,9 +10354,8 @@ ship_mod_early_troop_ship_range_high = {
 		ship_supply_efficiency_add = 0.15
 	}
 
-	construction_goods = { # 5400
-		goods_input_groceries_add = 120
-		goods_input_grain_add = 90
+	construction_goods = { # 4000
+		goods_input_grain_add = 200
 	}
 
 	ai_weight = {
@@ -10366,10 +10375,8 @@ ship_mod_early_troop_ship_range_high = {
 			}
 			# GROUP program_4df2dfa2c6a36e51_equipment_material_opportunity_positive
 			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_range_high_groceries_opportunity [military]; 候选真实正投入groceries已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 				# equipment_ship_mod_early_troop_ship_range_high_grain_opportunity [military]; 候选真实正投入grain已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
 			}
 			# GROUP program_4df2dfa2c6a36e51_equipment_material_pressure_grain_negative
 			add = { value = 0
@@ -10378,14 +10385,7 @@ ship_mod_early_troop_ship_range_high = {
 				# equipment_ship_mod_early_troop_ship_range_high_grain_scarcity [military]; 候选真实正投入grain已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = -0.1 }
 			}
-			# GROUP program_4df2dfa2c6a36e51_equipment_material_pressure_groceries_negative
-			add = { value = 0
-				# equipment_ship_mod_early_troop_ship_range_high_groceries_pressure [military]; 候选真实正投入groceries高价且短缺，仅升档同一材料压力，不与基础短缺重复
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
-				# equipment_ship_mod_early_troop_ship_range_high_groceries_scarcity [military]; 候选真实正投入groceries已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = -0.1 }
-			}
-			min = 0.5
+			min = 0.65
 			max = 1.08
 		} }
 		# SITAI END information:ship_mod_early_troop_ship_range_high.ai_weight

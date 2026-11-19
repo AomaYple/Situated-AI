@@ -151,7 +151,7 @@ increase_relations = {
 				multiply = 2
 			}
 
-	# SITAI POLICY 1.15.1 BEGIN a0-dip-relations
+	# SITAI POLICY 1.15.2 BEGIN a0-dip-relations
 		if = { limit = { is_ai = yes }
 			add = {
 				value = 0
@@ -165,7 +165,7 @@ increase_relations = {
 				max = 3
 			}
 		}
-	# SITAI POLICY 1.15.1 END a0-dip-relations
+	# SITAI POLICY 1.15.2 END a0-dip-relations
 }
 
 		will_propose = {
