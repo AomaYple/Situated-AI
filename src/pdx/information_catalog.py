@@ -30,13 +30,14 @@ from .capability_catalog import FileDisposition, LayeredCatalog, OccurrenceWrite
 from .committed_raw import read_source, verified_catalog_inputs, verified_source
 from .input_contracts import ArtifactRef, InputContractError, ParseStatus
 from .input_inventory import (
+    FLAT_PDX_RESOURCE_SUFFIXES,
     MAP_ADJACENCIES,
     PDX_RESOURCE_CATEGORIES,
     STRUCTURED_JSON_SUFFIXES,
     classify_path,
 )
 from .localization import SUFFIXES, parse_loc_entries_with_lines
-from .model import Block, ParseError
+from .model import Assignment, Block, ParseError, Scalar
 from .parser import parse_bytes
 from .scan import FileEntry, walk_files
 from .structured_csv import parse_map_table
@@ -816,7 +817,7 @@ def _build_raw_index(
             resource_category = PDX_RESOURCE_CATEGORIES.get(suffix)
             category = record.category
             map_table = record.path.casefold() == MAP_ADJACENCIES
-            if category == "unknown" or map_table:
+            if category == "unknown" or map_table or suffix in FLAT_PDX_RESOURCE_SUFFIXES:
                 # 历史盘点的类别属于已提交原件，更新只写入派生处置。
                 category = classify_path(record.path)
             pdx_resource = resource_category is not None and category == resource_category
@@ -876,9 +877,14 @@ def _build_raw_index(
                     # 通用 parser 也接受裸标量。这些资料的完整结构至少须包含一块。
                     if b"\x00" in raw:
                         parsed.errors.append("pdx_resource_contains_nul")
-                    elif suffix in {".skin", ".terrain"}:
-                        if not parsed.top_assignments:
-                            parsed.errors.append("pdx_resource_missing_top_level_assignment")
+                    elif suffix in FLAT_PDX_RESOURCE_SUFFIXES:
+                        if not parsed.root.items or any(
+                            not isinstance(item, Assignment)
+                            or not isinstance(item.value, Scalar)
+                            or item.op != "="
+                            for item in parsed.root.items
+                        ):
+                            parsed.errors.append("pdx_resource_expected_flat_scalar_assignments")
                     elif parsed.max_depth == 0:
                         parsed.errors.append("pdx_resource_missing_top_level_block")
                 parse_status = parsed.parse_status

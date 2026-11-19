@@ -58,6 +58,11 @@ PDX_RESOURCE_CATEGORIES = {
 }
 MAP_ADJACENCIES = "game/map_data/adjacencies.csv"
 STRUCTURED_JSON_SUFFIXES = frozenset({".json", ".meta"})
+FLAT_PDX_RESOURCE_SUFFIXES = frozenset({".skin", ".terrain"})
+_FLAT_RESOURCE_PATHS = {
+    ".skin": ("game/gfx/skins/*.skin", "game/dlc/*/gfx/skins/*.skin"),
+    ".terrain": ("game/gfx/map/terrain/*.terrain",),
+}
 _CATEGORIES = {
     "gui": {".gui", ".layout"},
     "asset_entity_dna": {".asset", ".entity", ".dna", ".mesh", ".anim", ".gfx", ".mb"},
@@ -305,10 +310,16 @@ def classify_path(relative: str) -> str:
     if path.name.casefold().startswith(("license", "licence", "copying", "copyright", "readme")):
         return "documentation"
     suffix = path.suffix.casefold()
-    if "/".join(parts) in {MAP_ADJACENCIES, "game/map_data/nodes.dat"} or suffix == ".splnet":
+    relative = "/".join(parts)
+    if relative in {MAP_ADJACENCIES, "game/map_data/nodes.dat"} or suffix == ".splnet":
         return "map_data"
     if suffix == ".meta" and "gfx" in parts[:-1]:
         return "structured_configuration"
+    resource_paths = _FLAT_RESOURCE_PATHS.get(suffix)
+    if resource_paths and not any(
+        PurePosixPath(relative).full_match(rule) for rule in resource_paths
+    ):
+        return "unknown"
     for category, suffixes in _CATEGORIES.items():
         if suffix in suffixes:
             return category

@@ -40,7 +40,11 @@ def parse_map_table(raw: bytes) -> CsvResult:
             break
         except csv.Error as error:
             diagnostics.append(f"csv_syntax:{line}: {error}")
-            break
+            if reader.line_num < line:
+                break
+            continue
+        if any("\x00" in cell for cell in cells):
+            diagnostics.append(f"csv_nul:{line}: NUL in cell")
         if rows and len(cells) != len(rows[0].cells):
             diagnostics.append(
                 f"csv_row_width:{line}: {len(cells)} expected width {len(rows[0].cells)}"
@@ -49,6 +53,13 @@ def parse_map_table(raw: bytes) -> CsvResult:
     if not rows or not rows[0].cells:
         diagnostics.append("csv_header_missing")
         return CsvResult("complete", "failed", tuple(rows), tuple(diagnostics))
+    header = rows[0].cells
+    if header[:2] != ("From", "To"):
+        diagnostics.append("csv_header_fields: expected From;To")
+    if any(not name.strip() for name in header):
+        diagnostics.append("csv_empty_header")
+    if len({name.strip().casefold() for name in header}) != len(header):
+        diagnostics.append("csv_duplicate_header")
     return CsvResult(
         "complete", "partial" if diagnostics else "complete", tuple(rows), tuple(diagnostics)
     )

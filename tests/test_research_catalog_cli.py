@@ -49,6 +49,14 @@ _EXTERNAL_REF = "identity-sources/steam-appmanifest.acf"
 _FORMATS = tuple(PDX_RESOURCE_CATEGORIES)
 
 
+def _graphics_resource(suffix: str) -> str:
+    if suffix == ".skin":
+        return "game/dlc/sample/gfx/skins/sample.skin"
+    if suffix == ".terrain":
+        return "game/gfx/map/terrain/sample.terrain"
+    return f"game/gfx/sample{suffix}"
+
+
 @pytest.fixture(autouse=True)
 def synthetic_installation_identity(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
@@ -101,7 +109,14 @@ def _committed_fixture(
         "game/common/example/score.txt": b"# lookup\nentry = { value = score }",
         "game/documents.zip": _zip_sample(),
     }
-    sources.update({f"game/gfx/sample{ext}": b"resource = { setting = yes }" for ext in _FORMATS})
+    sources.update(
+        {
+            _graphics_resource(ext): b"resource = { setting = yes }"
+            if ext not in {".skin", ".terrain"}
+            else b"setting = yes"
+            for ext in _FORMATS
+        }
+    )
     sources.update(extra_sources or {})
     if drift:
         sources["caligula_rev.txt"] = b"another-build"
@@ -252,8 +267,8 @@ def test_analyze_research_uses_committed_denominator_and_reports_formats(
     _root, raw, epoch, count = _committed_fixture(
         tmp_path,
         extra_sources={
-            "game/gfx/one.skin": b"folder = shape",
-            "game/gfx/two.skin": b"shape = {",
+            "game/dlc/sample/gfx/skins/one.skin": b"folder = shape",
+            "game/dlc/sample/gfx/skins/two.skin": b"shape = {",
         },
     )
     monkeypatch.setattr(config, "GAME", tmp_path / "absent-game")
@@ -281,7 +296,7 @@ def test_analyze_research_uses_committed_denominator_and_reports_formats(
         "category": "asset_entity_dna",
         "suffix": ".skin",
         "sources": 3,
-        "bytes": 51,
+        "bytes": 36,
         "decode_status": {"complete": 3},
         "parse_status": {"complete": 2, "partial": 1},
     }
@@ -384,7 +399,7 @@ def test_formats_diagnostics_and_locators_use_the_same_committed_denominator(
     rows = {row.path: row for row in layer.dispositions}
     assert layer.index.file_count == len(rows) == count
     for extension in _FORMATS:
-        source = f"game/gfx/sample{extension}"
+        source = _graphics_resource(extension)
         assert rows[source].category == PDX_RESOURCE_CATEGORIES[extension]
         assert rows[source].parse_status == "complete"
         assert layer.index.find(source=source, key="setting")[0].line == 1
@@ -467,9 +482,65 @@ def test_map_table_reports_lexical_and_width_gaps(tmp_path: Path) -> None:
         ).fetchall() == [("x",), ("y",), ("extra",)]
 
 
+@pytest.mark.parametrize(
+    ("body", "message", "recovered"),
+    [
+        (b"From,To\nx,y\n", "csv_header_fields", "x,y"),
+        (b"From;To;To\nx;y;z\n", "csv_duplicate_header", "z"),
+        (b"From;To;\nx;y;z\n", "csv_empty_header", "z"),
+        (b"From;To\nx;\x00y\n", "csv_nul:2:", "\x00y"),
+        (b'From;To\nx;"bad"z\ny;ok\n', "csv_syntax:2:", "ok"),
+    ],
+)
+def test_map_table_retains_recoverable_cells_when_reporting_format_gaps(
+    tmp_path: Path, body: bytes, message: str, recovered: str
+) -> None:
+    table = "game/map_data/adjacencies.csv"
+    _root, raw, epoch, _count = _committed_fixture(tmp_path, extra_sources={table: body})
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    row = next(row for row in layer.dispositions if row.path == table)
+    assert row.parse_status == "partial"
+    assert any(value.startswith(message) for value in row.diagnostics)
+    assert any(hit.kind == "csv_cell" for hit in layer.index.find(source=table, scalar=recovered))
+
+
+def test_graphics_flat_formats_reject_loose_nodes_and_unverified_locations(tmp_path: Path) -> None:
+    skin = _graphics_resource(".skin")
+    terrain = _graphics_resource(".terrain")
+    outside = "other/sample.skin"
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            skin: b"folder = shape orphan",
+            terrain: b"detail_scale = 1 { nested = yes }",
+            outside: b"name = standalone",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    rows = {row.path: row for row in layer.dispositions}
+    assert rows[skin].parse_status == rows[terrain].parse_status == "partial"
+    assert layer.index.find(source=skin, key="folder")[0].parse_status == "partial"
+    assert rows[outside].category == "unknown"
+    assert layer.index.find(source=outside) == ()
+
+
 def test_graphics_resources_distinguish_pdx_json_source_and_binary(tmp_path: Path) -> None:
     skin, terrain, curves, metadata, shader, mesh, animation = (
-        f"game/gfx/resource{suffix}"
+        _graphics_resource(suffix)
         for suffix in (".skin", ".terrain", ".curves", ".meta", ".fxh", ".mesh", ".anim")
     )
     _root, raw, epoch, _count = _committed_fixture(
@@ -595,7 +666,10 @@ def test_research_rejects_wrong_or_noncommitted_epoch(
 
 @pytest.mark.parametrize(
     ("version", "drift", "message"),
-    [("1.15.0", False, "当前仅维护 1.15.1"), ("1.15.1", True, "caligula_rev.txt")],
+    [
+        ("1.15.0", False, f"当前仅维护 {version_contracts.CURRENT_VERSION}"),
+        (version_contracts.CURRENT_VERSION, True, "caligula_rev.txt"),
+    ],
 )
 def test_research_rejects_unreviewed_captured_installation(
     tmp_path: Path, version: str, drift: bool, message: str
