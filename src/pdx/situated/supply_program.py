@@ -1,7 +1,7 @@
 """Typed goods-stance appends and reviewed unions, with no numeric-score credit.
 
-The 1.15.1 default source lines 6493-6494 call these production/trade planning
-stances and allow an active strategy to override them. The three pinned unions
+The native default strategy documents production and trade planning stances
+and allows an active strategy to override them. The three pinned unions
 intentionally extend local stance activation. They retain native execution gates,
 produce one enum when both causes hold, and authorize no general eligibility OR.
 """
@@ -62,14 +62,17 @@ def block_span(text: str, path: tuple[str, ...]) -> tuple[int, int]:
 
 @dataclass(frozen=True, slots=True)
 class NativeSupplyStance:
-    """Only the three independently pinned 1.15.1 preference activations."""
+    """The three independently pinned preference activations."""
 
     good: str
     body: str
+    version: str = "1.15.1"
 
     def __post_init__(self) -> None:
-        if hashlib.sha256(self.body.encode()).hexdigest() != _NATIVE_STANCE_1151.get(self.good):
-            raise ValueError("供给立场原版身份漂移；只允许精确1.15.1三商品")
+        if self.version not in {"1.15.1", version_contracts.CURRENT_VERSION} or hashlib.sha256(
+            self.body.encode()
+        ).hexdigest() != _NATIVE_STANCE_1151.get(self.good):
+            raise ValueError("供给立场原版身份漂移；只允许已锁三商品")
 
     def compose(self, scarcity: str) -> str:
         start, end = block_span(self.body, ("<anonymous>", "trigger"))
@@ -89,9 +92,11 @@ class NativeSupplyStance:
 
     def as_dict(self) -> dict[str, object]:
         return {
-            "game_version": "1.15.1",
+            "game_version": self.version,
             "source": SOURCE,
-            "source_sha256": _NATIVE_1151_SHA256,
+            "source_sha256": version_contracts.contract(self.version).default_strategy_sha256
+            if self.version == version_contracts.CURRENT_VERSION
+            else _NATIVE_1151_SHA256,
             "body_sha256": _NATIVE_STANCE_1151[self.good],
             "native_trigger": "first AND retains the complete original body bytes and AST",
             "meaning": "local production/trade stance activation, not action execution eligibility",
@@ -99,10 +104,14 @@ class NativeSupplyStance:
         }
 
 
-def native_stances_1151() -> tuple[NativeSupplyStance, ...]:
-    """Load reviewed raw evidence, never rediscover a native-policy permission."""
-    if version_contracts.active_version() != "1.15.1":
-        raise ValueError("合成供给立场仅支持精确1.15.1")
+def native_stances() -> tuple[NativeSupplyStance, ...]:
+    """Read the frozen lexical blocks proved identical in the current source.
+
+    Rendering independently compares each block to the exact production input.
+    """
+    version = version_contracts.active_version()
+    if version not in {"1.15.1", version_contracts.CURRENT_VERSION}:
+        raise ValueError("合成供给立场仅支持已锁原版版本")
     path = Path(__file__).resolve().parents[3] / "research/vanilla-ai/1.15.1/native/game" / SOURCE
     raw = path.read_bytes()
     if hashlib.sha256(raw).hexdigest() != _NATIVE_1151_SHA256:
@@ -111,8 +120,15 @@ def native_stances_1151() -> tuple[NativeSupplyStance, ...]:
     result = []
     for good in sorted(_NATIVE_STANCE_1151):
         start, end = block_span(text, ("ai_strategy_default", "goods_stances", good))
-        result.append(NativeSupplyStance(good, text[start:end]))
+        result.append(NativeSupplyStance(good, text[start:end], version))
     return tuple(result)
+
+
+def native_stances_1151() -> tuple[NativeSupplyStance, ...]:
+    """Retain the explicit historical validation entry."""
+    if version_contracts.active_version() != "1.15.1":
+        raise ValueError("合成供给立场仅支持精确1.15.1")
+    return native_stances()
 
 
 def _number(value: object) -> bool:

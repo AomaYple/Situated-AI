@@ -2972,7 +2972,7 @@ def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int,
             return {}
         native_stances = {stance.good: stance for stance in plan.native_stances}
         if native_stances:
-            reviewed = supply_program.native_stances_1151()
+            reviewed = supply_program.native_stances()
             if (
                 plan.native_stances != reviewed
                 or (set(before.value.keys()) & set(plan.goods)) != native_stances.keys()

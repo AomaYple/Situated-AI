@@ -1,0 +1,869 @@
+{
+  "candidates": {
+    "abandon_piracy": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "0049a7d00c7ba3d389d645c44fc2be7028b3246377b9919fd453d9581a5fb6dd",
+      "evaluation_line": 90,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "3313f9b92451f24ea72b55ef05338004e61668b7dabf8b899356ecd7c499003e",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/36_abandon_piracy.txt",
+      "weight_line": 115,
+      "weight_sha256": "b07758e79e93c58b5d8fee7a63d1f0eac8e6ebdf1c5ff58e69dd3040f35bad5c",
+      "weight_shape": "block"
+    },
+    "acquire_monopoly_for_company": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "d34e3c0807b79864fb11b30f4bfea645ea9a2a9b24174c3268647f81381a68cb",
+      "evaluation_line": 161,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "4a22fd810d139af588c0e651b485111c2d9e84648bce305e1753a2054ce46dce",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/18_acquire_monopoly_for_company.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "alliance": {
+      "cost": "150",
+      "cost_line": 3,
+      "definition_sha256": "4568b6de2efa770ec11be9bee27e34ba5381f0dd5e94e577f65b173a42b800ee",
+      "evaluation_line": 292,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "15d8aa4db3031bbc53605bfbbbb8c1c006f93b7fb27490f0542179deca416481",
+      "evaluation_shape": "block",
+      "kind": "mutual",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/00_alliance.txt",
+      "weight_line": 323,
+      "weight_sha256": "7f80ab0a093fd262ddf22ee980c6a9baf55bcbd6bb08243011d8a59b54375c25",
+      "weight_shape": "block"
+    },
+    "amend_succession": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "511dc774b4bb5bc63076241390c629a29be62b20778b19d7eeed6bacac4308f9",
+      "evaluation_line": 148,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/27_amend_succession.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "defensive_pact": {
+      "cost": "100",
+      "cost_line": 3,
+      "definition_sha256": "25548b41f0ce229cd7e4792a6c2ca0e9c6a125d9eb38586d1978f176dcf8543d",
+      "evaluation_line": 175,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "479e51c4740179c8aabf696cd353a21b6f1d6b8ac1cea4ca2e09de806c22d215",
+      "evaluation_shape": "block",
+      "kind": "mutual",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/01_defensive_pact.txt",
+      "weight_line": 206,
+      "weight_sha256": "2ee1f20d30001a799d620601ebee4bfcc99e97549b6a2a6bf1bfa015769fb0f0",
+      "weight_shape": "block"
+    },
+    "foreign_investment_rights": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "d2cf72812fca79f3d61b5a2af8125244e35e370306452e368d9f9490153b9b00",
+      "evaluation_line": 136,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "a025ba4ddf40af9742bd0cf9f555b453287b0cd4d077f5aaa4cd8725c11133ad",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/07_foreign_investment_rights.txt",
+      "weight_line": 161,
+      "weight_sha256": "b6d713593774307eaf075b3e69c681b47c6531b917582f12f7305832c0f38210",
+      "weight_shape": "block"
+    },
+    "free_text": {
+      "cost": "0",
+      "cost_line": 3,
+      "definition_sha256": "3ad961b7da6d8a396195f504d95905e47bdcb2563f185538bd80a321f9d81dd1",
+      "evaluation_line": 31,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "b21f7a3b47d10aee836a6f5006d3238ba0d4cd0483a4e336df45d97da1dfed94",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/28_free_text.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "goods_transfer": {
+      "cost": "10",
+      "cost_line": 3,
+      "definition_sha256": "9918f0bfbbb7988b082a0026fe0fc7b4e3428b232cff6af5d2f27abed23d8332",
+      "evaluation_line": 238,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "6d172240698f3f552275185fe83dd380e6473c4656bfdb44c64315089885f85d",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/13_goods_transfer.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "guarantee_independence": {
+      "cost": "50",
+      "cost_line": 3,
+      "definition_sha256": "f29db2502cb65a5111738c718d1e4911d2e75d9aa80b3a5989e336381697df0c",
+      "evaluation_line": 175,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "3322605fd2ceec072c264bc93a938165c570fe8510ac321442a03ca2d361eb5f",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/02_guarantee_independence.txt",
+      "weight_line": 204,
+      "weight_sha256": "302e3bc8f0a7dbbb2d2e81bcd6c8ab560542f4a91fa0975cabf21354b5442c56",
+      "weight_shape": "block"
+    },
+    "host_power_bloc_embassy": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "292e13b74bf8854d8f40f30ccaa58a0e2dda4081664bee32d71c9588bc7219bb",
+      "evaluation_line": 116,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "678094f050e5c5adfef1b8cdafe2dc2829599cf3c0e023a4e8f4cd7fe5534f2e",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/10_host_power_bloc_embassy.txt",
+      "weight_line": 128,
+      "weight_sha256": "10bb456d4cf135f0ae73de3f76a9a600eb1a65e7c56fa66164cd70101d5cdcd5",
+      "weight_shape": "block"
+    },
+    "join_power_bloc": {
+      "cost": "0",
+      "cost_line": 3,
+      "definition_sha256": "3f84b7194f662e4862d442379a14558f63b058f0bd6f3a1d75ee56618260c3b2",
+      "evaluation_line": 73,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "2507e013b120d2e081d1af5aabf7aac86c4ec3bd1e614c5d76c07c1030ef6882",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/09_join_power_bloc.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "law_commitment": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "b6f748c9122c222fab9c67339cded8c54abfc9ce7e2265300e9aa7b362ebcc63",
+      "evaluation_line": 272,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "541935ded424106a8561d1348d9985f714a4969bcb4712b4a9c0198b12837caf",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/20_law_commitment.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "military_access": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "2d913cf458f135779f8b7ddca9995233a9fa3a89ce344ce11518005a308ca3a6",
+      "evaluation_line": 78,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "ecc0b6bfe5f8e81b20c865e9b4cc52392769c39c36a6c104bd2c8182ed6cadd5",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/15_military_access.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "military_assistance": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "2bbbe7c9270c82ceb1661ea7b262ff3cd133bf7b057e86fbe8765e1175c66ff8",
+      "evaluation_line": 142,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "cc11d96ae9e9ec10884da9b74c5827985a5fa6c66f9611dc01fae72ee5109d63",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/12_military_assistance.txt",
+      "weight_line": 159,
+      "weight_sha256": "b6d713593774307eaf075b3e69c681b47c6531b917582f12f7305832c0f38210",
+      "weight_shape": "block"
+    },
+    "money_transfer": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "88e99669684ec1aea2895784b83a31b755f9d4e4651815ab1fe7c0510abb24aa",
+      "evaluation_line": 134,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "7ad1babd979889d681ce31517e34fa51526746ba2ce3182504760f154bc194d9",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/05_transfer_money.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "no_strait_closure": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "00cff81cce44cf674564c4e65391c066398fcfbbb14d8a4cbb1dbc011761b9ac",
+      "evaluation_line": 89,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "a082c71e5c07a11206630b8c166a7739eb5ff956cd9492d66c26ccebdce05076",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/34_no_strait_closure.txt",
+      "weight_line": 116,
+      "weight_sha256": "fe5d01298475809285cc9dd6bd247f2e728d4452e7a971b4ce6f412730ea323b",
+      "weight_shape": "block"
+    },
+    "no_subventions": {
+      "cost": "10",
+      "cost_line": 3,
+      "definition_sha256": "31539d92285ec4463af678953a1e52eefb0ce5bc698afb136df1dde5b5133a32",
+      "evaluation_line": 141,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/26_no_subventions.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "no_tariffs": {
+      "cost": "10",
+      "cost_line": 3,
+      "definition_sha256": "1dbb61a46a466fac368803ba3c43f4d801a3da21b5aafc7f2bc46b583e2c70ad",
+      "evaluation_line": 150,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/21_no_tariffs.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "no_tolls": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "83e25c0772c3441ba9a2997af272af9f33beed4974c81849b83b091fde67c415",
+      "evaluation_line": 89,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "1d0b995306c6b21df601d35dc6da4af38a982ce7337acbfad5741db196085cef",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/32_no_tolls.txt",
+      "weight_line": 116,
+      "weight_sha256": "3ea020dd891e49cbf431a382e0eded7f99961c8a8653996f42b2bc18e2e17975",
+      "weight_shape": "block"
+    },
+    "non_colonization_agreement": {
+      "cost": "10",
+      "cost_line": 3,
+      "definition_sha256": "8f87e5f18d9dcd5a91a8fc03fbfa4f1f5b5c926975b5d5f1b58d8bf2dd5f6e28",
+      "evaluation_line": 116,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "a8a4fe76273945c2dfedb606d42d7bbb0ed31a6ffe4068f2a5f4345cfc533390",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/16_non_colonization_agreement.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "non_piracy_agreement": {
+      "cost": "10",
+      "cost_line": 3,
+      "definition_sha256": "f2d79e7892080ad27ef54d9ea539d76067f6907237fb4b5d54109d040dd73295",
+      "evaluation_line": 89,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "6f5379cb949f5a4c733882bc3c67cde2f692ae460733cad321cb0b87a6a7765f",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/35_non_piracy_agreement.txt",
+      "weight_line": 114,
+      "weight_sha256": "493826fb1f5c97575172a24850e579d29fc06d6f15fe06cc4663404bca0d8941",
+      "weight_shape": "block"
+    },
+    "offer_embassy": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "a601b4e525fe245366c094db854d6128effbf9a6956f900867f9628c12403623",
+      "evaluation_line": 106,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "5ae789a41df84c0c706f1c3afd4091ae0c887ac44c7f912f4975f02bf0551637",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/11_offer_embassy.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "prohibit_trade_with_global_market": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "cc24c473ef31ea227f72f742aa8d779e0d935a576a55fc6d61ea96c12367290c",
+      "evaluation_line": 131,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "4a22fd810d139af588c0e651b485111c2d9e84648bce305e1753a2054ce46dce",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/17_prohibit_trade_with_global_market.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "recognize_independence": {
+      "cost": "25",
+      "cost_line": 3,
+      "definition_sha256": "a2b0134e925f3f90cbcb117d5b019d6cc242dc48b693c641bf7049e75c45a2e4",
+      "evaluation_line": 79,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "850f33a26e02bf81b72e451ed807ecbf0a5aead806fb0f7bb66e7424024b5444",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/29_recognize_independence.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "ship_transfer": {
+      "cost": "0",
+      "cost_line": 3,
+      "definition_sha256": "ff625c0b7c0baa64e46c3fd725b65cf7833ccdd61634e57364033703bdd0ec20",
+      "evaluation_line": 140,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/31_ship_transfer.txt",
+      "weight_line": 151,
+      "weight_sha256": "16578ecca2c22094b8e738d5d2cc53a092e4ca26f09196a484c3be4ab5d4acf2",
+      "weight_shape": "block"
+    },
+    "state_transfer": {
+      "cost": "0",
+      "cost_line": 3,
+      "definition_sha256": "3a20b1879de6670b83c8a1858ab1e76f9f022b2fd2270599bd502b79c21c2d27",
+      "evaluation_line": 173,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/06_transfer_state.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "strait_access": {
+      "cost": "10",
+      "cost_line": 3,
+      "definition_sha256": "f75f0cc27ba60e9a744dd4eb961f2562d5f9ac1f14f124413edcd2ebd7e35c5a",
+      "evaluation_line": 90,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "0f2a45dee85bd77ba6e47429743c10aabd85277f95f9f1181a0106c81eb14aa4",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/33_strait_access.txt",
+      "weight_line": 118,
+      "weight_sha256": "00d3f3906227d96baa06701bdf67450523e4830b7c6822bbcf9c614de979eb87",
+      "weight_shape": "block"
+    },
+    "support_independence": {
+      "cost": "50",
+      "cost_line": 3,
+      "definition_sha256": "a84a4fc69e94a42960741ead606714695cf368edcf40f8eebbd622f6686501fd",
+      "evaluation_line": 244,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "366dcfa27aa319eddd1c72cf7c6b0cc370c720bb3a7176500fabec74e8187835",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/03_support_independence.txt",
+      "weight_line": 273,
+      "weight_sha256": "4dc1b551978589ceea9f05bbc8cc0a009365434653ca8e81d4697136c43fd887",
+      "weight_shape": "block"
+    },
+    "take_on_debt": {
+      "cost": "0",
+      "cost_line": 3,
+      "definition_sha256": "ca623b95c3052d76fc43d94e21ffb1fe12de00ded660f9e4081862f7b6dc8d34",
+      "evaluation_line": 104,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "5ae789a41df84c0c706f1c3afd4091ae0c887ac44c7f912f4975f02bf0551637",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/04_take_on_debt.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "toll_exemption": {
+      "cost": "10",
+      "cost_line": 3,
+      "definition_sha256": "b37d77eda5d1f705e63f40c52ccf2d9a68844849fc0ec1d4988b3b7692d6e08b",
+      "evaluation_line": 90,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "7434f1737cbed3ec8f9cfc4a4e24a9376285d1f68c21164a0145b4177588071b",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/31_toll_exemption.txt",
+      "weight_line": 118,
+      "weight_sha256": "f40a521dd572eb368fa662511a4ef07f4298d96a598d13dad546be7d12ab4795",
+      "weight_shape": "block"
+    },
+    "trade_privilege": {
+      "cost": "50",
+      "cost_line": 3,
+      "definition_sha256": "7fd34dc5999b951663cb09bc19056defab92eaf0cd51a25de746be5329c1ec4d",
+      "evaluation_line": 126,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "2d5f796e1e8e16983f66a5e83f53d983d3b33dfac0e28aaef616843c6687192a",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/25_trade_privilege.txt",
+      "weight_line": 138,
+      "weight_sha256": "4dc1b551978589ceea9f05bbc8cc0a009365434653ca8e81d4697136c43fd887",
+      "weight_shape": "block"
+    },
+    "transfer_subject": {
+      "cost": "0",
+      "cost_line": 3,
+      "definition_sha256": "a84b99cd22ffd18b8fb695c4e77a214d074e96d3b15637153d1229b62be8b270",
+      "evaluation_line": 144,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/30_transfer_subject.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "transit_rights": {
+      "cost": "50",
+      "cost_line": 3,
+      "definition_sha256": "e2e6918d58ad8c3cb5a67d2ea5ff0c26a74b3ab9f642a983242bcff46abab554",
+      "evaluation_line": 92,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "7a3b827f49d413b0ab20e10fdc6b06175d865869de82d66a53fa3f7cad1a746e",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/24_transit_rights.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    },
+    "treaty_port": {
+      "cost": "50",
+      "cost_line": 3,
+      "definition_sha256": "668a24ca6f8f179f2cb15ca7c320b4c94b9efb9ceed96ac2fbd6a675788cb5c3",
+      "evaluation_line": 268,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:530"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
+      "kind": "directed",
+      "line": 1,
+      "scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:166"
+      ],
+      "source": "common/treaty_articles/14_treaty_port.txt",
+      "weight_line": 0,
+      "weight_sha256": null,
+      "weight_shape": "missing"
+    }
+  },
+  "contract": {
+    "actor": "country",
+    "evaluation_chance": {
+      "actor": "country",
+      "native_operation": "proposal_score",
+      "target": "none",
+      "timing": "before_proposal_inputs",
+      "unit": "probability",
+      "writer_unit": "multiplier",
+      "zero": "never_use"
+    },
+    "evidence": "native_documentation_and_exact_script_not_runtime",
+    "field": "ai.proposal_weight",
+    "native_operation": "proposal_score",
+    "supported_shape": "block",
+    "target": "none",
+    "unit": "multiplier",
+    "writer_operation": "multiply"
+  },
+  "getter_evidence": {
+    "engine": "influence",
+    "kind": "number",
+    "line": 153,
+    "path": [
+      "expel_diplomats",
+      "ai",
+      "will_propose",
+      "OR",
+      "AND",
+      "OR",
+      "influence"
+    ],
+    "scope": "root",
+    "source": "common/diplomatic_actions/01_expel_diplomats.txt",
+    "unit": "capacity_balance"
+  },
+  "originals": {
+    "common/diplomatic_actions/01_expel_diplomats.txt": {
+      "sha256": "634b87f8eb3a55d4742e5bf724d6b993c570736765898a97070cebea75893d4f"
+    },
+    "common/treaty_articles/00_alliance.txt": {
+      "sha256": "88be63a8fbe81d8473936e7091539d45f2a9b102c8758270d26f5d9ae277e571"
+    },
+    "common/treaty_articles/01_defensive_pact.txt": {
+      "sha256": "949b3d29d35c254f8f24c740f4a4b1b88bb28bf749afbd071dc94665442d7a86"
+    },
+    "common/treaty_articles/02_guarantee_independence.txt": {
+      "sha256": "44ab6fbebbaa04df60bd52cf4e0202b5ec6f752d5185cbf491258ccf578c237e"
+    },
+    "common/treaty_articles/03_support_independence.txt": {
+      "sha256": "28eea03f66d917f5f4ba23b7accbd6b75a82023b5a4882517472d321ee39bf34"
+    },
+    "common/treaty_articles/04_take_on_debt.txt": {
+      "sha256": "e5983a4b4740f8fc85163bc69205b781a70d2d8704401c0da34bba5951dccc4b"
+    },
+    "common/treaty_articles/05_transfer_money.txt": {
+      "sha256": "34ee4f9be01389e2228a866ae054ea45bd6666b67472552842385f3e77be47d3"
+    },
+    "common/treaty_articles/06_transfer_state.txt": {
+      "sha256": "6c975fdec756585d7247e9ea276e2e983332349fd52d46a8d27a0239ccc86822"
+    },
+    "common/treaty_articles/07_foreign_investment_rights.txt": {
+      "sha256": "5aaf7a9f67ed7e06ee45997c3f556706b1f00e9a91edf1c36d2f57b546e49828"
+    },
+    "common/treaty_articles/09_join_power_bloc.txt": {
+      "sha256": "587571abcb9368cc315d94d8508b44ac3f974a03855ab8c1f634d00e5462a9f0"
+    },
+    "common/treaty_articles/10_host_power_bloc_embassy.txt": {
+      "sha256": "202184b6bfc6586689dea317cd0cbcd4ee0946999db9d120db3a13df7842dbc3"
+    },
+    "common/treaty_articles/11_offer_embassy.txt": {
+      "sha256": "44db8f8ec43d40664086dadc3315fb33f154f8bceef47349744b35a5c063bdf6"
+    },
+    "common/treaty_articles/12_military_assistance.txt": {
+      "sha256": "58be247f9cb6bf4e83470ba2aca84e12752869fd4fb38b644d66a765750bf1cc"
+    },
+    "common/treaty_articles/13_goods_transfer.txt": {
+      "sha256": "6b674b14651aad3330bc72b81bb319db9ae8bd27960baf62a0cadfec67112012"
+    },
+    "common/treaty_articles/14_treaty_port.txt": {
+      "sha256": "0b9ec4de5efbf007dbcd407d988699bf22c92dd88615240b073eca70dcbead0d"
+    },
+    "common/treaty_articles/15_military_access.txt": {
+      "sha256": "d3fe3696302ea4d979838d6a8e511e7098d89bdb127d9ac3b752f30800b7394a"
+    },
+    "common/treaty_articles/16_non_colonization_agreement.txt": {
+      "sha256": "bed4a11b0f1f9aa3b75de8a0f89255f481150f880cd9778abc3fa1e6f01b1dc2"
+    },
+    "common/treaty_articles/17_prohibit_trade_with_global_market.txt": {
+      "sha256": "346997dbb2e1dab61fc09b5f1caf70822a23cebd9dde57e044291da33621c3be"
+    },
+    "common/treaty_articles/18_acquire_monopoly_for_company.txt": {
+      "sha256": "7f3b50e2a27dcaeb498af3011819d22e9879aa89adecc857bea3e29194b8f2dd"
+    },
+    "common/treaty_articles/20_law_commitment.txt": {
+      "sha256": "d4656e2100c1682f2dba5c3a650c694b9e7fdf3ac52e3683990a974c206432a0"
+    },
+    "common/treaty_articles/21_no_tariffs.txt": {
+      "sha256": "2bc6082764c7c1773663844e017e619f3ce09b9410c8c4ea29c22f99c3e8b94d"
+    },
+    "common/treaty_articles/24_transit_rights.txt": {
+      "sha256": "7f91bc3dfaeaead17c38532a4d45b72cea95accfd2b0a4b2c5b3fc529eeb23a1"
+    },
+    "common/treaty_articles/25_trade_privilege.txt": {
+      "sha256": "bab17c1d85e958105de90d52da618c42bbbe4a628d0e0fbe5ac08a154a63cff2"
+    },
+    "common/treaty_articles/26_no_subventions.txt": {
+      "sha256": "30976f4acbe3e6802be7e0e4a44f771bc1275fc2feea829bdf26ee583fd03150"
+    },
+    "common/treaty_articles/27_amend_succession.txt": {
+      "sha256": "34d3a7138671ee2bff961ccd607227729ad030c0a1a773d364dfc2de52706daa"
+    },
+    "common/treaty_articles/28_free_text.txt": {
+      "sha256": "486b7e395f1e21a67d365ef5addaf06b7a33217fb48c4f02c5137d748df97da7"
+    },
+    "common/treaty_articles/29_recognize_independence.txt": {
+      "sha256": "d30f86fd984ceb3f6fcc2feb751be131e89deb2fd95505675a4fd916e275d44e"
+    },
+    "common/treaty_articles/30_transfer_subject.txt": {
+      "sha256": "0a5fbcb021473bdbc2292e39e247fc07990bf6c14456f4f9344e6d3e752379cb"
+    },
+    "common/treaty_articles/31_ship_transfer.txt": {
+      "sha256": "f5723d9d5ee7c827528be3afb1ad6226f33d366ba30e8374053cee91e06c96ff"
+    },
+    "common/treaty_articles/31_toll_exemption.txt": {
+      "sha256": "b561cd3a7ec5d855b5f37460efe63b6ed30afe2898e152da440bf062d0b58cf0"
+    },
+    "common/treaty_articles/32_no_tolls.txt": {
+      "sha256": "0ed44a8038296ae9bb4ab85ba422780a4ca6e419c04056b2550097eec73e2720"
+    },
+    "common/treaty_articles/33_strait_access.txt": {
+      "sha256": "cca513cb0f5142eed0da204a7c32494cf1cf226b87f3a5a982f6616e7a2dbd19"
+    },
+    "common/treaty_articles/34_no_strait_closure.txt": {
+      "sha256": "a2bb17682f7e04b13db6a239a4d36222eabfd949b91518462e2c558fdc250bf1"
+    },
+    "common/treaty_articles/35_non_piracy_agreement.txt": {
+      "sha256": "c0b9e2e97660befc5c7f6054a8719d6f33e94f247dee9519f08cbe1ada6b7df0"
+    },
+    "common/treaty_articles/36_abandon_piracy.txt": {
+      "sha256": "f112f83a5f62ff400e47561ed38f96087db6bca77dba7f4268833a09aeb1a299"
+    },
+    "common/treaty_articles/treaty_articles.md": {
+      "sha256": "ea1f5dc6519ca69debb8c902ae5db13e209c7297a7a0eef6c2adccb25b5f1c78"
+    }
+  },
+  "schema": 2,
+  "sources": {
+    "common/diplomatic_actions/01_expel_diplomats.txt": "a1187db53529e92f733775a5d51746d7c6fc0dac8b15e6cf8b2e139298afc678",
+    "common/treaty_articles/00_alliance.txt": "78d6a82a728271e6da09016f6fd6995df665d88a42e8c49feee1f63f7f02cad1",
+    "common/treaty_articles/01_defensive_pact.txt": "9bf85289b4b8098f86ac20f2ccf0087ff84f2bfd38c13aaee0f2de0b20f6095a",
+    "common/treaty_articles/02_guarantee_independence.txt": "a0a4beea6f090d998516c6118b94555b04261f451adb5b4462d68ab731b42a12",
+    "common/treaty_articles/03_support_independence.txt": "bc83cb413b3cb393bfa8436ef28fe9d7b96a63a6c14084ecc1871583b9b8032f",
+    "common/treaty_articles/04_take_on_debt.txt": "256aedaac47c67aaabb64c2ad2bd99db33d8e50a63bbb3581d1df3022cca78d4",
+    "common/treaty_articles/05_transfer_money.txt": "76de90c006e875f097d3df75f00fd545c4a6519dd936f2a2a5671a5cd33be948",
+    "common/treaty_articles/06_transfer_state.txt": "10d76a72f7e045ba2693d0e06813bbd1d5feaea4d1bcd2876e424d2db67796e8",
+    "common/treaty_articles/07_foreign_investment_rights.txt": "b3520ddffd960d74339e61d11e526b96efefbc324d00d0e9551aa577382ff61e",
+    "common/treaty_articles/09_join_power_bloc.txt": "751ca0543e8dc12a30fa09e82a9abeeed9037ad7664f95229f6ee069c9e16988",
+    "common/treaty_articles/10_host_power_bloc_embassy.txt": "0f1e33c06aa8a89297222b982cfd6c08d5521a2b02261e8723133b45626b0ad2",
+    "common/treaty_articles/11_offer_embassy.txt": "4aba82e0b253fed0058d325b67a1ef943173c2a1ffda615502a93d9f6bb50132",
+    "common/treaty_articles/12_military_assistance.txt": "2c13b8a53ac2eb74343a14b3a8e314bcbafb03def69b319212485b8615bde9d1",
+    "common/treaty_articles/13_goods_transfer.txt": "351863a506c4d78012ee79d88ce490a9439e94107bbefca77808c0a7e1edfc1b",
+    "common/treaty_articles/14_treaty_port.txt": "19d1eb925f219c0219106a38491a33bffbae5daf282eee91bb8c820f053fd643",
+    "common/treaty_articles/15_military_access.txt": "1872f73129b4846505c909aa035f4b238032069a2936a160b6c1be6970ba7e5f",
+    "common/treaty_articles/16_non_colonization_agreement.txt": "4e880cb19f481e333c83e8c2619195d722bf88118d4f72c37056e30e068de134",
+    "common/treaty_articles/17_prohibit_trade_with_global_market.txt": "fa0f429482e096e7891b5acf4ce80de327b9877f380fda693f95c5aaba7f5350",
+    "common/treaty_articles/18_acquire_monopoly_for_company.txt": "f052e40bad3a29d3b13a5fb0c33d8d9ad81ff558b2e71d265ddabfb887382e19",
+    "common/treaty_articles/20_law_commitment.txt": "92360fd58559b8f454a42aebee8418b9829a01cbc637e6b28f1bdfc988f33a0e",
+    "common/treaty_articles/21_no_tariffs.txt": "4e361356002dd9d440b767bad998b20e73eb4af1a5a0d1999e566a8923e5afab",
+    "common/treaty_articles/24_transit_rights.txt": "4ca1e997e9294c2764832f4011a08de1fe5d41452a2e52f35e20b50aeba0c70a",
+    "common/treaty_articles/25_trade_privilege.txt": "d61d4308671da458e11bfdce31c82caf53153ee29b1d0d35a84ed6c1f61957be",
+    "common/treaty_articles/26_no_subventions.txt": "7a7348ca4878c1628bb4b494b1a03b436c786424fcf65f19b3e03eacee46cb36",
+    "common/treaty_articles/27_amend_succession.txt": "c89d7adb84c4dbf2bfe2e98cc35c211f57ecf2ea3cf57902d819cca4333ea01b",
+    "common/treaty_articles/28_free_text.txt": "00163ab22f22e7b60e70c105dd60bc7a9a76e59483dd22dd6b4989c223edd12f",
+    "common/treaty_articles/29_recognize_independence.txt": "b4e5e28477b4c6088e3057c6a2cfcc21e7016a4e3fca69c12325aa7adfe6e30d",
+    "common/treaty_articles/30_transfer_subject.txt": "01eef44ba7a8431c389b201aa789a3b6502141d2e20c27eef976a80fc81a3c69",
+    "common/treaty_articles/31_ship_transfer.txt": "438c878d68c53f9f1d0b37de369911c317c5c4077307b6e6523ebb66e8d0a7bf",
+    "common/treaty_articles/31_toll_exemption.txt": "1a282a5c10c6287a8c431b2d3abb33068e8c3ca1323ea700e41f9fe89c30bd94",
+    "common/treaty_articles/32_no_tolls.txt": "ffbff713184a7e2f5eee1fec6c1b98b2adf0b1598c1ae44c8c79aa3e2c209e53",
+    "common/treaty_articles/33_strait_access.txt": "5a1677e603bfb45fd1b2d615967a130ec9e2afe9ba7b9e8668205dee809ef787",
+    "common/treaty_articles/34_no_strait_closure.txt": "f553547614b157c062b9cc37ece5e4cb4de1631162b139176bb7fbf851526e4b",
+    "common/treaty_articles/35_non_piracy_agreement.txt": "e7c1cd95f280a570ae2f885182524993739b701bb03480a7d4738a1b3a9440f4",
+    "common/treaty_articles/36_abandon_piracy.txt": "8ce248f3d9fb7ccc800de8c92a57f99c35ff5d435d33b27455f3f4ffe7a2dcff",
+    "common/treaty_articles/treaty_articles.md": "0db1a61cedd888ff29685838fd5338c6802f0f5f4e2dcb3940de8cb086fe38c9"
+  }
+}

@@ -74,7 +74,7 @@ class InitialValue:
 
 @dataclass(frozen=True, slots=True)
 class SupplyPlan:
-    """追加供给偏好；精确1.15.1三商品合成原生或AI稀缺的同一枚举。"""
+    """追加供给偏好，三项已锁商品合成原生或 AI 稀缺的同一枚举。"""
 
     source: str
     goods: tuple[str, ...]
@@ -743,8 +743,9 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             item["source"],
             tuple(sorted(item["goods"])),
             float(item["price_threshold"]),
-            supply_program.native_stances_1151()
-            if source == SOURCE and version_contracts.active_version() == "1.15.1"
+            supply_program.native_stances()
+            if source == SOURCE
+            and version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
             else (),
         )
     scalar_values = []
