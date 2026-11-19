@@ -84,8 +84,9 @@ def test_all_bindings_lower_from_complete_ir():
             count += 1
         assert decision_rules.evaluate(compiled, {}, is_ai=False) == {}
         assert decision_rules.evaluate(compiled, {}, is_ai=True) == {}
-    assert count == len(production_policy_sources().rules)
-    assert identities == production_policy_sources().rules
+    rules = production_policy_sources().rules
+    assert count == len(rules)
+    assert identities == rules
 
 
 def test_reference_action_selection_blocks_lower_candidate_when_higher_core_is_unknown():

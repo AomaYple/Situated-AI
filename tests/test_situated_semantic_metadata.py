@@ -46,6 +46,7 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
 
     numeric_calls = []
     ast_calls = []
+    rules = production_policy_sources().rules
     collect_numeric = lowering.witnesses
     collect_ast = lowering.ast_witnesses
 
@@ -62,14 +63,12 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
         return result
 
     def witness(instances, generated):
-        assert len([item for item in instances if item.kind == "rule_action"]) == len(
-            production_policy_sources().rules
-        )
+        assert len([item for item in instances if item.kind == "rule_action"]) == len(rules)
         assert {
             (item.source, item.rule_id, item.consumer_field)
             for item in instances
             if item.kind == "rule_action"
-        } == production_policy_sources().rules
+        } == rules
         assert generated is numeric_calls[-1]
         assert isinstance(generated, tuple)
         assert all(item.source.endswith(".txt") for item in generated)
@@ -91,8 +90,9 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
 
 
 def _assert_legacy_contract(witness) -> None:
-    assert witness["expected"] == len(production_policy_sources().rules)
-    assert witness["count"] == len(production_policy_sources().rules)
+    expected = len(production_policy_sources().rules)
+    assert witness["expected"] == expected
+    assert witness["count"] == expected
     assert witness["missing"] == []
     assert witness["mismatches"] == []
     assert witness["duplicate_ids"] == []

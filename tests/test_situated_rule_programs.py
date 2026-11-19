@@ -261,10 +261,12 @@ def test_all_current_rules_have_real_complete_consumer_programs():
         consumers.update(
             (source, ".".join(program.field)) for program in migrated.consumer_programs
         )
-    assert variants == len(production_policy_sources().rules)
-    assert program_count == len(production_policy_sources().consumers)
-    assert identities == production_policy_sources().rules
-    assert consumers == production_policy_sources().consumers
+    expected = production_policy_sources()
+    expected_consumers = expected.consumers
+    assert variants == len(expected.rules)
+    assert program_count == len(expected_consumers)
+    assert identities == expected.rules
+    assert consumers == expected_consumers
 
 
 def test_native_construction_terminal_zero_is_not_revived():

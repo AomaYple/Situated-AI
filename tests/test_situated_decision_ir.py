@@ -35,6 +35,7 @@ def test_统一生产bundle包含全部legacy和显式writer():
     assert model.consumer_ir is not None
     bundle = model.consumer_ir
     supply = production_supply_sources().rules
+    rules = production_policy_sources().rules
     assert len(bundle.writers) == len(model.action_instances) + len(supply)
     assert {item.kind for item in bundle.writers} == {
         "rule_action",
@@ -50,18 +51,16 @@ def test_统一生产bundle包含全部legacy和显式writer():
     assert {item.writer_id for item in bundle.writers if item.kind == "supply_program"} == {
         f"supply_{good}" for _source, good, _field in supply
     }
-    assert sum(item.kind == "rule_action" for item in bundle.writers) == len(
-        production_policy_sources().rules
-    )
+    assert sum(item.kind == "rule_action" for item in bundle.writers) == len(rules)
     assert {
         (item.source, item.definition, item.field)
         for item in bundle.writers
         if item.kind == "rule_action"
-    } == production_policy_sources().rules
+    } == rules
     assert sum(item.kind == "action_card" for item in bundle.writers) == len(model.actions)
     payload = bundle.as_dict()
-    assert payload["legacy_writer_count"] == len(production_policy_sources().rules)
-    assert payload["legacy_semantic_count"] == len(production_policy_sources().rules)
+    assert payload["legacy_writer_count"] == len(rules)
+    assert payload["legacy_semantic_count"] == len(rules)
     assert payload["action_card_writer_count"] == len(model.actions)
     assert payload["supply_program_writer_count"] == len(supply)
     assert payload["support_program_writer_count"] == 0
@@ -95,14 +94,13 @@ def test_legacy_writer绑定与owner逐项反查且每个消费者字段只有�
     bindings = {(item.source, item.definition): item for item in model.binding_rows}
     writers = tuple(item for item in bundle.writers if item.kind == "rule_action")
 
-    assert len(instances) == len(production_policy_sources().rules)
-    assert len(bindings) == len(production_policy_sources().rules)
+    rules = production_policy_sources().rules
+    assert len(instances) == len(rules)
+    assert len(bindings) == len(rules)
     assert {
         (item.source, item.rule_id, item.consumer_field) for item in instances.values()
-    } == production_policy_sources().rules
-    assert {
-        (item.source, item.definition, item.field) for item in bindings.values()
-    } == production_policy_sources().rules
+    } == rules
+    assert {(item.source, item.definition, item.field) for item in bindings.values()} == rules
     assert {(item.source, item.definition) for item in writers} == set(bindings)
 
     owners: dict[str, str] = {}

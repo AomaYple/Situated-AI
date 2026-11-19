@@ -70,10 +70,11 @@ def test_领域覆盖逐目标保留消费者作用域成本和回退责任():
     model = load_model()
     summary = contract(coverage, model.action_instances)
     targets = [target for row in summary["domains"].values() for target in row["targets"]]
-    assert len(targets) == len(production_policy_sources().rules)
+    rules = production_policy_sources().rules
+    assert len(targets) == len(rules)
     assert {
         (target["source"], target["definition"], target["consumer_id"]) for target in targets
-    } == production_policy_sources().rules
+    } == rules
     assert len({target["target_id"] for target in targets}) == len(targets)
     assert all(
         target["consumer_id"]
