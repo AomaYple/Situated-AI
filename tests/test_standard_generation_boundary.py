@@ -61,7 +61,7 @@ def standard_tree(tmp_path, monkeypatch):
 
     monkeypatch.setattr(distribution, "generation_lock", lock)
     monkeypatch.setattr(distribution, "verify_compatibility_installation", lambda: None)
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         yield target, ledger
 
 
@@ -383,7 +383,7 @@ def test_current_cli_keeps_generated_ledgers_in_standard_writer_transaction(tmp_
         raise ValueError("final-current-boundary-drift")
 
     monkeypatch.setattr(distribution, "write_standard_outputs", reject)
-    with version_contracts.select_version("1.15.1"):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
         result = CliRunner().invoke(cli.app, ["modgen", "--write"])
     assert called
     assert result.exit_code == 1, result.output

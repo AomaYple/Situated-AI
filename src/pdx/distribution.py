@@ -575,8 +575,7 @@ def check_configuration_identity(
     files: Mapping[str, str | bytes],
     configuration: profile_configuration.ProfileConfiguration,
 ) -> None:
-    if version_contracts.active_version() != "1.15.1":
-        return
+    version_contracts.require_current()
     metadata = json.loads(files[METADATA_NAME])
     if metadata.get("game_custom_data", {}).get("configuration") != configuration.identity():
         raise ValueError("生成物的完整配置身份不一致；生成、检查和打包必须选择同一配置")
@@ -801,6 +800,7 @@ def package(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> Path:
     """核对仓库生成物后，生成唯一正式包。"""
+    version_contracts.require_current()
     source_lock = generation_lock({})
     policy, extensions, internal_files = package_inputs(
         include_engineering_metadata=True, profile=profile, configuration=configuration
@@ -808,14 +808,11 @@ def package(
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
     production_files = {name: text for name, text in files.items() if name != "README.md"}
-    if version_contracts.active_version() == "1.15.0":
-        _profile_directory_files(decisions.product_path())
     issues = decisions.check(decisions.product_path(), production_files)
     if issues:
         raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
 
-    if version_contracts.active_version() == "1.15.1":
-        check_generation_lock()
+    check_generation_lock()
 
     def verify_before_replace() -> None:
         verify_compatibility_installation()
@@ -824,13 +821,7 @@ def package(
         issues = decisions.check(decisions.product_path(), production_files)
         if issues:
             raise ValueError("完整兼容打包期间产物发生漂移：" + "; ".join(issues))
-        if version_contracts.active_version() == "1.15.1":
-            check_generation_lock()
-        if version_contracts.active_version() == "1.15.0":
-            actual = _profile_directory_files(decisions.product_path())
-            if set(actual) != set(production_files) | {"generation-lock.json"}:
-                raise ValueError("完整兼容打包期间产物文件集合发生漂移")
-            check_generation_lock()
+        check_generation_lock()
 
     return write_zip(
         files,
@@ -913,8 +904,7 @@ def write_standard_outputs(
     source inputs. Existing user/source files are retained with their exact bytes;
     undeclared production files and any new files appearing during the write fail.
     """
-    if version_contracts.active_version() != "1.15.1":
-        raise ValueError("标准生产生成只接受当前 1.15.1 合同")
+    version_contracts.require_current()
     if transaction is None:
         with GenerationTransaction() as owned:
             return write_standard_outputs(configuration=configuration, transaction=owned)

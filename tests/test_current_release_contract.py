@@ -1,13 +1,23 @@
 """Current Victoria 3 build selection and installed identity."""
 
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, decision_adapters, decision_interfaces, version_contracts
-from pdx.situated import network_profile, production_profile
+from pdx import (
+    cli,
+    decision_adapters,
+    decision_interfaces,
+    decisions,
+    distribution,
+    version_contracts,
+)
+from pdx.situated import network_profile, production_profile, profile_configuration
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def test_1152_is_the_current_build_for_default_and_explicit_selection(
@@ -70,3 +80,48 @@ def test_current_adapter_authority_proves_default_strategy_field_shapes() -> Non
 def test_current_scripted_predicate_uses_the_current_version_inventory() -> None:
     assert decision_interfaces.scripted_predicate_path().parent.name == "1.15.2"
     assert decision_interfaces.scripted_trigger_snapshot()
+
+
+def test_configuration_identity_mismatch_rejects_current_profile() -> None:
+    files = {distribution.METADATA_NAME: '{"game_custom_data": {"configuration": {}}}'}
+    with pytest.raises(ValueError, match="完整配置身份不一致"):
+        distribution.check_configuration_identity(
+            files, profile_configuration.ProfileConfiguration()
+        )
+
+
+@pytest.mark.parametrize("drift", ["before-archive", "before-replace"])
+def test_current_package_rejects_drift_and_preserves_previous_package(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, drift: str
+) -> None:
+    product = tmp_path / "mod"
+    generated = product / ".metadata/metadata.json"
+    generated.parent.mkdir(parents=True)
+    generated.write_bytes(b"{}\n")
+    files = {distribution.METADATA_NAME: "{}\n"}
+    lock = product / "generation-lock.json"
+    package = tmp_path / "candidate.zip"
+    package.write_bytes(b"previous package")
+    monkeypatch.setattr(decisions, "PRODUCT", product)
+    monkeypatch.setattr(distribution, "package_inputs", lambda **_: (None, None, files))
+    monkeypatch.setattr(distribution, "_release_files", dict)
+    monkeypatch.setattr(distribution, "_release_generation", lambda *_: {})
+    monkeypatch.setattr(distribution, "verify_compatibility_installation", lambda: None)
+    lock.write_bytes(distribution.generation_lock().encode())
+
+    def check_replacement(
+        _files: object, destination: Path, *, before_replace: Callable[[], None], **_options: object
+    ) -> Path:
+        if drift == "before-archive":
+            pytest.fail("a drifted lock reached the archive writer")
+        lock.write_bytes(b"drift")
+        before_replace()
+        destination.write_bytes(b"unexpected replacement")
+        return destination
+
+    monkeypatch.setattr(distribution, "write_zip", check_replacement)
+    if drift == "before-archive":
+        lock.write_bytes(b"drift")
+    with pytest.raises(ValueError, match="生产源码或产物与冻结记录不一致"):
+        distribution.package(package)
+    assert package.read_bytes() == b"previous package"
