@@ -1,4 +1,4 @@
-"""Exact native report joins for frozen treaty proposals and medical formations."""
+"""Exact native report joins for treaty proposals and paid mobilization options."""
 
 from __future__ import annotations
 
@@ -7,7 +7,13 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_adapters, mobilization_opportunities, treaty_opportunities
+from pdx import (
+    config,
+    decision_adapters,
+    mobilization_opportunities,
+    treaty_opportunities,
+    version_contracts,
+)
 from pdx.model import Block
 from pdx.parser import parse_bytes
 from pdx.situated import compiler, domain_coverage, vanilla_inventory
@@ -15,20 +21,29 @@ from pdx.situated.decision_ir import ContextBinding, EvaluationContext
 
 pytestmark = pytest.mark.unit
 MEDICAL = "common/mobilization_options/00_mobilization_option.txt"
+OWNER_EVENT = "events/tech_events/trench_warfare.txt"
 
 
 @pytest.fixture(scope="module")
-def production():
-    model = compiler.load_model()
+def action_instances():
+    return compiler.load_model().action_instances
+
+
+@pytest.fixture(scope="module")
+def production(action_instances):
+    version_contracts.verify_installation_identity(config.GAME.parent)
     policies = dict(decision_adapters.load().policies)
     inputs = {}
     for module in (mobilization_opportunities, treaty_opportunities):
         baseline = module.load_baseline()
-        for source, row in baseline["originals"].items():
-            inputs[source] = bytes.fromhex(row["bytes"])
+        originals = module.read_inputs(config.GAME)
+        assert {source: hashlib.sha256(raw).hexdigest() for source, raw in originals.items()} == {
+            source: row["sha256"] for source, row in baseline["originals"].items()
+        }
+        inputs.update(originals)
     instances = tuple(
         item
-        for item in model.action_instances
+        for item in action_instances
         if item.source == MEDICAL or item.source.startswith("common/treaty_articles/")
     )
     identities = {(item.source, *item.consumer_field.split(".", 1)) for item in instances}
@@ -53,19 +68,20 @@ def production():
             vanilla_inventory._surface(source, definition, field, assignment.line, scope)
         )
     inventory = vanilla_inventory.VanillaInventory(
-        baseline_id="independent_frozen_source_numeric_bindings",
+        baseline_id="independent_installed_source_numeric_bindings",
         source_hashes={source: hashlib.sha256(raw).hexdigest() for source, raw in inputs.items()},
         scope_hash="a" * 64,
         surfaces=tuple(surfaces),
         scanned_directories=("mobilization_options", "treaty_articles"),
-        content_roots=("frozen_originals",),
+        content_roots=("game",),
         parsed_files=len(inputs),
     )
-    return inventory, instances, inputs, policies, model.action_instances
+    return inventory, instances, inputs, policies
 
 
+@pytest.mark.integration
 def test_real_bindings_close_only_reviewed_frozen_native_declarations(production):
-    inventory, instances, inputs, policies, _ = production
+    inventory, instances, inputs, policies = production
     assert len(instances) == 99
     assert len(inventory.surfaces) == 25
     report = domain_coverage.native_coverage(
@@ -78,6 +94,7 @@ def test_real_bindings_close_only_reviewed_frozen_native_declarations(production
     assert report["inventory_status_counts"] == {"pending": 25}
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("family", ["medical", "treaty"])
 @pytest.mark.parametrize(
     "damage",
@@ -101,7 +118,7 @@ def test_real_bindings_close_only_reviewed_frozen_native_declarations(production
 def test_exact_instances_cannot_borrow_frozen_numeric_or_country_owner_permissions(
     production, family, damage
 ):
-    inventory, instances, inputs, policies, _ = production
+    inventory, instances, inputs, policies = production
     instance = next(item for item in instances if (item.source == MEDICAL) == (family == "medical"))
     definition, leaf = instance.consumer_field.split(".", 1)
     surface = next(
@@ -158,12 +175,13 @@ def test_exact_instances_cannot_borrow_frozen_numeric_or_country_owner_permissio
     assert report["binding_issue_count"] or report["unmatched_production"]
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("family", ["medical", "treaty"])
 @pytest.mark.parametrize(
     "damage", ["operation", "actor", "target", "line", "evidence", "capability"]
 )
 def test_native_surface_must_retain_exact_frozen_field_contract(production, family, damage):
-    inventory, instances, inputs, policies, _ = production
+    inventory, instances, inputs, policies = production
     instance = next(item for item in instances if (item.source == MEDICAL) == (family == "medical"))
     definition, leaf = instance.consumer_field.split(".", 1)
     surface = next(
@@ -190,11 +208,12 @@ def test_native_surface_must_retain_exact_frozen_field_contract(production, fami
     assert report["binding_issue_count"] == 1
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize(
     "damage", ["missing_sources", "missing_policy", "raw_drift", "raw_and_inventory_drift"]
 )
 def test_source_and_policy_proof_are_required_even_with_correct_object_labels(production, damage):
-    inventory, instances, inputs, policies, _ = production
+    inventory, instances, inputs, policies = production
     inputs, policies = dict(inputs), dict(policies)
     if damage == "missing_sources":
         inputs = {}
@@ -220,9 +239,10 @@ def test_source_and_policy_proof_are_required_even_with_correct_object_labels(pr
     assert report["binding_issue_count"] == expected
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("family", ["medical", "treaty"])
 def test_unreviewed_real_candidate_cannot_borrow_neighbor_consumer_permission(production, family):
-    inventory, instances, inputs, policies, _ = production
+    inventory, instances, inputs, policies = production
     instance = next(item for item in instances if (item.source == MEDICAL) == (family == "medical"))
     source, definition, leaf = (
         (MEDICAL, "mobilization_option_forced_march", "ai_weight")
@@ -257,11 +277,58 @@ def test_unreviewed_real_candidate_cannot_borrow_neighbor_consumer_permission(pr
     assert report["binding_issue_count"] == 1
 
 
-def test_six_colonial_pending_numeric_consumers_remain_rejected(production):
-    inventory, _, inputs, policies, all_instances = production
-    assert not any(item.consumer_field == "colonial_interest_ratio" for item in all_instances)
+def test_reviewed_numeric_declarations_do_not_replace_missing_source_bytes(action_instances):
+    treaty = treaty_opportunities.load_baseline()["candidates"]["alliance"]
+    mobilization = mobilization_opportunities.candidate_catalog()[
+        "mobilization_option_balloon_recon"
+    ]
+    cases = (
+        (
+            treaty["source"],
+            "alliance.ai.proposal_weight",
+            treaty["weight_line"],
+            vanilla_inventory._Scope(
+                "country", "none", "proposal_score", "direct", tuple(treaty["scope_evidence"])
+            ),
+        ),
+        (
+            mobilization["source"],
+            mobilization["field"],
+            mobilization["sections"]["ai_weight"]["line"],
+            vanilla_inventory._Scope(
+                "military_formation", "none", "multiplicative_score", "direct", ("fixture:1",)
+            ),
+        ),
+    )
+    for source, consumer_field, line, scope in cases:
+        instance = next(
+            item
+            for item in action_instances
+            if (item.source, item.consumer_field) == (source, consumer_field)
+        )
+        definition, field = consumer_field.split(".", 1)
+        surface = vanilla_inventory._surface(source, definition, field, line, scope)
+        inventory = vanilla_inventory.VanillaInventory(
+            baseline_id="synthetic_numeric_declaration_without_source",
+            source_hashes={},
+            scope_hash="a" * 64,
+            surfaces=(surface,),
+            scanned_directories=(),
+            content_roots=("fixture",),
+            parsed_files=0,
+        )
+        report = domain_coverage.native_coverage(inventory, (instance,))
+        assert report["counts"]["actual_covered"] == 0
+        assert report["binding_issue_count"] == 1
+        assert report["rows"][0]["binding_issues"] == {
+            instance.action_id: "native_source_contract_unproven"
+        }
+
+
+def test_six_colonial_pending_numeric_consumers_remain_rejected(action_instances):
+    assert not any(item.consumer_field == "colonial_interest_ratio" for item in action_instances)
     template = next(
-        item for item in all_instances if item.source == "mod/decisions/information.toml"
+        item for item in action_instances if item.source == "mod/decisions/information.toml"
     )
     # Keep the rejection regression after withdrawing the unsafe production
     # writers: merely reintroducing six familiar names must not authorize scope.
@@ -291,12 +358,16 @@ def test_six_colonial_pending_numeric_consumers_remain_rejected(production):
         responsibility_step="D0.03",
         source_line=1,
     )
-    report = domain_coverage.native_coverage(
-        replace(inventory, surfaces=(surface,)),
-        instances,
-        native_sources=inputs,
-        production_policies=policies,
+    inventory = vanilla_inventory.VanillaInventory(
+        baseline_id="synthetic_pending_colonial_consumer",
+        source_hashes={},
+        scope_hash="a" * 64,
+        surfaces=(surface,),
+        scanned_directories=("ai_strategies",),
+        content_roots=("fixture",),
+        parsed_files=0,
     )
+    report = domain_coverage.native_coverage(inventory, instances)
     assert report["binding_issue_count"] == 6
     assert report["counts"]["actual_covered"] == 0
     assert report["counts"]["pending"] == 1
@@ -305,14 +376,17 @@ def test_six_colonial_pending_numeric_consumers_remain_rejected(production):
     }
 
 
+@pytest.mark.integration
 def test_common_inventory_uses_exact_pinned_event_corroboration_without_expanding_denominator(
     production,
 ):
-    inventory, instances, inputs, policies, _ = production
-    event = "events/tech_events/trench_warfare.txt"
-    inputs = {source: raw for source, raw in inputs.items() if source != event}
+    inventory, instances, inputs, policies = production
+    event_digest = inventory.source_hashes[OWNER_EVENT]
+    inputs = {source: raw for source, raw in inputs.items() if source != OWNER_EVENT}
     hashes = {
-        source: digest for source, digest in inventory.source_hashes.items() if source != event
+        source: digest
+        for source, digest in inventory.source_hashes.items()
+        if source != OWNER_EVENT
     }
     inventory = replace(inventory, source_hashes=hashes)
     report = domain_coverage.native_coverage(
@@ -320,7 +394,7 @@ def test_common_inventory_uses_exact_pinned_event_corroboration_without_expandin
     )
     assert report["binding_issue_count"] == 0
     assert report["denominator"] == 25
-    assert event not in report["source_hashes"]
+    assert OWNER_EVENT not in report["source_hashes"]
     # There is no exemption for missing common/ witnesses or inventoried events.
     for source in (
         "common/on_actions/00_code_on_actions.txt",
@@ -335,11 +409,7 @@ def test_common_inventory_uses_exact_pinned_event_corroboration_without_expandin
         inventory,
         source_hashes={
             **inventory.source_hashes,
-            event: hashlib.sha256(
-                bytes.fromhex(
-                    mobilization_opportunities.load_baseline()["originals"][event]["bytes"]
-                )
-            ).hexdigest(),
+            OWNER_EVENT: event_digest,
         },
     )
     rejected = domain_coverage.native_coverage(
