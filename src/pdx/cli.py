@@ -357,6 +357,9 @@ def analyze_cmd(
     output_dir: Annotated[
         Path | None, typer.Option("--output-dir", help="研究结果的本机新目录")
     ] = None,
+    installation: Annotated[
+        bool, typer.Option("--installation", help="只读全量分析 V3_ROOT 并保存来源位置")
+    ] = False,
 ) -> None:
     """分析已提交的完整游戏安装，或生成现场原版及 Mod 概览。
 
@@ -364,8 +367,13 @@ def analyze_cmd(
     SQLite 出现位置索引。现场概览默认依次分析原版、Mod 和交叉关系，可用
     --no-mods、--no-cross、--no-write 或 --profile 调整，--quiet 关闭进度行。
     """
-    research = _research_inputs(raw_root, epoch, output_dir)
-    if research is not None:
+    if installation:
+        if raw_root is not None or epoch is not None or output_dir is None:
+            _fail("--installation 须提供 --output-dir，且与 --raw-root / --epoch 互斥")
+        research = None
+    else:
+        research = _research_inputs(raw_root, epoch, output_dir)
+    if installation or research is not None:
         if not write or profile:
             _fail("完整安装研究模式不能使用 --no-write 或 --profile")
         if any(
@@ -375,7 +383,15 @@ def analyze_cmd(
             for name, enabled in (("mods", mods), ("cross", cross))
         ):
             _fail("完整安装研究模式不接受 --mods 或 --cross")
-        _write_research_catalog(*research)
+        if research is not None:
+            _write_research_catalog(*research)
+        else:
+            assert output_dir is not None
+            try:
+                marker = research_catalog.write_installation(config.ROOT, output_dir)
+            except (OSError, ValueError) as exc:
+                _fail(f"现场研究构建失败：{exc}", EXIT_FAILED)
+            console.print(f"[green]安装研究目录已写入[/] {escape(str(marker.parent))}")
         return
     _require_game()
     started = time.perf_counter()

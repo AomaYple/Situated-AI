@@ -384,9 +384,14 @@ def read_source(
     """安全流式核对同一份源字节；仅格式 reader 需要时常驻单文件。"""
     if record.read_status != "read":
         return None
-    relative = _object_path(record)
+    return read_record(record, root=raw_root, relative=_object_path(record), retain=retain)
+
+
+def read_record(
+    record: InventoryRecord, *, root: Path, relative: str, retain: bool
+) -> bytes | None:
     hasher, size, chunks = hashlib.sha256(), 0, []
-    with open_inventory_source(raw_root, relative) as stream:
+    with open_inventory_source(root, relative) as stream:
         for chunk in iter(lambda: stream.read(_CHUNK), b""):
             hasher.update(chunk)
             size += len(chunk)
@@ -400,8 +405,13 @@ def read_source(
 @contextmanager
 def verified_source(record: InventoryRecord, *, raw_root: Path) -> Iterator[BinaryIO]:
     """给需要 seek 的成熟格式 reader 同一安全句柄，前后核对原字节摘要。"""
-    relative = _object_path(record)
-    with open_inventory_source(raw_root, relative) as stream:
+    with verified_record(record, root=raw_root, relative=_object_path(record)) as stream:
+        yield stream
+
+
+@contextmanager
+def verified_record(record: InventoryRecord, *, root: Path, relative: str) -> Iterator[BinaryIO]:
+    with open_inventory_source(root, relative) as stream:
 
         def verify() -> None:
             stream.seek(0)

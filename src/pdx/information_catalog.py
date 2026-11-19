@@ -27,7 +27,13 @@ from typing import TYPE_CHECKING
 from . import ai_surface, config, political_surface, version_contracts
 from .cache import parse_cached
 from .capability_catalog import FileDisposition, LayeredCatalog, OccurrenceWriter, base_frontier
-from .committed_raw import read_source, verified_catalog_inputs, verified_source
+from .committed_raw import (
+    read_record,
+    read_source,
+    verified_catalog_inputs,
+    verified_record,
+    verified_source,
+)
 from .input_contracts import ArtifactRef, InputContractError, ParseStatus
 from .input_inventory import (
     FLAT_PDX_RESOURCE_SUFFIXES,
@@ -47,7 +53,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
     from typing import BinaryIO
 
-    from .input_contracts import InputIdentity, InputInventory
+    from .input_contracts import InputIdentity, InputInventory, InventoryRecord
     from .model import ParsedFile
 
 
@@ -788,22 +794,34 @@ def _build_from_raw(
     ):
         raise ValueError("派生索引必须位于原始来源根之外")
     with verified_catalog_inputs(identity, inventory, raw_root=raw_root):
-        return _build_raw_index(identity, inventory, index_path, raw_root)
+        return _build_research_index(identity, inventory, index_path, raw_root)
 
 
-def _build_raw_index(
-    identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path
+def _build_research_index(
+    identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path | None
 ) -> ResearchInformationCatalog:
     items: list[InformationItem] = []
     dispositions: list[FileDisposition] = []
-    with OccurrenceWriter(index_path, identity, inventory) as writer:
+    installation = Path(identity.installation_root)
+
+    def read(record: InventoryRecord, *, retain: bool) -> bytes | None:
+        if raw_root is not None:
+            return read_source(record, raw_root=raw_root, retain=retain)
+        return read_record(record, root=installation, relative=record.path, retain=retain)
+
+    with OccurrenceWriter(
+        index_path, identity, inventory, metadata_only=raw_root is None
+    ) as writer:
         for record in inventory.records:
+            raw_status = "unknown"
+            if record.read_status == "read":
+                raw_status = "proven" if raw_root is not None else "observed"
             if record.path.partition("/")[0].casefold() == "%localappdata%":
-                read_source(record, raw_root=raw_root, retain=False)
+                read(record, retain=False)
                 row = FileDisposition(
                     path=record.path,
                     category=record.category,
-                    raw_status="proven" if record.read_status == "read" else "unknown",
+                    raw_status=raw_status,
                     decode_status="not_attempted",
                     parse_status="not_attempted",
                     semantic_status="unknown",
@@ -846,9 +864,8 @@ def _build_raw_index(
             raw = (
                 None
                 if zip_container
-                else read_source(
+                else read(
                     record,
-                    raw_root=raw_root,
                     retain=script
                     or localization
                     or document
@@ -857,7 +874,6 @@ def _build_raw_index(
                     or shader_source,
                 )
             )
-            raw_status = "proven" if record.read_status == "read" else "unknown"
             domain = record.path.rpartition("/")[0] or "."
             diagnostics = tuple(f"{d.code}: {d.message}" for d in record.diagnostics)
             parsed = None
@@ -931,7 +947,12 @@ def _build_raw_index(
                     if unconsumed or language == "?":
                         diagnostics += (f"language={language}; unconsumed={unconsumed}",)
             elif zip_container:
-                with verified_source(record, raw_root=raw_root) as stream:
+                stream_context = (
+                    verified_source(record, raw_root=raw_root)
+                    if raw_root is not None
+                    else verified_record(record, root=installation, relative=record.path)
+                )
+                with stream_context as stream:
                     try:
                         members, errors = _zip_members(stream)
                     except zipfile.BadZipFile as error:
@@ -971,6 +992,8 @@ def _build_raw_index(
                     "unresolved",
                     "unknown format retained; discovery cannot be silently excluded",
                 )
+            if raw_root is None and diagnostics:
+                diagnostics = (f"diagnostic_count:{len(diagnostics)}",)
             row = FileDisposition(
                 record.path,
                 category,
@@ -993,6 +1016,8 @@ def _build_raw_index(
                 writer.add_structured_json(record, json_result)
             if parsed is not None:
                 writer.add_parsed(record, parsed)
+                if raw_root is None:
+                    continue
                 if parsed.parse_status == "complete":
                     items.extend(
                         _parsed_script_items(
@@ -1013,17 +1038,18 @@ def _build_raw_index(
                         )
                     )
             elif record.sha256 is not None:
-                items.append(
-                    InformationItem(
-                        id=_item_id(domain, "__source__", record.path),
-                        domain=domain,
-                        name="__source__",
-                        source=record.path,
-                        source_sha256=record.sha256,
-                        source_line=None,
-                        notes=reason,
+                if raw_root is not None:
+                    items.append(
+                        InformationItem(
+                            id=_item_id(domain, "__source__", record.path),
+                            domain=domain,
+                            name="__source__",
+                            source=record.path,
+                            source_sha256=record.sha256,
+                            source_line=None,
+                            notes=reason,
+                        )
                     )
-                )
                 for ordinal, (key, value, line) in enumerate(entries):
                     writer.add(
                         record.path,
@@ -1060,7 +1086,9 @@ def _build_raw_index(
             "build_id": identity.build_id,
             "branch": identity.branch,
         },
-        roots={"raw": str(raw_root)},
+        roots={"raw": str(raw_root)}
+        if raw_root is not None
+        else {"installation": str(installation)},
         items=tuple(items),
         layered=LayeredCatalog(
             identity, inventory, rows, index, base_frontier(identity, rows), raw_root

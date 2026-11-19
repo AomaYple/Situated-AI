@@ -18,7 +18,12 @@ import pytest
 from typer.testing import CliRunner, Result
 
 from pdx import cli, config, research_output, version_contracts
-from pdx.capability_catalog import indexed_lines, indexed_parsed_file, structured_json_source
+from pdx.capability_catalog import (
+    OccurrenceWriter,
+    indexed_lines,
+    indexed_parsed_file,
+    structured_json_source,
+)
 from pdx.committed_raw import open_committed_capture
 from pdx.information_catalog import _build_from_raw
 from pdx.input_contracts import (
@@ -321,6 +326,69 @@ def test_analyze_research_refuses_to_skip_writing(capture, tmp_path: Path) -> No
     )
     assert result.exit_code == 2
     assert "--no-write" in result.output
+    assert not output.exists()
+
+
+@pytest.fixture
+def live_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    root = tmp_path / "game-installation"
+    version = version_contracts.CURRENT_VERSION
+    sources = {
+        **_IDENTITY_SOURCE,
+        "launcher/launcher-settings.json": json.dumps(
+            {"gameId": "victoria3", "rawVersion": version, "version": version}
+        ).encode(),
+        "game/common/ample/sample.txt": b'sample_key = { key = "synthetic_value_do_not_index" }',
+        "game/config.json": b'{"key":"synthetic_value_do_not_index"}',
+        "game/docs/example.md": b"synthetic_value_do_not_index",
+    }
+    for name, data in sources.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    monkeypatch.setattr(config, "ROOT", root)
+    return root
+
+
+def test_analyze_installation_binds_full_denominator_and_publishes_only_locators(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    catalog = json.loads(data)["分层目录"]
+    assert all(row["raw"] is None for row in catalog["input_inventory"]["records"])
+    assert {row["path"] for row in catalog["dispositions"]} == {
+        path.relative_to(live_installation).as_posix()
+        for path in live_installation.rglob("*")
+        if path.is_file()
+    }
+    assert b"synthetic_value_do_not_index" not in data
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute("SELECT count(scalar) FROM occurrences").fetchone() == (0,)
+        assert database.execute(
+            "SELECT line FROM occurrences WHERE key='sample_key'"
+        ).fetchone() == (1,)
+    assert b"synthetic_value_do_not_index" not in (output / "occurrences.sqlite").read_bytes()
+    assert catalog["coverage"][0]["layer"] == "source_bytes"
+    assert catalog["coverage"][-1]["denominator_status"] == "unknown"
+
+
+def test_analyze_installation_refuses_drift_after_indexing(
+    tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    publish = OccurrenceWriter.publish
+
+    def publish_then_edit(writer):
+        index = publish(writer)
+        (live_installation / "game/common/ample/sample.txt").write_bytes(b"sample_key = fresh")
+        return index
+
+    monkeypatch.setattr(OccurrenceWriter, "publish", publish_then_edit)
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 1, result.output
     assert not output.exists()
 
 

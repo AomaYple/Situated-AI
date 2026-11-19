@@ -289,8 +289,16 @@ class OccurrenceIndex:
 class OccurrenceWriter:
     """一次构建事务；异常或中断不发布候选，也不覆盖上一次索引。"""
 
-    def __init__(self, path: Path, identity: InputIdentity, inventory: InputInventory) -> None:
+    def __init__(
+        self,
+        path: Path,
+        identity: InputIdentity,
+        inventory: InputInventory,
+        *,
+        metadata_only: bool = False,
+    ) -> None:
         self.path, self.identity, self.inventory = path, identity, inventory
+        self.metadata_only = metadata_only
         self.implementation = implementation_digest()
         self.count = self.files = 0
         self.connection: sqlite3.Connection
@@ -409,7 +417,7 @@ class OccurrenceWriter:
                 kind,
                 key,
                 operator,
-                scalar,
+                None if self.metadata_only else scalar,
                 int(quoted),
                 line,
                 parse_status,
@@ -421,7 +429,14 @@ class OccurrenceWriter:
         return occurrence_id
 
     def add_structured_json(self, record: InventoryRecord, result: JsonResult) -> None:
-        self.add_details(record.path, structured_json=_json_details(result))
+        if not self.metadata_only:
+            self.add_details(record.path, structured_json=_json_details(result))
+        else:
+            document = result.document
+            self.add_details(
+                record.path,
+                structured_json_node_count=0 if document is None else len(document.nodes),
+            )
         if result.document is not None:
             assert record.sha256 is not None
             assert result.root_line is not None
@@ -446,7 +461,12 @@ class OccurrenceWriter:
         header = result.rows[0].cells if result.rows else ()
         self.add_details(
             record.path,
-            structured_csv={"delimiter": ";", "header": header, "rows_read": len(result.rows)},
+            structured_csv={
+                "delimiter": ";",
+                "columns": len(header),
+                "header": () if self.metadata_only else header,
+                "rows_read": len(result.rows),
+            },
         )
         for ordinal, row in enumerate(result.rows):
             path = ("row", str(ordinal))
@@ -484,29 +504,22 @@ class OccurrenceWriter:
 
     def add_parsed(self, record: InventoryRecord, parsed: ParsedFile) -> None:
         assert record.sha256 is not None
-        row = self.connection.execute(
-            "SELECT details FROM source_details WHERE source=?", (record.path,)
-        ).fetchone()
-        details = json.loads(row[0])
-        details["parser"] = {
-            name: getattr(parsed, name)
-            for name in (
-                "encoding",
-                "had_bom",
-                "errors",
-                "max_depth",
-                "unconsumed_tokens",
-                "diagnostics",
-                "token_count",
-                "decoding_error",
-            )
-        }
-        # 输入 reader 已逐字节验证这份 record，原样保留来源而不再读取原件。
-        details["parser"]["raw_sha256"] = record.sha256
-        details["parser"]["raw_size"] = record.size
-        self.connection.execute(
-            "UPDATE source_details SET details=? WHERE source=?", (_json(details), record.path)
-        )
+        if not self.metadata_only:
+            details = {
+                name: getattr(parsed, name)
+                for name in (
+                    "encoding",
+                    "had_bom",
+                    "errors",
+                    "max_depth",
+                    "unconsumed_tokens",
+                    "diagnostics",
+                    "token_count",
+                    "decoding_error",
+                )
+            }
+            details.update(raw_sha256=record.sha256, raw_size=record.size)
+            self.add_details(record.path, parser=details)
         # 显式栈保留匿名块、裸标量与重复赋值；不让目录遍历比共享 parser 更易栈溢出。
         stack: list[
             tuple[Assignment | Block | Scalar, tuple[int, ...], tuple[str, ...], str | None]
@@ -674,7 +687,7 @@ class LayeredCatalog:
     dispositions: tuple[FileDisposition, ...]
     index: OccurrenceIndex
     frontier: tuple[UnknownFrontier, ...]
-    raw_root: Path
+    raw_root: Path | None
 
     def __post_init__(self) -> None:
         validate_inputs(self.identity, self.inventory)
@@ -688,9 +701,15 @@ class LayeredCatalog:
             len(self.inventory.records),
         ):
             raise ValueError("分层目录与索引 epoch/分母不相同")
-        with verified_catalog_inputs(self.identity, self.inventory, raw_root=self.raw_root):
-            if any(row.raw_status != "proven" for row in self.dispositions):
-                raise ValueError("完整 raw 分母存在未验证的逐项处置")
+        if self.raw_root is None:
+            if any(record.raw is not None for record in self.inventory.records) or any(
+                row.raw_status != "observed" for row in self.dispositions
+            ):
+                raise ValueError("现场来源目录必须逐项核验且不声明原件保全")
+        else:
+            with verified_catalog_inputs(self.identity, self.inventory, raw_root=self.raw_root):
+                if any(row.raw_status != "proven" for row in self.dispositions):
+                    raise ValueError("完整 raw 分母存在未验证的逐项处置")
 
     @property
     def epoch_id(self) -> str:
@@ -699,7 +718,7 @@ class LayeredCatalog:
     @property
     def coverage(self) -> tuple[LayerCoverage, ...]:
         total = len(self.dispositions)
-        raw = sum(row.raw_status == "proven" for row in self.dispositions)
+        raw = sum(row.raw_status in {"proven", "observed"} for row in self.dispositions)
         parsed = sum(row.parse_status == "complete" for row in self.dispositions)
         na = sum(row.parse_status == "not_applicable" for row in self.dispositions)
         denominator = (
@@ -714,7 +733,14 @@ class LayeredCatalog:
             else "partial"
         )
         return (
-            LayerCoverage("raw", unit, total, raw, total - raw, denominator_status=denominator),
+            LayerCoverage(
+                "raw" if self.raw_root is not None else "source_bytes",
+                unit,
+                total,
+                raw,
+                total - raw,
+                denominator_status=denominator,
+            ),
             LayerCoverage(
                 "decode_parse",
                 unit,
@@ -771,6 +797,9 @@ class LayeredCatalog:
             "disposition_counts": dict(sorted(counts.items())),
             "dispositions": [asdict(row) for row in self.dispositions],
             "index": self.index.to_dict(),
+            "index_projection": "full_private_index"
+            if self.raw_root is not None
+            else "source_locators",
             "unknown_frontier": [asdict(row) for row in self.frontier],
         }
 
@@ -800,6 +829,8 @@ def structured_json_source(layered: LayeredCatalog, source: str) -> JsonDocument
     Leaf coordinates remain unknown. A source-level root is indexed in SQLite;
     individual fields are queried through the validated typed document, not SQL.
     """
+    if layered.raw_root is None:
+        raise ValueError("现场索引只含来源定位，JSON 原文需从已核验安装读取")
     validate_inputs(layered.identity, layered.inventory)
     try:
         ordinal = next(
