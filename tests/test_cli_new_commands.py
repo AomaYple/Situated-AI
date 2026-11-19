@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,6 +19,7 @@ from types import SimpleNamespace
 import pytest
 from _helpers import run_cli as _run
 from conftest import NEEDS_GAME
+from packaging import markers
 
 from pdx import config, mods
 
@@ -76,6 +78,40 @@ def test_lock与当前环境对账(tmp_path, monkeypatch, actual_version, expect
     assert lockfile.read(target) == {"sample-package": "1.0"}
 
 
+@pytest.mark.parametrize("foreign_platform", ["linux", "darwin"])
+def test_lock_refuses_foreign_platform_write(tmp_path, monkeypatch, foreign_platform) -> None:
+    from pdx import lockfile
+
+    target = tmp_path / lockfile.LOCK_FILE
+    target.write_bytes((config.REPO / lockfile.LOCK_FILE).read_bytes())
+    previous = target.read_bytes()
+    (tmp_path / "pyproject.toml").write_bytes((config.REPO / "pyproject.toml").read_bytes())
+    monkeypatch.setattr(lockfile, "config", SimpleNamespace(REPO=tmp_path))
+    monkeypatch.setattr(
+        lockfile,
+        "sys",
+        SimpleNamespace(
+            platform=foreign_platform,
+            version_info=sys.version_info,
+            implementation=sys.implementation,
+        ),
+    )
+    environment = markers.default_environment()
+    environment["sys_platform"] = foreign_platform
+    environment["platform_system"] = "Linux" if foreign_platform == "linux" else "Darwin"
+    monkeypatch.setattr(markers, "default_environment", environment.copy)
+    assert "colorama" not in lockfile.resolve()
+
+    result = _run("lock", "--write")
+
+    assert result.exit_code == 1, result.output
+    assert "Windows" in result.output
+    assert target.read_bytes() == previous
+    result = _run("lock")
+    assert result.exit_code == 1, result.output
+    assert "colorama" in result.output
+
+
 def test_lock写入模式可用(tmp_path, monkeypatch) -> None:
     """`--write` 走一遍渲染与落盘（写到临时文件，不动仓库里那份）。"""
     from pdx import lockfile
@@ -86,6 +122,13 @@ def test_lock写入模式可用(tmp_path, monkeypatch) -> None:
     )
     target = tmp_path / lockfile.LOCK_FILE
     monkeypatch.setattr(lockfile, "config", SimpleNamespace(REPO=tmp_path))
+    monkeypatch.setattr(
+        lockfile,
+        "sys",
+        SimpleNamespace(
+            platform="win32", version_info=sys.version_info, implementation=sys.implementation
+        ),
+    )
     result = _run("lock", "--write")
     assert result.exit_code == 0, result.output
     assert target.is_file()

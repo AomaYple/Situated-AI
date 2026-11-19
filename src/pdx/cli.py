@@ -2263,7 +2263,9 @@ def strings_cmd(
 
 @app.command("lock")
 def lock_cmd(
-    write: bool = typer.Option(False, "--write", help="按当前环境重写 requirements.lock"),
+    write: bool = typer.Option(
+        False, "--write", help="从 Windows CPython 环境重写 requirements.lock"
+    ),
 ) -> None:
     """核对已安装的运行期和 `dev` 依赖闭包。
 
@@ -2271,6 +2273,14 @@ def lock_cmd(
     `Requires-Dist` 展开闭包，并核对版本约束。默认与 `requirements.lock` 对账，
     有差异时退出码为 1。Windows 开发环境可用 `--write` 更新锁文件。
     """
+    if write:
+        try:
+            count = lockfile.write()
+        except (OSError, RuntimeError, ValueError) as exc:
+            _fail(f"依赖锁写入失败：{exc}", EXIT_FAILED)
+        console.print(f"[green]已写入 {lockfile.LOCK_FILE}：{count} 条[/]")
+        return
+
     try:
         lockfile.validate_python_version()
     except (ModuleNotFoundError, RuntimeError, ValueError) as exc:
@@ -2279,10 +2289,6 @@ def lock_cmd(
         actual = lockfile.resolve()
     except (OSError, RuntimeError, ValueError) as exc:
         _fail(f"依赖锁生成失败：{exc}", EXIT_FAILED)
-    if write:
-        count = lockfile.write(actual)
-        console.print(f"[green]已写入 {lockfile.LOCK_FILE}：{count} 条[/]")
-        return
 
     locked = lockfile.read()
     if not locked:

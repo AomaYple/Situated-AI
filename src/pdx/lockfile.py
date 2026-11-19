@@ -18,7 +18,7 @@
 ----------
 * 已提交的锁描述 Windows 闭包，其中包括 ``colorama`` 等平台相关依赖。
 * `packaging` 按 PEP 508 解析平台、Python 和 extra 条件，按 PEP 440 校验版本约束。
-* ``v3 lock`` 默认**核对**，``--write`` 在仓库根目录暂存并原子替换现有锁。
+* ``v3 lock`` 默认**核对**。``--write`` 由 Windows CPython 在仓库根目录暂存并原子替换现有锁。
 """
 
 from __future__ import annotations
@@ -255,7 +255,9 @@ def compare(pinned: dict[str, str], locked: dict[str, str]) -> list[Drift]:
 
 
 def write(pinned: dict[str, str] | None = None) -> int:
-    """写锁文件，返回写入的条目数。"""
+    """在 Windows CPython 环境写锁文件，返回写入的条目数。"""
+    if sys.platform != "win32" or sys.implementation.name != "cpython":
+        raise RuntimeError(f"{LOCK_FILE} 只能由 Windows CPython 环境生成")
     validate_python_version()
     data = resolve() if pinned is None else pinned
     text = render(data)

@@ -20,6 +20,7 @@ import json
 import sys
 from importlib.metadata import Distribution, PackageNotFoundError
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -128,6 +129,13 @@ def test_failed_replace_preserves_previous_lock(tmp_path, monkeypatch) -> None:
         '[project]\nrequires-python = "==3.15.2"\n', encoding="utf-8"
     )
     monkeypatch.setattr(lockfile.config, "REPO", tmp_path)
+    monkeypatch.setattr(
+        lockfile,
+        "sys",
+        SimpleNamespace(
+            platform="win32", version_info=sys.version_info, implementation=sys.implementation
+        ),
+    )
     lockfile.write({"sample-package": "1.0"})
     previous = target.read_bytes()
 

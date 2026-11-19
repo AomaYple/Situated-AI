@@ -80,6 +80,21 @@ def test_detects_abandoned_pip_directories_only_at_root(tmp_path: Path) -> None:
     assert _paths(find_violations(tmp_path)) == set(names)
 
 
+def test_reports_default_mutmut_output_without_adding_cleanup_permission(tmp_path: Path) -> None:
+    output = tmp_path / "mutants"
+    output.mkdir()
+    stats = output / "mutmut-stats.json"
+    stats.write_bytes(b"{}")
+    (tmp_path / "src" / "mutants").mkdir(parents=True)
+
+    rows = find_violations(tmp_path)
+    assert _paths(rows) == {"mutants"}
+    result = clean(tmp_path, apply=True)
+    assert result["skipped"] == rows
+    assert result["removed"] == []
+    assert stats.read_bytes() == b"{}"
+
+
 def test_detects_root_caches_bytecode_and_nested_pycache(tmp_path: Path) -> None:
     (tmp_path / ".pytest_cache").mkdir()
     (tmp_path / ".coverage.123").write_text("data", encoding="utf-8")
