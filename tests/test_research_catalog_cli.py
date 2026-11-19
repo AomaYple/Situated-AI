@@ -78,6 +78,7 @@ def _committed_fixture(
     *,
     version: str = version_contracts.CURRENT_VERSION,
     drift: bool = False,
+    extra_sources: dict[str, bytes] | None = None,
 ) -> tuple[Path, Path, str, int]:
     installation = tmp_path / "installation"
     store = tmp_path / "raw"
@@ -101,6 +102,7 @@ def _committed_fixture(
         "game/documents.zip": _zip_sample(),
     }
     sources.update({f"game/gfx/sample{ext}": b"resource = { setting = yes }" for ext in _FORMATS})
+    sources.update(extra_sources or {})
     if drift:
         sources["caligula_rev.txt"] = b"another-build"
 
@@ -344,6 +346,104 @@ def test_formats_diagnostics_and_locators_use_the_same_committed_denominator(
             "# original document",
             "line 2",
         ]
+
+
+def test_map_table_preserves_order_empty_cells_and_physical_source_lines(tmp_path: Path) -> None:
+    table = "game/map_data/adjacencies.csv"
+    _root, raw, epoch, count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            table: b'\xef\xbb\xbfFrom;To;Comment\r\nx;y;"first;line\r\nsecond"\r\ny;;\r\n'
+        },
+    )
+    output = tmp_path / "research-output"
+    result = _invoke(raw, epoch, output)
+    assert result.exit_code == 0, result.output
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute("SELECT count(*) FROM sources").fetchone()[0] == count
+        assert database.execute(
+            "SELECT parse_status FROM sources WHERE path=?", (table,)
+        ).fetchone() == ("complete",)
+        assert database.execute(
+            "SELECT kind, line FROM occurrences WHERE source=? AND parent_id IS NULL ORDER BY line",
+            (table,),
+        ).fetchall() == [("csv_header", 1), ("csv_row", 2), ("csv_row", 4)]
+        assert database.execute(
+            """SELECT c.key, c.scalar, p.line FROM occurrences c
+            JOIN occurrences p ON p.id=c.parent_id WHERE c.source=? AND p.kind='csv_row'
+            ORDER BY p.line, c.address""",
+            (table,),
+        ).fetchall() == [
+            ("From", "x", 2),
+            ("To", "y", 2),
+            ("Comment", "first;line\r\nsecond", 2),
+            ("From", "y", 4),
+            ("To", "", 4),
+            ("Comment", "", 4),
+        ]
+
+
+def test_map_table_reports_lexical_and_width_gaps(tmp_path: Path) -> None:
+    table = "game/map_data/adjacencies.csv"
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path, extra_sources={table: b'From;To\nx;y;extra\nz;"open\n'}
+    )
+    output = tmp_path / "research-output"
+    result = _invoke(raw, epoch, output)
+    assert result.exit_code == 0, result.output
+    catalog = json.loads((output / "information-catalog.json").read_bytes())["分层目录"]
+    disposition = next(row for row in catalog["dispositions"] if row["path"] == table)
+    assert disposition["parse_status"] == "partial"
+    assert disposition["semantic_status"] == "unknown"
+    assert any("csv_row_width:2:" in value for value in disposition["diagnostics"])
+    assert any("csv_syntax:3:" in value for value in disposition["diagnostics"])
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute(
+            "SELECT scalar FROM occurrences WHERE source=? AND kind='csv_cell' AND line=2 ORDER BY address",
+            (table,),
+        ).fetchall() == [("x",), ("y",), ("extra",)]
+
+
+def test_graphics_resources_distinguish_pdx_json_source_and_binary(tmp_path: Path) -> None:
+    skin, terrain, curves, metadata, shader, mesh, animation = (
+        f"game/gfx/resource{suffix}"
+        for suffix in (".skin", ".terrain", ".curves", ".meta", ".fxh", ".mesh", ".anim")
+    )
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            skin: b"folder = sample",
+            terrain: b"detail_scale = 1",
+            curves: b"{ type = linear }",
+            metadata: b'{"input_needs": ["one", "two"]}',
+            shader: b'Includes = { "shared.fxh" }\n[[float f() { return a + 1; }]]',
+            mesh: b"@@b@!\x08pdxasseti\x02\x00\x00\x00\x01\x00\x00\x00",
+            animation: b"\x00\xff",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    rows = {row.path: row for row in layer.dispositions}
+    for source, key in ((skin, "folder"), (terrain, "detail_scale"), (curves, "type")):
+        assert rows[source].parse_status == "complete"
+        assert layer.index.find(source=source, key=key)[0].line == 1
+    document = structured_json_source(layer, metadata)
+    assert len(document.members((), "input_needs")) == 1
+    assert rows[shader].decode_status == "complete"
+    assert rows[shader].parse_status == "not_attempted"
+    shader_hit = layer.index.search_text("return a", source=shader)[0]
+    assert (shader_hit.kind, shader_hit.line) == ("source_line", 2)
+    for source in (mesh, animation):
+        assert rows[source].category == "asset_entity_dna"
+        assert rows[source].parse_status == "not_attempted"
+        assert rows[source].semantic_status == "unknown"
+        assert layer.index.find(source=source) == ()
 
 
 def test_research_refuses_tampered_external_identity_object(

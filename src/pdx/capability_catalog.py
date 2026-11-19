@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from .committed_raw import read_source, validate_inputs, verified_catalog_inputs
 from .input_contracts import UnknownFrontier, dumps_contract
+from .input_inventory import STRUCTURED_JSON_SUFFIXES
 from .model import Assignment, Block, ParsedFile, Scalar
 from .parser import PREFIXES
 from .references import SCRIPT_SYMBOL_CATEGORIES, script_symbol_references
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from .input_contracts import InputIdentity, InputInventory, InventoryRecord, ParseStatus
+    from .structured_csv import CsvResult
 
 
 INDEX_SCHEMA = 3
@@ -58,6 +60,7 @@ def implementation_digest() -> str:
         "capability_catalog.py",
         "committed_raw.py",
         "references.py",
+        "structured_csv.py",
         "structured_json.py",
         "research_catalog.py",
         "research_output.py",
@@ -438,6 +441,47 @@ class OccurrenceWriter:
                 value_line=result.root_line,
             )
 
+    def add_map_table(self, record: InventoryRecord, result: CsvResult) -> None:
+        assert record.sha256 is not None
+        header = result.rows[0].cells if result.rows else ()
+        self.add_details(
+            record.path,
+            structured_csv={"delimiter": ";", "header": header, "rows_read": len(result.rows)},
+        )
+        for ordinal, row in enumerate(result.rows):
+            path = ("row", str(ordinal))
+            parent = self.add(
+                record.path,
+                record.sha256,
+                address=(ordinal,),
+                path=path,
+                kind="csv_row" if ordinal else "csv_header",
+                key=None,
+                operator=None,
+                scalar=None,
+                quoted=False,
+                line=row.line,
+                parse_status=result.parse_status,
+                value_kind="csv_row",
+            )
+            for column, cell in enumerate(row.cells):
+                key = header[column] if column < len(header) else None
+                self.add(
+                    record.path,
+                    record.sha256,
+                    address=(ordinal, column),
+                    path=(*path, str(column)),
+                    kind="csv_cell",
+                    key=key,
+                    operator=None,
+                    scalar=cell,
+                    quoted=False,
+                    line=row.line,
+                    parse_status=result.parse_status,
+                    parent=parent,
+                    value_kind="csv_text",
+                )
+
     def add_parsed(self, record: InventoryRecord, parsed: ParsedFile) -> None:
         assert record.sha256 is not None
         row = self.connection.execute(
@@ -731,8 +775,8 @@ def structured_json_source(layered: LayeredCatalog, source: str) -> JsonDocument
         raise KeyError(source) from None
     record, disposition = layered.inventory.records[ordinal], layered.dispositions[ordinal]
     if (
-        record.category != "structured_configuration"
-        or Path(source).suffix.casefold() != ".json"
+        disposition.category != "structured_configuration"
+        or Path(source).suffix.casefold() not in STRUCTURED_JSON_SUFFIXES
         or disposition.path != source
         or disposition.parse_status != "complete"
         or disposition.decode_status != "complete"

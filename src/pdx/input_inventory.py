@@ -44,26 +44,57 @@ _POSIX_DIR_FD_OPEN_SUPPORTED = os.open in os.supports_dir_fd
 PDX_RESOURCE_CATEGORIES = {
     ".bindings": "editor_data",
     ".compound": "asset_entity_dna",
+    ".curves": "editor_data",
     ".editordata": "editor_data",
     ".heightmap": "map_data",
     ".lines": "asset_entity_dna",
     ".map": "map_data",
     ".particle2": "asset_entity_dna",
     ".schematic": "asset_entity_dna",
+    ".skin": "asset_entity_dna",
     ".smv": "asset_entity_dna",
+    ".terrain": "map_data",
     ".vertical_borders": "map_data",
 }
+MAP_ADJACENCIES = "game/map_data/adjacencies.csv"
+STRUCTURED_JSON_SUFFIXES = frozenset({".json", ".meta"})
 _CATEGORIES = {
     "gui": {".gui", ".layout"},
-    "asset_entity_dna": {".asset", ".entity", ".dna", ".mesh", ".anim", ".gfx"},
+    "asset_entity_dna": {".asset", ".entity", ".dna", ".mesh", ".anim", ".gfx", ".mb"},
     "localization": {".yml", ".yaml"},
     "structured_configuration": {".json", ".csv", ".toml", ".ini", ".cfg", ".xml"},
     "documentation": {".md", ".rst", ".html", ".htm", ".pdf", ".rtf"},
-    "image_map": {".png", ".dds", ".tga", ".bmp", ".jpg", ".jpeg", ".tif", ".tiff"},
+    "shader_source": {".shader", ".fxh"},
+    "image_map": {
+        ".png",
+        ".dds",
+        ".tga",
+        ".bmp",
+        ".jpg",
+        ".jpeg",
+        ".tif",
+        ".tiff",
+        ".ani",
+        ".cur",
+        ".ico",
+        ".jpf",
+        ".psd",
+    },
     "font": {".ttf", ".otf", ".woff", ".woff2"},
-    "audio_video": {".wav", ".ogg", ".mp3", ".flac", ".opus", ".mp4", ".webm", ".bik"},
+    "audio_video": {
+        ".wav",
+        ".ogg",
+        ".mp3",
+        ".flac",
+        ".opus",
+        ".mp4",
+        ".webm",
+        ".bik",
+        ".bk2",
+        ".bank",
+    },
     "container": {".zip", ".7z", ".rar", ".pak", ".tar", ".gz", ".bz2", ".xz"},
-    "binary": {".exe", ".dll", ".so", ".dylib", ".bin", ".pdb"},
+    "binary": {".exe", ".dll", ".so", ".dylib", ".bin", ".pdb", ".lib", ".exp", ".dmp"},
     "pdx_script": {".txt", ".font", ".settings", ".profile", ".shortcuts", ".dlc"},
 }
 
@@ -274,6 +305,10 @@ def classify_path(relative: str) -> str:
     if path.name.casefold().startswith(("license", "licence", "copying", "copyright", "readme")):
         return "documentation"
     suffix = path.suffix.casefold()
+    if "/".join(parts) in {MAP_ADJACENCIES, "game/map_data/nodes.dat"} or suffix == ".splnet":
+        return "map_data"
+    if suffix == ".meta" and "gfx" in parts[:-1]:
+        return "structured_configuration"
     for category, suffixes in _CATEGORIES.items():
         if suffix in suffixes:
             return category

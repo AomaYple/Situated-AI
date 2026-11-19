@@ -29,11 +29,17 @@ from .cache import parse_cached
 from .capability_catalog import FileDisposition, LayeredCatalog, OccurrenceWriter, base_frontier
 from .committed_raw import read_source, verified_catalog_inputs, verified_source
 from .input_contracts import ArtifactRef, InputContractError, ParseStatus
-from .input_inventory import PDX_RESOURCE_CATEGORIES, classify_path
+from .input_inventory import (
+    MAP_ADJACENCIES,
+    PDX_RESOURCE_CATEGORIES,
+    STRUCTURED_JSON_SUFFIXES,
+    classify_path,
+)
 from .localization import SUFFIXES, parse_loc_entries_with_lines
 from .model import Block, ParseError
 from .parser import parse_bytes
 from .scan import FileEntry, walk_files
+from .structured_csv import parse_map_table
 from .structured_json import parse_json
 
 if TYPE_CHECKING:
@@ -809,7 +815,8 @@ def _build_raw_index(
             suffix = Path(record.path).suffix.casefold()
             resource_category = PDX_RESOURCE_CATEGORIES.get(suffix)
             category = record.category
-            if resource_category is not None and category == "unknown":
+            map_table = record.path.casefold() == MAP_ADJACENCIES
+            if category == "unknown" or map_table:
                 # 历史盘点的类别属于已提交原件，更新只写入派生处置。
                 category = classify_path(record.path)
             pdx_resource = resource_category is not None and category == resource_category
@@ -826,7 +833,11 @@ def _build_raw_index(
                 ".html",
                 ".htm",
             }
-            structured_json = category == "structured_configuration" and suffix == ".json"
+            structured_json = (
+                category == "structured_configuration" and suffix in STRUCTURED_JSON_SUFFIXES
+            )
+            shader_source = category == "shader_source"
+            csv_result = None
             json_result = None
             zip_container = (
                 category == "container" and suffix == ".zip" and record.read_status == "read"
@@ -837,7 +848,12 @@ def _build_raw_index(
                 else read_source(
                     record,
                     raw_root=raw_root,
-                    retain=script or localization or document or structured_json,
+                    retain=script
+                    or localization
+                    or document
+                    or structured_json
+                    or map_table
+                    or shader_source,
                 )
             )
             raw_status = "proven" if record.read_status == "read" else "unknown"
@@ -847,7 +863,7 @@ def _build_raw_index(
             entries: list[tuple[str, str, int]] = []
             language = "?"
             members: list[dict[str, object]] = []
-            document_lines: list[tuple[int, str]] = []
+            text_lines: list[tuple[int, str]] = []
             decode_status = "not_attempted"
             parse_status: ParseStatus = "not_attempted"
             disposition = "research_only"
@@ -860,6 +876,9 @@ def _build_raw_index(
                     # 通用 parser 也接受裸标量。这些资料的完整结构至少须包含一块。
                     if b"\x00" in raw:
                         parsed.errors.append("pdx_resource_contains_nul")
+                    elif suffix in {".skin", ".terrain"}:
+                        if not parsed.top_assignments:
+                            parsed.errors.append("pdx_resource_missing_top_level_assignment")
                     elif parsed.max_depth == 0:
                         parsed.errors.append("pdx_resource_missing_top_level_block")
                 parse_status = parsed.parse_status
@@ -872,6 +891,13 @@ def _build_raw_index(
                     reason = "shared_parser_incomplete"
                 else:
                     reason = "PDX syntax and full occurrence index; exact engine semantics require separate evidence"
+            elif map_table and raw is not None:
+                csv_result = parse_map_table(raw)
+                decode_status, parse_status = csv_result.decode_status, csv_result.parse_status
+                diagnostics += csv_result.diagnostics
+                reason = (
+                    "map CSV rows and cells indexed; map interpretation requires separate evidence"
+                )
             elif structured_json and raw is not None:
                 json_result = parse_json(raw)
                 decode_status, parse_status = json_result.decode_status, json_result.parse_status
@@ -909,17 +935,22 @@ def _build_raw_index(
                         parse_status = "partial" if errors else "complete"
                         reason = "safe ZIP metadata mapping; member content/export/license not established"
                         diagnostics += errors
-            elif document and raw is not None:
+            elif (document or shader_source) and raw is not None:
                 try:
                     text = raw.decode("utf-8-sig")
                 except UnicodeDecodeError as error:
                     decode_status, parse_status = "failed", "failed"
                     diagnostics += (str(error),)
-                    reason = "document_decode_failed_no_declared_alternative_codec"
+                    format_name = "document" if document else "shader_source"
+                    reason = f"{format_name}_decode_failed_no_declared_alternative_codec"
                 else:
-                    decode_status, parse_status = "complete", "not_applicable"
-                    document_lines = list(enumerate(text.splitlines(), 1))
-                    reason = "full document line index; source version bound to epoch; engine export not executed"
+                    decode_status = "complete"
+                    text_lines = list(enumerate(text.splitlines(), 1))
+                    if document:
+                        parse_status = "not_applicable"
+                        reason = "full document line index; source version bound to epoch; engine export not executed"
+                    else:
+                        reason = "shader source lines indexed; mixed PDX/shader grammar pending"
             elif category in {"image_map", "font", "audio_video", "binary"}:
                 parse_status = "not_applicable"
                 reason = "binary/media raw engineering input; no text reader or engine observation inferred"
@@ -950,6 +981,8 @@ def _build_raw_index(
             if localization:
                 writer.add_details(record.path, localization_language=language)
             writer.add_container_members(record.path, members)
+            if csv_result is not None:
+                writer.add_map_table(record, csv_result)
             if json_result is not None:
                 writer.add_structured_json(record, json_result)
             if parsed is not None:
@@ -999,19 +1032,19 @@ def _build_raw_index(
                         line=line,
                         parse_status=parse_status,
                     )
-                for line, text in document_lines:
+                for line, text in text_lines:
                     writer.add(
                         record.path,
                         record.sha256 or "",
                         address=(line,),
                         path=("line", str(line)),
-                        kind="document_line",
+                        kind="source_line" if shader_source else "document_line",
                         key=None,
                         operator=None,
                         scalar=text,
                         quoted=True,
                         line=line,
-                        parse_status="not_applicable",
+                        parse_status=parse_status,
                     )
         index = writer.publish()
     rows = tuple(dispositions)
