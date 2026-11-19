@@ -131,7 +131,7 @@ jobs:
             -o addopts="" --benchmark-only --benchmark-json=bench.json -q
 
       - name: 把基准数字写进 job summary
-        run: python tools/ci/bench_summary.py bench.json >> "$GITHUB_STEP_SUMMARY"
+        run: python tools/ci/bench_summary.py bench.json --github-step-summary
 
       - name: Python 时间与分配峰值（输出指纹随报告保存）
         run: python -m pdx.performance --output performance.json
