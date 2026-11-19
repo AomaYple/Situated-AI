@@ -59,7 +59,7 @@ def _source_data():
             "common/ai_strategies/00_default_strategy.txt"
         ]
         engine_reader_115.project_information_readers(data["readers"])
-    if version_contracts.active_version() == "1.15.1":
+    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
         # Independent declaration oracle: name the complete retired set here,
         # rather than deriving expected rule identities from the production loader.
         retired = {
@@ -139,29 +139,64 @@ def rules() -> decision_rules.RuleSet:
     return decision_rules.load()
 
 
-@pytest.mark.integration
-def test_shared_information_readers_have_sha_locked_native_evidence(rules):
-    if not (config.GAME / "common/laws/readme.md").is_file():
-        pytest.skip("需要锁定版本的游戏原件")
-    inputs = decision_adapters.read_inputs(decision_adapters.load())
-    evidence = decision_adapters.reader_evidence(inputs)
-    native_readers = decision_interfaces.proven_reader_words()
-    assert all(
-        reader.engine in evidence
-        or reader.engine in native_readers
-        or reader.engine in country_state.owned_triggers(country_state.load())
-        for reader in rules.readers
-    )
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
-    script = decision_rules.patch(
+@pytest.fixture(scope="module")
+def frozen_strategy(rules):
+    """Exercise current rule semantics on the pinned 1.15.1 strategy sample."""
+    version = "1.15.1"
+    path = version_contracts.research_path("vanilla-ai", "00_default_strategy.txt", version)
+    baseline = path.read_text(encoding="utf-8")
+    digest = version_contracts.contract(version).baseline_strategy_sha256
+    assert hashlib.sha256(baseline.encode("utf-8")).hexdigest() == digest
+    return baseline, replace(rules, baseline_sha256=digest)
+
+
+@pytest.fixture(scope="module")
+def frozen_strategy_script(frozen_strategy):
+    baseline, rules = frozen_strategy
+    return decision_rules.patch(
         baseline,
         rules,
         baseline=baseline,
-        reader_words=frozenset(evidence) | native_readers,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
         country_policy=country_state.load(),
     )
-    assert "bureaucracy >= 0" in script
-    assert "has_insurrectionary_interest_groups = no" in script
+
+
+@pytest.fixture(scope="module")
+def current_native_strategy():
+    if not (config.GAME / "common/laws/readme.md").is_file():
+        pytest.skip("需要锁定版本的游戏原件")
+    version_contracts.verify_installation_identity(config.ROOT)
+    return decisions.baseline_text()
+
+
+@pytest.fixture(scope="module")
+def current_native_strategy_script(rules, current_native_strategy):
+    inputs = decision_adapters.read_inputs(decision_adapters.load())
+    evidence = decision_adapters.reader_evidence(inputs)
+    native_readers = decision_interfaces.proven_reader_words()
+    words = frozenset(evidence) | native_readers
+    owned_triggers = country_state.owned_triggers(country_state.load())
+    assert all(
+        reader.engine in words or reader.engine in owned_triggers for reader in rules.readers
+    )
+    baseline = current_native_strategy
+    return decision_rules.patch(
+        baseline,
+        rules,
+        baseline=baseline,
+        reader_words=words,
+        country_policy=country_state.load(),
+    )
+
+
+@pytest.mark.integration
+def test_shared_information_readers_have_sha_locked_native_evidence(
+    rules, current_native_strategy, current_native_strategy_script
+):
+    assert "bureaucracy >= 0" in current_native_strategy_script
+    assert "has_insurrectionary_interest_groups = no" in current_native_strategy_script
+    _assert_preserved_strategy(current_native_strategy, current_native_strategy_script, rules)
 
 
 @cache
@@ -238,7 +273,9 @@ def test_synthetic_values_cover_every_production_reader(rules):
     assert {reader.key for reader in rules.readers} <= _values().keys()
 
 
-def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rules):
+def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(
+    rules, frozen_strategy, frozen_strategy_script
+):
     source = _source_data()
     assert {rule.id for rule in rules.rules} == {row["id"] for row in source["rules"]}
     assert {reader.key for reader in rules.readers} == set(source["readers"])
@@ -256,14 +293,12 @@ def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rule
         "geography",
         "identity",
     }
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
-    script = decision_rules.patch(
-        baseline,
-        rules,
-        baseline=baseline,
-        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
-        country_policy=country_state.load(),
-    )
+    baseline, _ = frozen_strategy
+    _assert_preserved_strategy(baseline, frozen_strategy_script, rules)
+    assert "ai_strategy_default" not in rules.groups()
+
+
+def _assert_preserved_strategy(baseline, script, rules):
     assert not parse_text(script).errors
     assert not decisions.player_boundary_issues(script)
     for field in rules.groups():
@@ -276,10 +311,10 @@ def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rule
         flags=re.DOTALL,
     )
     assert restored == baseline
-    assert "ai_strategy_default" not in rules.groups()
 
 
-def test_unknown_player_and_empty_switches_preserve_vanilla(rules):
+def test_unknown_player_and_empty_switches_preserve_vanilla(frozen_strategy):
+    baseline, rules = frozen_strategy
     assert decision_rules.evaluate(rules, {}, is_ai=True) == {}
     assert decision_rules.evaluate(rules, _values(), is_ai=False) == {}
     assert decision_rules.evaluate(rules, _values(), is_ai=True, enabled_domains=frozenset()) == {}
@@ -289,7 +324,6 @@ def test_unknown_player_and_empty_switches_preserve_vanilla(rules):
         )
         is None
     )
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     assert (
         decision_rules.patch(
             baseline,
@@ -696,15 +730,25 @@ def _geography_branch_value(branch: Block, facts: dict[str, bool]) -> float:
     return float(value.value.text)
 
 
-def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(rules):
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
-    generated = decision_rules.patch(
-        baseline,
-        rules,
-        baseline=baseline,
-        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
-        country_policy=country_state.load(),
-    )
+def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(
+    rules, frozen_strategy, frozen_strategy_script
+):
+    baseline, _ = frozen_strategy
+    _assert_land_adjacency_preserved(baseline, frozen_strategy_script)
+    isolation = next(reader for reader in rules.readers if reader.key == "target_isolated")
+    assert (isolation.engine, isolation.scope) == ("is_isolated_from_market", "target_state")
+    isolation_cost = next(rule for rule in rules.rules if rule.id == "lj14_homeland_isolation_cost")
+    assert any(predicate.fact == "target_isolated" for predicate in isolation_cost.conditions)
+
+
+@pytest.mark.integration
+def test_current_native_land_adjacency_is_preserved(
+    current_native_strategy, current_native_strategy_script
+):
+    _assert_land_adjacency_preserved(current_native_strategy, current_native_strategy_script)
+
+
+def _assert_land_adjacency_preserved(baseline, generated):
     vanilla_strategy = parse_text(baseline).root.first("ai_strategy_default")
     generated_strategy = parse_text(generated).root.first("ai_strategy_default")
     assert vanilla_strategy is not None
@@ -756,15 +800,12 @@ def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(ru
             )
             assert generated_value == expected, (marker, profile)
 
-    isolation = next(reader for reader in rules.readers if reader.key == "target_isolated")
-    assert (isolation.engine, isolation.scope) == ("is_isolated_from_market", "target_state")
-    isolation_cost = next(rule for rule in rules.rules if rule.id == "lj14_homeland_isolation_cost")
-    assert any(predicate.fact == "target_isolated" for predicate in isolation_cost.conditions)
-
 
 @pytest.mark.parametrize("high_uses_target", [True, False])
-def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_uses_target):
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+def test_missing_scope_obeys_priority_without_blocking_known_false(
+    frozen_strategy, high_uses_target
+):
+    baseline, rules = frozen_strategy
     original = next(rule for rule in rules.rules if rule.id == "geographic_port_continuity")
     top = replace(original, field=("state_value",), priority=100, value=1.1)
     lower = replace(original, id="lower", priority=50, value=0.9)
@@ -823,8 +864,8 @@ class GeneratedRuleBlocks(NamedTuple):
 
 
 @pytest.fixture(scope="module")
-def generated_rule_blocks(rules):
-    return _generated_rule_blocks(rules)
+def generated_rule_blocks(rules, frozen_strategy_script):
+    return _generated_rule_blocks(rules, frozen_strategy_script)
 
 
 @pytest.fixture(params=("1.14.5", "1.15.0"))
@@ -836,18 +877,18 @@ def historical_school_rules(request):
 
 @pytest.fixture
 def historical_school_blocks(historical_school_rules):
-    return _generated_rule_blocks(historical_school_rules)
-
-
-def _generated_rule_blocks(rules):
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+    baseline = decisions.baseline_text()
     generated = decision_rules.patch(
         baseline,
-        rules,
+        historical_school_rules,
         baseline=baseline,
         reader_evidence=_SYNTHETIC_READER_EVIDENCE,
         country_policy=country_state.load(),
     )
+    return _generated_rule_blocks(historical_school_rules, generated)
+
+
+def _generated_rule_blocks(rules, generated):
     blocks = {}
     for field in rules.groups():
         field_name = ".".join(field)
@@ -1073,8 +1114,17 @@ def test_geographic_cost_precedes_reward_and_missing_state_preserves_vanilla(
     assert _evaluate_script(blocks["state_value"], engine) == 1.0
 
 
-def test_drift_bad_path_and_unproven_reader_refuse_generation(rules):
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
+def test_drift_bad_path_and_unproven_reader_refuse_generation(frozen_strategy):
+    baseline, rules = frozen_strategy
+    _assert_generation_refuses_invalid_inputs(baseline, rules)
+
+
+@pytest.mark.integration
+def test_current_native_strategy_refuses_invalid_generation(rules, current_native_strategy):
+    _assert_generation_refuses_invalid_inputs(current_native_strategy, rules)
+
+
+def _assert_generation_refuses_invalid_inputs(baseline, rules):
     with pytest.raises(ValueError, match="漂移"):
         decision_rules.patch(baseline, rules, baseline=baseline + "\n")
     broken = replace(
@@ -1187,7 +1237,9 @@ def test_unconsumed_or_invalid_shared_constraint_fails_closed(contexts):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
-def test_shared_constraints_expand_into_real_fields_once(rules):
+def test_shared_constraints_expand_into_real_fields_once(
+    rules, frozen_strategy, frozen_strategy_script
+):
     data = _source_data()
     selected = next(row for row in data["rules"] if row["id"] == "fiscal_construction_guard")
     conditions = copy.deepcopy(selected["conditions"])
@@ -1206,19 +1258,16 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
             assert decision_rules.evaluate(policy, values, is_ai=True) == decision_rules.evaluate(
                 rules, values, is_ai=True
             )
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
-    assert decision_rules.patch(
-        baseline,
-        policy,
-        baseline=baseline,
-        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
-        country_policy=country_state.load(),
-    ) == decision_rules.patch(
-        baseline,
-        rules,
-        baseline=baseline,
-        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
-        country_policy=country_state.load(),
+    baseline, sample_rules = frozen_strategy
+    assert (
+        decision_rules.patch(
+            baseline,
+            replace(policy, baseline_sha256=sample_rules.baseline_sha256),
+            baseline=baseline,
+            reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+            country_policy=country_state.load(),
+        )
+        == frozen_strategy_script
     )
 
 
