@@ -20,6 +20,7 @@ import json
 import re
 import subprocess
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -187,6 +188,7 @@ def _dynamic_reasons(
     node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
     tree: ast.Module,
     *,
+    exported: set[str],
     class_method: bool = False,
 ) -> tuple[str, ...]:
     reasons: list[str] = []
@@ -199,7 +201,7 @@ def _dynamic_reasons(
         reasons.append("__main__ entrypoint")
     if node.name in PYTEST_HOOK_NAMES:
         reasons.append("pytest hook")
-    if node.name in _exported_names(tree):
+    if node.name in exported:
         reasons.append("__all__ export")
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and class_method:
         reasons.append("class method")
@@ -225,11 +227,11 @@ def _exported_names(tree: ast.Module) -> set[str]:
     return names
 
 
-def _class_method_nodes(tree: ast.Module) -> set[int]:
-    """一次遍历收集类体中的方法节点，避免逐定义反复遍历整棵 AST。"""
+def _class_method_nodes(nodes: Iterable[ast.AST]) -> set[int]:
+    """收集直接定义在类体中的方法。"""
 
     methods: set[int] = set()
-    for class_node in ast.walk(tree):
+    for class_node in nodes:
         if not isinstance(class_node, ast.ClassDef):
             continue
         methods.update(
@@ -238,16 +240,6 @@ def _class_method_nodes(tree: ast.Module) -> set[int]:
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
         )
     return methods
-
-
-def _local_loads(tree: ast.AST, name: str) -> int:
-    """统计同一文件里真实的名字读取，排除文档和注释中的文字。"""
-
-    return sum(
-        1
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, ast.Load)
-    )
 
 
 def scan_paths(
@@ -272,14 +264,20 @@ def scan_paths(
             tree = ast.parse(text, filename=path)
         except SyntaxError as exc:
             raise ValueError(f"无法解析 {path}:{exc.lineno}: {exc.msg}") from exc
-        class_methods = _class_method_nodes(tree)
-        for node in ast.walk(tree):
+        nodes = list(ast.walk(tree))
+        class_methods = _class_method_nodes(nodes)
+        exported = _exported_names(tree)
+        local_loads = Counter(
+            node.id
+            for node in nodes
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+        )
+        for node in nodes:
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 continue
             hits = index.get(node.name, [])
             same = sum(hit_path == path and hit_line != node.lineno for hit_path, hit_line in hits)
             other = sum(hit_path != path for hit_path, _ in hits)
-            local_loads = _local_loads(tree, node.name)
             doc = ast.get_docstring(node) or ""
             rows.append(
                 Definition(
@@ -288,10 +286,10 @@ def scan_paths(
                     name=node.name,
                     kind="class" if isinstance(node, ast.ClassDef) else "function",
                     same_uses=same,
-                    local_loads=local_loads,
+                    local_loads=local_loads[node.name],
                     other_uses=other,
                     dynamic_reasons=_dynamic_reasons(
-                        node, tree, class_method=id(node) in class_methods
+                        node, tree, exported=exported, class_method=id(node) in class_methods
                     ),
                     doc=(doc.strip().splitlines() or [""])[0][:160],
                 )
@@ -300,9 +298,7 @@ def scan_paths(
 
 
 def _report(rows: list[Definition], paths: list[str]) -> dict[str, object]:
-    counts: dict[str, int] = {}
-    for row in rows:
-        counts[row.verdict] = counts.get(row.verdict, 0) + 1
+    counts = Counter(row.verdict for row in rows)
     candidates = [row.as_dict() for row in rows if row.verdict == "零引用候选"]
     local_only = [row.as_dict() for row in rows if row.verdict == "仅定义文件内使用"]
     return {
