@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import json
 import time
+from dataclasses import asdict
 
 # Path 必须能**在运行期**导入：typer 用 ``inspect.signature(eval_str=True)``
 # 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError（已实测）。
@@ -74,6 +75,7 @@ from pdx import (
     evidence,
     exe_strings,
     information_catalog,
+    input_inventory,
     law_opportunities,
     lockfile,
     observe,
@@ -378,6 +380,57 @@ def analyze_cmd(
         console.print(table)
 
     console.print(f"\n总耗时 {elapsed:.1f} 秒")
+
+
+@app.command("input-inventory")
+def input_inventory_cmd() -> None:
+    """按 V3_ROOT 只读盘点安装根，将原字节的文件元数据写到标准输出。"""
+    try:
+        contract = version_contracts.contract()
+    except ValueError as exc:
+        typer.echo("V3_CONTRACT_PROFILE 不是受支持的版本合同。", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    try:
+        scan = input_inventory.inventory_installation(config.ROOT)
+    except ValueError as exc:
+        typer.echo("V3_ROOT 无法用作安装盘点根。", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    version_source = "game/common/ai_strategies/00_default_strategy.txt"
+    version_matched = any(
+        record.path == version_source
+        and record.read_status == "read"
+        and not record.diagnostics
+        and record.sha256 == contract.default_strategy_sha256
+        for record in scan.records
+    )
+    payload = {
+        "schema": 1,
+        "evidence_kind": "static_check",
+        "scan_status": scan.scan_status,
+        "expected_version": contract.version,
+        "version_anchor": {"path": version_source, "matched": version_matched},
+        "file_set_sha256": scan.file_set_sha256,
+        "summary": asdict(scan.summary),
+        "blocked_directories": scan.blocked_directories,
+        "unrecorded_paths": sorted(
+            set(scan.observed_paths).difference(record.path for record in scan.records)
+        ),
+        "diagnostic_codes": sorted({diagnostic.code for diagnostic in scan.diagnostics}),
+        "records": [
+            {
+                "path": record.path,
+                "size": record.size,
+                "sha256": record.sha256,
+                "category": record.category,
+                "read_status": record.read_status,
+                "diagnostic_codes": sorted({diagnostic.code for diagnostic in record.diagnostics}),
+            }
+            for record in scan.records
+        ],
+    }
+    typer.echo(json.dumps(payload, separators=(",", ":")))
+    if scan.scan_status != "complete" or not version_matched:
+        raise typer.Exit(EXIT_FAILED)
 
 
 @app.command("information-catalog")
