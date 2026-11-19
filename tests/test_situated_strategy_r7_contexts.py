@@ -402,9 +402,9 @@ def test_production_strategy_gate_requires_complete_stance_file_set(tmp_path, mo
 
 
 @pytest.mark.integration
-def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monkeypatch, tmp_path):
+def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monkeypatch):
     monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
-    model = compiler.load_model()
+    model = compiler.load_model(baseline=compiler.baseline_text())
     assert model.consumer_ir is not None
     instances = {row.action_id: row for row in model.action_instances}
     strategy = [
@@ -470,6 +470,10 @@ def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monk
             assert {binding.name for binding in writer.evaluation_context.auxiliary_scopes} == {
                 "region_score"
             }
+
+
+def test_current_strategy_baseline_reader_rejects_missing_installation(monkeypatch, tmp_path):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
-        compiler.load_model()
+        compiler.baseline_text()
