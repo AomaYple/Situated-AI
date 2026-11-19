@@ -969,6 +969,7 @@ def test_full_first_batch_against_installed_native_declarations(installed_invent
             "1.14.5": 2197,
             "1.15.0": 2291,
             "1.15.1": 2293,
+            version_contracts.CURRENT_VERSION: 2294,
         }[version_contracts.active_version()]
     )
     assert counts["static_construction_cap"] == (271 if current else 261)
