@@ -12,7 +12,7 @@ import sqlite3
 import tempfile
 from collections import Counter
 from contextlib import contextmanager, suppress
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -657,6 +657,16 @@ class LayerCoverage:
         return self.known / self.total
 
 
+@dataclass(slots=True)
+class _FormatCoverage:
+    category: str
+    suffix: str
+    sources: int = 0
+    bytes: int = 0
+    decode_status: Counter[str] = field(default_factory=Counter)
+    parse_status: Counter[str] = field(default_factory=Counter)
+
+
 @dataclass(frozen=True, slots=True)
 class LayeredCatalog:
     identity: InputIdentity
@@ -726,6 +736,29 @@ class LayeredCatalog:
             LayerCoverage("production", "consumer_closures", 0, 0, 0, denominator_status="unknown"),
         )
 
+    def _coverage_by_format(self) -> list[dict[str, object]]:
+        formats: dict[tuple[str, str], _FormatCoverage] = {}
+        for record, disposition in zip(self.inventory.records, self.dispositions, strict=True):
+            key = (disposition.category, Path(record.path).suffix.casefold())
+            row = formats.get(key)
+            if row is None:
+                row = formats[key] = _FormatCoverage(*key)
+            row.sources += 1
+            row.bytes += record.size or 0
+            row.decode_status[disposition.decode_status] += 1
+            row.parse_status[disposition.parse_status] += 1
+        return [
+            {
+                "category": row.category,
+                "suffix": row.suffix,
+                "sources": row.sources,
+                "bytes": row.bytes,
+                "decode_status": dict(row.decode_status),
+                "parse_status": dict(row.parse_status),
+            }
+            for _, row in sorted(formats.items())
+        ]
+
     def to_dict(self) -> dict[str, object]:
         counts = Counter(row.disposition for row in self.dispositions)
         return {
@@ -734,6 +767,7 @@ class LayeredCatalog:
             "input_identity": json.loads(dumps_contract(self.identity)),
             "input_inventory": json.loads(dumps_contract(self.inventory)),
             "coverage": [{**asdict(row), "ratio": row.ratio} for row in self.coverage],
+            "coverage_by_format": self._coverage_by_format(),
             "disposition_counts": dict(sorted(counts.items())),
             "dispositions": [asdict(row) for row in self.dispositions],
             "index": self.index.to_dict(),

@@ -246,6 +246,69 @@ def test_research_options_require_complete_group(option: str, tmp_path: Path) ->
     assert "同时提供" in result.output
 
 
+def test_analyze_research_uses_committed_denominator_and_reports_formats(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _root, raw, epoch, count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            "game/gfx/one.skin": b"folder = shape",
+            "game/gfx/two.skin": b"shape = {",
+        },
+    )
+    monkeypatch.setattr(config, "GAME", tmp_path / "absent-game")
+    output = tmp_path / "analysis"
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "analyze",
+            "--raw-root",
+            str(raw),
+            "--epoch",
+            epoch,
+            "--output-dir",
+            str(output),
+            "--no-mods",
+            "--quiet",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    catalog = json.loads((output / "information-catalog.json").read_bytes())["分层目录"]
+    formats = catalog["coverage_by_format"]
+    assert sum(row["sources"] for row in formats) == count
+    skins = next(row for row in formats if row["suffix"] == ".skin")
+    assert skins == {
+        "category": "asset_entity_dna",
+        "suffix": ".skin",
+        "sources": 3,
+        "bytes": 51,
+        "decode_status": {"complete": 3},
+        "parse_status": {"complete": 2, "partial": 1},
+    }
+    assert catalog["coverage"][-1]["denominator_status"] == "unknown"
+
+
+def test_analyze_research_refuses_to_skip_writing(capture, tmp_path: Path) -> None:
+    _root, raw, epoch, _count = capture
+    output = tmp_path / "analysis"
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "analyze",
+            "--raw-root",
+            str(raw),
+            "--epoch",
+            epoch,
+            "--output-dir",
+            str(output),
+            "--no-write",
+        ],
+    )
+    assert result.exit_code == 2
+    assert "--no-write" in result.output
+    assert not output.exists()
+
+
 def test_committed_research_preserves_denominator_without_local_state_values(
     capture: tuple[Path, Path, str, int], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

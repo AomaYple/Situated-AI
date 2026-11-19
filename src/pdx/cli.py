@@ -314,8 +314,27 @@ def _profile_run(
     return ga, ma, ca, profiler
 
 
+def _research_inputs(
+    raw_root: Path | None, epoch: str | None, output_dir: Path | None
+) -> tuple[Path, str, Path] | None:
+    if raw_root is None and epoch is None and output_dir is None:
+        return None
+    if raw_root is None or epoch is None or output_dir is None:
+        _fail("规范研究模式须同时提供 --raw-root、--epoch 和 --output-dir")
+    return raw_root, epoch, output_dir
+
+
+def _write_research_catalog(raw_root: Path, epoch: str, output_dir: Path) -> None:
+    try:
+        marker = research_catalog.write(raw_root, epoch, output_dir)
+    except (OSError, ValueError) as exc:
+        _fail(f"规范研究构建失败：{exc}", EXIT_FAILED)
+    console.print(f"[green]规范研究目录已写入[/] {escape(str(marker.parent))}")
+
+
 @app.command("analyze")
 def analyze_cmd(
+    ctx: typer.Context,
     mods: Annotated[
         bool, typer.Option("--mods/--no-mods", help="分析全部 mod（关闭则只看游戏本体）")
     ] = True,
@@ -329,13 +348,35 @@ def analyze_cmd(
     profile: Annotated[
         bool, typer.Option("--profile", help="用 pyinstrument 输出调用树剖析")
     ] = False,
+    raw_root: Annotated[
+        Path | None, typer.Option("--raw-root", help="完整安装研究模式的只读 raw 根")
+    ] = None,
+    epoch: Annotated[
+        str | None, typer.Option("--epoch", help="已提交 raw epoch 的 SHA-256")
+    ] = None,
+    output_dir: Annotated[
+        Path | None, typer.Option("--output-dir", help="研究结果的本机新目录")
+    ] = None,
 ) -> None:
-    """全量分析游戏本体与全部 mod。
+    """分析已提交的完整游戏安装，或生成现场原版及 Mod 概览。
 
-    三段流水线默认全做：游戏本体 → mod → 交叉分析。--no-mods 只分析游戏
-    本体；--no-cross 保留 mod 分析但不做覆盖关系交叉。--profile 用
-    pyinstrument 输出调用树（仍然落盘），--quiet 关掉进度行。
+    完整安装研究同时使用 --raw-root、--epoch、--output-dir，生成逐文件处置和
+    SQLite 出现位置索引。现场概览默认依次分析原版、Mod 和交叉关系，可用
+    --no-mods、--no-cross、--no-write 或 --profile 调整，--quiet 关闭进度行。
     """
+    research = _research_inputs(raw_root, epoch, output_dir)
+    if research is not None:
+        if not write or profile:
+            _fail("完整安装研究模式不能使用 --no-write 或 --profile")
+        if any(
+            enabled
+            and (origin := ctx.get_parameter_source(name)) is not None
+            and origin.name == "COMMANDLINE"
+            for name, enabled in (("mods", mods), ("cross", cross))
+        ):
+            _fail("完整安装研究模式不接受 --mods 或 --cross")
+        _write_research_catalog(*research)
+        return
     _require_game()
     started = time.perf_counter()
 
@@ -505,9 +546,8 @@ def information_catalog_cmd(
     后续按权威实施计划逐步核对；静态登记不等于运行期行为通过。
     """
 
-    if any(value is not None for value in (raw_root, epoch, output_dir)):
-        if raw_root is None or epoch is None or output_dir is None:
-            _fail("规范研究模式须同时提供 --raw-root、--epoch 和 --output-dir")
+    research = _research_inputs(raw_root, epoch, output_dir)
+    if research is not None:
         localization_source = ctx.get_parameter_source("localization")
         if (
             any(
@@ -525,11 +565,7 @@ def information_catalog_cmd(
             or (localization_source is not None and localization_source.name == "COMMANDLINE")
         ):
             _fail("规范研究模式不能混用现场目录、候选或本地化选项")
-        try:
-            marker = research_catalog.write(raw_root, epoch, output_dir)
-        except (OSError, ValueError) as exc:
-            _fail(f"规范研究构建失败：{exc}", EXIT_FAILED)
-        console.print(f"[green]规范研究目录已写入[/] {escape(str(marker.parent))}")
+        _write_research_catalog(*research)
         return
 
     if candidate_metadata is not None and candidate_production:
