@@ -42,7 +42,12 @@ SOURCE_SHA256 = {
 }
 
 SOURCE_SHA256_1151 = {
-    **version_contracts.INSTALLATION_IDENTITY_SHA256,
+    "binaries/checksum.txt": "2dc9ed5946fe105d8143a3eebdd7a9d6417f0333ee468a3b81892a6ab6c60325",
+    "caligula_branch.txt": "b9ed9070caf21333852ae4c658359e3babd04b9625dcf7146f6b32d99b45a565",
+    "caligula_rev.txt": "9cb420ce9ae7ddde03ae8ced02cf2da9fcb7fe70b311877be6c98717e7a38b98",
+    "clausewitz_branch.txt": "563a1baf6a4b11be321c25dbef63a2f9ffd6d3bf0888f3c74116579ac966508f",
+    "clausewitz_rev.txt": "7b01c7e17e500a28904d6f00d5dcbbcaa6d5b23ac6ae55d8a9f4d176797697fd",
+    "launcher/launcher-settings.json": "e5719ec975d35fed526338c7e2176baeda126ad55a2bea38869d17f4a1a20d99",
     "game/common/ai_strategies/00_default_strategy.txt": "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba",
     "game/common/ai_strategies/01_admin_strategies.txt": "1ad973d0398acced05da72f6fe49e7b08d0a9c02f5406a694c69d789c4d6bffe",
     "game/common/ai_strategies/03_political_strategies.txt": "2b0b83d06cc4ef8fb1bc58902ca4f90cf0723838afef6d81854e301f5f7c62f4",

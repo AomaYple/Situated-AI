@@ -22,15 +22,15 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 ENVIRONMENT_VARIABLE = "V3_CONTRACT_PROFILE"
-CURRENT_VERSION = "1.15.1"
+CURRENT_VERSION = "1.15.2"
 _LAUNCHER_SETTINGS = "launcher/launcher-settings.json"
 INSTALLATION_IDENTITY_SHA256 = {
-    "binaries/checksum.txt": "2dc9ed5946fe105d8143a3eebdd7a9d6417f0333ee468a3b81892a6ab6c60325",
-    "caligula_branch.txt": "b9ed9070caf21333852ae4c658359e3babd04b9625dcf7146f6b32d99b45a565",
-    "caligula_rev.txt": "9cb420ce9ae7ddde03ae8ced02cf2da9fcb7fe70b311877be6c98717e7a38b98",
-    "clausewitz_branch.txt": "563a1baf6a4b11be321c25dbef63a2f9ffd6d3bf0888f3c74116579ac966508f",
+    "binaries/checksum.txt": "2a8c3667c01597df3ec941c9c012f5b9e2f00a776a6fd9729c171d135422d344",
+    "caligula_branch.txt": "e8c4023bf4942a7b58dd4fe86fa3ad729f1ca4f0598fbe2cd3ced3ee432c71be",
+    "caligula_rev.txt": "86072c7de4cb3d3e2880246fa58c00eb4525d7a2be9dabadd3b1a6ce4028a74b",
+    "clausewitz_branch.txt": "7e62118214c7e94936b5264185fd2c75c2e85ce1709cf831b56437f3bd1b6b75",
     "clausewitz_rev.txt": "7b01c7e17e500a28904d6f00d5dcbbcaa6d5b23ac6ae55d8a9f4d176797697fd",
-    _LAUNCHER_SETTINGS: "e5719ec975d35fed526338c7e2176baeda126ad55a2bea38869d17f4a1a20d99",
+    _LAUNCHER_SETTINGS: "fe17a1b8195f40757beb5cb03125b7a0619ea2b164bc54309075958a72248232",
 }
 
 
@@ -77,6 +77,15 @@ VERSION_SPECS = {
         "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba",
         "e0e2cc9762f2d1e07deeb45091ca2e317e3771038851b840232d5f80538210c0",
         doc17_table_values_sha256="705649b0ecbd3ace8c8187210101f217b8b5657aef6767e88cdd20a7f3470568",
+    ),
+    CURRENT_VERSION: VersionContract(
+        CURRENT_VERSION,
+        True,
+        "victoria3-modding-1.15.2",
+        "official-docs-1.15.2.manifest.json",
+        "release-1.15.2",
+        "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
+        "42088c06f326a6fd1f01ed120928c8888d29b776c9bacb9795c63f9c390d7d40",
     ),
 }
 SUPPORTED_VERSIONS = frozenset(VERSION_SPECS)
