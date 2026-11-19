@@ -9,6 +9,7 @@ import sys
 import zipfile
 from collections import Counter
 from pathlib import Path
+from unittest.mock import create_autospec
 
 import pytest
 from hypothesis import given
@@ -452,7 +453,11 @@ def test_table_cli_detects_repairs_and_preserves_prose(tmp_path, monkeypatch, of
     spec = TableSpec("sample", "| Name | Count |", lambda: rows)
     target = SimpleNamespace(name=doc.name, path=doc, specs=(spec,))
     monkeypatch.setattr(docgen, "targets", lambda: (target,))
-    monkeypatch.setattr(tables_offline, "load_tables", lambda: {"99-sample.md::sample": rows})
+    monkeypatch.setattr(
+        tables_offline,
+        "load_tables",
+        create_autospec(tables_offline.load_tables, return_value={"99-sample.md::sample": rows}),
+    )
     runner = CliRunner()
     args = ["tables", *(["--offline"] if offline else [])]
     before = doc.read_bytes()
@@ -492,7 +497,11 @@ def test_table_cli_missing_header_reports_prerequisite(tmp_path, monkeypatch, of
         docgen, "targets", lambda: (SimpleNamespace(name=doc.name, path=doc, specs=(spec,)),)
     )
     monkeypatch.setattr(
-        tables_offline, "load_tables", lambda: {"99-sample.md::sample": ["| alpha | 1 |"]}
+        tables_offline,
+        "load_tables",
+        create_autospec(
+            tables_offline.load_tables, return_value={"99-sample.md::sample": ["| alpha | 1 |"]}
+        ),
     )
     args = ["tables", *(["--offline"] if offline else []), *(["--write"] if write else [])]
     result = CliRunner().invoke(cli.app, args)
