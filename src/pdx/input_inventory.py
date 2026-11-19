@@ -61,11 +61,26 @@ DEFAULT_STRATEGY_ANCHOR = "game/common/ai_strategies/00_default_strategy.txt"
 SCRIPT_VALUES_INFO = "jomini/common/script_values/_script_values.info"
 EXTENSIONLESS_BODY_RESOURCE = "game/gfx/models/portraits/male_body/male_body"
 PYTHON_TOOL_SOURCE = "game/script.py"
+DEVELOPER_XML_ROOTS = {
+    "binaries/d3d12memalloc.natvis": "http://schemas.microsoft.com/vstudio/debugger/natvis/2010 AutoVisualizer",
+    "binaries/victoria3.exe.manifest": "urn:schemas-microsoft-com:asm.v1 assembly",
+    "binaries/victoria3_win_console.exe.manifest": "urn:schemas-microsoft-com:asm.v1 assembly",
+}
 _PATH_CATEGORIES = {
     SCRIPT_VALUES_INFO: "documentation",
     EXTENSIONLESS_BODY_RESOURCE: "asset_entity_dna",
     PYTHON_TOOL_SOURCE: "tooling_source",
+    "clausewitz/cw_flow_graphs.anchor": "editor_data",
+    "game/game_flow_graphs.anchor": "editor_data",
+    "game/gfx/cursors/.xnviewsort": "editor_data",
+    "game/dlc/dlc014_ip3/gfx/map/city_data/city_centerpiece/balkan_centerpieces_old": "documentation",
+    **dict.fromkeys(DEVELOPER_XML_ROOTS, "structured_configuration"),
 }
+DEVELOPER_TEXT_PATHS = frozenset(
+    path
+    for path, category in _PATH_CATEGORIES.items()
+    if category in {"documentation", "editor_data"}
+)
 STRUCTURED_JSON_SUFFIXES = frozenset({".json", ".meta"})
 FLAT_PDX_RESOURCE_SUFFIXES = frozenset({".skin", ".terrain"})
 _FLAT_RESOURCE_PATHS = {

@@ -765,6 +765,70 @@ def test_research_detects_known_developer_sources_without_generalizing_suffixes(
     assert rows[other].disposition == "unresolved"
 
 
+def test_analyze_installation_indexes_developer_xml_and_text_by_path(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    source = "binaries/victoria3.exe.manifest"
+    malformed = "binaries/victoria3_win_console.exe.manifest"
+    unsafe = "binaries/D3D12MemAlloc.natvis"
+    anchor = "game/game_flow_graphs.anchor"
+    notes = "game/gfx/cursors/.XnViewSort"
+    old_asset = "game/dlc/dlc014_ip3/gfx/map/city_data/city_centerpiece/balkan_centerpieces_old"
+    other = "game/unrecognized.manifest"
+    for path, content in {
+        source: b'<assembly xmlns="urn:schemas-microsoft-com:asm.v1">\n'
+        b'  <assemblyIdentity name="private_synthetic_manifest_value"/>\n</assembly>',
+        malformed: b'<assembly xmlns="urn:schemas-microsoft-com:asm.v1"><incomplete>',
+        unsafe: b"<!DOCTYPE AutoVisualizer><AutoVisualizer/>",
+        anchor: b"../unfollowed_editor_reference\n",
+        notes: b"private_synthetic_sort_value\n",
+        old_asset: b"# obsolete asset notes\n",
+        other: b"<assembly/>",
+    }.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+
+    output = tmp_path / "installation-analysis"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    data = (output / "information-catalog.json").read_bytes()
+    rows = {row["path"]: row for row in json.loads(data)["分层目录"]["dispositions"]}
+
+    assert rows[source]["category"] == "structured_configuration"
+    assert (rows[source]["decode_status"], rows[source]["parse_status"]) == ("complete", "complete")
+    assert rows[malformed]["parse_status"] == "failed"
+    assert rows[malformed]["diagnostics"][0].startswith("developer_xml_syntax_failed:")
+    assert rows[unsafe]["parse_status"] == "failed"
+    assert rows[unsafe]["diagnostics"] == ["developer_xml_doctype_refused"]
+    assert rows[other]["disposition"] == "unresolved"
+    for path in (anchor, notes, old_asset):
+        assert rows[path]["disposition"] == "research_only"
+        assert rows[path]["decode_status"] == "complete"
+    assert rows[anchor]["parse_status"] == "not_attempted"
+    assert rows[old_asset]["parse_status"] == "not_applicable"
+    assert all(rows[path]["semantic_status"] == "unknown" for path in (source, anchor, old_asset))
+
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute(
+            "SELECT line, scalar FROM occurrences WHERE source=? AND key=?",
+            (source, "urn:schemas-microsoft-com:asm.v1 assemblyIdentity"),
+        ).fetchone() == (2, None)
+        for path, kind in (
+            (anchor, "source_line"),
+            (notes, "source_line"),
+            (old_asset, "document_line"),
+        ):
+            assert database.execute(
+                "SELECT kind, line, scalar FROM occurrences WHERE source=?", (path,)
+            ).fetchall() == [(kind, 1, None)]
+        assert database.execute(
+            "SELECT count(*) FROM occurrences WHERE source IN (?, ?, ?)", (malformed, unsafe, other)
+        ).fetchone() == (0,)
+    assert b"private_synthetic_manifest_value" not in data
+    assert b"private_synthetic_sort_value" not in data
+
+
 def test_binary_headers_record_observed_metadata_and_leave_payload_unparsed(tmp_path: Path) -> None:
     texture = "game/gfx/synthetic.dds"
     truncated = "game/gfx/truncated.dds"

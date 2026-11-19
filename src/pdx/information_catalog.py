@@ -25,6 +25,7 @@ from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
+from xml.parsers import expat
 
 from . import ai_surface, config, political_surface, version_contracts
 from .binary_headers import BINARY_HEADER_SUFFIXES, HEADER_BYTES, binary_header
@@ -39,11 +40,12 @@ from .committed_raw import (
 )
 from .input_contracts import ArtifactRef, InputContractError, ParseStatus
 from .input_inventory import (
+    DEVELOPER_TEXT_PATHS,
+    DEVELOPER_XML_ROOTS,
     EXTENSIONLESS_BODY_RESOURCE,
     FLAT_PDX_RESOURCE_SUFFIXES,
     MAP_ADJACENCIES,
     PDX_RESOURCE_CATEGORIES,
-    SCRIPT_VALUES_INFO,
     STRUCTURED_JSON_SUFFIXES,
     classify_path,
 )
@@ -809,6 +811,40 @@ def _build_from_raw(
         return _build_research_index(identity, inventory, index_path, raw_root)
 
 
+_DEVELOPER_XML_BYTE_LIMIT = 1024 * 1024
+
+
+def _developer_xml_elements(
+    raw: bytes, expected_root: str
+) -> tuple[list[tuple[int, str]], str | None]:
+    parser = expat.ParserCreate(encoding="UTF-8", namespace_separator=" ")
+    elements: list[tuple[int, str]] = []
+    name_length = 0
+
+    def record_element(name: str, _attributes: dict[str, str]) -> None:
+        nonlocal name_length
+        if not elements and name != expected_root:
+            raise ValueError("developer_xml_unexpected_root")
+        # Expanded namespace names can be much larger than the source tags.
+        name_length += len(name)
+        if name_length > _DEVELOPER_XML_BYTE_LIMIT:
+            raise ValueError("developer_xml_element_name_budget_exceeded")
+        elements.append((parser.CurrentLineNumber, name))
+
+    def refuse_doctype(*_args: object) -> None:
+        raise ValueError("developer_xml_doctype_refused")
+
+    parser.StartElementHandler = record_element
+    parser.StartDoctypeDeclHandler = refuse_doctype
+    try:
+        parser.Parse(raw, True)
+    except expat.ExpatError as error:
+        return [], f"developer_xml_syntax_failed:{error.lineno}:{error.offset}"
+    except ValueError as error:
+        return [], str(error)
+    return elements, None
+
+
 def _build_research_index(
     identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path | None
 ) -> ResearchInformationCatalog:
@@ -864,12 +900,15 @@ def _build_research_index(
                 or pdx_resource
             )
             localization = category == "localization"
+            developer_text = relative in DEVELOPER_TEXT_PATHS
             document = category == "documentation" and (
-                suffix in {".md", ".rst", ".txt", ".html", ".htm"} or relative == SCRIPT_VALUES_INFO
+                suffix in {".md", ".rst", ".txt", ".html", ".htm"} or developer_text
             )
             structured_json = (
                 category == "structured_configuration" and suffix in STRUCTURED_JSON_SUFFIXES
             )
+            xml_root = DEVELOPER_XML_ROOTS.get(relative)
+            read_xml = xml_root is not None and (record.size or 0) <= _DEVELOPER_XML_BYTE_LIMIT
             shader_source = category == "shader_source"
             python_tool = category == "tooling_source"
             binary_probe = suffix in BINARY_HEADER_SUFFIXES and category in {
@@ -891,6 +930,8 @@ def _build_research_index(
                     or localization
                     or document
                     or structured_json
+                    or read_xml
+                    or developer_text
                     or map_table
                     or shader_source
                     or python_tool
@@ -906,6 +947,7 @@ def _build_research_index(
             language = "?"
             members: list[dict[str, object]] = []
             text_lines: list[tuple[int, str]] = []
+            xml_elements: list[tuple[int, str]] = []
             decode_status = "not_attempted"
             parse_status: ParseStatus = "not_attempted"
             disposition = "research_only"
@@ -971,6 +1013,31 @@ def _build_research_index(
                     if parse_status == "complete"
                     else "structured_json_decode_or_parse_failed"
                 )
+            elif xml_root is not None:
+                if raw is None:
+                    reason = "developer_xml_byte_budget_exceeded"
+                    locator_diagnostics.append(reason)
+                    diagnostics += (reason,)
+                else:
+                    try:
+                        raw.decode("utf-8-sig")
+                    except UnicodeDecodeError as error:
+                        decode_status, parse_status = "failed", "failed"
+                        reason = "developer_xml_decode_failed"
+                        diagnostic = f"{reason}:byte:{error.start}"
+                        diagnostics += (diagnostic,)
+                        locator_diagnostics.append(diagnostic)
+                    else:
+                        decode_status = "complete"
+                        xml_elements, error_code = _developer_xml_elements(raw, xml_root)
+                        if error_code is None:
+                            parse_status = "complete"
+                            reason = "well-formed developer XML and element locations indexed"
+                        else:
+                            parse_status = "failed"
+                            reason = "developer_xml_parse_failed"
+                            diagnostics += (error_code,)
+                            locator_diagnostics.append(error_code)
             elif localization and raw is not None:
                 unconsumed: list[tuple[int, str]] = []
                 try:
@@ -1015,7 +1082,7 @@ def _build_research_index(
                             f"{message.rpartition(':')[2]}:member:{message.partition(':')[0]}"
                             for message in errors
                         )
-            elif (document or shader_source or python_tool) and raw is not None:
+            elif (document or shader_source or python_tool or developer_text) and raw is not None:
                 try:
                     text = raw.decode("utf-8-sig")
                 except UnicodeDecodeError as error:
@@ -1046,6 +1113,8 @@ def _build_research_index(
                         else:
                             parse_status = "complete"
                             reason = "Python syntax and source line index; tool not executed"
+                    elif developer_text:
+                        reason = "developer text lines indexed; editor format not interpreted"
                     else:
                         reason = "shader source lines indexed; mixed PDX/shader grammar pending"
             elif binary_probe and raw is not None:
@@ -1150,6 +1219,20 @@ def _build_research_index(
                         operator=None,
                         scalar=text,
                         quoted=True,
+                        line=line,
+                        parse_status=parse_status,
+                    )
+                for ordinal, (line, name) in enumerate(xml_elements):
+                    writer.add(
+                        record.path,
+                        record.sha256,
+                        address=(ordinal,),
+                        path=("xml_element", str(ordinal)),
+                        kind="xml_element",
+                        key=name,
+                        operator=None,
+                        scalar=None,
+                        quoted=False,
                         line=line,
                         parse_status=parse_status,
                     )
