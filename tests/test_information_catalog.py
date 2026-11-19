@@ -113,6 +113,28 @@ def test_parser_errors_are_explicitly_unsupported(tmp_path: Path) -> None:
     assert "没有闭合" in item.notes
 
 
+@pytest.mark.parametrize(
+    ("payload", "diagnostic"),
+    [
+        (b"}\nsynthetic = 1", "unexpected_closing_brace"),
+        (b'synthetic = "\xa9"', "UnicodeDecodeError"),
+    ],
+)
+def test_catalog_reports_partial_or_lossy_source_instead_of_definitions(
+    tmp_path: Path, payload: bytes, diagnostic: str
+) -> None:
+    game = tmp_path / "game"
+    target = game / "common" / "buildings" / "broken.txt"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(payload)
+
+    catalog = information_catalog.build(roots={"game": game}, include_localization=False)
+
+    assert [item.name for item in catalog.items] == ["__parse_error__"]
+    assert catalog.items[0].status is information_catalog.InformationStatus.UNSUPPORTED
+    assert diagnostic in catalog.items[0].notes
+
+
 def test_localization_key_catalog_is_streamed_and_auditable(tmp_path: Path) -> None:
     game = _write_fixture(tmp_path / "fixture")
     target = tmp_path / "localization.jsonl"

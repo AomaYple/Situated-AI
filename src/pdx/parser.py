@@ -50,7 +50,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .lexer import ATOM, EOF, LBRACE, OP, RBRACE, STRING, Token, tokenize
-from .model import Assignment, Block, ParsedFile, Scalar
+from .model import Assignment, Block, Node, ParsedFile, ParseDiagnostic, Scalar
 
 #: 引擎级功能前缀。键名前带这些前缀时，语义是「对已存在条目做注入/替换」
 #: 而不是重新定义。已确认存在于 victoria3.exe 的字符串表中。
@@ -122,7 +122,17 @@ class _Parser:
     零调用（覆盖率报告里长期挂着未覆盖行），已删除。
     """
 
-    __slots__ = ("_err", "cur", "depth", "errors", "max_depth", "pos", "tokens")
+    __slots__ = (
+        "_err",
+        "cur",
+        "depth",
+        "diagnostics",
+        "errors",
+        "max_depth",
+        "pos",
+        "tokens",
+        "unconsumed_tokens",
+    )
 
     def __init__(self, tokens: list[Token]) -> None:
         self.tokens = tokens
@@ -131,11 +141,20 @@ class _Parser:
         self.cur = tokens[0]
         self.errors: list[str] = []
         self._err = self.errors.append
+        self.diagnostics: list[ParseDiagnostic] = []
+        self.unconsumed_tokens: list[tuple[str, str, int, int]] = []
         #: 当前花括号深度与见过的最大深度。
         #: 记录在这里，而不是事后遍历 AST —— 后者要为每个文件把整棵树
         #: 再递归走一遍（全量分析下是 58 万次块访问的纯重复劳动）。
         self.depth = 0
         self.max_depth = 0
+
+    def diagnose(self, kind: str, token: Token) -> None:
+        self.diagnostics.append({"kind": kind, "line": token.line, "column": token.col})
+
+    def reject(self, kind: str, token: Token) -> None:
+        self.unconsumed_tokens.append((token.kind, token.value, token.line, token.col))
+        self.diagnose(kind, token)
 
     # ── token 辅助 ─────────────────────────────────────────
     def advance(self) -> Token:
@@ -164,14 +183,14 @@ class _Parser:
                 self.advance()
         return root
 
-    def parse_block(self, line: int) -> Block:
+    def parse_block(self, opening: Token) -> Block:
         depth = self.depth + 1
         self.depth = depth
         # 不用 max()：热路径上它会多一次属性读，if 更快
         if depth > self.max_depth:  # noqa: PLR1730
             self.max_depth = depth
 
-        block = Block(line=line)
+        block = Block(line=opening.line)
         items = block.items
         while True:
             kind = self.cur.kind
@@ -186,12 +205,13 @@ class _Parser:
         if self.cur.kind == RBRACE:
             self.advance()
         else:
-            self._err(f"第 {line} 行开始的块没有闭合的花括号")
+            self.diagnose("unclosed_block", opening)
+            self._err(f"第 {opening.line} 行开始的块没有闭合的花括号")
 
         self.depth = depth - 1
         return block
 
-    def parse_statement(self):
+    def parse_statement(self) -> Node | None:
         """解析一条语句。``parse_value`` 已内联，见类文档。
 
         刻意**不带**「是否顶层」参数 —— 早先有个 ``top_level`` 形参，
@@ -203,17 +223,18 @@ class _Parser:
 
         if kind == LBRACE:
             self.advance()
-            return self.parse_block(tok.line)
+            return self.parse_block(tok)
 
         if kind == RBRACE:
-            # 多余的右括号：上层会处理，这里不消费，避免吞掉
+            # 块内的右括号由 parse_block 消费，剩下的是根上的多余 token。
+            self.reject("unexpected_closing_brace", tok)
             return None
 
         if kind in _WORDLIKE:
             self.advance()
             # 下一个是运算符 → 赋值；否则是裸标量（列表元素）
             if self.cur.kind == OP:
-                op = self.advance().value
+                operator = self.advance()
 
                 # ── 内联的 parse_value ──────────────────────
                 vtok = self.cur
@@ -221,7 +242,7 @@ class _Parser:
                 value: Block | Scalar | None
                 if vkind == LBRACE:
                     self.advance()
-                    value = self.parse_block(vtok.line)
+                    value = self.parse_block(vtok)
                 elif vkind == STRING:
                     self.advance()
                     value = Scalar(text=vtok.value, quoted=True, line=vtok.line)
@@ -229,8 +250,9 @@ class _Parser:
                     self.advance()
                     value = Scalar(text=vtok.value, quoted=False, line=vtok.line)
                 else:
-                    # 空值：``key =`` 后面直接换行或遇到右括号
+                    # 缺值时保留旧 AST 的空赋值，再由完整性诊断说明缺口。
                     value = None
+                    self.diagnose("missing_assignment_value", operator)
 
                 if kind == STRING:
                     raw = tok.value
@@ -238,10 +260,13 @@ class _Parser:
                     prefix = None
                 else:
                     prefix, key = _split_prefix(tok.value)
-                return Assignment(key=key, op=op, value=value, prefix=prefix, line=tok.line)
+                return Assignment(
+                    key=key, op=operator.value, value=value, prefix=prefix, line=tok.line
+                )
             return Scalar(text=tok.value, quoted=(kind == STRING), line=tok.line)
 
-        # 无法识别：消费掉，避免死循环
+        # 记录没有赋值键的运算符，再恢复后续内容。
+        self.reject("missing_assignment_key", tok)
         self.advance()
         return None
 
@@ -264,8 +289,11 @@ def parse_text(text: str, path: str = "<text>") -> ParsedFile:
     # 长度检查是必须的 —— 空文件只有 EOF 一个 token（这里踩过 IndexError）。
     if len(tokens) >= 2:
         last = tokens[-2]
-        if last.kind == STRING and not last.value.endswith('"'):
-            parser._err("文件结束时仍有一个引号字符串没有闭合")
+        if last.kind == STRING and not last.terminated:
+            parser.diagnose("unclosed_string", last)
+            # errors 仍供既有统计和冻结产物读取，完整性判断使用 diagnostics。
+            if not last.value.endswith('"'):
+                parser.errors.append("文件结束时仍有一个引号字符串没有闭合")
     return ParsedFile(
         path=path,
         root=root,
@@ -273,6 +301,9 @@ def parse_text(text: str, path: str = "<text>") -> ParsedFile:
         errors=parser.errors,
         comments=comments,
         max_depth=parser.max_depth,
+        diagnostics=parser.diagnostics,
+        unconsumed_tokens=parser.unconsumed_tokens,
+        token_count=len(tokens) - 1,
     )
 
 
@@ -286,14 +317,21 @@ def parse_file(path: str | Path) -> ParsedFile:
     return parse_bytes(Path(path).read_bytes(), str(Path(path)))
 
 
-def parse_bytes(raw: bytes, path: str) -> ParsedFile:
-    """解析已经读取并可校验指纹的同一份字节，保留文件入口的编码语义。"""
+def parse_bytes(raw: bytes, path: str, *, encoding: str | None = None) -> ParsedFile:
+    """解析已读字节；显式传入编码时禁用替换解码。"""
     had_bom = raw.startswith(b"\xef\xbb\xbf")
+    codec = "utf-8-sig" if encoding is None else encoding
     try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        # 极少数文件可能不是 UTF-8；用替换字符兜底，不中断整轮扫描
-        text = raw.decode("utf-8", errors="replace")
-    result = parse_text(text, path)
+        text = raw.decode(codec)
+    except UnicodeDecodeError as exc:
+        if encoding is None:
+            # 旧入口保留容错树，完整性门仍拒绝发生替换解码的输入。
+            result = parse_text(raw.decode("utf-8", errors="replace"), path)
+        else:
+            result = ParsedFile(path=path, root=Block(line=1))
+        result.decoding_error = f"UnicodeDecodeError: {exc}"
+    else:
+        result = parse_text(text, path)
+    result.encoding = codec
     result.had_bom = had_bom
     return result

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -22,6 +22,7 @@ class ParseError(Exception):
 
     def __init__(self, message: str, path: str, line: int = 0) -> None:
         super().__init__(f"{path}:{line}: {message}")
+        self.detail = message
         self.path = path
         self.line = line
 
@@ -117,6 +118,16 @@ class Assignment:
 
 Node = Assignment | Block | Scalar
 
+type ParseStatus = Literal["complete", "partial", "failed"]
+
+
+class ParseDiagnostic(TypedDict):
+    """可按类别与源位置查找的语法诊断。"""
+
+    kind: str
+    line: int
+    column: int
+
 
 @dataclass(slots=True)
 class ParsedFile:
@@ -140,6 +151,43 @@ class ParsedFile:
     #: 后者要为每个文件把整棵树再递归走一遍，而深度在解析过程中本来就已知。
     #: 语义与旧实现一致：根为 0，每进一层块加 1，匿名块同样计入。
     max_depth: int = 0
+    diagnostics: list[ParseDiagnostic] = field(default_factory=list)
+    #: AST 未接纳的 token，保留 (kind, value, line, column)，不含文件尾标记。
+    unconsumed_tokens: list[tuple[str, str, int, int]] = field(default_factory=list)
+    token_count: int = 0
+    decoding_error: str | None = None
+
+    @property
+    def parse_status(self) -> ParseStatus:
+        """说明解码和语法完整性，替换解码得到的树仍标记为失败。"""
+        if self.decoding_error is not None:
+            return "failed"
+        if self.diagnostics or self.errors or self.unconsumed_tokens:
+            return "partial"
+        return "complete"
+
+    @property
+    def consumed_token_count(self) -> int:
+        return self.token_count - len(self.unconsumed_tokens)
+
+    def require_complete(self) -> None:
+        """需要完整输入的读取方可在使用 AST 前显式核验。"""
+        status = self.parse_status
+        if status == "complete":
+            return
+        line = 0
+        if self.decoding_error is not None:
+            detail = self.decoding_error
+        elif self.diagnostics:
+            first = self.diagnostics[0]
+            line = first["line"]
+            detail = f"{first['kind']}（第 {line} 行第 {first['column']} 列）"
+        elif self.errors:
+            detail = "；".join(self.errors)
+        else:
+            kind, _, line, column = self.unconsumed_tokens[0]
+            detail = f"未接纳 {kind}（第 {line} 行第 {column} 列）"
+        raise ParseError(f"parse_status={status}: {detail}", self.path, line)
 
     # ── 便捷视图 ───────────────────────────────────────────
     @property
