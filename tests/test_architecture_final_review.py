@@ -426,12 +426,23 @@ def _r2_rows(candidate, disabled):
             }
 
 
+def _assert_source_snapshot(expected: dict[str, str]) -> None:
+    observed = architecture_receipts.source_snapshot(config.REPO)
+    if observed != expected:
+        changed = sorted(
+            path
+            for path in observed.keys() | expected.keys()
+            if observed.get(path) != expected.get(path)
+        )
+        pytest.fail(f"Architecture review sources changed: {', '.join(changed)}")
+
+
 @pytest.fixture(scope="module")
 def final_candidate():
     before = architecture_receipts.source_snapshot(config.REPO)
     policy, extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
     model = compiler.load_model()
-    assert architecture_receipts.source_snapshot(config.REPO) == before
+    _assert_source_snapshot(before)
     files = {
         name: value.encode() if isinstance(value, str) else value
         for name, value in generated.items()
@@ -449,6 +460,7 @@ def final_candidate():
         "files": files,
         "consumers": consumers,
         "snapshot": digest(before),
+        "snapshot_sources": before,
         "r8": (model, actual, raw),
         "policy": policy,
         "extensions": extensions,
@@ -463,10 +475,7 @@ def final_native(final_candidate):
         assert path.is_file(), f"explicit final native report missing: {path}"
         report = json.loads(path.read_bytes())
     else:
-        assert (
-            digest(architecture_receipts.source_snapshot(config.REPO))
-            == (final_candidate["snapshot"])
-        )
+        _assert_source_snapshot(final_candidate["snapshot_sources"])
         # Keep both full native closure checks from package_inputs while
         # reusing this module's freshly generated complete candidate.
         distribution.verify_compatibility_installation()
@@ -474,10 +483,7 @@ def final_native(final_candidate):
             final_candidate["model"], final_candidate["files"]
         )
         distribution.verify_compatibility_installation()
-        assert (
-            digest(architecture_receipts.source_snapshot(config.REPO))
-            == (final_candidate["snapshot"])
-        )
+        _assert_source_snapshot(final_candidate["snapshot_sources"])
     assert report["source_snapshot_sha256"] == final_candidate["snapshot"]
     assert report["plan_version"] == architecture_receipts.PLAN_VERSION
     # Re-discover the installed originals independently of the supplied/built
@@ -990,7 +996,7 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     expected_consumers.update(r2_identities)
     assert consumers == expected_consumers
     assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, expected_cases_per_role)
-    assert digest(architecture_receipts.source_snapshot(config.REPO)) == candidate["snapshot"]
+    _assert_source_snapshot(candidate["snapshot_sources"])
     return {
         "review": {
             "contract_version": version_contracts.active_version(),
