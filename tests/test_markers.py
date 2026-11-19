@@ -61,6 +61,10 @@ MARKER_NOT_NEEDED: dict[str, str] = {
 if version_contracts.is_115():
     MARKER_NOT_NEEDED.pop("script.lists_doc04")
 
+if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+    MARKER_NOT_NEEDED.pop("ai.script_values_doc09")
+    MARKER_NOT_NEEDED.pop("ai.strategy_refs_doc09")
+
 
 def test_没有标记的断言都有理由() -> None:
     """覆盖率不是靠「尽量多打标记」，而是靠**每个没标记的都答得出为什么**。

@@ -426,16 +426,9 @@ def test_profile_summary_counts_real_calls(tmp_path, request):
 @pytest.fixture
 def table_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from pdx import config
-    from pdx.situated import r2_reader_authority
-    from pdx.version_contracts import CURRENT_VERSION, INSTALLATION_IDENTITY_SHA256
 
+    configure_current_identity(tmp_path, monkeypatch)
     (tmp_path / "game/common").mkdir(parents=True)
-    baseline = r2_reader_authority.frozen_root(CURRENT_VERSION)
-    for relative in INSTALLATION_IDENTITY_SHA256:
-        target = tmp_path / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((baseline / relative).read_bytes())
-    monkeypatch.setattr(config, "ROOT", tmp_path)
     monkeypatch.setattr(config, "GAME", tmp_path / "game")
 
 
