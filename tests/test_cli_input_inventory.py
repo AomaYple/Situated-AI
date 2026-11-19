@@ -18,6 +18,30 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def _install_identity(
+    root: Path, monkeypatch: pytest.MonkeyPatch, *, valid: bool = True
+) -> set[str]:
+    hashes = {}
+    for relative in version_contracts.INSTALLATION_IDENTITY_SHA256:
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(f"synthetic-{relative}".encode())
+        hashes[relative] = sha256(path.read_bytes()).hexdigest()
+    launcher = root / "launcher/launcher-settings.json"
+    launcher.write_text(
+        json.dumps(
+            {
+                "gameId": "victoria3",
+                "rawVersion": version_contracts.CURRENT_VERSION if valid else "1.15.0",
+                "version": version_contracts.CURRENT_VERSION,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(version_contracts, "INSTALLATION_IDENTITY_SHA256", hashes)
+    return set(hashes)
+
+
 @pytest.mark.parametrize(
     ("matching", "denied", "unrepresentable"),
     [(True, False, False), (False, False, False), (True, True, False), (True, False, True)],
@@ -35,6 +59,8 @@ def test_input_inventory_reports_only_metadata_and_checks_version_source(
     anchor.write_bytes(b"fixture_strategy = {}")
     extra = tmp_path / "some-new-format"
     extra.write_bytes(b"unique-original-bytes")
+    identities = _install_identity(tmp_path, monkeypatch)
+    (tmp_path / "empty").mkdir()
 
     expected_version = version_contracts.CURRENT_VERSION
     contract = version_contracts.VERSION_SPECS[expected_version]
@@ -45,7 +71,7 @@ def test_input_inventory_reports_only_metadata_and_checks_version_source(
         replace(contract, default_strategy_sha256=expected_anchor),
     )
     monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
-    monkeypatch.setattr(config, "ROOT", tmp_path)
+    monkeypatch.setattr(config, "ROOT", tmp_path / "empty" / "..")
     if denied:
         open_verified = input_inventory._open_verified
 
@@ -85,7 +111,7 @@ def test_input_inventory_reports_only_metadata_and_checks_version_source(
         assert payload["file_set_sha256"]
         assert payload["unrecorded_paths"] == []
     records = {row["path"]: row for row in payload["records"]}
-    assert set(records) == {anchor_path, "some-new-format"}
+    assert set(records) == identities | {anchor_path, "some-new-format"}
     assert records["some-new-format"] == {
         "path": "some-new-format",
         "sha256": None if denied else sha256(b"unique-original-bytes").hexdigest(),
@@ -97,3 +123,22 @@ def test_input_inventory_reports_only_metadata_and_checks_version_source(
     assert "unique-original-bytes" not in result.stdout
     assert str(tmp_path) not in result.stdout
     assert extra.read_bytes() == b"unique-original-bytes"
+
+
+@pytest.mark.parametrize("historical_contract", [True, False])
+def test_input_inventory_rejects_noncurrent_contract_or_installation_before_scanning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, historical_contract: bool
+) -> None:
+    _install_identity(tmp_path, monkeypatch, valid=historical_contract)
+    (tmp_path / "game").mkdir()
+    monkeypatch.setattr(config, "ROOT", tmp_path)
+    if historical_contract:
+        monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.0")
+    else:
+        monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
+
+    result = CliRunner().invoke(cli.app, ["input-inventory"])
+
+    assert result.exit_code == cli.EXIT_USAGE, result.output
+    assert result.stdout == ""
+    assert "1.15.1" in result.stderr
