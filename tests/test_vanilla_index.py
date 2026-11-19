@@ -1,11 +1,13 @@
 """原版离线路径索引的覆盖回归。"""
 
-from typing import TYPE_CHECKING
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from pdx import vanilla_index
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_snapshot_path_dirs_covers_scriptable_assets_and_dlc(tmp_path: Path) -> None:
@@ -70,3 +72,64 @@ def test_snapshot_script_value_accessor_missing_domain_is_uncovered(tmp_path: Pa
         },
     )
     assert index.script_value_accessors() == {"economic_dependence"}
+
+
+@pytest.mark.property
+@given(order=st.permutations(("zeta", "alpha", "beta")))
+def test_snapshot_sections_are_invariant_to_file_creation_order(order: list[str]) -> None:
+    with TemporaryDirectory() as temporary:
+        game = Path(temporary)
+        for root, names in ((game / "first", order), (game / "second", reversed(order))):
+            effects = root / "common/scripted_effects"
+            effects.mkdir(parents=True)
+            for name in names:
+                (effects / f"{name}.txt").write_text(
+                    f"{name} = {{ nested = yes }}\n", encoding="utf-8"
+                )
+
+        sections = vanilla_index.snapshot_sections(game / "first")
+        assert sections == vanilla_index.snapshot_sections(game / "second")
+        assert sections[vanilla_index.SECTION_KEYS]["common/scripted_effects"] == [
+            "alpha",
+            "beta",
+            "zeta",
+        ]
+        assert sections[vanilla_index.SECTION_VOCABULARY]["common/scripted_effects"] == [
+            "alpha",
+            "beta",
+            "nested",
+            "zeta",
+        ]
+
+
+@pytest.mark.property
+@settings(max_examples=24)
+@given(name=st.text(alphabet="abcdefghijklmnopqrstuvwxyz", min_size=1, max_size=12))
+def test_game_and_snapshot_variable_pools_only_admit_literal_writes(name: str) -> None:
+    with TemporaryDirectory() as temporary:
+        game = Path(temporary)
+        effects = game / "common/scripted_effects"
+        effects.mkdir(parents=True)
+        (effects / "writes.txt").write_text(
+            f"effect = {{ set_variable = {{ name = local_{name} }} }}\n"
+            "set_variable = { name = ROOT.dynamic }\n"
+            "set_variable = { name = { invalid = yes } }\n"
+            "set_variable = { value = { name = nested_lookalike } }\n"
+            "set_variable = yes\n"
+            "set_global_variable = { name = global_lookalike }\n",
+            encoding="utf-8",
+        )
+        events = game / "events"
+        events.mkdir()
+        (events / "writes.txt").write_text(
+            f'set_variable = {{ name = "event_{name}" }}\n', encoding="utf-8"
+        )
+
+        live = vanilla_index.game_index(game)
+        assert live is not None
+        snapshot = vanilla_index.VanillaIndex(
+            source="snapshot", game=game, sections=vanilla_index.snapshot_sections(game)
+        )
+        expected = {f"local_{name}", f"event_{name}"}
+        assert live.variables() == expected
+        assert snapshot.variables() == expected
