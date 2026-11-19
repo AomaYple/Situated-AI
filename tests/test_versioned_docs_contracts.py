@@ -41,6 +41,19 @@ def test_documentation_and_complete_claim_registry_switch_at_call_time():
             assert new.kind not in verify._MANIFEST_GETTERS
 
 
+def test_claim_registry_keeps_1151_when_switching_from_current() -> None:
+    with select_version(CURRENT_VERSION):
+        current = verify.current_claims()
+        with select_version("1.15.1"):
+            previous = verify.current_claims()
+            marker = next(c for c in previous if c.id == "env.caligula_branch")
+            assert marker.expected == "release/1.15.1"
+            assert config.docs_root() == config.DOCS_1151
+        assert verify.current_claims() is current
+        marker = next(c for c in current if c.id == "env.caligula_branch")
+        assert marker.expected == f"release/{CURRENT_VERSION}"
+
+
 def test_invalid_profile_fails_at_default_operation_in_a_fresh_process():
     environment = os.environ.copy()
     environment["V3_CONTRACT_PROFILE"] = "latest"

@@ -627,6 +627,40 @@ def test_check_outputs_缺产物时返回2(tmp_path, monkeypatch) -> None:
     assert "缺少产物" in r.output or "analyze" in r.output
 
 
+@pytest.mark.parametrize("missing_field", [False, True], ids=["matching", "missing-field"])
+def test_check_outputs_核验落盘产物(tmp_path, monkeypatch, missing_field) -> None:
+    game = {"common": {"laws": {"顶层条目数": 4}}}
+    mods = {"概览": {"mod 数": 2}}
+    if not missing_field:
+        mods["概览"]["文件总计"] = 7
+    for attr, name, product in (
+        ("OUT_GAME", "游戏本体.json", game),
+        ("OUT_MODS", "mod.json", mods),
+        ("OUT_CROSS", "交叉.json", {}),
+    ):
+        root = tmp_path / attr
+        root.mkdir()
+        (root / name).write_text(json.dumps(product, ensure_ascii=False), encoding="utf-8")
+        monkeypatch.setattr(config, attr, root)
+    claims = [
+        verify.Claim("law.entries", "fixture.md", "原版法律条目数", "dir_entries", "laws", 4),
+        verify.Claim("mod.total", "fixture.md", "已分析 Mod 数", "mods_total", "", 2),
+        verify.Claim("mod.files", "fixture.md", "已分析 Mod 文件数", "mods_files", "", 7),
+        verify.Claim("env.branch", "fixture.md", "原版分支", "game_version_field", "", "release"),
+    ]
+    monkeypatch.setattr(verify, "CLAIMS", claims)
+
+    r = _invoke("check-outputs")
+    assert "产物可核验 3 / 4 条断言" in r.output
+    if missing_field:
+        assert r.exit_code == 1, r.output
+        assert "不一致 1 条" in r.output
+        assert "产物中该字段缺失" in r.output
+    else:
+        assert r.exit_code == 0, r.output
+        assert "产物与断言注册表完全一致" in r.output
+
+
 @NEEDS_GAME
 def test_check_outputs_有产物时通过() -> None:
     if not (config.OUT_GAME / "游戏本体.json").is_file():
