@@ -173,7 +173,8 @@ def capture_retentions(game: Path, *, output: Path) -> Path:
             "capture_scope": "native_retention_subset_not_full_migration_contract",
             "version": version_contracts.active_version(),
             "source": source,
-            "source_sha256": hashlib.sha256(baseline.encode("utf-8")).hexdigest(),
+            "source_sha256": hashlib.sha256(_source_bytes(game, source)).hexdigest(),
+            "source_normalized_sha256": hashlib.sha256(baseline.encode("utf-8")).hexdigest(),
             "retentions": retentions,
         },
     )
@@ -266,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 from . import technology_opportunities  # noqa: PLC0415
 
-                output = technology_opportunities.write_catalog_1151(game, output=args.output)
+                output = technology_opportunities.write_catalog(game, output=args.output)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"[native-authority-capture] 捕获失败：{exc}", file=sys.stderr)
         return 1

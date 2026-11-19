@@ -66,7 +66,7 @@ def sandbox(tmp_path, monkeypatch):
 
     def verify(root):
         assert root == installation
-        assert version_contracts.active_version() == "1.15.1"
+        assert version_contracts.active_version() == version_contracts.CURRENT_VERSION
         verified.append(root)
         return {"runtime": "unknown"}
 
@@ -80,7 +80,7 @@ def sandbox(tmp_path, monkeypatch):
 def _argv(installation, kind, output):
     return [
         "--profile",
-        "1.15.1",
+        version_contracts.CURRENT_VERSION,
         "--installation",
         str(installation),
         "--kind",
@@ -103,7 +103,7 @@ def test_cli_requires_every_selection_even_when_environment_has_current_profile(
     assert not sandbox.candidate_root.exists()
 
 
-@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.2"])
+@pytest.mark.parametrize("profile", ["1.14.5", "1.15.0", "1.15.1", "1.15.3"])
 def test_cli_rejects_noncurrent_explicit_profile_before_reads_or_writes(sandbox, profile):
     _repo, installation, verified, _candidate_root = sandbox
     args = _argv(installation, "parameters", sandbox.candidate_root / "capture/parameters.json")
@@ -115,7 +115,7 @@ def test_cli_rejects_noncurrent_explicit_profile_before_reads_or_writes(sandbox,
     assert not sandbox.candidate_root.exists()
 
 
-@pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "unknown"])
+@pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "1.15.1", "unknown"])
 def test_cli_rejects_stale_environment_for_explicit_current_capture(
     sandbox, monkeypatch, capsys, environment
 ):
@@ -162,12 +162,10 @@ def native_inputs(sandbox, monkeypatch):
         path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
-    baseline_root = repo / "research/vanilla-ai/1.15.1"
-    baseline_root.mkdir(parents=True)
-    for source in (STRATEGY, "common/script_values/war_support_values.txt"):
-        (baseline_root / Path(source).name).write_text(inputs[source], encoding="utf-8")
     monkeypatch.setattr(
-        version_contracts, "research_path", lambda _category, name: baseline_root / name
+        version_contracts,
+        "read_default_strategy",
+        lambda root: (root / STRATEGY).read_text(encoding="utf-8-sig"),
     )
     monkeypatch.setattr(
         vanilla_inventory, "_PARAMETER_EVIDENCE_HASHES", {STRATEGY: "historical-hash-unused"}
@@ -196,14 +194,14 @@ def native_inputs(sandbox, monkeypatch):
     monkeypatch.setattr(migration_baseline, "_VERSION_115_SOURCE", historical)
     catalog = technology.inventory({TECHNOLOGY: inputs[TECHNOLOGY]}, {"banking": TECHNOLOGY})
     catalog["legacy_rules"] = []
-    template = repo / "technology_historical.toml"
+    template = repo / "technology_current.toml"
     template.write_text(
         "schema = 1\ncatalog_json = '''"
         + json.dumps(catalog)
         + "'''\n\n[parameters]\nreviewed = 7\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr(technology, "PARAMETERS_115", template)
+    monkeypatch.setattr(technology, "PARAMETERS_CURRENT", template)
     return inputs
 
 
@@ -234,7 +232,7 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
         )
     else:
         data = json.loads(output.read_bytes())
-        assert data["version"] == "1.15.1"
+        assert data["version"] == version_contracts.CURRENT_VERSION
         assert data["runtime"] == "unknown"
         if kind == "parameters":
             assert data["sources"] == {
@@ -244,6 +242,8 @@ def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
             assert data["capture_scope"] == "native_retention_subset_not_full_migration_contract"
             assert set(data["retentions"]) == {"retained"}
             assert "school_policy_migration" not in data
+            digest = hashlib.sha256(native_inputs[STRATEGY].encode()).hexdigest()
+            assert data["source_sha256"] == data["source_normalized_sha256"] == digest
         else:
             assert set(data["fields"]) == compatibility_115.FIELDS
             assert set(data["hooks"]) == compatibility_115.HOOKS
@@ -332,11 +332,11 @@ def test_direct_capture_rejects_historical_context_before_identity_or_output(san
         "parameters": capture.capture_parameters,
         "retentions-native-subset": capture.capture_retentions,
         "compatibility": capture.capture_compatibility,
-        "technology-catalog": technology.write_catalog_1151,
+        "technology-catalog": technology.write_catalog,
     }
     with (
         version_contracts.select_version("1.15.0"),
-        pytest.raises(ValueError, match="只接受当前"),
+        pytest.raises(ValueError, match="当前仅维护"),
     ):
         functions[kind](installation / "game", output=output)
     assert verified == []
