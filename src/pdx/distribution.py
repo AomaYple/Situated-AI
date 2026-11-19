@@ -816,8 +816,9 @@ def package(
     """核对仓库生成物后，生成唯一正式包。"""
     version_contracts.require_current()
     source_lock = generation_lock({})
+    selected_profile = profile if profile is not None else production_profile.declared_profile()
     policy, extensions, internal_files = package_inputs(
-        include_engineering_metadata=True, profile=profile, configuration=configuration
+        include_engineering_metadata=True, profile=selected_profile, configuration=configuration
     )
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
@@ -830,6 +831,7 @@ def package(
 
     def verify_before_replace() -> None:
         verify_compatibility_installation()
+        check_profile_installation(selected_profile)
         if generation_lock({}) != source_lock:
             raise ValueError("完整兼容打包期间源码发生漂移")
         issues = decisions.check(decisions.product_path(), production_files)
@@ -885,6 +887,8 @@ def _verify_written_outputs(
     lock: str,
     expected: Mapping[str, bytes],
     source_lock: str,
+    *,
+    profile: production_profile.ProductionProfile | None = None,
 ) -> None:
     """Keep source, output, lock and live checks inside the rollback boundary."""
 
@@ -901,6 +905,8 @@ def _verify_written_outputs(
         raise ValueError("生产生成期间源码发生漂移")
     check_generation_lock({name: actual[name].read_bytes() for name in files})
     verify_compatibility_installation()
+    if profile is not None:
+        check_profile_installation(profile)
     # The live verifier can itself overlap source or output changes.
     if generation_lock({}) != source_lock or generation_lock(files) != lock:
         raise ValueError("生产最终原件核验期间源码发生漂移")
@@ -923,7 +929,8 @@ def write_standard_outputs(
         with GenerationTransaction() as owned:
             return write_standard_outputs(configuration=configuration, transaction=owned)
     source_lock = generation_lock({})
-    _, _, internal = package_inputs(configuration=configuration)
+    profile = production_profile.declared_profile()
+    _, _, internal = package_inputs(profile=profile, configuration=configuration)
     if generation_lock({}) != source_lock:
         raise ValueError("标准生产生成期间源码发生漂移")
     files = {name: raw for name, raw in _release_files(internal).items() if name != "README.md"}
@@ -961,7 +968,9 @@ def write_standard_outputs(
             or name == "generation-lock.json"
         }
     )
-    _verify_written_outputs(transaction, target, files, lock, expected, source_lock)
+    _verify_written_outputs(
+        transaction, target, files, lock, expected, source_lock, profile=profile
+    )
     return files
 
 

@@ -92,7 +92,7 @@ def test_configuration_identity_mismatch_rejects_current_profile() -> None:
         )
 
 
-@pytest.mark.parametrize("drift", ["before-archive", "before-replace"])
+@pytest.mark.parametrize("drift", ["before-archive", "before-replace", "reader"])
 def test_current_package_rejects_drift_and_preserves_previous_package(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, drift: str
 ) -> None:
@@ -111,12 +111,25 @@ def test_current_package_rejects_drift_and_preserves_previous_package(
     monkeypatch.setattr(distribution, "verify_compatibility_installation", lambda: None)
     lock.write_bytes(distribution.generation_lock().encode())
 
+    reader_changed = False
+
+    def check_reader(profile):
+        if reader_changed:
+            raise ValueError("R2 reader source drift")
+        return profile
+
+    monkeypatch.setattr(distribution, "check_profile_installation", check_reader)
+
     def check_replacement(
         _files: object, destination: Path, *, before_replace: Callable[[], None], **_options: object
     ) -> Path:
         if drift == "before-archive":
             pytest.fail("a drifted lock reached the archive writer")
-        lock.write_bytes(b"drift")
+        nonlocal reader_changed
+        if drift == "reader":
+            reader_changed = True
+        else:
+            lock.write_bytes(b"drift")
         before_replace()
         destination.write_bytes(b"unexpected replacement")
         return destination
@@ -124,7 +137,8 @@ def test_current_package_rejects_drift_and_preserves_previous_package(
     monkeypatch.setattr(distribution, "write_zip", check_replacement)
     if drift == "before-archive":
         lock.write_bytes(b"drift")
-    with pytest.raises(ValueError, match="生产源码或产物与冻结记录不一致"):
+    expected = "R2 reader source drift" if drift == "reader" else "生产源码或产物与冻结记录不一致"
+    with pytest.raises(ValueError, match=expected):
         distribution.package(package)
     assert package.read_bytes() == b"previous package"
 
