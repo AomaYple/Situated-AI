@@ -1,0 +1,463 @@
+{
+  "block_names": [
+    "aggression",
+    "ai_ship_category_weights",
+    "anti_interest_groups",
+    "become_subject_value",
+    "building_group_weights",
+    "change_law_chance",
+    "colonial_interest_ratio",
+    "combat_unit_group_weights",
+    "conscript_battalion_ratio",
+    "cossack_host_scores",
+    "diplomatic_play_boldness",
+    "diplomatic_play_neutrality",
+    "diplomatic_play_support",
+    "economic_vs_government_spending_balance",
+    "fleet_compositions",
+    "goods_stances",
+    "ideological_opinion_effect_mult",
+    "institution_scores",
+    "interest_group_government_weight",
+    "liberate_country_scores",
+    "max_active_stances",
+    "max_progressiveness",
+    "max_regressiveness",
+    "max_ship_design_complexity",
+    "min_law_chance_to_pass",
+    "nationalization_desire",
+    "negotiation_chance",
+    "obligation_value",
+    "possible",
+    "pro_interest_groups",
+    "recklessness",
+    "revolution_aversion",
+    "secret_goal_scores",
+    "ship_construction_output_multiplier",
+    "state_value",
+    "strait_scores",
+    "strategic_region_scores",
+    "strategic_region_stance_type_scores",
+    "subject_value",
+    "subsidies",
+    "target_marine_formation_size",
+    "treaty_category_scores",
+    "treaty_port_value",
+    "unacceptable_infamy_level",
+    "undesirable_infamy_level",
+    "wanted_army_size",
+    "wanted_construction_output",
+    "wanted_marines",
+    "wanted_naval_fortification_levels",
+    "wanted_navy_size",
+    "wanted_num_supply_ships",
+    "war_subsidies",
+    "wargoal_maneuvers_fraction",
+    "wargoal_scores",
+    "weight",
+    "will_form_power_bloc",
+    "will_incorporate_state"
+  ],
+  "field_contexts": {
+    "become_subject_value": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 3752,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:3752"
+      ],
+      "status": "observed",
+      "targets": [
+        {
+          "kind": "country",
+          "line": 3752,
+          "name": "overlord",
+          "role": "target",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ]
+    },
+    "combat_unit_group_weights": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 6365,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "military_formation",
+          "line": 6366,
+          "name": "military_formation",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:6365",
+        "common/ai_strategies/00_default_strategy.txt:6366"
+      ],
+      "status": "observed",
+      "targets": []
+    },
+    "combat_unit_group_weights.combat_unit_group_artillery": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 6365,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "military_formation",
+          "line": 6366,
+          "name": "military_formation",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:6365",
+        "common/ai_strategies/00_default_strategy.txt:6366"
+      ],
+      "status": "observed",
+      "targets": []
+    },
+    "combat_unit_group_weights.combat_unit_group_cavalry": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 6365,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "military_formation",
+          "line": 6366,
+          "name": "military_formation",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:6365",
+        "common/ai_strategies/00_default_strategy.txt:6366"
+      ],
+      "status": "observed",
+      "targets": []
+    },
+    "combat_unit_group_weights.combat_unit_group_infantry": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 6365,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "military_formation",
+          "line": 6366,
+          "name": "military_formation",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:6365",
+        "common/ai_strategies/00_default_strategy.txt:6366"
+      ],
+      "status": "observed",
+      "targets": []
+    },
+    "conscript_battalion_ratio": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 6426,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "military_formation",
+          "line": 6427,
+          "name": "military_formation",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:6426",
+        "common/ai_strategies/00_default_strategy.txt:6427"
+      ],
+      "status": "observed",
+      "targets": []
+    },
+    "interest_group_government_weight": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 1761,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:1761",
+        "common/ai_strategies/00_default_strategy.txt:1762"
+      ],
+      "status": "observed",
+      "targets": [
+        {
+          "kind": "interest_group",
+          "line": 1762,
+          "name": "interest_group",
+          "role": "candidate",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ]
+    },
+    "negotiation_chance": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 161,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "law",
+          "line": 162,
+          "name": "law",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        },
+        {
+          "kind": "scalar",
+          "line": 164,
+          "name": "amenability",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        },
+        {
+          "kind": "scalar",
+          "line": 165,
+          "name": "advance_chance",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        },
+        {
+          "kind": "scalar",
+          "line": 166,
+          "name": "stall_chance",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:161",
+        "common/ai_strategies/00_default_strategy.txt:162",
+        "common/ai_strategies/00_default_strategy.txt:163",
+        "common/ai_strategies/00_default_strategy.txt:164",
+        "common/ai_strategies/00_default_strategy.txt:165",
+        "common/ai_strategies/00_default_strategy.txt:166"
+      ],
+      "status": "observed",
+      "targets": [
+        {
+          "kind": "interest_group",
+          "line": 163,
+          "name": "interest_group",
+          "role": "candidate",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ]
+    },
+    "state_value": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 1769,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "country",
+          "line": 1771,
+          "name": "target_country",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:1769",
+        "common/ai_strategies/00_default_strategy.txt:1770",
+        "common/ai_strategies/00_default_strategy.txt:1771"
+      ],
+      "status": "observed",
+      "targets": [
+        {
+          "kind": "state",
+          "line": 1770,
+          "name": "target_state",
+          "role": "target",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ]
+    },
+    "subject_value": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 3382,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:3382"
+      ],
+      "status": "observed",
+      "targets": [
+        {
+          "kind": "country",
+          "line": 3382,
+          "name": "target_country",
+          "role": "target",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ]
+    },
+    "treaty_port_value": {
+      "actor_scope": {
+        "kind": "country",
+        "line": 3186,
+        "name": "root",
+        "role": "actor",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      "auxiliary_scopes": [
+        {
+          "kind": "country",
+          "line": 3188,
+          "name": "target_country",
+          "role": "auxiliary",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ],
+      "evidence": [
+        "common/ai_strategies/00_default_strategy.txt:3186",
+        "common/ai_strategies/00_default_strategy.txt:3187",
+        "common/ai_strategies/00_default_strategy.txt:3188"
+      ],
+      "status": "observed",
+      "targets": [
+        {
+          "kind": "state",
+          "line": 3187,
+          "name": "target_state",
+          "role": "target",
+          "source": "common/ai_strategies/00_default_strategy.txt"
+        }
+      ]
+    }
+  },
+  "normalized_sha256": "42088c06f326a6fd1f01ed120928c8888d29b776c9bacb9795c63f9c390d7d40",
+  "numeric_children": [
+    "institution_scores.institution_colonial_affairs",
+    "institution_scores.institution_health_system",
+    "institution_scores.institution_home_affairs",
+    "institution_scores.institution_police",
+    "institution_scores.institution_schools",
+    "institution_scores.institution_social_security",
+    "institution_scores.institution_workplace_safety",
+    "secret_goal_scores.antagonize.score",
+    "secret_goal_scores.befriend.score",
+    "secret_goal_scores.conquer.score",
+    "secret_goal_scores.dominate.score",
+    "secret_goal_scores.none.score",
+    "secret_goal_scores.protect.score",
+    "secret_goal_scores.reconcile.score",
+    "strategic_region_stance_type_scores.stance_colonize_region",
+    "strategic_region_stance_type_scores.stance_conquer_region",
+    "strategic_region_stance_type_scores.stance_none",
+    "strategic_region_stance_type_scores.stance_protect_region",
+    "treaty_category_scores.economy",
+    "treaty_category_scores.expansion",
+    "treaty_category_scores.ideology",
+    "treaty_category_scores.military",
+    "treaty_category_scores.military_defense",
+    "treaty_category_scores.none",
+    "treaty_category_scores.other",
+    "treaty_category_scores.power_bloc",
+    "treaty_category_scores.trade",
+    "wargoal_scores.annex_country",
+    "wargoal_scores.colonization_rights",
+    "wargoal_scores.conquer_state",
+    "wargoal_scores.contain_threat",
+    "wargoal_scores.force_nationalization",
+    "wargoal_scores.humiliation",
+    "wargoal_scores.increase_autonomy",
+    "wargoal_scores.independence",
+    "wargoal_scores.join_power_bloc",
+    "wargoal_scores.leave_power_bloc",
+    "wargoal_scores.liberate_country",
+    "wargoal_scores.liberate_subject",
+    "wargoal_scores.make_subject",
+    "wargoal_scores.open_market",
+    "wargoal_scores.reduce_autonomy",
+    "wargoal_scores.regime_change",
+    "wargoal_scores.return_state",
+    "wargoal_scores.revoke_claim",
+    "wargoal_scores.secession",
+    "wargoal_scores.transfer_subject",
+    "wargoal_scores.unification"
+  ],
+  "schema": 1,
+  "source": "common/ai_strategies/00_default_strategy.txt",
+  "source_sha256": "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
+  "support_context": {
+    "actor_scope": {
+      "kind": "country",
+      "line": 210,
+      "name": "root",
+      "role": "actor",
+      "source": "common/ai_strategies/00_default_strategy.txt"
+    },
+    "auxiliary_scopes": [],
+    "evidence": [
+      "common/ai_strategies/00_default_strategy.txt:210",
+      "common/ai_strategies/00_default_strategy.txt:211",
+      "common/ai_strategies/00_default_strategy.txt:212"
+    ],
+    "status": "observed",
+    "targets": [
+      {
+        "kind": "country",
+        "line": 211,
+        "name": "target_country",
+        "role": "target",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      },
+      {
+        "kind": "country",
+        "line": 212,
+        "name": "enemy_country",
+        "role": "target",
+        "source": "common/ai_strategies/00_default_strategy.txt"
+      }
+    ]
+  },
+  "version": "1.15.2"
+}

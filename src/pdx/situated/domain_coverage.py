@@ -194,10 +194,10 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
     ):
         return "continuous_writer_contract_mismatch"
     context = writer.evaluation_context
-    from .compiler import support_evaluation_context  # noqa: PLC0415
+    from .compiler import declared_support_evaluation_context  # noqa: PLC0415
 
     try:
-        expected_context = support_evaluation_context()
+        expected_context = declared_support_evaluation_context()
     except OSError, ValueError:
         return "evaluation_context_unproven"
     if context is None or context.status != "observed" or context.actor_scope is None:

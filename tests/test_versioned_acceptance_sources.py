@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decisions, version_contracts
+from pdx import config, decisions, version_contracts
 from pdx.situated import (
     bindings,
     compatibility_115,
@@ -97,6 +97,52 @@ def test_current_baseline_bytes_cannot_borrow_old_scope_proof(tmp_path, monkeypa
         compiler._frozen_institution_contexts(
             compiler._frozen_strategy_contexts()["institution_scores"]
         )
+
+
+def test_release_model_and_metadata_use_verified_structure_without_installation(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(config, "GAME", tmp_path)
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        model = compiler.load_model()
+        policy, extensions = decisions.load(), decisions.load_extensions()
+        fingerprint = decisions.source_fingerprint(policy, extensions, None, situated_model=model)
+        context = compiler.declared_support_evaluation_context()
+        assert (
+            fingerprint["baseline_sha256"] == version_contracts.contract().baseline_strategy_sha256
+        )
+        assert (
+            fingerprint["situated_default_strategy_structure_source_sha256"]
+            == model.source_sha256["default_strategy_structure"]
+        )
+        assert context.actor_scope is not None
+        assert context.actor_scope.source == version_contracts.DEFAULT_STRATEGY_SOURCE
+        with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
+            compatibility_115.snapshot(game=tmp_path)
+
+
+def test_release_model_rejects_structure_declaration_drift(tmp_path, monkeypatch):
+    projection = tmp_path / "default-strategy-structure.json"
+    projection.write_bytes(compiler._DEFAULT_STRATEGY_PROJECTION.read_bytes() + b"\n")
+    monkeypatch.setattr(compiler, "_DEFAULT_STRATEGY_PROJECTION", projection)
+    with (
+        version_contracts.select_version(version_contracts.CURRENT_VERSION),
+        pytest.raises(ValueError, match="默认策略结构合同字节漂移"),
+    ):
+        compiler.load_model()
+
+
+@pytest.mark.integration
+def test_release_compatibility_refuses_changed_installed_strategy_bytes(tmp_path):
+    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
+        relative = version_contracts.DEFAULT_STRATEGY_SOURCE
+        changed = tmp_path / relative
+        changed.parent.mkdir(parents=True)
+        # Copy only to the test's temporary directory. The trailing change is
+        # immaterial to the AST and must still fail the raw source gate.
+        changed.write_bytes((config.GAME / relative).read_bytes() + b"\n")
+        with pytest.raises(ValueError, match="当前原版默认策略原始字节漂移"):
+            compatibility_115.snapshot(game=tmp_path)
 
 
 def test_parameter_identity_pins_keep_the_full_auxiliary_set_without_permissions(

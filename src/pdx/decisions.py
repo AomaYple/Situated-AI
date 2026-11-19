@@ -1081,17 +1081,22 @@ def patch_default(
 def source_fingerprint(
     policy: Policy,
     extensions: Extensions,
-    baseline: str,
+    baseline: str | None,
     country_policy: CountryPolicy | None = None,
     *,
     situated_model: situated_compiler.SituatedModel | None = None,
 ) -> dict[str, str]:
     """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
 
+    if baseline is None and version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+        baseline_sha256 = version_contracts.contract().baseline_strategy_sha256
+    else:
+        source = baseline if baseline is not None else baseline_text()
+        baseline_sha256 = hashlib.sha256(normalized_text(source).encode()).hexdigest()
     result = {
         "fiscal_source_sha256": policy.source_sha256,
         "extensions_source_sha256": extensions.source_sha256,
-        "baseline_sha256": hashlib.sha256(normalized_text(baseline).encode()).hexdigest(),
+        "baseline_sha256": baseline_sha256,
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
     if situated_model is None:
@@ -1240,7 +1245,7 @@ def metadata_payload(
         else source_fingerprint(
             policy,
             extensions,
-            baseline if baseline is not None else baseline_text(),
+            baseline,
             country_policy,
             situated_model=situated_model,
         ),

@@ -92,6 +92,7 @@ def test_current_support_context_binds_locked_installed_source_and_line():
         if lines[line - 1].strip() == "# root = supporting country doing the AI evaluation"
     )
     context = compiler.support_evaluation_context()
+    assert compiler.declared_support_evaluation_context() == context
     assert context.actor_scope is not None
     assert context.actor_scope.source == source
     assert context.actor_scope.line == actor_line

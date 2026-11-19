@@ -11,7 +11,14 @@ from typing import Any
 
 import pytest
 
-from pdx import config, decision_adapters, decisions, distribution, equipment_opportunities
+from pdx import (
+    config,
+    decision_adapters,
+    decisions,
+    distribution,
+    equipment_opportunities,
+    version_contracts,
+)
 from pdx.model import Block
 from pdx.situated import audit, compiler, domain_coverage, vanilla_inventory
 from pdx.situated.decision_ir import (
@@ -23,6 +30,15 @@ from pdx.situated.support_program import SupportProgram
 pytestmark = pytest.mark.unit
 
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
+
+
+@pytest.fixture(autouse=True)
+def support_profile(request):
+    if request.node.get_closest_marker("integration"):
+        yield
+    else:
+        with version_contracts.select_version("1.15.0"):
+            yield
 
 
 def test_continuous_program_api_keeps_empty_independent_denominator():
@@ -37,7 +53,7 @@ def real_production():
     return distribution.package_inputs(include_engineering_metadata=True)[2]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def controlled_output():
     """A declared unit fixture; the separate integration test must prove build()."""
     extra = replace(decisions.Extensions(), market_enabled=True, security_enabled=True)
@@ -55,7 +71,7 @@ def controlled_output():
         vanilla_tail="preserve",
         owner="situated_kernel",
         program=program,
-        evaluation_context=compiler.support_evaluation_context(),
+        evaluation_context=compiler.declared_support_evaluation_context(),
     )
     metadata = {
         "situated_actions": {"consumer_ir": ConsumerIRBundle(1, (), (writer,)).as_dict()},
@@ -84,8 +100,7 @@ def test_real_build_program_has_an_exact_native_mapping(real_production, real_na
     assert report["denominator"] == 1
 
 
-def _native_scope(getter: bytes):
-    raw = b"\xef\xbb\xbf" + decisions.baseline_path().read_bytes()
+def _native_scope(raw: bytes, getter: bytes):
     parsed = vanilla_inventory.parse_bytes(raw, path=SOURCE)
     strategy = parsed.root.first("ai_strategy_default")
     assert strategy is not None
@@ -135,14 +150,16 @@ def native_scope(monkeypatch):
     baseline = copy.deepcopy(equipment_opportunities.load_baseline())
     baseline["sources"][getter_source] = hashlib.sha256(getter).hexdigest()
     monkeypatch.setattr(equipment_opportunities, "load_baseline", lambda: baseline)
-    return _native_scope(getter)
+    return _native_scope(b"\xef\xbb\xbf" + decisions.baseline_path().read_bytes(), getter)
 
 
 @pytest.fixture
 def real_native_scope():
     """The integration test retains the actual source and unmodified production pin."""
     getter_source = "common/script_values/01_power_bloc_values.txt"
-    return _native_scope((config.GAME / getter_source).read_bytes())
+    return _native_scope(
+        (config.GAME / SOURCE).read_bytes(), (config.GAME / getter_source).read_bytes()
+    )
 
 
 def test_controlled_program_maps_without_fabricating_an_action(controlled_output, native_scope):

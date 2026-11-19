@@ -15,7 +15,7 @@ from pdx.model import Block
 from pdx.parser import parse_bytes
 from pdx.textio import normalized_text
 
-from . import engine_scope
+from . import engine_scope, migration_baseline
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -98,19 +98,25 @@ def snapshot(*, game: Path | None = None) -> bytes:
     for field in FIELDS - {"diplomatic_play_support"}:
         if binary["consumers"][field]["actor_scope"] != "country":
             raise ValueError(f"1.15 完整兼容策略没有国家对象证据：{field}")
-    from .compiler import baseline_path, support_evaluation_context  # noqa: PLC0415
-
-    support = support_evaluation_context()
-    if support.actor_scope is None or support.actor_scope.kind != "country":
-        raise ValueError("1.15 完整兼容支持字段缺少独立原版文档对象证据")
+    from .compiler import (  # noqa: PLC0415
+        baseline_path,
+        support_evaluation_context,
+        verify_default_strategy_projection,
+    )
 
     current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
     game = config.GAME if game is None else game
-    baseline = (
-        version_contracts.read_default_strategy(game).encode("utf-8")
-        if current
-        else baseline_path().read_bytes()
-    )
+    if current:
+        text = version_contracts.read_default_strategy(game)
+        verify_default_strategy_projection(text)
+        migration_baseline.verify_default_strategy_retention(text)
+        migration_baseline.verify_school_replacement_output(game.parent, text)
+        baseline = text.encode("utf-8")
+    else:
+        support = support_evaluation_context()
+        if support.actor_scope is None or support.actor_scope.kind != "country":
+            raise ValueError("1.15 完整兼容支持字段缺少独立原版文档对象证据")
+        baseline = baseline_path().read_bytes()
     if hashlib.sha256(baseline).hexdigest() != data["baseline_sha256"]:
         raise ValueError("1.15 完整兼容策略底本字节漂移")
     parsed = parse_bytes(baseline, path=data["strategy_source"])
