@@ -1349,6 +1349,7 @@ def contract(
     from .situated.programs import contract as program_contract  # noqa: PLC0415
 
     active_rules = tuple(rule for ruleset in rules.groups().values() for rule in ruleset)
+    active_rule_ids = {rule.id for rule in active_rules}
     used_reader_keys = {key for rule in active_rules for key in rule.input_keys()}
     return {
         "schema": 1,
@@ -1474,6 +1475,7 @@ def contract(
                 "counterexample": rule.counterexample,
             }
             for rule in rules.rules
+            if rule.id in active_rule_ids
         ],
         "cost_by_field": {
             ".".join(field): {

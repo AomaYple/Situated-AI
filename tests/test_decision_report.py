@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from dataclasses import replace
+from typing import Any, cast
 
 import pytest
 
@@ -158,6 +159,37 @@ def test_offline_metadata_fingerprints_the_declared_current_source(
     fingerprint = engineering_metadata["source_fingerprint"]
     assert fingerprint["baseline_sha256"] == version_contracts.contract().baseline_strategy_sha256
     assert fingerprint["country_state_source_sha256"] == country_state.load().source_sha256
+
+
+@pytest.mark.parametrize(
+    "configuration",
+    [
+        ProfileConfiguration(),
+        ProfileConfiguration(domains=frozenset({"economy"})),
+        ProfileConfiguration(core=False),
+    ],
+    ids=["default", "economy", "core-off"],
+)
+def test_shared_contract_keeps_only_active_rules_in_source_order(
+    configuration: ProfileConfiguration,
+) -> None:
+    rules = decision_rules.load(strategy=decision_intents.load())
+    selected = rules.enabled_domains & configuration.legacy_domains
+    active = [rule for rule in rules.rules if rule.domain in selected]
+    used_readers = {key for rule in active for key in rule.input_keys()}
+
+    contract = decision_rules.contract(replace(rules, enabled_domains=selected))
+
+    assert [row["id"] for row in cast("list[dict[str, Any]]", contract["rules"])] == [
+        rule.id for rule in active
+    ]
+    assert [row["key"] for row in cast("list[dict[str, Any]]", contract["readers"])] == [
+        reader.key for reader in rules.readers if reader.key in used_readers
+    ]
+    assert contract["field_owners"] == {
+        ".".join(rule.field): "information_rules" for rule in active
+    }
+    assert contract["active_rule_count"] == len(active)
 
 
 def test_offline_report_preserves_core_off_configuration() -> None:
