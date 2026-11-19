@@ -43,8 +43,8 @@ import pytest
 from conftest import NEEDS_GAME, configure_current_identity
 from typer.testing import CliRunner
 
-from pdx import cli, config, verify
-from pdx.version_contracts import CURRENT_VERSION
+from pdx import cli, config, decisions, verify
+from pdx.version_contracts import CURRENT_VERSION, ENVIRONMENT_VARIABLE
 
 pytestmark = pytest.mark.cli
 
@@ -152,6 +152,39 @@ def test_verify_json_落盘(tmp_path) -> None:
     summary = data["summary"]
     assert summary["总数"] > 0
     assert summary["失败"] == 0
+
+
+@pytest.mark.parametrize(
+    "profile", [[], ["--profile", CURRENT_VERSION]], ids=["default", "explicit"]
+)
+def test_decision_audit_offline_uses_current_source_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, profile: list[str]
+) -> None:
+    missing = tmp_path / "missing-installation"
+    monkeypatch.delenv(ENVIRONMENT_VARIABLE, raising=False)
+    monkeypatch.setattr(config, "ROOT", missing)
+    monkeypatch.setattr(config, "GAME", missing / "game")
+
+    def need_no_native_input(*_args, **_kwargs):
+        pytest.fail("离线决策审计读取了生产原件")
+
+    monkeypatch.setattr(decisions, "baseline_path", need_no_native_input)
+    monkeypatch.setattr(decisions, "load_situated_model", need_no_native_input)
+    output = tmp_path / "audit.json"
+    result = _invoke("decision-audit", "--offline", "--output", str(output), *profile)
+    assert result.exit_code == 0, result.output
+    report = json.loads(output.read_bytes())
+    assert report["supported_game_version"] == CURRENT_VERSION
+    assert report["evidence"] == "static_source_contract_only"
+    assert report["behavior_verified"] is False
+    network = report["action_network"]
+    assert network["native_inputs"] == "declared_write_points_and_digests"
+    assert network["runtime"] == "unknown"
+    assert {program["consumer"] for program in network["programs"]} == {
+        "a0-econ-road",
+        "a0-pol-schools",
+        "a0-dip-relations",
+    }
 
 
 # ── crosscheck（引擎交叉验证）────────────────────────────────

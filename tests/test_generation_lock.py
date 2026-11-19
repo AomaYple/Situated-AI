@@ -8,15 +8,17 @@ from typer.testing import CliRunner
 
 from pdx import cli, config, decisions, distribution, version_contracts
 
+CURRENT_VERSION = version_contracts.CURRENT_VERSION
+
 
 @pytest.fixture
 def frozen_product(tmp_path, monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, CURRENT_VERSION)
     product = tmp_path / "mod"
     for name, raw in {
         "src/pdx/generator.py": b"SOURCE = 1\n",
         "mod/decisions/policy.toml": b"enabled = true\n",
-        "research/vanilla-ai/1.14.5/default.txt": decisions._HISTORICAL_BASELINE.read_bytes(),
+        f"research/vanilla-ai/{CURRENT_VERSION}/authority.json": b'{"schema": 1}\n',
         "mod/common/values.txt": b"value = 1\n",
         "mod/localization/english/l_english.yml": b"l_english:\n",
         "mod/.metadata/metadata.json": b"{}\n",
@@ -25,7 +27,6 @@ def frozen_product(tmp_path, monkeypatch):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
     monkeypatch.setattr(decisions, "PRODUCT", product)
-    monkeypatch.setattr(decisions, "BASELINE", tmp_path / "research/vanilla-ai/1.14.5/default.txt")
     (product / "generation-lock.json").write_text(
         distribution.generation_lock(), encoding="utf-8", newline="\n"
     )
@@ -50,6 +51,7 @@ def test_frozen_lock_is_deterministic_and_excludes_delivery_guide(frozen_product
         ("../src/pdx/generator.py", "change"),
         ("../src/pdx/added.py", "add"),
         ("decisions/policy.toml", "delete"),
+        (f"../research/vanilla-ai/{CURRENT_VERSION}/authority.json", "change"),
         ("common/values.txt", "change"),
         ("common/values.txt", "crlf"),
         ("common/values.txt", "bom"),
@@ -115,40 +117,34 @@ def test_lock_tracks_independent_historical_migration_manifest(frozen_product, o
 
 
 def test_no_game_offline_guard_uses_frozen_snapshot_contract(tmp_path, monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.1")
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, CURRENT_VERSION)
     root = tmp_path / "missing-installation"
     monkeypatch.setattr(config, "ROOT", root)
     monkeypatch.setattr(config, "GAME", root / "game")
-    result = CliRunner().invoke(cli.app, ["modguard", "--offline", "--profile", "1.15.1"])
+    result = CliRunner().invoke(cli.app, ["modguard", "--offline", "--profile", CURRENT_VERSION])
     assert result.exit_code == 0, result.output
     assert "冻结源码/产物" in result.output
     assert "不证明当前游戏内容" in result.output
 
 
-def test_current_lock_tracks_versioned_sources_and_uses_isolated_tree(frozen_product, monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
-    selected = frozen_product / "compatibility"
-    selected.mkdir()
-    (selected / "common").mkdir()
-    (selected / "common/current.txt").write_bytes(b"current = yes\n")
-    monkeypatch.setattr(decisions, "product_path", lambda: selected)
-    source = frozen_product.parent / "mod/decisions/1.15.0/action_bindings.toml"
+def test_current_lock_tracks_versioned_sources(frozen_product):
+    relative = f"mod/decisions/{CURRENT_VERSION}/action_bindings.toml"
+    source = frozen_product.parent / relative
     source.parent.mkdir(parents=True)
-    source.write_bytes(b"version = '1.15.0'\n")
+    source.write_bytes(f'version = "{CURRENT_VERSION}"\n'.encode())
     lock = distribution.generation_lock()
-    (selected / "generation-lock.json").write_text(lock, encoding="utf-8", newline="\n")
+    (frozen_product / "generation-lock.json").write_text(lock, encoding="utf-8", newline="\n")
     distribution.check_generation_lock()
-    assert version_contracts.active_version() == "1.15.0"
-    assert "mod/decisions/1.15.0/action_bindings.toml" in json.loads(lock)["sources"]
+    assert relative in json.loads(lock)["sources"]
     source.write_bytes(b"version = 'unreviewed'\n")
     with pytest.raises(ValueError, match="冻结记录不一致"):
         distribution.check_generation_lock()
 
 
-def test_no_game_historical_package_refuses_and_preserves_existing(
-    frozen_product, tmp_path, monkeypatch
-):
-    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
+def test_no_game_package_api_refuses_and_preserves_existing(frozen_product, tmp_path, monkeypatch):
+    root = tmp_path / "missing-installation"
+    monkeypatch.setattr(config, "ROOT", root)
+    monkeypatch.setattr(config, "GAME", root / "game")
     target = tmp_path / "existing.zip"
     target.write_bytes(b"previous zip")
     with pytest.raises(ValueError, match="缺少锁定游戏原件"):
@@ -157,7 +153,7 @@ def test_no_game_historical_package_refuses_and_preserves_existing(
 
 
 def test_no_game_production_generation_refuses_and_preserves_existing(tmp_path, monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.1")
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, CURRENT_VERSION)
     root = tmp_path / "missing-installation"
     monkeypatch.setattr(config, "ROOT", root)
     monkeypatch.setattr(config, "GAME", root / "game")
@@ -173,7 +169,7 @@ def test_no_game_production_generation_refuses_and_preserves_existing(tmp_path, 
         ["modgen", "--check"],
         ["package", "--output", str(target)],
     ):
-        result = CliRunner().invoke(cli.app, [*command, "--profile", "1.15.1"])
+        result = CliRunner().invoke(cli.app, [*command, "--profile", CURRENT_VERSION])
         assert result.exit_code == cli.EXIT_FAILED, result.output
         assert "missing or linked source binaries/checksum.txt" in result.output
         assert list(product.iterdir()) == [preserved_file]

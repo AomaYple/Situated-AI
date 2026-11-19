@@ -299,48 +299,44 @@ HISTORICAL_SHOCKS_WITHOUT_LOCKED_READER = (
 def source_metadata(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> dict[str, Any]:
-    """从入库源和锁定底本构造不依赖本机游戏目录的合同。
-
-    该路径只用于静态合同审计和无游戏 CI。生产生成仍必须经过
-    :func:`pdx.distribution.package_inputs`，以便核对当前原版文件的指纹、
-    作用域和消费者原件；这里绝不把源合同冒充当前游戏内容或行为验证。
-    """
+    """从入库生产源和当前原版声明构造静态审计合同。"""
 
     from . import distribution  # noqa: PLC0415
 
-    if configuration is None and version_contracts.active_version() == "1.15.1":
-        configuration = profile_configuration.ProfileConfiguration()
+    profile = production_profile.declared_profile()
+    configuration = (
+        profile_configuration.ProfileConfiguration() if configuration is None else configuration
+    )
     policy, extensions = distribution.production_configuration(configuration=configuration)
     country_policy = country_state.load()
-    if configuration is not None and not configuration.enabled_domains:
+    if not configuration.enabled_domains:
         country_policy = replace(country_policy, enabled=False)
     strategy = decision_intents.load()
     information = decision_rules.load(strategy=strategy)
     adapters = decision_adapters.load(strategy=strategy)
-    if configuration is not None:
-        profile_configuration.validate_coverage(
-            frozenset(
-                rule.domain
-                for rules in (information, *(item for _, item in adapters.policies))
-                for rule in rules.rules
-            ),
-            decisions.EXTENSION_PROFILE_MODULES,
-        )
-        information = replace(
-            information, enabled_domains=information.enabled_domains & configuration.legacy_domains
-        )
-        adapters = replace(
-            adapters,
-            policies=tuple(
-                (
-                    source,
-                    replace(
-                        rules, enabled_domains=rules.enabled_domains & configuration.legacy_domains
-                    ),
-                )
-                for source, rules in adapters.policies
-            ),
-        )
+    profile_configuration.validate_coverage(
+        frozenset(
+            rule.domain
+            for rules in (information, *(item for _, item in adapters.policies))
+            for rule in rules.rules
+        ),
+        decisions.EXTENSION_PROFILE_MODULES,
+    )
+    information = replace(
+        information, enabled_domains=information.enabled_domains & configuration.legacy_domains
+    )
+    adapters = replace(
+        adapters,
+        policies=tuple(
+            (
+                source,
+                replace(
+                    rules, enabled_domains=rules.enabled_domains & configuration.legacy_domains
+                ),
+            )
+            for source, rules in adapters.policies
+        ),
+    )
 
     information_contract = decision_rules.contract(information)
 
@@ -355,10 +351,11 @@ def source_metadata(
     metadata = decisions.metadata_payload(
         policy,
         extensions,
-        baseline=decisions.baseline_path().read_text(encoding="utf-8"),
         complete_localization=True,
         country_policy=country_policy,
+        fingerprint={"baseline_sha256": version_contracts.contract().baseline_strategy_sha256},
     )
+    decisions.attach_country_metadata(metadata, country_policy)
     enabled_modules = metadata["enabled_modules"]
     if not isinstance(enabled_modules, list):
         raise TypeError("元数据的 enabled_modules 必须是列表")
@@ -375,19 +372,12 @@ def source_metadata(
         "sources": dict(adapters.sources),
         "consumers": consumers,
     }
-    metadata["country_state"] = country_state.contract(country_policy)
-    metadata["country_coordination"] = {
-        "runtime_state": "stateless_consumer_observations"
-        if country_policy.enabled
-        else "disabled",
-        "state_contract": metadata["country_state"],
-        "behavior_verified": False,
-        "evidence": "static_check",
+    metadata["action_network"] = {
+        **network_profile.audit(profile, configuration=configuration),
+        "native_inputs": "declared_write_points_and_digests",
     }
-    if version_contracts.active_version() == "1.15.1":
-        profile = production_profile.load_profile(production_profile.baseline_root())
-        metadata["action_network"] = network_profile.audit(profile, configuration=configuration)
-        metadata["configuration"] = configuration.identity() if configuration is not None else None
+    metadata["configuration"] = configuration.identity()
+    metadata["report_evidence"] = "static_source_contract_only"
     return metadata
 
 
@@ -932,7 +922,7 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
             else {}
         ),
         "goal": GOAL,
-        "evidence": "static_generated_contract_only",
+        "evidence": metadata.get("report_evidence", "static_generated_contract_only"),
         "behavior_verified": False,
         "supported_game_version": metadata["supported_game_version"],
         "candidate_version": metadata["version"],

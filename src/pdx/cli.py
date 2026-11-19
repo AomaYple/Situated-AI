@@ -3041,7 +3041,7 @@ def decision_audit_cmd(
     offline: bool = typer.Option(
         False,
         "--offline",
-        help="只使用入库源和锁定底本；适用于无游戏目录的 CI 静态合同检查",
+        help="从入库生产源和原版声明核对静态合同；适用于无游戏目录的 CI",
     ),
     profile: Annotated[str | None, typer.Option("--profile", help="断言当前生产版本")] = None,
     configuration: Annotated[
@@ -3050,9 +3050,8 @@ def decision_audit_cmd(
 ) -> None:
     """核对情境决策合同并生成可解释报告。
 
-    默认复用一次生产构建得到的 engineering metadata；``--offline`` 使用入库源和
-    锁定底本构造同一份静态合同，供无游戏目录的 CI 使用。它不启动游戏，也不把合同
-    通过升级为 AI 行为或平衡通过。
+    默认复用一次生产构建得到的 engineering metadata。``--offline`` 从入库生产源和
+    原版声明核对静态合同，供无游戏目录的 CI 使用。AI 行为和平衡仍需实机验收。
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:

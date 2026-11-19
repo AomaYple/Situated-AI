@@ -5,7 +5,15 @@ from typing import Any
 
 import pytest
 
-from pdx import country_state, decision_adapters, decision_intents, decision_report, decision_rules
+from pdx import (
+    country_state,
+    decision_adapters,
+    decision_intents,
+    decision_report,
+    decision_rules,
+    version_contracts,
+)
+from pdx.situated.profile_configuration import ProfileConfiguration
 
 
 @pytest.fixture(scope="module")
@@ -142,6 +150,24 @@ def test_offline_metadata_reuses_the_shared_rule_contract(
         }
         for source, rules in adapters.policies
     ]
+
+
+def test_offline_metadata_fingerprints_the_declared_current_source(
+    engineering_metadata: dict[str, Any],
+) -> None:
+    fingerprint = engineering_metadata["source_fingerprint"]
+    assert fingerprint["baseline_sha256"] == version_contracts.contract().baseline_strategy_sha256
+    assert fingerprint["country_state_source_sha256"] == country_state.load().source_sha256
+
+
+def test_offline_report_preserves_core_off_configuration() -> None:
+    configuration = ProfileConfiguration(core=False)
+    report = decision_report.build(decision_report.source_metadata(configuration))
+
+    assert report["configuration"] == configuration.identity()
+    assert report["action_network"]["programs"] == []
+    assert report["profile"]["runtime_state"] == "disabled"
+    assert report["reader_count"] == 0
 
 
 def test_decision_report_rejects_missing_rationale(engineering_metadata: dict[str, Any]) -> None:
