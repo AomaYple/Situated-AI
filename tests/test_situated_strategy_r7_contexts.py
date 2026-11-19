@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules, equipment_opportunities, version_contracts
+from pdx import config, decision_rules, equipment_opportunities, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
@@ -196,7 +196,10 @@ def test_map_rejects_unknown_duplicate_and_substitute_shapes(family, key, damage
 
 
 @pytest.mark.parametrize("field", FIELDS)
-def test_new_contexts_keep_complete_objects_and_all_readers(field):
+@pytest.mark.parametrize("version", ["1.15.1", version_contracts.CURRENT_VERSION])
+def test_new_contexts_keep_complete_objects_and_all_readers(field, version, monkeypatch, tmp_path):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version)
+    monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     context = compiler._frozen_strategy_contexts()[field]
     reader = decision_rules.Reader("war", "is_at_war", "root", "boolean", "boolean")
     path = (
@@ -247,7 +250,10 @@ def test_parent_and_non_exact_child_paths_never_become_numeric_contexts(family, 
             compiler.validate_context_readers(path, context, {}, ())
 
 
-def test_shipmod_context_keeps_candidate_and_all_root_readers():
+@pytest.mark.parametrize("version", ["1.15.1", version_contracts.CURRENT_VERSION])
+def test_shipmod_context_keeps_candidate_and_all_root_readers(version, monkeypatch, tmp_path):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version)
+    monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     contexts = compiler._frozen_ship_modification_contexts()
     assert len(contexts) == 263
     context = next(iter(contexts.values()))
@@ -395,9 +401,9 @@ def test_production_strategy_gate_requires_complete_stance_file_set(tmp_path, mo
         engine_scope.verify_strategy_game(game)
 
 
+@pytest.mark.integration
 def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monkeypatch, tmp_path):
-    from pdx import config
-
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
     model = compiler.load_model()
     assert model.consumer_ir is not None
     instances = {row.action_id: row for row in model.action_instances}
@@ -465,6 +471,5 @@ def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monk
                 "region_score"
             }
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
-    offline = compiler.load_model()
-    assert offline.consumer_ir is not None
-    assert offline.consumer_ir.writers == model.consumer_ir.writers
+    with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
+        compiler.load_model()
