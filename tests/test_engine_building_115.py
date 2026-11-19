@@ -22,11 +22,7 @@ def test_current_building_default_verifies_both_native_define_branches_and_execu
     assert contract["selection"] == "valid_template_else_self"
     assert len(data["observations"]) == 37
     hashes = dict(engine_building_115.verify_game(config.GAME))
-    assert hashes["@engine/binaries/victoria3.exe"] == (
-        engine_scope_115.EXE_SHA256_1151
-        if version_contracts.active_version() == "1.15.1"
-        else engine_scope_115.EXE_SHA256
-    )
+    assert hashes["@engine/binaries/victoria3.exe"] == engine_scope_115.executable_identity()[0]
     assert hashes["common/defines/00_ai.txt"] == data["script_hashes"]["common/defines/00_ai.txt"]
 
 
@@ -54,11 +50,11 @@ def test_rebound_manifest_cannot_expand_exact_initializer_contract(tmp_path, mon
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        (
-            engine_scope_115.MANIFESTS_1151
-            if version_contracts.active_version() == "1.15.1"
-            else engine_scope_115.MANIFESTS
-        ),
+        {
+            "1.15.0": engine_scope_115.MANIFESTS,
+            "1.15.1": engine_scope_115.MANIFESTS_1151,
+            "1.15.2": engine_scope_115.MANIFESTS_1152,
+        }[version_contracts.active_version()],
         "building-default",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -67,10 +63,10 @@ def test_rebound_manifest_cannot_expand_exact_initializer_contract(tmp_path, mon
 
 
 def test_missing_engine_manifest_blocks_adapter_loading(monkeypatch, tmp_path):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.0")
-    _, digest = engine_scope_115.MANIFESTS["building-default"]
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
+    _, digest = engine_scope_115.MANIFESTS_1152["building-default"]
     monkeypatch.setitem(
-        engine_scope_115.MANIFESTS, "building-default", (str(tmp_path / "absent.json"), digest)
+        engine_scope_115.MANIFESTS_1152, "building-default", (str(tmp_path / "absent.json"), digest)
     )
     with pytest.raises(FileNotFoundError):
         decision_adapters.load()

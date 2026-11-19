@@ -13,6 +13,7 @@ from pdx.situated import (
     decision_ir,
     engine_scope,
     engine_scope_115,
+    engine_strategy_1152,
     evidence,
     relations,
     support_signals,
@@ -298,17 +299,28 @@ def test_card_context_rejects_unproven_actual_inputs(card_inputs, damage):
         compiler._action_context_readers(row, context, declared, signals, readers)
 
 
-def test_production_instances_and_writers_share_frozen_context_offline(monkeypatch, tmp_path):
-    live = compiler.load_model()
+def test_historical_strategy_context_remains_readable_without_an_installation(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.1")
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    offline = compiler.load_model()
-    assert offline.source_sha256 == live.source_sha256
-    assert offline.contract() == live.contract()
-    assert offline.consumer_ir is not None
-    by_id = {instance.action_id: instance for instance in offline.action_instances}
+    contexts = compiler._frozen_strategy_contexts()
+    assert contexts["recklessness"].status == "observed"
+    assert contexts["wargoal_maneuvers_fraction"].status == "observed"
+
+
+@pytest.mark.integration
+def test_production_instances_and_writers_share_frozen_context(monkeypatch, tmp_path):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
+    model = compiler.load_model()
+    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
+    with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
+        compiler.load_model()
+    assert model.consumer_ir is not None
+    by_id = {instance.action_id: instance for instance in model.action_instances}
     selected = [
         writer
-        for writer in offline.consumer_ir.writers
+        for writer in model.consumer_ir.writers
         if writer.field
         in {
             "recklessness",
@@ -328,62 +340,50 @@ def test_production_instances_and_writers_share_frozen_context_offline(monkeypat
             )
     assert all(
         instance.evaluation_context is not None
-        for instance in offline.action_instances
+        for instance in model.action_instances
         if instance.consumer_field.endswith("min_law_chance_to_pass")
     )
 
 
 @pytest.fixture
 def current_game_fixture(monkeypatch, tmp_path):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
     game = tmp_path / "game"
     executable = tmp_path / "binaries/victoria3.exe"
     executable.parent.mkdir()
     data = json.loads(engine_scope.strategy_snapshot())
     image = bytearray()
-    for point in data["observations"]:
+    for index, point in enumerate(data["observations"]):
         point["file_offset"] = hex(len(image))
-        image.extend(bytes.fromhex(point["bytes"]))
+        sample = bytes([index % 256]) * point["size"]
+        point["sha256"] = hashlib.sha256(sample).hexdigest()
+        image.extend(sample)
     executable.write_bytes(image)
     data["exe"] = {
         "sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
         "bytes": executable.stat().st_size,
     }
+    monkeypatch.setattr(engine_scope_115, "EXE_SHA256_1152", data["exe"]["sha256"])
+    monkeypatch.setattr(engine_scope_115, "EXE_BYTES_1152", data["exe"]["bytes"])
     for source in data["script_hashes"]:
         path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(source.encode())
         data["script_hashes"][source] = hashlib.sha256(path.read_bytes()).hexdigest()
-    for source in data["institution_definition_sources"]:
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(
-            bytes.fromhex(data["institution_definition_bytes"][source])
-            if "institution_definition_bytes" in data
-            else source.encode()
-        )
-        data["institution_definition_sources"][source] = hashlib.sha256(
-            path.read_bytes()
-        ).hexdigest()
-    for source, raw_hex in data["stance_definition_bytes"].items():
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes.fromhex(raw_hex))
+    for field in ("institution_definition_sources", "stance_definition_sources"):
+        for source in data[field]:
+            path = game / source
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(source.encode())
+            data[field][source] = hashlib.sha256(path.read_bytes()).hexdigest()
+        monkeypatch.setitem(engine_strategy_1152.CONTRACTS, field, dict(data[field]))
     manifest = tmp_path / "manifest.json"
 
     def freeze():
         raw = json.dumps(data, indent=2).encode()
         manifest.write_bytes(raw)
         digest = hashlib.sha256(raw).hexdigest()
-        if version_contracts.is_115():
-            registry = (
-                engine_scope_115.MANIFESTS_1151
-                if version_contracts.active_version() == "1.15.1"
-                else engine_scope_115.MANIFESTS
-            )
-            monkeypatch.setitem(registry, "strategy", (str(manifest), digest))
-        else:
-            monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
-            monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST_SHA256", digest)
+        monkeypatch.setitem(engine_scope_115.MANIFESTS_1152, "strategy", (str(manifest), digest))
 
     freeze()
     return game, executable, data, freeze
@@ -415,7 +415,7 @@ def test_current_engine_verification_rejects_precise_byte_and_presence_drift(
         data["exe"]["bytes"] += 1
         freeze()
     else:
-        data["observations"][0]["bytes"] = b"changed".hex()
+        data["observations"][0]["sha256"] = hashlib.sha256(b"changed").hexdigest()
         freeze()
     with pytest.raises((ValueError, FileNotFoundError)):
         engine_scope.verify_strategy_game(game)
