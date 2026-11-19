@@ -88,6 +88,10 @@ MANIFESTS_1151 = {
 EXE_SHA256_1152 = "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36"
 EXE_BYTES_1152 = 100_280_440
 MANIFESTS_1152 = {
+    "defensive-pact-reader": (
+        "research/situated/1.15.2/engine-defensive-pact-reader.json",
+        "bd5a7c845ae7282499fcbf2a80233690c81e0a9951a97a1054d5e647d2b8e087",
+    ),
     "strategy": (
         "research/situated/1.15.2/engine-strategy.json",
         "e69c31f2cd10bcfa36d51c819aa86117bd69f3f4e6a079e29acffe20d3e5d384",
