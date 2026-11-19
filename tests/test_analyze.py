@@ -74,7 +74,9 @@ class TestGameAnalysis:
         """空目录也必须收录 —— scripted_modifiers 只有 .md 没有 .txt。"""
         assert (
             len(ga.common)
-            == {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141}[version_contracts.active_version()]
+            == {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
+                version_contracts.active_version()
+            ]
         )
 
     def test_scripted_modifiers_present_but_empty(self, ga):
@@ -111,6 +113,8 @@ class TestGameAnalysis:
             }
         if version_contracts.active_version() == "1.15.1":
             known.update(modifier_type_definitions=2476, static_modifiers=6487)
+        elif version_contracts.active_version() == "1.15.2":
+            known.update(modifier_type_definitions=2477, static_modifiers=6490, on_actions=286)
         for name, want in known.items():
             assert ga.common[name].unique_entries == want, name
 
@@ -134,13 +138,17 @@ class TestGameAnalysis:
     def test_official_docs_94(self, ga):
         assert (
             len(ga.official_docs)
-            == {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100}[version_contracts.active_version()]
+            == {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100, "1.15.2": 100}[
+                version_contracts.active_version()
+            ]
         )
 
     def test_dlc_count(self, ga):
         assert (
             len(ga.dlcs)
-            == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18}[version_contracts.active_version()]
+            == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18, "1.15.2": 18}[
+                version_contracts.active_version()
+            ]
         )
 
     def test_dlc_have_no_script_dirs(self, ga):
