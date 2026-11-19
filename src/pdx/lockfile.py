@@ -14,7 +14,7 @@ pytest / ruff / hypothesis 版本可能各不相同，于是「本地过了、CI
 1. 从 ``pyproject.toml`` 读出**直接依赖**（运行期 + ``dev`` extra）；
 2. 用 :mod:`importlib.metadata` 沿着 ``Requires-Dist`` 递归展开**闭包**
    （先按当前平台、解释器与已请求 extras 求值；条件不成立的依赖排除，
-   任何适用依赖缺失或元数据读取失败都拒绝生成不完整锁）；
+   任何适用依赖缺失、版本冲突或元数据读取失败都中止生成）；
 3. 按名字排序写成 ``requirements.lock``：``name==version``，外加一段文件头
    说明生成方式与解释器版本。
 
@@ -24,13 +24,13 @@ pytest / ruff / hypothesis 版本可能各不相同，于是「本地过了、CI
   ``colorama``）。在别的平台上装它会多装一个无害的包，不会少装；
 * 标记求值由 `packaging` 按 PEP 508 解析，支持平台、版本、AND/OR；
   未请求的 extra 不纳入，非法标记明确报错。Windows 锁只承诺 Windows 环境。
-* ``v3 lock`` 默认**核对**，``--write`` 才写盘 —— 与 ``v3 tables`` 同一套约定：
-  门禁不该顺手改文件。
+* ``v3 lock`` 默认**核对**，``--write`` 在仓库根目录暂存并原子替换现有锁。
 """
 
 from __future__ import annotations
 
 import sys
+import tempfile
 import tomllib
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, requires, version
@@ -40,7 +40,8 @@ from typing import TYPE_CHECKING
 from packaging.markers import Marker
 from packaging.requirements import Requirement
 from packaging.specifiers import SpecifierSet
-from packaging.utils import canonicalize_name
+from packaging.utils import InvalidName, canonicalize_name
+from packaging.version import InvalidVersion, Version
 
 from . import config
 
@@ -91,63 +92,75 @@ def normalize(name: str) -> str:
     return canonicalize_name(name.strip())
 
 
-def _marker_allows(marker: str, *, extra: str = "") -> bool:
+def _marker_allows(marker: Marker | str, *, extra: str = "") -> bool:
     """使用 PEP 508 的 AND/OR、平台和版本语义；坏标记明确报错。"""
-    return Marker(marker).evaluate({"extra": extra})
+    return (Marker(marker) if isinstance(marker, str) else marker).evaluate({"extra": extra})
 
 
-def _requirement_names(specs: Iterable[str], *, extras: Iterable[str] = ("",)) -> list[str]:
-    """过滤不适用的 PEP 508 依赖，保留继续展开闭包所需的 extras。"""
-    out: list[str] = []
+def _active_requirements(
+    specs: Iterable[str], *, extras: Iterable[str] = ("",)
+) -> list[Requirement]:
+    """过滤不适用的 PEP 508 依赖，保留版本约束和 extras。"""
+    out: list[Requirement] = []
     contexts = tuple(extras)
     for raw in specs:
         line = raw.strip()
         if not line:
             continue
         requirement = Requirement(line)
-        if requirement.marker and not any(
-            _marker_allows(str(requirement.marker), extra=extra) for extra in contexts
-        ):
-            continue
-        requested = f"[{','.join(sorted(requirement.extras))}]" if requirement.extras else ""
-        out.append(f"{requirement.name}{requested}")
+        marker = requirement.marker
+        if marker is None or any(_marker_allows(marker, extra=extra) for extra in contexts):
+            out.append(requirement)
     return out
 
 
-def direct_requirements() -> list[str]:
-    """``pyproject.toml`` 里的直接依赖（运行期 + ``dev`` extra）。"""
+def _direct_requirements() -> list[Requirement]:
     data = tomllib.loads((config.REPO / "pyproject.toml").read_text(encoding="utf-8"))
     project = data.get("project", {})
-    specs = list(project.get("dependencies", []))
-    specs += list(project.get("optional-dependencies", {}).get("dev", []))
-    return _requirement_names(specs)
+    runtime = _active_requirements(project.get("dependencies", []))
+    development = _active_requirements(
+        project.get("optional-dependencies", {}).get("dev", []), extras=("", "dev")
+    )
+    return runtime + development
+
+
+def direct_requirements() -> list[str]:
+    """``pyproject.toml`` 直接依赖的包名及所请求的 extras。"""
+    return [
+        f"{req.name}[{','.join(sorted(req.extras))}]" if req.extras else req.name
+        for req in _direct_requirements()
+    ]
 
 
 def resolve() -> dict[str, str]:
     """本机已安装的依赖闭包：``{规范化包名: 版本}``。"""
     pinned: dict[str, str] = {}
-    direct = direct_requirements()
-    direct_names = {normalize(Requirement(name).name) for name in direct}
+    queue = _direct_requirements()
+    direct_names = {normalize(requirement.name) for requirement in queue}
     expanded: dict[str, set[str]] = {}
-    queue = list(direct)
     while queue:
-        requirement = Requirement(queue.pop())
+        requirement = queue.pop()
         name = requirement.name
         key = normalize(name)
-        contexts = {"", *requirement.extras} - expanded.get(key, set())
-        if not contexts:
-            continue
         if key not in pinned:
             try:
                 pinned[key] = version(name)
             except PackageNotFoundError:
                 kind = "直接依赖" if key in direct_names else "依赖闭包成员"
                 raise RuntimeError(f"{kind}未安装，不能生成不完整锁：{name}") from None
+        installed = pinned[key]
+        if requirement.specifier and not requirement.specifier.contains(
+            installed, prereleases=True
+        ):
+            raise RuntimeError(f"已安装 {name}=={installed} 不满足依赖约束 {requirement}")
+        contexts = {"", *requirement.extras} - expanded.get(key, set())
+        if not contexts:
+            continue
         # Process newly requested extras even when the base distribution was
         # already visited. Unknown metadata never proves an empty closure.
         children = requires(name) or []
         expanded.setdefault(key, set()).update(contexts)
-        queue.extend(_requirement_names(children, extras=contexts))
+        queue.extend(_active_requirements(children, extras=contexts))
     return dict(sorted(pinned.items()))
 
 
@@ -180,15 +193,11 @@ def read(path: str | Path | None = None) -> dict[str, str]:
         target = config.REPO / target
     if not target.is_file():
         return {}
-    text = target.read_text(encoding="utf-8")
-    if HEADER not in text:
+    lines = target.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0] != HEADER:
         return {}
-    requirement_line = next(
-        (line for line in text.splitlines() if line.startswith("# Python 要求：")), None
-    )
-    interpreter_line = next(
-        (line for line in text.splitlines() if line.startswith("# 解释器：Python ")), None
-    )
+    requirement_line = next((line for line in lines if line.startswith("# Python 要求：")), None)
+    interpreter_line = next((line for line in lines if line.startswith("# 解释器：Python ")), None)
     if requirement_line is None or interpreter_line is None:
         return {}
     recorded_requirement = requirement_line.removeprefix("# Python 要求：").strip()
@@ -205,12 +214,20 @@ def read(path: str | Path | None = None) -> dict[str, str]:
     except ValueError, RuntimeError:
         return {}
     out: dict[str, str] = {}
-    for line in text.splitlines():
+    for line in lines:
         if not line or line.startswith("#"):
             continue
-        name, _, ver = line.partition("==")
-        if name and ver:
-            out[normalize(name)] = ver.strip()
+        name, separator, ver = line.partition("==")
+        if not separator:
+            return {}
+        try:
+            key = canonicalize_name(name.strip(), validate=True)
+            Version(ver)
+        except InvalidName, InvalidVersion:
+            return {}
+        if key in out:
+            return {}
+        out[key] = ver.strip()
     return dict(sorted(out.items()))
 
 
@@ -246,7 +263,14 @@ def write(pinned: dict[str, str] | None = None) -> int:
     """写锁文件，返回写入的条目数。"""
     validate_python_version()
     data = resolve() if pinned is None else pinned
-    (config.REPO / LOCK_FILE).write_text(render(data), encoding="utf-8", newline="\n")
+    text = render(data)
+    destination = config.REPO / LOCK_FILE
+    with tempfile.TemporaryDirectory(
+        dir=destination.parent, prefix=f".{destination.name}."
+    ) as temp:
+        staged = Path(temp) / destination.name
+        staged.write_text(text, encoding="utf-8", newline="\n")
+        staged.replace(destination)
     return len(data)
 
 

@@ -86,13 +86,16 @@ def test_dependency_marker_platforms(platform, monkeypatch):
     environment = markers.default_environment()
     environment["sys_platform"] = platform
     monkeypatch.setattr(markers, "default_environment", lambda: environment)
-    assert lockfile._requirement_names(
+    active = lockfile._active_requirements(
         [
             "base>=1",
             "native>=1; sys_platform == 'win32'",
             "other; sys_platform == 'linux' or sys_platform == 'darwin'",
         ]
-    ) == (["base", "native"] if platform == "win32" else ["base", "other"])
+    )
+    assert [requirement.name for requirement in active] == (
+        ["base", "native"] if platform == "win32" else ["base", "other"]
+    )
 
 
 def test_invalid_and_boolean_markers():
