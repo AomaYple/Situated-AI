@@ -1434,7 +1434,10 @@ def tables_cmd(
 
 def _tables_offline(*, write: bool, only: str) -> None:
     """``v3 tables --offline``：只读快照与文档，不读游戏。"""
-    recorded = tables_offline.load_tables()
+    try:
+        recorded = tables_offline.load_tables(only=only)
+    except snapshot.SnapshotFormatError as exc:
+        _fail(str(exc), EXIT_FAILED)
     if not recorded:
         _fail(
             "快照里没有生成表记录（域 doc_tables）—— 在装有游戏的机器上跑 "
@@ -1476,7 +1479,7 @@ def _tables_offline(*, write: bool, only: str) -> None:
         console.print("[yellow]跑 `v3 tables --offline --write` 可按快照恢复[/]")
         raise typer.Exit(EXIT_FAILED)
 
-    covered = len(recorded) - len(orphans)
+    covered = sum(not only or only in key.partition("::")[0] for key in recorded) - len(orphans)
     console.print(f"[green]快照里记录的 {covered} 张生成表都与文档一致[/]")
     if missing:
         console.print(

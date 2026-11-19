@@ -253,7 +253,7 @@ def test_离线快照路径与验证器同源(monkeypatch) -> None:
     monkeypatch.setattr(tables_offline, "latest_compact_snapshot", lambda: snapshot)
     assert tables_offline._latest() is snapshot
     raw = snapshot.sections.get(tables_offline.SECTION, {})
-    recorded = tables_offline.load_tables()
+    recorded = tables_offline.load_tables(only="08-")
     assert recorded == install_tree.current_doc08_narrative_tables(raw)
     projected = {
         "08-目录全量清单.md::doc08 版本指纹": ("游戏版本", {1, 2}),

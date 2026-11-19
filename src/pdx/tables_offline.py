@@ -13,6 +13,7 @@ CI runner 上没有游戏，于是「表格是否与生成结果一致」这件�
 1. 生成快照时把**每张表当时的数据行**记进 ``域.doc_tables``（:mod:`pdx.snapshot`）；
 2. 离线时只读文档 + 快照，逐行比对；当前 1.15.1 的三处 doc08 说明另从
    版本合同、冻结表分母和版本化官方文档 manifest 同源派生，原快照字节不变；
+   当前 doc17 的两张有限观测表取自绑定同一冻结分母的统计收据。
 3. ``--write`` 时按快照里的行把文档恢复成当时的样子 —— 这就是「没有游戏也能
    把表恢复到最后一次已知正确状态」的能力。
 
@@ -28,10 +29,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import docgen, install_tree
+from . import doc17_receipt, docgen, install_tree
 from .doc_tables import current_rows, spec_key, write_rows
 from .snapshot import Snapshot
 from .verify import latest_compact_snapshot
+from .version_contracts import contract
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,13 +62,20 @@ class TableDiff:
     expected: str
 
 
-def load_tables(path: Path | None = None) -> dict[str, list[str]]:
+def load_tables(path: Path | None = None, *, only: str = "") -> dict[str, list[str]]:
     """从快照里取生成表记录（默认取最新的那份入库精简快照）。"""
     snap = Snapshot.load(path) if path is not None else _latest()
     if snap is None:
         return {}
     snap.require_version()
-    return install_tree.current_doc08_narrative_tables(snap.sections.get(SECTION, {}))
+    recorded = install_tree.current_doc08_narrative_tables(snap.sections.get(SECTION, {}))
+    if (
+        path is None
+        and contract().doc17_table_values_sha256 is not None
+        and (not only or only in doc17_receipt.DOC)
+    ):
+        recorded.update(doc17_receipt.load(snap))
+    return recorded
 
 
 def compare(
@@ -77,7 +86,7 @@ def compare(
     返回 ``(不一致, 快照里缺的表, 快照里有但登记表里没有的表)``。
     第三项是**反向**检查：有人删了生成器规格却没更新快照时看得见。
     """
-    recorded = load_tables() if recorded is None else recorded
+    recorded = load_tables(only=only) if recorded is None else recorded
     diffs: list[TableDiff] = []
     known: set[str] = set()
     for target in docgen.targets():
@@ -104,13 +113,15 @@ def compare(
         for s in t.specs
         if spec_key(t.name, s) not in recorded
     )
-    orphans = sorted(k for k in recorded if k not in known)
+    orphans = sorted(
+        k for k in recorded if k not in known and (not only or only in k.partition("::")[0])
+    )
     return diffs, missing, orphans
 
 
 def restore(recorded: dict[str, list[str]] | None = None, *, only: str = "") -> dict[str, int]:
     """按快照里的行把文档表格写回去，返回 ``{表标识: 行数}``。"""
-    recorded = load_tables() if recorded is None else recorded
+    recorded = load_tables(only=only) if recorded is None else recorded
     out: dict[str, int] = {}
     for target in docgen.targets():
         if only and only not in target.name:
