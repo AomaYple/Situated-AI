@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_adapters, decision_rules
+from pdx import decision_adapters, decision_rules, version_contracts
 from pdx.situated import compiler, decision_ir, migration_baseline
 
 pytestmark = pytest.mark.unit
@@ -395,8 +395,16 @@ def test_reader_scope_argument_and_fact_reference_expression_cannot_cross_contex
         )
 
 
+@pytest.fixture
+def historical_context_contract():
+    with version_contracts.select_version("1.14.5"):
+        yield
+
+
 @pytest.mark.parametrize("damage", ["missing", "role", "direction"])
-def test_model_loader_rejects_used_reader_context_drift(monkeypatch, damage):
+def test_model_loader_rejects_used_reader_context_drift(
+    monkeypatch, damage, historical_context_contract
+):
     contexts = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))
     subject = contexts["subject_value"]
     if damage == "missing":
@@ -416,7 +424,7 @@ def test_model_loader_rejects_used_reader_context_drift(monkeypatch, damage):
         compiler.load_model()
 
 
-def test_compiler_exports_context_but_keeps_frozen_migration_identity():
+def test_compiler_exports_context_but_keeps_frozen_migration_identity(historical_context_contract):
     model = compiler.load_model()
     bundle = model.consumer_ir
     assert bundle is not None
