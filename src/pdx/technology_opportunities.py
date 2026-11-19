@@ -30,14 +30,18 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 PARAMETERS = config.REPO / "mod/decisions/technology_opportunities.toml"
-PARAMETERS_115 = config.REPO / "mod/decisions/technology_opportunities_115.toml"
+PARAMETERS_115 = PARAMETERS.with_name("technology_opportunities_115.toml")
+PARAMETERS_CURRENT = PARAMETERS.with_name("technology_opportunities_1152.toml")
 
 
 def parameter_path() -> Path:
     """Keep the migrated native catalog separate from the historical policy source."""
-    if version_contracts.active_version() == "1.15.1":
-        return PARAMETERS.with_name("technology_opportunities_1151.toml")
-    return PARAMETERS_115 if version_contracts.is_115() else PARAMETERS
+    return {
+        "1.14.5": PARAMETERS,
+        "1.15.0": PARAMETERS_115,
+        "1.15.1": PARAMETERS.with_name("technology_opportunities_1151.toml"),
+        "1.15.2": PARAMETERS_CURRENT,
+    }[version_contracts.active_version()]
 
 
 _FAMILIES = frozenset(
@@ -558,7 +562,7 @@ def load_catalog(path: Path = PARAMETERS) -> dict[str, Any]:
     return catalog
 
 
-def write_catalog_1151(game: Path, *, output: Path) -> Path:
+def write_catalog(game: Path, *, output: Path) -> Path:
     """Rebuild current native mechanisms while preserving reviewed policy parameters."""
     from .native_authority_capture import (  # noqa: PLC0415
         _prepare_capture,
@@ -567,7 +571,7 @@ def write_catalog_1151(game: Path, *, output: Path) -> Path:
     )
 
     game, output = _prepare_capture(game, output, suffix=".toml")
-    previous = load_catalog(PARAMETERS_115)
+    reviewed = load_catalog(PARAMETERS_CURRENT)
     inputs = {
         path.relative_to(game).as_posix(): _source_bytes(
             game, path.relative_to(game).as_posix()
@@ -575,7 +579,7 @@ def write_catalog_1151(game: Path, *, output: Path) -> Path:
         for path in sorted(game.rglob("*.txt"))
         if _family(path.relative_to(game).as_posix()) is not None
     }
-    consumers = {key: row["source"] for key, row in previous["technologies"].items()}
+    consumers = {key: row["source"] for key, row in reviewed["technologies"].items()}
     rebuilt = inventory(inputs, consumers)
     discovered = {
         item.key: source
@@ -584,14 +588,14 @@ def write_catalog_1151(game: Path, *, output: Path) -> Path:
         for item in parse_text(text, path=source).root.assignments()
         if isinstance(item.value, Block) and item.value.all("ai_weight")
     }
-    retained = previous.get("native_retained", {})
+    retained = reviewed.get("native_retained", {})
     if discovered != {**consumers, **retained}:
         raise ValueError("当前科技原生消费者集合变化，必须逐项审阅处置")
     rebuilt["native_retained"] = retained
-    rebuilt["legacy_rules"] = previous["legacy_rules"]
+    rebuilt["legacy_rules"] = reviewed["legacy_rules"]
     _validate_catalog(rebuilt)
     encoded = json.dumps(rebuilt, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    template = PARAMETERS_115.read_text(encoding="utf-8")
+    template = PARAMETERS_CURRENT.read_text(encoding="utf-8")
     text, count = re.subn(
         r"catalog_json = '''.*?'''",
         lambda _: f"catalog_json = '''{encoded}'''",
@@ -602,6 +606,10 @@ def write_catalog_1151(game: Path, *, output: Path) -> Path:
     if count != 1:
         raise ValueError("科技配置必须包含唯一 catalog_json 字面量")
     return _write_candidate(output, text)
+
+
+# The capture CLI can migrate its import independently.
+write_catalog_1151 = write_catalog
 
 
 def _validate_catalog(catalog: Mapping[str, Any]) -> None:
@@ -816,22 +824,13 @@ def _validate_catalog(catalog: Mapping[str, Any]) -> None:
         identities.add(row["id"])
 
 
-with version_contracts.select_version("1.14.5"):
-    _QUERY_CATALOG = load_catalog()
-with version_contracts.select_version("1.15.0"):
-    _QUERY_CATALOG_115 = load_catalog()
-
-
 @cache
-def _query_catalog_1151() -> dict[str, Any]:
-    with version_contracts.select_version("1.15.1"):
-        return load_catalog()
+def _load_query_catalog(path: Path) -> dict[str, Any]:
+    return load_catalog(path)
 
 
 def _query_catalog() -> dict[str, Any]:
-    if version_contracts.active_version() == "1.15.1":
-        return _query_catalog_1151()
-    return _QUERY_CATALOG_115 if version_contracts.is_115() else _QUERY_CATALOG
+    return _load_query_catalog(parameter_path())
 
 
 _ART = "common/journal_entries/00_art_jes.txt"
@@ -861,10 +860,22 @@ QUERY_SOURCE_HASHES_1151 = {
 }
 
 
+QUERY_SOURCE_HASHES_CURRENT = {
+    _ART: "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+    _CULTURE: "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30",
+    _SLAVE: "6eb96f3cefcde036790351c16b90197c763b1b5f0238a86d2a8020717a0a27fd",
+    _COMPANY: "f17a0d2d696378ab835597e159b3b315881a8d9d9f66d5d352f59f6d755025bc",
+    _OPIUM: "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1",
+}
+
+
 def query_source_hashes() -> dict[str, str]:
-    if version_contracts.active_version() == "1.15.1":
-        return QUERY_SOURCE_HASHES_1151
-    return QUERY_SOURCE_HASHES_115 if version_contracts.is_115() else QUERY_SOURCE_HASHES
+    return {
+        "1.14.5": QUERY_SOURCE_HASHES,
+        "1.15.0": QUERY_SOURCE_HASHES_115,
+        "1.15.1": QUERY_SOURCE_HASHES_1151,
+        "1.15.2": QUERY_SOURCE_HASHES_CURRENT,
+    }[version_contracts.active_version()]
 
 
 UNKNOWN_POLICY = company_observations.UNKNOWN_POLICY
