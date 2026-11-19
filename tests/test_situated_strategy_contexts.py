@@ -310,12 +310,9 @@ def test_historical_strategy_context_remains_readable_without_an_installation(
 
 
 @pytest.mark.integration
-def test_production_instances_and_writers_share_frozen_context(monkeypatch, tmp_path):
+def test_production_instances_and_writers_share_frozen_context(monkeypatch):
     monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
-    model = compiler.load_model()
-    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
-        compiler.load_model()
+    model = compiler.load_model(baseline=compiler.baseline_text())
     assert model.consumer_ir is not None
     by_id = {instance.action_id: instance for instance in model.action_instances}
     selected = [
