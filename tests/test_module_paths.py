@@ -105,7 +105,9 @@ def test_doc17_前缀计数器跳过变量(fake_game) -> None:
     assert counter["_total"] == 2, "@变量 不该被计入总数"
 
 
-def test_doc17_概览计数在缺目录时为零(fake_game) -> None:
+def test_doc17_概览计数在缺目录时为零(fake_game, monkeypatch) -> None:
+    # 空合成语料的冻结 DNA 来源清单也为空。
+    monkeypatch.setattr(doc17, "FROZEN_PARTIAL_DNA_SHA256", {})
     assert doc17.overview_txt_count() == 0
     assert doc17.overview_key_count() == 0
     assert doc17.gene_block_names() == []

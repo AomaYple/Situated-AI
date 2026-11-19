@@ -49,7 +49,7 @@ def raw():
 @pytest.fixture(scope="module")
 def installed_inputs(baseline):
     if not config.GAME.is_dir():
-        pytest.skip("需要当前锁定的游戏安装")
+        pytest.skip("需要当前锁定原版游戏安装")
     game = config.verified_game_root()
     assert treaty.verify_game(game) == baseline
     return treaty.read_inputs(game)

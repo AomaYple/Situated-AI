@@ -560,6 +560,10 @@ if is_115():
     # 该页已移除旧版本提示；正文「0 命中」和表格中的 0 不再落入散文扫描口径。
     del PROSE_NOT_COMPUTED[("15-政治人口与社会.md", 0)]
 
+if version_contracts.active_version() == "1.15.2":
+    # 当前版将包含该数字的脚本示例转为同名历史章节的链接。
+    del PROSE_NOT_COMPUTED[("11-历史初始状态与AI策略分配.md", 3)]
+
 
 def _unguarded_prose() -> dict[str, set[int]]:
     """``文档名 → 既没有断言看守的散文数字``（含已在 :data:`PROSE_NOT_COMPUTED` 登记理由的）。
