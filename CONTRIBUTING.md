@@ -107,29 +107,27 @@ python -m pdx.cli package
 标准包只包含 Mod 安装所需内容，不含探针、Python、日志、缓存、本体资源或历史实验。ZIP 路径使用 POSIX 形式；
 游戏文本的 BOM 只在游戏安装或打包边界添加。完整包内合同和恢复边界见工程交付基线。
 
-在线读取和生产命令仅接受 Victoria 3 `1.15.1`。可用 `--profile 1.15.1` 明确断言当前生产版本。
-已有 1.15.0 历史候选仅通过 `modgen --check`、`modguard --offline` 或 `decision-audit --offline` 配合 `--profile 1.15.0` 核对。
-这些命令读取隔离目录 `tools/out/production/1.15.0/`，其中 `decision-audit` 可另写审计 JSON。
+在线读取和生产命令仅接受 Victoria 3 `1.15.2`。可用 `--profile 1.15.2` 明确断言当前生产版本。
+历史生产候选通过对应的发布标签、提交及原始收据追溯。
 同一组命令可用 `--configuration <TOML路径>` 选择构建配置（严格 schema、核心、领域和 policy/neutral 模式），
 检查与打包必须传入同一配置；具体字段见 `src/pdx/situated/profile_configuration.py`。
 候选静态通过及 ZIP 生成不代表完整工程门通过，也不构成发布或部署。
 
-`snapshot`、`tables`、`verify`、`index` 等没有 `--profile` 参数的分析与文档命令，通过
-`V3_CONTRACT_PROFILE=1.15.1` 选择同版本合同、文档、官方文档 manifest 和快照。例如在 PowerShell 中：
+`snapshot`、`tables`、`verify`、`index` 默认使用当前版本合同、文档、官方文档 manifest 和快照。
+例如在 PowerShell 中运行以下离线验证命令。
 
 ```powershell
-$env:V3_CONTRACT_PROFILE = '1.15.1'
 .venv/Scripts/python.exe -B -X utf8 -m pdx.cli verify --from-snapshot
 .venv/Scripts/python.exe -B -X utf8 -m pdx.cli tables --offline
 ```
 
-环境变量用于明确指定离线证据合同。在线读取先核对启动器游戏标识与版本，以及冻结的分支、修订和构建校验文件。
-历史 `1.14.5` 和 `1.15.0` 的已落盘快照仍可离线核对。
+核对历史快照时，可对相应的离线命令显式设置 `V3_CONTRACT_PROFILE`。
+在线读取先核对启动器游戏标识与版本，以及冻结的分支、修订和构建校验文件。
 
 原版权威候选通过专用入口显式捕获，例如：
 
 ```text
-python -m pdx.native_authority_capture --profile 1.15.1 --installation <安装根目录> --kind parameters --output tools/out/version1151/authority-candidates/inventory-parameters.json
+python -m pdx.native_authority_capture --profile 1.15.2 --installation <安装根目录> --kind parameters --output tools/out/version1152/authority-candidates/inventory-parameters.json
 ```
 
 `--profile`、`--installation`、`--kind`、`--output` 均必填，不从环境推断本次授权。
@@ -153,14 +151,14 @@ python tools/ci/run_check.py baseline
 `baseline` 已包含依赖一致性、离线断言、离线表格、`modguard --offline`、`decision-audit --offline`、`ai-surface --check`
 和死代码审计，无需另行重复运行。
 
-当前迁移候选必须运行版本门；这些入口向原有离线检查传递同一版本合同，并追加生成与生产合同检查：
+静态基线追加当前版本的生产生成检查，需要本机安装锁定原版。完整验收也核对同一安装身份。
 
 ```text
-python tools/ci/run_check.py baseline --profile 1.15.1
-python tools/ci/run_check.py full-acceptance --profile 1.15.1 --quiet
+python tools/ci/run_check.py baseline --profile 1.15.2
+python tools/ci/run_check.py full-acceptance --profile 1.15.2 --quiet
 ```
 
-它们保留完整的既有检查集合；不带 `--profile` 的命令默认同一当前版本。历史验收必须绑定其原输入与合同。
+两个入口默认使用当前版本。`--profile` 可显式核对当前版本。历史验收必须绑定其原输入与合同。
 
 涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目；构建不应在工作树留下 `build/` 或 egg-info：
 
@@ -168,7 +166,7 @@ python tools/ci/run_check.py full-acceptance --profile 1.15.1 --quiet
 python tools/ci/python_package.py
 ```
 
-常规反馈或无游戏环境运行 `python tools/ci/run_check.py test-offline`；冻结最终候选运行
+常规反馈或无游戏环境运行 `python tools/ci/run_check.py test-offline`，它与线上 CI 使用同一当前版本和测试筛选。冻结最终候选运行
 `python tools/ci/run_check.py full-acceptance --quiet`。完整验收已经包含离线用例，不要在同一轮再重复运行 `test-offline`。
 pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录实际 worker、测试选择、跳过项、覆盖率、墙钟和进程 RSS。
 性能基准清除普通 pytest 参数并串行运行；输入、测试集合、环境和资源口径不一致时，只报告各自成本，不声称整体提速。

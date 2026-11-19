@@ -117,13 +117,27 @@ def main() -> int:
     if len(sys.argv) < 2 or sys.argv[1] not in (*COMMANDS, "baseline"):
         print(f"检查种类：{', '.join((*COMMANDS, 'baseline'))}", file=sys.stderr)
         return 2
-    if sys.argv[1] == "baseline":
-        parser = argparse.ArgumentParser(description="完整静态基线；版本门追加到现有门禁之后。")
-        parser.add_argument("--profile", choices=("1.15.1",), default="1.15.1")
-        args = parser.parse_args(sys.argv[2:])
-        selected_environment = os.environ.get("V3_CONTRACT_PROFILE")
-        if selected_environment is not None and selected_environment != args.profile:
-            parser.error(f"未支持的原版合同版本：{selected_environment!r}")
+    check = sys.argv[1]
+    current = None
+    profile_environment: dict[str, str] = {}
+    if check in {"baseline", "test", "test-offline"}:
+        from pdx import version_contracts  # noqa: PLC0415
+
+        parser = None
+        if check == "baseline":
+            parser = argparse.ArgumentParser(description="完整静态基线，含当前版本生产与离线合同。")
+            parser.add_argument("--profile", choices=(version_contracts.CURRENT_VERSION,))
+            profile = parser.parse_args(sys.argv[2:]).profile
+        else:
+            profile = None
+        try:
+            current = version_contracts.require_current(profile)
+        except ValueError as exc:
+            if parser is not None:
+                parser.error(str(exc))
+            print(exc, file=sys.stderr)
+            return 2
+        profile_environment[version_contracts.ENVIRONMENT_VARIABLE] = current
     try:
         python = interpreter()
         ensure_supported_interpreter(python)
@@ -136,22 +150,18 @@ def main() -> int:
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(ROOT), env.get("PYTHONPATH", "")])
     # -B applies to this child; the environment also covers nested Python tools.
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    if sys.argv[1] == "baseline":
+    env.update(profile_environment)
+    if check == "baseline":
+        assert current is not None
         commands = list(BASELINE_COMMANDS)
-        if args.profile:
-            # 原有离线断言、表格和 AI 面也消费相同版本合同；完整集合继续保留。
-            env["V3_CONTRACT_PROFILE"] = args.profile
-            commands.extend(
-                (
-                    f"{args.profile} {name}",
-                    ["pdx.cli", name, "--profile", args.profile, *options],
-                )
-                for name, options in (
-                    ("modgen", ["--check"]),
-                    ("modguard", ["--offline"]),
-                    ("decision-audit", ["--offline"]),
-                )
+        commands.extend(
+            (f"{current} {name}", ["pdx.cli", name, "--profile", current, *options])
+            for name, options in (
+                ("modgen", ["--check"]),
+                ("modguard", ["--offline"]),
+                ("decision-audit", ["--offline"]),
             )
+        )
         for label, command in commands:
             print(f"[baseline] {label}", flush=True)
             result = subprocess.run(
@@ -164,7 +174,7 @@ def main() -> int:
                 print(f"[baseline] {label} 失败（退出码 {result.returncode}）", file=sys.stderr)
                 return result.returncode
         return 0
-    command = COMMANDS[sys.argv[1]]
+    command = COMMANDS[check]
     return subprocess.run(
         [str(python), "-B", "-X", "utf8", "-m", *command, *sys.argv[2:]],
         cwd=ROOT,
@@ -174,4 +184,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    # The script path starts in tools/ci, and an editable install can be from another checkout.
+    sys.dont_write_bytecode = True
+    sys.path.insert(0, str(ROOT / "src"))
     raise SystemExit(main())
