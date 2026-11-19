@@ -1125,7 +1125,7 @@ def check_profile_installation(
     r2_reader_authority.verify_installation(config.ROOT)
     installed = production_profile.load_profile(config.ROOT)
     if installed != profile:
-        raise ValueError("1.15.0 本机原版 profile 与冻结生成身份不一致")
+        raise ValueError("本机原版 profile 与声明的生产身份不一致")
     return installed
 
 
