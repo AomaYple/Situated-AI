@@ -38,8 +38,6 @@ subparsers 的脚本、2 个裸脚本（``show_outputs.py`` 连 ``main()`` 都�
 from __future__ import annotations
 
 import json
-import shutil
-import tempfile
 import time
 
 # Path 必须能**在运行期**导入：typer 用 ``inspect.signature(eval_str=True)``
@@ -192,14 +190,26 @@ def _relative(path: Path) -> str:
         return str(path)
 
 
-def _require_game() -> None:
-    """前置条件：游戏安装目录必须存在。
-
-    缺了就退出码 2，而不是让它一路跑出满屏的「0 个文件」—— 后者看起来像
-    「分析成功但游戏里没内容」，是最容易被误信的失败形态。
-    """
+def _require_game(*, optional: bool = False) -> None:
+    """在读取本机原版前核对安装身份。"""
+    if optional and not config.ROOT.is_dir() and not config.GAME.is_dir():
+        return
     if not config.GAME.is_dir():
-        _fail(f"找不到游戏目录 {config.GAME}（可用环境变量 V3_ROOT 指定）")
+        _fail(f"前置条件缺失：找不到游戏目录 {config.GAME}（可用环境变量 V3_ROOT 指定）")
+    try:
+        installation = config.ROOT.resolve(strict=True)
+        if config.GAME.resolve(strict=True) != installation / "game":
+            raise ValueError("内容目录与 V3_ROOT 的 game/ 不一致")
+        version_contracts.verify_installation_identity(installation)
+    except (OSError, ValueError) as exc:
+        _fail(f"无法使用本机原版（V3_ROOT）：{exc}")
+
+
+def _require_current_output() -> None:
+    try:
+        version_contracts.require_current()
+    except ValueError as exc:
+        _fail(str(exc))
 
 
 def _require_file(path: Path, what: str, hint: str = "") -> None:
@@ -469,6 +479,7 @@ def information_catalog_cmd(
     metadata_origin: Literal["caller_supplied", "current_production_sources"] = (
         "current_production_sources" if candidate_production else "caller_supplied"
     )
+    _require_game()
     if candidate_metadata is not None:
         try:
             metadata = json.loads(candidate_metadata.read_text(encoding="utf-8"))
@@ -489,7 +500,6 @@ def information_catalog_cmd(
         except (KeyError, OSError, ValueError) as exc:
             console.print(f"[red]当前生产候选合同不可用：{escape(str(exc))}[/]")
             raise typer.Exit(EXIT_USAGE) from exc
-    _require_game()
     started = time.perf_counter()
     catalog = information_catalog.build(include_localization=localization)
     if metadata is not None:
@@ -1104,6 +1114,7 @@ def mirror_check() -> None:
     bad: list[str] = []
 
     if (config.GAME / "common").is_dir():
+        _require_game()
         checked += 1
         against_game = docs_mirror.diff_against_game()
         if against_game:
@@ -1187,6 +1198,7 @@ def refresh_cmd(
     正是这个仓库反复踩的坑（doc 04 的 682 行活了整整一个版本、README 的
     164/226 停了两轮）。跑完退出码 0 表示全绿；否则 1，并列出剩余项。
     """
+    _require_game()
     console.rule("[bold]1/3 重算生成表[/]")
     if dry_run:
         try:
@@ -1281,11 +1293,14 @@ def tables_cmd(
     它证明的是「表与入库快照一致」，**不是**「表与现在的游戏一致」
     （后者仍是 `v3 refresh` 的活）。口径见 :mod:`pdx.tables_offline`。
     """
+    if write:
+        _require_current_output()
     if offline:
         _tables_offline(write=write, only=only)
         return
     if only:
         _fail("--only 只在 --offline 下有意义（在线核对是逐表与生成结果比对）")
+    _require_game()
 
     if write:
         try:
@@ -1554,6 +1569,7 @@ def verify_cmd(
         return
 
     if fix:
+        _require_current_output()
         changes = verify.fix_markers(write=True)
         if not changes:
             console.print("[green]带标记的数字全都与断言一致，无需改动[/]")
@@ -1825,6 +1841,7 @@ def crosscheck_cmd(
     claims, version = engine_log.parse_logs()
     if not claims:
         _fail(f"找不到引擎日志：{engine_log.default_log_dir()}（需要先运行过一次游戏）")
+    _require_game()
 
     # 覆盖映射要留着 —— 「结论 = 不可核对」那一档必须写出**覆盖来源**
     # （哪个 mod 的哪份文件顶替了原版），否则读的人只看到"对不上"却不知道在跟谁对。
@@ -2065,6 +2082,7 @@ def strings_cmd(
     它给的是**线索**而不是结论：候选里混着编译器与 CRT 符号（`SDL_` / `map_K*` 这种
     一眼能排除），哪些是 PDX 的字段枚举要人看。文件不存在时退出码 2。
     """
+    _require_game()
     if not exe_strings.exe_path().is_file():
         console.print(f"[red]找不到 {escape(str(exe_strings.exe_path()))}[/] —— 需要游戏本体")
         raise typer.Exit(2)
@@ -2274,6 +2292,7 @@ def evidence_cmd(
     ⚠️ ④ 只是线索：邻居里混着同节的无关字面量，"引擎里有" 不等于 "语法合法"。
     没有游戏本体时 ①②④ 为空，命令仍成功（退出码 0）。
     """
+    _require_game(optional=True)
     if exe_grep:
         hits = exe_strings.match_identifiers(exe_grep, limit=0)
         console.print(f"exe 里含 [cyan]{escape(exe_grep)}[/] 的标识符（{len(hits)} 个）：")
@@ -2285,9 +2304,10 @@ def evidence_cmd(
     if not keys:
         _fail("至少要给一个键名，例如 `v3 evidence is_shown_in_lobby`")
 
-    reports = evidence.gather(
-        keys, mods=mods, root=(config.GAME / directory) if directory else None
-    )
+    root = (config.GAME / directory).resolve() if directory else None
+    if root is not None and not root.is_relative_to(config.GAME.resolve()):
+        _fail("原版检索路径必须位于锁定游戏目录内")
+    reports = evidence.gather(keys, mods=mods, root=root)
     for ev in reports:
         console.print(f"\n[bold cyan]{escape(ev.key)}[/] —— {escape(ev.summary)}")
         v = ev.vanilla
@@ -2348,6 +2368,7 @@ def prefixes_cmd(
     ⚠️ 结果取决于本机装了哪些 mod（**本机快照**），不是游戏版本属性。
     没有 mod 时输出空表。
     """
+    _require_game(optional=True)
     by_dir = mods_mod.prefix_usage_by_dir()
     if not by_dir:
         console.print("[yellow]没有发现任何 mod（workshop 与本地 mod 目录都为空）[/]")
@@ -2391,6 +2412,7 @@ def assets_cmd(
     ⚠️ 结果描述的是**本机这一份安装**，随 DLC 与美术更新而变；文档引用时
     应写成「本机快照 + 复算命令」。没有游戏时输出空表并成功退出。
     """
+    _require_game(optional=True)
     result = assets.census()
     table = Table(title=f"DDS 头普查（{escape(result.root)}）", show_lines=False)
     table.add_column("指标")
@@ -2418,7 +2440,10 @@ def csv_cmd(
     的几条结论（`Type` 只有若干种取值、`Through` 全是 `-1`…）此前同样是一次性脚本的
     产物，现在可随时复算（口径见 `pdx.tabular`）。文件不存在时退出码 2。
     """
+    _require_game()
     path = (config.GAME / rel).resolve()
+    if not path.is_relative_to(config.GAME.resolve()):
+        _fail("表格路径必须位于锁定游戏目录内")
     _require_file(path, f"表格文件 {rel}", "路径按游戏目录算，例如 map_data/adjacencies.csv")
     text = path.read_text(encoding="utf-8-sig", errors="replace")
     delimiter, columns, rows = tabular.parse_table_text(text)
@@ -2493,17 +2518,15 @@ def ai_surface_cmd(
     # 实测过：不挡的话 `--check` 会在读 `common/defines/00_ai.txt` 时抛
     # `FileNotFoundError` 并把整个 traceback 打到用户脸上。
     # 与 `v3 modguard` / `v3 tables` 同一口径：报"前置条件缺失"，退出码 2。
+    if write:
+        _require_current_output()
     if offline:
         try:
             ai_surface.read_offline()
         except ai_surface.OfflineUnavailableError as exc:
             _fail(str(exc))
-    elif not config.GAME.is_dir():
-        _fail(
-            f"前置条件缺失：找不到原版目录 {config.GAME}（可用环境变量 V3_ROOT 指定）"
-            " —— 本命令的三件事全部枚举自原版 ai_strategies / defines，"
-            "没有游戏本体时不可用；没有游戏的机器请用 `--offline`（读入库快照）"
-        )
+    else:
+        _require_game()
 
     if check:
         try:
@@ -2587,8 +2610,7 @@ def political_surface_cmd(
     IG/运动偏好，并保留每个条件加法的来源行。它不计算引擎最终启动概率、
     候选排序或随机抽签；这些仍需实机 Getter 或行为证据。
     """
-    if not config.GAME.is_dir():
-        _fail(f"前置条件缺失：找不到原版目录 {config.GAME}（可用环境变量 V3_ROOT 指定）")
+    _require_game()
     try:
         strategies = political_surface.read_strategies()
         default_strategy = political_surface.read_default_strategy()
@@ -2659,34 +2681,8 @@ def _modgen_verify_sources() -> None:
     technology_opportunities.verify_inputs(inputs)
 
 
-def _modgen_output_changes(production: dict[str, str | bytes]) -> dict[Path, bytes | None]:
-    """Build all bytes and existing stale-file cleanup in a disposable Mod copy."""
-    root = decisions.PRODUCT
-    with tempfile.TemporaryDirectory(prefix="sitai-modgen-") as folder:
-        staged = Path(folder) / "mod"
-        shutil.copytree(root, staged)
-        decisions.write(staged, production)
-        (staged / "generation-lock.json").write_text(
-            distribution.generation_lock(production), encoding="utf-8", newline="\n"
-        )
-        before = {
-            path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
-        }
-        after = {
-            path.relative_to(staged): path.read_bytes()
-            for path in staged.rglob("*")
-            if path.is_file()
-        }
-        return {
-            root / name: after.get(name)
-            for name in sorted(before.keys() | after.keys())
-            if before.get(name) != after.get(name)
-        }
-
-
 def _production_profile(
     name: str | None,
-    configuration: Path | None = None,
     *,
     offline: bool = False,
     context: typer.Context | None = None,
@@ -2698,6 +2694,9 @@ def _production_profile(
     a missing installation never silently selects the frozen copy instead.
     """
     selected = version_contracts.active_version(name)
+    historical = offline and name == "1.15.0"
+    if not historical:
+        version_contracts.require_current(name)
     if name is not None and context is not None:
         scope = version_contracts.select_version(selected)
         scope.__enter__()
@@ -2715,19 +2714,8 @@ def _production_profile(
                 distribution.check_profile_installation(frozen)
             # The current profile uses the complete standard generation path.
             return None
-        if name is None:
-            if configuration is not None:
-                raise ValueError("历史完整兼容入口不接受 --configuration；请显式选择 profile")
-            return None
-        if selected != "1.15.0":
-            if configuration is not None:
-                raise ValueError("历史版本不接受 --configuration")
-            return None
         situated_production_profile.verify_baseline()
-        frozen = situated_production_profile.load_profile(
-            situated_production_profile.baseline_root()
-        )
-        return frozen if offline else distribution.check_profile_installation(frozen)
+        return situated_production_profile.load_profile(situated_production_profile.baseline_root())
 
 
 def _profile_configuration(path: Path | None, *, mode: Literal["policy", "neutral"] = "policy"):
@@ -2743,7 +2731,8 @@ def modgen_cmd(
     write: Annotated[bool, typer.Option("--write", help="生成唯一正式 Mod 的仓库产物")] = False,
     check: Annotated[bool, typer.Option("--check", help="逐字节核对生成物，不写盘")] = False,
     profile: Annotated[
-        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
+        str | None,
+        typer.Option("--profile", help="生产版本 1.15.1；仅 --check 可显式核对 1.15.0 历史产物"),
     ] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
@@ -2753,17 +2742,13 @@ def modgen_cmd(
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
-        selected_profile = _production_profile(profile, configuration, context=context)
+        selected_profile = _production_profile(
+            profile, offline=check and profile == "1.15.0", context=context
+        )
         if selected_profile is not None:
             resolved = _profile_configuration(configuration)
-            if write:
-                files = distribution.write_profile_outputs(selected_profile, configuration=resolved)
-                console.print(f"[green]已生成 1.15.0 {resolved.mode} 产物：{len(files)} 个文件[/]")
-            elif check:
-                distribution.check_profile_outputs(selected_profile, configuration=resolved)
-                console.print("[green]1.15.0 隔离产物与 profile lock 逐字节一致[/]")
-            else:
-                console.print("Situated AI 1.15.0 profile：使用 --write 生成 / --check 核对")
+            distribution.check_profile_outputs(selected_profile, configuration=resolved)
+            console.print("[green]1.15.0 历史产物与 profile lock 逐字节一致[/]")
             return
         if not (config.GAME / "common").is_dir():
             raise ValueError(f"缺少锁定游戏原件：{config.GAME / 'common'}")
@@ -2781,16 +2766,9 @@ def modgen_cmd(
             # verification; any later error restores their original bytes.
             with GenerationTransaction() as transaction:
                 transaction.replace(ledgers)
-                if version_contracts.active_version() == "1.15.1":
-                    production = distribution.write_standard_outputs(
-                        configuration=_profile_configuration(configuration), transaction=transaction
-                    )
-                else:
-                    _, _, files = distribution.package_inputs(
-                        configuration=_profile_configuration(configuration)
-                    )
-                    production = {name: text for name, text in files.items() if name != "README.md"}
-                    transaction.replace(_modgen_output_changes(production))
+                production = distribution.write_standard_outputs(
+                    configuration=_profile_configuration(configuration), transaction=transaction
+                )
             console.print(
                 f"[green]已重建 {len(bindings)} 条原版消费者绑定和 "
                 f"{len(situated_domain_coverage.FAMILIES)} 个领域统计[/]"
@@ -2824,27 +2802,18 @@ def modgen_cmd(
 
 @app.command("package")
 def package_cmd(
-    context: typer.Context,
     output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = (
         distribution.DEFAULT_PACKAGE_PATH
     ),
-    profile: Annotated[
-        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
-    ] = None,
+    profile: Annotated[str | None, typer.Option("--profile", help="生产版本断言：1.15.1")] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
     ] = None,
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
     try:
-        selected_profile = _production_profile(profile, configuration, context=context)
-        target = (
-            distribution.profile_package(
-                output, selected_profile, configuration=_profile_configuration(configuration)
-            )
-            if selected_profile is not None
-            else distribution.package(output, configuration=_profile_configuration(configuration))
-        )
+        _production_profile(profile)
+        target = distribution.package(output, configuration=_profile_configuration(configuration))
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
     console.print(f"[green]已生成[/] {escape(str(target))}")
@@ -2871,6 +2840,7 @@ def citations_cmd(
     """
     if not paths:
         _fail("至少指定一个说明文件或目录")
+    _require_game(optional=True)
     targets = [Path(item) for item in paths]
     missing = [str(path) for path in targets if not path.exists()]
     if missing:
@@ -2906,7 +2876,8 @@ def modguard_cmd(
     context: typer.Context,
     offline: Annotated[bool, typer.Option("--offline", help="从入库快照核对原版接口")] = False,
     profile: Annotated[
-        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
+        str | None,
+        typer.Option("--profile", help="生产版本 1.15.1；仅 --offline 可显式核对 1.15.0 历史产物"),
     ] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
@@ -2914,9 +2885,7 @@ def modguard_cmd(
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
-        selected_profile = _production_profile(
-            profile, configuration, offline=offline, context=context
-        )
+        selected_profile = _production_profile(profile, offline=offline, context=context)
         if selected_profile is not None:
             distribution.check_profile_outputs(
                 selected_profile, configuration=_profile_configuration(configuration)
@@ -2981,7 +2950,8 @@ def decision_audit_cmd(
         help="只使用入库源和锁定底本；适用于无游戏目录的 CI 静态合同检查",
     ),
     profile: Annotated[
-        str | None, typer.Option("--profile", help="生产版本：默认 1.15.1；历史 R2 候选显式 1.15.0")
+        str | None,
+        typer.Option("--profile", help="生产版本 1.15.1；仅 --offline 可显式审计 1.15.0 历史产物"),
     ] = None,
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
@@ -2995,9 +2965,7 @@ def decision_audit_cmd(
     """
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
-        selected_profile = _production_profile(
-            profile, configuration, offline=offline, context=context
-        )
+        selected_profile = _production_profile(profile, offline=offline, context=context)
         if selected_profile is not None:
             resolved = _profile_configuration(configuration)
             profile_files = distribution.check_profile_outputs(
@@ -3070,6 +3038,7 @@ def decision_audit_cmd(
 @situated_app.command("audit")
 def situated_audit_cmd() -> None:
     """检查处境行动内核的源、关系、预算和生产接线合同。"""
+    _require_game(optional=True)
     try:
         problems = situated.audit.check()
         coverage = situated.audit.report()
@@ -3130,6 +3099,7 @@ def situated_report_cmd(
     ),
 ) -> None:
     """输出处境行动内核的可追溯合同报告。"""
+    _require_game(optional=not native)
     target = output or (config.OUT / "ci" / "situated-report.json")
     try:
         if native:

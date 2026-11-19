@@ -57,7 +57,7 @@ def test_外部配置超大整数按配置错误拒绝(tmp_path):
         decisions.load_extensions(source)
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0", "1.15.1"])
 def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, version):
     from typer.testing import CliRunner
 
@@ -83,8 +83,9 @@ def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, ve
 
     resolve = cli._production_profile
 
-    def frozen_profile(name, configuration=None, *, context=None):
-        return resolve(name, configuration, offline=True, context=context)
+    def frozen_profile(name):
+        version_contracts.require_current(name)
+        return resolve(name, offline=True)
 
     monkeypatch.setattr(cli, "_production_profile", frozen_profile)
     monkeypatch.setattr(distribution, "package", capture)
@@ -93,8 +94,13 @@ def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, ve
     output = tmp_path / "release.zip"
     with version_contracts.select_version(version):
         result = runner.invoke(app, ["package", "--profile", version, "--output", str(output)])
-    assert result.exit_code == 0, result.output
-    assert calls == [("current" if version == "1.15.0" else "historical", output)]
+    if version == "1.15.1":
+        assert result.exit_code == 0, result.output
+        assert calls == [("historical", output)]
+    else:
+        assert result.exit_code == 1, result.output
+        assert "合同版本" in result.output
+        assert calls == []
 
 
 @pytest.mark.parametrize(

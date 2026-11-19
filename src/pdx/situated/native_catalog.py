@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.situated.version_inventory import CONTENT_ROOTS, TEXT_EXTENSIONS, canonical_json
-from pdx.version_contracts import active_version
+from pdx.version_contracts import active_version, require_current, verify_installation_identity
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -878,9 +878,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inventory", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args(argv)
-    result = build_native_catalog(
-        args.installation, json.loads(args.inventory.read_text(encoding="utf-8"))
-    )
+    try:
+        verify_installation_identity(args.installation)
+    except ValueError as exc:
+        parser.error(str(exc))
+    inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
+    try:
+        require_current(inventory["expected_version"])
+    except (KeyError, TypeError, ValueError) as exc:
+        parser.error(f"原版盘点版本无效：{exc}")
+    result = build_native_catalog(args.installation, inventory)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(canonical_json(result), encoding="utf-8", newline="\n")
     print(canonical_json(result["summary"]), end="")

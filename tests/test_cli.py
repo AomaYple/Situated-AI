@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import sys
 import sysconfig
@@ -44,6 +45,8 @@ from conftest import NEEDS_GAME
 from typer.testing import CliRunner
 
 from pdx import cli, config, verify
+from pdx.situated import r2_reader_authority
+from pdx.version_contracts import CURRENT_VERSION
 
 pytestmark = pytest.mark.cli
 
@@ -160,7 +163,7 @@ _FIXTURE_MOD = "fixture_workshop_mod"
 
 #: 合成日志里的游戏版本。它和宿主机真日志的版本**可能一样**（同一个 1.14.5），
 #: 所以"读的是夹具"由断言**条数**背书（宿主机真日志有几百条 token 断言），不由版本号。
-_FIXTURE_VERSION = "1.14.5"
+_FIXTURE_VERSION = CURRENT_VERSION
 
 #: 原版 ``gui/panel.gui``：4 行，KEY_ALPHA / KEY_BETA / KEY_GAMMA / KEY_DELTA 各占一行。
 _VANILLA_GUI = 'a = "KEY_ALPHA"\nb = "KEY_BETA"\nc = "KEY_GAMMA"\nd = "KEY_DELTA"\n'
@@ -211,7 +214,12 @@ def _crosscheck_fixture(
     """
     root = base / "game"
     (root / "gui").mkdir(parents=True)
-    (base / "caligula_branch.txt").write_text(f"release/{_FIXTURE_VERSION}", encoding="utf-8")
+    shutil.copytree(
+        r2_reader_authority.frozen_root(CURRENT_VERSION),
+        base,
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("game", r2_reader_authority.MANIFEST_NAME),
+    )
     (root / "gui" / "panel.gui").write_text(vanilla, encoding="utf-8")
 
     workshop = base / "workshop"
@@ -225,6 +233,7 @@ def _crosscheck_fixture(
     (userdir / "mod").mkdir()  # 本地 mod：空的
 
     monkeypatch.setattr(config, "GAME", root)
+    monkeypatch.setattr(config, "ROOT", base)
     monkeypatch.setattr(config, "WORKSHOP", workshop)
     monkeypatch.setattr(config, "LOCAL_MODS", userdir / "mod")
     monkeypatch.setattr(config, "USERDIR", userdir)
@@ -445,6 +454,7 @@ def test_crosscheck_真错配仍判红_阴性对照(monkeypatch) -> None:
     claim = engine_log.EngineClaim(
         kind="token_at", detail="", file_rel="gui/panel.gui", line=2, token="KEY_HERE"
     )
+    monkeypatch.setattr(cli, "_require_game", lambda: None)
     monkeypatch.setattr(cli.engine_log, "parse_logs", lambda: ([claim], "1.14.4"))
     # 覆盖来源要给得出（"不可核对"那一档的输出要求写出它）。
     monkeypatch.setattr(

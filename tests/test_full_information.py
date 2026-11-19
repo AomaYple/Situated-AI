@@ -1232,24 +1232,6 @@ def test_release_package_is_deterministic(standard_release_package, tmp_path):
     assert regenerated.read_bytes() == original
 
 
-@pytest.fixture(scope="module")
-def standard_release_package(tmp_path_factory):
-    if not (config.GAME / "common/laws/readme.md").is_file():
-        pytest.skip("需要锁定版本的游戏原件")
-    root = tmp_path_factory.mktemp("standard-release")
-    if version_contracts.active_version() == "1.15.0":
-        # Only the historical 1.15.0 compatibility tree uses this generator.
-        # The current 1.15.1 standard package validates its checked generation lock.
-        # The output directory is private to this module's worker; the actual
-        # source root and every executable/source check stay unchanged.
-        with pytest.MonkeyPatch.context() as patches:
-            patches.setattr(decisions, "product_path", lambda: root / "compatibility")
-            distribution.write_compatibility_outputs()
-            yield distribution.package(root / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
-    else:
-        yield distribution.package(root / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
-
-
 @pytest.mark.integration
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"

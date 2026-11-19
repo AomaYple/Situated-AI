@@ -22,7 +22,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import ai_surface, config, political_surface
+from . import ai_surface, config, political_surface, version_contracts
 from .cache import parse_cached
 from .localization import SUFFIXES, parse_loc_entries_with_lines
 from .model import Block
@@ -517,6 +517,7 @@ def write_localization_catalog(
     """
 
     if roots is None:
+        version_contracts.verify_installation_identity(config.ROOT)
         selected: dict[str, Path] = {
             "game": config.GAME,
             "jomini": config.JOMINI,
@@ -658,6 +659,7 @@ def build(
     """
 
     if roots is None:
+        version_contracts.verify_installation_identity(config.ROOT)
         selected: dict[str, Path] = {
             "game": config.GAME,
             "jomini": config.JOMINI,

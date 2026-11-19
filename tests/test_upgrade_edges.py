@@ -418,18 +418,32 @@ def test_profile_summary_counts_real_calls(tmp_path, request):
     assert profile_suite.summarize(tmp_path / "missing")["profiles"] == []
 
 
+@pytest.fixture
+def table_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pdx import config
+    from pdx.situated import r2_reader_authority
+    from pdx.version_contracts import CURRENT_VERSION, INSTALLATION_IDENTITY_SHA256
+
+    (tmp_path / "game/common").mkdir(parents=True)
+    baseline = r2_reader_authority.frozen_root(CURRENT_VERSION)
+    for relative in INSTALLATION_IDENTITY_SHA256:
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((baseline / relative).read_bytes())
+    monkeypatch.setattr(config, "ROOT", tmp_path)
+    monkeypatch.setattr(config, "GAME", tmp_path / "game")
+
+
+@pytest.mark.usefixtures("table_game")
 @pytest.mark.parametrize("offline", [False, True])
 def test_table_cli_detects_repairs_and_preserves_prose(tmp_path, monkeypatch, offline):
     from types import SimpleNamespace
 
     from typer.testing import CliRunner
 
-    from pdx import cli, config, docgen, tables_offline
+    from pdx import cli, docgen, tables_offline
     from pdx.doc_tables import TableSpec
 
-    game = tmp_path / "game"
-    (game / "common").mkdir(parents=True)
-    monkeypatch.setattr(config, "GAME", game)
     doc = tmp_path / "99-sample.md"
     doc.write_bytes(
         b"# Sample\n\nProse before.\n\n| Name | Count |\n|---|---|\n| alpha | 999 |\n\nProse after.\n"
@@ -460,6 +474,7 @@ def test_table_cli_detects_repairs_and_preserves_prose(tmp_path, monkeypatch, of
     assert doc.read_bytes() == raw
 
 
+@pytest.mark.usefixtures("table_game")
 @pytest.mark.parametrize("offline", [False, True])
 @pytest.mark.parametrize("write", [False, True])
 def test_table_cli_missing_header_reports_prerequisite(tmp_path, monkeypatch, offline, write):
@@ -467,11 +482,9 @@ def test_table_cli_missing_header_reports_prerequisite(tmp_path, monkeypatch, of
 
     from typer.testing import CliRunner
 
-    from pdx import cli, config, docgen, tables_offline
+    from pdx import cli, docgen, tables_offline
     from pdx.doc_tables import TableSpec
 
-    (tmp_path / "game/common").mkdir(parents=True)
-    monkeypatch.setattr(config, "GAME", tmp_path / "game")
     doc = tmp_path / "99-sample.md"
     doc.write_bytes(b"# No table\n")
     spec = TableSpec("sample", "| Name | Count |", lambda: ["| alpha | 1 |"])

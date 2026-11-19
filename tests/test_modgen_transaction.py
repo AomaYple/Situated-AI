@@ -2,24 +2,27 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, version_contracts
+from pdx import cli
 from pdx.generation_transaction import GenerationTransaction
 
 pytestmark = pytest.mark.unit
-
-
-@pytest.fixture(autouse=True)
-def historical_cli_contract():
-    # These fixtures model the legacy ledger CLI; current profile transactions
-    # have independent complete-tree/live-installation tests.
-    with version_contracts.select_version("1.14.5"):
-        yield
+_METADATA = (
+    json.dumps(
+        {
+            name: {} if name == "game_custom_data" else ""
+            for name in cli.distribution.LAUNCHER_METADATA_KEYS
+        },
+        indent=2,
+    )
+    + "\n"
+)
 
 
 @pytest.mark.parametrize("rollback", [False, True])
@@ -63,7 +66,7 @@ def generation(tmp_path, monkeypatch):
     initial = {
         "decisions/action_bindings.toml": b"old-bindings\r\n",
         "decisions/domain_actions.toml": b"old-domains\n",
-        "common/old.txt": b"old-production\n",
+        "user-old.bin": b"old-external\n",
         "generation-lock.json": b"old-lock\n",
         "common/scripted_triggers/sitai_country_triggers.txt": b"retired\n",
         "user-note.bin": b"keep-user-bytes\x00",
@@ -74,14 +77,16 @@ def generation(tmp_path, monkeypatch):
         path.write_bytes(raw)
     monkeypatch.setattr(cli.config, "GAME", game)
     monkeypatch.setattr(cli.decisions, "PRODUCT", root)
-    monkeypatch.setattr(cli.situated_bindings, "DEFAULT_SOURCE", binding)
-    monkeypatch.setattr(cli.situated_domain_coverage, "DEFAULT_SOURCE", domain)
+    monkeypatch.setattr(cli.situated_bindings, "source_path", lambda: binding)
+    monkeypatch.setattr(cli.situated_domain_coverage, "source_path", lambda: domain)
     monkeypatch.setattr(cli.situated_bindings, "build", lambda: ("new-binding",))
     monkeypatch.setattr(cli.situated_bindings, "render", lambda _rows: "new-bindings\n")
     monkeypatch.setattr(
         cli.situated_domain_coverage, "render_counts", lambda _path: "new-domains\n"
     )
     monkeypatch.setattr(cli, "_modgen_verify_sources", lambda: None)
+    monkeypatch.setattr(cli.distribution, "check_profile_installation", lambda _profile: None)
+    monkeypatch.setattr(cli.distribution, "verify_compatibility_installation", lambda: None)
     monkeypatch.setattr(cli.distribution, "generation_lock", lambda _files: "new-lock\n")
 
     def build(*, configuration):
@@ -90,8 +95,16 @@ def generation(tmp_path, monkeypatch):
         assert binding.read_bytes() == b"new-bindings\n"
         assert domain.read_bytes() == b"new-domains\n"
         # Even after ledger derivation no production output has changed.
-        assert (root / "common/old.txt").read_bytes() == initial["common/old.txt"]
-        return None, None, {"common/new.txt": "new-production\n", "README.md": "guide\n"}
+        assert (root / "user-old.bin").read_bytes() == initial["user-old.bin"]
+        return (
+            None,
+            None,
+            {
+                "common/new.txt": "new-production\n",
+                "README.md": "guide\n",
+                cli.distribution.METADATA_NAME: _METADATA,
+            },
+        )
 
     monkeypatch.setattr(cli.distribution, "package_inputs", build)
     for module in (
@@ -121,6 +134,7 @@ def test_valid_rule_change_refreshes_stale_ledgers_and_preserves_user_files(gene
         "decisions/action_bindings.toml": b"new-bindings\n",
         "decisions/domain_actions.toml": b"new-domains\n",
         "common/new.txt": b"new-production\n",
+        cli.distribution.METADATA_NAME: _METADATA.encode(),
         "generation-lock.json": b"new-lock\n",
     }
     expected.pop("common/scripted_triggers/sitai_country_triggers.txt")
@@ -320,7 +334,7 @@ def test_failed_staged_write_cannot_leave_its_partial_files(generation, monkeypa
 
     def fail(staged, _files):
         (staged / "partial.txt").write_bytes(b"partial staged output")
-        (staged / "common/old.txt").write_bytes(b"damaged staged output")
+        (staged / "user-old.bin").write_bytes(b"damaged staged output")
         raise OSError("disk full in stage")
 
     monkeypatch.setattr(cli.decisions, "write", fail)

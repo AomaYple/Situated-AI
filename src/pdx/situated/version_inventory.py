@@ -21,7 +21,12 @@ from pdx.localization_languages import LANGUAGE_HEADER_RE
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.scan import TEXT_SUFFIXES
-from pdx.version_contracts import CURRENT_VERSION, active_version
+from pdx.version_contracts import (
+    CURRENT_VERSION,
+    active_version,
+    require_current,
+    verify_installation_identity,
+)
 
 SCHEMA = "situated-ai.native-inventory/1"
 CONTENT_ROOTS = ("game", "clausewitz", "jomini")
@@ -624,6 +629,11 @@ def main() -> int:
         arguments.installation.resolve()
     ):
         parser.error("output must be outside the read-only game installation")
+    try:
+        require_current(arguments.expected_version)
+        verify_installation_identity(arguments.installation)
+    except ValueError as exc:
+        parser.error(str(exc))
     result = inventory_installation(
         arguments.installation, expected_version=arguments.expected_version
     )

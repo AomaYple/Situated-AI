@@ -255,6 +255,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         with version_contracts.select_version(args.profile):
+            version_contracts.require_current()
             game = args.installation / "game"
             if args.kind == "parameters":
                 output = capture_parameters(game, output=args.output)

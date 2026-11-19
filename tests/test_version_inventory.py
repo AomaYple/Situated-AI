@@ -280,6 +280,12 @@ def test_same_installation_bytes_are_independent_of_location(
 def test_cli_uses_same_json_and_refuses_installation_output(
     installation: Path, tmp_path: Path
 ) -> None:
+    from pdx import version_contracts
+    from pdx.situated import r2_reader_authority
+
+    baseline = r2_reader_authority.frozen_root("1.15.1")
+    for relative in version_contracts.INSTALLATION_IDENTITY_SHA256:
+        _write(installation, relative, (baseline / relative).read_bytes())
     command = [
         sys.executable,
         "-B",

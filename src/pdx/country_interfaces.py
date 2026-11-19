@@ -370,6 +370,7 @@ def main():
     parser = argparse.ArgumentParser(description="从锁定原版生成国家接口补充证据")
     parser.add_argument("--write", action="store_true", required=True)
     parser.parse_args()
+    version_contracts.verify_installation_identity(config.ROOT)
     index = vanilla_index.snapshot_index()
     if index is None:
         raise ValueError("缺少冻结精简快照")

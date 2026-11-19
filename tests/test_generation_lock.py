@@ -114,9 +114,12 @@ def test_lock_tracks_independent_historical_migration_manifest(frozen_product, o
         distribution.check_generation_lock()
 
 
-def test_no_game_offline_guard_uses_frozen_snapshot_contract(frozen_product, tmp_path, monkeypatch):
-    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    result = CliRunner().invoke(cli.app, ["modguard", "--offline"])
+def test_no_game_offline_guard_uses_frozen_snapshot_contract(tmp_path, monkeypatch):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.1")
+    root = tmp_path / "missing-installation"
+    monkeypatch.setattr(config, "ROOT", root)
+    monkeypatch.setattr(config, "GAME", root / "game")
+    result = CliRunner().invoke(cli.app, ["modguard", "--offline", "--profile", "1.15.1"])
     assert result.exit_code == 0, result.output
     assert "冻结源码/产物" in result.output
     assert "不证明当前游戏内容" in result.output
@@ -142,25 +145,37 @@ def test_current_lock_tracks_versioned_sources_and_uses_isolated_tree(frozen_pro
         distribution.check_generation_lock()
 
 
-def test_no_game_production_generation_refuses_and_preserves_existing(tmp_path, monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
+def test_no_game_historical_package_refuses_and_preserves_existing(
+    frozen_product, tmp_path, monkeypatch
+):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    product = tmp_path / "mod"
-    product.mkdir()
-    preserved_file = product / "existing.txt"
-    preserved_file.write_bytes(b"previous production\n")
-    monkeypatch.setattr(decisions, "PRODUCT", product)
-    baseline = tmp_path / "baseline.txt"
-    baseline.write_bytes(decisions._HISTORICAL_BASELINE.read_bytes())
-    monkeypatch.setattr(decisions, "BASELINE", baseline)
     target = tmp_path / "existing.zip"
     target.write_bytes(b"previous zip")
     with pytest.raises(ValueError, match="缺少锁定游戏原件"):
         distribution.package(target)
     assert target.read_bytes() == b"previous zip"
-    for command in (["modgen", "--write"], ["modgen", "--check"]):
-        result = CliRunner().invoke(cli.app, command)
-        assert result.exit_code == 1, result.output
-        assert "缺少锁定游戏原件" in result.output
+
+
+def test_no_game_production_generation_refuses_and_preserves_existing(tmp_path, monkeypatch):
+    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.1")
+    root = tmp_path / "missing-installation"
+    monkeypatch.setattr(config, "ROOT", root)
+    monkeypatch.setattr(config, "GAME", root / "game")
+    product = tmp_path / "mod"
+    product.mkdir()
+    preserved_file = product / "existing.txt"
+    preserved_file.write_bytes(b"previous production\n")
+    monkeypatch.setattr(decisions, "PRODUCT", product)
+    target = tmp_path / "existing.zip"
+    target.write_bytes(b"previous zip")
+    for command in (
+        ["modgen", "--write"],
+        ["modgen", "--check"],
+        ["package", "--output", str(target)],
+    ):
+        result = CliRunner().invoke(cli.app, [*command, "--profile", "1.15.1"])
+        assert result.exit_code == cli.EXIT_FAILED, result.output
+        assert "missing or linked source binaries/checksum.txt" in result.output
         assert list(product.iterdir()) == [preserved_file]
         assert preserved_file.read_bytes() == b"previous production\n"
+        assert target.read_bytes() == b"previous zip"
