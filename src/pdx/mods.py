@@ -105,7 +105,7 @@ def read_metadata(root: Path) -> dict[str, Any]:
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
+    except OSError, json.JSONDecodeError:
         return {}
     return data if isinstance(data, dict) else {}
 

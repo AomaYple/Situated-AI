@@ -192,7 +192,7 @@ class MemReader:
     def read(self, pid: int) -> tuple[int, int | None, int | None] | None:
         try:
             info = self._process(pid).memory_info()
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except psutil.NoSuchProcess, psutil.AccessDenied:
             return None
         peak = getattr(info, "peak_wset", None)
         private = getattr(info, "private", None)
@@ -208,7 +208,7 @@ class MemReader:
     def read_cpu(self, pid: int) -> float | None:
         try:
             times = self._process(pid).cpu_times()
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except psutil.NoSuchProcess, psutil.AccessDenied:
             return None
         return round(times.user + times.system, 2)
 
@@ -246,7 +246,7 @@ def list_procs() -> list[tuple[int, int, str]]:
             info = process.info
             if info["ppid"] is not None and info["name"] is not None:
                 rows.append((info["pid"], info["ppid"], info["name"]))
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except psutil.NoSuchProcess, psutil.AccessDenied:
             continue
     return rows
 
@@ -891,7 +891,7 @@ def _mark(glyph: str, fallback: str) -> str:
     encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
     try:
         glyph.encode(encoding)
-    except (UnicodeEncodeError, LookupError):
+    except UnicodeEncodeError, LookupError:
         return fallback
     return glyph
 
@@ -947,7 +947,7 @@ def tag_groups_seen(tag: str, group: str) -> list[str]:
     for path in sorted(OUT_DIR.glob("*.summary.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+        except OSError, ValueError:
             continue
         if not isinstance(payload, dict):
             continue
@@ -2869,7 +2869,7 @@ if pytest is not None:  # pragma: no branch
         try:
             try:
                 value = yield
-            except (SkipTest, pytest.skip.Exception):
+            except SkipTest, pytest.skip.Exception:
                 # unittest.setUpClass 的正常跳过由 pytest/JUnit 记录，不是采样错误。
                 outcome = "skipped"
                 raise

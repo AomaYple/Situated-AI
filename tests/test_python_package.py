@@ -24,6 +24,9 @@ def test_setuptools_package_discovery_includes_all_project_subpackages() -> None
     assert setuptools["package-dir"] == {"": "src"}
     assert discovery["where"] == ["src"]
     assert "pdx*" in discovery["include"]
+    assert discovery["namespaces"] is False
+    assert config["project"]["dependencies"]
+    assert set(config["project"]["urls"]) == {"Homepage", "Repository", "Issues"}
     assert not isinstance(setuptools["packages"], list)
 
     package_paths = (root / "src" / "pdx").rglob("__init__.py")

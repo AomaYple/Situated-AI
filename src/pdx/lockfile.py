@@ -13,8 +13,8 @@ pytest / ruff / hypothesis 版本可能各不相同，于是「本地过了、CI
 
 1. 从 ``pyproject.toml`` 读出**直接依赖**（运行期 + ``dev`` extra）；
 2. 用 :mod:`importlib.metadata` 沿着 ``Requires-Dist`` 递归展开**闭包**
-   （只统计**本机真的装了**的那些 —— 没装的多半是别的平台/别的 Python 版本的
-   条件依赖，锁里不该凭空写一个版本号）;
+   （先按当前平台、解释器与已请求 extras 求值；条件不成立的依赖排除，
+   任何适用依赖缺失或元数据读取失败都拒绝生成不完整锁）；
 3. 按名字排序写成 ``requirements.lock``：``name==version``，外加一段文件头
    说明生成方式与解释器版本。
 
@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING
 
 from packaging.markers import Marker
 from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 from packaging.utils import canonicalize_name
 
 from . import config
@@ -53,27 +54,63 @@ LOCK_FILE = "requirements.lock"
 HEADER = "# 由 `v3 lock --write` 生成 —— 手改会被 `v3 lock`（不带参数）对账时报出来。"
 
 
+def requires_python(root: Path | None = None) -> str:
+    """读取 ``pyproject.toml`` 中唯一维护的 Python 版本要求。"""
+    base = config.REPO if root is None else root
+    project = tomllib.loads((base / "pyproject.toml").read_text(encoding="utf-8")).get(
+        "project", {}
+    )
+    requirement = project.get("requires-python")
+    if not isinstance(requirement, str) or not requirement.strip():
+        raise ValueError("pyproject.toml 缺少有效的 project.requires-python")
+    return requirement.strip()
+
+
+def current_python_version() -> tuple[int, int, int]:
+    """当前生成器解释器的稳定三段版本。"""
+    return (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
+
+
+def validate_python_version(
+    actual: tuple[int, int, int] | None = None,
+    requirement: str | None = None,
+) -> None:
+    """拒绝不满足项目合同的解释器，避免生成不可用的锁。"""
+    version = current_python_version() if actual is None else actual
+    expected = requires_python() if requirement is None else requirement
+    if SpecifierSet(expected).contains(".".join(map(str, version)), prereleases=True):
+        return
+    actual_text = ".".join(map(str, version))
+    raise RuntimeError(
+        f"锁生成器解释器版本不满足项目要求：实际 Python {actual_text}；要求 {expected}"
+    )
+
+
 def normalize(name: str) -> str:
     """包名规范化（``Foo_Bar`` 与 ``foo-bar`` 是同一个包）。"""
     return canonicalize_name(name.strip())
 
 
-def _marker_allows(marker: str) -> bool:
+def _marker_allows(marker: str, *, extra: str = "") -> bool:
     """使用 PEP 508 的 AND/OR、平台和版本语义；坏标记明确报错。"""
-    return Marker(marker).evaluate({"extra": ""})
+    return Marker(marker).evaluate({"extra": extra})
 
 
-def _requirement_names(specs: Iterable[str]) -> list[str]:
-    """从 PEP 508 依赖串里取包名（丢掉版本号、extra、标记）。"""
+def _requirement_names(specs: Iterable[str], *, extras: Iterable[str] = ("",)) -> list[str]:
+    """过滤不适用的 PEP 508 依赖，保留继续展开闭包所需的 extras。"""
     out: list[str] = []
+    contexts = tuple(extras)
     for raw in specs:
         line = raw.strip()
         if not line:
             continue
         requirement = Requirement(line)
-        if requirement.marker and not _marker_allows(str(requirement.marker)):
+        if requirement.marker and not any(
+            _marker_allows(str(requirement.marker), extra=extra) for extra in contexts
+        ):
             continue
-        out.append(requirement.name)
+        requested = f"[{','.join(sorted(requirement.extras))}]" if requirement.extras else ""
+        out.append(f"{requirement.name}{requested}")
     return out
 
 
@@ -89,33 +126,43 @@ def direct_requirements() -> list[str]:
 def resolve() -> dict[str, str]:
     """本机已安装的依赖闭包：``{规范化包名: 版本}``。"""
     pinned: dict[str, str] = {}
-    queue = direct_requirements()
+    direct = direct_requirements()
+    direct_names = {normalize(Requirement(name).name) for name in direct}
+    expanded: dict[str, set[str]] = {}
+    queue = list(direct)
     while queue:
-        name = queue.pop()
+        requirement = Requirement(queue.pop())
+        name = requirement.name
         key = normalize(name)
-        if key in pinned:
+        contexts = {"", *requirement.extras} - expanded.get(key, set())
+        if not contexts:
             continue
-        try:
-            pinned[key] = version(name)
-        except PackageNotFoundError:
-            continue  # 条件依赖（别的平台 / 别的 Python）没装，锁里不写
-        try:
-            children = requires(name) or []
-        except Exception:  # pragma: no cover - 元数据损坏的极端情况
-            children = []
-        queue.extend(_requirement_names(children))
+        if key not in pinned:
+            try:
+                pinned[key] = version(name)
+            except PackageNotFoundError:
+                kind = "直接依赖" if key in direct_names else "依赖闭包成员"
+                raise RuntimeError(f"{kind}未安装，不能生成不完整锁：{name}") from None
+        # Process newly requested extras even when the base distribution was
+        # already visited. Unknown metadata never proves an empty closure.
+        children = requires(name) or []
+        expanded.setdefault(key, set()).update(contexts)
+        queue.extend(_requirement_names(children, extras=contexts))
     return dict(sorted(pinned.items()))
 
 
 def render(pinned: dict[str, str]) -> str:
     """把闭包渲染成锁文件文本（含头部说明）。"""
+    requirement = requires_python()
+    interpreter = current_python_version()
     lines = [
         HEADER,
         "#",
         "# 口径：从 pyproject.toml 的直接依赖出发，沿 Requires-Dist 展开本机已安装的闭包。",
         "# 它描述的是**这台机器解析出来的版本组合**，含平台相关依赖（如 Windows 上的 colorama）。",
         "# `v3 lock`（不带参数）会拿它与当前环境对账；不一致时先想清楚再 `--write`。",
-        f"# 解释器：Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        f"# Python 要求：{requirement}",
+        f"# 解释器：Python {'.'.join(map(str, interpreter))}",
         "",
     ]
     lines += [f"{name}=={ver}" for name, ver in pinned.items()]
@@ -135,6 +182,27 @@ def read(path: str | Path | None = None) -> dict[str, str]:
         return {}
     text = target.read_text(encoding="utf-8")
     if HEADER not in text:
+        return {}
+    requirement_line = next(
+        (line for line in text.splitlines() if line.startswith("# Python 要求：")), None
+    )
+    interpreter_line = next(
+        (line for line in text.splitlines() if line.startswith("# 解释器：Python ")), None
+    )
+    if requirement_line is None or interpreter_line is None:
+        return {}
+    recorded_requirement = requirement_line.removeprefix("# Python 要求：").strip()
+    if recorded_requirement != requires_python():
+        return {}
+    try:
+        recorded_version = tuple(
+            int(part)
+            for part in interpreter_line.removeprefix("# 解释器：Python ").strip().split(".")
+        )
+        if len(recorded_version) != 3:
+            return {}
+        validate_python_version(recorded_version, recorded_requirement)
+    except ValueError, RuntimeError:
         return {}
     out: dict[str, str] = {}
     for line in text.splitlines():
@@ -176,6 +244,7 @@ def compare(pinned: dict[str, str], locked: dict[str, str]) -> list[Drift]:
 
 def write(pinned: dict[str, str] | None = None) -> int:
     """写锁文件，返回写入的条目数。"""
+    validate_python_version()
     data = resolve() if pinned is None else pinned
     (config.REPO / LOCK_FILE).write_text(render(data), encoding="utf-8", newline="\n")
     return len(data)
@@ -186,10 +255,13 @@ __all__ = [
     "LOCK_FILE",
     "Drift",
     "compare",
+    "current_python_version",
     "direct_requirements",
     "normalize",
     "read",
     "render",
+    "requires_python",
     "resolve",
+    "validate_python_version",
     "write",
 ]

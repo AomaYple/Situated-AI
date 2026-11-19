@@ -199,7 +199,7 @@ def test_player_disabled_unknown_wrong_country_and_full_native_ast_are_preserved
 def test_native_social_institution_mechanism_is_welfare_and_food_without_legitimacy():
     path = config.GAME / "common/institutions/00_institutions.txt"
     if not path.is_file():
-        pytest.skip("requires installed locked native institution source")
+        pytest.skip("需要锁定原版制度来源")
     modifiers = _block(
         _block(
             parse_text(path.read_text(encoding="utf-8-sig")).root, "institution_social_security"

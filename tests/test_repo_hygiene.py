@@ -97,7 +97,7 @@ def _受控文件() -> tuple[str, ...]:
     except FileNotFoundError:  # pragma: no cover - 环境无 git
         pytest.skip("找不到 git —— 受控文件清单取不到")
     except subprocess.CalledProcessError as exc:  # pragma: no cover - 不是 git 工作树
-        pytest.skip(f"git ls-files 失败（{exc.returncode}）")
+        pytest.skip(f"开发工具 git ls-files 失败（{exc.returncode}）")
 
     return tuple(
         sorted(

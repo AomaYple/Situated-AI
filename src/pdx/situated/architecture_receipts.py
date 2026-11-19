@@ -824,7 +824,7 @@ def launcher_points_at_deployment(launcher: Path, target: Path) -> bool:
         path = Path(value)
         try:
             return path.is_absolute() and path.resolve(strict=True) == target.resolve(strict=True)
-        except (OSError, ValueError, RuntimeError):
+        except OSError, ValueError, RuntimeError:
             return False
 
     try:
@@ -850,7 +850,7 @@ def launcher_points_at_deployment(launcher: Path, target: Path) -> bool:
                 and pointers[0].value.quoted
                 and matches(pointers[0].value.unquoted)
             )
-    except (OSError, ValueError, UnicodeError, RuntimeError):
+    except OSError, ValueError, UnicodeError, RuntimeError:
         return False
     return False
 

@@ -7,9 +7,8 @@ Possible PM recipes establish shared inputs; they do not identify active PMs.
 
 import hashlib
 import re
-from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -17,6 +16,9 @@ from pdx import config, country_state, decision_adapters, decision_rules, versio
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 pytestmark = pytest.mark.integration
 EUROPE = "common/company_types/00_companies_europe.txt"

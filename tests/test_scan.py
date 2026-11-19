@@ -278,7 +278,7 @@ def test_stats_counts_hard_links_as_distinct_paths(tmp_path):
     try:
         (tmp_path / "alias.txt").hardlink_to(source)
     except (OSError, NotImplementedError) as exc:
-        pytest.skip(f"当前平台不支持硬链接：{exc}")
+        pytest.skip(f"当前平台能力不可用，不支持硬链接：{exc}")
     result = stats_for(tmp_path)
     assert (result.files, result.dirs, result.size) == (2, 0, 6)
     assert result.by_suffix == {".txt": 2}
@@ -373,7 +373,7 @@ def test_stats_ignores_child_links_but_allows_link_as_root(tmp_path):
         (root / "file-link.txt").symlink_to(root / "real" / "file.txt")
         (root / "dangling").symlink_to(root / "missing")
     except (OSError, NotImplementedError) as exc:
-        pytest.skip(f"当前平台未授予符号链接能力：{exc}")
+        pytest.skip(f"系统未授予符号链接权限：{exc}")
     for path in (root, linked_root):
         result = stats_for(path)
         assert (result.files, result.dirs, result.size) == (1, 1, 2)

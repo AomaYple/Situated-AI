@@ -144,7 +144,14 @@ def test_actual(architecture_witness, request, role, expected, responsibility):
         command = [item for item in command if not item.startswith("--architecture-witness-")]
         command.append("--architecture-witness-plan=tools/out/fixture-plan.json")
     result = subprocess.run(
-        command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=45, check=False
+        command,
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=45,
+        check=False,
+        encoding="utf-8",
     )
     path = tmp_path / "tools/out/capture.json"
     assert path.is_file(), result.stdout + result.stderr

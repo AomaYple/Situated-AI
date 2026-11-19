@@ -8,7 +8,7 @@
 
 ```text
 pytest tests/test_benchmarks.py -o addopts="" --benchmark-only --benchmark-json=bench.json
-python tools/ci/bench_summary.py bench.json >> "$GITHUB_STEP_SUMMARY"
+python tools/ci/bench_summary.py bench.json --github-step-summary
 ```
 
 只用标准库：CI 上不该为了打一张表再装东西（P4）。
@@ -16,7 +16,9 @@ python tools/ci/bench_summary.py bench.json >> "$GITHUB_STEP_SUMMARY"
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -71,18 +73,38 @@ def table(data: dict[str, object]) -> str:
     return "\n".join(out) + "\n"
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    path = Path(args[0]) if args else Path("bench.json")
+def _report(path: Path) -> str:
     if not path.is_file():
-        print(f"_找不到 {path} —— 基准那一步没产出文件？_\n")
-        return 0  # 汇总失败不该让 job 红：它不是门禁
+        return f"_找不到 {path} —— 基准那一步没产出文件？_\n\n"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as exc:
-        print(f"_基准 JSON 读不动（{exc}）_\n")
-        return 0
-    sys.stdout.write(table(data))
+        return f"_基准 JSON 读不动（{exc}）_\n\n"
+    return table(data)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="汇总 pytest-benchmark 的 JSON 数据")
+    parser.add_argument("path", nargs="?", type=Path, default=Path("bench.json"))
+    parser.add_argument(
+        "--github-step-summary",
+        action="store_true",
+        help="以 UTF-8 LF 追加到 GITHUB_STEP_SUMMARY 指定的文件",
+    )
+    args = parser.parse_args(argv)
+    report = _report(args.path)
+    if args.github_step_summary:
+        target = os.environ.get("GITHUB_STEP_SUMMARY")
+        try:
+            if not target:
+                raise ValueError("未设置摘要路径")
+            with Path(target).open("a", encoding="utf-8", newline="\n") as summary:
+                summary.write(report)
+        except (OSError, ValueError) as exc:
+            print(f"无法写入 GITHUB_STEP_SUMMARY（{exc}）", file=sys.stderr)
+        else:
+            return 0
+    sys.stdout.write(report)
     return 0
 
 

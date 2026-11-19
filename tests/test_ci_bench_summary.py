@@ -7,29 +7,16 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from types import ModuleType
+from tools.ci import bench_summary
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tools" / "ci" / "bench_summary.py"
-
-
-def _module() -> ModuleType:
-    """按路径加载脚本（`tools/ci/` 不是包，不能 import）。"""
-    spec = importlib.util.spec_from_file_location("bench_summary", SCRIPT)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def _data(*rows: tuple[str, float]) -> dict[str, object]:
@@ -52,32 +39,32 @@ def _data(*rows: tuple[str, float]) -> dict[str, object]:
 
 class TestTable:
     def test_按名字排序(self) -> None:
-        text = _module().table(_data(("b", 0.001), ("a", 0.001)))
+        text = bench_summary.table(_data(("b", 0.001), ("a", 0.001)))
         assert text.index("`a`") < text.index("`b`")
 
     def test_数值原样不美化(self) -> None:
         """0.0135 秒要写成 ``13.50 ms`` —— 换算只换单位，不改有效数字。"""
-        text = _module().table(_data(("x", 0.0135)))
+        text = bench_summary.table(_data(("x", 0.0135)))
         assert "13.50 ms" in text, text
 
     def test_三个量级各用各的单位(self) -> None:
-        table = _module().table
+        table = bench_summary.table
         assert "900.00 ns" in table(_data(("n", 9e-7)))
         assert "50.00 us" in table(_data(("u", 5e-5)))
         assert "2.00 ms" in table(_data(("m", 2e-3)))
 
     def test_表尾说清它不是门禁(self) -> None:
-        text = _module().table(_data(("x", 0.001)))
+        text = bench_summary.table(_data(("x", 0.001)))
         assert "不是门禁" in text
         assert "test_cache" in text, "要说清断言落在哪里，否则下一个人会以为基准没人守"
 
     def test_空数据给一句人话(self) -> None:
-        text = _module().table({"benchmarks": []})
+        text = bench_summary.table({"benchmarks": []})
         assert "没有基准数据" in text
         assert "|" not in text.splitlines()[0]
 
     def test_缺stats的条目被跳过而不是崩(self) -> None:
-        text = _module().table(
+        text = bench_summary.table(
             {"benchmarks": [{"name": "bad"}, {"name": "ok", "stats": {"mean": 1.0}}]}
         )
         assert "`ok`" in text
@@ -85,11 +72,14 @@ class TestTable:
 
 
 class TestMain:
-    def _run(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def _run(self, *args: str, summary: Path | None = None) -> subprocess.CompletedProcess[str]:
         # ⚠️ 子进程的输出编码必须显式钉成 UTF-8：本机 locale 是 GBK 时，脚本里的中文
         # 会按 GBK 打出来，而这边按 UTF-8 解码 ⇒ UnicodeDecodeError（实测踩过，
         # `test_repo_numbers.py` 里也是同一条）。
         env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+        env.pop("GITHUB_STEP_SUMMARY", None)
+        if summary is not None:
+            env["GITHUB_STEP_SUMMARY"] = str(summary)
         return subprocess.run(
             [sys.executable, str(SCRIPT), *args],
             capture_output=True,
@@ -118,3 +108,47 @@ class TestMain:
         result = self._run(str(path))
         assert result.returncode == 0
         assert "读不动" in result.stdout
+
+    def test_显式追加UTF8摘要并保留原内容(self, tmp_path: Path) -> None:
+        path = tmp_path / "bench.json"
+        data = _data(("样本", 0.001))
+        path.write_text(json.dumps(data), encoding="utf-8")
+        summary = tmp_path / "已有 摘要.md"
+        previous = "上一条摘要\n".encode()
+        summary.write_bytes(previous)
+
+        result = self._run(str(path), summary=summary)
+        assert result.returncode == 0
+        assert result.stdout == bench_summary.table(data)
+        assert summary.read_bytes() == previous
+
+        for _ in range(2):
+            result = self._run(str(path), "--github-step-summary", summary=summary)
+            assert result.returncode == 0
+            assert result.stdout == result.stderr == ""
+        assert summary.read_bytes() == previous + bench_summary.table(data).encode() * 2
+
+    def test_坏输入的软失败也写入摘要(self, tmp_path: Path) -> None:
+        path = tmp_path / "bench.json"
+        summary = tmp_path / "摘要.md"
+        missing = self._run(str(path), "--github-step-summary", summary=summary)
+        path.write_text("{ 这不是 json", encoding="utf-8")
+        malformed = self._run(str(path), "--github-step-summary", summary=summary)
+
+        assert missing.returncode == malformed.returncode == 0
+        assert missing.stdout == malformed.stdout == ""
+        data = summary.read_bytes()
+        assert "找不到" in data.decode()
+        assert "读不动" in data.decode()
+        assert b"\r" not in data
+
+    def test_摘要目标不可用时保留stdout并软失败(self, tmp_path: Path) -> None:
+        path = tmp_path / "bench.json"
+        data = _data(("样本", 0.001))
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+        for summary in (None, tmp_path):
+            result = self._run(str(path), "--github-step-summary", summary=summary)
+            assert result.returncode == 0
+            assert result.stdout == bench_summary.table(data)
+            assert "GITHUB_STEP_SUMMARY" in result.stderr

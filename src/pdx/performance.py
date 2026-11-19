@@ -108,7 +108,7 @@ def command(
             for child in tree:
                 try:
                     rss += child.memory_info().rss
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                except psutil.NoSuchProcess, psutil.AccessDenied:
                     continue
             peak = max(peak, rss)
             samples += 1
@@ -117,7 +117,7 @@ def command(
                 for child in reversed(tree):
                     try:
                         child.kill()
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    except psutil.NoSuchProcess, psutil.AccessDenied:
                         continue
                 process.kill()
                 break

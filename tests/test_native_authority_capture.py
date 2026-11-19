@@ -292,7 +292,7 @@ def test_cli_rejects_linked_output_and_preserves_target(sandbox):
     try:
         output.symlink_to(target)
     except OSError as exc:
-        pytest.skip(f"symlink creation unavailable: {exc}")
+        pytest.skip(f"系统未授予符号链接权限：{exc}")
     assert capture.main(_argv(installation, "parameters", output)) == 1
     assert verified == []
     assert target.read_bytes() == b"reviewed original bytes\n"

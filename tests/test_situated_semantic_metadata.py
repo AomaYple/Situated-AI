@@ -41,7 +41,7 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
     monkeypatch, historical_assembly_contract
 ) -> None:
     """只隔离最终报告装配；实际 AST 见证由下方冻结树/重生成测试负责。"""
-    sentinel = {"evidence": "metadata_assembly_test_only", "sentinel": ["final_texts"]}
+    preserved_file = {"evidence": "metadata_assembly_test_only", "sentinel": ["final_texts"]}
     calls = []
 
     numeric_calls = []
@@ -74,7 +74,7 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
         assert isinstance(generated, tuple)
         assert all(item.source.endswith(".txt") for item in generated)
         calls.append(generated)
-        return sentinel
+        return preserved_file
 
     monkeypatch.setattr(lowering, "witnesses", numeric)
     monkeypatch.setattr(lowering, "ast_witnesses", ast)
@@ -83,7 +83,7 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(
         files = decisions.build(extensions=decisions.load_extensions(profile="release"))
         metadata = json.loads(files[".metadata/metadata.json"])
         assert len(calls) == len(numeric_calls) == len(ast_calls) == count
-        assert metadata["situated_actions"]["legacy_behavior_witness_contract"] == sentinel
+        assert metadata["situated_actions"]["legacy_behavior_witness_contract"] == preserved_file
     assert numeric_calls[0] == numeric_calls[1]
     assert numeric_calls[0] is not numeric_calls[1]
     assert ast_calls[0] == ast_calls[1]

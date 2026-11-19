@@ -1,19 +1,24 @@
-"""检查仓库中不应保留的可再生缓存和 Python 运行态文件。
+"""检查并按白名单清理仓库中不应保留的可再生缓存和运行态文件。
 
 这个检查只负责仓库卫生，不判断源码是否可以删除，也不扫描 ``tools/out``、
-``.venv`` 或官方文档镜像中的运行态内容：这些目录分别由证据、环境和原文
-字节契约管理。检查结果可以写入被忽略的 ``tools/out/ci``，不会改变仓库内容。
+``.venv``、``.claude``、``.superpowers`` 或官方文档镜像中的运行态内容：这些
+目录分别由证据、环境、协作工具和原文字节契约管理。默认只报告，不改变仓库
+内容；``--clean`` 仍是 dry-run，只有显式传入 ``--apply`` 才会删除白名单项目。
+清理不会跟随符号链接或 Windows reparse point，也不会触碰受控证据目录。
 
 用法::
 
     python -m tools.ci.repo_hygiene
     python -m tools.ci.repo_hygiene --output tools/out/ci/repo-hygiene.json
+    python -m tools.ci.repo_hygiene --clean       # 只列出可清理项目
+    python -m tools.ci.repo_hygiene --clean --apply
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import stat
 import sys
 from pathlib import Path
@@ -44,11 +49,19 @@ ROOT_CACHE_PREFIXES = (
     "pip-ephem-wheel-cache-",
 )
 ROOT_CACHE_FILES = (".coverage",)
+ROOT_BUILD_NAMES = frozenset({"build", "dist"})
+ROOT_BUILD_SUFFIXES = (".egg-info",)
+
+# 只有这些报告类别可由本入口清理。未知文件、读取错误和证据目录永远不
+# 会被递归删除；构建目录只限根目录和 src 直接子目录的 egg-info。
+CLEANABLE_KINDS = frozenset({"root_cache", "build_artifact", "bytecode_directory", "bytecode_file"})
 
 # 这些目录的内容有独立字节契约或是本机运行环境，不属于源码卫生门禁。
 EXCLUDED_ROOTS = (
     ".git",
     ".venv",
+    ".claude",
+    ".superpowers",
     "research/official-docs",
     "tools/out",
 )
@@ -72,6 +85,16 @@ def _is_root_cache(relative: Path) -> bool:
         or any(name.startswith(prefix) for prefix in ROOT_CACHE_PREFIXES)
         or name in ROOT_CACHE_FILES
         or name.startswith(".coverage.")
+    )
+
+
+def _is_root_build(relative: Path) -> bool:
+    """判断根构建目录，以及根目录或 src 直接子目录的 egg-info。"""
+
+    name = relative.name
+    return (len(relative.parts) == 1 and name in ROOT_BUILD_NAMES) or (
+        name.endswith(ROOT_BUILD_SUFFIXES)
+        and (len(relative.parts) == 1 or (len(relative.parts) == 2 and relative.parts[0] == "src"))
     )
 
 
@@ -124,6 +147,15 @@ def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
                     }
                 )
                 continue
+            if _is_root_build(relative):
+                violations.append(
+                    {
+                        "path": relative.as_posix(),
+                        "kind": "build_artifact",
+                        "detail": "根构建目录或根/src 直接子目录的可再生 egg-info",
+                    }
+                )
+                continue
             if path.is_dir():
                 if path.name == "__pycache__":
                     violations.append(
@@ -147,6 +179,69 @@ def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
 
     walk(root)
     return sorted(violations, key=lambda row: (row["path"], row["kind"]))
+
+
+def _safe_target(root: Path, relative: str) -> Path | None:
+    """解析一个内部报告路径，并拒绝越出根目录的链接或路径。"""
+
+    root = root.resolve()
+    target = root / Path(relative)
+    try:
+        info = target.lstat()
+    except OSError:
+        return None
+    if stat.S_ISLNK(info.st_mode) or (
+        getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+    ):
+        return None
+    try:
+        resolved = target.resolve()
+    except OSError:
+        return None
+    if resolved != root and root not in resolved.parents:
+        return None
+    return target
+
+
+def clean(root: Path = ROOT, *, apply: bool = False) -> dict[str, object]:
+    """按白名单清理报告中的项目；默认只返回 dry-run 计划。"""
+
+    root = root.resolve()
+    violations = find_violations(root)
+    candidates = [row for row in violations if row["kind"] in CLEANABLE_KINDS]
+    skipped = [row for row in violations if row["kind"] not in CLEANABLE_KINDS]
+    removed: list[str] = []
+    failures: list[dict[str, str]] = []
+    if apply:
+        # 先处理父目录，避免清理根缓存后再对其中子项重复操作。
+        candidates = sorted(candidates, key=lambda row: (row["path"].count("/"), row["path"]))
+        removed_targets: list[Path] = []
+        for row in candidates:
+            target = _safe_target(root, row["path"])
+            if target is None or any(
+                target == parent or parent in target.parents for parent in removed_targets
+            ):
+                failures.append({**row, "detail": "目标不存在、已处理或位于链接/reparse point"})
+                continue
+            try:
+                if target.is_dir():
+                    shutil.rmtree(target)
+                else:
+                    target.unlink()
+            except OSError as exc:
+                failures.append({**row, "detail": f"删除失败：{exc}"})
+                continue
+            removed.append(row["path"])
+            removed_targets.append(target)
+    return {
+        "mode": "apply" if apply else "dry-run",
+        "cleanable": candidates
+        if not apply
+        else [row for row in violations if row["kind"] in CLEANABLE_KINDS],
+        "skipped": skipped,
+        "removed": removed,
+        "failures": failures,
+    }
 
 
 def report(root: Path = ROOT) -> dict[str, object]:
@@ -175,20 +270,40 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, help="写入 JSON 报告")
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="列出白名单可清理项目；默认 dry-run，不修改文件",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="与 --clean 联用，实际删除白名单项目",
+    )
     args = parser.parse_args(argv)
+    if args.apply and not args.clean:
+        parser.error("--apply 必须与 --clean 一起使用")
     try:
         data = report(args.root)
+        cleanup = clean(args.root, apply=args.apply) if args.clean else None
         if args.output is not None:
-            _write_report(args.output, data)
+            payload: dict[str, object] = dict(data)
+            if cleanup is not None:
+                payload["cleanup"] = cleanup
+            _write_report(args.output, payload)
     except OSError as exc:
         print(f"[hygiene] 检查失败：{exc}", file=sys.stderr)
         return 2
-    print(
-        json.dumps(
-            {"violation_count": data["violation_count"], "violations": data["violations"]},
-            ensure_ascii=False,
-        )
-    )
+    payload = {"violation_count": data["violation_count"], "violations": data["violations"]}
+    if cleanup is not None:
+        payload["cleanup"] = cleanup
+        if args.apply:
+            refreshed = report(args.root)
+            payload["remaining_violation_count"] = refreshed["violation_count"]
+            payload["remaining_violations"] = refreshed["violations"]
+            print(json.dumps(payload, ensure_ascii=False))
+            return 1 if refreshed["violations"] else 0
+    print(json.dumps(payload, ensure_ascii=False))
     return 1 if data["violations"] else 0
 
 

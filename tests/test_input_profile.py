@@ -1,4 +1,4 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pdx.input_profile import (
     EXPECTED_MODIFIERS,
@@ -6,6 +6,9 @@ from pdx.input_profile import (
     check_profile,
     parse_profile,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def profile_text(*, speed_5: str = "34\n\t\tscancode = 93", pause: str = "44") -> str:

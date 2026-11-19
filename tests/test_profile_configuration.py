@@ -15,7 +15,9 @@ from pdx.situated.profile_configuration import ProfileConfiguration, load
 
 def test_configuration_is_strict_and_core_off_is_effective(tmp_path):
     path = tmp_path / "profile.toml"
-    path.write_text('schema = 1\ncore = false\ndomains = ["economy"]\nmode = "policy"\n')
+    path.write_text(
+        'schema = 1\ncore = false\ndomains = ["economy"]\nmode = "policy"\n', encoding="utf-8"
+    )
     selected = load(path)
     assert selected.domains == frozenset({"economy"})
     assert selected.enabled_domains == frozenset()
@@ -26,7 +28,7 @@ def test_configuration_is_strict_and_core_off_is_effective(tmp_path):
         'schema=1\ncore=true\ndomains=[]\nmode="unknown"',
         'schema=1\ncore=true\ndomains=[]\nmode="policy"\nextra=true',
     ):
-        path.write_text(contents)
+        path.write_text(contents, encoding="utf-8")
         with pytest.raises(ValueError):
             load(path)
 
@@ -57,7 +59,7 @@ def test_cli_audit_resolves_configuration_once_for_real_check_and_audit(tmp_path
     monkeypatch.setattr(config, "ROOT", r2_reader_authority.FROZEN_ROOT)
     monkeypatch.setattr(config, "OUT", tmp_path / "out")
     path = tmp_path / "profile.toml"
-    path.write_text('schema=1\ncore=true\ndomains=["economy"]\nmode="policy"\n')
+    path.write_text('schema=1\ncore=true\ndomains=["economy"]\nmode="policy"\n', encoding="utf-8")
     selected = load(path)
     profile = production_profile.load_profile(production_profile.BASELINE_ROOT)
     files = distribution.write_profile_outputs(profile, configuration=selected)
@@ -71,7 +73,9 @@ def test_cli_audit_resolves_configuration_once_for_real_check_and_audit(tmp_path
         configuration = resolver(*args, **kwargs)
         resolved.append(configuration)
         # A later filesystem change must not split one audit across two configurations.
-        path.write_text('schema=1\ncore=true\ndomains=["politics"]\nmode="policy"\n')
+        path.write_text(
+            'schema=1\ncore=true\ndomains=["politics"]\nmode="policy"\n', encoding="utf-8"
+        )
         return configuration
 
     monkeypatch.setattr(cli, "_profile_configuration", resolve)

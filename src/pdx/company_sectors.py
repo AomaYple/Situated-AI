@@ -1077,6 +1077,7 @@ def _load_baseline() -> dict[str, Any]:
             provenance["builder_source_sha256"] = _BUILDER_115_SHA256
         if (
             set(data) != {"schema", "game_version", "provenance", "payload"}
+            or type(data["schema"]) is not int
             or data["schema"] != 3
             or data["game_version"] != version_contracts.active_version()
             or data["provenance"] != provenance

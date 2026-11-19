@@ -1120,7 +1120,7 @@ def _symlink(link: Path, target: Path, *, directory: bool) -> None:
     try:
         link.symlink_to(target, target_is_directory=directory)
     except OSError as exc:
-        pytest.skip(f"本机不支持创建符号链接：{exc}")
+        pytest.skip(f"系统未授予符号链接权限：{exc}")
 
 
 @pytest.mark.parametrize("escape", [False, True])

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections import Counter
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from _helpers import run_cli as _run
@@ -60,8 +61,9 @@ def test_lock与当前环境对账(tmp_path, monkeypatch, actual_version, expect
     from pdx import lockfile
 
     target = tmp_path / lockfile.LOCK_FILE
+    (tmp_path / "pyproject.toml").write_bytes((config.REPO / "pyproject.toml").read_bytes())
     target.write_text(lockfile.render({"sample-package": "1.0"}), encoding="utf-8", newline="\n")
-    monkeypatch.setattr(lockfile.config, "REPO", tmp_path)
+    monkeypatch.setattr(lockfile, "config", SimpleNamespace(REPO=tmp_path))
     monkeypatch.setattr(lockfile, "resolve", lambda: {"sample-package": actual_version})
     result = _run("lock")
     assert result.exit_code == expected_code, result.output
@@ -83,7 +85,7 @@ def test_lock写入模式可用(tmp_path, monkeypatch) -> None:
         (config.REPO / "pyproject.toml").read_text(encoding="utf-8"), encoding="utf-8"
     )
     target = tmp_path / lockfile.LOCK_FILE
-    monkeypatch.setattr(lockfile.config, "REPO", tmp_path)
+    monkeypatch.setattr(lockfile, "config", SimpleNamespace(REPO=tmp_path))
     result = _run("lock", "--write")
     assert result.exit_code == 0, result.output
     assert target.is_file()

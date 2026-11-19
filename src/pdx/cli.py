@@ -2109,7 +2109,14 @@ def lock_cmd(
     而本仓库只有 15 条直接依赖，标准库的 `importlib.metadata` 就够了。
     口径与边界（含「标记保守求值」这条）见 `pdx.lockfile`。
     """
-    actual = lockfile.resolve()
+    try:
+        lockfile.validate_python_version()
+    except (ModuleNotFoundError, RuntimeError, ValueError) as exc:
+        _fail(f"依赖锁拒绝当前解释器：{exc}", EXIT_FAILED)
+    try:
+        actual = lockfile.resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        _fail(f"依赖锁生成失败：{exc}", EXIT_FAILED)
     if write:
         count = lockfile.write(actual)
         console.print(f"[green]已写入 {lockfile.LOCK_FILE}：{count} 条[/]")

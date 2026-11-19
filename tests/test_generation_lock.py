@@ -147,8 +147,8 @@ def test_no_game_production_generation_refuses_and_preserves_existing(tmp_path, 
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
     product = tmp_path / "mod"
     product.mkdir()
-    sentinel = product / "existing.txt"
-    sentinel.write_bytes(b"previous production\n")
+    preserved_file = product / "existing.txt"
+    preserved_file.write_bytes(b"previous production\n")
     monkeypatch.setattr(decisions, "PRODUCT", product)
     baseline = tmp_path / "baseline.txt"
     baseline.write_bytes(decisions._HISTORICAL_BASELINE.read_bytes())
@@ -162,5 +162,5 @@ def test_no_game_production_generation_refuses_and_preserves_existing(tmp_path, 
         result = CliRunner().invoke(cli.app, command)
         assert result.exit_code == 1, result.output
         assert "缺少锁定游戏原件" in result.output
-        assert list(product.iterdir()) == [sentinel]
-        assert sentinel.read_bytes() == b"previous production\n"
+        assert list(product.iterdir()) == [preserved_file]
+        assert preserved_file.read_bytes() == b"previous production\n"

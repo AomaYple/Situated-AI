@@ -174,7 +174,7 @@ def test_nonempty_numeric_path_keeps_country_scope_and_original_evaluator(eviden
 @pytest.fixture(scope="module")
 def native():
     if not config.GAME.is_dir():
-        pytest.skip("locked Victoria 3 installation unavailable")
+        pytest.skip("需要锁定原版：游戏目录不可用")
     inputs = company_sectors.read_inputs(config.GAME)
     profiles = company_sectors.derive(inputs)["profiles"]
     return inputs, profiles
