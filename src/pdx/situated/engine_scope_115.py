@@ -88,6 +88,18 @@ MANIFESTS_1151 = {
 EXE_SHA256_1152 = "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36"
 EXE_BYTES_1152 = 100_280_440
 MANIFESTS_1152 = {
+    "company": (
+        "research/situated/1.15.2/engine-company.json",
+        "823989284f7d5d7de9142bda4689a0136726ae3f7a4e21ccf2316c565e9eb0f6",
+    ),
+    "company-default": (
+        "research/situated/1.15.2/engine-company-default.json",
+        "64cbcade0e0b939bc16ded10a6e33f82045a085b59b4dbf9073ef318b7636025",
+    ),
+    "technology": (
+        "research/situated/1.15.2/engine-technology.json",
+        "1ef8906bcd28f941e8ebb3b6e00030ed73bb0ffd632be295b0c8e812fff5a6ab",
+    ),
     "country-definition": (
         "research/situated/1.15.2/engine-country-definition.json",
         "4d5547de4078b1136e7703fa4d577d0ebcb40cc899bb2ba77b27164a777bd24b",
