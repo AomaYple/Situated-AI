@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import BinaryIO
 
+    from .version_contracts import VerifiedInstallation
+
 ScanStatus = Literal["complete", "partial", "failed"]
 _CHUNK_SIZE = 1024 * 1024
 _POSIX_DIR_FD_OPEN_SUPPORTED = os.open in os.supports_dir_fd
@@ -277,7 +279,9 @@ def classify_path(relative: str) -> str:
     return PDX_RESOURCE_CATEGORIES.get(suffix, "unknown")
 
 
-def _enumerate(root: Path) -> _Enumeration:
+def _enumerate(
+    root: Path, *, expected_root_identity: tuple[int, int] | None = None
+) -> _Enumeration:
     result = _Enumeration({}, {}, set(), [])
     pending = [(root, ".")]
     seen_directories: set[tuple[int, int]] = set()
@@ -289,6 +293,12 @@ def _enumerate(root: Path) -> _Enumeration:
             if not stat.S_ISDIR(before.mode):
                 raise _ObservationError("not_directory", "枚举根或目录已不是普通目录")
             identity = (before.device, before.inode)
+            if (
+                relative == "."
+                and expected_root_identity is not None
+                and (not before.inode or identity != expected_root_identity)
+            ):
+                raise _ObservationError("installation_root_changed", "盘点根与已核验安装根不同")
             if before.inode and identity in seen_directories:
                 raise _ObservationError("directory_cycle", "目录身份重复，拒绝目录循环")
             seen_directories.add(identity)
@@ -337,6 +347,12 @@ def _enumerate(root: Path) -> _Enumeration:
                     result.entries[child_relative] = _Entry("unknown", None, (problem,))
             _check_components(directory)
             after = _path_state(directory)
+            if (
+                relative == "."
+                and expected_root_identity is not None
+                and (after.device, after.inode) != expected_root_identity
+            ):
+                raise _ObservationError("installation_root_changed", "盘点期间安装根发生变更")
             if before != after:
                 result.diagnostics.append(
                     _directory_diagnostic(
@@ -642,11 +658,18 @@ def _scan(
     installation: bool,
     chunk_size: int,
     read_authorized: bool = True,
+    verified: VerifiedInstallation | None = None,
 ) -> InventoryScan:
     if type(chunk_size) is not int or chunk_size <= 0:
         raise ValueError("chunk_size 必须是正整数")
     root = _root_path(root)
-    start = _enumerate(root)
+    if verified is not None and root != verified.root:
+        raise ValueError("盘点根路径与已核验安装根不一致")
+    start = (
+        _enumerate(root, expected_root_identity=verified.root_identity)
+        if verified is not None
+        else _enumerate(root)
+    )
     records = {
         relative: _record(relative, entry, source_layer, root, chunk_size, read_authorized)
         for relative, entry in sorted(start.entries.items())
@@ -666,7 +689,11 @@ def _scan(
             )
             problem = _diagnostic(code, relative, f"{type(error).__name__}: {error}")
             records[relative] = replace(record, diagnostics=(*record.diagnostics, problem))
-    end = _enumerate(root)
+    end = (
+        _enumerate(root, expected_root_identity=verified.root_identity)
+        if verified is not None
+        else _enumerate(root)
+    )
     diagnostics.extend(end.diagnostics)
     for relative in sorted(start.entries.keys() | end.entries.keys()):
         initial, final = start.entries.get(relative), end.entries.get(relative)
@@ -726,6 +753,26 @@ def _scan(
                 "安装根缺少普通 game 目录，拒绝把内容子树冒充全安装",
             )
         )
+    if verified is not None and "." in start.directories:
+        for source in verified.sources:
+            identity_record = records.get(source.path)
+            if (
+                identity_record is not None
+                and identity_record.read_status == "read"
+                and not identity_record.diagnostics
+                and (identity_record.size, identity_record.sha256) == (source.size, source.sha256)
+            ):
+                continue
+            problem = _diagnostic(
+                "installation_identity_source_changed",
+                source.path,
+                "盘点未能复核已通过安装身份校验的来源",
+            )
+            diagnostics.append(problem)
+            if identity_record is not None:
+                records[source.path] = replace(
+                    identity_record, diagnostics=(*identity_record.diagnostics, problem)
+                )
     ordered = tuple(records[path] for path in sorted(records))
     for record in ordered:
         diagnostics.extend(record.diagnostics)
@@ -735,8 +782,13 @@ def _scan(
     except InputContractError:
         denominator = None
     observed_paths = tuple(sorted(start.entries.keys() | end.entries.keys()))
-    if len(ordered) != len(observed_paths) or any(
-        problem.code == "case_collision" for problem in diagnostics
+    if (
+        len(ordered) != len(observed_paths)
+        or (verified is not None and ("." in start.blocked or "." in end.blocked))
+        or any(
+            problem.code in {"case_collision", "installation_identity_source_changed"}
+            for problem in diagnostics
+        )
     ):
         denominator = None
     status: ScanStatus = "complete"
@@ -779,14 +831,20 @@ def _scan(
     )
 
 
-def inventory_installation(installation: Path, *, chunk_size: int = _CHUNK_SIZE) -> InventoryScan:
-    """枚举调用方指定的安装根全部入口；不发现路径、不读取外部材料。"""
+def inventory_installation(
+    installation: Path,
+    *,
+    chunk_size: int = _CHUNK_SIZE,
+    verified: VerifiedInstallation | None = None,
+) -> InventoryScan:
+    """枚举调用方指定的安装根，可一并复核已经通过版本校验的来源。"""
     return _scan(
         installation,
         source_layer="installation",
         authorization="installation_read_only",
         installation=True,
         chunk_size=chunk_size,
+        verified=verified,
     )
 
 

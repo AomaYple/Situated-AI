@@ -386,8 +386,7 @@ def analyze_cmd(
 def input_inventory_cmd() -> None:
     """按 V3_ROOT 只读盘点安装根，将原字节的文件元数据写到标准输出。"""
     try:
-        installation = config.ROOT.resolve(strict=True)
-        version_contracts.verify_installation_identity(installation)
+        verified = version_contracts.verify_installation_identity(config.ROOT)
     except (OSError, ValueError) as exc:
         typer.echo(
             f"V3_ROOT 安装身份校验失败，盘点要求 Victoria 3 {version_contracts.CURRENT_VERSION}。",
@@ -395,7 +394,7 @@ def input_inventory_cmd() -> None:
         )
         raise typer.Exit(EXIT_USAGE) from exc
     contract = version_contracts.contract(version_contracts.CURRENT_VERSION)
-    scan = input_inventory.inventory_installation(installation)
+    scan = input_inventory.inventory_installation(verified.root, verified=verified)
     version_source = "game/common/ai_strategies/00_default_strategy.txt"
     version_matched = any(
         record.path == version_source

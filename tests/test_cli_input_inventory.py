@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 from contextlib import contextmanager
 from dataclasses import replace
 from hashlib import sha256
@@ -142,3 +143,64 @@ def test_input_inventory_rejects_noncurrent_contract_or_installation_before_scan
     assert result.exit_code == cli.EXIT_USAGE, result.output
     assert result.stdout == ""
     assert "1.15.1" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("change", "diagnostic"),
+    [
+        ("launcher", "installation_identity_source_changed"),
+        ("revision", "installation_identity_source_changed"),
+        ("root", "installation_root_changed"),
+    ],
+)
+def test_input_inventory_binds_preflight_identity_to_the_scan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: str, diagnostic: str
+) -> None:
+    root = tmp_path / "installation"
+    anchor = root / "game/common/ai_strategies/00_default_strategy.txt"
+    anchor.parent.mkdir(parents=True)
+    anchor.write_bytes(b"fixture_strategy = {}")
+    _install_identity(root, monkeypatch)
+    baseline = version_contracts.contract(version_contracts.CURRENT_VERSION)
+    monkeypatch.setitem(
+        version_contracts.VERSION_SPECS,
+        baseline.version,
+        replace(baseline, default_strategy_sha256=sha256(anchor.read_bytes()).hexdigest()),
+    )
+    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
+    monkeypatch.setattr(config, "ROOT", root)
+    verify = version_contracts.verify_installation_identity
+
+    def replace_after_verification(path: Path) -> version_contracts.VerifiedInstallation:
+        verified = verify(path)
+        if change == "root":
+            archived = root.with_name("previous-root")
+            root.rename(archived)
+            shutil.copytree(archived, root)
+        elif change == "launcher":
+            launcher = root / "launcher/launcher-settings.json"
+            launcher.write_bytes(
+                launcher.read_bytes().replace(b'"rawVersion": "1.15.1"', b'"rawVersion": "1.15.0"')
+            )
+        else:
+            (root / "caligula_rev.txt").write_bytes(b"replaced revision")
+        return verified
+
+    monkeypatch.setattr(
+        version_contracts, "verify_installation_identity", replace_after_verification
+    )
+    result = CliRunner().invoke(cli.app, ["input-inventory"])
+
+    assert result.exit_code == cli.EXIT_FAILED, result.output
+    payload = json.loads(result.stdout)
+    assert payload["scan_status"] in {"partial", "failed"}
+    assert payload["file_set_sha256"] is None
+    assert diagnostic in payload["diagnostic_codes"]
+    if change == "root":
+        assert payload["records"] == []
+        assert payload["blocked_directories"] == ["."]
+    else:
+        assert payload["version_anchor"]["matched"]
+        affected = "launcher/launcher-settings.json" if change == "launcher" else "caligula_rev.txt"
+        records = {record["path"]: record for record in payload["records"]}
+        assert diagnostic in records[affected]["diagnostic_codes"]
