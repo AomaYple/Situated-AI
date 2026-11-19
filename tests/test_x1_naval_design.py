@@ -1,11 +1,12 @@
 """Known financing pressure survives war, independently of native design tails."""
 
 import copy
+import hashlib
 from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_rules, decisions
+from pdx import config, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import pdx_eval, programs
@@ -14,8 +15,7 @@ pytestmark = pytest.mark.unit
 FIELD = "max_ship_design_complexity"
 
 
-@pytest.fixture(scope="module")
-def design():
+def _design(baseline, *, verified):
     original = decision_rules.load()
     rules = tuple(rule for rule in original.rules if rule.field == (FIELD,))
     assert len(rules) == 1
@@ -24,6 +24,11 @@ def design():
     policy = programs.enable(
         replace(
             original,
+            baseline_sha256=(
+                original.baseline_sha256
+                if verified
+                else hashlib.sha256(baseline.encode()).hexdigest()
+            ),
             enabled_domains=frozenset({"military"}),
             rules=rules,
             readers=tuple(r for r in original.readers if r.key in keys),
@@ -32,12 +37,22 @@ def design():
         ),
         source="mod/decisions/information.toml",
     )
-    baseline = decisions.baseline_path().read_text(encoding="utf-8")
     text = decision_rules.patch(
         baseline, policy, baseline=baseline, reader_words=frozenset({"is_at_war", "in_default"})
     )
     overlay = pdx_eval.marked_block(text, policy.consumer_programs[0].action_id)
     return policy, text, overlay
+
+
+@pytest.fixture(scope="module")
+def design():
+    baseline = "ai_strategy_default = { max_ship_design_complexity = { value = 4 } }\n"
+    return _design(baseline, verified=False)
+
+
+@pytest.fixture(scope="module")
+def installed_design():
+    return _design(version_contracts.read_default_strategy(config.GAME), verified=True)
 
 
 @pytest.mark.parametrize("war", [False, True, None])
@@ -57,14 +72,15 @@ def test_default_is_one_cause_and_does_not_require_known_peace(design, war, defa
     assert pdx_eval.select(overlay, facts).operation is None
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize(
     ("rank", "law", "native"),
     [(1, "merchant", 5), (4, "jeune", 9), (7, "professional", 14), (4, "none", 10)],
 )
 def test_native_rank_and_law_execute_before_positive_financing_multiplier(
-    design, rank, law, native
+    installed_design, rank, law, native
 ):
-    _, text, _ = design
+    _, text, _ = installed_design
     definition = parse_text(text).root.first("ai_strategy_default")
     assert definition is not None
     assert isinstance(definition.value, Block)
@@ -98,15 +114,9 @@ def test_native_rank_and_law_execute_before_positive_financing_multiplier(
     assert pdx_eval._numeric_value(Assignment("multiply", "=", zero), facts) == 0
 
 
+@pytest.mark.integration
 def test_locked_native_strategy_is_not_inferred_from_development_fixture():
-    import hashlib
-
-    from pdx.textio import normalized_text
-
-    source = config.GAME / "common/ai_strategies/00_default_strategy.txt"
-    if not source.is_file():
-        pytest.skip("锁定原版不可用")
     assert (
-        hashlib.sha256(normalized_text(source.read_text(encoding="utf-8-sig")).encode()).hexdigest()
+        hashlib.sha256(version_contracts.read_default_strategy(config.GAME).encode()).hexdigest()
         == decision_rules.load().baseline_sha256
     )

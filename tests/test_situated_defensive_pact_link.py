@@ -6,7 +6,14 @@ from dataclasses import replace
 import pytest
 from _frozen_reader_words import frozen_reader_words
 
-from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx import (
+    config,
+    country_state,
+    decision_adapters,
+    decision_interfaces,
+    decision_rules,
+    version_contracts,
+)
 from pdx.situated import compiler, joint_chain_contract, pdx_eval
 
 pytestmark = pytest.mark.unit
@@ -105,22 +112,23 @@ def _values(**changes):
     }
 
 
-@pytest.fixture(scope="module")
-def generated():
+def _generate(native, *, verified):
     original = decision_rules.load()
     rules = tuple(row for row in original.rules if row.field == (FIELD,))
     keys = {key for row in rules for key in row.input_keys()}
     policy = replace(
         original,
+        baseline_sha256=(
+            original.baseline_sha256 if verified else hashlib.sha256(native.encode()).hexdigest()
+        ),
         rules=rules,
         readers=tuple(row for row in original.readers if row.key in keys),
         enabled_domains=frozenset(row.domain for row in rules),
         semantic_ir=(),
     )
-    model = compiler.load_model()
+    model = compiler.load_model(baseline=native if verified else None)
     assert model.consumer_ir is not None
     compiled = compiler.compile_policy(policy, INFO, model)[0]
-    native = compiler.baseline_path().read_text(encoding="utf-8")
     text = decision_rules.patch(
         native,
         compiled,
@@ -133,6 +141,22 @@ def generated():
         consumer_source=INFO,
     )
     return compiled, pdx_eval.marked_block(text, PROGRAM), model
+
+
+@pytest.fixture(scope="module")
+def generated():
+    return _generate(
+        "ai_strategy_default = { wanted_army_size = { value = 12 } }\n", verified=False
+    )
+
+
+@pytest.mark.integration
+def test_locked_strategy_preserves_the_actual_lj10_overlay():
+    native = version_contracts.read_default_strategy(config.GAME)
+    policy, overlay, _ = _generate(native, verified=True)
+    values = _values()
+    assert decision_rules.evaluate_ir(policy, values, is_ai=True)[FIELD][1] == pytest.approx(0.95)
+    assert pdx_eval.select(overlay, _facts(values)).delta == pytest.approx(0.95)
 
 
 def _facts(values, *, is_ai=True):
