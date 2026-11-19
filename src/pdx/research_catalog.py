@@ -45,7 +45,7 @@ def write(raw_root: Path, epoch: str, output_dir: Path) -> Path:
             validate_local_output(staging)
             index_path = staging / "occurrences.sqlite"
             catalog_path = staging / "information-catalog.json"
-            catalog = information_catalog.build_from_raw(
+            catalog = information_catalog._build_from_raw(
                 identity=identity, inventory=inventory, raw_root=raw_root, index_path=index_path
             )
             assert catalog.layered is not None

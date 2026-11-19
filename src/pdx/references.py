@@ -155,9 +155,6 @@ def scan_tree(root: Path) -> tuple[list[dict[str, object]], list[dict[str, objec
     return references, unresolved
 
 
-__all__ = ["ResourceReference", "scan_file", "scan_tree", "script_symbol_references"]
-
-
 SCRIPT_SYMBOL_CATEGORIES = {
     "script_values": "script_value",
     "scripted_values": "script_value",

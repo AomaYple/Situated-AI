@@ -20,7 +20,7 @@ from typer.testing import CliRunner, Result
 from pdx import cli, config, research_output, version_contracts
 from pdx.capability_catalog import indexed_lines, indexed_parsed_file, structured_json_source
 from pdx.committed_raw import open_committed_capture
-from pdx.information_catalog import build_from_raw
+from pdx.information_catalog import _build_from_raw
 from pdx.input_contracts import (
     ArtifactRef,
     CaptureCheck,
@@ -32,11 +32,13 @@ from pdx.input_contracts import (
     file_set_digest,
 )
 from pdx.input_inventory import PDX_RESOURCE_CATEGORIES, classify_path
+from pdx.parser import parse_bytes
 
 _PRIVATE = "%LOCALAPPDATA%/PDX/SDK/victoria3/private.json"
 _PRIVATE_TXT = "%LOCALAPPDATA%/PDX/SDK/victoria3/private.txt"
 _SENTINEL = "private_value_not_for_projection"
 _PARTIAL = "game/common/sample/partial.txt"
+_BAD_PDX = "game/common/sample/bad_encoding.txt"
 
 
 _IDENTITY_SOURCE = {
@@ -86,6 +88,7 @@ def _committed_fixture(
         _PRIVATE: json.dumps({"private": _SENTINEL}).encode(),
         _PRIVATE_TXT: f"private = {_SENTINEL}".encode(),
         _PARTIAL: b"partial = { leaf = 1",
+        _BAD_PDX: b"preserved = { value = 1 }\xff",
         "game/common/sample/complete.txt": b"active = { leaf = 1 }",
         "game/sample.json": b'{"repeat":1,"repeat":2}',
         "game/broken.json": b'{"open":',
@@ -262,6 +265,10 @@ def test_committed_research_preserves_denominator_without_local_state_values(
     rows = {row["path"]: row for row in catalog["dispositions"]}
     assert rows[_PARTIAL]["parse_status"] == "partial"
     assert rows[_PARTIAL]["semantic_status"] == "unknown"
+    assert rows[_BAD_PDX]["raw_status"] == "proven"
+    assert rows[_BAD_PDX]["decode_status"] == "failed"
+    assert rows[_BAD_PDX]["parse_status"] == "failed"
+    assert any("UnicodeDecodeError" in message for message in rows[_BAD_PDX]["diagnostics"])
     for path in (_PRIVATE, _PRIVATE_TXT):
         assert rows[path]["reason"] == "local_state_not_projected"
         assert rows[path]["raw_status"] == "proven"
@@ -285,7 +292,16 @@ def test_committed_research_preserves_denominator_without_local_state_values(
             database.execute("SELECT count(*) FROM occurrences WHERE key='active'").fetchone()[0]
             == 1
         )
+        assert (
+            database.execute(
+                "SELECT count(*) FROM occurrences WHERE source=?", (_BAD_PDX,)
+            ).fetchone()[0]
+            == 0
+        )
     assert _SENTINEL.encode() not in (output / "occurrences.sqlite").read_bytes()
+    legacy = parse_bytes((_root / _BAD_PDX).read_bytes(), _BAD_PDX)
+    assert legacy.parse_status == "failed"
+    assert "preserved" in legacy.top_keys
 
 
 def test_formats_diagnostics_and_locators_use_the_same_committed_denominator(
@@ -293,7 +309,7 @@ def test_formats_diagnostics_and_locators_use_the_same_committed_denominator(
 ) -> None:
     _root, raw, epoch, count = capture
     with open_committed_capture(raw, epoch) as (identity, inventory):
-        catalog = build_from_raw(
+        catalog = _build_from_raw(
             identity=identity,
             inventory=inventory,
             raw_root=raw,
@@ -461,6 +477,64 @@ def test_research_detects_commit_marker_drift_before_publishing(
     assert result.exit_code != 0
     assert "消失" in result.output
     assert not output.exists()
+
+
+def test_epoch_drift_cannot_replace_a_previous_published_index(
+    capture: tuple[Path, Path, str, int], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pdx.information_catalog import InformationCatalog
+
+    _root, raw, epoch, _count = capture
+    previous = tmp_path / "previous"
+    assert (result := _invoke(raw, epoch, previous)).exit_code == 0, result.output
+    before = {path.name: _sha(path.read_bytes()) for path in previous.iterdir()}
+    marker = raw / "epochs" / epoch / "COMMITTED.json"
+    next_output = tmp_path / "next"
+    original = InformationCatalog.write
+
+    def swap(self: InformationCatalog, path: Path) -> None:
+        assert not next_output.exists()
+        original(self, path)
+        marker.write_bytes(b"{}")
+
+    monkeypatch.setattr(InformationCatalog, "write", swap)
+    assert _invoke(raw, epoch, next_output).exit_code == 1
+    assert not next_output.exists()
+    assert {path.name: _sha(path.read_bytes()) for path in previous.iterdir()} == before
+
+
+def test_linux_uses_deepest_mount_and_refuses_ambiguous_or_network_volumes() -> None:
+    root = "1 0 0:1 / / rw - overlay overlay rw"
+    escaped_mount = r"2 1 0:2 / /data\040files rw - nfs server:/files rw"
+    target = Path("/data files/report")
+    assert research_output._linux_mount_is_local(target, root)
+    assert not research_output._linux_mount_is_local(target, f"{root}\n{escaped_mount}")
+    local_mount = "3 1 0:3 / /data\\040files rw - ext4 /dev/vda rw"
+    assert not research_output._linux_mount_is_local(
+        target, f"{root}\n{escaped_mount}\n{local_mount}"
+    )
+    assert research_output._linux_mount_is_local(target, f"{root}\n{local_mount}")
+    assert not research_output._linux_mount_is_local(target, "incomplete mountinfo")
+
+
+@pytest.mark.parametrize("is_local", [True, False])
+def test_darwin_output_uses_native_volume_locality(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, is_local: bool
+) -> None:
+    checks: list[Path] = []
+
+    def detect(path: Path) -> bool:
+        checks.append(path)
+        return is_local
+
+    monkeypatch.setattr(research_output, "sys", SimpleNamespace(platform="darwin"))
+    monkeypatch.setattr(research_output, "_darwin_volume_is_local", detect)
+    if is_local:
+        research_output._check_local(tmp_path)
+    else:
+        with pytest.raises(ValueError, match="未标为本地"):
+            research_output._check_local(tmp_path)
+    assert checks == [tmp_path]
 
 
 def test_research_rejects_nonignored_output_in_other_git_worktree(

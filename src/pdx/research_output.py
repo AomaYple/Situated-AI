@@ -81,46 +81,107 @@ def _windows_path(kernel: Any, handle: int) -> str:
     return value.removeprefix("\\\\?\\")
 
 
+_LINUX_LOCAL_FILESYSTEMS = frozenset(
+    {
+        "ext2",
+        "ext3",
+        "ext4",
+        "xfs",
+        "btrfs",
+        "zfs",
+        "tmpfs",
+        "ramfs",
+        "overlay",
+        "vfat",
+        "exfat",
+        "ntfs",
+        "ntfs3",
+        "fuseblk",
+        "f2fs",
+    }
+)
+_DARWIN_CORE_FOUNDATION = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation"
+
+
+def _linux_mount_is_local(root: Path, mountinfo: str) -> bool:
+    """Use the deepest matching mount, rejecting unknown or conflicting types."""
+    matches: dict[int, set[str]] = {}
+    for line in mountinfo.splitlines():
+        head, separator, tail = line.partition(" - ")
+        fields, filesystem = head.split(), tail.split()
+        if not separator or len(fields) < 6 or not filesystem:
+            return False
+        mount = Path(re.sub(r"\\([0-7]{3})", lambda m: chr(int(m[1], 8)), fields[4]))
+        if root.is_relative_to(mount):
+            matches.setdefault(len(mount.parts), set()).add(filesystem[0])
+    return bool(matches) and matches[max(matches)] <= _LINUX_LOCAL_FILESYSTEMS
+
+
+def _darwin_volume_is_local(root: Path) -> bool:
+    """Query Apple's public kCFURLVolumeIsLocalKey, which is a CFBoolean."""
+    try:
+        framework = ctypes.CDLL(_DARWIN_CORE_FOUNDATION)
+        resource_key = ctypes.c_void_p.in_dll(framework, "kCFURLVolumeIsLocalKey")
+        create_url = framework.CFURLCreateFromFileSystemRepresentation
+        copy_property = framework.CFURLCopyResourcePropertyForKey
+        get_type = framework.CFGetTypeID
+        get_boolean_type = framework.CFBooleanGetTypeID
+        get_boolean = framework.CFBooleanGetValue
+        release = framework.CFRelease
+    except (AttributeError, OSError, ValueError) as error:
+        raise RawEvidenceError("unverifiable_target", "无法查询 macOS 目标卷的本地属性") from error
+
+    create_url.argtypes = (ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_ubyte)
+    create_url.restype = ctypes.c_void_p
+    copy_property.argtypes = (
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.c_void_p,
+    )
+    copy_property.restype = ctypes.c_ubyte
+    get_type.argtypes = (ctypes.c_void_p,)
+    get_type.restype = ctypes.c_ulong
+    get_boolean_type.argtypes = ()
+    get_boolean_type.restype = ctypes.c_ulong
+    get_boolean.argtypes = (ctypes.c_void_p,)
+    get_boolean.restype = ctypes.c_ubyte
+    release.argtypes = (ctypes.c_void_p,)
+    release.restype = None
+
+    path_bytes = os.fsencode(root)
+    url = create_url(None, path_bytes, len(path_bytes), 1)
+    if not url:
+        raise RawEvidenceError("unverifiable_target", "无法标识 macOS 目标卷")
+    value = ctypes.c_void_p()
+    try:
+        if (
+            not resource_key
+            or not copy_property(url, resource_key, ctypes.byref(value), None)
+            or not value.value
+            or get_type(value) != get_boolean_type()
+        ):
+            raise RawEvidenceError("unverifiable_target", "无法核验 macOS 目标卷是否本地")
+        return bool(get_boolean(value))
+    finally:
+        if value.value:
+            release(value)
+        release(url)
+
+
 def _check_local(root: Path) -> None:
     if str(root).startswith(("\\\\", "//")):
         raise RawEvidenceError("nonlocal_target", "拒绝网络目标")
     if sys.platform == "win32":
         if _windows_library().GetDriveTypeW(root.anchor) not in {3, 6}:
             raise RawEvidenceError("nonlocal_target", "目标必须是固定本地卷或内存卷")
-    elif os.name == "posix":
-        # Linux 不能从 st_dev 判断远程挂载，按内核挂载表识别实际最长挂载点。
-        mountinfo = Path("/proc/self/mountinfo")
-        if mountinfo.exists():
-            matches = []
-            for line in mountinfo.read_text(encoding="utf-8").splitlines():
-                head, tail = line.split(" - ", 1)
-                mount = Path(re.sub(r"\\([0-7]{3})", lambda m: chr(int(m[1], 8)), head.split()[4]))
-                if root.is_relative_to(mount):
-                    matches.append((len(mount.parts), tail.split()[0]))
-            local_types = {
-                "ext2",
-                "ext3",
-                "ext4",
-                "xfs",
-                "btrfs",
-                "zfs",
-                "tmpfs",
-                "ramfs",
-                "overlay",
-                "vfat",
-                "exfat",
-                "ntfs",
-                "ntfs3",
-                "fuseblk",
-                "f2fs",
-            }
-            if not matches or max(matches)[1] not in local_types:
-                raise RawEvidenceError("nonlocal_target", "挂载类型无法证明为本机证据卷")
-        elif hasattr(os, "ST_LOCAL"):
-            if not _POSIX_API.statvfs(root).f_flag & _POSIX_API.ST_LOCAL:
-                raise RawEvidenceError("nonlocal_target", "目标未标为本地文件系统")
-        else:
-            raise RawEvidenceError("unverifiable_target", "平台无法核验目标卷是否本地")
+    elif sys.platform == "linux":
+        mountinfo = Path("/proc/self/mountinfo").read_text(encoding="utf-8")
+        if not _linux_mount_is_local(root, mountinfo):
+            raise RawEvidenceError("nonlocal_target", "挂载类型无法证明为本机证据卷")
+    elif sys.platform == "darwin":
+        if not _darwin_volume_is_local(root):
+            raise RawEvidenceError("nonlocal_target", "macOS 目标卷未标为本地")
     else:
         raise RawEvidenceError("unsupported_platform", "平台没有安全证据写入实现")
 

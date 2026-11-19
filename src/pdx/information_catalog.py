@@ -766,14 +766,14 @@ def _incomplete_script_item(
     )
 
 
-def build_from_raw(
+def _build_from_raw(
     *,
     identity: InputIdentity,
     inventory: InputInventory,
     index_path: Path,
     raw_root: Path,
 ) -> ResearchInformationCatalog:
-    """Project the committed canonical inventory without enumerating the live game."""
+    """Build a private staged index for research_catalog.write to publish."""
     destination = index_path.resolve()
     if any(
         destination.is_relative_to(root.resolve())
@@ -855,7 +855,7 @@ def _build_raw_index(
             if record.read_status != "read":
                 reason = "source_not_read"
             elif script and raw is not None:
-                parsed = parse_bytes(raw, record.path)
+                parsed = parse_bytes(raw, record.path, encoding="utf-8-sig")
                 if pdx_resource and parsed.parse_status == "complete":
                     # 通用 parser 也接受裸标量。这些资料的完整结构至少须包含一块。
                     if b"\x00" in raw:
@@ -865,9 +865,13 @@ def _build_raw_index(
                 parse_status = parsed.parse_status
                 decode_status = "failed" if parsed.decoding_error else "complete"
                 diagnostics += tuple(parsed.errors)
-                reason = "PDX syntax and full occurrence index; exact engine semantics require separate evidence"
-                if parse_status != "complete":
+                if parsed.decoding_error is not None:
+                    diagnostics += (parsed.decoding_error,)
+                    reason = "pdx_decode_failed"
+                elif parse_status != "complete":
                     reason = "shared_parser_incomplete"
+                else:
+                    reason = "PDX syntax and full occurrence index; exact engine semantics require separate evidence"
             elif structured_json and raw is not None:
                 json_result = parse_json(raw)
                 decode_status, parse_status = json_result.decode_status, json_result.parse_status
