@@ -217,7 +217,6 @@ def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
 class _ReviewedNumericContract:
     """An exact frozen consumer, not a family-wide numeric permission."""
 
-    raw_hashes: dict[str, str]
     baseline_sha256: str
     actor_path: tuple[str, ...]
     native_root: str
@@ -461,19 +460,23 @@ class _NativeBindingProofs:
         self.policies = policies
         self.parsed: dict[str, Block] = {}
         self.company_defaults: dict[str, Any] | None = None
-        self.reviewed_numeric: dict[tuple[str, str, str], _ReviewedNumericContract] | None = None
+        self.reviewed_numeric: (
+            dict[tuple[str, str, str], _ReviewedNumericContract | None] | None
+        ) = None
         for source, raw in self.sources.items():
             if hashlib.sha256(raw).hexdigest() != inventory.source_hashes.get(source):
                 raise ValueError(f"原版覆盖证据与独立盘点字节不一致：{source}")
 
-    def _reviewed_numeric_contracts(self) -> dict[tuple[str, str, str], _ReviewedNumericContract]:
+    def _reviewed_numeric_contracts(
+        self,
+    ) -> dict[tuple[str, str, str], _ReviewedNumericContract | None]:
         if self.reviewed_numeric is not None:
             return self.reviewed_numeric
         from pdx import mobilization_opportunities, treaty_opportunities  # noqa: PLC0415
 
         from . import compiler, vanilla_inventory  # noqa: PLC0415
 
-        contracts = {}
+        contracts: dict[tuple[str, str, str], _ReviewedNumericContract | None] = {}
         for module, contexts, native_root, actor_path, operation in (
             (
                 mobilization_opportunities,
@@ -492,13 +495,28 @@ class _NativeBindingProofs:
         ):
             baseline = module.load_baseline()
             derived = module.derive({"sources": {}, "readers": {}, "rules": []}, baseline)
-            raw_hashes = {source: row["sha256"] for source, row in baseline["originals"].items()}
-            inputs = {
-                source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()
-            }
+            inputs: dict[str, bytes] | None = {}
+            for source, original in baseline["originals"].items():
+                raw = self.sources.get(source)
+                # The locked event corroborates formation.owner=country outside
+                # the common/ denominator. Package verification rereads it.
+                if (
+                    source == "events/tech_events/trench_warfare.txt"
+                    and raw is None
+                    and source not in self.inventory.source_hashes
+                ):
+                    continue
+                if raw is None or self.inventory.source_hashes.get(source) != original["sha256"]:
+                    inputs = None
+                    break
+                inputs[source] = raw
             for row in derived["covered"]:
                 source, field = row["source"], row["field"]
                 definition, leaf = field.split(".", 1)
+                identity = (source, definition, leaf)
+                if inputs is None:
+                    contracts[identity] = None
+                    continue
                 parsed = parse_bytes(inputs[source], path=source)
                 declaration = _ordinary(parsed.root, definition)
                 if parsed.errors or declaration is None:
@@ -535,8 +553,7 @@ class _NativeBindingProofs:
                         required_known_facts=tuple(rule.get("required_known_facts", ())),
                         contribution_group=rule["contribution_group"],
                     )
-                contracts[(source, definition, leaf)] = _ReviewedNumericContract(
-                    raw_hashes,
+                contracts[identity] = _ReviewedNumericContract(
                     baseline["sources"][source],
                     actor_path,
                     native_root,
@@ -559,15 +576,15 @@ class _NativeBindingProofs:
             surface.source.startswith("common/treaty_articles/")
             and surface.field in {"ai.proposal_weight", "ai.evaluation_chance"}
         )
-        contract = (
-            self._reviewed_numeric_contracts().get(
-                (surface.source, surface.definition, surface.field)
-            )
-            if candidate
-            else None
-        )
-        if contract is None:
+        if not candidate:
             return _native_context_issue(instance, surface, state_owner_proven=state_owner_proven)
+        contracts = self._reviewed_numeric_contracts()
+        identity = (surface.source, surface.definition, surface.field)
+        if identity not in contracts:
+            return "numeric_consumer_contract_unproven"
+        contract = contracts[identity]
+        if contract is None:
+            return "native_source_contract_unproven"
         if (
             surface.capability != "direct"
             or not surface.legal
@@ -583,24 +600,6 @@ class _NativeBindingProofs:
             or instance.consumer_field != f"{surface.definition}.{surface.field}"
         ):
             return "numeric_consumer_contract_unproven"
-        if any(
-            (
-                source not in self.sources
-                or hashlib.sha256(self.sources[source]).hexdigest() != digest
-            )
-            for source, digest in contract.raw_hashes.items()
-            # Independent discovery inventories common/; this one frozen event
-            # only corroborates formation.owner=country. Its pinned bytes and
-            # exact context were checked above; the production package gate
-            # separately re-reads all five originals. Never exempt a consumer,
-            # document, or a source actually present in the native inventory.
-            if not (
-                source == "events/tech_events/trench_warfare.txt"
-                and source not in self.inventory.source_hashes
-                and source not in self.sources
-            )
-        ):
-            return "native_source_contract_unproven"
         if (
             instance.owner != "consumer_adapters"
             or instance.vanilla_tail != "retain_original_qualification_cost_random_execution"
