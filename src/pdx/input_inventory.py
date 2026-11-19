@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import stat
+import sys
 from collections import Counter
 from contextlib import ExitStack, contextmanager
 from ctypes import wintypes
@@ -239,7 +240,7 @@ def _path_state(path: Path) -> _State:
 
 def _handle_state(descriptor: int) -> _State:
     observed = _state(os.fstat(descriptor))
-    if os.name == "nt":
+    if sys.platform == "win32":
         import msvcrt  # noqa: PLC0415 -- Windows 专属句柄。
 
         return replace(
@@ -380,6 +381,8 @@ def _enumerate(
 @lru_cache(maxsize=1)
 def _windows_kernel32() -> Any:
     """标准 Windows API；动态 ctypes 函数签名仅在本边界设置一次。"""
+    if sys.platform != "win32":
+        raise OSError("Windows 原生句柄 API 不可用")
     library = ctypes.WinDLL("kernel32", use_last_error=True)
     library.GetFinalPathNameByHandleW.argtypes = (
         wintypes.HANDLE,
@@ -420,16 +423,22 @@ class _WindowsBasicInfo(ctypes.Structure):
     ]
 
 
+def _windows_last_error() -> OSError:
+    if sys.platform != "win32":
+        return OSError("Windows 原生句柄 API 不可用")
+    return ctypes.WinError(ctypes.get_last_error())
+
+
 def _windows_handle_path(handle: int) -> str:
     """规范化真实 Windows 句柄路径；元数据和内容句柄共用。"""
     query = _windows_kernel32().GetFinalPathNameByHandleW
     length = query(handle, None, 0, 0)  # FILE_NAME_NORMALIZED | VOLUME_NAME_DOS
     if not length:
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise _windows_last_error()
     buffer = ctypes.create_unicode_buffer(length + 1)
     written = query(handle, buffer, len(buffer), 0)
     if not written:
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise _windows_last_error()
     if written >= len(buffer):
         raise _ObservationError("opened_path_unverifiable", "句柄路径查询期间长度变化")
     value = buffer.value
@@ -440,6 +449,8 @@ def _windows_handle_path(handle: int) -> str:
 
 def _windows_final_path(descriptor: int) -> str:
     """在任何 read 前查询实际打开对象，而非再次检查可被替换的路径。"""
+    if sys.platform != "win32":
+        raise OSError("Windows 原生句柄 API 不可用")
     import msvcrt  # noqa: PLC0415 -- Windows 专属，POSIX 不导入。
 
     return _windows_handle_path(msvcrt.get_osfhandle(descriptor))
@@ -451,7 +462,7 @@ def _windows_basic_attributes(handle: int) -> int:
     if not _windows_kernel32().GetFileInformationByHandleEx(
         handle, 0, ctypes.byref(value), ctypes.sizeof(value)
     ):
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise _windows_last_error()
     return int(value.FileAttributes)
 
 
@@ -464,7 +475,7 @@ def _windows_path_attributes(path: Path) -> int:
     kernel = _windows_kernel32()
     handle = kernel.CreateFileW(str(path), 0x80, 0x7, None, 3, 0x02200000, None)
     if handle == wintypes.HANDLE(-1).value:
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise _windows_last_error()
     try:
         attributes = _windows_basic_attributes(handle)
         if attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400):
@@ -478,7 +489,7 @@ def _windows_path_attributes(path: Path) -> int:
         return attributes
     finally:
         if not kernel.CloseHandle(handle):
-            raise ctypes.WinError(ctypes.get_last_error())
+            raise _windows_last_error()
 
 
 def _open_verified(path: Path) -> int:

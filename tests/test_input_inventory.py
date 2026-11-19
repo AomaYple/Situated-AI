@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import stat
+import sys
 from contextlib import contextmanager
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -755,11 +756,12 @@ def test_public_source_reader_refuses_junction_swap_before_context(
             saved.rename(game)
 
 
-@pytest.mark.skipif(os.name != "nt", reason="Windows 路径/句柄属性来源口径")
 @pytest.mark.parametrize("vary_raw_attribute", [False, True])
 def test_windows_raw_attribute_representation_is_not_content_drift(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, vary_raw_attribute: bool
 ) -> None:
+    if sys.platform != "win32":
+        pytest.skip("Windows 路径/句柄属性来源口径")
     root = _installation(tmp_path)
     target = root / "game/a.txt"
     original_lstat = Path.lstat
@@ -789,8 +791,9 @@ def test_windows_raw_attribute_representation_is_not_content_drift(
         assert metadata["comparison_attributes"] == original_lstat(target).st_file_attributes
 
 
-@pytest.mark.skipif(os.name != "nt", reason="Windows 真实临时扩展属性夹具")
 def test_windows_temporary_file_with_extended_attributes_is_readable(tmp_path: Path) -> None:
+    if sys.platform != "win32":
+        pytest.skip("Windows 真实临时扩展属性夹具")
     import ctypes
     import msvcrt
     import struct
@@ -1027,10 +1030,11 @@ def test_size_comparison_respects_platform_and_actual_file_type(
     }
 
 
-@pytest.mark.skipif(os.name != "nt", reason="Windows 目录 size 无跨来源文件字节语义")
 def test_windows_directory_size_representation_does_not_invent_drift(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    if sys.platform != "win32":
+        pytest.skip("Windows 目录 size 无跨来源文件字节语义")
     root = _installation(tmp_path)
     target = root / "game"
     original_lstat = Path.lstat

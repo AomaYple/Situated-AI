@@ -55,7 +55,7 @@
     "src/pdx/generation_transaction.py": "77eec96147496a00adec4d6621299c56cf648cad3dbc0a5829e2ea9254ad244a",
     "src/pdx/information_catalog.py": "6ab91f9b2a96a6d9acd83bab102df9cf05a077f4e9e41f3e939b1dd03f23045a",
     "src/pdx/input_contracts.py": "6d4c6ddac0f9a56b97613e6bbcd77f56299680fb4d70728eb90e065cebebfb25",
-    "src/pdx/input_inventory.py": "d22e5121e63f5029e22ffbd9a0e53665c692bdbf3bddefddf85243c54b17a807",
+    "src/pdx/input_inventory.py": "43ad1e375c0a4bd049bc5d8eee00eee34c29f8fc95e15c18f30786b023bfbf53",
     "src/pdx/input_profile.py": "3f09f3884fcbedc5998f320ffa6c173fb547f8f78ba33a73b8fe92fcdcd80490",
     "src/pdx/install_tree.py": "efaa2ac481e499a9ee956cc47e961d1eee210d59d3141c983cfcea00e5d640b3",
     "src/pdx/law_opportunities.py": "4be6e3cfd2720d76f8bbdff390157b5182f80d618e9067d52158eb82324b4a59",
