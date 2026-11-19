@@ -254,22 +254,22 @@ line-ending = "lf"
 docstring-code-format = true
 
 # ─────────────────────────────────────────────────────────────
-# mutmut —— 变异测试（**不进 pytest**，按需手动跑）
-#
-# 为什么单独一个工具：变异测试要「改一处源码 → 跑一遍测试 → 看有没有红」，
-# 一轮下来是几十次全套测试。放进 CI 等于每次提交都跑几十分钟，
-# 放进 pytest 更是自相矛盾（测试里再跑测试）。它的用法是**定期体检**：
-#
-# 在支持 fork 的环境安装 dev 与 mutation，操作命令见 CONTRIBUTING.md。
-#
-# 先只挑**纯函数、无游戏依赖**的两个模块：变异测试的价值在于
-# 「测试能不能发现语义改变」，而依赖真实游戏数据的模块会让每次变异都
-# 因为环境差异而失败（那种红不代表测试强）。
+# mutmut：按需运行 lexer 和归属标记的变异测试
+# mutmut 在隔离根加载整个 pdx 包，仅改写下面两个源模块。
+# dev 与 mutation 的安装和运行方式见 CONTRIBUTING.md。
 # ─────────────────────────────────────────────────────────────
 [tool.mutmut]
-paths_to_mutate = ["src/pdx/lexer.py", "src/pdx/markers.py"]
-tests_dir = "tests"
-runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration and not benchmark'"
+source_paths = ["src"]
+only_mutate = ["src/pdx/lexer.py", "src/pdx/markers.py"]
+also_copy = ["mod/decisions", "docs"]
+pytest_add_cli_args = ["-n", "0", "--no-header"]
+pytest_add_cli_args_test_selection = [
+    "tests/test_lexer.py",
+    "tests/test_lexer_differential.py",
+    "tests/test_markers.py",
+    "-m",
+    "not integration and not benchmark",
+]
 
 # ─────────────────────────────────────────────────────────────
 # mypy —— 类型检查

@@ -48,7 +48,8 @@ CPython 3.15.2 的运行期和 `dev` 依赖闭包。复现该环境时，先用�
 其他平台的运行期和 `dev` 依赖也从该文件解析，由三平台 CI 核验。
 
 按需运行变异测试时，使用支持 `fork` 的 Linux、macOS 或 WSL 环境，在项目的虚拟环境安装
-`dev` 和 `mutation`。Windows 上使用 WSL 内的 CPython 和虚拟环境。
+`dev` 和 `mutation`。Windows 上使用 WSL 内的 CPython 和虚拟环境。变异测试在
+`mutants/` 中运行 lexer 单元与差分用例、文档归属标记用例。
 
 ```text
 .venv/bin/python -X utf8 -m pip install -e ".[dev,mutation]"
