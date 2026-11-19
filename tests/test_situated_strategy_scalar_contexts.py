@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import config, decision_rules, version_contracts
+from pdx import config, decision_rules, decisions, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
@@ -316,11 +316,19 @@ def test_all_actual_scalar_writers_bind_every_input_and_share_the_instance_conte
         _assert_scalar_writer_bindings(writer, instance, cards.get(writer.writer_id))
 
 
-def test_current_scalar_writer_model_requires_locked_default_strategy(monkeypatch, tmp_path):
+def test_current_scalar_model_is_offline_and_generation_requires_locked_strategy(
+    monkeypatch, tmp_path
+):
     monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
+    bundle = compiler.load_model().consumer_ir
+    assert bundle is not None
+    writer = next(
+        row for row in bundle.writers if row.writer_id == "card_diplomatic_aggression_guard"
+    )
+    assert writer.evaluation_context == compiler._frozen_strategy_contexts()["aggression"]
     with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
-        compiler.load_model()
+        decisions.build()
 
 
 @pytest.mark.integration
