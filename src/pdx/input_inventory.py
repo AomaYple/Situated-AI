@@ -58,6 +58,14 @@ PDX_RESOURCE_CATEGORIES = {
 }
 MAP_ADJACENCIES = "game/map_data/adjacencies.csv"
 DEFAULT_STRATEGY_ANCHOR = "game/common/ai_strategies/00_default_strategy.txt"
+SCRIPT_VALUES_INFO = "jomini/common/script_values/_script_values.info"
+EXTENSIONLESS_BODY_RESOURCE = "game/gfx/models/portraits/male_body/male_body"
+PYTHON_TOOL_SOURCE = "game/script.py"
+_PATH_CATEGORIES = {
+    SCRIPT_VALUES_INFO: "documentation",
+    EXTENSIONLESS_BODY_RESOURCE: "asset_entity_dna",
+    PYTHON_TOOL_SOURCE: "tooling_source",
+}
 STRUCTURED_JSON_SUFFIXES = frozenset({".json", ".meta"})
 FLAT_PDX_RESOURCE_SUFFIXES = frozenset({".skin", ".terrain"})
 _FLAT_RESOURCE_PATHS = {
@@ -312,6 +320,8 @@ def classify_path(relative: str) -> str:
         return "documentation"
     suffix = path.suffix.casefold()
     relative = "/".join(parts)
+    if relative in _PATH_CATEGORIES:
+        return _PATH_CATEGORIES[relative]
     if relative in {MAP_ADJACENCIES, "game/map_data/nodes.dat"} or suffix == ".splnet":
         return "map_data"
     if suffix == ".meta" and "gfx" in parts[:-1]:

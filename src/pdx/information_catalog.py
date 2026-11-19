@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -38,9 +39,11 @@ from .committed_raw import (
 )
 from .input_contracts import ArtifactRef, InputContractError, ParseStatus
 from .input_inventory import (
+    EXTENSIONLESS_BODY_RESOURCE,
     FLAT_PDX_RESOURCE_SUFFIXES,
     MAP_ADJACENCIES,
     PDX_RESOURCE_CATEGORIES,
+    SCRIPT_VALUES_INFO,
     STRUCTURED_JSON_SUFFIXES,
     classify_path,
 )
@@ -846,8 +849,11 @@ def _build_research_index(
                 continue
             suffix = Path(record.path).suffix.casefold()
             resource_category = PDX_RESOURCE_CATEGORIES.get(suffix)
+            relative = record.path.casefold()
+            if relative == EXTENSIONLESS_BODY_RESOURCE:
+                resource_category = "asset_entity_dna"
             category = record.category
-            map_table = record.path.casefold() == MAP_ADJACENCIES
+            map_table = relative == MAP_ADJACENCIES
             if category == "unknown" or map_table or suffix in FLAT_PDX_RESOURCE_SUFFIXES:
                 # 历史盘点的类别属于已提交原件，更新只写入派生处置。
                 category = classify_path(record.path)
@@ -858,17 +864,14 @@ def _build_research_index(
                 or pdx_resource
             )
             localization = category == "localization"
-            document = category == "documentation" and suffix in {
-                ".md",
-                ".rst",
-                ".txt",
-                ".html",
-                ".htm",
-            }
+            document = category == "documentation" and (
+                suffix in {".md", ".rst", ".txt", ".html", ".htm"} or relative == SCRIPT_VALUES_INFO
+            )
             structured_json = (
                 category == "structured_configuration" and suffix in STRUCTURED_JSON_SUFFIXES
             )
             shader_source = category == "shader_source"
+            python_tool = category == "tooling_source"
             binary_probe = suffix in BINARY_HEADER_SUFFIXES and category in {
                 "asset_entity_dna",
                 "image_map",
@@ -890,6 +893,7 @@ def _build_research_index(
                     or structured_json
                     or map_table
                     or shader_source
+                    or python_tool
                     or binary_probe,
                     prefix_size=HEADER_BYTES if binary_probe else None,
                 )
@@ -1011,13 +1015,13 @@ def _build_research_index(
                             f"{message.rpartition(':')[2]}:member:{message.partition(':')[0]}"
                             for message in errors
                         )
-            elif (document or shader_source) and raw is not None:
+            elif (document or shader_source or python_tool) and raw is not None:
                 try:
                     text = raw.decode("utf-8-sig")
                 except UnicodeDecodeError as error:
                     decode_status, parse_status = "failed", "failed"
                     diagnostics += (str(error),)
-                    format_name = "document" if document else "shader_source"
+                    format_name = "document" if document else category
                     reason = f"{format_name}_decode_failed_no_declared_alternative_codec"
                     locator_diagnostics.append(f"{format_name}_decode_failed:byte:{error.start}")
                 else:
@@ -1026,6 +1030,22 @@ def _build_research_index(
                     if document:
                         parse_status = "not_applicable"
                         reason = "full document line index; source version bound to epoch; engine export not executed"
+                    elif python_tool:
+                        try:
+                            ast.parse(text, filename=record.path)
+                        except (SyntaxError, RecursionError) as error:
+                            parse_status = "failed"
+                            reason = "tooling_python_syntax_failed"
+                            location = (
+                                f":{error.lineno}:{error.offset}"
+                                if isinstance(error, SyntaxError)
+                                else ""
+                            )
+                            diagnostics += (f"{reason}{location}",)
+                            locator_diagnostics.append(f"{reason}{location}")
+                        else:
+                            parse_status = "complete"
+                            reason = "Python syntax and source line index; tool not executed"
                     else:
                         reason = "shader source lines indexed; mixed PDX/shader grammar pending"
             elif binary_probe and raw is not None:
@@ -1125,7 +1145,7 @@ def _build_research_index(
                         record.sha256 or "",
                         address=(line,),
                         path=("line", str(line)),
-                        kind="source_line" if shader_source else "document_line",
+                        kind="document_line" if document else "source_line",
                         key=None,
                         operator=None,
                         scalar=text,

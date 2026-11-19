@@ -728,6 +728,43 @@ def test_graphics_resources_distinguish_pdx_json_source_and_binary(tmp_path: Pat
         assert layer.index.find(source=source) == ()
 
 
+def test_research_detects_known_developer_sources_without_generalizing_suffixes(
+    tmp_path: Path,
+) -> None:
+    docs = "jomini/common/script_values/_script_values.info"
+    body = "game/gfx/models/portraits/male_body/male_body"
+    tool = "game/script.py"
+    other = "other/unknown.info"
+    _root, raw, epoch, _count = _committed_fixture(
+        tmp_path,
+        extra_sources={
+            docs: b"First line\nAn explanation with braces { here.",
+            body: b"mesh = { name = sample }",
+            tool: b'raise RuntimeError("would fail if executed")\n',
+            other: b"unknown content",
+        },
+    )
+    with open_committed_capture(raw, epoch) as (identity, inventory):
+        catalog = _build_from_raw(
+            identity=identity,
+            inventory=inventory,
+            raw_root=raw,
+            index_path=tmp_path / "index.sqlite",
+        )
+    layer = catalog.layered
+    rows = {row.path: row for row in layer.dispositions}
+    assert rows[docs].category == "documentation"
+    assert rows[docs].parse_status == "not_applicable"
+    assert layer.index.search_text("An explanation", source=docs)[0].line == 2
+    assert rows[body].category == "asset_entity_dna"
+    assert rows[body].parse_status == "complete"
+    assert layer.index.find(source=body, key="name")[0].line == 1
+    assert rows[tool].category == "tooling_source"
+    assert rows[tool].parse_status == "complete"
+    assert layer.index.search_text("raise RuntimeError", source=tool)[0].line == 1
+    assert rows[other].disposition == "unresolved"
+
+
 def test_binary_headers_record_observed_metadata_and_leave_payload_unparsed(tmp_path: Path) -> None:
     texture = "game/gfx/synthetic.dds"
     truncated = "game/gfx/truncated.dds"
