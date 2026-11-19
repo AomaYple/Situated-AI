@@ -2,15 +2,11 @@
 
 为什么需要它
 ------------
-``pyproject.toml`` 里全是下限（``typer>=0.27`` 这种）。下限保证「装得上」，
-**不保证「装出来是同一套」**：CI 与本地、今天与三个月后，解析出来的
-pytest / ruff / hypothesis 版本可能各不相同，于是「本地过了、CI 红」或者
-反过来的事就会发生 —— 而这类失败最难查，因为代码一行没改。
+``pyproject.toml`` 维护安装约束。``requirements.lock`` 记录 Windows
+开发环境实际使用的运行期和 ``dev`` 依赖版本。
 
 做法
 ----
-不引入 pip-tools / uv（那是又一个需要装、需要维护的工具）：
-
 1. 从 ``pyproject.toml`` 读出**直接依赖**（运行期 + ``dev`` extra）；
 2. 用 :mod:`importlib.metadata` 沿着 ``Requires-Dist`` 递归展开**闭包**
    （先按当前平台、解释器与已请求 extras 求值；条件不成立的依赖排除，
@@ -20,10 +16,8 @@ pytest / ruff / hypothesis 版本可能各不相同，于是「本地过了、CI
 
 口径与边界
 ----------
-* 锁描述的是**本机解析出来的闭包**，含平台相关依赖（例如 Windows 上会有
-  ``colorama``）。在别的平台上装它会多装一个无害的包，不会少装；
-* 标记求值由 `packaging` 按 PEP 508 解析，支持平台、版本、AND/OR；
-  未请求的 extra 不纳入，非法标记明确报错。Windows 锁只承诺 Windows 环境。
+* 已提交的锁描述 Windows 闭包，其中包括 ``colorama`` 等平台相关依赖。
+* `packaging` 按 PEP 508 解析平台、Python 和 extra 条件，按 PEP 440 校验版本约束。
 * ``v3 lock`` 默认**核对**，``--write`` 在仓库根目录暂存并原子替换现有锁。
 """
 

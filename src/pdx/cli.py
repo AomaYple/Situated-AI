@@ -2267,17 +2267,11 @@ def strings_cmd(
 def lock_cmd(
     write: bool = typer.Option(False, "--write", help="按当前环境重写 requirements.lock"),
 ) -> None:
-    """依赖锁：把本机解析出来的依赖版本组合写成可核对的文件。
+    """核对已安装的运行期和 `dev` 依赖闭包。
 
-    `pyproject.toml` 里全是下限（`typer>=0.27`）—— 下限保证装得上，
-    **不保证装出来是同一套**：CI 与本地、今天与三个月后解析出的
-    pytest / ruff / hypothesis 版本可能不同，于是「代码一行没改却一边红」
-    就会发生。这个命令沿 `Requires-Dist` 展开本机已安装的闭包，
-    `--write` 写成 `requirements.lock`；不带参数时与锁**对账**（有差异退出码 1）。
-
-    为什么不引 pip-tools / uv：那是又一个要装、要维护、要联网解析的工具，
-    而本仓库只有 15 条直接依赖，标准库的 `importlib.metadata` 就够了。
-    口径与边界（含「标记保守求值」这条）见 `pdx.lockfile`。
+    从 `pyproject.toml` 的声明出发，按环境标记沿已安装包的
+    `Requires-Dist` 展开闭包，并核对版本约束。默认与 `requirements.lock` 对账，
+    有差异时退出码为 1。Windows 开发环境可用 `--write` 更新锁文件。
     """
     try:
         lockfile.validate_python_version()

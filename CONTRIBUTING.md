@@ -15,7 +15,9 @@
 复现步骤和脱敏日志。安全问题使用 [SECURITY.md](SECURITY.md) 中的私密报告方式，不在公开 Issue 附利用细节或敏感数据。
 
 依赖、锁文件、检查工具版本与 GitHub Actions 固定方式的约束见 [EP-16](docs/principles/工程原则.md)、[EP-22 至 EP-24](docs/principles/工程原则.md)；
-`requirements.lock` 的适用范围见“环境准备”。调整依赖后运行 `pip check` 和 `v3 lock --write`，再复核锁文件差异。
+`requirements.lock` 的适用范围见“环境准备”。更新闭包时在 Windows 的新虚拟环境按 `.[dev]` 安装，
+运行 `pip check`、`v3 lock --write` 和 `v3 lock`，再复核锁文件差异。已有环境可用
+`pip install --upgrade --upgrade-strategy eager -e ".[dev]"` 更新符合声明约束的传递依赖。
 
 ## 环境准备
 
@@ -40,8 +42,19 @@ macOS/Linux：
 ```
 
 开发命令应从完整仓库运行，以便读取 `mod/decisions/`、测试、快照和文档。可通过 `V3_ROOT` 指定游戏安装根目录，
-通过 `V3_USERDIR` 指定用户数据目录；未安装游戏时仍可运行离线检查。`requirements.lock` 仅适用于 Windows
-Python 3.15.2；其他平台依据 `pyproject.toml` 解析依赖，并由三平台 CI 核验。
+通过 `V3_USERDIR` 指定用户数据目录；未安装游戏时仍可运行离线检查。`requirements.lock` 固定 Windows
+CPython 3.15.2 的运行期和 `dev` 依赖闭包。复现该环境时，先用虚拟环境的解释器执行
+`-X utf8 -m pip install -r requirements.lock`，再安装项目。`pyproject.toml` 的构建依赖由构建隔离环境安装，
+其他平台的运行期和 `dev` 依赖也从该文件解析，由三平台 CI 核验。
+
+按需运行变异测试时，使用支持 `fork` 的 Linux、macOS 或 WSL 环境，在项目的虚拟环境安装
+`dev` 和 `mutation`。Windows 上使用 WSL 内的 CPython 和虚拟环境。
+
+```text
+.venv/bin/python -X utf8 -m pip install -e ".[dev,mutation]"
+.venv/bin/python -X utf8 -m mutmut run
+.venv/bin/python -X utf8 -m mutmut results
+```
 
 ## 安装根只读盘点
 
