@@ -19,7 +19,7 @@
 
 ## 环境准备
 
-需要满足 `pyproject.toml` 的 `requires-python` 合同；当前基线为 Python 3.15.2。优先使用仓库虚拟环境中的解释器，不依赖激活脚本、默认编码或本机绝对路径。
+用与 `pyproject.toml` 的 `requires-python` 完全一致的 CPython 正式版创建虚拟环境。优先使用仓库虚拟环境中的解释器，不依赖激活脚本、默认编码或本机绝对路径。
 
 ```text
 python -m venv .venv

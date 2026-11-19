@@ -47,7 +47,7 @@
 | EP-06、EP-07、EP-09 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
 | EP-10 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
 | EP-14 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
-| EP-16 | 部分执行 | `pyproject.toml` 维护解释器要求；`tests/test_engineering_enforcement.py` 拒绝仓库根的独立工具配置文件并核对 pytest、coverage、ruff、mypy 配置段；其余工具的配置集中靠评审 |
+| EP-16 | 部分执行 | CI 各任务从 `pyproject.toml` 读取解释器要求；`tests/test_engineering_enforcement.py` 拒绝仓库根的独立工具配置文件并核对 pytest、coverage、ruff、mypy 配置段；其余工具的配置集中靠评审 |
 | EP-19 | 部分执行 | `tests/test_portability.py` 拒绝受控 `src`、`tools`、`tests` Python 文件中的机器专属绝对路径；`tests/test_engineering_enforcement.py` 只覆盖 `tests/` 下属性调用形式的 `read_text`/`write_text` 省略 encoding，以及带 `text=`/`universal_newlines=` 的 `subprocess` 属性调用省略 encoding；内建 `open()`、`Path.open()` 的文本模式、`from subprocess import run` 形式，以及 `src`、`tools` 的默认编码与 shell 默认行为都靠评审 |
 | EP-21 | 部分执行 | `run_check.py types` 在 `pyproject.toml` 的 mypy 文件范围检查类型兼容；公共注解完整性与错误合同仍需测试及评审 |
 | EP-22 | 部分执行 | CI 的 `v3 lock` 与 `pip check`；`tests/test_lockfile.py` 覆盖解释器合同、条件依赖、extras、环及缺失闭包拒绝；变更原因靠评审 |
@@ -66,7 +66,7 @@
 | EP-01、EP-02、EP-08、EP-11、EP-12、EP-13、EP-15、EP-17、EP-18 | 仅评审 | 未核实到自动检查入口 |
 | EP-32、EP-33、EP-35、EP-37、EP-38、EP-39、EP-40、EP-41、EP-42、EP-43、EP-44、EP-45 | 仅评审 | 未核实到自动检查入口 |
 | EP-46、EP-47、EP-48、EP-49、EP-51、EP-52、EP-53、EP-54、EP-58 | 仅评审 | 未核实到自动检查入口 |
-| EP-59、EP-60、EP-61 | 部分执行 | `pyproject.toml`、三平台 CI 统一 Python 3.15.2 基线；`tools/ci/run_check.py`、`tests/test_run_check.py` 在调用前拒绝错误解释器与不一致 pyvenv 记录；旧兼容代码清退和实现选型靠评审 |
+| EP-59、EP-60、EP-61 | 部分执行 | `pyproject.toml` 固定补丁版本，三平台 CI 共用该基线；`tools/ci/run_check.py`、`tests/test_run_check.py` 核验正式 CPython 和虚拟环境记录；旧兼容代码清退和实现选型靠评审 |
 | EP-62、EP-63 | 仅评审 | 信息读取范围与成熟库选型需要专项审查，本轮工具检查不代签产品读取能力 |
 | MP-50 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
 | MP-55 | 强执行 | `src/pdx/distribution.py`、`tests/test_localization_languages.py` |

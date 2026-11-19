@@ -10,13 +10,6 @@ import sys
 import tomllib
 from pathlib import Path
 
-try:
-    from packaging.specifiers import SpecifierSet
-except ModuleNotFoundError:  # pragma: no cover - exercised only before dependencies install
-    _HAS_PACKAGING = False
-else:
-    _HAS_PACKAGING = True
-
 ROOT = Path(__file__).resolve().parents[2]
 COMMANDS = {
     "lint": ["ruff", "check", "--force-exclude"],
@@ -65,73 +58,26 @@ def project_requires_python(root: Path = ROOT) -> str:
     return requirement.strip()
 
 
-def _version_tuple(value: str) -> tuple[int, int, int]:
-    """解析解释器的稳定三段版本，拒绝无法核验的值。"""
-    match = re.fullmatch(r"\s*(\d+)\.(\d+)(?:\.(\d+))?(?:[+].*)?\s*", value)
+def ensure_supported_interpreter(candidate: Path, root: Path = ROOT) -> None:
+    """在启动仓库工具前核对正式 CPython 及虚拟环境记录。"""
+    requirement = project_requires_python(root)
+    match = re.fullmatch(r"==([0-9]+\.[0-9]+\.[0-9]+)", requirement)
     if match is None:
-        raise ValueError(f"无法解析解释器版本：{value!r}")
-    major, minor, micro = match.groups()
-    return int(major), int(minor), int(micro or 0)
-
-
-def _fallback_satisfies(version: tuple[int, int, int], requirement: str) -> bool:
-    """无 packaging 时覆盖项目合同所需的 PEP 440 比较子集。
-
-    ``run_check.py`` 必须能在依赖尚未安装的全局解释器下给出清晰的版本错误，
-    因此这里保留一个标准库回退；完整的 PEP 508 解析仍由项目依赖提供。
-    """
-    for raw in requirement.split(","):
-        item = raw.strip()
-        match = re.fullmatch(r"(<=|>=|==|!=|<|>)[ ]*(\d+(?:\.\d+){0,2})", item)
-        if match is None:
-            raise ValueError(f"无法在无 packaging 回退中解析 Python 要求：{requirement!r}")
-        operator, expected_text = match.groups()
-        expected = _version_tuple(expected_text)
-        checks = {
-            ">=": version >= expected,
-            ">": version > expected,
-            "<=": version <= expected,
-            "<": version < expected,
-            "==": version == expected,
-            "!=": version != expected,
-        }
-        if not checks[operator]:
-            return False
-    return True
-
-
-def version_satisfies(version: tuple[int, int, int], requirement: str) -> bool:
-    """判断解释器版本是否满足 ``requires-python``。"""
-    if not _HAS_PACKAGING:
-        return _fallback_satisfies(version, requirement)
-    return SpecifierSet(requirement).contains(".".join(map(str, version)), prereleases=True)
-
-
-def validate_interpreter_version(
-    version: tuple[int, int, int], requirement: str, *, interpreter: Path | None = None
-) -> None:
-    """不满足项目版本合同就显式失败，避免静默使用错误虚拟环境。"""
-    if version_satisfies(version, requirement):
-        return
-    actual = ".".join(map(str, version))
-    location = f"（路径：{interpreter}）" if interpreter is not None else ""
-    raise RuntimeError(
-        f"解释器版本不满足项目要求：实际 Python {actual}{location}；要求 {requirement}"
-    )
-
-
-def interpreter_version(candidate: Path) -> tuple[int, int, int]:
-    """运行候选解释器探针，并用 ``pyvenv.cfg`` 交叉核对环境记录。"""
-    config_version: tuple[int, int, int] | None = None
-    config_path = candidate.parent.parent / "pyvenv.cfg"
-    if config_path.is_file():
-        for line in config_path.read_text(encoding="utf-8").splitlines():
-            key, separator, value = line.partition("=")
-            if separator and key.strip().lower() == "version":
-                config_version = _version_tuple(value)
-                break
+        raise ValueError(f"project.requires-python 必须使用 == 固定三段版本：{requirement!r}")
+    expected = match[1]
     probe = subprocess.run(
-        [str(candidate), "-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))"],
+        [
+            str(candidate),
+            "-I",
+            "-B",
+            "-S",
+            "-c",
+            (
+                "import sys; "
+                "print(sys.implementation.name, '.'.join(map(str, sys.version_info[:3])), "
+                "sys.version_info.releaselevel)"
+            ),
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -140,20 +86,23 @@ def interpreter_version(candidate: Path) -> tuple[int, int, int]:
     if probe.returncode:
         detail = (probe.stderr or "").strip()
         raise RuntimeError(f"无法读取解释器版本：{candidate}（退出码 {probe.returncode}）{detail}")
-    actual = _version_tuple((probe.stdout or "").strip())
-    if config_version is not None and config_version != actual:
-        expected = ".".join(map(str, config_version))
-        observed = ".".join(map(str, actual))
+    identity = probe.stdout.strip()
+    if identity != f"cpython {expected} final":
         raise RuntimeError(
-            f"解释器版本记录不一致：pyvenv.cfg 为 {expected}，实际探针为 {observed}（路径：{candidate}）"
+            f"要求 CPython {expected} 正式版，实际探针为 {identity!r}（路径：{candidate}）"
         )
-    return actual
-
-
-def ensure_supported_interpreter(candidate: Path, root: Path = ROOT) -> None:
-    """在启动任何仓库工具前核对候选解释器。"""
-    requirement = project_requires_python(root)
-    validate_interpreter_version(interpreter_version(candidate), requirement, interpreter=candidate)
+    config_path = candidate.parent.parent / "pyvenv.cfg"
+    if config_path.is_file():
+        for line in config_path.read_text(encoding="utf-8").splitlines():
+            key, separator, value = line.partition("=")
+            if separator and key.strip().lower() == "version":
+                recorded = value.strip()
+                if recorded != expected:
+                    raise RuntimeError(
+                        f"解释器版本记录不一致：pyvenv.cfg 为 {recorded}，"
+                        f"实际探针为 {expected}（路径：{candidate}）"
+                    )
+                break
 
 
 def interpreter(root: Path = ROOT) -> Path:

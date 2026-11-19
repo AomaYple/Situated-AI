@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.15.2"
+          python-version-file: pyproject.toml
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: 仓库卫生 —— 拒绝提交缓存、字节码与临时产物
@@ -38,6 +38,7 @@ jobs:
         run: python -m ruff format --check .
 
   check:
+    name: check (${{ matrix.os }}, 3.15)
     runs-on: ${{ matrix.os }}
     env:
       SITAI_XDIST_WORKERS: "2"
@@ -45,7 +46,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.15.2"]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,7 +55,7 @@ jobs:
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version-file: pyproject.toml
           cache: pip
           cache-dependency-path: pyproject.toml
 
@@ -94,7 +94,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-summary-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: test-summary-${{ matrix.os }}-py3.15
           path: tools/out/ci/
 
       - name: v3 verify —— 用入库快照核验一部分断言
@@ -116,7 +116,7 @@ jobs:
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.15.2"
+          python-version-file: pyproject.toml
           cache: pip
           cache-dependency-path: pyproject.toml
 
@@ -144,11 +144,8 @@ jobs:
             performance.json
 
   lock:
+    name: lock (3.15)
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.15.2"]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -157,7 +154,7 @@ jobs:
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version-file: pyproject.toml
           cache: pip
           cache-dependency-path: requirements.lock
 

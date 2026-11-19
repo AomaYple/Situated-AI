@@ -10,7 +10,7 @@
    其余一律当作成立（宁可多写一行，也不漏掉一个真依赖）。
 
 ⚠️ 这里**不**比较版本号是否等于本机当前版本：CI 是按 `pyproject.toml` 的
-下限现解析的，与「这台机器锁住的组合」本来就可能不同。版本对账是本地命令
+声明现解析的，与「这台机器锁住的组合」本来就可能不同。版本对账是本地命令
 `v3 lock`（不带参数）的活，它的输出是给人看的。
 """
 
@@ -32,20 +32,19 @@ def test_锁文件存在且可解析() -> None:
     assert len(set(locked)) == len(locked), "锁里有重复条目"
 
 
-@pytest.mark.parametrize("version", [(3, 14, 7), (3, 15, 2)])
+@pytest.mark.parametrize("version", [(3, 14, 7), (3, 15, 2), (3, 15, 3)])
 def test_锁生成器版本合同(version) -> None:
     requirement = lockfile.requires_python()
-    if version == (3, 14, 7):
-        with pytest.raises(RuntimeError, match=r"实际 Python 3\.14\.7.*要求 >=3\.15\.2"):
-            lockfile.validate_python_version(version, requirement)
-    else:
+    if version == (3, 15, 2):
         lockfile.validate_python_version(version, requirement)
+    else:
+        with pytest.raises(RuntimeError, match=r"要求 ==3\.15\.2"):
+            lockfile.validate_python_version(version, requirement)
 
 
 def test_锁头记录_python_要求和生成解释器() -> None:
     text = lockfile.render({"sample-package": "1.0"})
-    assert "# Python 要求: >=3.15.2" not in text
-    assert "# Python 要求：>=3.15.2" in text
+    assert "# Python 要求：==3.15.2" in text
     assert "# 解释器：Python " in text
 
 

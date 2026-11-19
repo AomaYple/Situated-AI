@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -14,21 +15,38 @@ from tools.ci import run_check
 
 @pytest.fixture(autouse=True)
 def _dispatch_tests_use_supported_interpreter(monkeypatch):
-    """命令分发测试不依赖本机是否保留旧的兼容 .venv。"""
+    """命令分发测试不依赖工作区虚拟环境。"""
+    monkeypatch.setattr(run_check, "interpreter", lambda: Path(sys.executable))
     monkeypatch.setattr(run_check, "ensure_supported_interpreter", lambda *_args: None)
 
 
+_ensure_supported_interpreter = run_check.ensure_supported_interpreter
+
+
+def test_native_interpreter_matches_project_contract() -> None:
+    assert run_check.project_requires_python() == "==3.15.2"
+    _ensure_supported_interpreter(Path(sys.executable))
+
+
 @pytest.mark.parametrize(
-    ("version", "accepted"),
-    [((3, 14, 7), False), ((3, 15, 2), True)],
+    "identity",
+    [
+        "cpython 3.14.7 final",
+        "cpython 3.15.1 final",
+        "cpython 3.15.3 final",
+        "cpython 3.16.0 final",
+        "cpython 3.15.2 candidate",
+        "pypy 3.15.2 final",
+    ],
 )
-def test_interpreter_version_contract(version, accepted):
-    requirement = run_check.project_requires_python()
-    if accepted:
-        run_check.validate_interpreter_version(version, requirement)
-    else:
-        with pytest.raises(RuntimeError, match=r"实际 Python 3\.14\.7.*要求 >=3\.15\.2"):
-            run_check.validate_interpreter_version(version, requirement)
+def test_interpreter_probe_rejects_unsupported_identity(tmp_path, monkeypatch, identity):
+    monkeypatch.setattr(
+        run_check.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=identity, stderr=""),
+    )
+    with pytest.raises(RuntimeError, match=r"要求 CPython 3\.15\.2 正式版"):
+        _ensure_supported_interpreter(tmp_path / "python")
 
 
 def test_interpreter_probe_rejects_stale_venv_metadata(tmp_path, monkeypatch):
@@ -38,10 +56,12 @@ def test_interpreter_probe_rejects_stale_venv_metadata(tmp_path, monkeypatch):
     monkeypatch.setattr(
         run_check.subprocess,
         "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout="3.15.2\n", stderr=""),
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0, stdout="cpython 3.15.2 final\n", stderr=""
+        ),
     )
     with pytest.raises(RuntimeError, match=r"pyvenv\.cfg 为 3\.14\.7，实际探针为 3\.15\.2"):
-        run_check.interpreter_version(candidate)
+        _ensure_supported_interpreter(candidate)
 
 
 @pytest.mark.parametrize("profile", ["test", "test-offline", "full-acceptance"])
@@ -182,9 +202,9 @@ def test_baseline_rejects_invalid_environment_before_launch(monkeypatch, selecte
     assert caught.value.code == 2
 
 
-def test_interpreter_contract_before_dependency_install_uses_same_lower_bound(monkeypatch) -> None:
-    monkeypatch.setattr(run_check, "_HAS_PACKAGING", False)
-    assert run_check.version_satisfies((3, 15, 2), ">=3.15.2")
-    assert not run_check.version_satisfies((3, 14, 7), ">=3.15.2")
-    with pytest.raises(ValueError, match="无法在无 packaging 回退中解析"):
-        run_check.version_satisfies((3, 15, 2), "~=3.15")
+def test_interpreter_rejects_non_exact_project_requirement(tmp_path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nrequires-python = ">=3.15.2"\n', encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="必须使用 == 固定三段版本"):
+        _ensure_supported_interpreter(Path(sys.executable), tmp_path)

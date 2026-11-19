@@ -3,7 +3,7 @@
 # 口径：从 pyproject.toml 的直接依赖出发，沿 Requires-Dist 展开本机已安装的闭包。
 # 它描述的是**这台机器解析出来的版本组合**，含平台相关依赖（如 Windows 上的 colorama）。
 # `v3 lock`（不带参数）会拿它与当前环境对账；不一致时先想清楚再 `--write`。
-# Python 要求：>=3.15.2
+# Python 要求：==3.15.2
 # 解释器：Python 3.15.2
 
 annotated-doc==0.0.6
