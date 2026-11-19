@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import importlib.util
 import itertools
@@ -373,7 +374,21 @@ def _wait_for_progress(folder, process):
     while time.monotonic() < deadline:
         assert process.poll() is None, "miniature pytest exited before its held fixture"
         for path in folder.glob("inproc-full-master-*.json"):
-            payload = json.loads(path.read_bytes())
+            try:
+                content = path.read_bytes()
+            except FileNotFoundError:
+                continue
+            except PermissionError as error:
+                # Python's Windows file open may report a sharing violation as
+                # EACCES without WinError while the writer replaces the checkpoint.
+                if (
+                    _IS_WIN
+                    and error.errno == errno.EACCES
+                    and getattr(error, "winerror", None) in {None, 5, 32}
+                ):
+                    continue
+                raise
+            payload = json.loads(content)
             current = payload["current_test"]
             if (
                 current is not None
@@ -385,6 +400,47 @@ def _wait_for_progress(folder, process):
                 return path, payload
         time.sleep(0.02)
     pytest.fail("no checkpoint identified the real held fixture within 15 seconds")
+
+
+@pytest.mark.parametrize(
+    ("windows", "read_error", "retry"),
+    [
+        (True, PermissionError(errno.EACCES, "sharing"), True),
+        (False, FileNotFoundError(errno.ENOENT, "replaced"), True),
+        (False, PermissionError(errno.EACCES, "permission denied"), False),
+        (True, PermissionError(errno.EPERM, "permission denied"), False),
+    ],
+)
+def test_progress_wait_retries_only_transient_reads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, windows: bool, read_error: OSError, retry: bool
+) -> None:
+    checkpoint = {
+        "current_test": {"nodeid": "fixture::test_held"},
+        "active_fixtures": [{"name": "held"}],
+        "last_test": {"nodeid": "fixture::test_first"},
+    }
+    path = tmp_path / "inproc-full-master-1.json"
+    content = json.dumps(checkpoint).encode()
+    path.write_bytes(content)
+    read_bytes = type(path).read_bytes
+    failures = iter([read_error])
+
+    def interrupt_first_read(candidate: Path) -> bytes:
+        failure = next(failures, None) if candidate == path else None
+        if failure is not None:
+            raise failure
+        return read_bytes(candidate)
+
+    monkeypatch.setitem(globals(), "_IS_WIN", windows)
+    monkeypatch.setattr(type(path), "read_bytes", interrupt_first_read)
+    process = Mock()
+    process.poll.return_value = None
+    if retry:
+        assert _wait_for_progress(tmp_path, process) == (path, checkpoint)
+    else:
+        with pytest.raises(type(read_error)) as raised:
+            _wait_for_progress(tmp_path, process)
+        assert raised.value is read_error
 
 
 @pytest.mark.parametrize("terminate", [True, False])
