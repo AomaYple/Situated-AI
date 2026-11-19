@@ -725,7 +725,11 @@ def _school_facts(changes, *, is_ai=True):
     ],
 )
 def test_historical_school_lj03_multiplier_contract(version, changes, expected):
-    from test_full_information import _evaluate_script, _generated_rule_blocks
+    from test_full_information import (
+        _SYNTHETIC_READER_EVIDENCE,
+        _evaluate_script,
+        _generated_rule_blocks,
+    )
 
     with version_contracts.select_version(version):
         policy = decision_rules.load()
@@ -737,6 +741,15 @@ def test_historical_school_lj03_multiplier_contract(version, changes, expected):
             r.engine + (":" + r.argument if r.argument else ""): values.get(r.key)
             for r in policy.readers
         }
+        baseline = compiler.baseline_text()
+        generated = decision_rules.patch(
+            baseline,
+            policy,
+            baseline=baseline,
+            reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+            country_policy=country_state.load(),
+        )
         assert (
-            10 * _evaluate_script(_generated_rule_blocks(policy).blocks[field], engine) == expected
+            10 * _evaluate_script(_generated_rule_blocks(policy, generated).blocks[field], engine)
+            == expected
         )

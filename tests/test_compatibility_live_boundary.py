@@ -5,10 +5,14 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from pdx import config, decisions, distribution, version_contracts
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Current R2 bureaucracy evidence, outside the legacy compatibility read set.
 R2_READER_SOURCE = "common/scripted_buttons/scripted_buttons.md"
@@ -218,16 +222,18 @@ def test_isolated_output_apis_reject_real_junction(tmp_path, monkeypatch, placem
             "1.15.0" if entrypoint == "compatibility-write" else version_contracts.CURRENT_VERSION
         )
         with version_contracts.select_version(context):
+            operation: Callable[[], object]
             if entrypoint == "compatibility-write":
                 operation = distribution.write_compatibility_outputs
             else:
                 profile = distribution.production_profile.declared_profile()
-                operation = {
+                operations: dict[str, Callable[[], object]] = {
                     "scan": lambda: distribution._profile_directory_files(root),
                     "standard-write": distribution.write_standard_outputs,
                     "profile-write": lambda: distribution.write_profile_outputs(profile, root=root),
                     "profile-check": lambda: distribution.check_profile_outputs(profile, root=root),
-                }[entrypoint]
+                }
+                operation = operations[entrypoint]
             with pytest.raises(ValueError, match="重解析点"):
                 operation()
         assert preserved_file.read_bytes() == b"external original\n"

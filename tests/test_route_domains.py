@@ -13,6 +13,7 @@ from test_situated_joint_witnesses import _facts
 from test_situated_social_governance_joint import _overlay
 
 from pdx import country_state, decision_adapters, decision_rules
+from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
 
@@ -208,12 +209,20 @@ def test_current_installation_routes_keep_original_consumer_bodies():
     assert [line for line in restored.splitlines() if line.strip()] == [
         line for line in native.splitlines() if line.strip()
     ]
-    original = parse_text(native).root.first("ai_strategy_default").value
-    patched = parse_text(generated).root.first("ai_strategy_default").value
+    original = parse_text(native).root.first("ai_strategy_default")
+    patched = parse_text(generated).root.first("ai_strategy_default")
+    assert original is not None
+    assert isinstance(original.value, Block)
+    assert patched is not None
+    assert isinstance(patched.value, Block)
     for field in ("revolution_aversion", "wanted_army_size"):
-        before = original.first(field).value
-        after = patched.first(field).value
-        assert len(after.items) == len(before.items) + 1
+        before = original.value.first(field)
+        after = patched.value.first(field)
+        assert before is not None
+        assert isinstance(before.value, Block)
+        assert after is not None
+        assert isinstance(after.value, Block)
+        assert len(after.value.items) == len(before.value.items) + 1
         observed = pdx_eval.select(
             _overlay(generated, field), _facts(policy, _values({"war": True, "insurrection": True}))
         )
