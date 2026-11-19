@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import create_autospec
 
 import pytest
+from conftest import configure_current_identity
 from hypothesis import given
 from hypothesis import strategies as st
 from packaging import markers
@@ -227,11 +228,11 @@ def test_deploy_rejects_existing_target_link(tmp_path):
 
 
 def test_normalized_mirror_retains_original_game_hash(tmp_path, monkeypatch):
+    configure_current_identity(tmp_path, monkeypatch)
     game = tmp_path / "game"
     game.mkdir()
     original = codecs.BOM_UTF8 + b"# game\r\n"
     (game / "doc.md").write_bytes(original)
-    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", game),))
     manifest = docs_mirror.build_manifest()
     entries = docs_mirror.entries(manifest)
     assert entries["game/doc.md"]["sha256"] == hashlib.sha256(original).hexdigest()

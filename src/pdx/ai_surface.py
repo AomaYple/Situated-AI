@@ -196,7 +196,8 @@ FACTORS: tuple[Factor, ...] = (
 
 def strategy_files(game: Path | None = None) -> list[Path]:
     """策略文件列表（排序稳定，便于可复现）。"""
-    base = (game or config.GAME) / STRATEGY_DIR
+    root = config.verified_game_root() if game is None else game
+    base = root / STRATEGY_DIR
     return sorted(p for p in base.rglob("*.txt") if p.is_file())
 
 
@@ -310,7 +311,7 @@ def card_from(name: str, block: Block, *, file: str, line: int) -> Card:
 
 def read_cards(game: Path | None = None) -> list[Card]:
     """读取全部策略牌。"""
-    root = game or config.GAME
+    root = config.verified_game_root() if game is None else game
     cards: list[Card] = []
     for path in strategy_files(root):
         parsed = parse_cached(path)
@@ -396,7 +397,8 @@ NOTABLE_DEFINES = (
 
 def read_defines(game: Path | None = None) -> DefinesSurface:
     """读全局 AI 参数面。"""
-    path = (game or config.GAME) / DEFINES_FILE
+    root = config.verified_game_root() if game is None else game
+    path = root / DEFINES_FILE
     parsed = parse_cached(path)
     keys: list[str] = []
     for assignment in parsed.top_assignments:
@@ -554,10 +556,11 @@ def render(
 
 def build(game: Path | None = None, *, top: int = 60) -> str:
     """读原版数据并渲染全文。"""
-    cards = read_cards(game)
+    root = config.verified_game_root() if game is None else game
+    cards = read_cards(root)
     inputs = collect_inputs(cards)
     hits = factor_report(inputs)
-    defines = read_defines(game)
+    defines = read_defines(root)
     return render(cards, inputs, hits, defines, top=top)
 
 
@@ -614,14 +617,14 @@ def _encode_defines(surface: DefinesSurface) -> list[str]:
 def snapshot_section(game: Path | None = None) -> dict[str, list[str]]:
     """把原版 AI 面**编码**成快照域（供 :func:`pdx.snapshot.build` 调用）。
 
-    没有游戏（或 ``00_ai.txt`` 不在）时返回**空域**而不是半份记录：空域让离线
+    默认入口先核验安装身份。已选内容根缺少策略目录或 ``00_ai.txt`` 时返回**空域**：空域让离线
     侧报「快照太旧 / 前置条件缺失」，而不是拿一份假真值去核对（P13）。
     """
-    root = game or config.GAME
+    root = config.verified_game_root() if game is None else game
     if not (root / STRATEGY_DIR).is_dir() or not (root / DEFINES_FILE).is_file():
         return {}
-    out: dict[str, list[str]] = {DEFINES_KEY: _encode_defines(read_defines(game))}
-    for card in read_cards(game):
+    out: dict[str, list[str]] = {DEFINES_KEY: _encode_defines(read_defines(root))}
+    for card in read_cards(root):
         out[CARD_PREFIX + card.name] = _encode_card(card)
     return dict(sorted(out.items()))
 

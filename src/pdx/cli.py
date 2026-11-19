@@ -2627,7 +2627,7 @@ def ai_surface_cmd(
 
     if check:
         try:
-            problem = ai_surface.check_doc(top=top, offline=offline)
+            problem = ai_surface.check_doc(game=config.GAME, top=top, offline=offline)
         except ai_surface.OfflineUnavailableError as exc:
             _fail(str(exc))
         if problem:
@@ -2645,13 +2645,13 @@ def ai_surface_cmd(
     if offline:
         cards, defines = ai_surface.read_offline()
     else:
-        cards = ai_surface.read_cards()
-        defines = ai_surface.read_defines()
+        cards = ai_surface.read_cards(config.GAME)
+        defines = ai_surface.read_defines(config.GAME)
     inputs = ai_surface.collect_inputs(cards)
 
     if write:
         try:
-            path = ai_surface.write_doc(top=top, offline=offline)
+            path = ai_surface.write_doc(game=config.GAME, top=top, offline=offline)
         except ai_surface.OfflineUnavailableError as exc:
             _fail(str(exc))
         console.print(
@@ -2709,22 +2709,22 @@ def political_surface_cmd(
     """
     _require_game()
     try:
-        strategies = political_surface.read_strategies()
-        default_strategy = political_surface.read_default_strategy()
+        strategies = political_surface.read_strategies(config.GAME)
+        default_strategy = political_surface.read_default_strategy(config.GAME)
     except (OSError, ValueError) as exc:
         _fail(f"原版政治策略无法读取：{exc}")
     if check:
-        problem = political_surface.check_doc()
+        problem = political_surface.check_doc(game=config.GAME)
         if problem:
             _fail(problem)
         console.print(f"[green]{escape(political_surface.DOC_REL)} 与生成结果一致 ✅[/]")
     if write:
-        path = political_surface.write_doc()
+        path = political_surface.write_doc(game=config.GAME)
         console.print(
             f"[green]已写入 {escape(str(path))}[/]：{len(strategies)} 张政治策略牌 + 默认层"
         )
     if json_path is not None:
-        path = political_surface.write_json(json_path)
+        path = political_surface.write_json(json_path, game=config.GAME)
         console.print(f"[green]已写入 {escape(str(path))}[/]")
     if write or check or json_path is not None:
         return

@@ -280,7 +280,7 @@ def _condition_names(block: Block | None) -> tuple[str, ...]:
 def strategy_files(game: Path | None = None) -> list[Path]:
     """返回稳定排序的原版策略文件。"""
 
-    root = game or config.GAME
+    root = config.verified_game_root() if game is None else game
     return sorted((root / STRATEGY_DIR).glob("*.txt"))
 
 
@@ -331,7 +331,7 @@ def _read_file_strategies(path: Path, root: Path) -> list[PoliticalStrategy]:
 def read_strategies(game: Path | None = None) -> list[PoliticalStrategy]:
     """读取全部 ``type = political`` 策略牌并保留源文件指纹。"""
 
-    root = game or config.GAME
+    root = config.verified_game_root() if game is None else game
     strategies: list[PoliticalStrategy] = []
     for path in strategy_files(root):
         parsed = parse_cached(path)
@@ -359,7 +359,7 @@ def read_strategies(game: Path | None = None) -> list[PoliticalStrategy]:
 def read_default_strategy(game: Path | None = None) -> PoliticalStrategy:
     """读取原版默认层；它不是政治牌，但其贡献参与最终聚合。"""
 
-    root = game or config.GAME
+    root = config.verified_game_root() if game is None else game
     path = root / DEFAULT_PATH
     if not path.is_file():
         raise ValueError(f"原版默认策略不存在：{path}")
@@ -506,14 +506,16 @@ def render(
 
 
 def build(game: Path | None = None) -> str:
-    return render(read_strategies(game), read_default_strategy(game))
+    root = config.verified_game_root() if game is None else game
+    return render(read_strategies(root), read_default_strategy(root))
 
 
 def write_doc(repo: Path | None = None, *, game: Path | None = None) -> Path:
     root = repo or config.REPO
     path = root / DOC_PATH
+    text = build(game)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(build(game), encoding="utf-8", newline="\n")
+    path.write_text(text, encoding="utf-8", newline="\n")
     return path
 
 
@@ -593,10 +595,12 @@ def as_json(
 
 
 def write_json(path: Path, *, game: Path | None = None) -> Path:
+    root = config.verified_game_root() if game is None else game
+    payload = as_json(read_strategies(root), read_default_strategy(root))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
-            as_json(read_strategies(game), read_default_strategy(game)),
+            payload,
             ensure_ascii=False,
             indent=2,
         )
