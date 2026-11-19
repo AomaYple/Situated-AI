@@ -41,7 +41,8 @@ import typer
 from conftest import NEEDS_GAME
 
 from pdx import config, docs_mirror
-from pdx.version_contracts import active_version
+from pdx.situated import r2_reader_authority
+from pdx.version_contracts import INSTALLATION_IDENTITY_SHA256, active_version
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -318,13 +319,17 @@ def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.Monk
     from pdx import cli
 
     fake = _fake_roots(tmp_path, monkeypatch)
+    for relative in INSTALLATION_IDENTITY_SHA256:
+        target = fake / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((r2_reader_authority.frozen_root("1.15.1") / relative).read_bytes())
     research = tmp_path / "research"
     mirror = tmp_path / "mirror"
     monkeypatch.setattr(
         docs_mirror, "_ROOTS", (("game", fake / "game"), ("jomini", fake / "jomini"))
     )
     monkeypatch.setattr(config, "RESEARCH", research)
-    monkeypatch.setattr(config, "GAME", fake)
+    monkeypatch.setattr(config, "GAME", fake / "game")
     monkeypatch.setattr(config, "OFFICIAL_DOCS_MIRROR", mirror)
 
     cli.mirror_write(sync=True)

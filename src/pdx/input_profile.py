@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import config
+from . import config, version_contracts
 from .console import enable_utf8_stdio
 
 if TYPE_CHECKING:
@@ -284,6 +284,11 @@ def check_profile(
     """检查关键动作是否仍包含预期的物理键位。"""
 
     target = profile_path() if path is None else Path(path)
+    if path is None:
+        try:
+            version_contracts.verify_installation_identity(config.ROOT)
+        except ValueError as exc:
+            return ProfileCheck(target, "", 0, (), (str(exc),))
     if not target.is_file():
         return ProfileCheck(target, "", 0, (), (f"找不到输入配置：{target}",))
     data = target.read_bytes()

@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import config
+from . import config, version_contracts
 from .cache import memo_lifetime, parse_cached
 from .extract import DirExtract, extract_file, global_usage
 from .localization import LocalizationReport, extract_localization
@@ -350,6 +350,7 @@ def _scriptable_files(root: Path) -> list:
 
 def game_analysis(*, verbose: bool = False) -> GameAnalysis:
     """对游戏本体做分析。整棵树只遍历一次，只深度解析 mod 相关文件。"""
+    version_contracts.verify_installation_identity(config.ROOT)
     ga = GameAnalysis(version=config.game_version())
     common_root = config.GAME / "common"
 

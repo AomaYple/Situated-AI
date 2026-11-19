@@ -2762,6 +2762,8 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     """现读原版完整相关 common 定义；解析不完整或版本漂移均显式失败。"""
     root = game if game is not None else config.GAME
     locked_version = version_contracts.active_version()
+    if game is None:
+        version_contracts.verify_installation_identity(config.ROOT)
     version = config.game_version(root.parent)
     if version["caligula_branch"] != f"release/{locked_version}":
         raise ValueError(f"原版版本必须锁定 {locked_version}：{version['caligula_branch']!r}")

@@ -68,8 +68,9 @@ python -m pdx.cli package
 标准包只包含 Mod 安装所需内容，不含探针、Python、日志、缓存、本体资源或历史实验。ZIP 路径使用 POSIX 形式；
 游戏文本的 BOM 只在游戏安装或打包边界添加。完整包内合同和恢复边界见工程交付基线。
 
-当前迁移合同默认为 `1.15.1`，以上命令也可显式使用 `--profile 1.15.1`，两种方式均走完整 Mod 生产链。
-历史 R2 三消费者候选须显式使用 `--profile 1.15.0`；产物隔离在 `tools/out/production/1.15.0/`，不用于当前发布。
+在线读取和生产命令仅接受 Victoria 3 `1.15.1`。可用 `--profile 1.15.1` 明确断言当前生产版本。
+已有 1.15.0 历史候选仅通过 `modgen --check`、`modguard --offline` 或 `decision-audit --offline` 配合 `--profile 1.15.0` 核对。
+这些命令读取隔离目录 `tools/out/production/1.15.0/`，其中 `decision-audit` 可另写审计 JSON。
 同一组命令可用 `--configuration <TOML路径>` 选择构建配置（严格 schema、核心、领域和 policy/neutral 模式），
 检查与打包必须传入同一配置；具体字段见 `src/pdx/situated/profile_configuration.py`。
 候选静态通过及 ZIP 生成不代表完整工程门通过，也不构成发布或部署。
@@ -83,8 +84,8 @@ $env:V3_CONTRACT_PROFILE = '1.15.1'
 .venv/Scripts/python.exe -B -X utf8 -m pdx.cli tables --offline
 ```
 
-环境变量只选择版本合同，不把当前安装伪装成该版本；读取本机原版的命令仍核对实际安装身份。
-未显式选择时使用当前 `1.15.1` 合同；历史 `1.14.5`、`1.15.0` 必须显式选择，不能用旧门结果验收当前版本。
+环境变量用于明确指定离线证据合同。在线读取先核对启动器游戏标识与版本，以及冻结的分支、修订和构建校验文件。
+历史 `1.14.5` 和 `1.15.0` 的已落盘快照仍可离线核对。
 
 原版权威候选通过专用入口显式捕获，例如：
 

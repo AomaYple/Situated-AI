@@ -6,23 +6,26 @@ import argparse
 import json
 from pathlib import Path
 
+from pdx import version_contracts
 from pdx.situated import r2_reader_authority as authority
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("installation", type=Path, help="identity-verified Victoria 3 1.15 root")
-    parser.add_argument("--output", type=Path, default=authority.FROZEN_ROOT)
+    parser.add_argument("--output", type=Path)
     parser.add_argument(
         "--check", action="store_true", help="verify existing snapshot and live sources"
     )
     args = parser.parse_args()
     try:
+        version_contracts.require_current()
+        output = args.output or authority.frozen_root()
         if args.check:
-            manifest = authority.verify_frozen(args.output)
+            manifest = authority.verify_frozen(output)
             authority.verify_installation(args.installation)
         else:
-            manifest = authority.capture(args.installation, args.output)
+            manifest = authority.capture(args.installation, output)
     except (OSError, ValueError) as exc:
         parser.exit(1, f"{exc}\n")
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
