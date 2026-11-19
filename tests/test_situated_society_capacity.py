@@ -35,7 +35,7 @@ TECHNOLOGIES = (*COMPANY, *AUTHORITY)
 
 # Independently measured from the identity-verified 1.15.0 native files.
 # Historical hashes below retain their 1.14.5 contract.
-_CURRENT_NATIVE_HASHES = {
+_NATIVE_115_HASHES = {
     "common/technology/technologies/30_society.txt": (
         "204340e2ff81f31d5bceddb36824566d57fa2be941dc2ba90407d56be75176dc",
         "9e4a9ec6b2df956da8104339460b87f2d78b8ae038e394f9dfaebb74e44052ad",
@@ -468,7 +468,13 @@ def test_reader_evidence_uses_exact_native_bytes_and_registered_normalization(
     source, raw_hash, normalized_hash
 ):
     if version_contracts.is_115():
-        raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
+        raw_hash, normalized_hash = _NATIVE_115_HASHES[source]
+    if (
+        source == "common/alert_types/00_alert_types.txt"
+        and version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    ):
+        raw_hash = "74cbfaa21e54a8ca96be89aedf50b290baad2ca51e18825ceae70caad51a514a"
+        normalized_hash = "c550fa11141de170fe8edfff59cf996f83503fbecd078f29c7be121beaf91478"
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     text = normalized_text(raw.decode("utf-8-sig"))
