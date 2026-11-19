@@ -122,10 +122,33 @@ def test_外部配置拒绝非有限越界和未知字段(tmp_path, mutation):
 
 
 @pytest.mark.integration
-def test_正式候选包含所有生产模块且不修改生成源():
+def test_正式候选包含所有生产模块且不修改生成源(tmp_path):
     baseline = decisions.baseline_path()
     baseline_before = baseline.read_bytes()
-    before = decisions.build()
+    expected = {}
+    # Store the first build outside the repository so its large output can be
+    # released before constructing the release candidate and building again.
+    for index, (name, text) in enumerate(decisions.build().items()):
+        target = tmp_path / str(index)
+        target.write_text(text, encoding="utf-8", newline="")
+        expected[name] = target
+    del text
+
+    _assert_release_candidate_package()
+
+    rebuilt = decisions.build()
+    assert rebuilt.keys() == expected.keys()
+    for name, text in rebuilt.items():
+        # Compare the exact bytes without loading a second copy of each output.
+        with expected[name].open("rb") as source:
+            for start in range(0, len(text), 64 * 1024):
+                chunk = text[start : start + 64 * 1024].encode("utf-8")
+                assert source.read(len(chunk)) == chunk, name
+            assert not source.read(1), name
+    assert baseline.read_bytes() == baseline_before
+
+
+def _assert_release_candidate_package():
     policy, extra, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
     assert set(metadata["enabled_modules"]) == {
@@ -146,8 +169,6 @@ def test_正式候选包含所有生产模块且不修改生成源():
     assert extra.economy_enabled
     assert extra.diplomacy_enabled
     assert decisions.load_extensions(profile="release") == extra
-    assert decisions.build() == before
-    assert baseline.read_bytes() == baseline_before
     patched = files["common/ai_strategies/00_default_strategy.txt"]
     assert "# SITAI BEGIN " in patched
     assert "# SITAI END " in patched
