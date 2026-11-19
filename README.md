@@ -2,7 +2,7 @@
 
 当前实施状态见[当前工作清单](docs/design/当前工作清单.md)和[拓展结果](docs/design/exec/广度深度拓展-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
-仓库正在迁移到 Victoria 3 1.15.2，并升级 Python 工具链。当前正式交付为 3.3.0 / Victoria 3 1.15.1。迁移进度与验收范围见[当前工作清单](docs/design/当前工作清单.md)，正式发布和部署身份见[版本交付索引](docs/design/exec/版本交付-结果.md)。
+仓库正在迁移到 Victoria 3 1.15.2，并升级 Python 工具链，候选 Mod 版本为 3.3.1。最新正式交付为 3.3.0 / Victoria 3 1.15.1。迁移进度与验收范围见[当前工作清单](docs/design/当前工作清单.md)，正式发布和部署身份见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
