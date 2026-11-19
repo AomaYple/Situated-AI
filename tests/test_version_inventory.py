@@ -11,7 +11,9 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from conftest import configure_current_identity
 
+from pdx.situated import version_inventory
 from pdx.situated.version_inventory import (
     CONTENT_ROOTS,
     IDENTITY_PATHS,
@@ -278,36 +280,27 @@ def test_same_installation_bytes_are_independent_of_location(
 
 
 def test_cli_uses_same_json_and_refuses_installation_output(
-    installation: Path, tmp_path: Path
+    installation: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    from pdx import version_contracts
-    from pdx.situated import r2_reader_authority
-
-    baseline = r2_reader_authority.frozen_root("1.15.1")
-    for relative in version_contracts.INSTALLATION_IDENTITY_SHA256:
-        _write(installation, relative, (baseline / relative).read_bytes())
-    command = [
-        sys.executable,
-        "-B",
-        "-X",
-        "utf8",
-        "-m",
-        "pdx.situated.version_inventory",
-        str(installation),
-    ]
+    configure_current_identity(installation, monkeypatch)
+    command = ["pdx.situated.version_inventory", str(installation)]
     output = tmp_path / "inventory.json"
-    completed = subprocess.run(
-        [*command, "--output", str(output)], capture_output=True, check=False
-    )
-    assert completed.returncode == 0, completed.stderr
+    monkeypatch.setattr(sys, "argv", [*command, "--output", str(output)])
+    assert version_inventory.main() == 0
     assert output.read_text(encoding="utf-8") == canonical_json(
         inventory_installation(installation)
     )
-    refused = subprocess.run(
-        [*command, "--output", str(installation / "wrong.json")], capture_output=True, check=False
-    )
-    assert refused.returncode == 2
-    assert not (installation / "wrong.json").exists()
+
+    inside = installation / "wrong.json"
+    monkeypatch.setattr(sys, "argv", [*command, "--output", str(inside)])
+    with pytest.raises(SystemExit) as refused:
+        version_inventory.main()
+    assert refused.value.code == 2
+    assert "outside the read-only game installation" in capsys.readouterr().err
+    assert not inside.exists()
 
 
 def test_localization_parent_name_does_not_change_content_classification(

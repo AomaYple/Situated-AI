@@ -9,10 +9,11 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from conftest import configure_current_identity
 from typer.testing import CliRunner
 
-from pdx import cli, config, decision_adapters, decisions, distribution, version_contracts
-from pdx.situated import audit, r2_reader_authority
+from pdx import cli, config, decision_adapters, decisions, distribution
+from pdx.situated import audit
 from pdx.situated.action_instances import ActionInstance
 from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface
 
@@ -227,14 +228,7 @@ def test_upstream_verification_failures_propagate_without_legacy_fallback(
 
 @pytest.fixture
 def cli_installation(pipeline, monkeypatch):
-    root = pipeline.game.parent
-    originals = r2_reader_authority.frozen_root("1.15.1")
-    for relative in version_contracts.INSTALLATION_IDENTITY_SHA256:
-        target = root / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((originals / relative).read_bytes())
-    monkeypatch.setattr(config, "ROOT", root)
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+    configure_current_identity(pipeline.game.parent, monkeypatch)
 
 
 @pytest.mark.usefixtures("cli_installation")
