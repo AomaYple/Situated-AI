@@ -50,7 +50,7 @@ dist/                   可再生发布 ZIP（忽略）
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py test-offline
 ```
 
-完整矩阵、性能口径、清理和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态检查、快照和模拟只能证明明确覆盖的工程合同。引擎运行期语义、AI 行为质量、长期行为、平衡、后期性能、本地化呈现和 Workshop 体验需要用户在固定包上验收；工程通过不能代替这些结论。日志、存档和观察器提供辅助证据，其摘要不能单独证明这些结果。
+完整矩阵、性能口径、清理和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态检查、快照和模拟只能证明明确覆盖的工程合同。引擎运行期语义、AI 行为质量、长期行为、平衡、后期性能、本地化呈现和 Workshop 体验需要用户在固定包上验收；工程通过不能代替这些结论。日志和存档提供辅助证据，其摘要不能单独证明这些结果。
 
 ## 许可证
 

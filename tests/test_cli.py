@@ -78,7 +78,6 @@ def test_help_exit0() -> None:
         "snapshot",
         "verify",
         "crosscheck",
-        "observe",
         "check-outputs",
         "show",
     ):
@@ -94,7 +93,6 @@ def test_help_exit0() -> None:
         "snapshot",
         "verify",
         "crosscheck",
-        "observe",
         "check-outputs",
         "show",
     ],
