@@ -17,7 +17,7 @@ from . import config, country_state, version_contracts
 from .model import Block, Scalar
 from .parser import parse_text
 
-EVIDENCE_SHA256 = "46a8179cb9e83e2458551025a5c118722913531f57861865238a03c2acc6e9aa"
+EVIDENCE_SHA256 = "e759cb2a9aebca54f355bc47652bd58afee7eb7866c5b4a885196b0134a0d885"
 
 
 def evidence_sha256() -> str:

@@ -677,7 +677,7 @@
     }
   },
   "schema": 1,
-  "snapshot_sections_sha256": "5676371068b8dd8a344872dfa208eebbb233d247dd61782b0868761c64645199",
+  "snapshot_sections_sha256": "22dd730769199be754b710e1a3c92df14decf53cc3f17592819a016d2fc7dd67",
   "sources": {
     "common/achievements/base_achievements.txt": "276ed2057159ccc2c2b6ebe874e4e97a935300b9707d9b110e553f3c9c68602e",
     "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
