@@ -19,7 +19,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pdx import config, snapshot, version_contracts
+from pdx import config, snapshot, verify, version_contracts
 from pdx.input_profile import InputAction, ProfileCheck
 from pdx.model import ParseError
 
@@ -611,24 +611,22 @@ class TestCommittedCompactSnapshot(unittest.TestCase):
     """
 
     def test_至少有一份精简快照入库(self):
-        tracked = sorted(snapshot.SNAPSHOT_DIR.glob("*.compact.json"))
-        self.assertTrue(
-            tracked,
-            "tools/out/snapshots/ 下没有 *.compact.json —— "
-            "跑 `v3 snapshot create --compact` 生成一份（它是入库的）",
+        expected_name = f"{version_contracts.CURRENT_CONTRACT.snapshot_label}.compact.json"
+        self.assertEqual(
+            verify.latest_compact_snapshot_path(),
+            snapshot.SNAPSHOT_DIR / expected_name,
         )
 
     def test_精简快照能被读出来且标记正确(self):
-        for path in sorted(snapshot.SNAPSHOT_DIR.glob("*.compact.json")):
-            with self.subTest(快照=path.name):
-                snap = snapshot.Snapshot.load(path)
-                self.assertTrue(snap.compact)
-                self.assertIn("localization_digest", snap.sections)
-                self.assertNotIn("localization", snap.sections)
-                self.assertTrue(snap.version.get("caligula_branch"))
-                # 结构域是它的全部价值所在，缺一个就白存了
-                for sec in ("common_entries", "fields", "defines", "dlc", "config"):
-                    self.assertIn(sec, snap.sections)
+        snap = verify.latest_compact_snapshot()
+        assert snap is not None, "缺少当前版本的入库精简快照"
+        self.assertTrue(snap.compact)
+        self.assertIn("localization_digest", snap.sections)
+        self.assertNotIn("localization", snap.sections)
+        self.assertEqual(snap.version_label, f"release/{version_contracts.CURRENT_VERSION}")
+        for sec in ("common_entries", "fields", "defines", "dlc", "config"):
+            with self.subTest(section=sec):
+                self.assertIn(sec, snap.sections)
 
 
 if __name__ == "__main__":

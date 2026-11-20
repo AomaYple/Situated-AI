@@ -376,39 +376,41 @@ def test_verify_fix_claims_只跑一条时不碰真断言表() -> None:
         assert result.exit_code == 2, result.output
 
 
-@NEEDS_GAME
-def test_snapshot_diff_自己与自己无差异() -> None:
-    """snapshot diff 收的是**快照名**（不含 .json），不是路径。
+def test_snapshot_diff_自己与自己无差异(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """按标签回退到精简快照并与自身比较。"""
+    monkeypatch.setattr(snapshot, "SNAPSHOT_DIR", tmp_path)
+    snapshot.Snapshot(
+        version={"caligula_branch": f"release/{CURRENT_VERSION}"},
+        sections={"common_entries": {"sample_group": ["sample_definition"]}},
+        compact=True,
+    ).write(tmp_path / "sample.compact.json")
 
-    只写了版本号时要能解析到**精简**快照 —— 入库的只有精简那份，
-    「拿两个版本比结构」在别的机器上只可能拿到它。
-    """
-    snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
-    assert snaps, "入库的精简快照（tools/out/snapshots/*.compact.json）缺失"
-    label = snaps[-1].name.removesuffix(".compact.json")
-    result = _run("snapshot", "diff", label, label)
+    result = _run("snapshot", "diff", "sample", "sample")
     assert result.exit_code == 0, result.output
     assert "无差异" in result.output or "完全一致" in result.output
 
 
-@NEEDS_GAME
-def test_snapshot_diff_域集合不同时会点明() -> None:
-    """两份快照的域集合不同时，差异里混着**格式变化** —— 必须点明，不能静默。
+def test_snapshot_diff_域集合不同时会点明(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """比较同版本精简快照时，明确报告新增的域。"""
+    monkeypatch.setattr(snapshot, "SNAPSHOT_DIR", tmp_path)
+    version = {"caligula_branch": f"release/{CURRENT_VERSION}"}
+    common = {"common_entries": {"sample_group": ["sample_definition"]}}
+    snapshot.Snapshot(version=version, sections=common, compact=True).write(
+        tmp_path / "older.compact.json"
+    )
+    snapshot.Snapshot(
+        version=version,
+        sections={**common, "events_entries": {"sample.txt": ["sample_event"]}},
+        compact=True,
+    ).write(tmp_path / "newer.compact.json")
+    snapshot.Snapshot(version=version, sections=common).write(tmp_path / "newer.json")
 
-    这不是假想：入库的 `release-1.14.3.compact.json` 是上一轮的域集合（6 个域），
-    拿它比 1.14.4（14 个域）会报出百万级「删除」，而真正的原版变化只有几百处。
-    """
-    snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
-    if len(snaps) < 2:
-        pytest.skip("少于两份精简快照，比不出「域集合不同」")
-    # 明确传入 `.compact`，避免旧版本同时有完整快照时被读取回退规则选成
-    # 完整快照，导致两边口径不同；这个用例专门检查域集合扩展。
-    older = snaps[0].name.removesuffix(".json")
-    newer = snaps[-1].name.removesuffix(".json")
-    result = _run("snapshot", "diff", older, newer)
+    result = _run("snapshot", "diff", "older.compact", "newer.compact")
     assert "MarkupError" not in result.output
     assert result.exit_code == 0, result.output
     assert "域集合不同" in result.output
+    assert "只有 B 有：events_entries" in result.output
+    assert "可比的是两侧都有的域：common_entries" in result.output
 
 
 @NEEDS_GAME
