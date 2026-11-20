@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import json
 import stat
+import subprocess
+from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
 
 import pytest
 
 from tools.ci.repo_hygiene import clean, find_violations, main, report
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _paths(rows: list[dict[str, str]]) -> set[str]:
@@ -124,6 +122,56 @@ def test_excludes_environment_evidence_and_official_mirror(tmp_path: Path) -> No
         (path / "ignored.pyc").write_bytes(b"bytecode")
 
     assert find_violations(tmp_path) == []
+
+
+def test_git_index_checks_registered_outputs_and_force_added_ignored_paths(
+    tmp_path: Path,
+) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    rules = Path(__file__).resolve().parents[1] / ".gitignore"
+    (tmp_path / ".gitignore").write_bytes(rules.read_bytes())
+    tracked = (
+        "tools/out/snapshots/release-1.15.2.compact.json",
+        "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json",
+    )
+    ignored = (
+        "tools/out/snapshots/本机结果.compact.json",
+        "tools/out/raw/游戏资料.json",
+        ".venv/pyvenv.cfg",
+        "research/official-docs/官方文档.txt",
+    )
+    for relative in (*tracked, *ignored):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"example\n")
+
+    subprocess.run(["git", "add", "--", *tracked], cwd=tmp_path, check=True)
+    assert find_violations(tmp_path) == []
+
+    subprocess.run(["git", "add", "-f", "--", *ignored], cwd=tmp_path, check=True)
+    violations = find_violations(tmp_path)
+    assert _paths(violations) == set(ignored)
+    assert {row["kind"] for row in violations} == {"tracked_ignored"}
+
+
+def test_cleanup_preserves_indexed_cache_files_and_ancestors(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    cache_dir = tmp_path / ".pytest_cache"
+    cache_dir.mkdir()
+    indexed = cache_dir / "important.txt"
+    indexed.write_bytes(b"tracked\n")
+    transient = tmp_path / ".coverage"
+    transient.write_bytes(b"transient\n")
+    subprocess.run(["git", "add", "--", ".pytest_cache/important.txt"], cwd=tmp_path, check=True)
+
+    result = clean(tmp_path, apply=True)
+
+    assert result["removed"] == [".coverage"]
+    skipped = result["skipped"]
+    assert isinstance(skipped, list)
+    assert {row["path"] for row in skipped} == {".pytest_cache"}
+    assert indexed.read_bytes() == b"tracked\n"
+    assert not transient.exists()
 
 
 def test_report_and_cli_return_failure_for_dirty_tree(tmp_path: Path, capsys) -> None:

@@ -27,11 +27,13 @@ jobs:
       - name: 仓库卫生 —— 拒绝提交缓存、字节码与临时产物
         run: python tools/ci/run_check.py hygiene
       - name: 从项目唯一依赖声明安装检查工具
-        run: python -m pip install ".[dev]"
+        run: python -m pip install -e ".[dev]"
       - name: ruff —— 代码检查
-        run: python -m ruff check .
+        run: python tools/ci/run_check.py lint .
       - name: ruff —— 格式检查
-        run: python -m ruff format --check .
+        run: python tools/ci/run_check.py format --check .
+      - name: 构建 wheel 并核对全量源码
+        run: python tools/ci/run_check.py python-package
 
   check:
     name: check (${{ matrix.os }}, 3.15)
@@ -60,14 +62,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
-      - name: pip check — 平台依赖闭包可解析
-        run: python -m pip check
-
       - name: UTF-8 无 BOM + LF —— 全部提交文本
         run: python tools/ci/run_check.py encoding
 
       - name: mypy —— 类型检查
-        run: mypy
+        run: python tools/ci/run_check.py types
 
       - name: 创建测试产物目录
         run: python -c "from pathlib import Path; Path('tools/out/ci').mkdir(parents=True, exist_ok=True)"
@@ -83,8 +82,8 @@ jobs:
           python tools/ci/test_summary.py tools/out/ci/test-results.xml
           --output tools/out/ci/test-summary.json
 
-      - name: 情境决策合同 —— 无游戏目录审计
-        run: python tools/ci/run_check.py decision-audit
+      - name: 离线静态基线 —— 依赖、快照、Mod 合同和死代码审计
+        run: python tools/ci/run_check.py baseline-offline
 
       - name: 测试摘要归档
         if: always()
@@ -92,18 +91,6 @@ jobs:
         with:
           name: test-summary-${{ matrix.os }}-py3.15
           path: tools/out/ci/
-
-      - name: v3 verify —— 用入库快照核验一部分断言
-        run: v3 verify --from-snapshot
-
-      - name: v3 tables --offline —— 用入库快照核验生成表
-        run: v3 tables --offline
-
-      - name: v3 modguard --offline —— 锁定快照的生产接口门禁
-        run: v3 modguard --offline
-
-      - name: v3 ai-surface --check --offline —— 可执行面（同一份快照）
-        run: v3 ai-surface --check --offline
 
   bench:
     runs-on: ubuntu-latest

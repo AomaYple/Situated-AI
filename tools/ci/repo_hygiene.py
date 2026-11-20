@@ -3,7 +3,8 @@
 这个检查只负责仓库卫生，不判断源码是否可以删除，也不扫描 ``tools/out``、
 ``.venv``、``.claude``、``.superpowers`` 或官方文档镜像中的运行态内容：这些
 目录分别由证据、环境、协作工具和原文字节契约管理。默认只报告，不改变仓库
-内容；``--clean`` 仍是 dry-run，只有显式传入 ``--apply`` 才会删除白名单项目。
+内容。Git 索引另行核对强制入库的忽略项。``--clean`` 仍是 dry-run，
+只有显式传入 ``--apply`` 才会删除白名单项目。
 清理不会跟随符号链接或 Windows reparse point，也不会触碰受控证据目录。
 
 用法::
@@ -20,6 +21,7 @@ import argparse
 import json
 import shutil
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -98,6 +100,23 @@ def _is_root_build(relative: Path) -> bool:
     )
 
 
+def _git_index_paths(root: Path, *options: str) -> list[Path]:
+    """读取普通检出或链接工作树的 Git 索引路径。"""
+
+    if not (root / ".git").exists():
+        return []
+    result = subprocess.run(
+        ["git", "ls-files", "--cached", "-z", *options],
+        cwd=root,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode:
+        detail = result.stderr.decode("utf-8", errors="replace").strip()
+        raise OSError(f"无法读取 Git 索引（退出码 {result.returncode}）：{detail}")
+    return [Path(name) for name in result.stdout.decode("utf-8").split("\0") if name]
+
+
 def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
     """返回按路径排序的可再生运行态违规项。
 
@@ -108,7 +127,14 @@ def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
     root = root.resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"卫生检查根目录不存在或不是目录：{root}")
-    violations: list[dict[str, str]] = []
+    violations = [
+        {
+            "path": path.as_posix(),
+            "kind": "tracked_ignored",
+            "detail": "Git 索引含仓库 .gitignore 禁止入库的路径",
+        }
+        for path in _git_index_paths(root, "--ignored", "--exclude-per-directory=.gitignore")
+    ]
 
     def walk(base: Path) -> None:
         try:
@@ -166,7 +192,7 @@ def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
                     }
                 )
                 continue
-            if path.is_dir():
+            if stat.S_ISDIR(info.st_mode):
                 if path.name == "__pycache__":
                     violations.append(
                         {
@@ -178,7 +204,7 @@ def find_violations(root: Path = ROOT) -> list[dict[str, str]]:
                     continue
                 walk(path)
                 continue
-            if path.is_file() and path.suffix.lower() in {".pyc", ".pyo"}:
+            if stat.S_ISREG(info.st_mode) and path.suffix.lower() in {".pyc", ".pyo"}:
                 violations.append(
                     {
                         "path": relative.as_posix(),
@@ -218,15 +244,23 @@ def clean(root: Path = ROOT, *, apply: bool = False) -> dict[str, object]:
 
     root = root.resolve()
     violations = find_violations(root)
-    candidates = [row for row in violations if row["kind"] in CLEANABLE_KINDS]
-    skipped = [row for row in violations if row["kind"] not in CLEANABLE_KINDS]
+    tracked = _git_index_paths(root)
+    protected = {ancestor for path in tracked for ancestor in (path, *path.parents)}
+    candidates: list[dict[str, str]] = []
+    skipped: list[dict[str, str]] = []
+    for row in violations:
+        if row["kind"] not in CLEANABLE_KINDS:
+            skipped.append(row)
+        elif Path(row["path"]) in protected:
+            skipped.append({**row, "detail": "该项或其后代在 Git 索引中"})
+        else:
+            candidates.append(row)
     removed: list[str] = []
     failures: list[dict[str, str]] = []
     if apply:
         # 先处理父目录，避免清理根缓存后再对其中子项重复操作。
-        candidates = sorted(candidates, key=lambda row: (row["path"].count("/"), row["path"]))
         removed_targets: list[Path] = []
-        for row in candidates:
+        for row in sorted(candidates, key=lambda row: (row["path"].count("/"), row["path"])):
             target = _safe_target(root, row["path"])
             if target is None or any(
                 target == parent or parent in target.parents for parent in removed_targets
@@ -245,9 +279,7 @@ def clean(root: Path = ROOT, *, apply: bool = False) -> dict[str, object]:
             removed_targets.append(target)
     return {
         "mode": "apply" if apply else "dry-run",
-        "cleanable": candidates
-        if not apply
-        else [row for row in violations if row["kind"] in CLEANABLE_KINDS],
+        "cleanable": candidates,
         "skipped": skipped,
         "removed": removed,
         "failures": failures,
@@ -301,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
             if cleanup is not None:
                 payload["cleanup"] = cleanup
             _write_report(args.output, payload)
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         print(f"[hygiene] 检查失败：{exc}", file=sys.stderr)
         return 2
     payload = {"violation_count": data["violation_count"], "violations": data["violations"]}

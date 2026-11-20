@@ -114,18 +114,23 @@ def interpreter(root: Path = ROOT) -> Path:
 
 
 def main() -> int:
-    if len(sys.argv) < 2 or sys.argv[1] not in (*COMMANDS, "baseline"):
-        print(f"检查种类：{', '.join((*COMMANDS, 'baseline'))}", file=sys.stderr)
+    baseline_checks = ("baseline", "baseline-offline")
+    checks = (*COMMANDS, *baseline_checks)
+    if len(sys.argv) < 2 or sys.argv[1] not in checks:
+        print(f"检查种类：{', '.join(checks)}", file=sys.stderr)
         return 2
     check = sys.argv[1]
     current = None
     profile_environment: dict[str, str] = {}
-    if check in {"baseline", "test", "test-offline"}:
+    if check in (*baseline_checks, "test", "test-offline"):
         from pdx import version_contracts  # noqa: PLC0415
 
         parser = None
-        if check == "baseline":
-            parser = argparse.ArgumentParser(description="完整静态基线，含当前版本生产与离线合同。")
+        if check in baseline_checks:
+            description = "完整静态基线，含当前版本生产与离线合同。"
+            if check == "baseline-offline":
+                description = "离线静态基线，无需游戏安装。"
+            parser = argparse.ArgumentParser(description=description)
             parser.add_argument("--profile", choices=(version_contracts.CURRENT_VERSION,))
             profile = parser.parse_args(sys.argv[2:]).profile
         else:
@@ -151,19 +156,20 @@ def main() -> int:
     # -B applies to this child; the environment also covers nested Python tools.
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env.update(profile_environment)
-    if check == "baseline":
+    if check in baseline_checks:
         assert current is not None
         commands = list(BASELINE_COMMANDS)
-        commands.extend(
-            (f"{current} {name}", ["pdx.cli", name, "--profile", current, *options])
-            for name, options in (
-                ("modgen", ["--check"]),
-                ("modguard", ["--offline"]),
-                ("decision-audit", ["--offline"]),
+        if check == "baseline":
+            commands.extend(
+                (f"{current} {name}", ["pdx.cli", name, "--profile", current, *options])
+                for name, options in (
+                    ("modgen", ["--check"]),
+                    ("modguard", ["--offline"]),
+                    ("decision-audit", ["--offline"]),
+                )
             )
-        )
         for label, command in commands:
-            print(f"[baseline] {label}", flush=True)
+            print(f"[{check}] {label}", flush=True)
             result = subprocess.run(
                 [str(python), "-B", "-X", "utf8", "-m", *command],
                 cwd=ROOT,
@@ -171,7 +177,7 @@ def main() -> int:
                 env=env,
             )
             if result.returncode:
-                print(f"[baseline] {label} 失败（退出码 {result.returncode}）", file=sys.stderr)
+                print(f"[{check}] {label} 失败（退出码 {result.returncode}）", file=sys.stderr)
                 return result.returncode
         return 0
     command = COMMANDS[check]
