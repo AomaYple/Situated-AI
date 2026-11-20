@@ -1,27 +1,17 @@
 # 工具目录
 
-当前实施状态见[工作清单](../docs/design/当前工作清单.md)和[拓展结果](../docs/design/exec/广度深度拓展-结果.md)；本轮实际交付见[3.2.0交付结果](../docs/design/exec/3.2.0-交付结果.md)，版本身份统一见[版本交付索引](../docs/design/exec/版本交付-结果.md)。
+工具目录汇集检查、基准、静态分析、快照和本机诊断入口。环境、验证和发布的完整步骤见[贡献指南](../CONTRIBUTING.md)，文档生成入口见[生成文档维护](../docs/README.md#生成文档维护)。
 
-当前架构与计划归档入口见[架构主计划](../docs/design/架构主计划.md)与[架构子计划](../docs/design/架构子计划.md)。
-生产已接入具体观测与行动、同因分档取强、独立收益成本联合和消费者末端一次限幅；国家协调按需读取当前事实，全国排他路线已退役，独立财政迟滞保留。
-历史收口工具核验 A2 的 S0–S6 机器收据；已完成的 X1 以逐项生产差异、独立见证、定向与集中检查和交付事实验收。旧收据不重签新源码，不能凭工具存在或默认静态通过声称拓展完成。
-旧合同见[处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)；
-历史证据见[分层联动执行结果](../docs/design/exec/分层联动-执行结果.md)。
-
-这里保存可复现的工程检查、基准、静态分析、快照和一次性输出约定。游戏长期行为、压力长跑和 GUI 自动化不属于
-当前工程交付链；日志分析、快照核对和最小复现辅助仍可用于处理用户反馈。发布包不包含 Python 工具、日志或
-历史实验。
-
-环境、验证和发布步骤见[贡献指南](../CONTRIBUTING.md)，文档生成入口见[文档导航](../docs/README.md#生成文档维护)。
+产品接口的实施顺序见[架构主计划](../docs/design/架构主计划.md)和[架构子计划](../docs/design/架构子计划.md)。旧诊断命令的阶段背景见[处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)。
 
 ## 当前入口
 
 | 路径/命令 | 用途 |
 |---|---|
-| `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、full-acceptance、offline、decision-audit、baseline、deadcode、python-package |
-| `tools/ci/repo_hygiene.py` | 检查缓存、字节码、根构建物及 `src/` 直系 egg-info；`--clean` 预览，追加 `--apply` 才清理白名单 |
+| `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、full-acceptance、offline、decision-audit、baseline-offline、baseline、deadcode、python-package |
+| `tools/ci/repo_hygiene.py` | 检查物理残留及被仓库忽略规则命中的已跟踪路径。`--clean` 预览，追加 `--apply` 执行白名单清理，保留已跟踪内容 |
 | `tools/ci/python_package.py` | 在临时源码副本中构建 wheel，核对源码模块集合、字节、ZIP 重复条目与完整性 |
-| `tools/ci/situated_closeout.py` | 汇总生成锁、标准包禁带项、生产编码、ConsumerIR owner 和卫生；`--require-engineering` 核对 A2/S0–S5 的功能、依赖、来源、真实见证与独立原版范围，`--require-plan` 继续核对 S6 实际发布与部署 |
+
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |
 | `tools/ci/test_summary.py` | 汇总 pytest JUnit XML 并给 skipped 测试分配工程类别；未知或空的跳过原因返回退出码 2 |
@@ -36,10 +26,6 @@
 
 `src/pdx/observe.py`、`src/pdx/savegame.py` 及 CLI 观察入口用于只读分析用户提供的日志和存档；
 它们属于工程辅助能力，不进入标准 Mod 包，也不把日志或存档摘要升级为 AI 行为质量结论。
-
-历史 A2 的逐项见证与范围处置由[架构阶段收据](../docs/design/exec/架构阶段收据.json)绑定；已完成的 X1 见[拓展结果](../docs/design/exec/广度深度拓展-结果.md)。`implemented` 需要相同物理消费者的实际 PDX 见证；
-保留原版需要完整来源、父结构、变量与引用闭包证明，不代签新增功能。跨域关系只消费已观察世界事实，不把候选评分或调整倾向当作执行完成。
-源码、测试、生成物、scope 或测试身份漂移后，原证据不能自动沿用；完整资源回归也不能由局部用例相加代替。
 
 ### 按游戏日期归档存档
 
@@ -65,24 +51,9 @@ SHA-256 校验。它不会启动、暂停、加速或向游戏窗口发送输入
 将解释器替换为 `.venv/bin/python`，并使用对应平台的用户目录。
 文件稳定和副本哈希只证明归档复制过程，不能替代游戏内读档验证；本工具不主动请求游戏保存。
 
-## 常用命令
+## 历史收口工具
 
-Windows：
-
-```text
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py hygiene
-.venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout
-.venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout --require-engineering
-.venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout --require-plan
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package
-```
-
-macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安装，按
-[CONTRIBUTING.md](../CONTRIBUTING.md) 的依赖步骤安装；不要把虚拟环境或 `tools/out/` 加入 Git。
+`tools/ci/situated_closeout.py` 用于复核历史 A2 阶段身份。`--require-engineering` 核对 S0–S5，`--require-plan` 继续核对 S6 交付，范围见[架构阶段收据](../docs/design/exec/架构阶段收据.json)。
 
 ## 输出和边界
 
@@ -92,11 +63,11 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 
 ## CLI 分层
 
-- `v3 analyze`、`information-catalog`、`snapshot`：读取锁定游戏或快照，生成 mod 开发知识和版本差异。
+- 普通 `v3 analyze` 生成现场概览。完整安装和已提交原件的只读研究入口见[贡献指南](../CONTRIBUTING.md#完整安装研究)。`v3 snapshot` 用于生成可核验的版本快照。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
-- `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成并核对标准 ZIP 和 manifest；标签、Release 和包哈希见
+- `python -m pdx.cli package`、`pdx.distribution.validate_package`：按生产源版本生成并核对标准 ZIP 和 manifest；标签、Release 和包哈希见
   [版本交付索引](../docs/design/exec/版本交付-结果.md)，候选与部署事实见[当前工作清单](../docs/design/当前工作清单.md)。命令成功不能证明已发布或已部署。
-- `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。
+- `v3 verify --from-snapshot` 和 `v3 tables --offline` 可在无游戏环境核对快照断言与文档。`v3 citations <路径...>` 读取本机游戏文件。
 
 `modguard --offline` 通过 `mod/generation-lock.json` 核对冻结源码/产物原始字节，再审计脚本语法与快照接口；
 `modgen --write/--check` 和 `package` 始终需要锁定原版。无游戏 CI 不执行原版重生成，也不会回退打包旧产物。

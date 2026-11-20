@@ -81,7 +81,7 @@ python -m pdx.cli analyze --installation --output-dir <本机研究目录>
 python -m pdx.cli analyze --raw-root <原件目录> --epoch <epoch摘要> --output-dir <本机研究目录>
 ```
 
-`COMPLETE.json` 绑定安装分母及两个输出的摘要。`information-catalog.json` 保留每个文件的处置、按格式汇总的解码和解析状态，以及五层证据覆盖。`occurrences.sqlite` 可按来源、键、路径和出现位置查询 PDX 脚本、地图邻接表、本地化及其他已读取资料。普通 `analyze` 继续生成现场概览和 Mod 交叉报告。研究目录供本机使用，其中含原版资料。
+输出目录的父目录须存在。`COMPLETE.json` 绑定安装分母及两个输出的摘要。`information-catalog.json` 保留每个文件的处置、按格式汇总的解码和解析状态，以及五层证据覆盖。`occurrences.sqlite` 可按来源、键、路径和出现位置查询 PDX 脚本、地图邻接表、本地化及其他已读取资料。普通 `analyze` 继续生成现场概览和 Mod 交叉报告。研究目录供本机使用，其中含原版资料。仓库内的研究输出使用 Git 忽略路径。
 
 ## Mod 生成与打包
 
@@ -146,13 +146,12 @@ python tools/ci/run_check.py hygiene
 python tools/ci/run_check.py lint .
 python tools/ci/run_check.py format --check .
 python tools/ci/run_check.py types
-python tools/ci/run_check.py baseline
+python tools/ci/run_check.py baseline-offline
 ```
 
-`baseline` 已包含依赖一致性、离线断言、离线表格、`modguard --offline`、`decision-audit --offline`、`ai-surface --check`
-和死代码审计，无需另行重复运行。
+`baseline-offline` 与三平台 CI 使用同一入口，依次核对依赖、离线断言、离线生成表格、Mod 门禁、情境决策合同、AI 可执行面和死代码报告。`baseline` 复用这七项，指定 `--profile` 时追加实装检查。
 
-静态基线追加当前版本的生产生成检查，需要本机安装锁定原版。完整验收也核对同一安装身份。
+带 `--profile` 的静态基线追加生产生成检查，需要本机锁定安装。完整验收始终核对当前安装身份。
 
 ```text
 python tools/ci/run_check.py baseline --profile 1.15.2
@@ -175,7 +174,7 @@ pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录�
 统一检查入口禁止当前及嵌套 Python 写入字节码；测试和静态工具仍可能生成其他缓存。结束后清理可再生目录，再运行 `hygiene` 作为最后的卫生检查；
 不要与测试并行运行 hygiene，否则会把测试正在创建的缓存误报成残留。
 可用 `python -m tools.ci.repo_hygiene --clean` 预览清理白名单；实际清理追加 `--apply`。
-该入口只清理缓存、字节码、根目录构建物和 `src/` 直系 egg-info，链接、reparse point、环境及证据目录不在清理范围。
+该入口仅清理白名单中的缓存、字节码、根目录构建物和 `src/` 直系 egg-info，并保护 Git 已跟踪文件及其父目录。链接、reparse point、环境和证据目录按原保护范围保留。卫生检查也会报告被仓库忽略规则命中且已强制入库的路径。历史与当前共六份精简快照及登记的 G1 证据以 `.gitignore` 的精确路径为准。
 
 历史工具 `tools/ci/situated_closeout.py` 只核验归档 A2 身份，不是当前完成门；其历史实现与证据保留在原有源码、测试及归档收据中，不代替当前工程或产品验收。
 

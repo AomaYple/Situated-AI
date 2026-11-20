@@ -1,6 +1,6 @@
 # Situated 引擎静态证据
 
-本目录保存版本固定的原始字节证据。它们属于 `static_check`，不执行游戏，也不证明运行效果、数值平衡或
+本目录保存版本固定的原始字节证据。本页以下逐字段记录属于 Victoria 3 **1.14.5**；1.15.2 的原版证据和生产复验见[当前工作清单](../../docs/design/当前工作清单.md)及其迁移收据。它们属于 `static_check`，不执行游戏，也不证明运行效果、数值平衡或
 完整下游行为。生产入口必须重新核对当前 EXE 和原版来源；离线快照只提供历史证据身份。
 
 ## 法律颁布权重文档摘录
@@ -22,7 +22,7 @@
 | 修订 4 | [strategy-scope-r4.json](victoria3-1.14.5-strategy-scope-r4.json) | `1012740c43d88e4a6665ac72cb9f0caea7fc516fd0974dd2b710075e9fa4bf8e` | 保留 17 个逐字段消费者，303 段原始字节观察；补齐两个目标评分枚举与精确对象 |
 | 修订 5 | [strategy-scope-r5.json](victoria3-1.14.5-strategy-scope-r5.json) | `e852bcd7f73d5da44f50c314a6ed921fa9aad4c32e2dbabf31ee536d3e6be463` | 保留 19 个逐字段消费者，325 段原始字节观察；追加海军目标与造船输出成员链 |
 | 修订 6 | [strategy-scope-r6.json](victoria3-1.14.5-strategy-scope-r6.json) | `39b41be99801353ea76c64a1f6c0dbe4c8debe725f52488b045e4a5de8d7d528` | 保留 29 个逐字段消费者，388 段原始字节观察；追加十条独立标量链及博弈实例类型 |
-| 修订 7 | [strategy-scope-r7.json](victoria3-1.14.5-strategy-scope-r7.json) | `3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1` | 当前 33 个逐字段消费者，452 段原始字节观察；追加 treaty/stance 精确 map 与两条舰船标量链 |
+| 修订 7 | [strategy-scope-r7.json](victoria3-1.14.5-strategy-scope-r7.json) | `3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1` | 1.14.5 修订 7 的 33 个逐字段消费者，452 段原始字节观察；追加 treaty/stance 精确 map 与两条舰船标量链 |
 
 修订 2 保留初版全部合同与观察，追加两条精确消费者链和 28 段观察，并更正初版对 `institution_scores`
 尚未授权的限制。初版文件原字节不变。共同锁定 Victoria 3 1.14.5 Windows x64 EXE：
