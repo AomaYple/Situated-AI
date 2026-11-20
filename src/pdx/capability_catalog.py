@@ -70,6 +70,7 @@ def implementation_digest() -> str:
         "structured_csv.py",
         "structured_json.py",
         "research_catalog.py",
+        "research_coverage.py",
         "research_output.py",
         "native_rename.py",
         "binary_headers.py",
@@ -152,7 +153,10 @@ class OccurrenceIndex:
     def connect(self, *, historical_locators: bool = False) -> Iterator[sqlite3.Connection]:
         self.implementation_status(historical_locators=historical_locators)
         with open_inventory_source(self.path.parent.absolute(), self.path.name) as stream:
-            if hashlib.file_digest(stream, "sha256").hexdigest() != self.sha256:
+            digest = hashlib.sha256()
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+            if digest.hexdigest() != self.sha256:
                 raise ValueError("出现位置索引摘要漂移 digest mismatch")
             connection = sqlite3.connect(
                 self.path.absolute().as_uri() + "?mode=ro&immutable=1", uri=True

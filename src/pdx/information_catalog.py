@@ -52,6 +52,7 @@ from .input_inventory import (
 from .localization import SUFFIXES, parse_loc_entries_with_lines
 from .model import Assignment, Block, ParseError, Scalar
 from .parser import parse_bytes
+from .research_coverage import FormatStructureEvidence
 from .scan import FileEntry, walk_files
 from .structured_csv import parse_map_table
 from .structured_json import parse_json
@@ -62,6 +63,7 @@ if TYPE_CHECKING:
 
     from .input_contracts import CaptureCheck, InputIdentity, InputInventory, InventoryRecord
     from .model import ParsedFile
+    from .research_coverage import ResearchCoverage
 
 
 class InformationStatus(StrEnum):
@@ -292,6 +294,8 @@ class ResearchInformationCatalog(InformationCatalog):
 
     layered: LayeredCatalog = field(kw_only=True)
     final_installation_check: CaptureCheck | None = field(default=None, kw_only=True)
+    format_evidence: tuple[FormatStructureEvidence, ...] = field(default=(), kw_only=True)
+    research_coverage: ResearchCoverage | None = field(default=None, kw_only=True)
     format_version: int = 2
 
     def to_dict(self) -> dict[str, object]:
@@ -302,6 +306,8 @@ class ResearchInformationCatalog(InformationCatalog):
                 "input_identity_capture_check_scope": "initial_inventory",
                 "final_inventory": asdict(self.final_installation_check),
             }
+        if self.research_coverage is not None:
+            layers["research_coverage"] = self.research_coverage.to_dict()
         result["分层目录"] = layers
         return result
 
@@ -850,6 +856,7 @@ def _build_research_index(
 ) -> ResearchInformationCatalog:
     items: list[InformationItem] = []
     dispositions: list[FileDisposition] = []
+    format_evidence: list[FormatStructureEvidence] = []
     installation = Path(identity.installation_root)
 
     def read(
@@ -1120,6 +1127,18 @@ def _build_research_index(
             elif binary_probe and raw is not None:
                 header = binary_header(suffix, raw)
                 reason = f"binary_header_{header['status']}; payload parser unavailable"
+                assert record.sha256 is not None
+                structure_status: ParseStatus = (
+                    "complete" if header["status"] == "observed" else "failed"
+                )
+                format_evidence.append(
+                    FormatStructureEvidence(
+                        ArtifactRef("installation", record.path, record.sha256),
+                        suffix.removeprefix("."),
+                        structure_status,
+                        "metadata",
+                    )
+                )
             elif category in {"image_map", "font", "audio_video", "binary"}:
                 parse_status = "not_applicable"
                 reason = "binary/media raw engineering input; no text reader or engine observation inferred"
@@ -1251,6 +1270,7 @@ def _build_research_index(
         layered=LayeredCatalog(
             identity, inventory, rows, index, base_frontier(identity, rows), raw_root
         ),
+        format_evidence=tuple(format_evidence),
     )
 
 

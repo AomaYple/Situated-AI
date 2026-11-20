@@ -449,6 +449,9 @@ def research_query_cmd(
     key: Annotated[str | None, typer.Option(help="精确结构键")] = None,
     after: Annotated[str, typer.Option(help="上一页的最后一个位置 ID")] = "",
     limit: Annotated[int, typer.Option(min=1, max=10000, help="每组查询的最大行数")] = 100,
+    coverage_report: Annotated[
+        bool, typer.Option("--coverage-report", help="包含按独立分母汇总的全部逐项覆盖与缺口")
+    ] = False,
     historical_locators: Annotated[
         bool, typer.Option("--historical-locators", help="读取已登记的旧实现位置索引")
     ] = False,
@@ -458,6 +461,7 @@ def research_query_cmd(
         with research_catalog.open_published(
             directory, historical_locators=historical_locators
         ) as (publication, connection):
+            sources: list[str | None] = list(source) if source else [None]
             queries = [
                 {
                     "source": path,
@@ -469,10 +473,10 @@ def research_query_cmd(
                         )
                     ],
                 }
-                for path in (source or [None])
+                for path in sources
                 if path is not None or key is not None
             ]
-            result = {
+            result: dict[str, object] = {
                 "epoch_id": publication.index.epoch_id,
                 "file_set_sha256": publication.index.file_set_sha256,
                 "implementation_sha256": publication.index.implementation_sha256,
@@ -481,6 +485,8 @@ def research_query_cmd(
                 "coverage": publication.coverage,
                 "queries": queries,
             }
+            if coverage_report:
+                result["research_coverage"] = publication.research_coverage
     except (OSError, ValueError, sqlite3.Error) as exc:
         _fail(f"研究目录读取失败：{exc}", EXIT_FAILED)
     typer.echo(json.dumps(result, ensure_ascii=False, indent=2))

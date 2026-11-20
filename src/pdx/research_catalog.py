@@ -29,6 +29,7 @@ from .input_inventory import (
     matches_default_strategy,
     open_inventory_source,
 )
+from .research_coverage import build_research_coverage
 from .research_output import open_local_evidence_output, validate_local_output
 
 if TYPE_CHECKING:
@@ -47,6 +48,7 @@ class PublishedResearch:
     projection: str
     implementation_status: str
     coverage: list[dict[str, Any]]
+    research_coverage: dict[str, Any] | None
 
 
 def _object(value: object) -> dict[str, Any]:
@@ -126,7 +128,16 @@ def open_published(
         coverage = layered.get("coverage")
         if not isinstance(coverage, list):
             raise ValueError("研究目录缺少覆盖统计")
-        published = PublishedResearch(index, projection, status, [_object(row) for row in coverage])
+        report_payload = layered.get("research_coverage")
+        report = None if report_payload is None else _object(report_payload)
+        if report is not None and (
+            report.get("epoch_id") != index.epoch_id
+            or report.get("file_set_sha256") != index.file_set_sha256
+        ):
+            raise ValueError("研究覆盖分母与索引身份不相同")
+        published = PublishedResearch(
+            index, projection, status, [_object(row) for row in coverage], report
+        )
         del layered, inventory
         with index.connect(historical_locators=historical_locators) as connection:
             yield published, connection
@@ -192,7 +203,16 @@ def write(raw_root: Path, epoch: str, output_dir: Path) -> Path:
                 raw_root=raw_root,
                 index_path=staging / _INDEX_NAME,
             )
-            files, encoded = _products(catalog, staging, destination.root)
+            report = build_research_coverage(
+                inventory.records,
+                inventory,
+                catalog.layered.dispositions,
+                denominator_status=inventory.completeness,
+                format_evidence=catalog.format_evidence,
+            )
+            files, encoded = _products(
+                replace(catalog, research_coverage=report), staging, destination.root
+            )
         return destination.publish(files, encoded, scratch=staging)
 
 
@@ -248,6 +268,13 @@ def write_installation(installation: Path, output_dir: Path) -> Path:
         final_check = CaptureCheck(
             datetime.now(UTC).isoformat(), identity_digest, scan.file_set_sha256, "stable"
         )
-        catalog = replace(catalog, final_installation_check=final_check)
+        report = build_research_coverage(
+            checked.records,
+            inventory,
+            catalog.layered.dispositions,
+            denominator_status=inventory.completeness,
+            format_evidence=catalog.format_evidence,
+        )
+        catalog = replace(catalog, final_installation_check=final_check, research_coverage=report)
         files, encoded = _products(catalog, staging, destination.root)
         return destination.publish(files, encoded, scratch=staging)

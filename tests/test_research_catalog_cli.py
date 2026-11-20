@@ -446,10 +446,18 @@ def test_research_query_rejects_marker_catalog_mismatch(
     output = tmp_path / "current-research"
     result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
     assert result.exit_code == 0, result.output
-    query = ["research-query", str(output), "--key", "sample_key"]
+    query = ["research-query", str(output), "--key", "sample_key", "--coverage-report"]
     result = CliRunner().invoke(cli.app, query)
     assert result.exit_code == 0, result.output
-    assert json.loads(result.stdout)["implementation_status"] == "current"
+    document = json.loads(result.stdout)
+    assert document["implementation_status"] == "current"
+    report = document["research_coverage"]
+    assert report["file_set_sha256"] == document["file_set_sha256"]
+    assert report["totals"]["denominator"] == len(
+        [path for path in live_installation.rglob("*") if path.is_file()]
+    )
+    assert report["denominator_status"] == "complete"
+    assert report["totals"]["semantic"]["object_denominator_status"] == "unknown"
 
     marker_path = output / "COMPLETE.json"
     marker = json.loads(marker_path.read_bytes())
