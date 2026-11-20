@@ -11,6 +11,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+OFFLINE_PYTEST = ["pytest", "-m", "not integration and not benchmark"]
 COMMANDS = {
     "lint": ["ruff", "check", "--force-exclude"],
     "format": ["ruff", "format", "--force-exclude"],
@@ -19,7 +20,17 @@ COMMANDS = {
     "full-acceptance": ["tools.ci.test_suite"],
     "python-package": ["tools.ci.python_package"],
     # 用参数列表传递 marker 表达式，避免 Windows shell 把空格拆成路径。
-    "test-offline": ["pytest", "-m", "not integration and not benchmark"],
+    "test-offline": OFFLINE_PYTEST,
+    "test-offline-ci": [*OFFLINE_PYTEST, "--max-worker-restart=0", "-vv", "--durations=25"],
+    "test-benchmark": [
+        "pytest",
+        "tests/test_benchmarks.py",
+        "-o",
+        "addopts=",
+        "--benchmark-only",
+        "--benchmark-json=bench.json",
+        "-q",
+    ],
     "offline": ["pdx.cli", "verify", "--from-snapshot"],
     "decision-audit": ["pdx.cli", "decision-audit", "--offline"],
     "encoding": [
@@ -121,7 +132,7 @@ def main() -> int:
         return 2
     check = sys.argv[1]
     current = None
-    if check in (*baseline_checks, "test", "test-offline"):
+    if check in (*baseline_checks, "test", "test-offline", "test-offline-ci"):
         from pdx import version_contracts  # noqa: PLC0415
 
         parser = None

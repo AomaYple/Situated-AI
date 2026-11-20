@@ -65,14 +65,8 @@ jobs:
       - name: mypy —— 类型检查
         run: python tools/ci/run_check.py types
 
-      - name: 创建测试产物目录
-        run: python -c "from pathlib import Path; Path('tools/out/ci').mkdir(parents=True, exist_ok=True)"
-
       - name: pytest —— 不依赖游戏的用例
-        run: >-
-          python tools/ci/run_check.py test-offline
-          --max-worker-restart=0 -vv --durations=25
-          --junitxml=tools/out/ci/test-results.xml
+        run: python tools/ci/run_check.py test-offline-ci --junitxml=tools/out/ci/test-results.xml
 
       - name: 测试跳过项 —— 分类并拒绝未知原因
         run: >-
@@ -106,9 +100,7 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: pytest-benchmark —— 不需要游戏的基准
-        run: |
-          python -m pytest tests/test_benchmarks.py \
-            -o addopts="" --benchmark-only --benchmark-json=bench.json -q
+        run: python tools/ci/run_check.py test-benchmark
 
       - name: 把基准数字写进 job summary
         run: python tools/ci/bench_summary.py bench.json --github-step-summary
@@ -146,6 +138,4 @@ jobs:
         run: v3 lock
 
       - name: pytest —— 在锁定的环境里跑不依赖游戏的用例
-        run: >-
-          python tools/ci/run_check.py test-offline
-          --max-worker-restart=0 -vv --durations=25
+        run: python tools/ci/run_check.py test-offline-ci
