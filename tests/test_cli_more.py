@@ -13,13 +13,17 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 import pytest
 from _helpers import run_cli as _run
 from conftest import NEEDS_GAME, configure_current_identity
 
-from pdx import config, docgen, verify
+from pdx import config, docgen, snapshot, verify
 from pdx.doc_tables import TableSpec
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pytestmark = pytest.mark.unit
 
@@ -293,9 +297,19 @@ def test_snapshot_diff_域集合不同时会点明() -> None:
 
 
 @NEEDS_GAME
-def test_snapshot_verify_自检() -> None:
+@pytest.mark.cli
+@pytest.mark.slow
+def test_snapshot_verify_自检(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    shared = config.OUT / "snapshots"
+    before = sorted(p.name for p in shared.glob("*.json"))
+    monkeypatch.setattr(snapshot, "SNAPSHOT_DIR", tmp_path)
+
     result = _run("snapshot", "verify")
     assert result.exit_code == 0, result.output
+    assert "两次构建结果完全一致" in result.output
+    assert not list(tmp_path.iterdir()), "自检不得写出快照"
+    after = sorted(p.name for p in shared.glob("*.json"))
+    assert after == before, "自检必须保留仓库共享快照目录的文件集合"
 
 
 @NEEDS_GAME
