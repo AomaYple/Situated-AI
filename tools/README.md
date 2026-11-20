@@ -2,7 +2,7 @@
 
 工具目录汇集检查、基准、静态分析、快照和本机诊断入口。环境、验证和发布的完整步骤见[贡献指南](../CONTRIBUTING.md)，文档生成入口见[生成文档维护](../docs/README.md#生成文档维护)。
 
-产品接口的实施顺序见[架构主计划](../docs/design/架构主计划.md)和[架构子计划](../docs/design/架构子计划.md)。旧诊断命令的阶段背景见[处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)。
+产品接口的实施顺序见[架构主计划](../docs/design/架构主计划.md)和[架构子计划](../docs/design/架构子计划.md)。
 
 ## 当前入口
 
@@ -11,13 +11,13 @@
 | `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、full-acceptance、offline、decision-audit、baseline-offline、baseline、deadcode、python-package |
 | `tools/ci/repo_hygiene.py` | 检查物理残留及被仓库忽略规则命中的已跟踪路径。`--clean` 预览，追加 `--apply` 执行白名单清理，保留已跟踪内容 |
 | `tools/ci/python_package.py` | 在临时源码副本中构建 wheel，核对源码模块集合、字节、ZIP 重复条目与完整性，并拒绝允许清单之外的条目 |
-
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |
 | `tools/ci/test_summary.py` | 汇总 pytest JUnit XML 并给 skipped 测试分配工程类别；未知或空的跳过原因返回退出码 2 |
 | [CI 基准摘要](ci/bench_summary.py) | 把 pytest-benchmark JSON 汇总成 Markdown，默认输出到 stdout。`--github-step-summary` 为 CI 追加摘要。 |
 | `tools/ci/mem_baseline.py` | 并行测试内存基线：整套峰值、每 worker 峰值和总耗时，输出写入忽略的 `tools/out/mem/` |
-| `tools/ci/architecture_witness_capture.py` | 显式启用的串行 pytest 插件，采集独立 PDX 见证并写出结果与草稿行，不写阶段完成 |
+| `tools/ci/architecture_witness_capture.py` | 串行 pytest 插件，按声明采集当前生产 PDX 见证，核对生产生成锁和现行原版输入，写入结果与草稿行 |
+| `python -m tools.ci.r2_profile_budget` | 从锁定安装构建当前生产候选并核对 R2 叠加层的编译、读取和遍历预算，超限返回失败 |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
 | `tools/benchmarks/profile_suite.py` | pytest cProfile 插件：每个 worker 独立落盘，按模块汇总函数自身耗时；分析有额外开销，不能代替墙钟/RSS 基线 |
 | `tools/prof/prof_e2e.py` | 全量分析端到端性能剖析（`full`、`stages`、`walkaudit`、`prefixaudit`），会重跑分析流水线 |
@@ -48,14 +48,12 @@ SHA-256 校验。它不会启动、暂停、加速或向游戏窗口发送输入
 将解释器替换为 `.venv/bin/python`，并使用对应平台的用户目录。
 文件稳定和副本哈希只证明归档复制过程，不能替代游戏内读档验证；本工具不主动请求游戏保存。
 
-## 历史收口工具
-
-`tools/ci/situated_closeout.py` 用于复核历史 A2 阶段身份。`--require-engineering` 核对 S0–S5，`--require-plan` 继续核对 S6 交付，范围见[架构阶段收据](../docs/design/exec/架构阶段收据.json)。
-
 ## 输出和边界
 
-`tools/out/`、`dist/`、缓存、日志和基准原件是可再生或机器相关输出，默认忽略。需要留档的静态快照或审计结果
-应复制为精简、可复核的文件，并在结果页说明来源、SHA-256、日期和限制。工程测试、静态快照、包校验和脚本加载
+`tools/out/`、`dist/`、缓存、日志和基准原件是可再生或机器相关输出，默认忽略。受控快照是
+`tools/out/snapshots/release-1.15.2.compact.json`。旧版快照、诊断工具和阶段证据可从提交
+[b3c3356e](https://github.com/AomaYple/Situated-AI/commit/b3c3356e61b7c080038f7d6a61b84d69aedc58d3) 按原路径查阅。
+需要留档的审计结果应在结果页说明来源、SHA-256、日期和限制。工程测试、静态快照、包校验和脚本加载
 不能证明 AI 行为质量、长期性能、平衡、玩家体验或创意工坊结果；这些由用户安装标准包后验收。
 
 ## CLI 分层

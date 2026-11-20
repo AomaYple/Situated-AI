@@ -10,8 +10,6 @@ import tomllib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-from pdx import version_contracts
-
 from .core_contracts import ConfigurationOption, ConfigurationSpec
 
 if TYPE_CHECKING:
@@ -72,20 +70,12 @@ class ProfileConfiguration:
         return frozenset().union(*(EXTENSION_MODULES[name] for name in self.enabled_domains))
 
     def identity(self) -> dict[str, object]:
-        identity: dict[str, object] = {
+        return {
             "core": self.core,
             "domains": sorted(self.domains),
             "enabled_domains": sorted(self.enabled_domains),
             "mode": self.mode,
         }
-        if version_contracts.active_version() == "1.15.1":
-            identity.update(
-                legacy_domains=sorted(self.legacy_domains),
-                extension_modules=sorted(self.extension_modules),
-                domain_mapping={name: sorted(LEGACY_DOMAINS[name]) for name in DOMAINS},
-                cross_domain_policy="observations do not re-enable disabled writers",
-            )
-        return identity
 
 
 def validate_coverage(domains: frozenset[str], modules: frozenset[str]) -> None:

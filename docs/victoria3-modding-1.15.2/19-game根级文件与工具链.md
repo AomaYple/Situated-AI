@@ -1,12 +1,10 @@
 # 19 · game 根级文件、工具链与 DLC 结构
 
-> 本页采用 Victoria 3 1.15.2 静态安装证据。登记断言使用 `claim` 标记。官方文档路径和指纹见 `research/official-docs-1.15.2.manifest.json`。正文保留早期研究、机器快照和订阅时点的原有标记。 分析来源与早期示例见[同名历史章节](../victoria3-modding-1.15.1/19-game根级文件与工具链.md)。
+> 本页采用 Victoria 3 1.15.2 静态安装证据。登记断言使用 `claim` 标记。官方文档路径和指纹见 `research/official-docs-1.15.2.manifest.json`。正文保留早期研究、机器快照和订阅时点的原有标记。
 
 > 本文补齐此前未覆盖的区域：`game\` 根目录的 13 个配置文件、`game\tools\` 工具链、
 > `game\dlc\` 结构、`platform_specific_game_data\` 日志配置。
 > 全部 **【实测】**。
-
-> 原始正文的 1.14.5 采集和交付说明见[历史知识库](../victoria3-modding/README.md)；本目录采用页首列出的 1.15.2 证据范围。
 
 ## 1<!--claim:env.checksum_files-->. `game\` 根目录 13 个文件
 

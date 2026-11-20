@@ -318,11 +318,6 @@ def _boundary_roles(
         "complete_native_numeric_ast": _field(_MARKED.sub("\n", candidate["built"]), field)
     }
     actual_native = {"complete_native_numeric_ast": _field(_MARKED.sub("\n", installed), field)}
-    baseline_root = (
-        config.GAME
-        if version_contracts.active_version() == version_contracts.CURRENT_VERSION
-        else config.REPO
-    )
     _record(
         architecture_witness,
         card=card,
@@ -332,7 +327,7 @@ def _boundary_roles(
         role="native_tail",
         observations={
             "remove_only_declared_overlays": True,
-            "original_source": decisions.baseline_path().relative_to(baseline_root).as_posix(),
+            "original_source": decisions.baseline_path().relative_to(config.GAME).as_posix(),
             "original_sha256": hashlib.sha256(candidate["baseline"].encode()).hexdigest(),
         },
         expected=expected_native,
@@ -500,9 +495,9 @@ def test_candidate_releases_full_outputs_before_the_next_heavy_stage(monkeypatch
         pass
 
     package = decisions.PackageContract(
-        "3.3.0", "released", "vanilla-1.15.1", "new-game-only", ("windows",), "fixture"
+        "3.3.0", "released", "vanilla-1.15.2", "new-game-only", ("windows",), "fixture"
     )
-    policy = decisions.Policy(True, "1.15.1", "baseline", 1, 1, 1, 1, 1, package)
+    policy = decisions.Policy(True, "1.15.2", "baseline", 1, 1, 1, 1, 1, package)
     extensions = decisions.Extensions(
         reform_enabled=True,
         market_enabled=True,

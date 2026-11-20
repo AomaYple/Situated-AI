@@ -38,71 +38,39 @@ from .usage import ai_script_values_key_stats, ai_script_values_referenced
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-#: doc 03 §3.1 那张 Top 25 的 25 个前缀（**作者的选取**，不是重新排序的结果）。
-#: 生成器只填数字：Top-N 榜单在并列处的取舍是作者的版面决定，
-#: 机械按 (次数, 名字) 排会把并列项换掉。
-_NAI_PREFIXES: tuple[str, ...] = (
-    "DIPLO",
-    "PRODUCTION",
-    "MONEY",
-    "AI",
-    "GOAL",
-    "FLEET",
-    "AUTONOMOUS",
-    "UNIFICATION",
-    "CHANGE",
-    "MOBILIZATION",
-    "GOVERNMENT",
-    "POWER",
-    "NAVAL",
-    "OWNER",
-    "COMPANY",
-    "DIPLOMATIC",
-    "FRONT",
-    "MIN",
-    "CONSTRUCTION",
-    "RAID",
-    "SHIP",
-    "TREATIES",
-    "DEFEND",
-    "PROTECT",
-    "BLOCKADE",
-)
-
-_NAI_PREFIX_DOMAINS = dict(
-    zip(
-        _NAI_PREFIXES,
-        (
-            "外交",
-            "生产/建造",
-            "财政",
-            "通用 AI",
-            "国家目标",
-            "舰队",
-            "自治投资",
-            "统一",
-            "变更判定",
-            "动员",
-            "政府",
-            "列强",
-            "海军",
-            "所有权",
-            "公司",
-            "外交",
-            "战线",
-            "下限",
-            "建造",
-            "袭击",
-            "舰船",
-            "条约",
-            "防御",
-            "保护",
-            "封锁",
-        ),
-        strict=True,
-    )
-)
-_NAI_PREFIX_DOMAINS.update(NUM="数量", MILITARY="军事", SUPPLY="补给", TRADE="贸易", PIRACY="海盗")
+#: NAI 参数名前缀的领域名称。
+_NAI_PREFIX_DOMAINS = {
+    "DIPLO": "外交",
+    "PRODUCTION": "生产/建造",
+    "MONEY": "财政",
+    "AI": "通用 AI",
+    "GOAL": "国家目标",
+    "FLEET": "舰队",
+    "AUTONOMOUS": "自治投资",
+    "UNIFICATION": "统一",
+    "CHANGE": "变更判定",
+    "MOBILIZATION": "动员",
+    "GOVERNMENT": "政府",
+    "POWER": "列强",
+    "NAVAL": "海军",
+    "OWNER": "所有权",
+    "COMPANY": "公司",
+    "DIPLOMATIC": "外交",
+    "FRONT": "战线",
+    "MIN": "下限",
+    "CONSTRUCTION": "建造",
+    "RAID": "袭击",
+    "SHIP": "舰船",
+    "TREATIES": "条约",
+    "DEFEND": "防御",
+    "PROTECT": "保护",
+    "BLOCKADE": "封锁",
+    "NUM": "数量",
+    "MILITARY": "军事",
+    "SUPPLY": "补给",
+    "TRADE": "贸易",
+    "PIRACY": "海盗",
+}
 
 #: 字段字段（60 个）所在的包装块。
 _AI_STRATEGY_FILE = "common/ai_strategies/00_default_strategy.txt"
@@ -139,23 +107,13 @@ def nai_prefix_counts() -> Counter[str]:
 
 
 def nai_prefix_rows() -> list[tuple[str, dict[int, str]]]:
+    version_contracts.require_current()
     counts = nai_prefix_counts()
-    prefixes = (
-        sorted(counts, key=lambda name: (-counts[name], name))[:25]
-        if version_contracts.is_115()
-        else _NAI_PREFIXES
-    )
+    prefixes = sorted(counts, key=lambda name: (-counts[name], name))[:25]
     return [(f"`{p}`", {1: str(counts[p])}) for p in prefixes]
 
 
-def _nai_prefix_table() -> TableSpec | KeyedTableSpec:
-    if version_contracts.active_version() == "1.14.5":
-        return KeyedTableSpec(
-            name="doc03 NAI 参数前缀 Top25",
-            header="| 前缀 | 数量 | 领域 |",
-            cells=nai_prefix_rows,
-            append_new=False,
-        )
+def _nai_prefix_table() -> TableSpec:
     return TableSpec(
         name="doc03 NAI 参数前缀 Top25",
         header="| 前缀 | 数量 | 领域 |",

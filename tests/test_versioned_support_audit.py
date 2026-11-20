@@ -4,72 +4,55 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any, cast
 
 import pytest
-import test_support_native_binding as support_fixtures
+from test_support_native_binding import (
+    SOURCE,
+    UNIT_BASELINE,
+    controlled_output,  # noqa: F401
+)
 
-from pdx import config, decision_report, version_contracts
+from pdx import config, decision_report, decisions, version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import audit, compiler
 
 pytestmark = pytest.mark.unit
-SOURCE = support_fixtures.SOURCE
 
 
-def _controlled_output():
-    return cast("Any", support_fixtures.controlled_output).__wrapped__()
+@pytest.fixture
+def native_support_tail(tmp_path, monkeypatch):
+    native = tmp_path / "default-strategy.txt"
+    native.write_text(UNIT_BASELINE, encoding="utf-8")
+    monkeypatch.setattr(decisions, "baseline_path", lambda: native)
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
-def test_continuous_audit_accepts_the_complete_selected_native_tail(version):
-    with version_contracts.select_version(version):
-        generated = _controlled_output()
-        bindings = audit._production_continuous_bindings(generated)
-        assert len(bindings) == 1
-        assert bindings[0].writer.evaluation_context == compiler.support_evaluation_context()
-        assert (
-            bindings[0].production_sha256 == hashlib.sha256(generated[SOURCE].encode()).hexdigest()
-        )
+def test_continuous_audit_accepts_the_complete_current_native_tail(request, native_support_tail):
+    generated = request.getfixturevalue("controlled_output")
+    bindings = audit._production_continuous_bindings(generated)
+    assert len(bindings) == 1
+    assert bindings[0].writer.evaluation_context == compiler.declared_support_evaluation_context()
+    assert bindings[0].production_sha256 == hashlib.sha256(generated[SOURCE].encode()).hexdigest()
 
 
-def test_current_continuous_audit_rejects_a_native_tail_mutation():
-    with version_contracts.select_version("1.15.0"):
-        generated = _controlled_output()
-        changed, count = re.subn(
-            r"(\bdiplomatic_play_support\s*=\s*\{)",
-            r"\1\n\t\tvalue = 987654321",
-            generated[SOURCE],
-            count=1,
-        )
-        assert count == 1
-        generated[SOURCE] = changed
-        with pytest.raises(ValueError, match="原版尾部漂移"):
-            audit._production_continuous_bindings(generated)
-
-
-@pytest.mark.parametrize(
-    ("output_version", "audit_version"), [("1.14.5", "1.15.0"), ("1.15.0", "1.14.5")]
-)
-def test_continuous_audit_rejects_the_other_versions_native_tail(output_version, audit_version):
-    with version_contracts.select_version(output_version):
-        generated = _controlled_output()
-    with version_contracts.select_version(audit_version):
-        # Keep the exact selected writer metadata, so rejection proves the
-        # physical native tail check rather than an unrelated context mismatch.
-        generated[".metadata/metadata.json"] = _controlled_output()[".metadata/metadata.json"]
-        with pytest.raises(ValueError, match="原版尾部漂移"):
-            audit._production_continuous_bindings(generated)
+def test_current_continuous_audit_rejects_a_native_tail_mutation(request, native_support_tail):
+    generated = request.getfixturevalue("controlled_output")
+    changed, count = re.subn(
+        r"(\bdiplomatic_play_support\s*=\s*\{)",
+        r"\1\n\t\tvalue = 987654321",
+        generated[SOURCE],
+        count=1,
+    )
+    assert count == 1
+    generated[SOURCE] = changed
+    with pytest.raises(ValueError, match="原版尾部漂移"):
+        audit._production_continuous_bindings(generated)
 
 
 @pytest.mark.parametrize("version", ["1.14.5", "1.15.0", "1.15.1"])
 def test_offline_report_refuses_retired_native_contracts(version, monkeypatch):
-    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
-    with (
-        version_contracts.select_version(version),
-        pytest.raises(ValueError, match=f"当前仅维护 {version_contracts.CURRENT_VERSION}"),
-    ):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
+    with pytest.raises(ValueError, match=f"当前仅维护 {version_contracts.CURRENT_VERSION}"):
         decision_report.source_metadata()
 
 

@@ -534,9 +534,7 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
     installation = installation.absolute()
     if not isinstance(inventory.get("expected_version"), str):
         raise ValueError("unsupported inventory version; missing exact identity")
-    expected_version = active_version(inventory["expected_version"])
-    if expected_version == "1.14.5":
-        raise ValueError("unsupported inventory version; expected a reviewed 1.15 identity")
+    active_version(inventory["expected_version"])
     version_identity = inventory.get("version_identity")
     if not isinstance(version_identity, dict) or version_identity.get("version_match") is not True:
         raise ValueError("version identity is not a verified expected-version match")

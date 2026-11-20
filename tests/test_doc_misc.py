@@ -28,7 +28,7 @@ from _table_guards import (
     skip_if_no_game,
 )
 
-from pdx import ai, config, doc_tables, install_tree, usage, version_contracts
+from pdx import ai, config, doc_tables, install_tree, usage
 from pdx.model import Block
 from pdx.parser import parse_bytes
 
@@ -85,14 +85,13 @@ def test_doc03_的_Top25_真的是前_25() -> None:
     outside = {p: n for p, n in counts.items() if p not in listed and n > smallest}
     assert not outside, f"这些前缀比表里最小的 {smallest} 还大，却没进 Top25：{outside}"
     assert len(listed) == 25
-    if version_contracts.is_115():
-        selected = set(listed)
-        for chosen in selected:
-            assert all(
-                counts[chosen] > counts[omitted]
-                or (counts[chosen] == counts[omitted] and chosen < omitted)
-                for omitted in counts.keys() - selected
-            )
+    selected = set(listed)
+    for chosen in selected:
+        assert all(
+            counts[chosen] > counts[omitted]
+            or (counts[chosen] == counts[omitted] and chosen < omitted)
+            for omitted in counts.keys() - selected
+        )
 
 
 def test_doc10_两类分类都覆盖全部字段() -> None:
@@ -109,12 +108,7 @@ def test_doc10_两类分类都覆盖全部字段() -> None:
     assert isinstance(definitions[0].value, Block)
     native_fields = [item.key for item in definitions[0].value.assignments()]
     assert [name for name, _comment, _value in ai._strategy_fields()] == native_fields
-    assert (
-        total
-        == {"1.14.5": 60, "1.15.0": 61, "1.15.1": 61, "1.15.2": 61}[
-            version_contracts.active_version()
-        ]
-    )
+    assert total == 61
     assert semantics == total, f"语义四类相加 {semantics} ≠ {total}"
     assert shapes == total, f"形态三类相加 {shapes} ≠ {total}"
 

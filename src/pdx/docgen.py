@@ -36,7 +36,6 @@ from . import (
     modifiers,
     tabular,
     usage,
-    version_contracts,
 )
 from .doc_tables import (
     KeyedTableSpec,
@@ -148,9 +147,7 @@ def targets() -> tuple[DocTarget, ...]:
             )
         ),
     )
-    if version_contracts.is_115():
-        return (*base, *_native_file_table_targets())
-    return base
+    return (*base, *_native_file_table_targets())
 
 
 def _native_file_cells(directory: str, byte_column: int) -> list[tuple[str, dict[int, str]]]:

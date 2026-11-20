@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 import test_network_profile as witness
 
-from pdx import version_contracts
+from pdx import config
 from pdx.situated import action_network as net
 from pdx.situated import core_contracts as core
 from pdx.situated import expressions as expr
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture(scope="module")
 def profile():
-    return native.load_profile(native.BASELINE_ROOT)
+    return native.declared_profile()
 
 
 @pytest.fixture(scope="module")
@@ -33,6 +33,8 @@ def programs(profile):
 
 
 def observations(program, values):
+    if program.network.actions[0].definition.consumer_id == witness.SCHOOL:
+        values = {"population": 1, "net-surplus": 0, **values}
     action = program.network.actions[0]
     return net.ObservationBatch(
         action,
@@ -219,6 +221,7 @@ def test_three_production_objectives_bind_the_actual_current_baseline(
     assert all(not isinstance(item, core.Observation) for item in program.network.objectives)
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize(
     ("consumer", "initial", "steps"),
     [
@@ -318,9 +321,16 @@ def test_three_real_consumers_refresh_through_shock_unknown_stale_and_recovery(
     that this sequence was sampled from a running engine.
     """
     canonical = programs[consumer]
-    generated = adapter.build(profile)
+    applied = {
+        row.source.removeprefix("game/"): (config.ROOT / row.source).read_text(encoding="utf-8-sig")
+        for row in profile.declarations
+    }
+    adapter.compose(applied, profile)
+    generated = applied
     row = next(item for item in profile.declarations if item.id == consumer)
     installed_overlay = witness._overlay(generated[row.source.removeprefix("game/")], consumer)
+    if consumer == witness.SCHOOL:
+        initial = {"population": 1, "net-surplus": 0, **initial}
     scope = "state" if consumer == witness.ROAD else "actor"
     stable_values = {
         witness.ROAD: {"infrastructure": 0.1, "road-present": False},
@@ -786,10 +796,3 @@ def test_audit_preserves_symbolic_goals_without_creating_sampled_baselines(profi
         )
         assert goal["lifetime"] == "evaluation"
         assert goal["score_comparison_baseline"] == "retained-native"
-
-
-@pytest.fixture(scope="module", autouse=True)
-def _historical_1150_contract():
-    """Bind the archived three-consumer objective witnesses to their input identity."""
-    with version_contracts.select_version("1.15.0"):
-        yield

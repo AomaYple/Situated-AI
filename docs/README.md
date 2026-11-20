@@ -18,23 +18,23 @@
 | 仅目标的领域及跨域子计划 | [架构子计划](design/架构子计划.md) |
 | 新架构规范与底本依据 | [1.15架构设计](design/1.15架构设计.md)、[1.15底本勘察](design/1.15底本勘察.md)；R2 规范与已有候选能力分开登记 |
 | 旧候选设计与范围上下文 | [处境决策设计](design/03-处境决策设计.md)、[行动层深化设计](design/05-行动层深化设计.md)、[行动覆盖与验收](design/04-行动覆盖与验收.md) |
-| 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
+| 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面-1.15.2.md)、[政治候选面](design/02-政治候选面.md) |
 | 历史实施计划（仅参考） | [处境行动决策内核实施计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
-| 历史 A2 架构检查与逐项证据 | [架构重设计结果](design/exec/架构重设计-结果.md)、[架构阶段收据](design/exec/架构阶段收据.json)；局部通过不等于阶段完成 |
+| 历史 A2 架构检查与逐项证据 | [架构重设计结果](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/%E6%9E%B6%E6%9E%84%E9%87%8D%E8%AE%BE%E8%AE%A1-%E7%BB%93%E6%9E%9C.md)、[架构阶段收据](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/%E6%9E%B6%E6%9E%84%E9%98%B6%E6%AE%B5%E6%94%B6%E6%8D%AE.json)；局部通过不等于阶段完成 |
 | 当前交付与历史版本证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.3.0 交付结果](design/exec/3.3.0-交付结果.md)；历史内核与分层收据由执行索引导航 |
 | 创意工坊文案（Steam BBCode，发布前核对固定包） | [全部 11 种语言](publishing/README.md) |
 | 本机安装盘点与原件研究 | [贡献指南](../CONTRIBUTING.md#完整安装研究) |
 | 工具与诊断入口 | [工具手册](../tools/README.md) |
 | Victoria 3 当前知识库 | [Victoria 3 1.15.2 知识库](victoria3-modding-1.15.2/README.md) |
-| Victoria 3 历史知识库 | [1.15.1](victoria3-modding-1.15.1/README.md)、[1.15.0](victoria3-modding-1.15.0/README.md)、[1.14.5](victoria3-modding/README.md) |
+| Victoria 3 历史知识库原件 | [1.14.5](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/victoria3-modding/README.md)、[1.15.0](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/victoria3-modding-1.15.0/README.md)、[1.15.1](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/victoria3-modding-1.15.1/README.md) |
 
 ## 目录职责
 
 - `docs/principles/`：持续工程和产品约束。
 - `docs/design/`：当前产品设计、计划和执行结果。
 - `docs/publishing/`：面向玩家的发布材料；正文只维护功能、使用、兼容性和语言信息。
-- `docs/victoria3-modding-1.15.2/` 收录当前锁定版本的研究知识库。各历史目录保留原底本和采集时点。
+- `docs/victoria3-modding-1.15.2/` 收录当前锁定版本的研究知识库。历史知识库、配套生成索引和证据可在上述 Git 提交按原路径查看。
 
 ## 文档维护边界
 
@@ -43,7 +43,7 @@
 | 规则与贡献流程 | `AGENTS.md`、`CONTRIBUTING.md`、`SECURITY.md`、`docs/principles/` | 人工评审；不在导航页复制 |
 | 产品设计、计划、状态和结果 | `docs/design/` | 只在对应权威页更新，结果页记录证据类型 |
 | 原版机械统计、指纹和索引 | `docs/design/02-*.md`、`docs/victoria3-modding-1.15.2/08-目录全量清单.md`、`13-common全量键名索引.md` 等生成目标 | 使用仓库 Python CLI 生成或核对，禁止手改生成数据 |
-| Victoria 3 研究正文 | `docs/victoria3-modding-1.15.2/` 及上表的历史目录 | 保留历史采集值，但必须标明底本版本、快照时点和证据边界 |
+| Victoria 3 研究正文 | `docs/victoria3-modding-1.15.2/` | 保留历史采集值，但必须标明底本版本、快照时点和证据边界 |
 
 ## 生成文档维护
 

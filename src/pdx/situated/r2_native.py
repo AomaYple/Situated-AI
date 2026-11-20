@@ -102,9 +102,7 @@ def production_bindings(
         if marked:
             raise ValueError("R2 output exists without its candidate declaration")
         return ()
-    version = version_contracts.active_version()
-    if version not in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        raise ValueError("complete R2 native audit requires the current release contract")
+    version = version_contracts.require_current()
     selected = document.get("configuration")
     if not isinstance(selected, dict):
         raise ValueError("R2 candidate lacks its resolved configuration")
@@ -114,21 +112,15 @@ def production_bindings(
     configuration = ProfileConfiguration(selected["core"], frozenset(domains), selected["mode"])
     if _canonical(configuration.identity()) != _canonical(selected):
         raise ValueError("R2 resolved configuration differs from the strict contract")
-    if version == version_contracts.CURRENT_VERSION:
-        baseline = config.ROOT
-        evidence_root = baseline
-        r2_reader_authority.verify_installation(baseline)
-    else:
-        baseline = production_profile.baseline_root(version)
-        evidence_root = r2_reader_authority.frozen_root(version)
-        r2_reader_authority.verify_frozen(evidence_root)
+    baseline = config.ROOT
+    r2_reader_authority.verify_installation(baseline)
     profile = production_profile.load_profile(baseline)
     evidence = {}
     for evidence_path, expected_sha256 in r2_reader_authority.source_hashes().items():
         if not evidence_path.startswith("game/"):
             continue
         source = evidence_path.removeprefix("game/")
-        original_evidence = (evidence_root / evidence_path).read_bytes()
+        original_evidence = (baseline / evidence_path).read_bytes()
         if hashlib.sha256(original_evidence).hexdigest() != expected_sha256:
             raise ValueError(f"R2 native reader evidence differs: {source}")
         if source in native_sources and native_sources[source] != original_evidence:

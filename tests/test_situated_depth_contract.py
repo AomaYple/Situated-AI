@@ -13,14 +13,6 @@ from pdx.situated import inventory, vanilla_inventory
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_discovery_contract():
-    # These synthetic fixtures declare release/1.14.5 and its documentation;
-    # installed 1.15 integrations keep their independently selected contract.
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 def _write(game: Path, relative: str, text: str) -> None:
     path = game / relative
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -29,7 +21,7 @@ def _write(game: Path, relative: str, text: str) -> None:
 
 def _game(tmp_path: Path) -> Path:
     game = tmp_path / "game"
-    _write(tmp_path, "caligula_branch.txt", "release/1.14.5\n")
+    _write(tmp_path, "caligula_branch.txt", f"release/{version_contracts.CURRENT_VERSION}\n")
     _write(tmp_path, "caligula_rev.txt", "fixture-revision\n")
     _write(tmp_path, "clausewitz_branch.txt", "fixture-engine-branch\n")
     _write(tmp_path, "clausewitz_rev.txt", "fixture-engine-revision\n")
@@ -1202,7 +1194,7 @@ def test_d0_repeated_define_namespaces_keep_distinct_global_ai_parameters(tmp_pa
 def test_d0_wrong_game_version_is_rejected(tmp_path) -> None:
     game = _game(tmp_path)
     _write(tmp_path, "caligula_branch.txt", "release/1.15.0\n")
-    with pytest.raises(ValueError, match=r"1\.14\.5"):
+    with pytest.raises(ValueError, match=r"1\.15\.2"):
         inventory.discover_vanilla(game=game)
 
 

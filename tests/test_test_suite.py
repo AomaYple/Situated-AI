@@ -453,14 +453,10 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
         "    enable_utf8_stdio()\n"
         "    assert 'SITAI_TEST_COLLECTION' not in os.environ\n"
         "    assert 'MEMBASELINE_OUT' not in os.environ\n"
-        f"    assert os.environ['V3_CONTRACT_PROFILE'] == {version_contracts.CURRENT_VERSION!r}\n"
+        "    assert 'V3_CONTRACT_PROFILE' not in os.environ\n"
         "    child = subprocess.run([sys.executable, '-c',\n"
         "        \"import os; assert 'SITAI_TEST_COLLECTION' not in os.environ; \"\n"
-        "        \"assert 'MEMBASELINE_OUT' not in os.environ; assert 'COVERAGE_FILE' not in os.environ\"], check=False)\n"
-        "    assert child.returncode == 0\n"
-        "    child = subprocess.run([sys.executable, '-c',\n"
-        f"        \"import os; assert os.environ['V3_CONTRACT_PROFILE'] == "
-        f'{version_contracts.CURRENT_VERSION!r}"], check=False)\n'
+        "        \"assert 'MEMBASELINE_OUT' not in os.environ; assert 'COVERAGE_FILE' not in os.environ; assert 'V3_CONTRACT_PROFILE' not in os.environ\"], check=False)\n"
         "    assert child.returncode == 0\n"
         "    if value == 1:\n"
         "        child = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', '-n0',\n"
@@ -476,7 +472,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     monkeypatch.setattr(
         test_suite, "capture_game_identity", lambda _out, profile: {"profile": profile}
     )
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
+    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
     monkeypatch.setenv("PYTEST_XDIST_WORKER", "gwInherited")
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).resolve().parents[1]))
     original_sample = test_suite.mem.TreeSampler.sample_once
@@ -530,7 +526,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     assert collection["effective"]["numprocesses"] == workers
     assert len(collection["workers"]) == workers
     assert "environment_sha256" in summary
-    assert summary["environment"]["V3_CONTRACT_PROFILE"]["present"]
+    assert not summary["environment"][version_contracts.ENVIRONMENT_VARIABLE]["present"]
     assert summary["game_input"]["profile"] == version_contracts.CURRENT_VERSION
     assert summary["versions"]["pytest-xdist"]
     assert len(list(out.glob("inproc-full-*.json"))) == workers + 1

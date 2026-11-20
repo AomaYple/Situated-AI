@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -92,16 +91,7 @@ def test_profiles_preserve_arguments_and_exit_status(monkeypatch, profile):
     assert calls[0][1]["cwd"] == run_check.ROOT
     assert calls[0][1]["check"] is False
     assert calls[0][1]["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
-    if profile in {"test", "test-offline"}:
-        assert (
-            calls[0][1]["env"][version_contracts.ENVIRONMENT_VARIABLE]
-            == version_contracts.CURRENT_VERSION
-        )
-    assert calls[0][1]["env"]["PYTHONPATH"].split(os.pathsep) == [
-        str(run_check.ROOT / "src"),
-        str(run_check.ROOT),
-        "preserved-path",
-    ]
+    assert version_contracts.ENVIRONMENT_VARIABLE not in calls[0][1]["env"]
 
 
 @pytest.mark.parametrize("command", ["baseline", "baseline-offline"])
@@ -145,7 +135,7 @@ def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
     calls = []
 
     def run(argv, **kwargs):
-        assert kwargs["env"]["V3_CONTRACT_PROFILE"] == selected
+        assert version_contracts.ENVIRONMENT_VARIABLE not in kwargs["env"]
         calls.append(argv[argv.index("-m") + 1 :])
         return SimpleNamespace(returncode=0)
 
@@ -168,7 +158,7 @@ def test_offline_baseline_runs_the_shared_gates_without_live_generation(monkeypa
     calls = []
 
     def run(argv, **kwargs):
-        assert kwargs["env"][version_contracts.ENVIRONMENT_VARIABLE] == selected
+        assert version_contracts.ENVIRONMENT_VARIABLE not in kwargs["env"]
         calls.append(argv[argv.index("-m") + 1 :])
         return SimpleNamespace(returncode=0)
 

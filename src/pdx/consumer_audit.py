@@ -13,15 +13,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path  # noqa: TC003 - runtime defaults and filesystem operations
 from typing import TYPE_CHECKING
 
-from . import ai_surface, config
+from . import ai_surface, config, version_contracts
 from .model import Block
-from .parser import parse_file
+from .parser import parse_file, parse_text
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
 
-BASELINE = config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
 OUTPUT = config.OUT / "f1-consumer-audit"
 
 
@@ -133,14 +132,20 @@ UNKNOWN_BY_MODULE: dict[str, tuple[str, ...]] = {
 }
 
 
-def _default_block(path: Path) -> tuple[Block, str]:
-    parsed = parse_file(path)
+def _default_block(baseline: Path | None) -> tuple[Block, str]:
+    if baseline is None:
+        source = version_contracts.DEFAULT_STRATEGY_SOURCE
+        text = version_contracts.read_default_strategy(config.verified_game_root())
+        parsed = parse_text(text, path=source)
+    else:
+        parsed = parse_file(baseline)
+        source = baseline.relative_to(config.REPO).as_posix()
     if parsed.errors or parsed.top_keys != ["ai_strategy_default"]:
-        raise ValueError(f"原版默认策略底本无效：{path}")
+        raise ValueError(f"原版默认策略底本无效：{source}")
     assignment = parsed.top_assignments[0]
     if not isinstance(assignment.value, Block):
         raise ValueError("原版默认策略顶层必须是块")
-    return assignment.value, path.relative_to(config.REPO).as_posix()
+    return assignment.value, source
 
 
 def _cards_for_field(cards: Iterable[ai_surface.Card], field: str) -> tuple[str, ...]:
@@ -149,7 +154,7 @@ def _cards_for_field(cards: Iterable[ai_surface.Card], field: str) -> tuple[str,
 
 def audit(
     *,
-    baseline: Path = BASELINE,
+    baseline: Path | None = None,
     cards: Iterable[ai_surface.Card] | None = None,
 ) -> tuple[ConsumerRow, ...]:
     """返回稳定排序的静态字段消费者台账。"""
@@ -183,7 +188,7 @@ def audit(
 
 
 def report(
-    *, baseline: Path = BASELINE, cards: Iterable[ai_surface.Card] | None = None
+    *, baseline: Path | None = None, cards: Iterable[ai_surface.Card] | None = None
 ) -> dict[str, object]:
     """返回 JSON 友好的审计报告，并明确其静态证据边界。"""
 
@@ -192,7 +197,7 @@ def report(
         "schema": "sitai-f1-consumer-audit-v1",
         "evidence_kind": "static-source-and-snapshot",
         "behavior_quality": "not_evaluated",
-        "baseline": baseline.relative_to(config.REPO).as_posix(),
+        "baseline": rows[0].source,
         "rows": [asdict(row) for row in rows],
         "limits": [
             "原版策略字段和作用域来自锁定底本/精简快照。",
@@ -247,10 +252,15 @@ def render_markdown(data: Mapping[str, object]) -> str:
     return "\n".join(lines)
 
 
-def write(output: Path = OUTPUT, *, baseline: Path = BASELINE) -> tuple[Path, Path]:
+def write(
+    output: Path = OUTPUT,
+    *,
+    baseline: Path | None = None,
+    cards: Iterable[ai_surface.Card] | None = None,
+) -> tuple[Path, Path]:
     """生成 JSON 与 Markdown 证据到忽略的输出目录。"""
 
-    data = report(baseline=baseline)
+    data = report(baseline=baseline, cards=cards)
     output.mkdir(parents=True, exist_ok=True)
     json_path = output / "report.json"
     markdown_path = output / "report.md"

@@ -207,21 +207,6 @@ class TestRealGameCounts(unittest.TestCase):
     """
 
     KNOWN = {
-        "buildings": 115,
-        "production_methods": 436,
-        "production_method_groups": 197,
-        "goods": 53,
-        "company_types": 221,
-        "laws": 138,
-        "interest_groups": 8,
-        "technology": 184,
-        "character_traits": 121,
-        "modifier_type_definitions": 2371,
-        "static_modifiers": 6128,
-        "character_templates": 2011,
-    }
-
-    KNOWN_115 = {
         "buildings": 122,
         "production_methods": 450,
         "production_method_groups": 203,
@@ -231,8 +216,8 @@ class TestRealGameCounts(unittest.TestCase):
         "interest_groups": 8,
         "technology": 184,
         "character_traits": 127,
-        "modifier_type_definitions": 2474,
-        "static_modifiers": 6479,
+        "modifier_type_definitions": 2477,
+        "static_modifiers": 6490,
         "character_templates": 2072,
     }
 
@@ -247,23 +232,7 @@ class TestRealGameCounts(unittest.TestCase):
         cls.common = GAME / "common"
 
     def test_known_entry_counts(self):
-        from pdx.version_contracts import active_version
-
-        expected = {
-            "1.14.5": self.KNOWN,
-            "1.15.0": self.KNOWN_115,
-            "1.15.1": {
-                **self.KNOWN_115,
-                "modifier_type_definitions": 2476,
-                "static_modifiers": 6487,
-            },
-            "1.15.2": {
-                **self.KNOWN_115,
-                "modifier_type_definitions": 2477,
-                "static_modifiers": 6490,
-            },
-        }[active_version()]
-        for name, want in expected.items():
+        for name, want in self.KNOWN.items():
             with self.subTest(directory=name):
                 res = extract_dir(self.common / name)
                 self.assertEqual(
@@ -279,9 +248,8 @@ class TestRealGameCounts(unittest.TestCase):
 
     def test_bom_ratio_reported(self):
         res = extract_dir(self.common / "static_modifiers")
-        from pdx.version_contracts import is_115
 
-        expected = 77 if is_115() else 68
+        expected = 77
         self.assertEqual(res.files, expected)
         self.assertEqual(res.bom_files, expected, "独立原始字节检查：全部源文件带 BOM")
 

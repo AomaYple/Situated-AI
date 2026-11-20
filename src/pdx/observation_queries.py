@@ -45,78 +45,34 @@ MARKET_CONSUMPTION_SOURCES = (_ATHEISM, _GFX, _GOODS)
 # source identities, not a claim that normalized strings retain raw BOM bytes.
 SOURCE_HASHES = {
     "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
-    "common/laws/00_citizenship.txt": "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f",
-    "common/laws/00_church_and_state.txt": "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174",
-    "common/laws/01_land_reform.txt": "8576c5bb769ca0bc9c2e3e2d89fb2e2dffcd9b4d479c08b43ca00c639e98e82f",
-    "common/laws/01_taxation.txt": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
-    "common/laws/02_labour_associations.txt": "47ec5d950de0c1fd409203b83aa3a56849a02c6977e69d7e21a4bacc2ca4ce45",
-    "common/laws/02_migration.txt": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
-    _ECONOMY: "5622b68492a6f57913ead582011980d2ea5c5f5d41c715261bc228b8b7f9f0e9",
-    _TRADE: "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
-    _POWER: "b16b4f8103ade4f61cf2890af6fd2834f8782856bab8b08c6ec5942522a00855",
-    _AI: "d8da988122619e26e16ce17e8ac196337cdb8d1592f357c45ded4f8cb85d3698",
-    _PORTUGAL: "3419343456182541870fc8de7c7c52c23bb6c9e7ec1deded06a7744d61e04316",
-    _ACW: "6132f262affcfc038df2549a0d5cb6ae059bc9e7fb90a8a1fe2c14db5263ff3e",
-    _ART: "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
-    _BUILDING: "c41ed5adb63e8f626e6394ce4f2f619bc8f229cafa3d8994271e2a66d1c2b0c5",
-    _GOVERNMENT_BUILDING: "01867816e5cf623ebf50927c94b0c2b92b189c8ed31d78fd55fa79ab67976872",
-    _GROUP: "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
-    _METHOD: "d9f0e653d3d0c1783fd4e9880fb58a6ada795d0ed3a3fdec011f0d1ce28da71f",
-    _COMMUNISM: "fbe2ce3af236a3f49e146f445ba56957952ac910b68022cc0f69e94e8010072f",
-    _GOVERNANCE: "481a2c32a6873a0d5d5682e50b056a91ffd1d41017742f171a105737d59be0f8",
-    _ATHEISM: "cb39c1a5badc168a6480bd3a19fb67dc82cfa80c8da7bd830b2fad747e80cf8e",
-    _GOODS: "496810f9b21012cb3ae764e4c0cd65aafa85b6079f96d3d2a6b3dece92a0afcc",
-    _GFX: "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
-}
-SOURCE_HASHES_115 = {
-    "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
-    "common/laws/00_citizenship.txt": "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76",
+    "common/laws/00_citizenship.txt": "129adadee3f099092182a73d7eb9fa95963b066de0c4353aee3657ba8ac0dcea",
     "common/laws/00_church_and_state.txt": "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50",
     "common/laws/01_land_reform.txt": "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174",
     "common/laws/01_taxation.txt": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
-    "common/laws/02_labour_associations.txt": "5b50400f5e9be0d70a75f1b13c902ee817384473c64ab12bf52935ea98cf23b5",
-    "common/laws/02_migration.txt": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
-    "common/laws/01_economic_system.txt": "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194",
-    "common/laws/01_trade_policy.txt": "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
-    "common/laws/00_distribution_of_power.txt": "c99d7a71a1d6f75385a35afb3f5d1887f50604f47cc73cb6ca3752da8127c478",
-    "common/scripted_triggers/00_ai_triggers.txt": "ffca2b8deef024a9d2703d1297a0bea3a3e931a0b1710e2daea74c48a9dd248b",
-    "common/journal_entries/06_portugal_politics.txt": "5d0a31d587f9d2ce137a879a0992748c25dd738b958f83b0ca875d0ea6a51a5f",
-    "common/journal_entries/00_acw_entries.txt": "3a3c170784d191f4c3835e3144e66546121f10eaadc7e1a62fd99af92d42f2a4",
-    "common/journal_entries/00_art_jes.txt": "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
-    "common/buildings/06_urban_center.txt": "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9",
-    "common/buildings/07_government.txt": "8c2213c705a739c06eb34287e3632e2e9d42a06564237c0556d7468624e6b211",
-    "common/production_method_groups/06_urban_center.txt": "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
-    "common/production_methods/06_urban_center.txt": "c1b86160eda21483015fc6e052bab2a038f06b060fb59e22ea97d7a08fab8759",
-    "common/journal_entries/00_communism.txt": "107fa64a7e5587d8459eab2404b504b06042d1fffb7a8918eb49b5a4654512c2",
-    "common/laws/00_governance_principles.txt": "c487020a20e305bf5a8c66b7ad45c429f4e67daa1cd6cdcf2208f421708365ed",
-    "events/law_events/state_atheism.txt": "79e17bbdbe7e20a98a488baaefafe9978eee0329e042c09b1cfeac8bbf728e85",
-    "common/goods/00_goods.txt": "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49",
-    "common/scripted_triggers/00_gfx_route_graphics_triggers.txt": "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
-}
-
-
-SOURCE_HASHES_1151 = {
-    **SOURCE_HASHES_115,
-    "common/journal_entries/00_communism.txt": "f38d15776d815e759e01b4d30db13510fa7f37437551063677cdaf0b336723ba",
-}
-
-
-SOURCE_HASHES_1152 = {
-    **SOURCE_HASHES_1151,
-    "common/laws/00_citizenship.txt": "129adadee3f099092182a73d7eb9fa95963b066de0c4353aee3657ba8ac0dcea",
     "common/laws/02_labour_associations.txt": "049f5bc288f67639f332d003a9dfb47c4bcbd398fc27d97ef02e90bf5d2e1f9f",
-    "common/laws/00_distribution_of_power.txt": "b01b007d987a17ade3b05ad51334f2b1fc0773eee8728b237a4a714a9f3f2dbd",
-    "common/scripted_triggers/00_ai_triggers.txt": "8b22f9ba99b4babc8c0465d892ab888cce0a51d1d350e80ba9a1448a7fe53be1",
-    "common/journal_entries/00_communism.txt": "65b4623541d2411f54f460092dcb94bf95d38f6289fbf01217aa180f746c3485",
+    "common/laws/02_migration.txt": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
+    _ECONOMY: "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194",
+    _TRADE: "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
+    _POWER: "b01b007d987a17ade3b05ad51334f2b1fc0773eee8728b237a4a714a9f3f2dbd",
+    _AI: "8b22f9ba99b4babc8c0465d892ab888cce0a51d1d350e80ba9a1448a7fe53be1",
+    _PORTUGAL: "5d0a31d587f9d2ce137a879a0992748c25dd738b958f83b0ca875d0ea6a51a5f",
+    _ACW: "3a3c170784d191f4c3835e3144e66546121f10eaadc7e1a62fd99af92d42f2a4",
+    _ART: "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
+    _BUILDING: "0e29718640dbabdbc6748d2a9e7f7e5f88aa053eafcb84a4cc0927846c08f5b9",
+    _GOVERNMENT_BUILDING: "8c2213c705a739c06eb34287e3632e2e9d42a06564237c0556d7468624e6b211",
+    _GROUP: "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
+    _METHOD: "c1b86160eda21483015fc6e052bab2a038f06b060fb59e22ea97d7a08fab8759",
+    _COMMUNISM: "65b4623541d2411f54f460092dcb94bf95d38f6289fbf01217aa180f746c3485",
+    _GOVERNANCE: "c487020a20e305bf5a8c66b7ad45c429f4e67daa1cd6cdcf2208f421708365ed",
+    _ATHEISM: "79e17bbdbe7e20a98a488baaefafe9978eee0329e042c09b1cfeac8bbf728e85",
+    _GOODS: "e64d87f053c8480dda942b33002dbb2fcd4481e553a1d327b7f7b2f059151a49",
+    _GFX: "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
 }
 
 
 def source_hashes() -> dict[str, str]:
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return SOURCE_HASHES_1152
-    if version_contracts.active_version() == "1.15.1":
-        return SOURCE_HASHES_1151
-    return SOURCE_HASHES_115 if version_contracts.is_115() else SOURCE_HASHES
+    version_contracts.require_current()
+    return SOURCE_HASHES
 
 
 LAW_SOURCES = {
@@ -442,12 +398,6 @@ def _verified_sources(
     return roots, hashes
 
 
-def _completion(journal: Block) -> Block:
-    if version_contracts.is_115():
-        return version_contracts.journal_completion(journal)
-    return _child(journal, "complete")
-
-
 def verify_market_consumption_sources(texts: Mapping[str, str]) -> tuple[str, ...]:
     """Prove the exact scalar path and car identity; never infer pop consumption.
 
@@ -509,11 +459,7 @@ def compile_query(
         _child(roots[_GOVERNANCE], "law_council_republic")
         references.append(f"{_GOVERNANCE}:{roots[_GOVERNANCE].all('law_council_republic')[0].line}")
         country = _child(roots[_COMMUNISM], "je_communism_1")
-        outcome = (
-            version_contracts.journal_completion(country, effect=True)
-            if version_contracts.is_115()
-            else _child(country, "on_fail")
-        )
+        outcome = version_contracts.journal_completion(country, effect=True)
         branch = _child(outcome, "else")
         expected = (
             (
@@ -522,27 +468,24 @@ def compile_query(
                 (("law", "=", "law_type:law_council_republic"), ("value", ">", "neutral")),
             ),
         )
-        if version_contracts.is_115():
-            branches = branch.all("if")
-            matches: list[Block] = []
-            full_branch = (
-                ("limit", "=", (("any_interest_group", "=", expected),)),
-                (
-                    "random_interest_group",
-                    "=",
-                    (("limit", "=", expected), ("set_variable", "=", "communist_ig_var")),
-                ),
-            )
-            for item in branches:
-                if item.op != "=" or item.prefix is not None or not isinstance(item.value, Block):
-                    raise ValueError("原版利益集团查询含非普通同国完成分支")
-                if _shape(item.value) == full_branch:
-                    matches.append(item.value)
-            if len(matches) != 1:
-                raise ValueError("原版利益集团查询缺少精确同国完成分支")
-            condition = matches[0]
-        else:
-            condition = _child(branch, "if")
+        branches = branch.all("if")
+        matches: list[Block] = []
+        full_branch = (
+            ("limit", "=", (("any_interest_group", "=", expected),)),
+            (
+                "random_interest_group",
+                "=",
+                (("limit", "=", expected), ("set_variable", "=", "communist_ig_var")),
+            ),
+        )
+        for item in branches:
+            if item.op != "=" or item.prefix is not None or not isinstance(item.value, Block):
+                raise ValueError("原版利益集团查询含非普通同国完成分支")
+            if _shape(item.value) == full_branch:
+                matches.append(item.value)
+        if len(matches) != 1:
+            raise ValueError("原版利益集团查询缺少精确同国完成分支")
+        condition = matches[0]
         limit = _child(condition, "limit")
         original = _child(limit, "any_interest_group")
         if _shape(original) != expected:
@@ -579,7 +522,9 @@ def compile_query(
         references.append(f"{_AI}:{line}")
         collections = ("owned_political_movements",)
     elif isinstance(query, AnyIncorporatedStateTaxCapacityShortfall):
-        completion = _completion(_child(roots[_PORTUGAL], "je_portugal_regeneration_public_works"))
+        completion = version_contracts.journal_completion(
+            _child(roots[_PORTUGAL], "je_portugal_regeneration_public_works")
+        )
         line = _find_shape(
             completion,
             "any_scope_state",
@@ -607,12 +552,17 @@ def compile_query(
         references.append(f"{_GOVERNMENT_BUILDING}:{building.all('should_auto_expand')[0].line}")
         collections = ("owned_states",)
     elif isinstance(query, AnyStateTurmoilAbove):
-        completion = _completion(_child(roots[_PORTUGAL], "je_portugal_regeneration_public_works"))
+        completion = version_contracts.journal_completion(
+            _child(roots[_PORTUGAL], "je_portugal_regeneration_public_works")
+        )
         line = _find_shape(
             _child(completion, "NOT"), "any_scope_state", (("market_access", "<", "1"),)
         )
         references.append(f"{_PORTUGAL}:{line}")
-        original = _child(_completion(_child(roots[_ACW], "je_acw_wild_wild_west")), "NOT")
+        original = _child(
+            version_contracts.journal_completion(_child(roots[_ACW], "je_acw_wild_wild_west")),
+            "NOT",
+        )
         line = _find_shape(
             original,
             "any_scope_state",
@@ -635,13 +585,15 @@ def compile_query(
         references.append(f"{_ACW}:{line}")
         collections = ("owned_states",)
     elif isinstance(query, AnyStateMarketAccessBelow):
-        completion = _completion(_child(roots[_PORTUGAL], "je_portugal_regeneration_public_works"))
+        completion = version_contracts.journal_completion(
+            _child(roots[_PORTUGAL], "je_portugal_regeneration_public_works")
+        )
         original = _child(completion, "NOT")
         line = _find_shape(original, "any_scope_state", (("market_access", "<", "1"),))
         references.append(f"{_PORTUGAL}:{line}")
         collections = ("owned_states",)
     elif isinstance(query, OwnBuildingActiveMethod):
-        traditional = _completion(_child(roots[_ART], "je_romanticism"))
+        traditional = version_contracts.journal_completion(_child(roots[_ART], "je_romanticism"))
         line = _find_shape(
             traditional,
             "any_scope_building",
@@ -653,7 +605,7 @@ def compile_query(
             ),
         )
         references.append(f"{_ART}:{line}")
-        photographic = _completion(_child(roots[_ART], "je_camera"))
+        photographic = version_contracts.journal_completion(_child(roots[_ART], "je_camera"))
         line = _find_shape(
             photographic,
             "any_scope_building",

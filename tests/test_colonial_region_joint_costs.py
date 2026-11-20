@@ -9,10 +9,12 @@ import pytest
 from _frozen_reader_words import frozen_reader_words
 from test_situated_joint_witnesses import _facts
 
-from pdx import country_state, decision_adapters, decision_rules, version_contracts
+from pdx import country_state, decision_adapters, decision_rules
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval, programs
 from pdx.situated.native_treatments import _digest
+
+pytestmark = pytest.mark.integration
 
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
 COLONIAL = "ai_strategy_default.institution_scores.institution_colonial_affairs"
@@ -20,16 +22,9 @@ CONQUEST = "ai_strategy_default.strategic_region_stance_type_scores.stance_conqu
 CRISIS = {"legitimacy": 20, "insurrection": True, "radical_share": 0.3}
 
 
-@pytest.fixture(
-    scope="module",
-    params=[
-        "1.15.0",
-        pytest.param(version_contracts.CURRENT_VERSION, marks=pytest.mark.integration),
-    ],
-)
-def production(request):
-    with version_contracts.select_version(request.param):
-        return _cost_case(compiler.baseline_text())
+@pytest.fixture(scope="module")
+def production():
+    return _cost_case(compiler.baseline_text())
 
 
 def _cost_case(native):

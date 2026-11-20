@@ -177,17 +177,8 @@ class TestKnownCounts(unittest.TestCase):
     """
 
     EXPECTED = {
-        "static_modifiers": 6128,
-        "modifier_type_definitions": 2371,
-        "production_methods": 436,
-        "character_templates": 2011,
-        "buildings": 115,
-        "laws": 138,
-    }
-
-    EXPECTED_115 = {
-        "static_modifiers": 6479,
-        "modifier_type_definitions": 2474,
+        "static_modifiers": 6490,
+        "modifier_type_definitions": 2477,
         "production_methods": 450,
         "character_templates": 2072,
         "buildings": 122,
@@ -202,23 +193,8 @@ class TestKnownCounts(unittest.TestCase):
             self.skipTest("游戏目录不可用")
 
         from pdx import parse_file
-        from pdx.version_contracts import active_version
 
-        expected = {
-            "1.14.5": self.EXPECTED,
-            "1.15.0": self.EXPECTED_115,
-            "1.15.1": {
-                **self.EXPECTED_115,
-                "modifier_type_definitions": 2476,
-                "static_modifiers": 6487,
-            },
-            "1.15.2": {
-                **self.EXPECTED_115,
-                "modifier_type_definitions": 2477,
-                "static_modifiers": 6490,
-            },
-        }[active_version()]
-        for name, want in expected.items():
+        for name, want in self.EXPECTED.items():
             with self.subTest(directory=name):
                 keys: set[str] = set()
                 for f in (common / name).rglob("*.txt"):

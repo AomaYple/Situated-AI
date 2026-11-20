@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from pdx import version_contracts
 from pdx.situated import architecture_receipts as receipts
 from pdx.situated.receipts import digest
 
@@ -95,7 +96,29 @@ def test_actual(architecture_witness, request, role, expected, responsibility):
         encoding="utf-8",
         newline="\n",
     )
-    env = {**os.environ, "PYTHONPATH": str(REPO)}
+    # Substitute the external installation/build boundary while exercising
+    # real pytest phases, responsibility routing and consumer checks.
+    setup = tmp_path / "witness_fixture.py"
+    setup.write_text(
+        """import hashlib
+from tools.ci import architecture_witness_capture as capture
+
+def attest(root):
+    generated = root / "mod/common/generated.txt"
+    return {
+        "contract_version": "1.15.2",
+        "native_scope_hash": SCOPE,
+        "generated_files": {"common/generated.txt": hashlib.sha256(generated.read_bytes()).hexdigest()},
+    }
+
+capture._current_attestation = attest
+""".replace("SCOPE", repr("c" * 64)),
+        encoding="utf-8",
+    )
+    env = {
+        **os.environ,
+        "PYTHONPATH": os.pathsep.join((str(tmp_path), str(REPO / "src"), str(REPO))),
+    }
     command = [
         sys.executable,
         "-X",
@@ -106,6 +129,8 @@ def test_actual(architecture_witness, request, role, expected, responsibility):
         "addopts=",
         "-q",
         "-n0",
+        "-p",
+        "witness_fixture",
         "-p",
         "tools.ci.architecture_witness_capture",
         "--architecture-witness-output=tools/out/capture.json",
@@ -133,7 +158,7 @@ def test_actual(architecture_witness, request, role, expected, responsibility):
                             "stage_id": "S2",
                             "requirement_id": "society_education_knowledge",
                             "evidence_id": "knowledge.executed",
-                            "scope_hash": "d" * 64,
+                            "scope_hash": "c" * 64,
                             "output": "tools/out/knowledge.json",
                         },
                     ],
@@ -164,9 +189,12 @@ def test_real_three_phase_results_bind_source_test_and_consumer_ast(tmp_path):
     assert result["status"] == "passed"
     assert len(result["cases"]) == 6
     assert result["source_snapshot_sha256"] == digest(receipts.source_snapshot(tmp_path))
-    row = json.loads((tmp_path / "tools/out/capture.row.json").read_text(encoding="utf-8"))
-    assert receipts._evidence(tmp_path, "S3", row, result["source_snapshot_sha256"], "c" * 64) == []
-    assert not (tmp_path / receipts.RECEIPT_PATH).exists()
+    row = json.loads((tmp_path / "tools/out/capture.current-row.json").read_text(encoding="utf-8"))
+    assert row["scope_hash"] == "c" * 64
+    assert row["source_snapshot_sha256"] == result["source_snapshot_sha256"]
+    assert len(row["tests"]) == 6
+    assert row["current_boundary"]["contract_version"] == version_contracts.CURRENT_VERSION
+    assert not (tmp_path / "docs/design/exec/架构阶段收据.json").exists()
     assert all(
         set(case["phases"]) == {"setup", "call", "teardown"}
         and set(case["phases"].values()) == {"passed"}
@@ -195,7 +223,7 @@ def test_failed_skipped_xfailed_changed_or_missing_execution_is_never_signed(tmp
     _run_result, result = _run(tmp_path, fault=fault)
     assert result["status"] == "rejected"
     assert result["open_items"]
-    assert not (tmp_path / "tools/out/capture.row.json").exists()
+    assert not (tmp_path / "tools/out/capture.current-row.json").exists()
 
 
 def test_one_frozen_execution_has_two_explicit_independent_requirement_rows(tmp_path):
@@ -206,20 +234,15 @@ def test_one_frozen_execution_has_two_explicit_independent_requirement_rows(tmp_
     assert first["source_snapshot_sha256"] == second["source_snapshot_sha256"]
     assert first["requirement_id"] != second["requirement_id"]
     for name, result in (("capture", first), ("knowledge", second)):
-        row = json.loads((tmp_path / f"tools/out/{name}.row.json").read_text(encoding="utf-8"))
+        row = json.loads(
+            (tmp_path / f"tools/out/{name}.current-row.json").read_text(encoding="utf-8")
+        )
         assert len(result["cases"]) == len(row["tests"]) == 6
         assert all(case["nodeid"].endswith(result["evidence_id"] + "]") for case in result["cases"])
-        assert (
-            receipts._evidence(
-                tmp_path,
-                result["stage_id"],
-                row,
-                result["source_snapshot_sha256"],
-                result["scope_hash"],
-            )
-            == []
-        )
-    assert not (tmp_path / receipts.RECEIPT_PATH).exists()
+        assert row["current_boundary"] == result["current_boundary"]
+        assert row["source_snapshot_sha256"] == result["source_snapshot_sha256"]
+        assert row["scope_hash"] == result["scope_hash"]
+    assert not (tmp_path / "docs/design/exec/架构阶段收据.json").exists()
 
 
 def test_six_roles_in_one_requirement_never_sign_another_requirements_positive_only(tmp_path):
@@ -230,7 +253,7 @@ def test_six_roles_in_one_requirement_never_sign_another_requirements_positive_o
     assert second["status"] == "rejected"
     assert len(second["cases"]) == 1
     assert "missing_functional_witness_roles" in second["open_items"]
-    assert not (tmp_path / "tools/out/knowledge.row.json").exists()
+    assert not (tmp_path / "tools/out/knowledge.current-row.json").exists()
 
 
 def test_case_consumers_are_exact_and_six_roles_for_A_never_sign_B(tmp_path):
@@ -243,7 +266,7 @@ def test_case_consumers_are_exact_and_six_roles_for_A_never_sign_B(tmp_path):
         item.endswith(":strategy:other") and item.startswith("missing_consumer_witness_roles:")
         for item in result["open_items"]
     )
-    assert not (tmp_path / "tools/out/capture.row.json").exists()
+    assert not (tmp_path / "tools/out/capture.current-row.json").exists()
 
 
 def test_other_consumer_output_change_cannot_sign_constant_consumer(tmp_path):
@@ -266,8 +289,8 @@ def test_batch_missing_explicit_responsibility_or_failed_run_rejects_all_rows(tm
     second = json.loads((tmp_path / "tools/out/knowledge.json").read_text(encoding="utf-8"))
     assert run.returncode != 0
     assert first["status"] == second["status"] == "rejected"
-    assert not (tmp_path / "tools/out/capture.row.json").exists()
-    assert not (tmp_path / "tools/out/knowledge.row.json").exists()
+    assert not (tmp_path / "tools/out/capture.current-row.json").exists()
+    assert not (tmp_path / "tools/out/knowledge.current-row.json").exists()
 
 
 @pytest.mark.parametrize(
@@ -302,7 +325,7 @@ def test_batch_plan_rejects_ambiguous_or_noncanonical_responsibility(tmp_path, f
     elif fault == "same_output":
         rows[1]["output"] = rows[0]["output"]
     elif fault == "row_output_overlap":
-        rows[1]["output"] = "tools/out/society.row.json"
+        rows[1]["output"] = "tools/out/society.current-row.json"
     elif fault == "plan_output_overlap":
         rows[1]["output"] = "tools/out/fixture-plan.json"
     elif fault == "invalid_requirement":
@@ -335,9 +358,6 @@ def _current_fixture(tmp_path, monkeypatch):
     test = tmp_path / "tests/test_business.py"
     test.parent.mkdir()
     test.write_text("def test_actual(role):\n    pass\n", encoding="utf-8")
-    baseline = tmp_path / "research/vanilla-ai/1.15.0/default.txt"
-    baseline.parent.mkdir(parents=True)
-    baseline.write_text("native = {}\n", encoding="utf-8")
     product = tmp_path / capture._CURRENT_ROOT
     generated = product / "common/generated.txt"
     generated.parent.mkdir(parents=True)
@@ -351,8 +371,6 @@ def _current_fixture(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "REPO", tmp_path)
     monkeypatch.setattr(config, "GAME", native.parents[1])
     monkeypatch.setattr(decisions, "PRODUCT", tmp_path / "mod")
-    monkeypatch.setattr(decisions, "_HISTORICAL_PRODUCT", tmp_path / "mod")
-    monkeypatch.setattr(decisions, "baseline_path", lambda: baseline)
     calls = []
 
     def verify_native():
@@ -364,7 +382,7 @@ def _current_fixture(tmp_path, monkeypatch):
         calls.append("discover_native")
         verify_native()
         return SimpleNamespace(
-            baseline_id="victoria3-1.15.0:fixture",
+            baseline_id=f"victoria3-{version_contracts.CURRENT_VERSION}:fixture",
             scope_hash=scope_hash,
             source_hashes=native_sources,
             discovered_count=1,
@@ -374,13 +392,11 @@ def _current_fixture(tmp_path, monkeypatch):
     monkeypatch.setattr(capture.vanilla_inventory, "discover", discover_native)
     built = {"common/generated.txt": generated.read_bytes()}
 
-    def package_inputs(*, include_engineering_metadata=False):
-        assert include_engineering_metadata is True
+    def package_inputs():
         verify_native()
         return None, None, dict(built)
 
     monkeypatch.setattr(distribution, "package_inputs", package_inputs)
-    monkeypatch.setattr(distribution, "_release_files", lambda files: files)
     lock = product / "generation-lock.json"
     lock.write_text(
         distribution.generation_lock({"common/generated.txt": generated.read_bytes()}),
@@ -393,7 +409,6 @@ def _current_fixture(tmp_path, monkeypatch):
         "architecture_witness_requirement": "observed_feedback_opportunity_cost",
         "architecture_witness_id": "current.executed",
         "architecture_witness_scope": scope_hash,
-        "architecture_witness_profile": "1.15.0",
         "numprocesses": 0,
     }
     cfg = SimpleNamespace(
@@ -418,7 +433,7 @@ def _record_current_roles(state, consumer=None):
             nodeid,
             case_id=role,
             role=role,
-            input={"role": role, "contract_version": "1.15.0"},
+            input={"role": role, "contract_version": version_contracts.CURRENT_VERSION},
             expected={"value": value},
             reference={"value": value},
             generated={"value": value},
@@ -440,17 +455,14 @@ def _record_current_roles(state, consumer=None):
 def test_explicit_current_capture_binds_raw_lock_native_scope_and_true_output_tree(
     tmp_path, monkeypatch
 ):
-    from pdx import version_contracts
-
     capture, cfg, _options, paths, calls = _current_fixture(tmp_path, monkeypatch)
-    with version_contracts.select_version("1.15.0"):
-        state = capture.Capture(cfg)
-        _record_current_roles(state)
-        result = state.pytest_sessionfinish(SimpleNamespace(testscollected=6, exitstatus=0), 0)
+    state = capture.Capture(cfg)
+    _record_current_roles(state)
+    result = state.pytest_sessionfinish(SimpleNamespace(testscollected=6, exitstatus=0), 0)
     assert result["status"] == "passed"
     assert result["schema"] == 2
     assert result["protocol"] == capture._CURRENT_PROTOCOL
-    assert result["contract_version"] == "1.15.0"
+    assert result["contract_version"] == version_contracts.CURRENT_VERSION
     assert result["current_boundary"]["generated_root"] == capture._CURRENT_ROOT
     assert calls.count("discover_native") == 2
     assert (
@@ -461,40 +473,43 @@ def test_explicit_current_capture_binds_raw_lock_native_scope_and_true_output_tr
     assert row_path.is_file()
     assert not (tmp_path / "tools/out/current.row.json").exists()
     row = json.loads(row_path.read_bytes())
-    assert receipts._evidence(
-        tmp_path, "S3", row, result["source_snapshot_sha256"], result["scope_hash"]
+    assert row["scope_hash"] == result["scope_hash"]
+    assert row["current_boundary"] == result["current_boundary"]
+    assert row["source_snapshot_sha256"] == result["source_snapshot_sha256"]
+    assert len(row["tests"]) == 6
+    assert (
+        row["result"]["sha256"]
+        == hashlib.sha256((tmp_path / row["result"]["path"]).read_bytes()).hexdigest()
     )
 
 
 @pytest.mark.parametrize(
-    "consumer", ["mod/common/generated.txt", "tools/out/arbitrary/common/generated.txt"]
+    "consumer", ["mod/decisions/actions.toml", "tools/out/arbitrary/common/generated.txt"]
 )
-def test_current_capture_rejects_old_or_arbitrary_generated_roots(tmp_path, monkeypatch, consumer):
-    from pdx import version_contracts
-
+def test_current_capture_rejects_authored_or_arbitrary_consumer_roots(
+    tmp_path, monkeypatch, consumer
+):
     capture, cfg, _options, _paths, _calls = _current_fixture(tmp_path, monkeypatch)
-    with version_contracts.select_version("1.15.0"):
-        state = capture.Capture(cfg)
-        with pytest.raises(ValueError, match="exact compatibility output root"):
-            _record_current_roles(state, consumer)
+    state = capture.Capture(cfg)
+    with pytest.raises(
+        ValueError, match="generated consumer path outside attested production outputs"
+    ):
+        _record_current_roles(state, consumer)
 
 
 @pytest.mark.parametrize("fault", ["source", "generated", "lock", "native", "extra_output"])
 def test_current_capture_rejects_changed_source_lock_output_or_native_bytes(
     tmp_path, monkeypatch, fault
 ):
-    from pdx import version_contracts
-
     capture, cfg, _options, paths, _calls = _current_fixture(tmp_path, monkeypatch)
-    with version_contracts.select_version("1.15.0"):
-        state = capture.Capture(cfg)
-        _record_current_roles(state)
-        if fault == "extra_output":
-            paths["generated"].with_name("unknown.txt").write_bytes(b"unknown={}")
-        else:
-            paths[fault].write_bytes(paths[fault].read_bytes() + b"\n# drift\n")
-        session = SimpleNamespace(testscollected=6, exitstatus=0)
-        result = state.pytest_sessionfinish(session, 0)
+    state = capture.Capture(cfg)
+    _record_current_roles(state)
+    if fault == "extra_output":
+        paths["generated"].with_name("unknown.txt").write_bytes(b"unknown={}")
+    else:
+        paths[fault].write_bytes(paths[fault].read_bytes() + b"\n# drift\n")
+    session = SimpleNamespace(testscollected=6, exitstatus=0)
+    result = state.pytest_sessionfinish(session, 0)
     assert result["status"] == "rejected"
     assert result["open_items"]
     assert session.exitstatus == pytest.ExitCode.TESTS_FAILED
@@ -504,59 +519,45 @@ def test_current_capture_rejects_changed_source_lock_output_or_native_bytes(
 def test_current_capture_rejects_old_tree_even_with_a_coherently_refreshed_current_lock(
     tmp_path, monkeypatch
 ):
-    from pdx import distribution, version_contracts
+    from pdx import distribution
 
     capture, cfg, _options, paths, _calls = _current_fixture(tmp_path, monkeypatch)
-    with version_contracts.select_version("1.15.0"):
-        paths["generated"].write_bytes(b"strategy = { weight = { value = 99 } }\n")
-        paths["lock"].write_text(
-            distribution.generation_lock({"common/generated.txt": paths["generated"].read_bytes()}),
-            encoding="utf-8",
-            newline="\n",
-        )
-        with pytest.raises(pytest.UsageError, match="freshly built production bytes"):
-            capture.Capture(cfg)
+    paths["generated"].write_bytes(b"strategy = { weight = { value = 99 } }\n")
+    paths["lock"].write_text(
+        distribution.generation_lock({"common/generated.txt": paths["generated"].read_bytes()}),
+        encoding="utf-8",
+        newline="\n",
+    )
+    with pytest.raises(pytest.UsageError, match="freshly built production bytes"):
+        capture.Capture(cfg)
 
 
 @pytest.mark.parametrize("fault", ["scope", "profile", "configured_root"])
 def test_current_capture_requires_matching_discovered_scope_and_configured_profile(
     tmp_path, monkeypatch, fault
 ):
-    from pdx import decisions, version_contracts
+    from pdx import decisions
 
     capture, cfg, options, _paths, _calls = _current_fixture(tmp_path, monkeypatch)
     if fault == "scope":
         options["architecture_witness_scope"] = "0" * 64
     elif fault == "configured_root":
         monkeypatch.setattr(decisions, "PRODUCT", tmp_path / "other-output")
-    with (
-        version_contracts.select_version("1.14.5" if fault == "profile" else "1.15.0"),
-        pytest.raises(pytest.UsageError, match="current architecture witness boundary"),
-    ):
+    else:
+        monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.14.5")
+    with pytest.raises(pytest.UsageError, match="current architecture witness boundary"):
         capture.Capture(cfg)
 
 
 def test_current_batch_responsibilities_share_one_complete_boundary_check(tmp_path, monkeypatch):
-    from pdx import version_contracts
-
     capture, cfg, options, _paths, calls = _current_fixture(tmp_path, monkeypatch)
-    with version_contracts.select_version("1.15.0"):
-        boundary = capture._CurrentBoundary(tmp_path)
-        first = capture.Capture(cfg, current_boundary=boundary)
-        options["architecture_witness_output"] = "tools/out/second.json"
-        options["architecture_witness_id"] = "second.executed"
-        second = capture.Capture(cfg, current_boundary=boundary)
-        for state in (first, second):
-            _record_current_roles(state)
-            result = state.pytest_sessionfinish(SimpleNamespace(testscollected=6, exitstatus=0), 0)
-            assert result["status"] == "passed"
+    boundary = capture._CurrentBoundary(tmp_path)
+    first = capture.Capture(cfg, current_boundary=boundary)
+    options["architecture_witness_output"] = "tools/out/second.json"
+    options["architecture_witness_id"] = "second.executed"
+    second = capture.Capture(cfg, current_boundary=boundary)
+    for state in (first, second):
+        _record_current_roles(state)
+        result = state.pytest_sessionfinish(SimpleNamespace(testscollected=6, exitstatus=0), 0)
+        assert result["status"] == "passed"
     assert calls.count("discover_native") == 2
-
-
-@pytest.fixture(autouse=True)
-def _historical_1150_contract():
-    from pdx import version_contracts
-
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
-        yield

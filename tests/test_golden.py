@@ -30,7 +30,6 @@ from _artifact_readback import assert_artifacts_readback
 from _artifact_text import assert_utf8_no_bom
 
 from pdx import analyze, config, docs_mirror, verify
-from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -75,43 +74,33 @@ def artifacts(tmp_path_factory: pytest.TempPathFactory, ga, ma, ca) -> dict[str,
 
 def test_artifact_digests(artifacts, data_regression, ga) -> None:
     """每个产物的字节数与 sha256 必须与冻结值一致。"""
-    version = active_version()
-    if version in {"1.15.0", "1.15.1", "1.15.2"}:
-        snap = verify.latest_compact_snapshot()
-        assert snap is not None
-        snap.require_version()
-        assert ga.version == snap.version
-        common = config.GAME / "common"
-        # Analysis includes every directory, including md-only empty buckets.
-        # The structural snapshot groups scriptable files and also includes
-        # loose root files. Verify both denominators against the installation.
-        assert set(ga.common) == {path.name for path in common.iterdir() if path.is_dir()}
-        buckets = {
-            path.relative_to(common).parts[0]
-            for path in common.rglob("*")
-            if path.is_file()
-            and config.is_scriptable(path.relative_to(config.GAME).parts, path.suffix.lower())
-        }
-        assert set(snap.sections["common_entries"]) == buckets
-        for name, extracted in ga.common.items():
-            assert set(extracted.entries) == set(snap.sections["common_entries"].get(name, [])), (
-                name
-            )
-        assert ga.official_docs == {
-            key: int(str(value["字节"])) for key, value in docs_mirror.entries().items()
-        }
+    snap = verify.latest_compact_snapshot()
+    assert snap is not None
+    snap.require_version()
+    assert ga.version == snap.version
+    common = config.GAME / "common"
+    # Analysis includes every directory, including md-only empty buckets.
+    # The structural snapshot groups scriptable files and also includes
+    # loose root files. Verify both denominators against the installation.
+    assert set(ga.common) == {path.name for path in common.iterdir() if path.is_dir()}
+    buckets = {
+        path.relative_to(common).parts[0]
+        for path in common.rglob("*")
+        if path.is_file()
+        and config.is_scriptable(path.relative_to(config.GAME).parts, path.suffix.lower())
+    }
+    assert set(snap.sections["common_entries"]) == buckets
+    for name, extracted in ga.common.items():
+        assert set(extracted.entries) == set(snap.sections["common_entries"].get(name, [])), name
+    assert ga.official_docs == {
+        key: int(str(value["字节"])) for key, value in docs_mirror.entries().items()
+    }
     digests = {
         name: {"字节": p.stat().st_size, "sha256": _sha256(p)}
         for name, p in sorted(artifacts.items())
     }
     assert digests, "至少要有产物"
-    basename = {
-        "1.14.5": None,
-        "1.15.0": "test_artifact_digests_115",
-        "1.15.1": "test_artifact_digests_1151",
-        "1.15.2": "test_artifact_digests_1152",
-    }[version]
-    data_regression.check(digests, basename=basename)
+    data_regression.check(digests, basename="test_artifact_digests_1152")
 
 
 def test_全部产物都非空(artifacts) -> None:

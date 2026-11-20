@@ -9,6 +9,7 @@ import pytest
 
 from pdx.situated.native_catalog import build_native_catalog
 from pdx.situated.version_inventory import canonical_json
+from pdx.version_contracts import CURRENT_VERSION
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,7 +32,7 @@ def _input(root: Path, sources: dict[str, str]) -> dict[str, Any]:
         )
     result: dict[str, Any] = {
         "schema": "situated-ai.native-inventory/1",
-        "expected_version": "1.15.0",
+        "expected_version": CURRENT_VERSION,
         "version_identity": {"version_match": True},
         "files": files,
         "failures": [],
@@ -230,12 +231,13 @@ def test_input_drift_and_tampering_fail_closed(tmp_path: Path) -> None:
     inventory = _input(
         tmp_path, {"game/common/ai_strategies/native.txt": "strategy = { weight = 1 }"}
     )
-    inventory["expected_version"] = "1.14.5"
-    with pytest.raises(ValueError, match=r"identity|version"):
+    record = inventory["files"][0]
+    record["parse_status"] = "partial"
+    with pytest.raises(ValueError, match="raw inventory identity mismatch"):
         build_native_catalog(tmp_path, inventory)
-    inventory["expected_version"] = "1.15.0"
-    (tmp_path / inventory["files"][0]["path"]).write_text("changed", encoding="utf-8")
-    with pytest.raises(ValueError, match="drift"):
+    record["parse_status"] = "parsed"
+    (tmp_path / record["path"]).write_text("changed", encoding="utf-8")
+    with pytest.raises(ValueError, match="native content drift"):
         build_native_catalog(tmp_path, inventory)
 
 
@@ -245,12 +247,14 @@ def test_resealed_wrong_version_or_identity_match_is_rejected(tmp_path: Path) ->
     )
     inventory["expected_version"] = "1.14.5"
     _seal(inventory)
-    with pytest.raises(ValueError, match="version"):
+    with pytest.raises(ValueError, match=r"未支持的原版合同版本.*1\.14\.5"):
         build_native_catalog(tmp_path, inventory)
-    inventory["expected_version"] = "1.15.0"
+    inventory["expected_version"] = CURRENT_VERSION
     inventory["version_identity"]["version_match"] = False
     _seal(inventory)
-    with pytest.raises(ValueError, match="version"):
+    with pytest.raises(
+        ValueError, match="version identity is not a verified expected-version match"
+    ):
         build_native_catalog(tmp_path, inventory)
 
 

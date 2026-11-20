@@ -11,7 +11,6 @@ from typing import Any
 
 import pytest
 from test_network_profile import _consumer, _parsed, _score
-from test_remaining_joint_consumers import _historical_school_blocks
 from test_situated_joint_witnesses import _facts
 
 from pdx import (
@@ -65,15 +64,7 @@ def production():
 
 @pytest.fixture(scope="module")
 def current_school(production):
-    version = version_contracts.active_version()
-    if version not in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        return None
-    baseline_root = (
-        config.ROOT
-        if version == version_contracts.CURRENT_VERSION
-        else production_profile.baseline_root()
-    )
-    profile = production_profile.load_profile(baseline_root)
+    profile = production_profile.load_profile(config.ROOT)
     program = next(
         row
         for row in network_profile.compile_profile(profile)
@@ -166,93 +157,6 @@ def _overlay(text, field):
     start = text.index(marker)
     stop = text.index(f"# SITAI END information:{field}", start)
     return "\n".join(text[start:stop].splitlines()[1:])
-
-
-@pytest.mark.parametrize(
-    ("changes", "expected"),
-    [
-        ({}, (1.0, 0.98)),
-        ({"loans": False}, (1.0, 0.98)),
-        ({"bureaucracy": 1}, (1.18, 1.08)),
-        ({"bureaucracy": 0}, (1.1, 1.08)),
-        ({"bureaucracy": 1, "loans": False}, (1.18, 1.08)),
-        ({"default": True}, (0.85, 0.78)),
-        ({"default": True, "bureaucracy": 1}, (1.03, 0.88)),
-        ({"default": True, "war": True}, (0.85, 0.83)),
-        ({"default": None}, (1.0, 0.98)),
-        ({"bureaucracy": None}, (1.1, 1.08)),
-        ({"net_surplus": None}, (1.0, 0.98)),
-        ({"loans": None}, (1.0, 0.98)),
-        ({"average_sol": None}, (1.0, 0.9)),
-        ({"population": None}, (0.9, 0.9)),
-        ({"average_sol": 8}, (1.0, 0.9)),
-        ({"literacy": 0.35}, (1.0, 0.98)),
-        ({"literacy": None}, (0.9, 0.98)),
-        ({"average_sol": 12, "literacy": 0.8, "bureaucracy": 1}, (1, 1.0)),
-        ({"bureaucracy": 1, "population": 2_000_000}, (1.18, 1.1)),
-        (
-            {"bureaucracy": 1, "net_surplus": 1, "grain_price": 0.6, "grain_balance": -1},
-            (1.25, 1.12),
-        ),
-        (
-            {"bureaucracy": 1, "net_surplus": 0, "grain_price": 0.6, "grain_balance": -1},
-            (1.18, 1.08),
-        ),
-        (
-            {
-                "bureaucracy": 1,
-                "net_surplus": 1,
-                "debt_ratio": 0.2,
-                "loans": False,
-                "legitimacy": 80,
-            },
-            (1.25, 1.08),
-        ),
-        (
-            {
-                "bureaucracy": 1,
-                "net_surplus": 1,
-                "debt_ratio": 0.3,
-                "loans": False,
-                "legitimacy": 20,
-            },
-            (1.25, 1.08),
-        ),
-        ({"route_education": True}, (1.0, 0.98)),
-        ({"candidate_selected": True, "institution_expanding": True}, (1.0, 0.98)),
-    ],
-)
-def test_complete_consumers_match_handwritten_joint_preferences(
-    production, current_school, changes, expected
-):
-    _source, policy, _native, generated, _disabled, _model = production
-    # Preserve both historical multiplier contracts against their own frozen
-    # source/PDX bodies, independently of the installed current game version.
-    for version in ("1.14.5", "1.15.0"):
-        with version_contracts.select_version(version):
-            historical, blocks = _historical_school_blocks(version)
-            old_values = _values(changes)
-            reference = decision_rules.evaluate(historical, old_values, is_ai=True)
-            assert reference.get(SCHOOL, ("native", 1))[1] == pytest.approx(expected[0])
-            assert oracle.select(
-                blocks[SCHOOL], _facts(historical, old_values)
-            ).delta == pytest.approx(expected[0])
-    values = _values(changes)
-    reference = decision_rules.evaluate(policy, values, is_ai=True)
-    facts = _facts(policy, values)
-    for field, factor in zip(FIELDS, expected, strict=True):
-        if field == SCHOOL and current_school is not None:
-            assert field not in reference
-            program, _generated_school, _declaration = current_school
-            delta = _current_school_observed(program, _current_school_facts(values))
-            assert delta == pytest.approx(_current_school_delta(values))
-            assert 10 + delta == pytest.approx(10 + _current_school_delta(values))
-            continue
-        observed = oracle.select(_overlay(generated, field), facts)
-        assert reference.get(field, ("native", 1))[1] == pytest.approx(factor)
-        assert (observed.delta if observed.operation == "multiply" else 1) == pytest.approx(factor)
-        # Both original institution entries are 10. No test claims investment.
-        assert 10 * factor == pytest.approx(10 * (observed.delta if observed.operation else 1))
 
 
 def test_same_demand_tiers_and_independent_costs_have_explicit_causes(production, current_school):

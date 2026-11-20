@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from pdx import config, political_surface, version_contracts
+from pdx import config, political_surface
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 
@@ -153,9 +153,7 @@ def test_默认层单独进入索引(tmp_path):
 def test_原版政治策略牌数量和关键策略字段():
     if not (config.GAME / political_surface.STRATEGY_DIR).is_dir():
         pytest.skip("没有游戏本体")
-    # Nine historical cards remain a separate contract. The two 1.15 cards
-    # are radical-leftist choices, not additional universally eligible cards.
-    historical_names = {
+    expected_names = {
         "ai_strategy_conservative_agenda",
         "ai_strategy_reactionary_agenda",
         "ai_strategy_progressive_agenda",
@@ -165,20 +163,9 @@ def test_原版政治策略牌数量和关键策略字段():
         "ai_strategy_tanzimat_reforms",
         "ai_strategy_meiji_restoration",
         "ai_strategy_great_reforms",
-    }
-    current_names = historical_names | {
         "ai_strategy_consolidation_agenda",
         "ai_strategy_confrontation_agenda",
     }
-    selected_version = version_contracts.active_version()
-    expected_names = {
-        "1.14.5": historical_names,
-        "1.15.0": current_names,
-        "1.15.1": current_names,
-        "1.15.2": current_names,
-    }[selected_version]
-    assert len(historical_names) == 9
-    assert len(current_names) == 11
 
     # Independently enumerate the real native AST, without the production
     # strategy-file selector or strategy extraction/summary implementation.
@@ -213,31 +200,30 @@ def test_原版政治策略牌数量和关键策略字段():
     by_name = {strategy.name: strategy for strategy in strategies}
     assert len(strategies) == len(expected_names)
     assert set(by_name) == expected_names == set(native_cards)
-    if selected_version in {"1.15.0", "1.15.1", "1.15.2"}:
-        for name, chance, aversion in (
-            ("ai_strategy_consolidation_agenda", 10, 75),
-            ("ai_strategy_confrontation_agenda", 20, 25),
-        ):
-            possible = native_cards[name].all("possible")
-            assert len(possible) == 1
-            assert possible[0].op == "="
-            assert possible[0].prefix is None
-            assert isinstance(possible[0].value, Block)
-            clauses = possible[0].value.items
-            assert len(clauses) == 1
-            guard = clauses[0]
-            assert isinstance(guard, Assignment)
-            assert guard.key == "has_radical_leftist_government"
-            assert guard.op == "="
-            assert guard.prefix is None
-            assert isinstance(guard.value, Scalar)
-            assert guard.value.unquoted == "yes"
-            card = by_name[name]
-            assert card.possible_keys == ("has_radical_leftist_government",)
-            assert card.change_law_chance is not None
-            assert card.change_law_chance.base == chance
-            assert card.revolution_aversion is not None
-            assert card.revolution_aversion.base == aversion
+    for name, chance, aversion in (
+        ("ai_strategy_consolidation_agenda", 10, 75),
+        ("ai_strategy_confrontation_agenda", 20, 25),
+    ):
+        possible = native_cards[name].all("possible")
+        assert len(possible) == 1
+        assert possible[0].op == "="
+        assert possible[0].prefix is None
+        assert isinstance(possible[0].value, Block)
+        clauses = possible[0].value.items
+        assert len(clauses) == 1
+        guard = clauses[0]
+        assert isinstance(guard, Assignment)
+        assert guard.key == "has_radical_leftist_government"
+        assert guard.op == "="
+        assert guard.prefix is None
+        assert isinstance(guard.value, Scalar)
+        assert guard.value.unquoted == "yes"
+        card = by_name[name]
+        assert card.possible_keys == ("has_radical_leftist_government",)
+        assert card.change_law_chance is not None
+        assert card.change_law_chance.base == chance
+        assert card.revolution_aversion is not None
+        assert card.revolution_aversion.base == aversion
     tanzimat = by_name["ai_strategy_tanzimat_reforms"]
     assert tanzimat.change_law_chance is not None
     assert tanzimat.change_law_chance.base == 100

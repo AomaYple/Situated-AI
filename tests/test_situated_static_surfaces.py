@@ -15,14 +15,6 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_discovery_contract():
-    # These synthetic fixtures declare release/1.14.5 and its documentation;
-    # installed 1.15 integrations keep their independently selected contract.
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 PM_DOC = (
     "ai_selection = most_productive # Affects how the AI chooses between PMs. "
     "Current options: most_profitable, most_productive. Default most_profitable\n"
@@ -96,7 +88,7 @@ def _write(root: Path, relative: str, text: str) -> None:
 
 def _game(tmp_path: Path) -> Path:
     for name, text in (
-        ("caligula_branch", "release/1.14.5"),
+        ("caligula_branch", f"release/{version_contracts.CURRENT_VERSION}"),
         ("caligula_rev", "fixture"),
         ("clausewitz_branch", "fixture"),
         ("clausewitz_rev", "fixture"),

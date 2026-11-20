@@ -25,15 +25,6 @@ def test_current_reader_has_independent_executable_and_native_source_identity():
     assert hashes["@engine/binaries/victoria3.exe"] == engine_scope_115.executable_identity()[0]
 
 
-@pytest.fixture
-def reader_manifest_registry():
-    return {
-        "1.15.0": engine_scope_115.MANIFESTS,
-        "1.15.1": engine_scope_115.MANIFESTS_1151,
-        "1.15.2": engine_scope_115.MANIFESTS_1152,
-    }[version_contracts.active_version()]
-
-
 def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_history(monkeypatch):
     original = decision_rules.SOURCE.read_bytes()
     historical = tomllib.loads(original.decode())
@@ -51,32 +42,13 @@ def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_hi
             decision_interfaces.reader_scope(replace(reader, unit="battalions"), ())
         assert historical["readers"][key]["unit"] == "battalions"
     assert decision_rules.SOURCE.read_bytes() == original
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
-    old = {reader.key: reader for reader in decision_rules.load().readers}
-    assert old["native_army_capacity"].unit == "battalions"
-    signature = joint_chain_contract._expected_reader_signature("native_army_capacity")
-    assert signature is not None
-    assert signature[7] == "battalions"
-    assert current.source_sha256 != decision_rules.load().source_sha256
-
-
-def test_current_discovery_never_opens_historical_getter_manifest(monkeypatch):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
-    monkeypatch.setattr(
-        decision_interfaces, "_LJ10_EVIDENCE", config.REPO / "absent-old-proof.json"
-    )
-    assert decision_interfaces.proven_reader_words() == frozenset(
-        {"num_defensive_pacts", *engine_reader_115.NATIVE_VALUES}
-    )
 
 
 @pytest.mark.parametrize(
     "damage",
     ["foreign-scope", "wrong-unit", "active-runtime", "old-exe", "flag-index", "old-strategy"],
 )
-def test_rebound_reader_evidence_cannot_expand_permission(
-    tmp_path, monkeypatch, reader_manifest_registry, damage
-):
+def test_rebound_reader_evidence_cannot_expand_permission(tmp_path, monkeypatch, damage):
     data = json.loads(engine_reader_115.snapshot())
     if damage == "foreign-scope":
         data["reader"]["scope"] = "target_country"
@@ -94,7 +66,7 @@ def test_rebound_reader_evidence_cannot_expand_permission(
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        reader_manifest_registry,
+        engine_scope_115.MANIFESTS,
         "defensive-pact-reader",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -111,7 +83,7 @@ def test_rebound_reader_evidence_cannot_expand_permission(
     ],
 )
 def test_rebound_reader_integer_identity_rejects_equal_nonintegers(
-    tmp_path, monkeypatch, reader_manifest_registry, section, field, conversion
+    tmp_path, monkeypatch, section, field, conversion
 ):
     data = json.loads(engine_reader_115.snapshot())
     data[section][field] = conversion(data[section][field])
@@ -119,7 +91,7 @@ def test_rebound_reader_integer_identity_rejects_equal_nonintegers(
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        reader_manifest_registry,
+        engine_scope_115.MANIFESTS,
         "defensive-pact-reader",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -156,20 +128,18 @@ def test_broad_online_generation_checks_current_reader_closure(monkeypatch):
 
     monkeypatch.setattr(engine_reader_115, "verify_game", reject)
     # Keep the preceding real scope/source guards aligned with this installation.
-    with version_contracts.select_version(installed_version):
-        assert version_contracts.is_115()
-        with pytest.raises(ValueError, match="current reader drift"):
-            distribution.package_inputs()
+    with pytest.raises(ValueError, match="current reader drift"):
+        distribution.package_inputs()
     assert calls == [(config.GAME, installed_version)]
 
 
+@pytest.mark.integration
 def test_three_consumer_profile_has_no_legacy_reader_dependency(monkeypatch):
     def reject(*_, **__):
         raise AssertionError("three-consumer profile must not require the legacy getter")
 
     monkeypatch.setattr(engine_reader_115, "snapshot", reject)
     monkeypatch.setattr(engine_reader_115, "verify_game", reject)
-    with version_contracts.select_version("1.15.0"):
-        profile = native.load_profile(native.BASELINE_ROOT)
-        files = distribution.profile_outputs(profile)
-    assert "common/decrees/00_decree.txt" in files
+    profile = native.declared_profile()
+    assert distribution.check_profile_installation(profile) == profile
+    assert len(profile.consumer_ids) == 3

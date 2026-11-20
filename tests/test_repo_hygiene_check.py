@@ -130,12 +130,10 @@ def test_git_index_checks_registered_outputs_and_force_added_ignored_paths(
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     rules = Path(__file__).resolve().parents[1] / ".gitignore"
     (tmp_path / ".gitignore").write_bytes(rules.read_bytes())
-    tracked = (
-        "tools/out/snapshots/release-1.15.2.compact.json",
-        "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json",
-    )
+    tracked = ("tools/out/snapshots/release-1.15.2.compact.json",)
     ignored = (
         "tools/out/snapshots/本机结果.compact.json",
+        "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json",
         "tools/out/raw/游戏资料.json",
         ".venv/pyvenv.cfg",
         "research/official-docs/官方文档.txt",

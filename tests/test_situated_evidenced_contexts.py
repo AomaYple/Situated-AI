@@ -114,7 +114,7 @@ def test_law_context_offline_evidence_is_tracked_and_independent_of_ignored_mirr
     import subprocess
 
     relative = compiler._LAW_DOC.relative_to(config.REPO).as_posix()
-    assert relative == "research/situated/victoria3-1.14.5-law-enact-context.md"
+    assert relative == "research/situated/1.15.2/law-enact-context.md"
     # The exact small excerpt is intentionally retained; the full copyrighted
     # document stays in the ignored local mirror and is not distributed.
     lines = compiler._LAW_DOC.read_text(encoding="utf-8").splitlines()
@@ -162,23 +162,14 @@ def test_frozen_law_evidence_rejects_snapshot_and_live_byte_drift(monkeypatch, t
 
 
 def test_law_manifest_evidence_cannot_be_relabelled(monkeypatch, tmp_path):
-    current = version_contracts.active_version() == "1.15.0"
-    original = (
-        compiler.REPO / "research/official-docs-1.15.0.manifest.json"
-        if current
-        else compiler._LAW_DOC_MANIFEST
-    )
+    name = version_contracts.contract().official_manifest_name
+    original = compiler.REPO / "research" / name
     manifest = json.loads(original.read_text(encoding="utf-8"))
     manifest["文档"]["game/common/laws/readme.md"]["sha256"] = "f" * 64
-    path = tmp_path / "manifest.json"
-    path.write_text(json.dumps(manifest), encoding="utf-8")
-    if current:
-        target = tmp_path / "research/official-docs-1.15.0.manifest.json"
-        target.parent.mkdir()
-        target.write_bytes(path.read_bytes())
-        monkeypatch.setattr(compiler, "REPO", tmp_path)
-    else:
-        monkeypatch.setattr(compiler, "_LAW_DOC_MANIFEST", path)
+    target = tmp_path / "research" / name
+    target.parent.mkdir()
+    target.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(compiler, "REPO", tmp_path)
     with pytest.raises(ValueError, match="冻结文档"):
         compiler._frozen_law_context()
 
@@ -334,10 +325,3 @@ def test_documented_country_actor_cannot_be_rebased_through_reader_owner(offset)
 def test_context_contradictions_cannot_hide_behind_identifier_case(contradiction):
     text = _strategy("treaty_port_value", PORT_COMMENTS + "\n# " + contradiction)
     assert compiler.evaluation_contexts(text)["treaty_port_value"].status == "unknown"
-
-
-@pytest.fixture(scope="module", autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
-        yield

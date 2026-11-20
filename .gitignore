@@ -31,23 +31,13 @@ __pycache__/
 /tools/benchmarks/repo-audit-baseline.json
 /tools/benchmarks/repo-audit-modules.json
 
-# 保留可复核的精简快照和明确登记的证据
+# 保留当前版本的精简快照
 !/tools/out/snapshots/
 /tools/out/snapshots/*
-!/tools/out/snapshots/release-1.14.3.compact.json
-!/tools/out/snapshots/release-1.14.4.compact.json
-!/tools/out/snapshots/release-1.14.5.compact.json
-!/tools/out/snapshots/release-1.15.0.compact.json
-!/tools/out/snapshots/release-1.15.1.compact.json
 !/tools/out/snapshots/release-1.15.2.compact.json
-!/tools/out/evidence/
-/tools/out/evidence/*
-!/tools/out/evidence/v0.1-g1-20261013/
-/tools/out/evidence/v0.1-g1-20261013/*
-!/tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json
 
 # 官方原文本地镜像（research/official-docs/）是被忽略的本机副本，原始文件按版权和体积不入库；
-# 入库的只有 research/official-docs.manifest.json
+# 入库的是当前 research/official-docs-1.15.2.manifest.json
 /research/official-docs/
 /research/official-docs-*/
 

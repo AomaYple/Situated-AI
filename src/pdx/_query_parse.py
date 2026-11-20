@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from .model import ParsedFile
 
-_Key = tuple[str, str, str]
+_Key = tuple[str, str]
 _Parses = dict[_Key, tuple[str, "ParsedFile"]]
 
 
@@ -55,7 +55,8 @@ def parse_query_source(text: str, source: str, digest: str) -> ParsedFile:
     if scope is None or not scope.active or scope.thread_id != threading.get_ident():
         return parse_text(text, path=source)
     parses = scope.parses
-    key = (version_contracts.active_version(), source, digest)
+    version_contracts.require_current()
+    key = (source, digest)
     previous = parses.get(key)
     if previous is not None and previous[0] == text:
         return previous[1]

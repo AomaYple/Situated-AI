@@ -102,8 +102,7 @@ def test_native_authority_rejects_ambiguous_or_changed_write_shapes(
 
 @pytest.mark.integration
 def test_native_changes_keep_journal_aware_blocks_and_only_initialize_actual_missing_fields():
-    with version_contracts.select_version("1.15.0"):
-        adapters = decision_adapters.load()
+    adapters = decision_adapters.load()
     building_initial = [
         row for row in adapters.initial_values if row.source.startswith("common/buildings/")
     ]
@@ -222,7 +221,7 @@ def test_current_subject_branch_requires_complete_exact_reachability_ast(damage)
         baseline = baseline.replace("is_subject_of = root", 'is_subject_of = "root"')
     else:
         baseline = baseline.replace("limit = {", "limit = { stray_atom")
-    with version_contracts.select_version("1.15.0"), pytest.raises(ValueError, match="保护形状"):
+    with pytest.raises(ValueError, match="保护形状"):
         decision_rules._protected_offsets(
             baseline,
             {("ai_strategy_default", "subject_value")},
@@ -236,9 +235,6 @@ def test_new_scripted_predicate_is_reproducible_without_reading_old_manifest(tmp
     expected = decision_interfaces.scripted_predicate_path().read_bytes()
     destination = tmp_path / "current-predicate.json"
     monkeypatch.setattr(decision_interfaces, "scripted_predicate_path", lambda: destination)
-    monkeypatch.setattr(
-        decision_interfaces, "SCRIPTED_PREDICATE_SOURCE", tmp_path / "absent-old.json"
-    )
     decision_interfaces.write_scripted_trigger_authority_115(config.GAME)
     assert destination.read_bytes() == expected
     destination.write_bytes(expected + b" ")
@@ -272,7 +268,7 @@ def test_current_state_witness_retains_optional_owner_and_victim_memory():
 def test_current_company_envelope_cannot_claim_version_provenance_or_nested_authority(
     tmp_path, monkeypatch, damage
 ):
-    data = json.loads(company_sectors.BASELINE_115.read_bytes())
+    data = json.loads(company_sectors.baseline_path().read_bytes())
     if damage == "schema":
         data["schema"] = True
     elif damage == "version":
@@ -288,8 +284,8 @@ def test_current_company_envelope_cannot_claim_version_provenance_or_nested_auth
         data["payload"]["building_profiles"][building]["groups"][0]["methods"] = []
     path = tmp_path / "company-current.json"
     path.write_text(company_sectors._canonical(data), encoding="utf-8", newline="\n")
-    monkeypatch.setattr(company_sectors, "BASELINE_115", path)
-    with version_contracts.select_version("1.15.0"), pytest.raises(ValueError):
+    monkeypatch.setattr(company_sectors, "baseline_path", lambda: path)
+    with pytest.raises(ValueError):
         company_sectors.load_baseline()
 
 
@@ -299,12 +295,11 @@ def test_current_company_recapture_requires_installed_authority_before_replacing
 ):
     destination = tmp_path / "evidence.json"
     destination.write_bytes(b"prior reviewed artifact")
-    monkeypatch.setattr(company_sectors, "BASELINE_115", destination)
-    with version_contracts.select_version("1.15.0"):
-        inputs = company_sectors.read_inputs(config.GAME)
-        monkeypatch.setattr(company_sectors, "read_inputs", lambda _game: inputs)
-        with pytest.raises(ValueError):
-            company_sectors.write_baseline(tmp_path / "missing-game")
+    monkeypatch.setattr(company_sectors, "baseline_path", lambda: destination)
+    inputs = company_sectors.read_inputs(config.GAME)
+    monkeypatch.setattr(company_sectors, "read_inputs", lambda _game: inputs)
+    with pytest.raises(ValueError):
+        company_sectors.write_baseline(tmp_path / "missing-game")
     assert destination.read_bytes() == b"prior reviewed artifact"
 
 
@@ -316,8 +311,5 @@ def test_current_company_builder_identity_includes_helpers_outside_derive(tmp_pa
     alternate = tmp_path / "company_sectors.py"
     alternate.write_bytes(changed)
     monkeypatch.setattr(company_sectors, "__file__", str(alternate))
-    with (
-        version_contracts.select_version("1.15.1"),
-        pytest.raises(ValueError, match="生成来源漂移"),
-    ):
+    with pytest.raises(ValueError, match="生成来源漂移"):
         company_sectors.load_baseline()

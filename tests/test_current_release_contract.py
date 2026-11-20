@@ -49,10 +49,8 @@ def test_package_validation_refuses_retired_context_before_reading_sources(
         pytest.fail("historical package validation opened production sources")
 
     monkeypatch.setattr(distribution, "package_inputs", unexpected_package_inputs)
-    with (
-        version_contracts.select_version("1.15.1"),
-        pytest.raises(ValueError, match=r"当前仅维护 1\.15\.2"),
-    ):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+    with pytest.raises(ValueError, match=r"当前仅维护 1\.15\.2"):
         distribution.validate_package(Path("should-not-be-read.zip"))
 
 

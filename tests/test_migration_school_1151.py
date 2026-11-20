@@ -2,21 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
 from copy import deepcopy
 from typing import cast
 
 import pytest
 
-from pdx import version_contracts
 from pdx.situated import migration_baseline as migration
 from pdx.situated import network_profile, network_support, production_profile
 from pdx.situated.decision_ir import WriterDecisionIR
-
-
-@pytest.fixture(scope="module", autouse=True)
-def current_version():
-    with version_contracts.select_version("1.15.1"):
-        yield
 
 
 @pytest.fixture
@@ -38,12 +32,10 @@ def test_school_successor_proves_exact_frozen_retirement_cross_product(contract)
     assert not any("unreviewed_school" in identity for identity in redirects)
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
-def test_school_successor_refuses_other_version_contexts(contract, version):
-    with (
-        version_contracts.select_version(version),
-        pytest.raises(ValueError, match=r"只允许精确1\.15\.1"),
-    ):
+@pytest.mark.parametrize("version", ["1.14.5", "1.15.0", "1.15.1"])
+def test_school_successor_refuses_other_version_evidence(contract, version):
+    contract["version"] = version
+    with pytest.raises(ValueError, match="学校网络替代原版版本漂移"):
         migration._school_network_replacements(contract, ())
 
 
@@ -103,34 +95,28 @@ def test_school_successor_refuses_missing_actual_bridge(contract, monkeypatch):
         migration._school_network_replacements(contract, ())
 
 
-def test_school_successor_refuses_changed_native_tail(contract, monkeypatch):
-    real_build = network_profile.build
-
-    def damaged_build(profile):
-        files = dict(real_build(profile))
-        name = "common/ai_strategies/00_default_strategy.txt"
-        files[name] += "\n# unreviewed native tail change\n"
-        return files
-
-    monkeypatch.setattr(network_profile, "build", damaged_build)
+def test_school_successor_refuses_changed_native_tail():
+    row = next(
+        row
+        for row in production_profile.declared_profile().declarations
+        if row.id == "a0-pol-schools"
+    )
+    original = (
+        "ai_strategy_default = { institution_scores = { institution_schools = { value = 1 } } }\n"
+    )
+    generated = original + production_profile._policy_marker(row, "add = 2\n")
+    digest = hashlib.sha256(generated.encode()).hexdigest()
+    migration._verify_school_output(original, generated, row, digest)
     with pytest.raises(ValueError, match="原版资格成本或完整尾部保护漂移"):
-        migration._school_network_replacements(contract, ())
+        migration._verify_school_output(original, generated + "# changed tail\n", row, digest)
 
 
-@pytest.mark.parametrize("version", ["1.15.0", "1.15.1", version_contracts.CURRENT_VERSION])
-def test_school_support_matrix_uses_numeric_witness_for_its_actual_version(version):
-    with version_contracts.select_version(version):
-        profile = (
-            production_profile.declared_profile()
-            if version == version_contracts.CURRENT_VERSION
-            else production_profile.load_profile(production_profile.baseline_root(version))
-        )
-        rows = network_support.matrix(profile, network_profile.compile_profile(profile))
+def test_school_support_matrix_uses_current_numeric_witness():
+    profile = production_profile.declared_profile()
+    rows = network_support.matrix(profile, network_profile.compile_profile(profile))
     expected = (
-        "tests/test_release_1151_integration.py::"
+        "tests/test_release_integration.py::"
         "test_school_additive_policy_has_literal_independent_pdx_witness"
-        if version != "1.15.0"
-        else "tests/test_network_profile.py::test_school_complete_costs_and_agenda_residual"
     )
     school = [
         row for row in rows if row["consumer"] == "a0-pol-schools" and row["production_eligible"]
@@ -138,11 +124,3 @@ def test_school_support_matrix_uses_numeric_witness_for_its_actual_version(versi
     assert school
     assert all(row["status"] == "production_bound" for row in school)
     assert all(expected in cast("list[str]", row["witnesses"]) for row in school)
-    wrong = (
-        "test_school_complete_costs_and_agenda_residual"
-        if version != "1.15.0"
-        else "test_school_additive_policy_has_literal_independent_pdx_witness"
-    )
-    assert not any(
-        wrong in witness for row in school for witness in cast("list[str]", row["witnesses"])
-    )

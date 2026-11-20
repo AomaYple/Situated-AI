@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tomllib
@@ -129,9 +130,7 @@ def test_cli_rejects_stale_environment_for_explicit_current_capture(
     _repo, installation, verified, _candidate_root = sandbox
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, environment)
     output = sandbox.candidate_root / "capture/parameters.json"
-    with version_contracts.select_version("1.15.0"):
-        assert capture.main(_argv(installation, "parameters", output)) == 1
-        assert version_contracts.active_version() == "1.15.0"
+    assert capture.main(_argv(installation, "parameters", output)) == 1
     assert "合同版本" in capsys.readouterr().err
     assert verified == []
     assert not sandbox.candidate_root.exists()
@@ -176,30 +175,25 @@ def native_inputs(sandbox, monkeypatch):
         lambda root: (root / STRATEGY).read_text(encoding="utf-8-sig"),
     )
     monkeypatch.setattr(
-        vanilla_inventory, "_PARAMETER_EVIDENCE_HASHES", {STRATEGY: "historical-hash-unused"}
+        vanilla_inventory, "_parameter_evidence_contract", lambda: {STRATEGY: "0" * 64}
     )
-    historical = repo / "historical-retentions.json"
     root = capture._root(game, STRATEGY)
-    historical.write_text(
-        json.dumps(
-            {
-                "schema": 1,
-                "version": "1.15.0",
-                "evidence_kind": "native_static",
-                "runtime": "unknown",
-                "source": "historical-baseline",
-                "source_sha256": "old",
-                "definition": "ai_strategy_default",
-                "retentions": {
-                    "retained": native_treatments._digest(
-                        capture._node(root, ("ai_strategy_default", "retained")).value
-                    )
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(migration_baseline, "_VERSION_115_SOURCE", historical)
+    reviewed = {
+        "schema": 1,
+        "version": version_contracts.CURRENT_VERSION,
+        "evidence_kind": "native_static",
+        "runtime": "unknown",
+        "source": STRATEGY,
+        "source_sha256": hashlib.sha256(strategy.encode()).hexdigest(),
+        "definition": "ai_strategy_default",
+        "retentions": {
+            "retained": native_treatments._digest(
+                capture._node(root, ("ai_strategy_default", "retained")).value
+            )
+        },
+        "school_policy_migration": {"fixture": True},
+    }
+    monkeypatch.setattr(migration_baseline, "_versioned_contract", lambda: reviewed)
     catalog = technology.inventory({TECHNOLOGY: inputs[TECHNOLOGY]}, {"banking": TECHNOLOGY})
     catalog["legacy_rules"] = []
     template = repo / "technology_current.toml"
@@ -209,7 +203,7 @@ def native_inputs(sandbox, monkeypatch):
         + "'''\n\n[parameters]\nreviewed = 7\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr(technology, "PARAMETERS_CURRENT", template)
+    monkeypatch.setattr(technology, "PARAMETERS", template)
     monkeypatch.setattr(
         law_opportunities,
         "_load_policy",
@@ -221,15 +215,15 @@ def native_inputs(sandbox, monkeypatch):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_cli_runs_each_capture_to_explicit_candidate_and_restores_profile(
-    sandbox, native_inputs, capsys, kind
+def test_cli_runs_each_capture_to_explicit_candidate_without_changing_environment(
+    sandbox, native_inputs, monkeypatch, capsys, kind
 ):
     _repo, installation, verified, _candidate_root = sandbox
     suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "capture" / (kind + suffix)
-    with version_contracts.select_version("1.15.0"):
-        assert capture.main(_argv(installation, kind, output)) == 0
-        assert version_contracts.active_version() == "1.15.0"
+    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
+    assert capture.main(_argv(installation, kind, output)) == 0
+    assert version_contracts.ENVIRONMENT_VARIABLE not in os.environ
     assert verified == [installation]
     summary = json.loads(capsys.readouterr().out)
     assert summary["artifact_role"] == "review_candidate"
@@ -291,10 +285,10 @@ def test_candidate_is_idempotent_but_never_replaces_different_bytes(sandbox, nat
 @pytest.mark.parametrize(
     "relative",
     [
-        "research/situated/1.15.0/migration-retentions.json",
-        "research/situated/1.15.1/inventory-parameters.json",
-        "mod/decisions/technology_opportunities_1151.toml",
-        "tools/out/snapshots/release-1.15.1.compact.json",
+        "research/situated/1.15.2/migration-retentions.json",
+        "research/situated/1.15.2/inventory-parameters.json",
+        "mod/decisions/technology_opportunities_1152.toml",
+        "tools/out/snapshots/release-1.15.2.compact.json",
         "tools/out/evidence/not-yet-created/authority.json",
         "tools/out/../outside.json",
         "tools/out/candidate.txt",
@@ -346,7 +340,9 @@ def test_cli_rejects_output_inside_installation_even_under_tools_out(sandbox):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_direct_capture_rejects_historical_context_before_identity_or_output(sandbox, kind):
+def test_direct_capture_rejects_historical_environment_before_identity_or_output(
+    sandbox, monkeypatch, kind
+):
     _repo, installation, verified, _candidate_root = sandbox
     suffix = ".toml" if kind.endswith("-catalog") else ".json"
     output = sandbox.candidate_root / "candidate" / (kind + suffix)
@@ -357,10 +353,8 @@ def test_direct_capture_rejects_historical_context_before_identity_or_output(san
         "technology-catalog": technology.write_catalog,
         "law-catalog": law_opportunities.write_catalog,
     }
-    with (
-        version_contracts.select_version("1.15.0"),
-        pytest.raises(ValueError, match="当前仅维护"),
-    ):
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.0")
+    with pytest.raises(ValueError, match="当前仅维护"):
         functions[kind](installation / "game", output=output)
     assert verified == []
     assert not output.parent.exists()
@@ -419,7 +413,7 @@ def test_output_parent_redirect_is_rejected_without_symlink_privileges(sandbox, 
 
     def redirected_resolve(path, *args, **kwargs):
         if path == output:
-            return repo / "research/situated/1.15.0/inventory-parameters.json"
+            return repo / "research/situated/1.15.2/inventory-parameters.json"
         return actual_resolve(path, *args, **kwargs)
 
     monkeypatch.setattr(Path, "resolve", redirected_resolve)

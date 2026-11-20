@@ -46,7 +46,7 @@ import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import config, version_contracts
+from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, norm_key
 from .extract import entry_fields, extract_dir
@@ -69,8 +69,6 @@ if TYPE_CHECKING:
 
     from .model import ParsedFile
 
-type SourceIdentity = tuple[str, int, str]
-
 # Their status is checked against the actual parse before their trees are omitted.
 FROZEN_PARTIAL_DNA_SHA256 = {
     "dna_data/00_bal_gangadhar_tilak.txt": "d5343c8ea68128f67aa4e132a28377f0ec3c556ab488f1a6887a13667380762d",
@@ -80,10 +78,6 @@ FROZEN_PARTIAL_DNA_SHA256 = {
     "dna_data/00_sarojni_naidu.txt": "228f994eea419a1d717581e5c08b1ca627acb0c95565738d4ab619139ccc23d4",
     "dna_data/00_zhou_xuexi.txt": "6effdf338a405a1ce31afa527d873e99cee2da167e3fe58fa3f439a18eeff7dc",
 }
-
-
-def _complete_file_observation() -> bool:
-    return version_contracts.active_version() in {"1.15.1", "1.15.2"}
 
 
 # ────────────────────────── 口径 1：字段出现次数 ──────────────────────────
@@ -165,12 +159,8 @@ def _doc17_field_specs() -> list[KeyedTableSpec]:
     return [
         KeyedTableSpec(
             name=f"doc17 字段表{n} {d}",
-            header="| 字段 | 官方 `.md` | 完整 `.txt` 实测次数 | 说明 |"
-            if n == 1 and _complete_file_observation()
-            else header,
-            cells=_dna_field_rows
-            if n == 1 and _complete_file_observation()
-            else _field_rows(d, col, within=within, zero_keys=zero),
+            header="| 字段 | 官方 `.md` | 完整 `.txt` 实测次数 | 说明 |" if n == 1 else header,
+            cells=_dna_field_rows if n == 1 else _field_rows(d, col, within=within, zero_keys=zero),
             occurrence=occ,
             append_new=False,
         )
@@ -564,13 +554,10 @@ def _overview_paths(dir_name: str) -> list[Path]:
     return sorted(p for p in base.rglob("*.txt") if p.is_file()) if base.is_dir() else []
 
 
-def _overview_sources(
-    name: str, identities: dict[str, SourceIdentity] | None = None
-) -> Iterator[tuple[Path, ParsedFile | None]]:
+def _overview_sources(name: str) -> Iterator[tuple[Path, ParsedFile | None]]:
     """Yield current complete ASTs and explicitly identified missing ASTs."""
-    complete_only = _complete_file_observation()
     paths = _overview_paths(name)
-    if complete_only and name == "dna_data":
+    if name == "dna_data":
         missing = FROZEN_PARTIAL_DNA_SHA256.keys() - {
             path.relative_to(config.GAME / "common").as_posix() for path in paths
         }
@@ -582,32 +569,23 @@ def _overview_sources(
     for path in paths:
         relative = path.relative_to(config.GAME).as_posix()
         frozen = FROZEN_PARTIAL_DNA_SHA256.get(relative.removeprefix("common/"))
-        if identities is not None or (complete_only and frozen is not None):
+        if frozen is not None:
             raw = path.read_bytes()
             digest = hashlib.sha256(raw).hexdigest()
             parsed = parse_bytes(raw, str(path))
-            if identities is not None:
-                identities[f"game/{relative}"] = (digest, len(raw), parsed.parse_status)
-            if complete_only and frozen is not None:
-                if digest != frozen or parsed.parse_status != "partial":
-                    raise ParseError(
-                        "doc17 DNA 来源 SHA-256 或部分解析状态不同于冻结原件", str(path)
-                    )
-                yield path, None
-                continue
-        else:
-            parsed = parse_cached(path)
-        if complete_only:
-            parsed.require_complete()
+            if digest != frozen or parsed.parse_status != "partial":
+                raise ParseError("doc17 DNA 来源 SHA-256 或部分解析状态不同于冻结原件", str(path))
+            yield path, None
+            continue
+        parsed = parse_cached(path)
+        parsed.require_complete()
         yield path, parsed
 
 
-def _dna_occurrences(
-    identities: dict[str, SourceIdentity] | None = None,
-) -> tuple[Counter[int], Counter[str]]:
+def _dna_occurrences() -> tuple[Counter[int], Counter[str]]:
     definitions: Counter[int] = Counter()
     fields: Counter[str] = Counter()
-    for _, parsed in _overview_sources("dna_data", identities):
+    for _, parsed in _overview_sources("dna_data"):
         if parsed is None:
             continue
         blocks = _entry_blocks(parsed)
@@ -617,10 +595,8 @@ def _dna_occurrences(
     return definitions, fields
 
 
-def _dna_field_rows(
-    identities: dict[str, SourceIdentity] | None = None,
-) -> list[tuple[str, dict[int, str]]]:
-    _, fields = _dna_occurrences(identities)
+def _dna_field_rows() -> list[tuple[str, dict[int, str]]]:
+    _, fields = _dna_occurrences()
     fields.setdefault("dna", 0)
     return _rows(fields, 2)
 
@@ -652,15 +628,13 @@ def _overview_counts() -> tuple[int, int]:
     return files, keys
 
 
-def _overview_table_rows(
-    identities: dict[str, SourceIdentity] | None = None,
-) -> list[tuple[str, dict[int, str]]]:
+def _overview_table_rows() -> list[tuple[str, dict[int, str]]]:
     """Own only the current overview's two mechanical columns."""
     result = []
     for name in OVERVIEW_DIRS:
         blocks: dict[Path, list[str]] = {}
         partial_count = 0
-        for path, parsed in _overview_sources(name, identities):
+        for path, parsed in _overview_sources(name):
             if parsed is None:
                 partial_count += 1
                 continue
@@ -681,7 +655,7 @@ def _overview_table_rows(
             files = f"{len(blocks) - len(eras)} + `eras/`{len(eras)}"
             era_keys = sum(len(blocks[path]) for path in eras)
             keys = f"{sum(map(len, blocks.values())) - era_keys:,} + {era_keys}"
-        elif name == "dna_data" and _complete_file_observation():
+        elif name == "dna_data":
             files += f"（{len(blocks)} 完整，{partial_count} 部分）"
         result.append((f"`{name}`", {2: files, 3: keys}))
     return result
@@ -911,20 +885,12 @@ def doc_table_specs() -> list[KeyedTableSpec]:
     每条只碰自己那几行 —— 其余行原样保留。
     """
     return [
-        *(
-            [
-                KeyedTableSpec(
-                    name="doc17 §0 目录总览",
-                    header="| # | 目录 | .txt | 顶层定义键（完整文件） | 官方 `.md` | 一句话用途 |"
-                    if _complete_file_observation()
-                    else "| # | 目录 | .txt | 顶层定义键 |",
-                    cells=_overview_table_rows,
-                    key_column=1,
-                    append_new=False,
-                )
-            ]
-            if version_contracts.is_115()
-            else []
+        KeyedTableSpec(
+            name="doc17 §0 目录总览",
+            header="| # | 目录 | .txt | 顶层定义键（完整文件） | 官方 `.md` | 一句话用途 |",
+            cells=_overview_table_rows,
+            key_column=1,
+            append_new=False,
         ),
         *_doc17_field_specs(),
         # `flag_definitions` 表的最后一行：`includes` 在 **TAG 顶层块**里（表里写着「列表级」），
@@ -959,8 +925,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             name="doc17 messages 逐文件",
             header="| 文件 | 定义数 | 内容 |",
             cells=definition_rows("common/messages", 1),
-            append_new=version_contracts.is_115(),
-            allow_drop=version_contracts.is_115(),
+            allow_drop=True,
         ),
         # 取值分布（口径 3）
         *_doc17_dist_specs(),

@@ -79,20 +79,13 @@ def test_reader_rejects_state_actor_and_changed_minimum(engine):
 
 
 def test_pinned_reader_manifest_is_checked_before_returning_words(monkeypatch, tmp_path):
-    # This mutation targets the historical artifact explicitly; the independent
-    # current manifest has its own corruption tests in test_engine_reader_115.
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.14.5")
-    assert decision_interfaces.proven_reader_words() == frozenset(
-        {
-            "num_defensive_pacts",
-            "wanted_army_size_script_value",
-            "wanted_marines_size_script_value",
-        }
-    )
+    from pdx.situated import engine_scope_115
+
+    original, _, digest = engine_scope_115.manifest("defensive-pact-reader")
     path = tmp_path / "evidence.json"
-    path.write_bytes(decision_interfaces._LJ10_EVIDENCE.read_bytes() + b" ")
-    monkeypatch.setattr(decision_interfaces, "_LJ10_EVIDENCE", path)
-    with pytest.raises(ValueError, match="冻结证据字节漂移"):
+    path.write_bytes(original.read_bytes() + b" ")
+    monkeypatch.setitem(engine_scope_115.MANIFESTS, "defensive-pact-reader", (str(path), digest))
+    with pytest.raises(ValueError, match="drift"):
         decision_interfaces.proven_reader_words()
 
 

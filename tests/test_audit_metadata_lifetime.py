@@ -8,19 +8,12 @@ from typing import Any, cast
 
 import pytest
 import test_support_native_binding as fixtures
+from test_support_native_binding import unit_support_baseline  # noqa: F401
 
-from pdx import version_contracts
 from pdx.situated import audit, native_treatments
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.usefixtures("unit_support_baseline")]
 METADATA = ".metadata/metadata.json"
-
-
-@pytest.fixture(autouse=True)
-def support_fixture_profile():
-    # Candidate construction and validation use the same support-program contract.
-    with version_contracts.select_version("1.15.0"):
-        yield
 
 
 def _candidate():

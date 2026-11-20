@@ -6,60 +6,27 @@ import hashlib
 import json
 
 import pytest
+from _engine_evidence import strategy_image
 
-from pdx import version_contracts
 from pdx.parser import parse_text
-from pdx.situated import engine_scope, vanilla_inventory
+from pdx.situated import engine_scope, engine_scope_115, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_engine_contract():
-    """Synthetic historical fixtures must not borrow the current EXE identity."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.fixture
 def strategy_proof(tmp_path, monkeypatch):
-    game = tmp_path / "game"
-    game.mkdir()
-    for key in ("caligula_branch", "caligula_rev", "clausewitz_branch", "clausewitz_rev"):
-        (tmp_path / f"{key}.txt").write_text(
-            "release/1.14.5" if key == "caligula_branch" else "fixture", encoding="utf-8"
-        )
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(b"fixed strategy image")
-    source = "common/ai_strategies/sample.txt"
-    inputs = {source: b"sample = { weight = 1 wanted_army_size = 10 }\n"}
-    data = json.loads(engine_scope.STRATEGY_MANIFEST.read_text(encoding="utf-8"))
-    data["exe"] = {"sha256": hashlib.sha256(exe.read_bytes()).hexdigest(), "bytes": 20}
-    data["script_hashes"] = {source: hashlib.sha256(inputs[source]).hexdigest()}
-    data["observations"] = [{"label": "fixture", "file_offset": "0x0", "bytes": b"fixed".hex()}]
-    for definition_source in data["institution_definition_sources"]:
-        raw = "\n".join(f"{key} = {{}}" for key in data["institution_definitions"]).encode()
-        path = game / definition_source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-        inputs[definition_source] = raw
-        data["institution_definition_sources"][definition_source] = hashlib.sha256(raw).hexdigest()
-    for definition_source, raw_hex in data["stance_definition_bytes"].items():
-        raw = bytes.fromhex(raw_hex)
-        path = game / definition_source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-    manifest = tmp_path / "strategy.json"
-
-    def freeze():
-        raw = json.dumps(data).encode()
-        manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
-        monkeypatch.setattr(
-            engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
-
+    game, exe, data, inputs, freeze = strategy_image(
+        tmp_path,
+        monkeypatch,
+        b"sample = { weight = 1 wanted_army_size = 10 }\n",
+        materialize_definitions=True,
+    )
+    for index, source in enumerate(tuple(data["script_hashes"])[1:], start=1):
+        raw = f"unrelated_{index} = {{}}".encode()
+        (game / source).write_bytes(raw)
+        inputs[source] = raw
+        data["script_hashes"][source] = hashlib.sha256(raw).hexdigest()
     freeze()
     return game, exe, inputs, data, freeze
 
@@ -78,7 +45,12 @@ def strategy_proof(tmp_path, monkeypatch):
         ),
         ("max_progressiveness", "none", "override_progressiveness_limit", "direct"),
         ("max_regressiveness", "none", "override_regressiveness_limit", "direct"),
-        ("change_law_chance", "none", "additive_percentage_chance", "direct"),
+        (
+            "change_law_chance",
+            "none",
+            "first_nonzero_active_change_law_chance_else_default",
+            "direct",
+        ),
         (
             "wargoal_maneuvers_fraction",
             "scope:enemy_country=country",
@@ -237,20 +209,20 @@ def test_ambiguous_definition_or_field_is_not_proven(strategy_proof, declaration
 def test_corrupt_attestation_is_a_hard_error(strategy_proof, corruption):
     game, _, inputs, data, freeze = strategy_proof
     if corruption == "manifest_bytes":
-        engine_scope.STRATEGY_MANIFEST.write_bytes(b"{}")
+        engine_scope_115.manifest("strategy")[0].write_bytes(b"{}")
     elif corruption == "length":
         data["exe"]["bytes"] += 1
         freeze()
     else:
-        data["observations"][0]["bytes"] = "00"
+        data["observations"][0]["sha256"] = "0" * 64
         freeze()
     with pytest.raises(ValueError, match="锁定策略作用域证据"):
         engine_scope.strategy_evidence(game, inputs)
 
 
 def test_frozen_manifest_preserves_distinct_scope_keys_and_operation_units():
-    raw = engine_scope.STRATEGY_MANIFEST.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == engine_scope.STRATEGY_MANIFEST_SHA256
+    raw = engine_scope_115.manifest("strategy")[0].read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == engine_scope_115.manifest("strategy")[2]
     data = json.loads(raw)
     contracts = data["consumers"]
     assert len(contracts) == 33
@@ -272,7 +244,7 @@ def test_production_strategy_verification_reads_actual_files(strategy_proof):
         path.write_bytes(raw)
     proof = engine_scope.verify_strategy_game(game)
     assert proof.verified
-    assert engine_scope.strategy_snapshot() == engine_scope.STRATEGY_MANIFEST.read_bytes()
+    assert engine_scope.strategy_snapshot() == engine_scope_115.manifest("strategy")[0].read_bytes()
 
 
 @pytest.mark.parametrize("damage", ["exe", "script", "missing_exe", "missing_script"])

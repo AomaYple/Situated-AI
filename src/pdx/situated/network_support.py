@@ -10,8 +10,6 @@ from __future__ import annotations
 from dataclasses import is_dataclass
 from typing import TYPE_CHECKING, get_args, get_type_hints
 
-from pdx import version_contracts
-
 from . import action_network as net
 from . import core_contracts as core
 from . import expressions as ex
@@ -387,9 +385,8 @@ def matrix(
     for consumer in CONSUMERS:
         declaration = declarations[consumer]
         witness = (
-            "tests/test_release_1151_integration.py::test_school_additive_policy_has_literal_independent_pdx_witness"
+            "tests/test_release_integration.py::test_school_additive_policy_has_literal_independent_pdx_witness"
             if consumer == "a0-pol-schools"
-            and profile.game_version in {"1.15.1", version_contracts.CURRENT_VERSION}
             else _WITNESS[consumer]
         )
         for feature in FEATURES:

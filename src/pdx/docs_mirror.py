@@ -32,11 +32,15 @@ from pathlib import Path
 from . import config
 from .doc_tables import KeyedTableSpec
 from .textio import text_bytes
-from .version_contracts import active_version, contract, verify_installation_identity
+from .version_contracts import (
+    CURRENT_CONTRACT,
+    active_version,
+    require_current,
+    verify_installation_identity,
+)
 
 #: 清单文件名（放在 research/ 下，与镜像目录平级）
-HISTORICAL_MANIFEST_NAME = "official-docs.manifest.json"
-MANIFEST_NAME = config.STARTUP_CONTRACT.official_manifest_name
+MANIFEST_NAME = CURRENT_CONTRACT.official_manifest_name
 
 #: 内容根 → 目录名前缀。清单与镜像都用 ``<根>/<相对路径>`` 作键，
 #: 因为不同内容根下可能有同名相对路径（只写相对路径会互相覆盖）。
@@ -58,7 +62,8 @@ class DocEntry:
 
 
 def manifest_path() -> Path:
-    return config.RESEARCH / contract().official_manifest_name
+    require_current()
+    return config.RESEARCH / MANIFEST_NAME
 
 
 def iter_docs() -> list[tuple[str, Path]]:

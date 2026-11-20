@@ -17,10 +17,9 @@ from pdx import (
     decisions,
     distribution,
     equipment_opportunities,
-    version_contracts,
 )
 from pdx.model import Block
-from pdx.situated import audit, compiler, domain_coverage, vanilla_inventory
+from pdx.situated import audit, compiler, domain_coverage, engine_scope, vanilla_inventory
 from pdx.situated.decision_ir import (
     ConsumerIRBundle,
     WriterDecisionIR,
@@ -30,15 +29,15 @@ from pdx.situated.support_program import SupportProgram
 pytestmark = pytest.mark.unit
 
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
-
-
-@pytest.fixture(autouse=True)
-def support_profile(request):
-    if request.node.get_closest_marker("integration"):
-        yield
-    else:
-        with version_contracts.select_version("1.15.0"):
-            yield
+UNIT_BASELINE = """\
+ai_strategy_default = {
+    # Added to diplomatic play support for the initiating or target country.
+    # root = country
+    # scope:country = country
+    # scope:enemy_country = country
+    diplomatic_play_support = { value = 0 }
+}
+"""
 
 
 def test_continuous_program_api_keeps_empty_independent_denominator():
@@ -51,6 +50,13 @@ def test_continuous_program_api_keeps_empty_independent_denominator():
 @pytest.fixture(scope="module")
 def real_production():
     return distribution.package_inputs(include_engineering_metadata=True)[2]
+
+
+@pytest.fixture
+def unit_support_baseline(tmp_path, monkeypatch):
+    path = tmp_path / "00_default_strategy.txt"
+    path.write_text(UNIT_BASELINE, encoding="utf-8", newline="\n")
+    monkeypatch.setattr(decisions, "baseline_path", lambda: path)
 
 
 @pytest.fixture
@@ -79,8 +85,12 @@ def controlled_output():
     }
     return {
         SOURCE: decisions.patch_default(
-            decisions.baseline_path().read_text(encoding="utf-8"),
-            replace(decisions.load(), enabled=False),
+            UNIT_BASELINE,
+            replace(
+                decisions.load(),
+                enabled=False,
+                baseline_sha256=hashlib.sha256(UNIT_BASELINE.lstrip().encode()).hexdigest(),
+            ),
             extra,
         ),
         ".metadata/metadata.json": json.dumps(metadata),
@@ -139,7 +149,7 @@ def _native_scope(raw: bytes, getter: bytes):
 
 
 @pytest.fixture
-def native_scope(monkeypatch):
+def native_scope(monkeypatch, unit_support_baseline):
     """Synthetic getter and its pin exercise checks without claiming native evidence."""
     getter_source = "common/script_values/01_power_bloc_values.txt"
     # The production binding contract requires the call at line 30. This is a
@@ -150,7 +160,10 @@ def native_scope(monkeypatch):
     baseline = copy.deepcopy(equipment_opportunities.load_baseline())
     baseline["sources"][getter_source] = hashlib.sha256(getter).hexdigest()
     monkeypatch.setattr(equipment_opportunities, "load_baseline", lambda: baseline)
-    return _native_scope(b"\xef\xbb\xbf" + decisions.baseline_path().read_bytes(), getter)
+    reviewed = json.loads(engine_scope.strategy_snapshot())
+    reviewed["script_hashes"][SOURCE] = hashlib.sha256(UNIT_BASELINE.encode()).hexdigest()
+    monkeypatch.setattr(engine_scope, "strategy_snapshot", lambda: json.dumps(reviewed).encode())
+    return _native_scope(UNIT_BASELINE.encode(), getter)
 
 
 @pytest.fixture
@@ -242,6 +255,7 @@ def test_report_consumes_same_package_metadata_and_keeps_its_output_hashes(
         "duplicate_writer",
     ],
 )
+@pytest.mark.usefixtures("unit_support_baseline")
 def test_actual_output_contract_rejects_a_tampered_support_writer(controlled_output, fault):
     generated = copy.deepcopy(controlled_output)
     metadata = json.loads(generated[".metadata/metadata.json"])
@@ -346,6 +360,7 @@ def test_frozen_input_contract_does_not_borrow_production_claims(
 
 
 @pytest.mark.parametrize("fault", ["duplicate_body", "unmarked_write", "owner_map", "getter"])
+@pytest.mark.usefixtures("unit_support_baseline")
 def test_unregistered_body_and_metadata_claims_are_explicit_failures(controlled_output, fault):
     generated = copy.deepcopy(controlled_output)
     metadata = json.loads(generated[".metadata/metadata.json"])

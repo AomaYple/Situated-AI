@@ -1,9 +1,4 @@
-"""Explicit version selection for native compatibility contracts.
-
-The environment is read at the call boundary so pytest workers and child
-processes select the same contract without rewriting historical evidence.
-Selecting a version never authorizes an unverified reader or source.
-"""
+"""Exact native identity and evidence locations for the current release."""
 
 from __future__ import annotations
 
@@ -11,7 +6,6 @@ import hashlib
 import json
 import os
 from contextlib import contextmanager
-from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -41,82 +35,42 @@ class VersionContract:
     """One explicitly reviewed native identity and its evidence locations."""
 
     version: str
-    uses_115_native: bool
     docs_subdir: str
     official_manifest_name: str
     snapshot_label: str
     # Original installed bytes (including BOM/newlines), distinct from the normalized baseline.
     default_strategy_sha256: str
     baseline_strategy_sha256: str
-    doc17_table_values_sha256: str | None = None
 
 
-VERSION_SPECS = {
-    "1.14.5": VersionContract(
-        "1.14.5",
-        False,
-        "victoria3-modding",
-        "official-docs.manifest.json",
-        "release-1.14.5",
-        "fd4b531d39bcd85c3491c703ecb08ea739094f795b13a176765cf559ece3fbee",
-        "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
-    ),
-    "1.15.0": VersionContract(
-        "1.15.0",
-        True,
-        "victoria3-modding-1.15.0",
-        "official-docs-1.15.0.manifest.json",
-        "release-1.15.0",
-        "83a9e8b7b568967ea9ae10df63ee18ed9b069ff69a5a31a23d35cc129b89ce73",
-        "6d0b4569b3f3b35f2ca1aab51ff71f2417b41e51c01379ee340394dee1f5f431",
-    ),
-    "1.15.1": VersionContract(
-        "1.15.1",
-        True,
-        "victoria3-modding-1.15.1",
-        "official-docs-1.15.1.manifest.json",
-        "release-1.15.1",
-        "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba",
-        "e0e2cc9762f2d1e07deeb45091ca2e317e3771038851b840232d5f80538210c0",
-        doc17_table_values_sha256="705649b0ecbd3ace8c8187210101f217b8b5657aef6767e88cdd20a7f3470568",
-    ),
-    CURRENT_VERSION: VersionContract(
-        CURRENT_VERSION,
-        True,
-        "victoria3-modding-1.15.2",
-        "official-docs-1.15.2.manifest.json",
-        "release-1.15.2",
-        "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
-        "42088c06f326a6fd1f01ed120928c8888d29b776c9bacb9795c63f9c390d7d40",
-    ),
-}
+CURRENT_CONTRACT = VersionContract(
+    CURRENT_VERSION,
+    "victoria3-modding-1.15.2",
+    "official-docs-1.15.2.manifest.json",
+    "release-1.15.2",
+    "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
+    "42088c06f326a6fd1f01ed120928c8888d29b776c9bacb9795c63f9c390d7d40",
+)
+VERSION_SPECS = {CURRENT_VERSION: CURRENT_CONTRACT}
 SUPPORTED_VERSIONS = frozenset(VERSION_SPECS)
-_selected: ContextVar[str | None] = ContextVar("native_contract_version", default=None)
-
-
-def active_version(version: str | None = None) -> str:
-    """Resolve one supported exact identity, defaulting to the current release."""
-    result = version if version is not None else _selected.get()
-    if result is None:
-        result = os.environ.get(ENVIRONMENT_VARIABLE, CURRENT_VERSION)
-    if result not in SUPPORTED_VERSIONS:
-        raise ValueError(f"未支持的原版合同版本：{result!r}")
-    return result
-
-
-def contract(version: str | None = None) -> VersionContract:
-    """Return the explicit specification; unknown future versions hard fail."""
-    return VERSION_SPECS[active_version(version)]
 
 
 def require_current(version: str | None = None) -> str:
-    """Require the current release independently of a historical evidence context."""
-    for candidate in (os.environ.get(ENVIRONMENT_VARIABLE), version, _selected.get()):
+    """Require the exact current release, including any external assertion."""
+    for candidate in (os.environ.get(ENVIRONMENT_VARIABLE), version):
         if candidate is not None and candidate != CURRENT_VERSION:
-            raise ValueError(
-                f"未支持的在线原版合同版本：{candidate!r}；当前仅维护 {CURRENT_VERSION}"
-            )
+            raise ValueError(f"未支持的原版合同版本：{candidate!r}；当前仅维护 {CURRENT_VERSION}")
     return CURRENT_VERSION
+
+
+def active_version(version: str | None = None) -> str:
+    """Resolve the exact current version."""
+    return require_current(version)
+
+
+def contract(version: str | None = None) -> VersionContract:
+    """Return the reviewed contract for the current release."""
+    return VERSION_SPECS[require_current(version)]
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,11 +159,6 @@ def _unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return result
 
 
-def is_115(version: str | None = None) -> bool:
-    """Select reviewed 1.15 syntax without authorizing an unreviewed release."""
-    return contract(version).uses_115_native
-
-
 def research_path(category: str, filename: str, version: str | None = None) -> Path:
     """Resolve a versioned evidence path, never reuse another release's identity."""
     if category not in {"situated", "vanilla-ai"}:
@@ -228,12 +177,9 @@ def research_path(category: str, filename: str, version: str | None = None) -> P
 
 @contextmanager
 def select_version(version: str) -> Iterator[None]:
-    """Select one contract for a bounded operation, restoring it on failure."""
-    token = _selected.set(active_version(version))
-    try:
-        yield
-    finally:
-        _selected.reset(token)
+    """Assert the current release at the start of a bounded operation."""
+    require_current(version)
+    yield
 
 
 def journal_completion(journal: Block, *, effect: bool = False) -> Block:

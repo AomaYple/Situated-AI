@@ -12,7 +12,6 @@ import hashlib
 import math
 import re
 from dataclasses import asdict, dataclass
-from pathlib import Path
 
 from pdx import version_contracts
 from pdx.lexer import ATOM, LBRACE, OP, RBRACE, tokenize
@@ -20,8 +19,7 @@ from pdx.parser import parse_text
 
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
 PARENT = "ai_strategy_default.goods_stances"
-_NATIVE_1151_SHA256 = "38e7aadd1be9465f3ab423f61fa8e9e8206b8d98f523979e8e43c42cc18753ba"
-_NATIVE_STANCE_1151 = {
+_NATIVE_STANCE_SHA256 = {
     "oil": "65004debc1e9f77a72c8b98b14ea63a31a471dbfdbbb87a061e5109af35b36d6",
     "radios": "bfbaf4ef8b19d20076baf6b80236ce7a365dd16e9f2a6b33db0ba7c5a5832eaf",
     "telephones": "daa1caeaf0572bf508a1338527047d41a3187706db1610723a989ed60e48408a",
@@ -66,19 +64,18 @@ class NativeSupplyStance:
 
     good: str
     body: str | None
-    version: str = "1.15.1"
+    version: str = version_contracts.CURRENT_VERSION
 
     def __post_init__(self) -> None:
         if (
-            self.version not in {"1.15.1", version_contracts.CURRENT_VERSION}
-            or self.good not in _NATIVE_STANCE_1151
+            self.version != version_contracts.CURRENT_VERSION
+            or self.good not in _NATIVE_STANCE_SHA256
             or (self.body is not None and not self.matches(self.body))
-            or (self.version == "1.15.1" and self.body is None)
         ):
             raise ValueError("供给立场原版身份漂移；只允许已锁三商品")
 
     def matches(self, body: str) -> bool:
-        return hashlib.sha256(body.encode()).hexdigest() == _NATIVE_STANCE_1151[self.good]
+        return hashlib.sha256(body.encode()).hexdigest() == _NATIVE_STANCE_SHA256[self.good]
 
     def compose(self, scarcity: str, *, body: str | None = None) -> str:
         original_body = self.body if body is None else body
@@ -101,10 +98,8 @@ class NativeSupplyStance:
         return {
             "game_version": self.version,
             "source": SOURCE,
-            "source_sha256": version_contracts.contract(self.version).default_strategy_sha256
-            if self.version == version_contracts.CURRENT_VERSION
-            else _NATIVE_1151_SHA256,
-            "body_sha256": _NATIVE_STANCE_1151[self.good],
+            "source_sha256": version_contracts.contract(self.version).default_strategy_sha256,
+            "body_sha256": _NATIVE_STANCE_SHA256[self.good],
             "native_trigger": "first AND retains the complete original body bytes and AST",
             "meaning": "local production/trade stance activation, not action execution eligibility",
             "scope_limit": "only oil, radios and telephones in this exact native source",
@@ -113,28 +108,8 @@ class NativeSupplyStance:
 
 def native_stances() -> tuple[NativeSupplyStance, ...]:
     """Declare current native identities without opening the game installation."""
-    version = version_contracts.active_version()
-    if version == version_contracts.CURRENT_VERSION:
-        return tuple(
-            NativeSupplyStance(good, None, version) for good in sorted(_NATIVE_STANCE_1151)
-        )
-    return native_stances_1151()
-
-
-def native_stances_1151() -> tuple[NativeSupplyStance, ...]:
-    """Load the archived lexical blocks for historical validation."""
-    if version_contracts.active_version() != "1.15.1":
-        raise ValueError("合成供给立场仅支持精确1.15.1")
-    path = Path(__file__).resolve().parents[3] / "research/vanilla-ai/1.15.1/native/game" / SOURCE
-    raw = path.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != _NATIVE_1151_SHA256:
-        raise ValueError("供给立场冻结原件漂移")
-    text = raw.decode("utf-8-sig")
-    result = []
-    for good in sorted(_NATIVE_STANCE_1151):
-        start, end = block_span(text, ("ai_strategy_default", "goods_stances", good))
-        result.append(NativeSupplyStance(good, text[start:end]))
-    return tuple(result)
+    version_contracts.require_current()
+    return tuple(NativeSupplyStance(good, None) for good in sorted(_NATIVE_STANCE_SHA256))
 
 
 def _number(value: object) -> bool:

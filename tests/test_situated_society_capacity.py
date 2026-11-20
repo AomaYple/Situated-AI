@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from pdx import config, country_state, decision_adapters, decision_rules, version_contracts
+from pdx import config, country_state, decision_adapters, decision_rules
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -33,16 +33,15 @@ AUTHORITY = ("mass_communication", "nationalism", "pan-nationalism", "political_
 TECHNOLOGIES = (*COMPANY, *AUTHORITY)
 
 
-# Independently measured from the identity-verified 1.15.0 native files.
-# Historical hashes below retain their 1.14.5 contract.
-_NATIVE_115_HASHES = {
+# Independently measured from the identity-verified current native files.
+_CURRENT_NATIVE_HASHES = {
     "common/technology/technologies/30_society.txt": (
         "204340e2ff81f31d5bceddb36824566d57fa2be941dc2ba90407d56be75176dc",
         "9e4a9ec6b2df956da8104339460b87f2d78b8ae038e394f9dfaebb74e44052ad",
     ),
     "common/alert_types/00_alert_types.txt": (
-        "ca60cb0f7425744d2695560d905f4ec58bbeb9dd3e6f1aedfcc891ceb23a55e3",
-        "06099e868214b521f615cac1b5cf1f0d410aff5c8809484e44e56f66213545da",
+        "74cbfaa21e54a8ca96be89aedf50b290baad2ca51e18825ceae70caad51a514a",
+        "c550fa11141de170fe8edfff59cf996f83503fbecd078f29c7be121beaf91478",
     ),
     "common/journal_entries/00_tutorial.txt": (
         "83e4f81f813ae2cb04563ed02bed77d760d93b7b1f196bf58da11ac933d7ab78",
@@ -439,42 +438,9 @@ def test_capacity_and_side_effect_claims_match_actual_native_modifiers(productio
     )
 
 
-@pytest.mark.parametrize(
-    ("source", "raw_hash", "normalized_hash"),
-    [
-        (
-            SOURCE,
-            "39fb1574d4dafdb67293b4e0e465a82b82bee63e4ac810f9715727d48a0fd918",
-            "52c0b085e7429cf3961dfeacc4e1891056e2a2e80c740ce7ebcca6f61124e880",
-        ),
-        (
-            "common/alert_types/00_alert_types.txt",
-            "14ff4bb983f84c17fc2825d79ce93620bc68cde7284f8d1fa2dbba6845420aea",
-            "399eaa0ed4bb11e29bac7d0de29e2fa1e191cbdbf3b1290fba5abac9b622f912",
-        ),
-        (
-            "common/journal_entries/00_tutorial.txt",
-            "f4e44394601d6bb52b85e4184012f9181391831f64af1c4251f8bbeb3978da13",
-            "dbd90b3993566ccb0c777912a9429013186367449b2d6b6e88b91acdb4e356da",
-        ),
-        (
-            "common/character_interactions/01_additional_interactions.txt",
-            "9f7e23778afa1adc23ece0819e3ec0a694e5a7355cfeaf1cf5acefd6cafc3809",
-            "d7cfbfccdd9b7b0b504908e4db43e38646838c26cb29c834abe5595210a22b53",
-        ),
-    ],
-)
-def test_reader_evidence_uses_exact_native_bytes_and_registered_normalization(
-    source, raw_hash, normalized_hash
-):
-    if version_contracts.is_115():
-        raw_hash, normalized_hash = _NATIVE_115_HASHES[source]
-    if (
-        source == "common/alert_types/00_alert_types.txt"
-        and version_contracts.active_version() == version_contracts.CURRENT_VERSION
-    ):
-        raw_hash = "74cbfaa21e54a8ca96be89aedf50b290baad2ca51e18825ceae70caad51a514a"
-        normalized_hash = "c550fa11141de170fe8edfff59cf996f83503fbecd078f29c7be121beaf91478"
+@pytest.mark.parametrize("source", _CURRENT_NATIVE_HASHES)
+def test_reader_evidence_uses_exact_native_bytes_and_registered_normalization(source):
+    raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     text = normalized_text(raw.decode("utf-8-sig"))

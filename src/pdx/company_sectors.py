@@ -27,10 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 PARAMETERS = config.REPO / "mod/decisions/company_sectors.toml"
-BASELINE = config.REPO / "research/situated/company-sector-baseline.json"
-BASELINE_115 = config.REPO / "research/situated/1.15.0/company-sector-baseline.json"
-_BASELINE_115_SHA256 = "27b6284aff73c30ac5a4223a090fac6ec66aa85b333a1ca5ddba31941e979219"
-_BUILDER_115_SHA256 = "0cfd52f1b7559e96b3f914ad31268b3c02ff2a1cf83730ae7bfc2985b4d4cf07"
 _FAMILIES = frozenset(
     {
         "company_types",
@@ -62,14 +58,7 @@ _JOB = re.compile(r"building_employment_([a-z_]+)_add\Z")
 
 
 def baseline_path() -> Path:
-    version = version_contracts.active_version()
-    return (
-        version_contracts.research_path("situated", BASELINE_115.name)
-        if version != "1.15.0" and version_contracts.is_115(version)
-        else BASELINE_115
-        if version == "1.15.0"
-        else BASELINE
-    )
+    return version_contracts.research_path("situated", "company-sector-baseline.json")
 
 
 def _parameters(values: Mapping[str, object]) -> dict[str, float]:
@@ -904,22 +893,19 @@ def read_inputs(game: Path) -> dict[str, str]:
 
 def write_baseline(game: Path) -> Path:
     """Explicit production step; never called by model loading or import."""
-    if version_contracts.is_115():
-        from .situated import r2_reader_authority  # noqa: PLC0415
+    from .situated import r2_reader_authority  # noqa: PLC0415
 
-        r2_reader_authority.verify_installation(game.parent)
+    r2_reader_authority.verify_installation(game.parent)
     inputs = read_inputs(game)
     data = derive(inputs, parameters=load_parameters())
     destination = baseline_path()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    frozen = _freeze(data)
-    if version_contracts.is_115():
-        frozen = {
-            "schema": 3,
-            "game_version": version_contracts.active_version(),
-            "provenance": _baseline_provenance(),
-            "payload": frozen,
-        }
+    frozen = {
+        "schema": 3,
+        "game_version": version_contracts.active_version(),
+        "provenance": _baseline_provenance(),
+        "payload": _freeze(data),
+    }
     destination.write_text(_canonical(frozen), encoding="utf-8", newline="\n")
     return destination
 
@@ -1068,24 +1054,15 @@ def _load_baseline() -> dict[str, Any]:
     data = json.loads(raw)
     if raw != _canonical(data):
         raise ValueError("公司部门冻结基线不是规范格式")
-    if version_contracts.is_115():
-        provenance = _baseline_provenance()
-        if version_contracts.active_version() == "1.15.0":
-            # Preserve the historical artifact and the builder that created it.
-            # Current rule source, parameters and default authority must still
-            # match; verify_baseline separately re-derives the complete payload.
-            if hashlib.sha256(raw.encode("utf-8")).hexdigest() != _BASELINE_115_SHA256:
-                raise ValueError("公司部门1.15.0历史基线原始字节漂移")
-            provenance["builder_source_sha256"] = _BUILDER_115_SHA256
-        if (
-            set(data) != {"schema", "game_version", "provenance", "payload"}
-            or type(data["schema"]) is not int
-            or data["schema"] != 3
-            or data["game_version"] != version_contracts.active_version()
-            or data["provenance"] != provenance
-        ):
-            raise ValueError("公司部门1.15派生版本或生成来源漂移")
-        data = data["payload"]
+    if (
+        set(data) != {"schema", "game_version", "provenance", "payload"}
+        or type(data["schema"]) is not int
+        or data["schema"] != 3
+        or data["game_version"] != version_contracts.active_version()
+        or data["provenance"] != _baseline_provenance()
+    ):
+        raise ValueError("公司部门当前派生版本或生成来源漂移")
+    data = data["payload"]
     return _validate_runtime(_thaw(data))
 
 

@@ -4,60 +4,37 @@ import hashlib
 import json
 
 import pytest
+from _engine_evidence import compact_image, current_manifest, repin_manifest
+from conftest import configure_current_identity
 
-from pdx import version_contracts
 from pdx.parser import parse_text
-from pdx.situated import engine_scope, vanilla_inventory
+from pdx.situated import engine_scope, engine_scope_115, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_engine_contract():
-    """Synthetic historical fixtures must not borrow the current EXE identity."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.fixture
 def country_proof(tmp_path, monkeypatch):
+    configure_current_identity(tmp_path, monkeypatch)
     game = tmp_path / "game"
     game.mkdir()
-    for name, value in {
-        "caligula_branch": "release/1.14.5",
-        "caligula_rev": "fixture",
-        "clausewitz_branch": "fixture",
-        "clausewitz_rev": "fixture",
-    }.items():
-        (tmp_path / f"{name}.txt").write_text(value, encoding="utf-8")
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(b"fixed country image")
     source = "common/country_creation/sample.txt"
     inputs = {source: b"sample = { ai_will_do = { always = yes } }\n"}
-    data = {
-        "exe": {
-            "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-            "bytes": exe.stat().st_size,
-        },
-        "script_hashes": {source: hashlib.sha256(inputs[source]).hexdigest()},
-        "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
-    }
-    manifest = tmp_path / "country.json"
+    data = current_manifest("country-definition")
+    executable = compact_image(tmp_path, data)
 
     def freeze():
-        raw = json.dumps(data).encode()
-        manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "COUNTRY_MANIFEST", manifest)
-        monkeypatch.setattr(
-            engine_scope, "COUNTRY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
+        data["script_hashes"] = {
+            name: hashlib.sha256(raw).hexdigest() for name, raw in inputs.items()
+        }
+        repin_manifest(monkeypatch, tmp_path / "proof.json", "country-definition", data)
 
     freeze()
     monkeypatch.setattr(
         vanilla_inventory, "_inputs", lambda _: (dict(inputs), ("country_creation",), ("game",))
     )
-    return game, exe, source, inputs, data, freeze
+
+    return game, executable, source, inputs, data, freeze
 
 
 @pytest.mark.parametrize("family", ["country_creation", "country_formation"])
@@ -178,22 +155,22 @@ def test_ambiguous_declaration_is_not_proven(country_proof, declaration):
 def test_corrupt_attestation_is_error(country_proof, corruption):
     game, _, _, inputs, data, freeze = country_proof
     if corruption == "manifest":
-        engine_scope.COUNTRY_MANIFEST.write_bytes(b"{}")
+        engine_scope_115.manifest("country-definition")[0].write_bytes(b"{}")
     elif corruption == "length":
         data["exe"]["bytes"] += 1
         freeze()
     else:
-        data["observations"][0]["bytes"] = "00"
+        data["observations"][0]["sha256"] = "0" * 64
         freeze()
     with pytest.raises(ValueError, match="锁定国家定义作用域证据"):
         engine_scope.country_evidence(game, inputs)
 
 
-def test_frozen_manifest_keeps_raw_evidence():
-    raw = engine_scope.COUNTRY_MANIFEST.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == engine_scope.COUNTRY_MANIFEST_SHA256
+def test_frozen_manifest_keeps_current_evidence():
+    raw = engine_scope_115.manifest("country-definition")[0].read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == engine_scope_115.manifest("country-definition")[2]
     data = json.loads(raw)
-    assert data["exe"]["bytes"] == 97774200
+    assert data["exe"]["bytes"] == 100_280_440
     assert len(data["script_hashes"]) == 3
-    assert len(data["observations"]) >= 55
+    assert len(data["observations"]) == 31
     assert {c["family"] for c in data["contracts"]} == {"country_creation", "country_formation"}

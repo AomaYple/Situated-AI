@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING, Any
 from .. import config, version_contracts  # noqa: TID252
 from . import bindings as binding_catalog
 from .action_instances import _output_source, witness_ids, witness_keys
-from .compiler import BASELINE, load_model
 from .compiler import baseline_path as compiler_baseline_path
+from .compiler import load_model
 from .receipts import StageReceipt, digest
 
 if TYPE_CHECKING:
@@ -107,7 +107,7 @@ def _sha256(path: Path) -> str:
 
 
 def _selected_baseline() -> Path:
-    return compiler_baseline_path() if version_contracts.is_115() else BASELINE
+    return compiler_baseline_path()
 
 
 def _scope_hash(surfaces: tuple[Surface, ...], source_hashes: dict[str, str]) -> str:
@@ -152,7 +152,7 @@ def discover(*, baseline: Path | None = None) -> SurfaceInventory:
     default_baseline = baseline == selected_baseline
     version = version_contracts.active_version()
     model = load_model(baseline=None if default_baseline else baseline.read_text(encoding="utf-8"))
-    current_structure = default_baseline and version == version_contracts.CURRENT_VERSION
+    current_structure = default_baseline
     baseline_sha256 = (
         version_contracts.contract().default_strategy_sha256
         if current_structure

@@ -47,9 +47,6 @@ if TYPE_CHECKING:
     from .situated.decision_ir import ConsumerIRBundle
 
 SOURCE = config.REPO / "mod/decisions/adapters.toml"
-NATIVE_AUTHORITY_115 = config.REPO / "research/situated/1.15.0/consumer-adapters.json"
-NATIVE_AUTHORITY_1151_SHA256 = "31f9c0c6edf633af3706d0aefca39de5aa8c5ffc4c2f0d4de43ce037d2d6ae9e"
-NATIVE_AUTHORITY_115_SHA256 = "405667f37790d5b593b2e7453d0f89283f11c751e2cfe382c586bf6fe33de108"
 _FLEET_SOURCE = "common/ai_strategies/00_default_strategy.txt"
 _FLEET_FIELD = (
     "ai_strategy_default",
@@ -112,21 +109,11 @@ class AdapterSet:
 
 
 def native_authority_path() -> Path:
-    return (
-        version_contracts.research_path("situated", "consumer-adapters.json")
-        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
-        else NATIVE_AUTHORITY_115
-    )
+    return version_contracts.research_path("situated", "consumer-adapters.json")
 
 
 def native_authority_sha256() -> str:
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return "2d34f3718737321d1f510ee8e2ebfe280d1680a75acc517d1829c0a85fee2750"
-    return (
-        NATIVE_AUTHORITY_1151_SHA256
-        if version_contracts.active_version() == "1.15.1"
-        else NATIVE_AUTHORITY_115_SHA256
-    )
+    return "2d34f3718737321d1f510ee8e2ebfe280d1680a75acc517d1829c0a85fee2750"
 
 
 def native_contract_data(
@@ -343,7 +330,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         raise ValueError("消费者适配 schema 无效")
     authority_digest = None
     building_default_digest = None
-    if source == SOURCE and version_contracts.is_115():
+    if source == SOURCE:
         from .situated import engine_building_115  # noqa: PLC0415
 
         authority = native_authority_115()
@@ -458,7 +445,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + Path(technology_opportunities.__file__).read_bytes()
         ).hexdigest()
     population_reader_digest = None
-    if source == SOURCE and version_contracts.is_115():
+    if source == SOURCE:
         from .situated import engine_reader_115  # noqa: PLC0415
 
         engine_reader_115.project_population_readers(data["readers"])
@@ -743,10 +730,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             item["source"],
             tuple(sorted(item["goods"])),
             float(item["price_threshold"]),
-            supply_program.native_stances()
-            if source == SOURCE
-            and version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
-            else (),
+            supply_program.native_stances() if source == SOURCE else (),
         )
     scalar_values = []
     if not isinstance(data.get("scalar_values", []), list):
@@ -891,7 +875,7 @@ def _supply_patch(
 ) -> str:
     """Compose reviewed stance activation; retain real action execution rules.
 
-    1.15.1 default source lines 6493-6494 describe production/trade planning
+    The current default source describes production/trade planning
     and active-strategy override. Only its three pinned enum conditions may be
     extended; this is not a general permission to OR native eligibility gates.
     """

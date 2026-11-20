@@ -1,4 +1,4 @@
-"""Version selection and the native 1.15 repeated-outcome boundary."""
+"""Current release assertions and the native repeated-outcome boundary."""
 
 from __future__ import annotations
 
@@ -9,30 +9,26 @@ from pdx.model import Scalar
 from pdx.parser import parse_text
 
 
-def test_version_is_selected_at_call_time_and_restored_after_failure(monkeypatch):
+def test_current_environment_is_read_at_call_time_and_cannot_be_overridden(monkeypatch):
     monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
-    assert version_contracts.active_version() == version_contracts.CURRENT_VERSION
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.0")
-    assert version_contracts.active_version() == "1.15.0"
-
-    def operation():
-        with version_contracts.select_version("1.14.5"):
-            assert version_contracts.active_version() == "1.14.5"
-            assert version_contracts.active_version("1.15.0") == "1.15.0"
-            raise RuntimeError("operation failed")
-
-    with pytest.raises(RuntimeError):
-        operation()
-    assert version_contracts.active_version() == "1.15.0"
+    assert version_contracts.active_version() == "1.15.2"
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+    with pytest.raises(ValueError, match="当前仅维护"):
+        version_contracts.contract("1.15.2")
+    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.2")
+    assert version_contracts.active_version() == "1.15.2"
 
 
-@pytest.mark.parametrize("version", ["", "1.15", "release/1.15.0", "1.16.0", "latest"])
-def test_unknown_version_cannot_silently_select_a_contract(monkeypatch, version):
+@pytest.mark.parametrize(
+    "version", ["1.14.5", "1.15.0", "1.15.1", "", "1.15", "release/1.15.2", "1.16.0", "latest"]
+)
+def test_noncurrent_version_cannot_select_a_contract(monkeypatch, version):
+    monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
+    with pytest.raises(ValueError, match="当前仅维护"):
+        version_contracts.contract(version)
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
-    with pytest.raises(ValueError, match="合同版本"):
+    with pytest.raises(ValueError, match="当前仅维护"):
         version_contracts.active_version()
-    with pytest.raises(ValueError, match="合同版本"), version_contracts.select_version(version):
-        pytest.fail("unknown version entered the operation")
 
 
 _COMPLETION = """
@@ -89,9 +85,4 @@ def test_default_and_explicit_current_contract_have_identical_identity(monkeypat
     assert version_contracts.CURRENT_VERSION == "1.15.2"
     current = version_contracts.contract("1.15.2")
     assert version_contracts.contract() == current
-    assert {"1.14.5", "1.15.0", "1.15.1", "1.15.2"} == version_contracts.SUPPORTED_VERSIONS
-    for historical in ("1.14.5", "1.15.0", "1.15.1"):
-        with version_contracts.select_version(historical):
-            assert version_contracts.active_version() == historical
-            assert version_contracts.contract() != current
-    assert version_contracts.active_version() == "1.15.2"
+    assert {"1.15.2"} == version_contracts.SUPPORTED_VERSIONS

@@ -8,24 +8,18 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import version_contracts
+from pdx import config
 from pdx.parser import parse_text
 from pdx.situated import domain_coverage, network_profile, production_profile, r2_native
 from pdx.situated.native_treatments import _AuditMetadata, _kind, native_treatments
 from pdx.situated.profile_configuration import ProfileConfiguration
 from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface, _road_maintenance_scope
 
-pytestmark = pytest.mark.unit
-
-
-@pytest.fixture(scope="module", autouse=True)
-def current_version():
-    with version_contracts.select_version("1.15.1"):
-        yield
+pytestmark = pytest.mark.integration
 
 
 def _candidate(configuration):
-    root = production_profile.baseline_root()
+    root = config.ROOT
     profile = production_profile.load_profile(root)
     originals = {
         row.source.removeprefix("game/"): (root / row.source).read_bytes()
@@ -72,8 +66,8 @@ def test_claims_cannot_hide_changed_expression_tail_source_or_order(candidate, c
     row = next(item for item in profile.declarations if item.id == consumer)
     source = row.source.removeprefix("game/")
     content = generated[source]
-    begin = f"\n\t# SITAI POLICY 1.15.1 BEGIN {consumer}\n"
-    end = f"\t# SITAI POLICY 1.15.1 END {consumer}\n"
+    begin = f"\n\t# SITAI POLICY {profile.game_version} BEGIN {consumer}\n"
+    end = f"\t# SITAI POLICY {profile.game_version} END {consumer}\n"
     start, stop = content.index(begin), content.index(end) + len(end)
     marker = content[start:stop]
     if damage == "metadata":

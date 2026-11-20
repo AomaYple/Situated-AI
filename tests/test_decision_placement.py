@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import decision_interfaces, decision_rules, decisions, version_contracts
+from pdx import decision_interfaces, decision_rules, decisions
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 
@@ -127,8 +127,7 @@ def test_complete_subject_result_keeps_reachability_refusal_and_native_clamp(
     if = { limit = { scope:target_country = { is_subject_of = root } } min = 100 max = 1000 }
     else = { min = 0 max = 200 }
     """
-    if version_contracts.is_115():
-        body = body.replace("can_reach_target_country =", "can_reach_target_country_to_subjugate =")
+    body = body.replace("can_reach_target_country =", "can_reach_target_country_to_subjugate =")
     generated = _generate("subject_value", body, "add", 3)
     value = _number(
         _block(generated, "ai_strategy_default.subject_value"),
@@ -144,20 +143,15 @@ def test_complete_subject_result_keeps_reachability_refusal_and_native_clamp(
     assert value == expected
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
-def test_subject_guard_rejects_the_other_versions_reachability_gate(version):
-    other = (
-        "can_reach_target_country"
-        if version == "1.15.0"
-        else "can_reach_target_country_to_subjugate"
-    )
+def test_subject_guard_rejects_the_retired_reachability_gate():
+    other = "can_reach_target_country"
     body = (
         "value = 0 if = { limit = { OR = { "
         "scope:target_country = { is_subject_of = root } "
         + other
         + " = { TARGET_COUNTRY = scope:target_country } } } add = 50 }"
     )
-    with version_contracts.select_version(version), pytest.raises(ValueError, match="可达性保护"):
+    with pytest.raises(ValueError, match="可达性保护"):
         _generate("subject_value", body, "add", 3)
 
 

@@ -34,16 +34,7 @@ def test_生成会修复编码和同长度正文漂移(tmp_path):
 
 
 @pytest.fixture
-def historical_core_assembly():
-    """These offline core lifecycle checks use their original frozen inputs."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
-@pytest.fixture
-def historical_policy(historical_core_assembly):
-    """Explicit dependency selects the frozen profile before loading policy."""
-    assert version_contracts.active_version() == "1.14.5"
+def current_policy():
     return decisions.load()
 
 
@@ -55,9 +46,7 @@ def policy():
 def test_财政开关显式开启且交付契约来自数据源(policy):
     assert policy.enabled
     assert policy.package.product_version == "3.2.0"
-    assert policy.package.status == (
-        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
-    )
+    assert policy.package.status == ("released")
     payload = decisions.metadata_payload(policy)
     assert payload["version"] == policy.package.product_version
     assert payload["tool_version"] == "0.3.0"
@@ -67,17 +56,16 @@ def test_财政开关显式开启且交付契约来自数据源(policy):
     assert fingerprint["baseline_sha256"] == policy.baseline_sha256
 
 
-def test_财政开关关闭不生成财政脚本且保留原版策略(historical_policy):
-    policy = historical_policy
+@pytest.mark.integration
+def test_财政开关关闭不生成财政脚本且保留原版策略(current_policy):
+    policy = current_policy
     disabled = replace(policy, enabled=False)
     files = decisions.build(disabled)
     assert set(files) == {
         "common/ai_strategies/00_default_strategy.txt",
         ".metadata/metadata.json",
     }
-    assert files[
-        "common/ai_strategies/00_default_strategy.txt"
-    ] == decisions.baseline_path().read_text(encoding="utf-8")
+    assert files["common/ai_strategies/00_default_strategy.txt"] == decisions.baseline_text()
     assert decisions.triggers(disabled) == ""
     assert decisions.effects(disabled) == ""
     assert decisions.on_actions(disabled) == ""
@@ -236,8 +224,9 @@ def test_财政外部暴露包含尚未选边的合法参与者(policy):
     assert "is_diplomatic_play_undecided_participant = yes" in triggers
 
 
-def test_生产扩展为本体每种语言生成完整键集(historical_policy):
-    policy = historical_policy
+@pytest.mark.integration
+def test_生产扩展为本体每种语言生成完整键集(current_policy):
+    policy = current_policy
     extra = replace(decisions.load_extensions(), market_enabled=True, security_enabled=True)
     files = decisions.build(policy, extensions=extra)
     expected = set(decisions.LANGUAGES)
@@ -259,8 +248,9 @@ def test_生产扩展为本体每种语言生成完整键集(historical_policy):
     assert metadata["localization"]["explanation_fallback_languages"] == []
 
 
-def test_显式空语言集合不能静默退回默认集合(historical_policy):
-    policy = historical_policy
+@pytest.mark.integration
+def test_显式空语言集合不能静默退回默认集合(current_policy):
+    policy = current_policy
     with pytest.raises(ValueError, match="至少需要一种"):
         decisions.build(policy, languages=())
 
@@ -279,8 +269,9 @@ def test_即使哈希匹配也拒绝不符结构(policy, body):
         decisions.patch_default(body, altered)
 
 
-def test_所有生成脚本可解析且没有旧世界或换牌干预(historical_policy):
-    policy = historical_policy
+@pytest.mark.integration
+def test_所有生成脚本可解析且没有旧世界或换牌干预(current_policy):
+    policy = current_policy
     files = decisions.build(policy)
     for name, text in files.items():
         assert not text.startswith("\ufeff")
@@ -323,7 +314,10 @@ def test_财政生命周期写入包含迟滞和TTL边界(policy):
     assert policy.ttl_days >= 32
 
 
-def test_写盘检查发现篡改和遗留产物(tmp_path, historical_core_assembly):
+@pytest.mark.integration
+def test_写盘检查发现篡改和遗留产物(
+    tmp_path,
+):
     decisions.write(tmp_path)
     assert decisions.check(tmp_path) == []
     path = tmp_path / "common/ai_strategies/00_default_strategy.txt"
@@ -376,7 +370,7 @@ def test_无有效信用不能凭借款周数进入风险(policy, credit):
     [
         "schema_version = 1|schema_version = true",
         'why = "真实违约|why = 42 # "真实违约',
-        'game_version = "1.14.5"|game_version = "1.15.0"',
+        'game_version = "1.15.2"|game_version = "1.15.3"',
     ],
 )
 def test_拒绝错误类型和未审查游戏版本(tmp_path, mutation):
@@ -435,7 +429,7 @@ def test_新接口缺证据和本机底本漂移均拒绝(tmp_path):
 def test_扩展开启时新增接口必须有原版证据(monkeypatch, tmp_path):
     baseline = tmp_path / "default.txt"
     baseline.write_bytes(b"ai_strategy_default = {}\n")
-    monkeypatch.setattr(decisions, "BASELINE", baseline)
+    monkeypatch.setattr(decisions, "baseline_path", lambda: baseline)
     monkeypatch.setattr(
         decisions,
         "load_extensions",
@@ -529,14 +523,11 @@ def test_生产ZIP清单携带实际包契约和源指纹(standard_release_packa
     assert manifest["install_directory"] == distribution.INSTALL_DIRECTORY_NAME
     assert manifest["generation"]["install_directory"] == distribution.INSTALL_DIRECTORY_NAME
     assert manifest["generation"]["schema"] == "sitai-distribution-v2"
-    current = version_contracts.active_version() == "1.15.0"
-    assert manifest["generation"]["publication_channel"] == ("unpublished" if current else "stable")
-    assert manifest["generation"]["artifact_kind"] == (
-        "engineering_compatibility_candidate" if current else "production_release"
-    )
+    assert manifest["generation"]["publication_channel"] == "stable"
+    assert manifest["generation"]["artifact_kind"] == "production_release"
     assert manifest["generation"]["behavior_quality"] == "not_evaluated"
     assert "candidate_kind" not in manifest["generation"]
-    assert manifest["contract"]["status"] == ("candidate" if current else "released")
+    assert manifest["contract"]["status"] == "released"
     assert manifest["generation"]["delivery_kind"] == "standard_mod"
 
 
@@ -585,8 +576,9 @@ def test_关闭阻止默认挂载和内存风险状态(policy, monkeypatch):
     )
 
 
-def test_开关往返清理旧生成物且保留未知文件(tmp_path, historical_policy):
-    policy = historical_policy
+@pytest.mark.integration
+def test_开关往返清理旧生成物且保留未知文件(tmp_path, current_policy):
+    policy = current_policy
     enabled = decisions.build(
         policy,
         extensions=decisions.Extensions(reform_enabled=True, market_enabled=True),
@@ -609,7 +601,7 @@ def test_开关往返清理旧生成物且保留未知文件(tmp_path, historica
 @pytest.mark.parametrize(
     ("reform", "market"), [(False, False), (True, False), (False, True), (True, True)]
 )
-@pytest.mark.parametrize("drift", ["raw_bytes", "normalized_digest", "historical_text"])
+@pytest.mark.parametrize("drift", ["raw_bytes", "normalized_digest"])
 def test_关闭财政仍验证共享策略底本(tmp_path, monkeypatch, reform, market, drift):
     snapshot: dict[str, object] = {
         "域": {
@@ -622,36 +614,29 @@ def test_关闭财政仍验证共享策略底本(tmp_path, monkeypatch, reform, 
     strategy.parent.mkdir(parents=True)
     raw = b"# strategy fixture\r\n"
     strategy.write_bytes(raw)
-    version = "1.14.5" if drift == "historical_text" else version_contracts.CURRENT_VERSION
-    with version_contracts.select_version(version):
-        policy = replace(decisions.load(), enabled=False)
-        if drift == "historical_text":
-            expected = "本机默认策略与锁定底本不一致，需重审版本"
-        else:
-            # Exercise each current digest gate independently with synthetic bytes.
-            baseline = b"# strategy fixture\n"
-            if drift == "raw_bytes":
-                pinned_raw, pinned_text = baseline, baseline
-                expected = f"当前原版默认策略原始字节漂移：{strategy}"
-            else:
-                pinned_raw, pinned_text = raw, b"# another strategy fixture\n"
-                expected = f"当前原版默认策略归一化摘要漂移：{strategy}"
-            monkeypatch.setitem(
-                version_contracts.VERSION_SPECS,
-                version,
-                replace(
-                    version_contracts.contract(),
-                    default_strategy_sha256=hashlib.sha256(pinned_raw).hexdigest(),
-                    baseline_strategy_sha256=hashlib.sha256(pinned_text).hexdigest(),
-                ),
-            )
-        issues = decisions.validate(
-            set(),
-            game=tmp_path,
-            snapshot=snapshot,
-            policy=policy,
-            extensions=decisions.Extensions(reform_enabled=reform, market_enabled=market),
-        )
+    policy = replace(decisions.load(), enabled=False)
+    if drift == "raw_bytes":
+        pinned_raw = pinned_text = b"# strategy fixture\n"
+        expected = f"当前原版默认策略原始字节漂移：{strategy}"
+    else:
+        pinned_raw, pinned_text = raw, b"# another strategy fixture\n"
+        expected = f"当前原版默认策略归一化摘要漂移：{strategy}"
+    monkeypatch.setitem(
+        version_contracts.VERSION_SPECS,
+        version_contracts.CURRENT_VERSION,
+        replace(
+            version_contracts.contract(),
+            default_strategy_sha256=hashlib.sha256(pinned_raw).hexdigest(),
+            baseline_strategy_sha256=hashlib.sha256(pinned_text).hexdigest(),
+        ),
+    )
+    issues = decisions.validate(
+        set(),
+        game=tmp_path,
+        snapshot=snapshot,
+        policy=policy,
+        extensions=decisions.Extensions(reform_enabled=reform, market_enabled=market),
+    )
     assert expected in issues
     assert not any("本机财政接口参考" in issue for issue in issues)
     assert {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()} == {
@@ -663,12 +648,8 @@ def test_指纹绑定实际替代源和生成器(tmp_path):
     fiscal, extensions = tmp_path / "fiscal.toml", tmp_path / "extensions.toml"
     fiscal.write_bytes(decisions.SOURCE.read_bytes() + b"\n# alternative fiscal\n")
     extensions.write_bytes(decisions.EXTENSIONS.read_bytes() + b"\n# alternative extensions\n")
-    # Alternative fiscal declarations in this test are historical raw bytes;
-    # current compatibility authority is intentionally restricted to SOURCE.
-    with version_contracts.select_version("1.14.5"):
-        policy, extra = decisions.load(fiscal), decisions.load_extensions(extensions)
-        metadata = json.loads(decisions.build(policy, extensions=extra)[".metadata/metadata.json"])
-    fingerprint = metadata["source_fingerprint"]
+    policy, extra = decisions.load(fiscal), decisions.load_extensions(extensions)
+    fingerprint = decisions.source_fingerprint(policy, extra, None)
     assert fingerprint["fiscal_source_sha256"] == hashlib.sha256(fiscal.read_bytes()).hexdigest()
     assert (
         fingerprint["extensions_source_sha256"]
@@ -821,8 +802,9 @@ def test_说明使用调用方提供的版本与财政参数(policy):
         assert expected in text
 
 
-def test_说明保留用户验收边界和回退且不进入游戏生成树(historical_policy):
-    policy = historical_policy
+@pytest.mark.integration
+def test_说明保留用户验收边界和回退且不进入游戏生成树(current_policy):
+    policy = current_policy
     from pdx.distribution import player_guide
 
     extensions = replace(decisions.Extensions(), diplomacy_enabled=True)

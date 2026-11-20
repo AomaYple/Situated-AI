@@ -17,28 +17,18 @@ from pdx import (
 
 
 @pytest.mark.parametrize(
-    "module", [equipment_opportunities, treaty_opportunities, mobilization_opportunities]
+    ("module", "count"),
+    [(equipment_opportunities, 271), (treaty_opportunities, 34), (mobilization_opportunities, 15)],
 )
-def test_artifact_and_pin_follow_the_explicit_version_without_rewriting_history(module):
-    original = module.BASELINE.read_bytes()
-    with version_contracts.select_version("1.14.5"):
-        assert module.baseline_path() == module.BASELINE
-        assert hashlib.sha256(original).hexdigest() == module.baseline_sha256()
-        historical = module.load_baseline()
-    with version_contracts.select_version("1.15.0"):
-        assert module.baseline_path() != module.BASELINE
-        assert (
-            hashlib.sha256(module.baseline_path().read_bytes()).hexdigest()
-            == module.baseline_sha256()
-        )
-        migrated = module.load_baseline()
-    assert module.BASELINE.read_bytes() == original
-    assert set(migrated["candidates"]) == set(historical["candidates"])
+def test_current_opportunity_artifacts_pin_the_full_candidate_denominator(module, count):
+    raw = module.baseline_path().read_bytes()
+    assert module.baseline_path().parent.name == version_contracts.CURRENT_VERSION
+    assert hashlib.sha256(raw).hexdigest() == module.baseline_sha256()
+    assert len(module.load_baseline()["candidates"]) == count
 
 
-def test_115_equipment_materials_reconstruct_the_changed_native_baskets():
-    with version_contracts.select_version("1.15.0"):
-        current = equipment_opportunities.load_baseline()
+def test_equipment_materials_reconstruct_current_native_baskets():
+    current = equipment_opportunities.load_baseline()
     candidates = current["candidates"]
     assert candidates["ship_mod_aircraft_carrier_armor_high"]["construction_goods"] == {
         "steel": "435"
@@ -48,19 +38,13 @@ def test_115_equipment_materials_reconstruct_the_changed_native_baskets():
     assert candidates["ship_mod_iron_frigate_guns_high"]["ordinary_goods"] == ["artillery"]
 
 
-def test_technology_query_catalog_does_not_leak_between_version_contexts():
-    with version_contracts.select_version("1.14.5"):
-        historical = technology_opportunities._query_catalog()
-        assert "copper" not in historical["goods"]
-    with version_contracts.select_version("1.15.0"):
-        migrated = technology_opportunities._query_catalog()
-        assert "copper" in migrated["goods"]
-        assert len(migrated["sources"]) == 83
-        assert len(migrated["technologies"]) == 135
-        assert len(migrated["native_retained"]) == 44
-        assert set(migrated["technologies"]).isdisjoint(migrated["native_retained"])
-    with version_contracts.select_version("1.14.5"):
-        assert technology_opportunities._query_catalog() is historical
+def test_technology_query_catalog_accounts_for_current_and_native_retained_technologies():
+    catalog = technology_opportunities._query_catalog()
+    assert "copper" in catalog["goods"]
+    assert len(catalog["sources"]) == 83
+    assert len(catalog["technologies"]) == 135
+    assert len(catalog["native_retained"]) == 44
+    assert set(catalog["technologies"]).isdisjoint(catalog["native_retained"])
 
 
 @pytest.mark.integration

@@ -3,7 +3,7 @@
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
-Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
+面向 Victoria 3 的 AI Mod 与开发工具链。当前开发基线为 Victoria 3 **1.15.2** 和 CPython **3.15.2**。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
 Mod ID 为 `situated-ai`。主线生产、工具链与公开发布的状态见[当前工作清单](docs/design/当前工作清单.md)和[版本交付索引](docs/design/exec/版本交付-结果.md)。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。
 

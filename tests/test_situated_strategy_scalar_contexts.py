@@ -2,24 +2,17 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import replace
 
 import pytest
+from _engine_evidence import strategy_image
 
 from pdx import config, decision_rules, decisions, version_contracts
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
-
-
-@pytest.fixture
-def historical_strategy_contract():
-    """Only synthetic revision attacks use the reviewed historical schema."""
-    with version_contracts.select_version("1.14.5"):
-        yield
 
 
 FIELDS = (
@@ -36,66 +29,10 @@ FIELDS = (
 )
 
 
-def test_r6_is_an_append_only_revision_with_ten_exact_consumers():
-    data = json.loads(
-        (
-            engine_scope.REPO / "research/situated/victoria3-1.14.5-strategy-scope-r6.json"
-        ).read_bytes()
-    )
-    assert len(data["consumers"]) == 29
-    assert len(data["observations"]) == 388
-    parent = json.loads(
-        (
-            engine_scope.REPO / "research/situated/victoria3-1.14.5-strategy-scope-r5.json"
-        ).read_bytes()
-    )
-    assert data["observations"][:325] == parent["observations"]
-    assert all(data["consumers"][key] == value for key, value in parent["consumers"].items())
-
-
 @pytest.fixture
-def scalar_proof(tmp_path, monkeypatch, historical_strategy_contract):
-    data = json.loads(engine_scope.strategy_snapshot())
-    points = data["observations"][325:388]
-    assert len(points) == 63
-    image = bytearray()
-    for point in points:
-        point["file_offset"] = hex(len(image))
-        image.extend(bytes.fromhex(point["bytes"]))
-    data["observations"] = points
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(image)
-    data["exe"] = {"sha256": hashlib.sha256(image).hexdigest(), "bytes": len(image)}
-    game = tmp_path / "game"
-    inputs = {}
-    for source in data["script_hashes"]:
-        inputs[source] = b"sample = {}"
-        data["script_hashes"][source] = hashlib.sha256(inputs[source]).hexdigest()
-    path = tmp_path / "strategy.json"
-
-    def freeze():
-        raw = json.dumps(data).encode()
-        path.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", path)
-        monkeypatch.setattr(
-            engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
-
-    freeze()
+def scalar_proof(tmp_path, monkeypatch):
+    game, exe, data, inputs, freeze = strategy_image(tmp_path, monkeypatch, b"sample = {}")
     return game, exe, data, inputs, freeze
-
-
-@pytest.mark.parametrize("index", range(63))
-def test_every_scalar_and_play_identity_span_is_checked_after_exe_repin(scalar_proof, index):
-    game, exe, data, inputs, freeze = scalar_proof
-    raw = bytearray(exe.read_bytes())
-    raw[int(data["observations"][index]["file_offset"], 16)] ^= 1
-    exe.write_bytes(raw)
-    data["exe"]["sha256"] = hashlib.sha256(raw).hexdigest()
-    freeze()
-    with pytest.raises(ValueError, match="字节不一致"):
-        engine_scope.strategy_evidence(game, inputs)
 
 
 @pytest.mark.parametrize("field", FIELDS)
@@ -120,9 +57,9 @@ def test_exact_scalar_contracts_fail_closed_after_manifest_repin(scalar_proof, f
     else:
         data["consumers"][field][member] = "unknown"
     freeze()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_evidence(game, inputs)
 
 
@@ -143,14 +80,12 @@ def test_play_instance_type_is_not_accepted_by_tag_guess(scalar_proof, member):
     _, _, data, _, freeze = scalar_proof
     data["diplomatic_play_instance_type"][member] = "unknown"
     freeze()
-    with pytest.raises(ValueError, match="博弈实例"):
+    with pytest.raises(ValueError, match="diplomatic_play_instance_type"):
         engine_scope.strategy_snapshot()
 
 
 @pytest.mark.parametrize("field", FIELDS)
-@pytest.mark.parametrize("version", ["1.15.1", version_contracts.CURRENT_VERSION])
-def test_scalar_contexts_bind_exact_objects_and_country_root(field, version, monkeypatch, tmp_path):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", version)
+def test_scalar_contexts_bind_exact_objects_and_country_root(field, monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     context = compiler._frozen_strategy_contexts()[field]
     reader = decision_rules.Reader("war", "is_at_war", "root", "boolean", "boolean")
@@ -247,8 +182,7 @@ def test_inventory_requires_each_exact_scalar_source_and_ordinary_child(scalar_p
 
 @pytest.fixture(scope="module")
 def scalar_model():
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        return compiler.load_model()
+    return compiler.load_model()
 
 
 def _assert_scalar_writer_bindings(writer, instance, card):

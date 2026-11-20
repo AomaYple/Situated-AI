@@ -12,7 +12,6 @@ from pdx import (
     config,
     decision_adapters,
     decision_rules,
-    version_contracts,
 )
 from pdx.situated import pdx_eval, programs
 
@@ -512,10 +511,9 @@ def test_unknown_source_with_no_hash_does_not_pass_a_missing_equality(adapters, 
 
 def test_locked_recipe_consensus_keeps_actual_building_output_differences():
     raw = tomllib.loads((config.REPO / "mod/decisions/adapters.toml").read_text(encoding="utf-8"))
-    if version_contracts.is_115():
-        authority = decision_adapters.native_authority_115()
-        assert set(raw["sources"]) == set(authority["sources"])
-        raw["sources"] = dict(authority["sources"])
+    authority = decision_adapters.native_authority_115()
+    assert set(raw["sources"]) == set(authority["sources"])
+    raw["sources"] = dict(authority["sources"])
     derived = building_opportunities.derive(raw)
     covered = {row["building"]: row["goods"] for row in derived["covered"]}
     assert covered["building_food_industry"] == ["groceries"]

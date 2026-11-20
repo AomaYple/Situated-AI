@@ -1,4 +1,4 @@
-"""The full historical acceptance graph selects current, independently proved inputs."""
+"""Current compiler, evidence identity and acceptance contracts."""
 
 from __future__ import annotations
 
@@ -22,142 +22,109 @@ from pdx.situated import (
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(scope="module", autouse=True)
-def selected_115():
-    with version_contracts.select_version("1.15.0"):
-        yield
-
-
 @pytest.fixture(scope="module")
 def current_model():
-    with version_contracts.select_version("1.15.0"):
-        return compiler.load_model()
+    return compiler.load_model()
 
 
-def test_current_ledgers_are_complete_and_historical_bytes_are_unchanged():
+def test_current_ledgers_are_complete():
     rows = bindings.load()
     assert rows == bindings.build()
-    assert len(rows) == 5857
+    assert len(rows) == 5873
     assert any("pm_coal_fired_plant_copper_cost" in row.definition for row in rows)
     assert bindings.check() == domain_coverage.check_counts() == []
     assert len(domain_coverage.load()) == 19
-    assert bindings.source_path() != bindings.DEFAULT_SOURCE
-    assert domain_coverage.source_path() != domain_coverage.DEFAULT_SOURCE
-    for path, digest in (
-        (
-            bindings.DEFAULT_SOURCE,
-            "d9e81fc2b729a37ecf4a83c9b62255ae848bc49e84b3a9de09fe7838ffb40fae",
-        ),
-        (
-            domain_coverage.DEFAULT_SOURCE,
-            "617e016a86227e36a5b10d4c9069b8b2c26d9529fcf29368e6b62fc67341c452",
-        ),
-    ):
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
 
 
-def test_current_contract_refuses_the_historical_binding_ledger():
+def test_current_contract_refuses_an_incomplete_binding_ledger(tmp_path):
+    path = tmp_path / "bindings.toml"
+    source = bindings.source_path().read_text(encoding="utf-8")
+    first_complete_row, _, _ = source.rpartition("[[bindings]]")
+    assert first_complete_row
+    path.write_text(first_complete_row, encoding="utf-8")
     with pytest.raises(ValueError, match="绑定目录不完整"):
-        bindings.load(bindings.DEFAULT_SOURCE)
+        bindings.load(path)
 
 
 def test_current_contexts_use_the_current_binary_identity():
     strategy = compiler._frozen_strategy_contexts()
     context = strategy["recklessness"]
     assert context.actor_scope is not None
-    assert context.actor_scope.source == "research/situated/victoria3-1.15.0-strategy-scope.json"
-    assert any("consumer=recklessness:va=0x14182761f" in item for item in context.evidence)
-    assert all("1.14.5" not in item for item in context.evidence)
+    assert context.actor_scope.source == "research/situated/1.15.2/engine-strategy.json"
+    assert any("consumer=recklessness:va=0x14184c11f" in item for item in context.evidence)
     company = compiler._frozen_company_context()
     assert company.actor_scope is not None
-    assert company.actor_scope.source == "research/situated/victoria3-1.15.0-company-scope.json"
-    assert all("1.14.5" not in item for item in company.evidence)
+    assert company.actor_scope.source == "research/situated/1.15.2/engine-company.json"
 
 
-def test_support_context_locates_current_field_comments_and_preserves_historical_lines():
+@pytest.mark.integration
+def test_support_context_locates_current_field_comments():
     current = compiler.support_evaluation_context()
     assert current.actor_scope is not None
-    assert current.actor_scope.source == "research/vanilla-ai/1.15.0/00_default_strategy.txt"
+    assert current.actor_scope.source == version_contracts.DEFAULT_STRATEGY_SOURCE
     assert current.actor_scope.line == 210
     assert tuple(row.line for row in current.targets) == (211, 212)
-    with version_contracts.select_version("1.14.5"):
-        old = compiler.support_evaluation_context()
-        assert old.actor_scope is not None
-        assert old.actor_scope.line == 183
-        assert tuple(row.line for row in old.targets) == (184, 185)
 
 
-def test_current_baseline_bytes_cannot_borrow_old_scope_proof(tmp_path, monkeypatch):
-    damaged = tmp_path / "default.txt"
-    damaged.write_bytes(compiler.baseline_path().read_bytes() + b"\n")
-    monkeypatch.setattr(compiler, "baseline_path", lambda: damaged)
-    with pytest.raises(ValueError, match="原版底本与引擎证据不一致"):
+@pytest.mark.integration
+def test_changed_installed_baseline_bytes_cannot_borrow_scope_proof(tmp_path, monkeypatch):
+    original = compiler.baseline_path()
+    damaged = tmp_path / version_contracts.DEFAULT_STRATEGY_SOURCE
+    damaged.parent.mkdir(parents=True)
+    damaged.write_bytes(original.read_bytes() + b"\n")
+    monkeypatch.setattr(config, "GAME", tmp_path)
+    with pytest.raises(ValueError, match="默认策略原始字节漂移"):
         compiler.support_evaluation_context()
-    with pytest.raises(ValueError, match="原件 SHA"):
-        compiler._frozen_institution_contexts(
-            compiler._frozen_strategy_contexts()["institution_scores"]
-        )
 
 
 def test_release_model_and_metadata_use_verified_structure_without_installation(
     tmp_path, monkeypatch
 ):
     monkeypatch.setattr(config, "GAME", tmp_path)
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        model = compiler.load_model()
-        policy, extensions = decisions.load(), decisions.load_extensions()
-        fingerprint = decisions.source_fingerprint(policy, extensions, None, situated_model=model)
-        context = compiler.declared_support_evaluation_context()
-        assert (
-            fingerprint["baseline_sha256"] == version_contracts.contract().baseline_strategy_sha256
-        )
-        assert (
-            fingerprint["situated_default_strategy_structure_source_sha256"]
-            == model.source_sha256["default_strategy_structure"]
-        )
-        assert context.actor_scope is not None
-        assert context.actor_scope.source == version_contracts.DEFAULT_STRATEGY_SOURCE
-        with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
-            compatibility_115.snapshot(game=tmp_path)
+    model = compiler.load_model()
+    policy, extensions = decisions.load(), decisions.load_extensions()
+    fingerprint = decisions.source_fingerprint(policy, extensions, None, situated_model=model)
+    context = compiler.declared_support_evaluation_context()
+    assert fingerprint["baseline_sha256"] == version_contracts.contract().baseline_strategy_sha256
+    assert (
+        fingerprint["situated_default_strategy_structure_source_sha256"]
+        == model.source_sha256["default_strategy_structure"]
+    )
+    assert context.actor_scope is not None
+    assert context.actor_scope.source == version_contracts.DEFAULT_STRATEGY_SOURCE
+    with pytest.raises(ValueError, match="缺少或无法读取锁定原版默认策略"):
+        compatibility_115.snapshot(game=tmp_path)
 
 
 def test_release_model_rejects_structure_declaration_drift(tmp_path, monkeypatch):
     projection = tmp_path / "default-strategy-structure.json"
     projection.write_bytes(compiler._DEFAULT_STRATEGY_PROJECTION.read_bytes() + b"\n")
     monkeypatch.setattr(compiler, "_DEFAULT_STRATEGY_PROJECTION", projection)
-    with (
-        version_contracts.select_version(version_contracts.CURRENT_VERSION),
-        pytest.raises(ValueError, match="默认策略结构合同字节漂移"),
-    ):
+    with pytest.raises(ValueError, match="默认策略结构合同字节漂移"):
         compiler.load_model()
 
 
 @pytest.mark.integration
 def test_release_compatibility_refuses_changed_installed_strategy_bytes(tmp_path):
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        relative = version_contracts.DEFAULT_STRATEGY_SOURCE
-        changed = tmp_path / relative
-        changed.parent.mkdir(parents=True)
-        # Copy only to the test's temporary directory. The trailing change is
-        # immaterial to the AST and must still fail the raw source gate.
-        changed.write_bytes((config.GAME / relative).read_bytes() + b"\n")
-        with pytest.raises(ValueError, match="当前原版默认策略原始字节漂移"):
-            compatibility_115.snapshot(game=tmp_path)
+    relative = version_contracts.DEFAULT_STRATEGY_SOURCE
+    changed = tmp_path / relative
+    changed.parent.mkdir(parents=True)
+    # Copy only to the test's temporary directory. The trailing change is
+    # immaterial to the AST and must still fail the raw source gate.
+    changed.write_bytes((config.GAME / relative).read_bytes() + b"\n")
+    with pytest.raises(ValueError, match="当前原版默认策略原始字节漂移"):
+        compatibility_115.snapshot(game=tmp_path)
 
 
 def test_parameter_identity_pins_keep_the_full_auxiliary_set_without_permissions(
     tmp_path, monkeypatch
 ):
     current = vanilla_inventory._parameter_evidence_contract()
-    assert set(current) == set(vanilla_inventory._PARAMETER_EVIDENCE_HASHES)
     assert len(current) == 19
-    assert (
-        current["common/goods/00_goods.txt"]
-        != vanilla_inventory._PARAMETER_EVIDENCE_HASHES["common/goods/00_goods.txt"]
+    assert current["common/goods/00_goods.txt"] == (
+        "5ef25e76d498cd4a8603732712a8248e03cb782d9e41bb95daba6dfd87feb0ab"
     )
-    damaged = tmp_path / "parameters.json"
-    damaged.write_bytes(vanilla_inventory._PARAMETER_115_SOURCE.read_bytes() + b"\n")
-    monkeypatch.setattr(vanilla_inventory, "_PARAMETER_115_SOURCE", damaged)
+    _mutate_research_file(monkeypatch, tmp_path, "inventory-parameters.json")
     with pytest.raises(ValueError, match="来源合同漂移"):
         vanilla_inventory.parameter_evidence_hashes(tmp_path)
 
@@ -216,54 +183,42 @@ def test_versioned_retirement_redirect_still_requires_the_exact_live_replacement
 def test_current_native_retention_contract_is_additional_and_tamper_closed(
     current_model, tmp_path, monkeypatch
 ):
-    damaged = tmp_path / "retentions.json"
-    damaged.write_bytes(migration_baseline._VERSION_115_SOURCE.read_bytes() + b"\n")
-    monkeypatch.setattr(migration_baseline, "_VERSION_115_SOURCE", damaged)
+    _mutate_research_file(monkeypatch, tmp_path, "migration-retentions.json")
     with pytest.raises(ValueError, match="延续合同字节漂移"):
         migration_baseline.validate_bundle(current_model.consumer_ir)
 
 
-def test_compatibility_policy_projects_current_native_authority_without_changing_historical_source():
-    raw = decisions.SOURCE.read_bytes()
-    with version_contracts.select_version("1.14.5"):
-        historical = decisions.load()
-    current = decisions.load()
-    assert current.game_version == "1.15.0"
-    assert (
-        current.baseline_sha256 == hashlib.sha256(compiler.baseline_path().read_bytes()).hexdigest()
+def _mutate_research_file(monkeypatch, tmp_path, name, *, raw=None):
+    research_path = version_contracts.research_path
+    path = tmp_path / name
+    path.write_bytes(research_path("situated", name).read_bytes() + b"\n" if raw is None else raw)
+    monkeypatch.setattr(
+        version_contracts,
+        "research_path",
+        lambda category, filename, version=None: (
+            path
+            if (category, filename) == ("situated", name)
+            else research_path(category, filename, version)
+        ),
     )
-    assert current.package.status == "candidate"
-    assert current.package.parent == "vanilla-1.15.0"
-    assert historical.game_version == "1.14.5"
-    assert historical.package.status == "released"
-    assert current.source_sha256 != historical.source_sha256
-    for name in ("enabled", "entry_weeks", "exit_weeks", "ttl_days", "neutrality", "aggression"):
-        assert getattr(current, name) == getattr(historical, name)
-    assert decisions.SOURCE.read_bytes() == raw
 
 
+@pytest.mark.integration
 def test_compatibility_native_field_ast_is_checked_beyond_its_manifest_hash(tmp_path, monkeypatch):
-    data = json.loads(compatibility_115.snapshot())
+    data = json.loads(compatibility_115.declaration())
     data["fields"]["aggression"]["ast_sha256"] = "0" * 64
-    path = tmp_path / "compatibility.json"
-    path.write_text(json.dumps(data), encoding="utf-8")
-    monkeypatch.setattr(compatibility_115, "SOURCE", path)
-    monkeypatch.setattr(compatibility_115, "SHA256", hashlib.sha256(path.read_bytes()).hexdigest())
+    raw = json.dumps(data).encode()
+    _mutate_research_file(monkeypatch, tmp_path, "compatibility-production.json", raw=raw)
+    monkeypatch.setattr(compatibility_115, "CURRENT_SHA256", hashlib.sha256(raw).hexdigest())
     with pytest.raises(ValueError, match="原版 AST 漂移：aggression"):
         compatibility_115.snapshot()
 
 
 @pytest.mark.parametrize(
-    ("version", "field", "expected"),
-    [
-        ("1.15.0", "change_law_chance", "dynamic_numeric"),
-        ("1.14.5", "change_law_chance", "needs_review"),
-        ("1.15.0", "another_chance", "needs_review"),
-    ],
+    ("field", "expected"),
+    [("change_law_chance", "dynamic_numeric"), ("another_chance", "needs_review")],
 )
-def test_first_nonzero_native_classification_is_bound_to_current_exact_consumer(
-    version, field, expected
-):
+def test_first_nonzero_native_classification_is_bound_to_current_exact_consumer(field, expected):
     from test_situated_native_protection import _fixture
 
     from pdx.situated.native_treatments import native_treatments
@@ -280,8 +235,7 @@ def test_first_nonzero_native_classification_is_bound_to_current_exact_consumer(
         capability="direct",
         operation="first_nonzero_active_change_law_chance_else_default",
     )
-    with version_contracts.select_version(version):
-        result = native_treatments(inventory, sources, {}, production_complete=True)
+    result = native_treatments(inventory, sources, {}, production_complete=True)
     row = result["rows"][0]
     assert row["interface_kind"] == expected
     assert row["implemented_numeric"] is False

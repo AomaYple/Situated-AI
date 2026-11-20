@@ -109,10 +109,9 @@ art = { building_modifiers = { workforce_scaled = { goods_input_paper_add = 10 g
 
 def _policy_readers(readers):
     selected = copy.deepcopy(readers)
-    if version_contracts.is_115():
-        from pdx.situated.engine_reader_115 import project_population_readers
+    from pdx.situated.engine_reader_115 import project_population_readers
 
-        project_population_readers(selected)
+    project_population_readers(selected)
     return selected
 
 
@@ -182,11 +181,7 @@ def _assert_joint(derived, company, changes, expected, *, observations=None, is_
         assert result.operation is None
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
-def test_company_fixture_binds_selected_population_without_mutating_derivation(
-    inputs, monkeypatch, version
-):
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
+def test_company_fixture_binds_current_population_without_mutating_derivation(inputs):
     derived = company_sectors.derive(inputs)
     historical_readers = copy.deepcopy(derived["readers"])
     _assert_joint(derived, "company_lkab", {"industrial_workforce": 0.15}, 1.04)
@@ -638,14 +633,16 @@ def test_unproven_synthetic_default_remains_registered_without_invented_score_or
 
 
 @pytest.fixture
-def authorized_default_inputs(inputs, monkeypatch):
-    # This fixture deliberately preserves the historical reviewed line 1049.
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.14.5")
+def authorized_default_inputs(inputs):
+    # Keep the synthetic definition at the exact current attested line.
+    source, line, define, _ = company_sectors._default_identities()["company_basic_steel"]
+    assert source == "common/company_types/99_basic_companies.txt"
+    assert define == "common/defines/00_ai.txt"
     inputs = dict(inputs)
     inputs.pop(COMPANY)
     inputs.pop(DEFINE)
     inputs["common/company_types/99_basic_companies.txt"] = (
-        "\n" * 1048 + "company_basic_steel = { building_types = { mine } }\n"
+        "\n" * (line - 1) + "company_basic_steel = { building_types = { mine } }\n"
     )
     inputs["common/defines/00_ai.txt"] = "NAI = { COMPANY_TYPE_DEFAULT_BASE_WEIGHT = 1 }\n"
     return inputs
@@ -718,7 +715,7 @@ def test_frozen_default_rules_cannot_survive_identity_drift_offline(
     assert len(frozen["rules"]) == 5
     assert len(company_sectors.initialized_fields(frozen)) == 1
     disk = json.loads(path.read_text(encoding="utf-8"))
-    disk["profiles"]["company_basic_steel"]["line"] += 1
+    disk["payload"]["profiles"]["company_basic_steel"]["line"] += 1
     path.write_text(company_sectors._canonical(disk), encoding="utf-8", newline="\n")
     with pytest.raises(ValueError, match=r"模板|读取器"):
         company_sectors.load_baseline()
@@ -830,17 +827,22 @@ def test_parameters_are_one_complete_finite_bounded_contract(inputs, key, value)
 
 
 def _freeze(tmp_path, monkeypatch, inputs):
-    # These mutation fixtures exercise the historical schema-2 reference
-    # representation. They are not a fake installed 1.15 game and must not
-    # bypass its live authority gate to manufacture a schema-3 attestation.
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.14.5")
-    monkeypatch.setattr(company_sectors, "BASELINE", tmp_path / "baseline.json")
+    from pdx.situated import r2_reader_authority
+
+    path = tmp_path / "baseline.json"
+    monkeypatch.setattr(company_sectors, "baseline_path", lambda: path)
+    # Isolate the current writer/loader contract. The deployed installation
+    # has its own full-source integration checks.
+    verified: list[object] = []
+    monkeypatch.setattr(r2_reader_authority, "verify_installation", verified.append)
     game = tmp_path / "game"
     for source, text in inputs.items():
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8", newline="\n")
-    return company_sectors.write_baseline(game)
+        target = game / source
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8", newline="\n")
+    assert company_sectors.write_baseline(game) == path
+    assert verified == [game.parent]
+    return path
 
 
 def test_explicit_baseline_write_load_and_independent_rederive_are_equal(
@@ -920,7 +922,8 @@ def test_reference_format_rejects_bad_references_and_duplicate_definitions(
 ):
     path = _freeze(tmp_path, monkeypatch, inputs)
     raw = path.read_text(encoding="utf-8")
-    frozen = json.loads(raw)
+    envelope = json.loads(raw)
+    frozen = envelope["payload"]
     if damage == "unknown":
         frozen["profiles"]["company_lkab"]["base_recipes"] = ["unknown"]
     elif damage == "missing":
@@ -947,7 +950,7 @@ def test_reference_format_rejects_bad_references_and_duplicate_definitions(
             newline="\n",
         )
     if damage != "duplicate_json_key":
-        path.write_text(company_sectors._canonical(frozen), encoding="utf-8", newline="\n")
+        path.write_text(company_sectors._canonical(envelope), encoding="utf-8", newline="\n")
     with pytest.raises(ValueError):
         company_sectors.load_baseline()
 
@@ -957,7 +960,8 @@ def test_reference_format_rejects_bad_references_and_duplicate_definitions(
 )
 def test_frozen_sections_cannot_self_attest_or_drift(inputs, tmp_path, monkeypatch, section):
     path = _freeze(tmp_path, monkeypatch, inputs)
-    data = json.loads(path.read_bytes())
+    envelope = json.loads(path.read_bytes())
+    data = envelope["payload"]
     if section == "profiles":
         data[section]["company_lkab"]["verified"] = True
     elif section == "rules":
@@ -970,7 +974,7 @@ def test_frozen_sections_cannot_self_attest_or_drift(inputs, tmp_path, monkeypat
         data[section]["demand_multiplier"] = 1.13
     else:
         data[section]["explicit_weight"] = 999
-    path.write_text(company_sectors._canonical(data), encoding="utf-8", newline="\n")
+    path.write_text(company_sectors._canonical(envelope), encoding="utf-8", newline="\n")
     with pytest.raises(ValueError):
         company_sectors.verify_baseline(inputs)
 
@@ -985,7 +989,7 @@ def test_frozen_format_and_keys_are_strict(inputs, tmp_path, monkeypatch, damage
         if damage == "extra_key":
             data["verified"] = True
         elif damage == "missing_key":
-            data.pop("sources")
+            data["payload"].pop("sources")
         elif damage == "bool_schema":
             data["schema"] = True
         path.write_text(company_sectors._canonical(data), encoding="utf-8", newline="\n")
@@ -994,7 +998,6 @@ def test_frozen_format_and_keys_are_strict(inputs, tmp_path, monkeypatch, damage
 
 
 def test_115_frozen_format_requires_integer_schema(inputs, tmp_path, monkeypatch):
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
     path = tmp_path / "baseline.json"
     monkeypatch.setattr(company_sectors, "baseline_path", lambda: path)
     monkeypatch.setattr(company_sectors, "_baseline_provenance", dict)
@@ -1002,7 +1005,7 @@ def test_115_frozen_format_requires_integer_schema(inputs, tmp_path, monkeypatch
     payload = company_sectors._freeze(derived)
     frozen = {
         "schema": 3,
-        "game_version": "1.15.1",
+        "game_version": version_contracts.CURRENT_VERSION,
         "provenance": {},
         "payload": payload,
     }
@@ -1012,7 +1015,7 @@ def test_115_frozen_format_requires_integer_schema(inputs, tmp_path, monkeypatch
 
     frozen["schema"] = 3.0
     path.write_text(company_sectors._canonical(frozen), encoding="utf-8", newline="\n")
-    with pytest.raises(ValueError, match=r"公司部门1\.15派生版本或生成来源漂移"):
+    with pytest.raises(ValueError, match=r"公司部门当前派生版本或生成来源漂移"):
         company_sectors.load_baseline()
 
 
@@ -1062,7 +1065,8 @@ def test_offline_load_rejects_untrusted_nested_claims_without_current_game(
     inputs, tmp_path, monkeypatch, damage
 ):
     path = _freeze(tmp_path, monkeypatch, inputs)
-    data = json.loads(path.read_bytes())
+    envelope = json.loads(path.read_bytes())
+    data = envelope["payload"]
     profile = data["profiles"]["company_lkab"]
     group = data["building_profiles"][profile["base_recipes"][0]]["groups"][0]
     if damage == "claim":
@@ -1075,7 +1079,7 @@ def test_offline_load_rejects_untrusted_nested_claims_without_current_game(
         group["base"] = False
     else:
         profile["base_recipes"] = [None]
-    path.write_text(company_sectors._canonical(data), encoding="utf-8", newline="\n")
+    path.write_text(company_sectors._canonical(envelope), encoding="utf-8", newline="\n")
     monkeypatch.setattr(config, "GAME", tmp_path / "absent-game")
     with pytest.raises(ValueError):
         company_sectors.load_baseline()

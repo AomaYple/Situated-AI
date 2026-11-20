@@ -266,14 +266,8 @@ def _assert_no_produced_supply(files):
     return metadata
 
 
-@pytest.fixture
-def historical_supply_assembly():
-    """The adapter exclusion assembly contract has frozen offline inputs."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
-def test_real_build_without_adapters_has_no_supply_writer_or_stance(historical_supply_assembly):
+@pytest.mark.integration
+def test_real_build_without_adapters_has_no_supply_writer_or_stance():
     files = decisions.build()
     metadata = _assert_no_produced_supply(files)
     assert "consumer_adapters" not in metadata

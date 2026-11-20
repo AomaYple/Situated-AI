@@ -4,11 +4,17 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_adapters, decision_rules, version_contracts
+from pdx import decision_adapters, decision_rules
 from pdx.situated import compiler, decision_ir, migration_baseline
 
 pytestmark = pytest.mark.unit
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
+
+
+def _declared_context(field):
+    return compiler._declared_context(
+        compiler._default_strategy_projection()["field_contexts"][field]
+    )
 
 
 def _argument_policy(field, argument, *, engine="is_subject_of", scope="root", parameters=None):
@@ -50,7 +56,7 @@ def _argument_policy(field, argument, *, engine="is_subject_of", scope="root", p
 )
 def test_production_reader_country_argument_rejects_other_object_kinds(field, argument):
     policy = _argument_policy(field, argument)
-    context = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))[field]
+    context = _declared_context(field)
     with pytest.raises(ValueError, match=r"参数.*country"):
         compiler.validate_context_readers(
             field, context, {r.key: r for r in policy.readers}, policy.rules[0].conditions
@@ -80,7 +86,7 @@ def test_production_country_arguments_preserve_legal_named_objects(
     field, argument, engine, scope, parameters
 ):
     policy = _argument_policy(field, argument, engine=engine, scope=scope, parameters=parameters)
-    context = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))[field]
+    context = _declared_context(field)
     bound = compiler.validate_context_readers(
         field, context, {r.key: r for r in policy.readers}, policy.rules[0].conditions
     )
@@ -92,9 +98,7 @@ def test_production_country_arguments_preserve_legal_named_objects(
     [("has_diplomatic_pact", "who"), ("has_treaty_alliance_with", "TARGET")],
 )
 def test_country_parameter_kind_is_checked_even_for_existing_named_scope(engine, parameter):
-    context = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))[
-        "state_value"
-    ]
+    context = _declared_context("state_value")
     reader = decision_rules.Reader(
         "parameter_fact",
         engine,
@@ -114,9 +118,7 @@ def test_country_parameter_kind_is_checked_even_for_existing_named_scope(engine,
 
 def test_context_cannot_turn_literal_argument_into_dynamic_object_getter():
     policy = _argument_policy("negotiation_chance", "scope:law", engine="has_variable")
-    context = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))[
-        "negotiation_chance"
-    ]
+    context = _declared_context("negotiation_chance")
     with pytest.raises(ValueError, match="参数不支持对象作用域"):
         compiler.validate_context_readers(
             "negotiation_chance",
@@ -131,9 +133,7 @@ def test_literal_root_identifier_keeps_production_argument_semantics(engine):
     policy = _argument_policy("negotiation_chance", "root", engine=engine)
     reader = policy.readers[0]
     assert reader.expression("=", True) == f"{engine} = root"
-    context = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))[
-        "negotiation_chance"
-    ]
+    context = _declared_context("negotiation_chance")
     assert compiler.validate_context_readers(
         "negotiation_chance", context, {reader.key: reader}, policy.rules[0].conditions
     ) == ((reader.key, "root", "country", "actor"),)
@@ -345,7 +345,7 @@ def test_reader_context_binding_does_not_invent_a_law_reader():
 
 @pytest.mark.parametrize("field", ["subject_value", "become_subject_value", "state_value"])
 def test_ig_candidate_cannot_become_country_or_state_target(field):
-    context = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))[field]
+    context = _declared_context(field)
     reader = decision_rules.Reader("ig", "ig_clout", "interest_group", "ratio", "number")
     with pytest.raises(ValueError, match="interest_group"):
         compiler.validate_context_readers(
@@ -367,9 +367,7 @@ def test_unknown_context_does_not_gain_reader_bindings():
 
 
 def test_reader_scope_argument_and_fact_reference_expression_cannot_cross_contexts():
-    context = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))[
-        "subject_value"
-    ]
+    context = _declared_context("subject_value")
     relation = decision_rules.Reader(
         "relation", "is_subject_of", "root", "boolean", "boolean", argument="scope:overlord"
     )
@@ -395,47 +393,33 @@ def test_reader_scope_argument_and_fact_reference_expression_cannot_cross_contex
         )
 
 
-@pytest.fixture
-def historical_context_contract():
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.mark.parametrize("damage", ["missing", "role", "direction"])
-def test_model_loader_rejects_used_reader_context_drift(
-    monkeypatch, damage, historical_context_contract
-):
-    contexts = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))
+def test_model_loader_rejects_used_reader_context_drift(monkeypatch, damage):
+    projection = compiler._default_strategy_projection()
+    contexts = projection["field_contexts"]
     subject = contexts["subject_value"]
     if damage == "missing":
-        contexts["subject_value"] = replace(subject, targets=())
+        contexts["subject_value"] = {**subject, "targets": []}
     elif damage == "role":
-        contexts["subject_value"] = replace(
-            subject,
-            targets=(),
-            auxiliary_scopes=(replace(subject.targets[0], role="auxiliary"),),
-        )
+        contexts["subject_value"] = {
+            **subject,
+            "targets": [],
+            "auxiliary_scopes": [{**subject["targets"][0], "role": "auxiliary"}],
+        }
     else:
         contexts["subject_value"] = contexts["become_subject_value"]
-    monkeypatch.setattr(compiler, "evaluation_contexts", lambda _text: contexts)
+    monkeypatch.setattr(compiler, "_default_strategy_projection", lambda: projection)
     with pytest.raises(
         ValueError, match=r"subject_value.*target_country|target_country.*subject_value"
     ):
         compiler.load_model()
 
 
-def test_compiler_exports_context_but_keeps_frozen_migration_identity(historical_context_contract):
+def test_compiler_exports_context_but_keeps_frozen_migration_identity():
     model = compiler.load_model()
     bundle = model.consumer_ir
     assert bundle is not None
     migration_baseline.validate_bundle(bundle)
-    actual_contexts = compiler.evaluation_contexts(compiler.BASELINE.read_text(encoding="utf-8"))
-    assert all(context.status == "observed" for context in actual_contexts.values())
-    baseline_lines = compiler.BASELINE.read_text(encoding="utf-8").splitlines()
-    for context in actual_contexts.values():
-        assert context.actor_scope is not None
-        for binding in (context.actor_scope, *context.targets, *context.auxiliary_scopes):
-            assert binding.name in baseline_lines[binding.line - 1]
     instance = next(
         i for i in model.action_instances if i.rule_id == "remaining_friendly_subject_need"
     )
@@ -468,3 +452,16 @@ def test_compiler_exports_context_but_keeps_frozen_migration_identity(historical
         assert decision_ir.lower_legacy(policy, bundle, source=source) == decision_ir.lower_legacy(
             policy, stripped, source=source
         )
+
+
+@pytest.mark.integration
+def test_current_strategy_documentation_matches_projected_contexts_and_real_lines():
+    baseline = compiler.baseline_text()
+    compiler.verify_default_strategy_projection(baseline)
+    actual_contexts = compiler.evaluation_contexts(baseline)
+    assert all(context.status == "observed" for context in actual_contexts.values())
+    baseline_lines = baseline.splitlines()
+    for context in actual_contexts.values():
+        assert context.actor_scope is not None
+        for binding in (context.actor_scope, *context.targets, *context.auxiliary_scopes):
+            assert binding.name in baseline_lines[binding.line - 1]

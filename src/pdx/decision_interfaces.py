@@ -10,7 +10,6 @@ import hashlib
 import inspect
 import json
 import math
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from . import observation_queries, version_contracts
@@ -18,41 +17,18 @@ from .model import Assignment, Block, Scalar
 from .parser import parse_text
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from .decision_rules import Reader, RuleSet
     from .situated.profile_configuration import ProfileConfiguration
 
 
-_LJ10_EVIDENCE = Path(__file__).resolve().parents[2] / (
-    "research/situated/victoria3-1.14.5-defensive-pact-reader.json"
-)
-_LJ10_EVIDENCE_SHA256 = "2237b33ebdb232e2c2061a995d471e98ca015ce06725cc00f4e7d252c63c20c6"
-SCRIPTED_PREDICATE_SOURCE = Path(__file__).resolve().parents[2] / (
-    "research/situated/victoria3-1.14.5-scripted-predicate.json"
-)
-SCRIPTED_PREDICATE_SHA256 = "128c85f83fdc007a42d19c97dad7bf8d61351be42121095e680ed1028a38918c"
-SCRIPTED_PREDICATE_115 = Path(__file__).resolve().parents[2] / (
-    "research/situated/1.15.0/scripted-predicate.json"
-)
-SCRIPTED_PREDICATE_115_SHA256 = "31dd68a463d5de5c7d1bf7e234be29db8850af011544c5bf6fa0702c49ef52fa"
-
-
-SCRIPTED_PREDICATE_1151_SHA256 = "ae30c39e5c282adb827f5121c4b283f3b96087e5634e894b19def7ca5e670ae3"
-
-
 def scripted_predicate_path() -> Path:
-    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        return version_contracts.research_path("situated", "scripted-predicate.json")
-    return SCRIPTED_PREDICATE_115 if version_contracts.is_115() else SCRIPTED_PREDICATE_SOURCE
+    return version_contracts.research_path("situated", "scripted-predicate.json")
 
 
 def scripted_predicate_sha256() -> str:
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return "bd38a586125271089d95f5e0e461490a40eb78ec0c522c23860e0f8d91baa7c3"
-    if version_contracts.active_version() == "1.15.1":
-        return SCRIPTED_PREDICATE_1151_SHA256
-    return (
-        SCRIPTED_PREDICATE_115_SHA256 if version_contracts.is_115() else SCRIPTED_PREDICATE_SHA256
-    )
+    return "bd38a586125271089d95f5e0e461490a40eb78ec0c522c23860e0f8d91baa7c3"
 
 
 def scripted_trigger_snapshot() -> bytes:
@@ -71,12 +47,7 @@ def scripted_trigger_snapshot() -> bytes:
         "result": "boolean",
         "unit": "boolean",
         "source": "common/scripted_triggers/00_scripted_triggers.txt",
-        "line": {
-            "1.14.5": 1117,
-            "1.15.0": 1243,
-            "1.15.1": 1244,
-            version_contracts.CURRENT_VERSION: 1244,
-        }[version],
+        "line": 1244,
         "definition": (
             "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
         ),
@@ -212,22 +183,9 @@ def proven_reader_words() -> frozenset[str]:
     hashes. It extends token discovery only; reader_scope still enforces exact
     own-Country signatures and does not grant arbitrary foreign-scope access.
     """
-    if version_contracts.is_115():
-        from .situated import engine_reader_115  # noqa: PLC0415
+    from .situated import engine_reader_115  # noqa: PLC0415
 
-        return engine_reader_115.proven_words()
-    raw = _LJ10_EVIDENCE.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != _LJ10_EVIDENCE_SHA256:
-        raise ValueError("LJ10 读取器冻结证据字节漂移")
-    manifest = json.loads(raw)
-    if manifest["exe"]["sha256"] != (
-        "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54"
-    ):
-        raise ValueError("LJ10 读取器原版引擎身份漂移")
-    return frozenset(
-        [manifest["reader"]["engine"]]
-        + [item["engine"] for item in manifest["positive_native_guard"]["readers"]]
-    )
+    return engine_reader_115.proven_words()
 
 
 _COUNTRY_BOOLEAN = frozenset(
@@ -367,18 +325,15 @@ def reader_scope(
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
     if reader.engine == "pop_type_percent_country":
-        current = version_contracts.is_115()
-        parameter = "target" if current else "pop_type"
         values = {"peasants", "laborers", "machinists"}
         if (
             reader.scope != "root"
             or reader.path != actor_path
             or reader.argument is not None
             or len(reader.parameters) != 1
-            or reader.parameters[0][0] != parameter
-            or reader.parameters[0][1]
-            not in ({f"pop_type:{name}" for name in values} if current else values)
-            or reader.value_field != ("value" if current else "percent")
+            or reader.parameters[0][0] != "target"
+            or reader.parameters[0][1] not in {f"pop_type:{name}" for name in values}
+            or reader.value_field != "value"
             or reader.kind != "number"
             or reader.unit != "ratio"
             or reader.minimum != 0
@@ -608,7 +563,7 @@ def reader_scope(
     if _INPUTS.get(reader.engine) != (scope, reader.kind):
         raise ValueError(f"读取器类型或作用域与静态接口签名不一致：{reader.key}")
     expected_unit = _UNITS.get(reader.engine, "boolean")
-    if version_contracts.is_115() and reader.engine in {
+    if reader.engine in {
         "wanted_army_size_script_value",
         "wanted_marines_size_script_value",
     }:
@@ -700,7 +655,7 @@ def consumer(
         ):
             raise ValueError("医疗动员消费者必须保留精确编队ROOT及所属国家角色")
         evidence, role = (
-            "research/situated/mobilization-opportunities.json",
+            f"research/situated/{version_contracts.CURRENT_VERSION}/mobilization-opportunities.json",
             "vanilla_mobilization_utility_multiplier_before_monetary_cost",
         )
     elif leaf == "ai_weight":
@@ -713,7 +668,7 @@ def consumer(
         and source.startswith("common/treaty_articles/")
     ):
         evidence, role = (
-            "research/situated/treaty-opportunities.json",
+            f"research/situated/{version_contracts.CURRENT_VERSION}/treaty-opportunities.json",
             "vanilla_treaty_article_proposal_multiplier",
         )
     elif (
@@ -729,7 +684,7 @@ def consumer(
         ):
             raise ValueError("条约抽样概率只允许被评估国家ROOT，无条款或对方角色")
         evidence, role = (
-            "research/situated/treaty-opportunities.json",
+            f"research/situated/{version_contracts.CURRENT_VERSION}/treaty-opportunities.json",
             "vanilla_treaty_article_evaluation_probability",
         )
     return {
@@ -779,7 +734,7 @@ def placement_contract(field: tuple[str, ...]) -> str:
 
 def _retained_reason(field: str) -> dict[str, str]:
     """保留原版是明确设计选择，既不是新增实现也不是接口不支持。"""
-    if field == "cossack_host_scores" and version_contracts.is_115():
+    if field == "cossack_host_scores":
         return {
             "disposition": "native_cossack_host_policy",
             "reason": "完整保留原版哥萨克军团州目标评分、零分拒绝及COSSACK_HOST_STICKYNESS惯性；未新增Mod写入",
@@ -939,38 +894,32 @@ def _configuration_writers(
                 "market",
             )
 
-    version = version_contracts.active_version()
-    if version in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        from .situated import network_profile, production_profile  # noqa: PLC0415
+    from .situated import network_profile, production_profile  # noqa: PLC0415
 
-        profile = (
-            production_profile.declared_profile()
-            if version == version_contracts.CURRENT_VERSION
-            else production_profile.load_profile(production_profile.baseline_root(version))
-        )
-        # The native declaration alone is not a Mod writer. Confirm that the
-        # current policy actually compiles the consumer before recording its
-        # withdrawal; the six retired school rules never reappear as writers.
-        programs = network_profile.compile_profile(profile)
-        consumers = {program.network.actions[0].definition.consumer_id for program in programs}
-        for row in profile.declarations:
-            if (
-                row.id in consumers
-                and row.source == "game/common/ai_strategies/00_default_strategy.txt"
-            ):
-                if row.definition != "ai_strategy_default":
-                    raise ValueError("配置关闭台账R2默认策略声明路径无效")
-                register(
-                    network_profile.source_path(profile.game_version)
-                    .relative_to(decisions.config.REPO)
-                    .as_posix(),
-                    row.id,
-                    row.field,
-                    "R2/action-network-v2",
-                    {"economy": "economy", "politics": "political", "diplomacy": "diplomacy"}[
-                        row.domain
-                    ],
-                )
+    profile = production_profile.declared_profile()
+    # The native declaration alone is not a Mod writer. Confirm that the
+    # current policy actually compiles the consumer before recording its
+    # withdrawal; the six retired school rules never reappear as writers.
+    programs = network_profile.compile_profile(profile)
+    consumers = {program.network.actions[0].definition.consumer_id for program in programs}
+    for row in profile.declarations:
+        if (
+            row.id in consumers
+            and row.source == "game/common/ai_strategies/00_default_strategy.txt"
+        ):
+            if row.definition != "ai_strategy_default":
+                raise ValueError("配置关闭台账R2默认策略声明路径无效")
+            register(
+                network_profile.source_path(profile.game_version)
+                .relative_to(decisions.config.REPO)
+                .as_posix(),
+                row.id,
+                row.field,
+                "R2/action-network-v2",
+                {"economy": "economy", "politics": "political", "diplomacy": "diplomacy"}[
+                    row.domain
+                ],
+            )
 
     policy, extensions = distribution.production_configuration()
     builtin_domains = {
@@ -1080,7 +1029,6 @@ def coverage(
 
 
 STATE_DEVASTATION_SOURCE = "common/ideologies/01_character_ideologies.txt"
-STATE_DEVASTATION_SHA256 = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
 
 
 def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
@@ -1089,22 +1037,14 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
     The ideology supplies a state getter witness, not a railway effect.
     The consumer remains the independently proved state building ai_value.
     """
+    from . import decision_adapters  # noqa: PLC0415
     from .textio import normalized_text  # noqa: PLC0415
 
+    authority_sources = decision_adapters.native_authority_115()["sources"]
     sources = {
-        STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
-        "common/on_actions/00_code_on_actions.txt": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
+        source: authority_sources[source]
+        for source in (STATE_DEVASTATION_SOURCE, "common/on_actions/00_code_on_actions.txt")
     }
-    if version_contracts.is_115():
-        sources = {
-            STATE_DEVASTATION_SOURCE: "ca28311ba527e4fca8ef590a4bff69e2d541cbaca5de9828913ca22d26b81ad4",
-            "common/on_actions/00_code_on_actions.txt": "ceebee2c1b4846ba1ad11a78093bb85b619b911c92c414c9f3f8e8bfb6e8510e",
-        }
-    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        from . import decision_adapters  # noqa: PLC0415
-
-        authority_sources = decision_adapters.native_authority_115()["sources"]
-        sources = {source: authority_sources[source] for source in sources}
     parsed = {}
     for source, expected in sources.items():
         text = texts.get(source)
@@ -1132,7 +1072,7 @@ def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
     # the state getter only inside that guarded owner branch; it grants no
     # unguarded root/foreign-owner access. The produced state consumer retains
     # its own proved state scope and does not copy or remove this native gate.
-    owner_operator = "?=" if version_contracts.is_115() else "="
+    owner_operator = "?="
     expected = shape(
         parse_text(
             f"owner {owner_operator} {{ any_scope_state = {{ is_incorporated = yes devastation > 0.2 }} }}"

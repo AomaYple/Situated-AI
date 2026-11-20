@@ -65,19 +65,14 @@ class TestGameAnalysis:
         assert ga.version["caligula_branch"]
         assert ga.version["caligula_rev"]
         assert ga.version["clausewitz_branch"]
-        assert ga.version["caligula_branch"] == f"release/{version_contracts.active_version()}"
+        assert ga.version["caligula_branch"] == f"release/{version_contracts.CURRENT_VERSION}"
 
     def test_all_three_content_roots(self, ga):
         assert set(ga.roots) == {"game", "jomini", "clausewitz"}
 
-    def test_common_has_138_dirs(self, ga):
+    def test_common_has_141_dirs(self, ga):
         """空目录也必须收录 —— scripted_modifiers 只有 .md 没有 .txt。"""
-        assert (
-            len(ga.common)
-            == {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
-                version_contracts.active_version()
-            ]
-        )
+        assert len(ga.common) == 141
 
     def test_scripted_modifiers_present_but_empty(self, ga):
         res = ga.common["scripted_modifiers"]
@@ -91,30 +86,15 @@ class TestGameAnalysis:
     def test_known_dir_entry_counts(self, ga):
         """把已核实的关键数字钉住。"""
         known = {
-            "buildings": 115,
-            "laws": 138,
+            "buildings": 122,
+            "laws": 148,
             "interest_groups": 8,
-            "modifier_type_definitions": 2371,
-            "static_modifiers": 6128,
-            "character_templates": 2011,
-            "production_methods": 436,
-            "on_actions": 268,
+            "modifier_type_definitions": 2477,
+            "static_modifiers": 6490,
+            "character_templates": 2072,
+            "production_methods": 450,
+            "on_actions": 286,
         }
-        if version_contracts.is_115():
-            known = {
-                "buildings": 122,
-                "laws": 148,
-                "interest_groups": 8,
-                "modifier_type_definitions": 2474,
-                "static_modifiers": 6479,
-                "character_templates": 2072,
-                "production_methods": 450,
-                "on_actions": 287,
-            }
-        if version_contracts.active_version() == "1.15.1":
-            known.update(modifier_type_definitions=2476, static_modifiers=6487)
-        elif version_contracts.active_version() == "1.15.2":
-            known.update(modifier_type_definitions=2477, static_modifiers=6490, on_actions=286)
         for name, want in known.items():
             assert ga.common[name].unique_entries == want, name
 
@@ -135,21 +115,11 @@ class TestGameAnalysis:
         total = sum(v["键"] for v in ga.localization.values())
         assert total > 1_000_000
 
-    def test_official_docs_94(self, ga):
-        assert (
-            len(ga.official_docs)
-            == {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100, "1.15.2": 100}[
-                version_contracts.active_version()
-            ]
-        )
+    def test_official_docs_100(self, ga):
+        assert len(ga.official_docs) == 100
 
     def test_dlc_count(self, ga):
-        assert (
-            len(ga.dlcs)
-            == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18, "1.15.2": 18}[
-                version_contracts.active_version()
-            ]
-        )
+        assert len(ga.dlcs) == 18
 
     def test_dlc_have_no_script_dirs(self, ga):
         """实测全部 DLC 只装资产，脚本内容都在主体 game/common 里。"""

@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import pytest
 
-from pdx import verify
+from pdx import verify, version_contracts
 
 pytestmark = pytest.mark.unit
 
@@ -94,6 +94,8 @@ def test_没有快照时仍然核验官方文档清单(tmp_path, monkeypatch) ->
 
 def test_完整快照不算数(tmp_path, monkeypatch) -> None:
     """只认 ``*.compact.json`` —— 完整快照不入库，取了会得到 41 MB 的意外。"""
-    (tmp_path / "release-1.14.3.json").write_text("{}", encoding="utf-8")
+    (tmp_path / f"release-{version_contracts.CURRENT_VERSION}.json").write_text(
+        "{}", encoding="utf-8"
+    )
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     assert verify.latest_compact_snapshot() is None

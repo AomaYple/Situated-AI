@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING
 from pdx import config, vanilla_index
 from pdx.cache import parse_cached
 from pdx.model import Assignment, Block, Node, Scalar
-from pdx.version_contracts import active_version, is_115
+from pdx.version_contracts import CURRENT_VERSION, require_current
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -49,16 +49,15 @@ STRATEGY_DIR = Path("common") / "ai_strategies"
 DEFINES_FILE = Path("common") / "defines" / "00_ai.txt"
 
 #: 生成物路径（相对仓库根）。
-DOC_PATH = Path("docs") / "design" / "02-可执行面.md"
+DOC_PATH = Path("docs") / "design" / f"02-可执行面-{CURRENT_VERSION}.md"
 
 #: 便于 CLI / 测试引用的路径字符串。
 DOC_REL = DOC_PATH.as_posix()
 
 
 def doc_path() -> Path:
-    """Resolve the selected version without overwriting the historical surface."""
-    if is_115():
-        return DOC_PATH.with_name(f"02-可执行面-{active_version()}.md")
+    """Return the generated surface path for the current release."""
+    require_current()
     return DOC_PATH
 
 

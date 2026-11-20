@@ -6,18 +6,11 @@ import hashlib
 import json
 
 import pytest
+from _engine_evidence import compact_image, repin_manifest
 
-from pdx import version_contracts
-from pdx.situated import engine_scope
+from pdx.situated import engine_scope, engine_scope_115
 
 pytestmark = pytest.mark.unit
-
-
-@pytest.fixture(autouse=True)
-def historical_engine_contract():
-    """Synthetic historical fixtures must not borrow the current EXE identity."""
-    with version_contracts.select_version("1.14.5"):
-        yield
 
 
 def test_company_default_snapshot_requires_exact_missing_score_contract():
@@ -37,16 +30,7 @@ def company_defaults_game(tmp_path, monkeypatch):
     data = json.loads(engine_scope.company_default_snapshot())
     parent = json.loads(engine_scope.company_snapshot())
     game = tmp_path / "game"
-    image = bytearray()
-    for point in data["observations"]:
-        point["file_offset"] = hex(len(image))
-        image.extend(bytes.fromhex(point["bytes"]))
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(image)
-    exe_contract = {"sha256": hashlib.sha256(image).hexdigest(), "bytes": len(image)}
-    data["exe"] = parent["exe"] = exe_contract
-    parent["observations"] = [{"label": "parent", "file_offset": "0x0", "bytes": image[:8].hex()}]
+    exe = compact_image(tmp_path, parent, data)
     for source in {*parent["script_hashes"], *data["script_hashes"]}:
         raw = source.encode()
         if source == "common/company_types/99_basic_companies.txt":
@@ -61,18 +45,10 @@ def company_defaults_game(tmp_path, monkeypatch):
     path = tmp_path / "company-default.json"
 
     def freeze():
-        parent_raw = json.dumps(parent).encode()
-        parent_path.write_bytes(parent_raw)
-        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", parent_path)
-        parent_digest = hashlib.sha256(parent_raw).hexdigest()
-        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST_SHA256", parent_digest)
-        data["parent_scope_manifest"]["sha256"] = parent_digest
-        raw = json.dumps(data).encode()
-        path.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "COMPANY_DEFAULT_MANIFEST", path)
-        monkeypatch.setattr(
-            engine_scope, "COMPANY_DEFAULT_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
+        data["parent_scope_manifest"]["sha256"] = repin_manifest(
+            monkeypatch, parent_path, "company", parent
         )
+        repin_manifest(monkeypatch, path, "company-default", data)
 
     freeze()
     return game, exe, data, parent, freeze
@@ -166,16 +142,16 @@ def test_inventory_default_evidence_contains_actual_define_hash_and_parent(compa
     assert proof.verified
     hashes = dict(proof.source_hashes)
     assert (
-        hashes[f"@evidence/{engine_scope.COMPANY_DEFAULT_MANIFEST_ID}"]
-        == engine_scope.COMPANY_DEFAULT_MANIFEST_SHA256
+        hashes[f"@evidence/{engine_scope_115.manifest('company-default')[1]}"]
+        == engine_scope_115.manifest("company-default")[2]
     )
     assert (
         hashes["common/defines/00_ai.txt"]
         == hashlib.sha256(inputs["common/defines/00_ai.txt"]).hexdigest()
     )
     assert (
-        hashes[f"@evidence/{engine_scope.COMPANY_MANIFEST_ID}"]
-        == engine_scope.COMPANY_MANIFEST_SHA256
+        hashes[f"@evidence/{engine_scope_115.manifest('company')[1]}"]
+        == engine_scope_115.manifest("company")[2]
     )
 
 
@@ -204,7 +180,7 @@ def test_inventory_default_evidence_does_not_infer_default_from_missing_or_drift
     assert not engine_scope.company_default_evidence(game, inputs).verified
 
 
-@pytest.mark.parametrize("index", range(8))
+@pytest.mark.parametrize("index", range(7))
 def test_each_company_default_original_span_is_required(company_defaults_game, index):
     game, exe, data, parent, freeze = company_defaults_game
     raw = bytearray(exe.read_bytes())
@@ -212,7 +188,6 @@ def test_each_company_default_original_span_is_required(company_defaults_game, i
     exe.write_bytes(raw)
     digest = hashlib.sha256(raw).hexdigest()
     data["exe"]["sha256"] = parent["exe"]["sha256"] = digest
-    parent["observations"][0]["bytes"] = raw[:8].hex()
     freeze()
     with pytest.raises(ValueError, match="字节不一致"):
         engine_scope.verify_company_defaults_game(game)

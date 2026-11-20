@@ -13,7 +13,7 @@ from test_native_parameter_boundary_proofs import _dependencies
 from test_native_parameter_closure import _reader_case
 from test_native_parameter_contract_reuse import _wire_contract
 
-from pdx import decision_adapters, decision_rules, observation_queries, version_contracts
+from pdx import decision_adapters, decision_rules, observation_queries
 from pdx.situated import vanilla_inventory
 from pdx.situated.native_treatments import _implicit_conditions_known, _resolve, native_treatments
 
@@ -40,8 +40,6 @@ def local_case(request, tmp_path, monkeypatch):
         completion = (
             "outcome={header=je_standard_completion_header "
             "effect_header=je_standard_on_completion_header trigger={" + trigger + "}}"
-            if version_contracts.is_115()
-            else "complete={" + trigger + "}"
         )
         native[PORTUGAL] = ("je_portugal_regeneration_public_works={" + completion + "}").encode()
         for name in (TAX, PORTUGAL):

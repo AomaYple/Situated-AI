@@ -283,7 +283,7 @@ def test_离线快照路径与验证器同源(monkeypatch) -> None:
     from copy import deepcopy
     from dataclasses import replace
 
-    from pdx import install_tree, tables_offline, verify
+    from pdx import tables_offline, verify
     from pdx.snapshot import SnapshotFormatError
 
     assert tables_offline.latest_compact_snapshot is verify.latest_compact_snapshot
@@ -296,26 +296,8 @@ def test_离线快照路径与验证器同源(monkeypatch) -> None:
     monkeypatch.setattr(tables_offline, "latest_compact_snapshot", lambda: snapshot)
     assert tables_offline._latest() is snapshot
     raw = snapshot.sections.get(tables_offline.SECTION, {})
-    recorded = tables_offline.load_tables(only="08-")
-    assert recorded == install_tree.current_doc08_narrative_tables(raw)
-    projected = {
-        "08-目录全量清单.md::doc08 版本指纹": ("游戏版本", {1, 2}),
-        "08-目录全量清单.md::doc08 localization 语言目录": ("`english`", {3}),
-        "08-目录全量清单.md::doc08 gfx 子目录": ("`map`", {4}),
-    }
-    assert recorded.keys() == raw.keys()
-    assert {key: rows for key, rows in recorded.items() if key not in projected} == {
-        key: rows for key, rows in raw.items() if key not in projected
-    }
-    for key, (label, allowed_columns) in projected.items():
-        assert len(recorded[key]) == len(raw[key])
-        for old_row, new_row in zip(raw[key], recorded[key], strict=True):
-            old_cells = [cell.strip() for cell in old_row.strip("|").split("|")]
-            new_cells = [cell.strip() for cell in new_row.strip("|").split("|")]
-            assert len(new_cells) == len(old_cells)
-            for column, (old, new) in enumerate(zip(old_cells, new_cells, strict=True)):
-                if old_cells[0] != label or column not in allowed_columns:
-                    assert new == old
+    assert raw
+    assert tables_offline.load_tables() == raw
     assert snapshot.to_dict() == before
     wrong_version = replace(snapshot, version={"caligula_branch": "release/0.0.0"})
     monkeypatch.setattr(tables_offline, "latest_compact_snapshot", lambda: wrong_version)

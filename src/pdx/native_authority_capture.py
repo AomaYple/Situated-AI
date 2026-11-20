@@ -147,7 +147,7 @@ def capture_parameters(game: Path, *, output: Path) -> Path:
             "runtime": "unknown",
             "sources": {
                 source: hashlib.sha256(_source_bytes(game, source)).hexdigest()
-                for source in vanilla_inventory._PARAMETER_EVIDENCE_HASHES
+                for source in vanilla_inventory._parameter_evidence_contract()
             },
         },
     )
@@ -161,21 +161,26 @@ def capture_retentions(game: Path, *, output: Path) -> Path:
     )
 
     game, output = _prepare_capture(game, output, suffix=".json")
-    previous = json.loads(migration_baseline._VERSION_115_SOURCE.read_bytes())
-    source = "common/ai_strategies/00_default_strategy.txt"
+    reviewed = migration_baseline._versioned_contract()
+    source = version_contracts.DEFAULT_STRATEGY_SOURCE
+    baseline = version_contracts.read_default_strategy(game)
     root = _root(game, source)
     retentions = {}
-    for field, historical in previous["retentions"].items():
-        node = _node(root, (previous["definition"], *field.split(".")))
+    for field, expected in reviewed["retentions"].items():
+        node = _node(root, (reviewed["definition"], *field.split(".")))
         digest = native_treatments._digest(node.value)
-        if digest != historical:
-            raise ValueError(f"当前原版保留字段与历史语义不同，必须独立处置：{field}")
+        if digest != expected:
+            raise ValueError(f"当前原版保留字段与复核合同不符：{field}")
         retentions[field] = digest
-    baseline = version_contracts.read_default_strategy(game)
+    native_subset = {
+        key: value
+        for key, value in reviewed.items()
+        if key not in {"school_policy_migration", "source_normalized_sha256"}
+    }
     return _write(
         output,
         {
-            **previous,
+            **native_subset,
             "capture_scope": "native_retention_subset_not_full_migration_contract",
             "version": version_contracts.active_version(),
             "source": source,
@@ -261,23 +266,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", required=True, type=Path, help="tools/out 内显式候选文件路径")
     args = parser.parse_args(argv)
     try:
-        with version_contracts.select_version(args.profile):
-            version_contracts.require_current()
-            game = args.installation / "game"
-            if args.kind == "parameters":
-                output = capture_parameters(game, output=args.output)
-            elif args.kind == "retentions-native-subset":
-                output = capture_retentions(game, output=args.output)
-            elif args.kind == "compatibility":
-                output = capture_compatibility(game, output=args.output)
-            elif args.kind == "technology-catalog":
-                from . import technology_opportunities  # noqa: PLC0415
+        version_contracts.require_current(args.profile)
+        game = args.installation / "game"
+        if args.kind == "parameters":
+            output = capture_parameters(game, output=args.output)
+        elif args.kind == "retentions-native-subset":
+            output = capture_retentions(game, output=args.output)
+        elif args.kind == "compatibility":
+            output = capture_compatibility(game, output=args.output)
+        elif args.kind == "technology-catalog":
+            from . import technology_opportunities  # noqa: PLC0415
 
-                output = technology_opportunities.write_catalog(game, output=args.output)
-            else:
-                from . import law_opportunities  # noqa: PLC0415
+            output = technology_opportunities.write_catalog(game, output=args.output)
+        else:
+            from . import law_opportunities  # noqa: PLC0415
 
-                output = law_opportunities.write_catalog(game, output=args.output)
+            output = law_opportunities.write_catalog(game, output=args.output)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"[native-authority-capture] 捕获失败：{exc}", file=sys.stderr)
         return 1

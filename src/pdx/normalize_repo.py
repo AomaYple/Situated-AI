@@ -123,6 +123,7 @@ PROTECTED_DIRECTORY_NAMES = frozenset(
 )
 PROTECTED_REPOSITORY_ROOTS = (
     "research/official-docs",
+    "research/official-docs-1.15.2",
     "research/vanilla-ai",
     "research/situated",
     "tools/out",

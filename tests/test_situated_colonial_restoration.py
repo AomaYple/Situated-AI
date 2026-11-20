@@ -7,7 +7,7 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules, decisions, distribution
+from pdx import decision_rules, distribution
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import bindings, compiler, engine_scope, migration_baseline
@@ -45,7 +45,7 @@ def test_unproven_field_has_no_active_rule_or_binding_even_at_old_thresholds(nav
 @pytest.mark.integration
 def test_complete_production_restores_native_ratio_ast_without_claiming_control():
     _policy, _extensions, generated = distribution.package_inputs()
-    native = decisions.BASELINE.read_text(encoding="utf-8")
+    native = compiler.baseline_text()
     produced = generated["common/ai_strategies/00_default_strategy.txt"]
     expected = _strategy_field(native, "colonial_interest_ratio")
     actual = _strategy_field(produced, "colonial_interest_ratio")

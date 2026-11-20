@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import config, decision_adapters, distribution, version_contracts
+from pdx import config, decision_adapters, distribution
 from pdx.model import Block
 from pdx.parser import parse_bytes
 from pdx.situated.native_treatments import native_treatments
@@ -961,25 +961,16 @@ def test_full_first_batch_against_installed_native_declarations(installed_invent
         surface.declaration_id for surface in selected
     }
     counts = report["interface_counts"]
-    current = version_contracts.is_115()
-    # Independent native AST counts retain the historical denominator too.
-    assert (
-        counts["static_modifier_valuation"]
-        == {
-            "1.14.5": 2197,
-            "1.15.0": 2291,
-            "1.15.1": 2293,
-            version_contracts.CURRENT_VERSION: 2294,
-        }[version_contracts.active_version()]
-    )
-    assert counts["static_construction_cap"] == (271 if current else 261)
+    # Independent native AST counts for the current installation.
+    assert counts["static_modifier_valuation"] == 2294
+    assert counts["static_construction_cap"] == 271
     assert counts["lifecycle_effect"] == 12
-    assert counts["completion_observation"] == (8 if current else 5)
+    assert counts["completion_observation"] == 8
     gates = [row for row in report["rows"] if row["interface_kind"] == "eligibility"]
     for family, expected in [
-        ("company_types", 231 if current else 221),
+        ("company_types", 231),
         ("country_creation", 394),
-        ("country_formation", 74 if current else 73),
+        ("country_formation", 74),
     ]:
         assert sum(row["source"].split("/")[-2] == family for row in gates) == expected
     assert sum(row["native_terminal"] == "always_false" for row in gates) == 398

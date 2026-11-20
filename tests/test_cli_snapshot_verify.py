@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from _helpers import run_cli
 
-from pdx import cli, snapshot
+from pdx import cli, snapshot, version_contracts
 
 pytestmark = pytest.mark.unit
 
@@ -103,3 +103,35 @@ def test_snapshot_verify_propagates_encoding_error_before_difference_report(monk
     result = run_cli("snapshot", "verify")
     assert isinstance(result.exception, TypeError)
     assert "两次构建结果不同" not in result.output
+
+
+def test_snapshot_list_and_diff_enforce_current_identity(tmp_path, monkeypatch):
+    monkeypatch.setattr(snapshot, "SNAPSHOT_DIR", tmp_path)
+    current = {"caligula_branch": f"release/{version_contracts.CURRENT_VERSION}"}
+    retired = {"caligula_branch": "release/1.15.1"}
+    for name, version, rows in (
+        ("current-before", current, ["first"]),
+        ("current-after", current, ["first", "second"]),
+        ("retired-build", retired, ["first"]),
+    ):
+        snapshot.Snapshot(version=version, sections={"sample": {"names": rows}}).write(
+            tmp_path / f"{name}.json"
+        )
+
+    listed = run_cli("snapshot", "list")
+    assert listed.exit_code == 0, listed.output
+    assert "current-before.json" in listed.output
+    assert "current-after.json" in listed.output
+    assert "retired-build.json" not in listed.output
+
+    current_diff = run_cli("snapshot", "diff", "current-before", "current-after")
+    assert current_diff.exit_code == 0, current_diff.output
+    assert "变更项 1 处" in current_diff.output
+
+    output = tmp_path / "diff.json"
+    retired_diff = run_cli(
+        "snapshot", "diff", "retired-build", "current-after", "--json", str(output)
+    )
+    assert retired_diff.exit_code == cli.EXIT_USAGE, retired_diff.output
+    assert "版本不匹配" in retired_diff.output
+    assert not output.exists()

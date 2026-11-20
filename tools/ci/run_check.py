@@ -121,7 +121,6 @@ def main() -> int:
         return 2
     check = sys.argv[1]
     current = None
-    profile_environment: dict[str, str] = {}
     if check in (*baseline_checks, "test", "test-offline"):
         from pdx import version_contracts  # noqa: PLC0415
 
@@ -142,7 +141,6 @@ def main() -> int:
                 parser.error(str(exc))
             print(exc, file=sys.stderr)
             return 2
-        profile_environment[version_contracts.ENVIRONMENT_VARIABLE] = current
     try:
         python = interpreter()
         ensure_supported_interpreter(python)
@@ -155,7 +153,6 @@ def main() -> int:
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(ROOT), env.get("PYTHONPATH", "")])
     # -B applies to this child; the environment also covers nested Python tools.
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env.update(profile_environment)
     if check in baseline_checks:
         assert current is not None
         commands = list(BASELINE_COMMANDS)

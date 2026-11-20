@@ -319,7 +319,7 @@ def test_law_parameter_must_have_one_actual_definition_even_after_shape_validati
 def test_repinning_cannot_turn_conditional_or_prefixed_blocks_into_ordinary_evidence(
     native_texts, monkeypatch, query, source, key, operation
 ):
-    if key == "complete" and queries.version_contracts.is_115():
+    if key == "complete":
         key = "outcome"
     original = native_texts[source]
     replacement = "INJECT:" + key + " = {" if operation == "prefix" else key + " ?= {"
@@ -454,7 +454,7 @@ def test_interest_group_native_branch_is_selected_by_full_predicate_and_effect(
     )
     changed = original.replace(anchor, anchor + "\n" + extra)
     _accept_test_source(monkeypatch, source, changed)
-    if duplicate or not queries.version_contracts.is_115():
+    if duplicate:
         with pytest.raises(ValueError):
             queries.compile_query(IG, {**native_texts, source: changed})
     else:

@@ -712,11 +712,9 @@ def test_knowledge_ready_exact_prior_and_paper_unknown_are_local(technology):
 
 
 def test_current_concrete_dockyards_ready_fixture_avoids_local_service_loss():
-    """Handwritten 1.15.1 port alternatives validate the independent fixture."""
+    """Handwritten port alternatives validate the current independent fixture."""
     from copy import deepcopy
 
-    if technology_reference._VERSION != "1.15.1":
-        pytest.skip("需要锁定原版 1.15.1 anchorage service-loss contract")
     spec = {
         "parameters": {
             "technology_query": "technology_use",

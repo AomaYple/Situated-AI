@@ -1,10 +1,4 @@
-"""快照与比对：捕获某个游戏版本下全部 mod 相关信息的**规范形态**，供版本间 diff。
-
-为什么需要
-----------
-2026-09-16 游戏静默从 1.14.2 升到 1.14.3，``00_ai.txt`` 的 AI 参数从 1,013
-变成 1,017。文档里的数字「看起来一直对得上」，实际已经过期 —— 没有快照
-就无从察觉。
+"""捕获当前游戏安装的结构快照，供同版本的核对和比对。
 
 设计要点
 --------
@@ -37,7 +31,7 @@ from .defines import extract_defines
 from .extract import entry_fields
 from .model import Block
 from .scan import TEXT_SUFFIXES, walk_files
-from .version_contracts import is_115
+from .version_contracts import active_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -331,8 +325,6 @@ class Snapshot:
 
     def require_version(self, version: str | None = None) -> None:
         """Reject offline evidence from a different or unknown native version."""
-        from .version_contracts import active_version  # noqa: PLC0415
-
         expected = f"release/{active_version(version)}"
         if self.version_label != expected:
             raise SnapshotFormatError(
@@ -359,12 +351,9 @@ def _doc_tables_snapshot() -> dict[str, list[str]]:
     from . import docgen  # noqa: PLC0415 - docgen 依赖各领域模块，导入期较重
 
     rows = docgen.render_all()
-    if is_115():
-        failed = [
-            key for key, values in rows.items() if any(v.startswith("<未取到：") for v in values)
-        ]
-        if failed:
-            raise ValueError("1.15快照生成表取值失败：" + ", ".join(failed))
+    failed = [key for key, values in rows.items() if any(v.startswith("<未取到：") for v in values)]
+    if failed:
+        raise ValueError("快照生成表取值失败：" + ", ".join(failed))
     return rows
 
 
@@ -491,8 +480,7 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     """
     snap = Snapshot(version=config.game_version(), compact=compact)
     snap.require_version()
-    if is_115():
-        snap.sections["source_identity"] = _source_identity_snapshot()
+    snap.sections["source_identity"] = _source_identity_snapshot()
     if verbose:
         print(f"  版本: {snap.version_label}  精简: {compact}")
 
@@ -650,15 +638,7 @@ def list_snapshots() -> list[Path]:
 
 
 def snapshot_path(label: str | None = None) -> Path:
-    """按**快照名**解析出文件路径；只写了版本号时优先完整快照，退回精简快照。
-
-    为什么要退回：**只有精简快照是入库的**（8 MB vs 41 MB），
-    所以「拿 1.14.3 与 1.14.4 比结构」在别的机器上只可能拿到 ``*.compact.json``。
-    早先这里硬拼 ``<label>.json``，于是 `v3 snapshot diff release-1.14.3
-    release-1.14.4` 在只有精简快照的机器上报「快照不存在」——
-    而那正是这条命令最主要的用法（版本演练）。完整快照在本地仍然优先：
-    它多带的本地化明细对 diff 更有用。
-    """
+    """按名称找当前版本快照，优先完整快照，回退到精简文件。"""
     full = SNAPSHOT_DIR / f"{label or 'current'}.json"
     if full.is_file():
         return full

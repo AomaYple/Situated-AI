@@ -69,15 +69,17 @@ def test_exception_clears_dictionary_retained_by_copied_context():
     assert retained.run(_parse) is not after_exit
 
 
-def test_source_digest_profile_and_exact_text_are_all_part_of_reuse():
-    with _query_parse.query_parse_scope(), version_contracts.select_version("1.14.5"):
+def test_source_digest_and_exact_text_are_all_part_of_reuse(monkeypatch):
+    with _query_parse.query_parse_scope():
         original = _parse()
         other_path = _query_parse.parse_query_source(TEXT, "common/other.txt", DIGEST)
         assert other_path is not original
         assert other_path.path == "common/other.txt"
         assert _query_parse.parse_query_source(TEXT, SOURCE, "another-digest") is not original
-        with version_contracts.select_version("1.15.0"):
-            assert _parse() is not original
+        with monkeypatch.context() as scoped:
+            scoped.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.0")
+            with pytest.raises(ValueError, match="合同版本"):
+                _parse()
         assert _parse() is original
         # Even a colliding digest cannot make different source text borrow a tree.
         changed = _query_parse.parse_query_source("native = { value = no }", SOURCE, DIGEST)

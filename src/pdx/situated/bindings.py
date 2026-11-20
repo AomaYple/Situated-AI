@@ -15,15 +15,16 @@ from pathlib import Path
 from pdx import decision_adapters, decision_rules, version_contracts
 
 REPO = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = REPO / "mod" / "decisions" / "action_bindings.toml"
+DEFAULT_SOURCE = (
+    REPO / "mod" / "decisions" / version_contracts.CURRENT_VERSION / "action_bindings.toml"
+)
 _SAFE = re.compile(r"[^a-z0-9_]+")
 _DISPOSITIONS = {"migrate", "merge", "remove", "retain_vanilla"}
 
 
 def source_path() -> Path:
     """Select the generated ledger without rewriting historical identities."""
-    if version_contracts.is_115():
-        return DEFAULT_SOURCE.parent / version_contracts.active_version() / DEFAULT_SOURCE.name
+    version_contracts.require_current()
     return DEFAULT_SOURCE
 
 

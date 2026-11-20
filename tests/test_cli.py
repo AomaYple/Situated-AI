@@ -43,7 +43,7 @@ import pytest
 from conftest import NEEDS_GAME, configure_current_identity
 from typer.testing import CliRunner
 
-from pdx import cli, config, decisions, verify
+from pdx import analyze, cli, config, decisions, verify
 from pdx.version_contracts import CURRENT_VERSION, ENVIRONMENT_VARIABLE
 
 pytestmark = pytest.mark.cli
@@ -625,12 +625,16 @@ def test_check_outputs_缺产物时返回2(tmp_path, monkeypatch) -> None:
     assert "缺少产物" in r.output or "analyze" in r.output
 
 
-@pytest.mark.parametrize("missing_field", [False, True], ids=["matching", "missing-field"])
-def test_check_outputs_核验落盘产物(tmp_path, monkeypatch, missing_field) -> None:
-    game = {"common": {"laws": {"顶层条目数": 4}}}
-    mods = {"概览": {"mod 数": 2}}
-    if not missing_field:
-        mods["概览"]["文件总计"] = 7
+@pytest.mark.parametrize("state", ["matching", "missing-field", "wrong-aggregate"])
+def test_check_outputs_核验落盘产物(tmp_path, monkeypatch, state) -> None:
+    game = {
+        "概览": {"版本": {"caligula_branch": f"release/{CURRENT_VERSION}"}},
+        "common": {"laws": {"顶层条目数": 4}},
+    }
+    overview = {"mod 数": 2}
+    if state != "missing-field":
+        overview["文件总计"] = 7 if state == "matching" else 99
+    mods = {"概览": overview, "各mod": [{"文件": 3}, {"文件": 4}]}
     for attr, name, product in (
         ("OUT_GAME", "游戏本体.json", game),
         ("OUT_MODS", "mod.json", mods),
@@ -642,29 +646,63 @@ def test_check_outputs_核验落盘产物(tmp_path, monkeypatch, missing_field) 
         monkeypatch.setattr(config, attr, root)
     claims = [
         verify.Claim("law.entries", "fixture.md", "原版法律条目数", "dir_entries", "laws", 4),
-        verify.Claim("mod.total", "fixture.md", "已分析 Mod 数", "mods_total", "", 2),
-        verify.Claim("mod.files", "fixture.md", "已分析 Mod 文件数", "mods_files", "", 7),
+        verify.Claim(
+            "mod.total",
+            "fixture.md",
+            "已分析 Mod 数",
+            "mods_total",
+            "",
+            42,
+            scope="machine_snapshot",
+        ),
+        verify.Claim(
+            "mod.files",
+            "fixture.md",
+            "已分析 Mod 文件数",
+            "mods_files",
+            "",
+            99,
+            scope="machine_snapshot",
+        ),
         verify.Claim("env.branch", "fixture.md", "原版分支", "game_version_field", "", "release"),
     ]
     monkeypatch.setattr(verify, "CLAIMS", claims)
 
     r = _invoke("check-outputs")
     assert "产物可核验 3 / 4 条断言" in r.output
-    if missing_field:
-        assert r.exit_code == 1, r.output
-        assert "不一致 1 条" in r.output
-        assert "产物中该字段缺失" in r.output
-    else:
+    if state == "matching":
         assert r.exit_code == 0, r.output
         assert "产物与断言注册表完全一致" in r.output
+    else:
+        assert r.exit_code == 1, r.output
+        assert "不一致 1 条" in r.output
+        if state == "missing-field":
+            assert "产物中该字段缺失" in r.output
+        else:
+            assert "[mod.files]" in r.output
+            assert "期望 7" in r.output
+            assert "实得 99" in r.output
 
 
-@NEEDS_GAME
-def test_check_outputs_有产物时通过() -> None:
-    if not (config.OUT_GAME / "游戏本体.json").is_file():
-        pytest.skip("尚无产物，先跑 v3 analyze")
-    r = _invoke("check-outputs")
-    assert r.exit_code == 0, r.output
+@pytest.mark.integration
+def test_check_outputs_现场原版分析产物通过(tmp_path, monkeypatch) -> None:
+    # This asserts the pinned native output. Workshop subscriptions are live
+    # user state and their count and file total have a synthetic CLI witness.
+    monkeypatch.setattr(config, "OUT_GAME", tmp_path / "game")
+    monkeypatch.setattr(config, "OUT_MODS", tmp_path / "mods")
+    monkeypatch.setattr(config, "OUT_CROSS", tmp_path / "cross")
+    monkeypatch.setattr(config, "REPORTS", tmp_path / "reports")
+    monkeypatch.setattr(cli.analyze, "GAME_OUT", config.OUT_GAME)
+    monkeypatch.setattr(cli.analyze, "MODS_OUT", config.OUT_MODS)
+    monkeypatch.setattr(cli.analyze, "CROSS_OUT", config.OUT_CROSS)
+    claims = [claim for claim in verify.CLAIMS if claim.scope == "native_installation"]
+    assert claims
+    monkeypatch.setattr(verify, "CLAIMS", claims)
+    result = _invoke("analyze", "--no-mods", "--no-cross", "--quiet")
+    assert result.exit_code == 0, result.output
+    result = _invoke("check-outputs")
+    assert result.exit_code == 0, result.output
+    assert "产物与断言注册表完全一致" in result.output
 
 
 # ── ai-surface ──────────────────────────────────────────────
@@ -683,13 +721,39 @@ def test_ai_surface_没有游戏时返回2(tmp_path, monkeypatch) -> None:
 
 
 # ── show ────────────────────────────────────────────────────
-@NEEDS_GAME
-def test_show_能转储产物结构() -> None:
-    if not (config.OUT_GAME / "游戏本体.json").is_file():
-        pytest.skip("尚无产物，先跑 v3 analyze")
-    r = _invoke("show")
-    assert r.exit_code == 0, r.output
-    assert "游戏本体" in r.output
+def test_show_只展示同次生成的交叉分析(tmp_path, monkeypatch) -> None:
+    for name in ("GAME_OUT", "MODS_OUT", "CROSS_OUT"):
+        root = tmp_path / name
+        monkeypatch.setattr(analyze, name, root)
+        area = name.removesuffix("_OUT")
+        monkeypatch.setattr(config, f"OUT_{area}", root)
+    monkeypatch.setattr(config, "REPORTS", tmp_path / "reports")
+    monkeypatch.setattr(analyze, "CONTENT_ROOTS", {})
+    monkeypatch.setattr(analyze, "to_data_dict", dict)
+
+    game = analyze.GameAnalysis(version={"caligula_branch": f"release/{CURRENT_VERSION}"})
+    mods = analyze.ModsAnalysis()
+    cross = analyze.CrossAnalysis(changed_entries={"mod": {"common/a.txt": ["sample"]}})
+    cross_path = analyze.write_reports(game, mods, cross)["交叉 JSON"]
+    result = _invoke("show")
+    assert result.exit_code == 0, result.output
+    assert "交叉 JSON —— 顶层字段" in result.output
+
+    # A report replaced independently of its publication can no longer be paired.
+    baseline_cross = cross_path.read_bytes()
+    cross_path.write_bytes(baseline_cross + b"\n")
+    result = _invoke("show")
+    assert result.exit_code == 0, result.output
+    assert "交叉 JSON" not in result.output
+    cross_path.write_bytes(baseline_cross)
+
+    # The same inputs without cross-analysis must invalidate even a byte-identical pair.
+    analyze.write_reports(game, mods, analyze.CrossAnalysis())
+    assert cross_path.read_bytes() == baseline_cross
+    result = _invoke("show")
+    assert result.exit_code == 0, result.output
+    assert "游戏本体 JSON —— 顶层字段" in result.output
+    assert "交叉 JSON" not in result.output
 
 
 # ── defines ─────────────────────────────────────────────────

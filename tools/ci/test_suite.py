@@ -46,33 +46,16 @@ def create_run_dir(root: Path) -> Path:
     return target
 
 
-def _current_profile(profile: str | None = None) -> str:
-    """在任何读写前断言唯一当前身份及环境合同。"""
-    from pdx import version_contracts  # noqa: PLC0415
-
-    current = version_contracts.CURRENT_VERSION
-    environment = os.environ.get(version_contracts.ENVIRONMENT_VARIABLE)
-    if environment is not None and environment != current:
-        raise ValueError(f"未支持的原版合同版本：{environment!r}")
-    selected = version_contracts.active_version(profile)
-    if selected != current:
-        raise ValueError(f"未支持的原版合同版本：{selected!r}")
-    return selected
-
-
 def capture_game_identity(out: Path, profile: str | None) -> dict[str, Any]:
-    return _capture_selected_game_identity(out, _current_profile(profile))
-
-
-def _capture_selected_game_identity(out: Path, profile: str) -> dict[str, Any]:
-    """记录实际测试输入；版本 profile 的静态输入核验不替代全仓测试。"""
+    """记录并核验完整测试的锁定安装、生产声明和读取器输入。"""
     # 此模块也作为早期 pytest 插件加载，不能在模块导入期预载业务代码。
-    from pdx import config  # noqa: PLC0415
+    from pdx import config, version_contracts  # noqa: PLC0415
 
+    version = version_contracts.require_current(profile)
     installation = config.ROOT.resolve()
     identity: dict[str, Any] = {
         "schema": 1,
-        "profile": profile,
+        "profile": version,
         "installation": str(installation),
         "game_available": (installation / "game/common").is_dir(),
         "version": config.game_version(installation),
@@ -80,32 +63,28 @@ def _capture_selected_game_identity(out: Path, profile: str) -> dict[str, Any]:
         "verified": False,
     }
     try:
-        binary = installation / "binaries/victoria3.exe"
-        if binary.is_file():
-            with binary.open("rb") as stream:
-                digest = hashlib.file_digest(stream, "sha256").hexdigest()
-            identity["executable"] = {"sha256": digest, "bytes": binary.stat().st_size}
-        if profile is not None:
-            from pdx.situated import production_profile, r2_reader_authority  # noqa: PLC0415
+        from pdx.situated import production_profile, r2_reader_authority  # noqa: PLC0415
 
-            if profile != production_profile.expected_version():
-                raise ValueError(f"不支持的完整验收 profile：{profile}")
-            if not binary.is_file():
-                raise ValueError("完整版本验收缺少实际游戏 EXE")
-            identity["checksum"] = (
-                (installation / "binaries/checksum.txt").read_text(encoding="utf-8-sig").strip()
-            )
-            declaration = production_profile.declaration_path()
-            declared_bytes = declaration.read_bytes()
-            loaded = production_profile.load_profile(installation, declaration)
-            authority = r2_reader_authority.verify_installation(installation)
-            if declaration.read_bytes() != declared_bytes:
-                raise ValueError("完整验收期间生产声明发生变化")
-            identity["reader_authority"] = authority
-            identity["profile_source_hashes"] = dict(loaded.source_hashes)
-            identity["build_id"] = loaded.build_id
-            identity["profile_declaration_sha256"] = hashlib.sha256(declared_bytes).hexdigest()
-            identity["verified"] = True
+        binary = installation / "binaries/victoria3.exe"
+        if not binary.is_file():
+            raise ValueError("完整版本验收缺少实际游戏 EXE")
+        with binary.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        identity["executable"] = {"sha256": digest, "bytes": binary.stat().st_size}
+        identity["checksum"] = (
+            (installation / "binaries/checksum.txt").read_text(encoding="utf-8-sig").strip()
+        )
+        declaration = production_profile.declaration_path()
+        declared_bytes = declaration.read_bytes()
+        loaded = production_profile.load_profile(installation, declaration)
+        authority = r2_reader_authority.verify_installation(installation)
+        if declaration.read_bytes() != declared_bytes:
+            raise ValueError("完整验收期间生产声明发生变化")
+        identity["reader_authority"] = authority
+        identity["profile_source_hashes"] = dict(loaded.source_hashes)
+        identity["build_id"] = loaded.build_id
+        identity["profile_declaration_sha256"] = hashlib.sha256(declared_bytes).hexdigest()
+        identity["verified"] = True
     except (ValueError, OSError) as exc:
         identity["error"] = str(exc)
         _write(out / "game-input.json", identity)
@@ -523,12 +502,8 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
 
 
 def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict[str, Any]:
-    profile = getattr(args, "profile", None)
-    game_input = capture_game_identity(out, profile)
+    game_input = capture_game_identity(out, getattr(args, "profile", None))
     env = dict(os.environ)
-    if profile is not None:
-        # 版本合同贯穿全部用例及其普通子进程，不能只记录 profile 而仍执行旧默认。
-        env["V3_CONTRACT_PROFILE"] = profile
     # 子验收是独立 controller，不能继承外层 pytest worker 的身份。
     for variable in (
         "PYTEST_XDIST_WORKER",
@@ -718,7 +693,7 @@ def main(argv: list[str] | None = None) -> int:
     split = raw.index("--") if "--" in raw else len(raw)
     args = parser.parse_args(raw[:split])
     try:
-        _current_profile(args.profile)
+        version_contracts.require_current(args.profile)
         pytest_args = validate_pytest_args(raw[split + 1 :])
         if os.environ.get("PYTEST_ADDOPTS"):
             raise ValueError("完整验收拒绝外部 PYTEST_ADDOPTS；请显式声明诊断参数")

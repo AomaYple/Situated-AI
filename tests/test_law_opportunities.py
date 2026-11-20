@@ -8,7 +8,7 @@ from collections import Counter
 
 import pytest
 
-from pdx import config, decision_rules, law_opportunities, version_contracts
+from pdx import config, decision_rules, law_opportunities
 from pdx.situated import programs
 
 pytestmark = pytest.mark.unit
@@ -24,10 +24,9 @@ def _policy(derived, source):
     rows = [rule for rule in derived["rules"] if rule["source"] == source]
     used = {clause["fact"] for rule in rows for clause in rule["conditions"]}
     readers = copy.deepcopy({key: derived["readers"][key] for key in sorted(used)})
-    if version_contracts.is_115():
-        from pdx.situated.engine_reader_115 import project_population_readers
+    from pdx.situated.engine_reader_115 import project_population_readers
 
-        project_population_readers(readers)
+    project_population_readers(readers)
     policy = decision_rules.from_data(
         {
             "schema": 1,
@@ -57,11 +56,7 @@ def _value(derived, law, changes):
     return result[1] if result else 0
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0"])
-def test_law_fixture_preserves_rural_transition_under_selected_population_contract(
-    derived, monkeypatch, version
-):
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
+def test_law_fixture_preserves_rural_transition_under_current_population_contract(derived):
     historical_readers = copy.deepcopy(derived["readers"])
     assert (
         _value(
@@ -221,9 +216,8 @@ def test_complete_native_sources_and_definitions_are_verified_without_looking_up
 
 
 def test_115_new_consumers_are_counted_and_explicitly_retain_native_policy():
-    with version_contracts.select_version("1.15.0"):
-        data = law_opportunities.load()
-        retained = law_opportunities.native_retained_candidates()
+    data = law_opportunities.load()
+    retained = law_opportunities.native_retained_candidates()
     assert retained == {
         "law_official_nationality": "common/laws/00_citizenship.txt",
         "law_caesaropapism": "common/laws/00_church_and_state.txt",
@@ -231,32 +225,17 @@ def test_115_new_consumers_are_counted_and_explicitly_retain_native_policy():
     assert set(data["candidates"]).isdisjoint(retained)
     assert len(data["candidates"]) == 52
     assert len({**data["candidates"], **retained}) == 54
-    with version_contracts.select_version("1.14.5"):
-        assert law_opportunities.native_retained_candidates() == {}
 
 
-def test_current_law_source_lock_preserves_the_historical_policy_and_pins():
+def test_current_law_source_lock_preserves_rules_and_binds_current_pins():
     base = law_opportunities.PARAMETERS.read_bytes()
-    with version_contracts.select_version("1.14.5"):
-        original = law_opportunities.load()
-        assert law_opportunities.policy_bytes() == base
-    with version_contracts.select_version("1.15.1"):
-        previous = law_opportunities.load()
-        retained = law_opportunities.native_retained_candidates()
-        assert law_opportunities.policy_bytes() == base
-        assert previous["sources"] != original["sources"]
-    with version_contracts.select_version("1.15.2"):
-        current = law_opportunities.load()
-        assert law_opportunities.native_retained_candidates() == retained
-        assert law_opportunities.policy_bytes() == (
-            base + b"\0native_sources:" + law_opportunities.SOURCE_LOCK_CURRENT.read_bytes()
-        )
-    assert {key for key in current if current[key] != previous[key]} == {"sources"}
-    assert {
-        source
-        for source, digest in current["sources"].items()
-        if digest != previous["sources"][source]
-    } == {"common/laws/00_citizenship.txt", "common/laws/02_labour_associations.txt"}
+    declaration = law_opportunities._load_policy()
+    current = law_opportunities.load()
+    assert law_opportunities.policy_bytes() == (
+        base + b"\0native_sources:" + law_opportunities.SOURCE_LOCK_CURRENT.read_bytes()
+    )
+    assert {key for key in current if current[key] != declaration[key]} == {"sources"}
+    assert set(current["sources"]) == set(declaration["sources"])
 
 
 @pytest.mark.integration

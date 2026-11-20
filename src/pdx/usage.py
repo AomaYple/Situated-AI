@@ -30,7 +30,7 @@ import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import config, version_contracts
+from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec
 from .extract import entry_fields
@@ -582,24 +582,19 @@ def _doc14_specs() -> list[KeyedTableSpec]:
                 append_new=False,
                 # This particular table claims fields actually present in the
                 # current PM AST. A retired key must not keep its old count.
-                # Historical tables retain their original preservation contract.
                 allow_drop=(
-                    version_contracts.active_version()
-                    in {"1.15.1", version_contracts.CURRENT_VERSION}
-                    and d == "production_methods"
-                    and header == "| 字段 | 实测次数 | 首现位置 | 语义 |"
+                    d == "production_methods" and header == "| 字段 | 实测次数 | 首现位置 | 语义 |"
                 ),
             )
         )
-    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        out.append(
-            KeyedTableSpec(
-                name="doc14 PM/PMG AI 字段",
-                header="| 字段 | 在哪 | vanilla 用量 | 说明 |",
-                cells=_pm_ai_rows,
-                append_new=False,
-            )
+    out.append(
+        KeyedTableSpec(
+            name="doc14 PM/PMG AI 字段",
+            header="| 字段 | 在哪 | vanilla 用量 | 说明 |",
+            cells=_pm_ai_rows,
+            append_new=False,
         )
+    )
     return out
 
 

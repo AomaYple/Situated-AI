@@ -30,15 +30,13 @@
 
 ## 原始证据与清理边界
 
-历史结果不改写；旧结果中的相对链接继续使用原路径，避免破坏字节哈希及依赖。旧收口工具只检查A2阶段源，不读取旧D阶段文字签发完成，也不签发新 X1 拓展完成。
+历史结果按原字节和相对目录在其冻结提交查阅。旧 A2 收口工具及其输入随当时提交保存。
 `tools/out/` 与 `.superpowers/` 中被结果页引用的原始材料不按缓存整树删除。
 D0 原来登记的 `tools/out/situated-depth/d0-baseline/` 本次核对已不存在；不能声称已恢复或用新输出冒充。
 `.superpowers/sdd/mod重设计-实施计划/` 中的现有证据继续保留。
 
-`tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json` 是登记的受控证据：2026-10-13 对 `tools/out/decisions` 与 `tools/out/recovery`
-共 155 份报告的 G1 重开扫描（`plan_id` 为 `v0.1-g1-20261013`），结论 `NO_NEW_REOPENING_INPUT` 并列出重开条件；它只记录当时的停止条件，不证明任何新能力（由提交 `d54c2ee` 引入）。
-`tools/out/snapshots/` 下 `release-1.14.3`、`release-1.14.4`、`release-1.14.5` 三份 `*.compact.json` 精简快照同样入库：
-代码按 `*.compact.json` 文件名模式读取它们（见 `src/pdx/snapshot.py`、`src/pdx/vanilla_index.py`、`src/pdx/verify.py`），不依赖本机游戏安装；完整快照不入库。
+2026-10-13 的 G1 重开扫描检查了 `tools/out/decisions` 与 `tools/out/recovery` 共 155 份报告，结论为 `NO_NEW_REOPENING_INPUT`。当时的停止条件和重开条件见[原始扫描报告](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json)。
+当前离线校验使用 `tools/out/snapshots/release-1.15.2.compact.json`。旧版精简快照按原路径从[冻结提交的快照目录](https://github.com/AomaYple/Situated-AI/tree/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/tools/out/snapshots)追溯。
 
 全仓源目录卫生检查结果写入忽略的 `tools/out/architecture-reset/`；零缓存违规只证明运行态整洁，
 不代表旧候选的适配语义失败、法律证据接口缺口或完整回归内存终止已解决。
@@ -50,4 +48,4 @@ A2/S0–S6 已于 2026-11-04 完成其静态功能、工程及交付出口，现
 同样从 `objects/97c606cfb3b4fb4321166e8399578f5cdb7b6796/<sha256>.gz` 读取精确原始字节；
 旧完成结论只属于该快照，不能关闭新的广度深度目标。两份 manifest 保留原字节，12 份原件合计 5,667,643 字节，
 受控 gzip 合计 1,325,884 字节；其中包含原 A2 收据，不改写其旧验证结果或签名身份。
-当前架构继续保留，新计划在现有职责、原版接口、局部未知和有界联合贡献上扩展。
+保留原有目录关系的 [A2 阶段收据](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/%E6%9E%B6%E6%9E%84%E9%98%B6%E6%AE%B5%E6%94%B6%E6%8D%AE.json)、[阶段结果](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/%E6%9E%B6%E6%9E%84%E9%87%8D%E8%AE%BE%E8%AE%A1-%E7%BB%93%E6%9E%9C.md)和[取证文件](https://github.com/AomaYple/Situated-AI/tree/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/research/situated/a2-evidence)可从冻结提交查阅。

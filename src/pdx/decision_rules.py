@@ -19,7 +19,7 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import config, decision_intents, decision_interfaces, observation_queries, version_contracts
+from . import config, decision_intents, decision_interfaces, observation_queries
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
@@ -86,9 +86,7 @@ class Reader:
 
     def expression(self, op: str, value: bool | float | FactReference) -> str:
         if self.engine == "pop_type_percent_country":
-            parameter, value_field = (
-                ("target", "value") if version_contracts.is_115() else ("pop_type", "percent")
-            )
+            parameter, value_field = ("target", "value")
             if (
                 len(self.parameters) != 1
                 or self.parameters[0][0] != parameter
@@ -210,7 +208,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
     source_digest = hashlib.sha256(raw).hexdigest()
-    if source == SOURCE and version_contracts.is_115():
+    if source == SOURCE:
         # Keep the historical TOML identity intact. The new complete native AST
         # authority supplies this version's reviewed default-strategy input.
         from .decision_adapters import native_authority_115  # noqa: PLC0415
@@ -224,10 +222,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         source_digest = hashlib.sha256(
             raw + b"\0current_reader:" + engine_reader_115.snapshot()
         ).hexdigest()
-    if source == SOURCE and version_contracts.active_version() in {
-        "1.15.1",
-        version_contracts.CURRENT_VERSION,
-    }:
+    if source == SOURCE:
         from .situated import network_profile  # noqa: PLC0415
 
         # A single R2 consumer now owns schools. Its additive benefit/cost and
@@ -335,8 +330,8 @@ def from_data(
             (
                 "pop_type_percent_country",
                 "number",
-                "value" if version_contracts.is_115() else "percent",
-            ): {"target" if version_contracts.is_115() else "pop_type"},
+                "value",
+            ): {"target"},
             ("radical_fraction", "number", "value"): {"pop_type"},
             ("loyalist_fraction", "number", "value"): {"pop_type"},
             ("has_diplomatic_pact", "boolean", None): {"who", "type"},
@@ -383,7 +378,6 @@ def from_data(
                             )
                             or (
                                 item["engine"] == "pop_type_percent_country"
-                                and version_contracts.is_115()
                                 and literal
                                 in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
                             )
@@ -403,11 +397,10 @@ def from_data(
         ):
             raise ValueError("复合数值读取器只支持已声明的 value 比较，不能混用布尔参数")
         if item["engine"] == "pop_type_percent_country" and (
-            value_field != ("value" if version_contracts.is_115() else "percent")
+            value_field != ("value")
             or parameters
             not in [
-                {"target": f"pop_type:{name}"} if version_contracts.is_115() else {"pop_type": name}
-                for name in ("peasants", "laborers", "machinists")
+                {"target": f"pop_type:{name}"} for name in ("peasants", "laborers", "machinists")
             ]
         ):
             raise ValueError("人口比例读取器必须声明所选版本的精确人口参数与比较字段")
@@ -874,11 +867,7 @@ def _protected_offsets(
                 raise ValueError("属国消费者缺少原版常规可达性保护块")
             limit = branch.value.first("limit")
             # 除源 SHA 外逐字核对门的词法形状，禁止误选另一个 if。
-            expected = "OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } }"
-            if version_contracts.is_115():
-                expected = expected.replace(
-                    "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
-                )
+            expected = "OR = { scope:target_country = { is_subject_of = root } can_reach_target_country_to_subjugate = { TARGET_COUNTRY = scope:target_country } }"
             if limit is None or not isinstance(limit.value, Block):
                 raise ValueError("属国消费者可达性保护形状漂移")
 
@@ -1184,7 +1173,6 @@ def patch(
                     )
                     or (
                         reader.engine == "pop_type_percent_country"
-                        and version_contracts.is_115()
                         and literal
                         in {"pop_type:peasants", "pop_type:laborers", "pop_type:machinists"}
                         and literal.removeprefix("pop_type:") in words

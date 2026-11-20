@@ -17,7 +17,6 @@ from pdx import (
     decision_adapters,
     decision_interfaces,
     decision_rules,
-    version_contracts,
 )
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
@@ -46,8 +45,7 @@ TECHNOLOGIES = {
 }
 
 
-# Independently measured from the identity-verified 1.15.0 native files.
-# Historical hashes below retain their 1.14.5 contract.
+# Independently measured from the identity-verified current native files.
 _CURRENT_NATIVE_HASHES = {
     "common/institutions/00_institutions.txt": (
         "9d3b8474e2e99a34cd23cc38343253b850d0b2991a0f9418c85577c68c8ece2b",
@@ -562,8 +560,6 @@ def test_existence_signature_has_country_owner_consumers_and_generic_institution
         "institution_workplace_safety",
         "institution_police",
     }
-    if version_contracts.active_version() == "1.14.5":
-        expected_arguments.add("institution_schools")
     assert owner_arguments == expected_arguments
     tutorial = parse_text(
         (config.GAME / "common/journal_entries/00_tutorial.txt").read_text(encoding="utf-8-sig")
@@ -572,22 +568,19 @@ def test_existence_signature_has_country_owner_consumers_and_generic_institution
     entry = tutorial.root.first("je_tutorial_invest_into_an_institution")
     assert entry is not None
     assert isinstance(entry.value, Block)
-    if version_contracts.is_115():
-        invalid_outcomes = []
-        for outcome in entry.value.all("outcome"):
-            assert isinstance(outcome.value, Block)
-            flags = outcome.value.first("flags")
-            if flags is not None:
-                assert isinstance(flags.value, Block)
-                if any(
-                    isinstance(flag, Scalar) and flag.unquoted == "invalid_outcome"
-                    for flag in flags.value.items
-                ):
-                    invalid_outcomes.append(outcome.value)
-        assert len(invalid_outcomes) == 1
-        invalid = invalid_outcomes[0].first("trigger")
-    else:
-        invalid = entry.value.first("invalid")
+    invalid_outcomes = []
+    for outcome in entry.value.all("outcome"):
+        assert isinstance(outcome.value, Block)
+        flags = outcome.value.first("flags")
+        if flags is not None:
+            assert isinstance(flags.value, Block)
+            if any(
+                isinstance(flag, Scalar) and flag.unquoted == "invalid_outcome"
+                for flag in flags.value.items
+            ):
+                invalid_outcomes.append(outcome.value)
+    assert len(invalid_outcomes) == 1
+    invalid = invalid_outcomes[0].first("trigger")
     assert invalid is not None
     assert isinstance(invalid.value, Block)
     assert _tree(invalid.value) == (
@@ -605,29 +598,9 @@ def test_this_slice_registers_no_second_capacity_award_on_existing_institution_c
     }
 
 
-@pytest.mark.parametrize(
-    ("source", "raw_hash", "normalized_hash"),
-    [
-        (
-            "common/institutions/00_institutions.txt",
-            "9d3b8474e2e99a34cd23cc38343253b850d0b2991a0f9418c85577c68c8ece2b",
-            "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f",
-        ),
-        (
-            "common/achievements/base_achievements.txt",
-            "dc5a50c8313fffbe50d68f0a6b8c9b9d05f1794f46725d23f2c0e67f7369799f",
-            "2d3e7fa2cc1239682b12377605e03aea4b530d2eeffcfb9d7c6ec2f73c8fef3d",
-        ),
-        (
-            "common/political_movements/00_ideological_movements.txt",
-            "834a1b97f09c65b9b64eafdaffe4ee68965aaac262066140793a482eefd23a6b",
-            "4462653e5fa326f3d84f03b6a551ddc76e9dead91409678adad56dcdb7f11035",
-        ),
-    ],
-)
-def test_new_source_evidence_is_locked_to_actual_original_bytes(source, raw_hash, normalized_hash):
-    if version_contracts.is_115():
-        raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
+@pytest.mark.parametrize("source", _CURRENT_NATIVE_HASHES)
+def test_new_source_evidence_is_locked_to_actual_original_bytes(source):
+    raw_hash, normalized_hash = _CURRENT_NATIVE_HASHES[source]
     raw = (config.GAME / source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == raw_hash
     assert (

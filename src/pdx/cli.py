@@ -37,6 +37,7 @@ subparsers 的脚本、2 个裸脚本（``show_outputs.py`` 连 ``main()`` 都�
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import time
@@ -141,8 +142,13 @@ app = typer.Typer(
 
 @app.callback()
 def _command_lifetime(context: typer.Context) -> None:
-    """Release only completed-command memo ownership, including failure exits."""
+    """Validate the contract assertion and release the memo on exit."""
     context.call_on_close(cache.release_memo)
+    try:
+        version_contracts.require_current()
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
 
 
 situated_app = typer.Typer(
@@ -224,7 +230,7 @@ def _require_file(path: Path, what: str, hint: str = "") -> None:
         _fail(f"{what}不存在：{path}{suffix}")
 
 
-def _load_product(path: Path, label: str) -> Any:
+def _load_product(path: Path, label: str) -> tuple[dict[str, Any], str]:
     """读一份已落盘的分析产物。
 
     两种失败都算前置条件缺失：文件不在（还没跑过 analyze），或文件在但读不
@@ -233,12 +239,44 @@ def _load_product(path: Path, label: str) -> Any:
     if not path.is_file():
         _fail(f"缺少产物：{_relative(path)}（请先运行 `v3 analyze` 生成{label}）")
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        raw = path.read_bytes()
+        data = json.loads(raw.decode("utf-8"))
     except _READ_ERRORS as exc:
         _fail(f"产物无法读取：{_relative(path)}（{type(exc).__name__}: {exc}）")
     if not isinstance(data, dict):
         _fail(f"产物结构异常：{_relative(path)}（顶层应为对象，实为 {type(data).__name__}）")
-    return data
+    return data, hashlib.sha256(raw).hexdigest()
+
+
+def _load_game_product(path: Path) -> tuple[dict[str, Any], str]:
+    game, digest = _load_product(path, "游戏本体分析")
+    overview = game.get("概览")
+    version = overview.get("版本") if isinstance(overview, dict) else None
+    branch = version.get("caligula_branch") if isinstance(version, dict) else None
+    expected = f"release/{version_contracts.CURRENT_VERSION}"
+    if branch != expected:
+        _fail(f"分析产物的原版版本不符：期望 {expected}，实际 {branch!r}。请重新运行 v3 analyze。")
+    return game, digest
+
+
+def _paired_cross_product(path: Path, game_digest: str, mods_digest: str) -> dict[str, Any] | None:
+    """Return cross-analysis only when its publication matches the reports just read."""
+    try:
+        pairing = json.loads(path.with_name(analyze.CROSS_PAIRING_NAME).read_text(encoding="utf-8"))
+        if (
+            not isinstance(pairing, dict)
+            or pairing.keys() != {"game", "mods", "cross"}
+            or pairing["game"] != game_digest
+            or pairing["mods"] != mods_digest
+        ):
+            return None
+        raw = path.read_bytes()
+        if pairing["cross"] != hashlib.sha256(raw).hexdigest():
+            return None
+        cross = json.loads(raw.decode("utf-8"))
+    except OSError, UnicodeError, json.JSONDecodeError:
+        return None
+    return cross if isinstance(cross, dict) else None
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -1067,7 +1105,7 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 def index_cmd(
     dry_run: Annotated[bool, typer.Option("--dry-run", help="只打印统计，不写文件")] = False,
 ) -> None:
-    """重新生成 docs/victoria3-modding/13-common全量键名索引.md。
+    """重新生成当前知识库的 13-common全量键名索引.md。
 
     取代早期用 PowerShell 正则生成的那一版：本版由 pdx 包驱动，因此自动
     获得 BOM 剥离、引号感知注释、花括号深度判定与连字符键名支持。
@@ -1105,7 +1143,7 @@ def index_cmd(
 
 # ── snapshot ────────────────────────────────────────────────
 snapshot_app = typer.Typer(
-    help="游戏版本快照：捕获某个版本的全部 mod 相关信息，Paradox 增删字段时一次 diff 就能全部发现。",
+    help="捕获、验证和比较当前原版安装的 Mod 相关信息。",
     add_completion=False,
     no_args_is_help=True,
 )
@@ -1115,7 +1153,9 @@ app.add_typer(snapshot_app, name="snapshot")
 def _load_snapshot(path: Path) -> snapshot.Snapshot:
     """读快照。文件损坏属前置条件缺失，退出码 2。"""
     try:
-        return snapshot.Snapshot.load(path)
+        snap = snapshot.Snapshot.load(path)
+        snap.require_version()
+        return snap
     except _READ_ERRORS as exc:
         _fail(f"快照无法读取：{_relative(path)}（{type(exc).__name__}: {exc}）")
 
@@ -1176,7 +1216,7 @@ def snap_list() -> None:
         console.print("[yellow]尚无快照。先运行 `v3 snapshot create`。[/]")
         return
 
-    table = Table(title=f"共 {len(paths)} 份快照", show_lines=False)
+    table = Table(show_lines=False)
     table.add_column("快照")
     table.add_column("版本")
     table.add_column("条目", justify="right", style="cyan")
@@ -1194,6 +1234,8 @@ def snap_list() -> None:
                 escape(f"{type(exc).__name__}: {exc}"),
             )
             continue
+        if snap.version_label != f"release/{version_contracts.CURRENT_VERSION}":
+            continue
         total = sum(len(names) for body in snap.sections.values() for names in body.values())
         table.add_row(
             escape(path.name),
@@ -1201,6 +1243,10 @@ def snap_list() -> None:
             f"{total:,}",
             f"{path.stat().st_size:,}",
         )
+    if not table.rows:
+        console.print("[yellow]尚无当前版本快照。先运行 `v3 snapshot create`。[/]")
+        return
+    table.title = f"共 {len(table.rows)} 份快照"
     console.print(table)
 
 
@@ -1238,11 +1284,7 @@ def snap_diff(
         console.print("[green]两份快照完全一致 —— 没有检测到任何字段增删。[/]")
         return
 
-    # 域集合不同 = 两份快照不是**同一个口径**拍的（常见于拿入库的旧快照比新版：
-    # 域是逐轮加上去的）。此时差异里混着「格式变化」，不能当成原版变化读 ——
-    # 1.14.3 那份只有 6 个域（localization 存明细），1.14.4 有 14 个
-    # （localization 换成 localization_digest + ai_surface/vocabulary 等），
-    # 直接 diff 会报出 116 万条「删除」，而真正的原版变化只有几百处。
+    # 域集合变化会改变比较口径，单独报告差异中的分母变化。
     only_a = sorted(set(a.sections) - set(b.sections))
     only_b = sorted(set(b.sections) - set(a.sections))
     if only_a or only_b:
@@ -1591,7 +1633,7 @@ def tables_cmd(
 def _tables_offline(*, write: bool, only: str) -> None:
     """``v3 tables --offline``：只读快照与文档，不读游戏。"""
     try:
-        recorded = tables_offline.load_tables(only=only)
+        recorded = tables_offline.load_tables()
     except snapshot.SnapshotFormatError as exc:
         _fail(str(exc), EXIT_FAILED)
     if not recorded:
@@ -1878,6 +1920,11 @@ def verify_cmd(
                 f"（注册表共 {len(verify.current_claims())} 条；用 v3 verify 不带 --only 查看全部）"
             )
 
+    machine = [claim for claim in claims if verify.claim_scope(claim) == "machine_snapshot"]
+    if machine:
+        console.print(f"[dim]{len(machine)} 条有日期的本机 Mod 观察值由文档断言保留。[/]")
+        if len(machine) == len(claims):
+            _fail("所选断言都属于附日期的本机 Mod 观察值。")
     results = verify.run_claims(claims, include_slow=not fast)
     failed = [r for r in results if not r.ok]
 
@@ -2206,11 +2253,10 @@ def check_outputs_cmd() -> None:
 
     缺少产物时退出码 2（先跑 `v3 analyze`），不一致时退出码 1。
     """
-    game = _load_product(config.OUT_GAME / "游戏本体.json", "游戏本体分析")
-    mods = _load_product(config.OUT_MODS / "mod.json", "mod 分析")
-    cross = _load_product(config.OUT_CROSS / "交叉.json", "交叉分析")
+    game, _ = _load_game_product(config.OUT_GAME / "游戏本体.json")
+    mods, _ = _load_product(config.OUT_MODS / "mod.json", "mod 分析")
 
-    results = verify.verify_products(game, mods, cross)
+    results = verify.verify_products(game, mods, {})
     checkable = [r for r in results if r.claim.kind in verify.product_kinds()]
 
     table = Table(title="分析产物核验", show_lines=False)
@@ -2862,7 +2908,7 @@ def _modgen_verify_sources() -> None:
 
 
 def _production_profile(name: str | None, *, offline: bool = False) -> None:
-    """Assert the current production release before any historical input can be opened."""
+    """Verify the current production contract and its installation when required."""
     version_contracts.require_current(name)
     if not offline:
         distribution.check_profile_installation(situated_production_profile.declared_profile())
@@ -3273,11 +3319,13 @@ def show_cmd() -> None:
     products = [
         ("游戏本体 JSON", config.OUT_GAME / "游戏本体.json"),
         ("mod JSON", config.OUT_MODS / "mod.json"),
-        ("交叉 JSON", config.OUT_CROSS / "交叉.json"),
     ]
-    game = _load_product(products[0][1], "游戏本体分析")
-    mods = _load_product(products[1][1], "mod 分析")
-    cross = _load_product(products[2][1], "交叉分析")
+    game, game_digest = _load_game_product(products[0][1])
+    mods, mods_digest = _load_product(products[1][1], "mod 分析")
+    cross_path = config.OUT_CROSS / "交叉.json"
+    cross = _paired_cross_product(cross_path, game_digest, mods_digest)
+    if cross is not None:
+        products.append(("交叉 JSON", cross_path))
 
     files = [
         *products,
@@ -3317,7 +3365,10 @@ def show_cmd() -> None:
         console.print(f"\n  · 每个 mod 记录的内容（样例：{escape(str(name))}）")
         console.print(_structure_table("", first))
 
-    console.print(_structure_table("交叉 JSON —— 顶层字段", cross))
+    if cross is not None:
+        console.print(_structure_table("交叉 JSON —— 顶层字段", cross))
+    else:
+        console.print("[dim]当前没有同批次的交叉分析结果。[/]")
 
 
 if __name__ == "__main__":  # pragma: no cover - 手工运行入口

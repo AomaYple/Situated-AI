@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pdx import config, snapshot, version_contracts
+from pdx import config, snapshot
 from pdx.input_profile import InputAction, ProfileCheck
 
 
@@ -176,12 +176,10 @@ class TestSnapshotShape(unittest.TestCase):
         self.assertTrue(self.snap.version.get("caligula_rev"))
 
     def test_common_entries_covers_all_dirs(self):
-        """必须覆盖全部数据目录（1.14.4 是 138 个）—— 曾经因路径口径错误变成 0。"""
+        """必须覆盖全部数据目录（1.15.2 是 141 个）—— 曾经因路径口径错误变成 0。"""
         self.assertEqual(
             len(self.snap.sections["common_entries"]),
-            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
-                version_contracts.active_version()
-            ],
+            141,
         )
 
     def test_common_entries_not_empty(self):
@@ -193,24 +191,20 @@ class TestSnapshotShape(unittest.TestCase):
 
     def test_defines_merges_repeated_namespaces(self):
         """NGUI 在 24 个块里出现，必须合并成一个键而非坍缩。
-        实测唯一命名空间 50（game）+ 17（jomini）= 67。
+        1.15.2 实测 69 个唯一命名空间。
         """
         self.assertEqual(
             len(self.snap.sections["defines"]),
-            {"1.14.5": 67, "1.15.0": 69, "1.15.1": 69, "1.15.2": 69}[
-                version_contracts.active_version()
-            ],
+            69,
         )
 
     def test_localization_has_11_languages(self):
         self.assertEqual(len(self.snap.sections["localization"]), 11)
 
-    def test_dlc_count_is_17(self):
+    def test_dlc_count_is_18(self):
         self.assertEqual(
             len(self.snap.sections["dlc"]),
-            {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18, "1.15.2": 18}[
-                version_contracts.active_version()
-            ],
+            18,
         )
 
 
@@ -485,9 +479,7 @@ class TestCompactSnapshot(unittest.TestCase):
                     self.assertIn(f"{top}_{suffix}", self.snap.sections)
         self.assertEqual(
             len(self.snap.sections["common_entries"]),
-            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
-                version_contracts.active_version()
-            ],
+            141,
         )
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 

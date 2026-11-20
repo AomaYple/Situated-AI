@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import decision_intents, distribution, version_contracts
+from pdx import decision_intents, distribution
 from pdx.situated import pdx_eval
 
 
@@ -74,9 +74,7 @@ def test_release_is_the_public_full_candidate(release_inputs):
     _, _, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
     assert metadata["version"] == distribution.RELEASE_VERSION
-    assert metadata["status"] == (
-        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
-    )
+    assert metadata["status"] == "released"
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",

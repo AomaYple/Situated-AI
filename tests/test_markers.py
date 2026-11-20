@@ -58,8 +58,7 @@ MARKER_NOT_NEEDED: dict[str, str] = {
 
 
 # 当前版本的正文已绑定该数值；不改历史版本的生成表豁免。
-if version_contracts.is_115():
-    MARKER_NOT_NEEDED.pop("script.lists_doc04")
+MARKER_NOT_NEEDED.pop("script.lists_doc04")
 
 if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
     MARKER_NOT_NEEDED.pop("ai.script_values_doc09")

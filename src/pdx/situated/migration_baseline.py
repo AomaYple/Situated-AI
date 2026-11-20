@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from pdx import config, version_contracts
 from pdx.model import Block
-from pdx.parser import parse_bytes, parse_text
+from pdx.parser import parse_text
 
 if TYPE_CHECKING:
     from .decision_ir import ConsumerIRBundle, WriterDecisionIR
@@ -30,28 +30,14 @@ _FIELDS = ("source", "definition", "field", "actor", "target", "operation")
 _TAIL = "retain_original_qualification_cost_random_execution"
 _DEFAULT_NATIVE_SOURCE = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
 _DEFAULT_NATIVE_SHA256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
-_VERSION_115_SOURCE = DEFAULT_SOURCE.parent / "1.15.0/migration-retentions.json"
-_VERSION_1152_SHA256 = "0fdcbd70046fd1f08efb41f58495aa182985730f550fe74833e6d633c1483848"
-_VERSION_1151_SHA256 = "c6cc8f3ec838e3fff2f4f04a0958f4f32d2a665859f08445655a6945602fd0af"
-_VERSION_115_SHA256 = "23eafb2070c1ab4aa3508e5258516a21ec6c54040b68490f28f58785b9c3ed29"
+_CURRENT_RETENTIONS_SHA256 = "0fdcbd70046fd1f08efb41f58495aa182985730f550fe74833e6d633c1483848"
 
 
-def _versioned_contract() -> dict[str, Any] | None:
-    version = version_contracts.active_version()
-    if version == "1.14.5":
-        return None
-    if version == "1.15.0":
-        path, expected = _VERSION_115_SOURCE, _VERSION_115_SHA256
-    else:
-        path = version_contracts.research_path("situated", "migration-retentions.json", version)
-        expected = (
-            _VERSION_1152_SHA256
-            if version == version_contracts.CURRENT_VERSION
-            else _VERSION_1151_SHA256
-        )
+def _versioned_contract() -> dict[str, Any]:
+    path = version_contracts.research_path("situated", "migration-retentions.json")
     raw = path.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != expected:
-        raise ValueError("1.15 历史迁移延续合同字节漂移")
+    if hashlib.sha256(raw).hexdigest() != _CURRENT_RETENTIONS_SHA256:
+        raise ValueError("当前迁移延续合同字节漂移")
     data = json.loads(raw, object_pairs_hook=_unique_json_object)
     if (
         data["schema"] != 1
@@ -61,15 +47,14 @@ def _versioned_contract() -> dict[str, Any] | None:
         or data["historical_retirements_sha256"] != _RETIREMENTS_SHA256
     ):
         raise ValueError("1.15 历史迁移延续合同身份漂移")
-    if version == version_contracts.CURRENT_VERSION:
-        selected = version_contracts.contract()
-        if (
-            data["source"] != version_contracts.DEFAULT_STRATEGY_SOURCE
-            or data["source_sha256"] != selected.default_strategy_sha256
-            or data["source_normalized_sha256"] != selected.baseline_strategy_sha256
-            or data["definition"] != "ai_strategy_default"
-        ):
-            raise ValueError("1.15 原版恢复来源与选定原版身份不一致")
+    selected = version_contracts.contract()
+    if (
+        data["source"] != version_contracts.DEFAULT_STRATEGY_SOURCE
+        or data["source_sha256"] != selected.default_strategy_sha256
+        or data["source_normalized_sha256"] != selected.baseline_strategy_sha256
+        or data["definition"] != "ai_strategy_default"
+    ):
+        raise ValueError("当前原版恢复来源与选定原版身份不一致")
     return cast("dict[str, Any]", data)
 
 
@@ -144,8 +129,6 @@ def _validate_native_retention(row: dict[str, Any], writers: tuple[WriterDecisio
     field. Current generated-byte preservation is checked independently by the
     native protection audit and production witnesses.
     """
-    from .native_treatments import _digest  # noqa: PLC0415
-
     evidence = row["native_retention"]
     adapter_restoration = row["source"] == "common/ai_strategies/00_default_strategy.txt" and row[
         "field"
@@ -170,41 +153,11 @@ def _validate_native_retention(row: dict[str, Any], writers: tuple[WriterDecisio
         or evidence["field"] != native_field
     ):
         raise ValueError("历史规则退役原版恢复身份、证据或业务边界无效")
-    native = DEFAULT_SOURCE.parents[2] / _DEFAULT_NATIVE_SOURCE
-    raw = native.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != _DEFAULT_NATIVE_SHA256:
-        raise ValueError("历史规则退役原版恢复来源字节漂移")
-    parsed = parse_bytes(raw, path=_DEFAULT_NATIVE_SOURCE)
-    definition = parsed.root.all(evidence["definition"])
-    if parsed.errors or len(definition) != 1 or not isinstance(definition[0].value, Block):
-        raise ValueError("历史规则退役原版恢复定义不唯一或无法解析")
-    block = definition[0].value
-    for part in native_field.split("."):
-        matches = block.all(part)
-        if (
-            len(matches) != 1
-            or matches[0].op != "="
-            or matches[0].prefix is not None
-            or not isinstance(matches[0].value, Block)
-        ):
-            raise ValueError("历史规则退役原版恢复字段缺失或不唯一")
-        block = matches[0].value
-    if _digest(block) != evidence["ast_sha256"]:
-        raise ValueError("历史规则退役原版恢复AST漂移")
+    # The pinned retirement records name the historical artifact. The pinned
+    # current contract must carry the same AST, which generation rechecks live.
     current = _versioned_contract()
-    if current is not None:
-        if current["retentions"].get(native_field) != evidence["ast_sha256"]:
-            raise ValueError("1.15 原版恢复AST与历史保留字段不一致")
-        if current["version"] != version_contracts.CURRENT_VERSION:
-            current_raw = (DEFAULT_SOURCE.parents[2] / current["source"]).read_bytes()
-            if hashlib.sha256(current_raw).hexdigest() != current["source_sha256"]:
-                raise ValueError("1.15 原版恢复来源字节漂移")
-            parsed_current = parse_bytes(current_raw, path=current["source"])
-            if parsed_current.errors:
-                raise ValueError("1.15 原版恢复定义不唯一或无法解析")
-            _verify_retained_fields(
-                parsed_current.root, current["definition"], {native_field: evidence["ast_sha256"]}
-            )
+    if current["retentions"].get(native_field) != evidence["ast_sha256"]:
+        raise ValueError("当前原版恢复AST与历史保留字段不一致")
     if any(
         writer.field == prefix or writer.field.startswith(prefix + ".")
         for writer in writers
@@ -235,8 +188,6 @@ def _verify_retained_fields(root: Block, definition: str, retentions: dict[str, 
 def verify_default_strategy_retention(verified_baseline: str) -> None:
     """Verify current installed ASTs at the generation boundary."""
     current = _versioned_contract()
-    if current is None or current["version"] != version_contracts.CURRENT_VERSION:
-        raise ValueError("当前原版恢复验证需要选定当前版本合同")
     parsed = parse_text(verified_baseline)
     if parsed.errors:
         raise ValueError("1.15 原版恢复定义不唯一或无法解析")
@@ -255,9 +206,7 @@ def _school_network_replacements(
 
     from . import network_profile, production_profile  # noqa: PLC0415
 
-    version = version_contracts.active_version()
-    if version not in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        raise ValueError("学校网络替代只允许精确1.15.1或当前合同")
+    version = version_contracts.require_current()
     if versioned.get("version") != version:
         raise ValueError("学校网络替代原版版本漂移")
     migration = versioned.get("school_policy_migration")
@@ -316,16 +265,7 @@ def _school_network_replacements(
         "policy_source"
     ) or hashlib.sha256(source.read_bytes()).hexdigest() != migration.get("policy_sha256"):
         raise ValueError("学校网络替代政策来源漂移")
-    baseline = (
-        None
-        if version == version_contracts.CURRENT_VERSION
-        else production_profile.baseline_root(version)
-    )
-    profile = (
-        production_profile.declared_profile()
-        if baseline is None
-        else production_profile.load_profile(baseline)
-    )
+    profile = production_profile.declared_profile()
     rows = [item for item in profile.declarations if item.id == successor["consumer"]]
     if len(rows) != 1:
         raise ValueError("学校网络替代缺少唯一真实消费者")
@@ -350,15 +290,6 @@ def _school_network_replacements(
         item["id"] for item in programs[0]["bridges"]
     }:
         raise ValueError("学校网络替代缺少已审精确桥")
-    if baseline is not None:
-        files = network_profile.build(profile)
-        original = (baseline / row.source).read_bytes().decode("utf-8-sig")
-        _verify_school_output(
-            original,
-            files[row.source.removeprefix("game/")],
-            row,
-            migration["native_output_sha256"],
-        )
     return frozenset(
         (expected_contract["source"], definition, replacement)
         for definition in retired
@@ -383,8 +314,6 @@ def verify_school_replacement_output(installation: Path, verified_baseline: str)
     from . import network_profile, production_profile  # noqa: PLC0415
 
     versioned = _versioned_contract()
-    if versioned is None or versioned["version"] != version_contracts.CURRENT_VERSION:
-        raise ValueError("学校网络替代原版生成需要当前合同")
     migration = versioned["school_policy_migration"]
     profile = production_profile.load_profile(installation)
     consumer = migration["program"]["consumer"]
@@ -436,6 +365,7 @@ def _retired_identities(
     retired: set[tuple[str, str]] = set()
     validated_tests: set[str] = set()
     network_replacements: frozenset[tuple[str, str, str]] | None = None
+    versioned = _versioned_contract()
     for row in data["retirements"]:
         if (
             not isinstance(row, dict)
@@ -462,29 +392,26 @@ def _retired_identities(
             replacements = []
         else:
             replacements = _string_list(row["replacements"], "replacements")
-        versioned = _versioned_contract()
         for definition in replacements:
             current_definition = definition
-            if versioned is not None:
-                redirects = [
-                    item
-                    for item in versioned["replacement_redirects"]
-                    if item["source"] == row["source"]
-                    and item["definition"] == row["definition"]
-                    and item["historical_replacement"] == definition
-                ]
-                if len(redirects) > 1:
-                    raise ValueError("1.15 历史替代身份映射重复")
-                if redirects:
-                    redirect = redirects[0]
-                    if any(redirect[key] != row[key] for key in _FIELDS if key != "definition"):
-                        raise ValueError("1.15 历史替代物理消费者合同漂移")
-                    current_definition = redirect["current_replacement"]
+            redirects = [
+                item
+                for item in versioned["replacement_redirects"]
+                if item["source"] == row["source"]
+                and item["definition"] == row["definition"]
+                and item["historical_replacement"] == definition
+            ]
+            if len(redirects) > 1:
+                raise ValueError("1.15 历史替代身份映射重复")
+            if redirects:
+                redirect = redirects[0]
+                if any(redirect[key] != row[key] for key in _FIELDS if key != "definition"):
+                    raise ValueError("1.15 历史替代物理消费者合同漂移")
+                current_definition = redirect["current_replacement"]
             replacement = current.get((row["source"], current_definition))
             if replacement is None:
                 if (
-                    versioned is not None
-                    and "school_policy_migration" in versioned
+                    "school_policy_migration" in versioned
                     and row["source"] == "mod/decisions/information.toml"
                     and row["field"] == "institution_scores.institution_schools"
                 ):

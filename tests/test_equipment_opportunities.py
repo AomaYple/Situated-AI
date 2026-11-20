@@ -84,15 +84,8 @@ def game(tmp_path):
 
 
 def _pin_fixture_baseline(monkeypatch, path):
-    version = equipment_opportunities.version_contracts.active_version()
-    digest_attribute = {
-        "1.14.5": "BASELINE_SHA256",
-        "1.15.0": "BASELINE_SHA256_115",
-        "1.15.1": "BASELINE_SHA256_1151",
-        "1.15.2": "BASELINE_SHA256_1152",
-    }[version]
     monkeypatch.setattr(
-        equipment_opportunities, digest_attribute, hashlib.sha256(path.read_bytes()).hexdigest()
+        equipment_opportunities, "BASELINE_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
     )
 
 
@@ -597,12 +590,8 @@ def test_actual_frozen_denominator_and_budgets_are_explicit():
     assert {row["reason"] for row in derived["uncovered"]} == {"missing_native_ai_weight"}
     assert baseline["contract"]["documented_type"] == "fixed_point"
     assert baseline["contract"]["supported_shape"] == "block"
-    assert len(derived["rules"]) == (
-        1541 if equipment_opportunities.version_contracts.is_115() else 1517
-    )
-    assert len(derived["readers"]) == (
-        41 if equipment_opportunities.version_contracts.is_115() else 39
-    )
+    assert len(derived["rules"]) == (1541)
+    assert len(derived["readers"]) == (41)
     for field in {rule["field"] for rule in derived["rules"]}:
         rules = [rule for rule in derived["rules"] if rule["field"] == field]
         assert len(rules) <= 32

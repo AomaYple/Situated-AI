@@ -5,26 +5,17 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decisions, version_contracts
+from pdx import decisions
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(scope="module", autouse=True)
-def historical_assembly_contract():
-    """Exercise input identity assembly with the frozen offline 1.14.5 contract.
-
-    Current generation verifies live sources and is covered by release integration.
-    """
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.fixture(scope="module")
-def model(historical_assembly_contract):
+def model():
     return decisions.load_situated_model()
 
 
+@pytest.mark.integration
 def test_build_metadata_uses_the_model_that_generated_the_scripts(model, monkeypatch):
     calls = []
 
@@ -61,6 +52,7 @@ def test_standalone_metadata_reads_fresh_inputs_on_every_call(model, monkeypatch
     assert len(calls) == 2
 
 
+@pytest.mark.integration
 def test_invalid_model_still_stops_generation_before_output(monkeypatch):
     def invalid(**kwargs):
         raise ValueError("invalid current model")

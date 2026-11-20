@@ -1,4 +1,4 @@
-"""Witnesses for the archived 1.15.1 and current supply stance compositions."""
+"""Current supply stance composition and native preservation witnesses."""
 
 from __future__ import annotations
 
@@ -16,49 +16,46 @@ from test_native_parameter_boundary_proofs import supply_enum_case as _supply_en
 from pdx import config, decision_adapters, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
-from pdx.situated import engine_scope, production_profile, supply_program, vanilla_inventory
+from pdx.situated import engine_scope, supply_program, vanilla_inventory
 from pdx.situated.decision_ir import WriterDecisionIR
 from pdx.situated.native_treatments import _supply_enum_projections, native_treatments
 
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
 GOODS = "common/goods/00_goods.txt"
 OVERLAP = {"oil", "radios", "telephones"}
-# The released 1.15.1 plan used these goods and a 0.25 price threshold.
-ARCHIVED_GOODS = (
-    "automobiles",
-    "clothes",
-    "coffee",
-    "explosives",
-    "fabric",
-    "fertilizer",
-    "fine_art",
-    "fish",
-    "fruit",
-    "furniture",
-    "glass",
-    "groceries",
-    "iron",
-    "lead",
-    "liquor",
-    "luxury_clothes",
-    "luxury_furniture",
-    "meat",
-    "merchant_marine",
-    "oil",
-    "opium",
-    "porcelain",
-    "radios",
-    "rubber",
-    "steel",
-    "sugar",
-    "sulfur",
-    "tea",
-    "telephones",
-    "tobacco",
-    "tools",
-    "wine",
-    "wood",
-)
+SYNTHETIC_STRATEGY = """ai_strategy_default = {
+  icon = "synthetic.dds"
+  nationalization_score = { value = nationalization_cost(scope:target_country) }
+  goods_stances = {
+    grain = { stance = wants_high_supply trigger = { has_famine = yes } }
+    oil = {
+      stance = wants_high_supply
+      trigger = { has_technology_researched = combustion_engine }
+    }
+    radios = {
+      stance = wants_high_supply
+      trigger = { OR = {
+        has_technology_researched = nco_training
+        has_technology_researched = mobile_armor
+        has_technology_researched = defense_in_depth
+        has_technology_researched = battleship_tech
+        has_technology_researched = carrier_tech
+      } }
+    }
+    telephones = {
+      stance = wants_high_supply
+      trigger = {
+        has_technology_researched = telephone
+        has_building = building_government_administration
+      }
+    }
+    small_arms = {
+      stance = wants_high_supply
+      trigger = { has_technology_researched = line_infantry }
+    }
+  }
+}
+"""
 WORDS = frozenset(
     {"market_goods_delta", "market_goods_pricier", "wants_high_supply", "market", "mg:grain"}
 )
@@ -92,40 +89,40 @@ def _patch_case(plan, text, goods):
     return plan, text, inputs, result
 
 
-@pytest.fixture(scope="module")
-def case():
-    with version_contracts.select_version("1.15.1"):
-        native_stances = supply_program.native_stances_1151()
-        text = (production_profile.baseline_root() / "game" / SOURCE).read_text(
-            encoding="utf-8-sig"
-        )
-    plan = decision_adapters.SupplyPlan(SOURCE, ARCHIVED_GOODS, 0.25, native_stances)
-    # The original triggers come from the archive. Only the goods names are synthetic.
+@pytest.fixture
+def case(monkeypatch):
+    text = SYNTHETIC_STRATEGY
+    pins = {}
+    for good in OVERLAP:
+        start, end = supply_program.block_span(text, ("ai_strategy_default", "goods_stances", good))
+        pins[good] = hashlib.sha256(text[start:end].encode()).hexdigest()
+    monkeypatch.setattr(supply_program, "_NATIVE_STANCE_SHA256", pins)
+    plan = decision_adapters.load().supply
+    assert plan is not None
     goods = " ".join(f"{good}={{}}" for good in plan.goods)
     return _patch_case(plan, text, goods)
 
 
 def test_all_three_native_stances_have_one_typed_idempotent_writer(case):
-    _assert_three_native_stance_writers(case, archived=True)
+    _assert_three_native_stance_writers(case)
 
 
 @pytest.mark.integration
 def test_current_supply_composition_uses_locked_installed_native_stances():
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        version_contracts.verify_installation_identity(config.GAME.parent)
-        text = version_contracts.read_default_strategy(config.GAME)
-        goods = (config.GAME / GOODS).read_bytes()
-        assert (
-            hashlib.sha256(goods).hexdigest()
-            == vanilla_inventory._parameter_evidence_contract()[GOODS]
-        )
-        plan = decision_adapters.load().supply
-        assert plan is not None
-        case = _patch_case(plan, text, goods.decode("utf-8-sig"))
-    _assert_three_native_stance_writers(case, archived=False)
+    version_contracts.verify_installation_identity(config.GAME.parent)
+    text = version_contracts.read_default_strategy(config.GAME)
+    goods = (config.GAME / GOODS).read_bytes()
+    assert (
+        hashlib.sha256(goods).hexdigest() == vanilla_inventory._parameter_evidence_contract()[GOODS]
+    )
+    plan = decision_adapters.load().supply
+    assert plan is not None
+    case = _patch_case(plan, text, goods.decode("utf-8-sig"))
+    _assert_three_native_stance_writers(case)
+    _assert_native_technology_and_building_alternatives(case)
 
 
-def _assert_three_native_stance_writers(case, *, archived):
+def _assert_three_native_stance_writers(case):
     plan, original, _, output = case
     programs = {program.good: program for program in plan.actions()}
     before, after = _stances(original), _stances(output)
@@ -145,10 +142,8 @@ def _assert_three_native_stance_writers(case, *, archived):
         path = ("ai_strategy_default", "goods_stances", good)
         start, end = supply_program.block_span(original, path)
         native_body = original[start:end]
-        assert native_stance.body == (native_body if archived else None)
-        assert native_stance.version == (
-            "1.15.1" if archived else version_contracts.CURRENT_VERSION
-        )
+        assert native_stance.body is None
+        assert native_stance.version == version_contracts.CURRENT_VERSION
         start, end = supply_program.block_span(native_body, ("<anonymous>", "trigger"))
         output_start, output_end = supply_program.block_span(output, path)
         assert "OR = { AND = " + native_body[start:end] in output[output_start:output_end]
@@ -250,15 +245,6 @@ def test_composition_rejects_native_or_sibling_drift(case, damage):
         decision_adapters._supply_patch(changed, plan, inputs, WORDS, plan.actions())
 
 
-def test_historical_plan_retains_only_unchanged_append_programs():
-    with version_contracts.select_version("1.15.0"):
-        plan = decision_adapters.load().supply
-        assert plan is not None
-        assert len(plan.actions()) == 33
-        assert all(program.operation == "append" for program in plan.actions())
-        assert all("native_stance" not in program.as_dict() for program in plan.actions())
-
-
 def test_supply_disabled_emits_no_stance_changes(case):
     plan, original, inputs, _ = case
     assert decision_adapters._supply_programs(plan, None, enabled=False) == ()
@@ -297,6 +283,10 @@ def test_full_reference_native_branch_survives_disabled_player_and_unknown(case,
 
 
 def test_native_technology_and_building_alternatives_are_preserved(case):
+    _assert_native_technology_and_building_alternatives(case)
+
+
+def _assert_native_technology_and_building_alternatives(case):
     generated = _stances(case[3])
     radios = generated.first("radios").value.first("trigger").value
     for technology in (
@@ -359,22 +349,15 @@ def test_typed_writer_operation_tracks_each_concrete_program(case):
             replace(
                 writer, operation="append" if program.operation != "append" else "idempotent_or"
             ).validate_supply_program()
-    with version_contracts.select_version("1.15.0"), pytest.raises(ValueError):
-        supply_program.native_stances_1151()
     stance = next(program.native_stance for program in case[0].actions() if program.native_stance)
-    with pytest.raises(ValueError):
-        replace(stance, body=stance.body.replace("trigger", "unreviewed"))
+    for change in ({"version": "1.15.0"}, {"body": "{ trigger = { unreviewed = yes } }"}):
+        with pytest.raises(ValueError):
+            replace(stance, **change)
 
 
 @pytest.fixture
 def composition_projection_case(case, tmp_path, monkeypatch):
-    """Real pinned triggers with explicitly synthetic ancillary name/getter proof.
-
-    The existing audit fixture supplies synthetic interfaces, metadata and goods;
-    its test-only source pins isolate whole-source enum projection. No production
-    authority or historic evidence file is changed or inferred from these bytes.
-    """
-    monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
+    """Exercise whole-source enum projection with explicitly synthetic inputs."""
     inventory, native, generated, path = cast("Any", _supply_enum_fixture).__wrapped__(
         tmp_path, monkeypatch
     )
@@ -438,12 +421,7 @@ def test_audit_restores_all_native_source_context_without_numeric_credit(
 
 
 def _enum_leaf_case(case):
-    """Keep the three native leaves as separate discovered responsibilities.
-
-    Ancillary source/getter authority remains the explicitly synthetic fixture
-    above. The three leaves, native triggers and complete production ORs use
-    the real frozen source and actual patcher output.
-    """
+    """Discover the three leaves independently in the actual patcher output."""
     inventory, native, generated, path = case
     stances = _stances(native[SOURCE].decode("utf-8-sig"))
     scopes = vanilla_inventory._strategy_scopes(native)
@@ -537,7 +515,7 @@ def test_claimed_union_cannot_hide_missing_actual_candidate_authority(
     ("before", "after"),
     [
         (
-            b'icon = "gfx/interface/icons/ai_strategy_icons/placate_population.dds"',
+            b'icon = "synthetic.dds"',
             b'icon = "unreviewed.dds"',
         ),
         (b"nationalization_cost(scope:target_country)", b"nationalization_cost(root)"),

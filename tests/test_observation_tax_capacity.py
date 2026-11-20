@@ -151,15 +151,14 @@ def source_texts(monkeypatch):
                 has_building = building_railway percent = 1 }
         } }""",
     }
-    if queries.version_contracts.is_115():
-        texts[PORTUGAL] = (
-            texts[PORTUGAL].replace(
-                "complete = {",
-                "outcome = { header = je_standard_completion_header "
-                "effect_header = je_standard_on_completion_header trigger = {",
-            )
-            + " }"
+    texts[PORTUGAL] = (
+        texts[PORTUGAL].replace(
+            "complete = {",
+            "outcome = { header = je_standard_completion_header "
+            "effect_header = je_standard_on_completion_header trigger = {",
         )
+        + " }"
+    )
     for source, text in texts.items():
         monkeypatch.setitem(
             queries.source_hashes(),

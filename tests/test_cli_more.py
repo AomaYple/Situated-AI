@@ -21,6 +21,7 @@ from conftest import NEEDS_GAME, configure_current_identity
 
 from pdx import config, docgen, snapshot, verify
 from pdx.doc_tables import TableSpec
+from pdx.version_contracts import CURRENT_VERSION
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -96,8 +97,8 @@ def test_mirror_check_一致() -> None:
     assert "一致" in result.output
 
 
-@pytest.mark.parametrize("workshop_drift", [False, True], ids=["matching", "workshop-drift"])
-def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> None:
+@pytest.mark.parametrize("state", ["matching", "workshop-drift", "documentation-drift"])
+def test_refresh_dry_run_只报告(tmp_path, monkeypatch, state) -> None:
     installation = tmp_path / "installation"
     game = installation / "game"
     game.mkdir(parents=True)
@@ -110,7 +111,7 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
     (scripts / "baseline.txt").write_text(
         "REPLACE_OR_CREATE:fixture_one = { always = yes }\n", encoding="utf-8"
     )
-    if workshop_drift:
+    if state == "workshop-drift":
         (scripts / "drift.txt").write_text(
             "REPLACE_OR_CREATE:fixture_two = { always = yes }\n", encoding="utf-8"
         )
@@ -120,7 +121,7 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
     docs = tmp_path / "docs"
     docs.mkdir()
     document = docs / "workshop.md"
-    documented_files = 9 if workshop_drift else 1
+    documented_files = 9 if state == "documentation-drift" else 1
     document.write_text(
         f"内容文件 {documented_files}<!--claim:mod.files--> 个。\n\n"
         "| 统计项 | 数量 |\n"
@@ -133,8 +134,32 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
         verify,
         "CLAIMS",
         [
-            verify.Claim("mod.files", document.name, "内容文件", "mods_files", "", 1),
-            verify.Claim("pfx.mods_total", document.name, "前缀总数", "mods_prefix_total", "", 1),
+            verify.Claim(
+                "env.branch",
+                document.name,
+                "原版分支",
+                "game_version_field",
+                "caligula_branch",
+                f"release/{CURRENT_VERSION}",
+            ),
+            verify.Claim(
+                "mod.files",
+                document.name,
+                "内容文件",
+                "mods_files",
+                "",
+                1,
+                scope="machine_snapshot",
+            ),
+            verify.Claim(
+                "pfx.mods_total",
+                document.name,
+                "前缀总数",
+                "mods_prefix_total",
+                "",
+                1,
+                scope="machine_snapshot",
+            ),
             verify.Claim(
                 "pfx.replace_or_create",
                 document.name,
@@ -142,6 +167,7 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
                 "prefix_in_mods",
                 "REPLACE_OR_CREATE",
                 1,
+                scope="machine_snapshot",
             ),
         ],
     )
@@ -152,16 +178,15 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
     result = _run("refresh", "--dry-run")
     assert document.read_bytes() == before
     assert "生成表与文档一致" in result.output
-    if workshop_drift:
+    assert "断言 1 / 1 通过" in result.output
+    if state == "documentation-drift":
         assert result.exit_code == 1, result.output
         assert "1 处需要改" in result.output
-        assert "断言 0 / 3 通过" in result.output
-        for claim_id in ("mod.files", "pfx.mods_total", "pfx.replace_or_create"):
-            assert f"[{claim_id}] 期望 1 实得 2" in result.output
+        assert "标记问题 1" in result.output
+        assert "断言期望 1" in result.output
     else:
         assert result.exit_code == 0, result.output
         assert "0 处需要改" in result.output
-        assert "断言 3 / 3 通过" in result.output
         assert "全部一致" in result.output
 
 

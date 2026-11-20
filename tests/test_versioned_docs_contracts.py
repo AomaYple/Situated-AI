@@ -9,49 +9,30 @@ import sys
 
 import pytest
 
-from pdx import config, docgen, docs_mirror, snapshot, tables_offline, vanilla_index, verify
-from pdx.version_contracts import CURRENT_VERSION, active_version, is_115, select_version
+from pdx import cli, config, docgen, docs_mirror, snapshot, tables_offline, vanilla_index, verify
+from pdx.version_contracts import CURRENT_VERSION
 
 
-def test_documentation_and_complete_claim_registry_switch_at_call_time():
-    historical = verify.claims_for_version("1.14.5")
-    current = verify.claims_for_version("1.15.0")
-    assert [(c.id, c.kind, c.target) for c in historical] == [
-        (c.id, c.kind, c.target) for c in current
-    ]
-    assert len(current) == 234
-    for version, directory, claims, name in (
-        ("1.14.5", config.HISTORICAL_DOCS, historical, "official-docs.manifest.json"),
-        ("1.15.0", config.DOCS_115, current, "official-docs-1.15.0.manifest.json"),
-    ):
-        with select_version(version):
-            assert config.docs_root() == directory
-            assert verify.current_claims() is claims
-            assert all(t.path.parent == directory for t in docgen.targets())
-            assert docs_mirror.manifest_path().name == name
-            assert {verify.claim_scope(c) for c in claims} == {
-                "native_installation",
-                "machine_snapshot",
-            }
-    for old, new in zip(historical, current, strict=True):
-        assert verify.claim_scope(old) == verify.claim_scope(new)
-        if verify.claim_scope(new) == "machine_snapshot":
-            assert "本机" in new.note
-            assert new.kind not in verify._SNAPSHOT_GETTERS
-            assert new.kind not in verify._MANIFEST_GETTERS
-
-
-def test_claim_registry_keeps_1151_when_switching_from_current() -> None:
-    with select_version(CURRENT_VERSION):
-        current = verify.current_claims()
-        with select_version("1.15.1"):
-            previous = verify.current_claims()
-            marker = next(c for c in previous if c.id == "env.caligula_branch")
-            assert marker.expected == "release/1.15.1"
-            assert config.docs_root() == config.DOCS_1151
-        assert verify.current_claims() is current
-        marker = next(c for c in current if c.id == "env.caligula_branch")
-        assert marker.expected == f"release/{CURRENT_VERSION}"
+def test_current_documentation_and_complete_claim_registry():
+    claims = verify.claims_for_version(CURRENT_VERSION)
+    assert verify.current_claims() is claims
+    assert len(claims) == 234
+    assert len({claim.id for claim in claims}) == len(claims)
+    directory = config.docs_root()
+    assert directory.name == f"victoria3-modding-{CURRENT_VERSION}"
+    assert all(target.path.parent == directory for target in docgen.targets())
+    assert docs_mirror.manifest_path().name == f"official-docs-{CURRENT_VERSION}.manifest.json"
+    marker = next(claim for claim in claims if claim.id == "env.caligula_branch")
+    assert marker.expected == f"release/{CURRENT_VERSION}"
+    assert {verify.claim_scope(claim) for claim in claims} == {
+        "native_installation",
+        "machine_snapshot",
+    }
+    for claim in claims:
+        if verify.claim_scope(claim) == "machine_snapshot":
+            assert "本机" in claim.note
+            assert claim.kind not in verify._SNAPSHOT_GETTERS
+            assert claim.kind not in verify._MANIFEST_GETTERS
 
 
 def test_invalid_profile_fails_at_default_operation_in_a_fresh_process():
@@ -94,23 +75,18 @@ def test_fresh_cli_rejects_bad_environment_with_explicit_current_profile(selecte
         encoding="utf-8",
         check=False,
     )
-    assert result.returncode == 1
-    assert f"未支持的在线原版合同版本：{selected!r}" in result.stdout + result.stderr
+    assert result.returncode == cli.EXIT_USAGE
+    assert f"未支持的原版合同版本：{selected!r}" in result.stdout + result.stderr
 
 
 def test_snapshot_selection_never_falls_back_to_a_different_version(tmp_path, monkeypatch):
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     old = snapshot.Snapshot(version={"caligula_branch": "release/1.14.5"}, compact=True)
     old.write(tmp_path / "release-1.14.5.compact.json")
-    with select_version("1.15.0"):
-        assert verify.latest_compact_snapshot_path() is None
-        assert verify.latest_compact_snapshot() is None
-        assert vanilla_index.snapshot_index() is None
-        assert tables_offline.load_tables() == {}
-    with select_version("1.14.5"):
-        historical = verify.latest_compact_snapshot()
-        assert historical is not None
-        assert historical.version_label == "release/1.14.5"
+    assert verify.latest_compact_snapshot_path() is None
+    assert verify.latest_compact_snapshot() is None
+    assert vanilla_index.snapshot_index() is None
+    assert tables_offline.load_tables() == {}
 
 
 @pytest.mark.parametrize("branch", ["release/1.14.5", "release/1.16.0", "", "unknown"])
@@ -120,40 +96,37 @@ def test_explicit_snapshot_cannot_supply_current_version_acceptance(tmp_path, br
     old.write(path)
     # Reading historical evidence remains available for deliberate comparison.
     assert snapshot.Snapshot.load(path).version_label == (branch or "?")
-    with select_version("1.15.0"):
-        with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
-            tables_offline.load_tables(path)
-        with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
-            verify.verify_from_snapshot(old)
-        with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
-            vanilla_index.snapshot_index(path)
+    with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
+        tables_offline.load_tables(path)
+    with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
+        verify.verify_from_snapshot(old)
+    with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
+        vanilla_index.snapshot_index(path)
 
 
 def test_wrong_identity_or_corrupt_selected_snapshot_is_not_accepted(tmp_path, monkeypatch):
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
-    path = tmp_path / "release-1.15.0.compact.json"
-    with select_version("1.15.0"):
-        snapshot.Snapshot(version={"caligula_branch": "release/1.14.5"}).write(path)
-        with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
-            verify.latest_compact_snapshot()
-        path.write_text("{broken", encoding="utf-8")
-        with pytest.raises(snapshot.SnapshotFormatError, match="无法读取快照"):
-            verify.latest_compact_snapshot()
+    path = tmp_path / f"release-{CURRENT_VERSION}.compact.json"
+    snapshot.Snapshot(version={"caligula_branch": "release/1.14.5"}).write(path)
+    with pytest.raises(snapshot.SnapshotFormatError, match="版本不匹配"):
+        verify.latest_compact_snapshot()
+    path.write_text("{broken", encoding="utf-8")
+    with pytest.raises(snapshot.SnapshotFormatError, match="无法读取快照"):
+        verify.latest_compact_snapshot()
 
 
 def test_official_manifest_identity_is_checked_independently_of_filename(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "RESEARCH", tmp_path)
-    with select_version("1.15.0"):
-        path = docs_mirror.manifest_path()
-        for version in ({}, {"caligula_branch": "release/1.14.5"}):
-            path.write_text(json.dumps({"版本": version, "文档": {"x": {}}}), encoding="utf-8")
-            with pytest.raises(ValueError, match="版本不匹配"):
-                docs_mirror.load_manifest()
-        path.write_text(
-            json.dumps({"版本": {"caligula_branch": "release/1.15.0"}, "文档": {"x": {}}}),
-            encoding="utf-8",
-        )
-        assert docs_mirror.entries() == {"x": {}}
+    path = docs_mirror.manifest_path()
+    for version in ({}, {"caligula_branch": "release/1.14.5"}):
+        path.write_text(json.dumps({"版本": version, "文档": {"x": {}}}), encoding="utf-8")
+        with pytest.raises(ValueError, match="版本不匹配"):
+            docs_mirror.load_manifest()
+    path.write_text(
+        json.dumps({"版本": {"caligula_branch": f"release/{CURRENT_VERSION}"}, "文档": {"x": {}}}),
+        encoding="utf-8",
+    )
+    assert docs_mirror.entries() == {"x": {}}
 
 
 def test_source_identity_keeps_original_bytes_and_filesystem_denominators(tmp_path, monkeypatch):
@@ -175,24 +148,22 @@ def test_selected_committed_evidence_binds_the_actual_version():
     snap = verify.latest_compact_snapshot()
     assert snap is not None
     snap.require_version()
-    assert snap.version_label == f"release/{active_version()}"
-    if is_115():
-        assert snap.sections["source_identity"]["installation/caligula_rev.txt"]
-        assert len(snap.sections["doc_tables"]) == sum(len(t.specs) for t in docgen.targets())
+    assert snap.version_label == f"release/{CURRENT_VERSION}"
+    assert snap.sections["source_identity"]["installation/caligula_rev.txt"]
+    assert len(snap.sections["doc_tables"]) == sum(len(t.specs) for t in docgen.targets())
 
 
 def test_current_snapshot_refuses_failed_table_rows_instead_of_freezing_placeholders(monkeypatch):
     monkeypatch.setattr(docgen, "render_all", lambda: {"fixture": ["<未取到：ValueError: bad>"]})
-    with select_version("1.15.0"), pytest.raises(ValueError, match="生成表取值失败"):
+    with pytest.raises(ValueError, match="生成表取值失败"):
         snapshot._doc_tables_snapshot()
 
 
 def test_malformed_selected_manifest_is_a_hard_error(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "RESEARCH", tmp_path)
-    with select_version("1.15.0"):
-        docs_mirror.manifest_path().write_text("{broken", encoding="utf-8")
-        with pytest.raises(ValueError, match="清单损坏"):
-            docs_mirror.load_manifest()
+    docs_mirror.manifest_path().write_text("{broken", encoding="utf-8")
+    with pytest.raises(ValueError, match="清单损坏"):
+        docs_mirror.load_manifest()
 
 
 def test_native_file_table_bytes_are_generated_from_explicit_original_source(tmp_path, monkeypatch):

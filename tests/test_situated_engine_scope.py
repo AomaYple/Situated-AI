@@ -3,62 +3,34 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 
 import pytest
+from _engine_evidence import compact_image, current_manifest, repin_manifest
+from conftest import configure_current_identity
 
-from pdx import version_contracts
 from pdx.parser import parse_text
-from pdx.situated import engine_scope, vanilla_inventory
+from pdx.situated import engine_scope, engine_scope_115, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_engine_contract():
-    """Synthetic historical fixtures must not borrow the current EXE identity."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.fixture
 def proof_fixture(tmp_path, monkeypatch):
+    configure_current_identity(tmp_path, monkeypatch)
     game = tmp_path / "game"
     game.mkdir()
-    for name, value in {
-        "caligula_branch": "release/1.14.5",
-        "caligula_rev": "fixture",
-        "clausewitz_branch": "fixture",
-        "clausewitz_rev": "fixture",
-    }.items():
-        (tmp_path / f"{name}.txt").write_text(value, encoding="utf-8")
-    executable = tmp_path / "binaries/victoria3.exe"
-    executable.parent.mkdir()
-    executable.write_bytes(b"fixed-test-image\x05\x00\x00\x00\xc3")
-    scripts = {"common/technology/technologies/sample.txt": b"sample = { ai_weight = 1 }\n"}
-    data = {
-        "exe": {
-            "sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
-            "bytes": 21,
-        },
-        "script_hashes": {
-            "common/technology/technologies/sample.txt": hashlib.sha256(
-                b"sample = { ai_weight = 1 }\n"
-            ).hexdigest()
-        },
-        "observations": [{"label": "scope tag", "file_offset": "0x10", "bytes": "05000000c3"}],
-    }
-    manifest = tmp_path / "proof.json"
+    source = "common/technology/technologies/sample.txt"
+    inputs = {source: b"sample = { ai_weight = 1 }\n"}
+    data = current_manifest("technology")
+    executable = compact_image(tmp_path, data)
 
     def freeze():
-        raw = json.dumps(data).encode()
-        manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "MANIFEST", manifest)
-        monkeypatch.setattr(engine_scope, "MANIFEST_SHA256", hashlib.sha256(raw).hexdigest())
+        data["script_hashes"] = {source: hashlib.sha256(inputs[source]).hexdigest()}
+        repin_manifest(monkeypatch, tmp_path / "proof.json", "technology", data)
 
     freeze()
-    return game, executable, scripts, data, freeze
+    return game, executable, inputs, data, freeze
 
 
 def test_complete_pinned_evidence_proves_only_definition_identity(proof_fixture):
@@ -117,12 +89,12 @@ def test_evidence_missing_or_drift_never_invents_scope(proof_fixture, change):
 def test_broken_frozen_attestation_is_an_error(proof_fixture, corruption):
     game, _, inputs, data, freeze = proof_fixture
     if corruption == "manifest_bytes":
-        engine_scope.MANIFEST.write_bytes(b"{}")
+        engine_scope_115.manifest("technology")[0].write_bytes(b"{}")
     elif corruption == "length":
-        data["exe"]["bytes"] = 22
+        data["exe"]["bytes"] += 1
         freeze()
     else:
-        data["observations"][0]["bytes"] = "06000000c3"
+        data["observations"][0]["sha256"] = "0" * 64
         freeze()
     with pytest.raises(ValueError, match="锁定引擎作用域证据"):
         engine_scope.technology_evidence(game, inputs)
@@ -157,10 +129,8 @@ def test_proof_does_not_authorize_other_consumers_or_ambiguous_definitions(
     assert scope.capability == "pending"
 
 
-def test_manifest_retains_raw_scope_and_formula_evidence():
-    raw = engine_scope.MANIFEST.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == engine_scope.MANIFEST_SHA256
-    data = json.loads(raw)
+def test_manifest_retains_scope_and_formula_evidence():
+    data = current_manifest("technology")
     assert data["consumer"] == {
         "directory": "technology",
         "field": "ai_weight",
@@ -169,13 +139,9 @@ def test_manifest_retains_raw_scope_and_formula_evidence():
         "operation": "base_candidate_score",
         "capability": "direct",
     }
-    assert data["exe"]["sha256"] == (
-        "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54"
-    )
-    points = {item["label"]: item for item in data["observations"]}
-    assert points["Country scope type tag getter"]["bytes"] == "b805000000c3"
-    assert points["AI candidate base script value evaluation"]["va"] == "0x141538b79"
-    assert len(data["limits"]) == 4
+    assert data["contract"]["country_tag"] == 5
+    assert data["reference_sites"] == ["0x1418d5e49", "0x1417b6650", "0x1415ea010"]
+    assert len(data["observations"]) == 23
     assert all(not Path(key).is_absolute() for key in data["script_hashes"])
 
 

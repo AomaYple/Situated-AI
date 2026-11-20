@@ -97,6 +97,7 @@ def open_published(
         inventory = loads_contract(json.dumps(layered.get("input_inventory")))
         if not isinstance(identity, InputIdentity) or not isinstance(inventory, InputInventory):
             raise ValueError("研究目录缺少完整输入身份或盘点")
+        version_contracts.require_current(identity.version)
         validate_inputs(identity, inventory)
         indexed = _object(layered.get("index"))
         index = OccurrenceIndex(

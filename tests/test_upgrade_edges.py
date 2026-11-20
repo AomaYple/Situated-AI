@@ -281,7 +281,7 @@ def test_performance_real_workloads_have_results():
     assert set(result["workloads"]) == {
         "citations.repeated_file",
         "localization.header_large_file",
-        "decisions.core_inputs",
+        "decisions.patch_strategy",
     }
     for metrics in result["workloads"].values():
         assert metrics["median_s"] > 0

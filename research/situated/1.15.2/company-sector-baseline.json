@@ -65218,7 +65218,7 @@
   },
   "provenance": {
     "builder_path": "src/pdx/company_sectors.py",
-    "builder_source_sha256": "6050df2dccae194cc8ba953539467e5bab828a11226e6cca95bcaf0f34ea185d",
+    "builder_source_sha256": "372ae6e6672dee8fe3bf3cf37e37c3fc70e7119db4e382287223dbe8d19b1e57",
     "default_authority_sha256": "64cbcade0e0b939bc16ded10a6e33f82045a085b59b4dbf9073ef318b7636025",
     "parameters_sha256": "d99e1c8e603c4f01dd3c5f81c5173f990b7246b899f06d91fb3349e8bdd22bc8",
     "rule_builder_source_sha256": "6c88f3e5a6bb7428c4ae74316e96695d397e850bf660293b8728a5942a1f2cb6"

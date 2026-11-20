@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 SCHEMA = 1
-LOCKED_VERSION = "1.14.5"
+LOCKED_VERSION = version_contracts.CURRENT_VERSION
 # 冻结旧集合的迁移分母，绝不作为本模块原版消费者分母。
 MIGRATION_DENOMINATOR = 1401
 CAPABILITIES = ("direct", "indirect", "observation", "unexposed", "pending")
@@ -61,51 +61,36 @@ _REQUIRED_DIRS = frozenset(
 )
 _OBSERVATION_DIRS = frozenset({"script_values", "scripted_triggers"})
 _INFRASTRUCTURE_DIRS = frozenset({"scripted_effects", "on_actions", "trigger_localization"})
-# Auxiliary 1.14.5 native evidence, independently frozen from installed bytes.
-# These declarations establish goods, unit, law and observation arguments; they
-# never enter consumer discovery merely because a Mod reader uses them.
-_PARAMETER_EVIDENCE_HASHES = {
-    "common/achievements/base_achievements.txt": "dc5a50c8313fffbe50d68f0a6b8c9b9d05f1794f46725d23f2c0e67f7369799f",
-    "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
-    "common/achievements/ip2_pivot_of_empire_achievements.txt": "9ce0330dab546239369a8b916b5ee8fc85ad6de28d5ec5cc60c47c798d271de8",
-    "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
-    "common/alert_types/00_alert_types.txt": "14ff4bb983f84c17fc2825d79ce93620bc68cde7284f8d1fa2dbba6845420aea",
-    "common/combat_unit_types/00_land_combat_unit_types.txt": "ad3ed3d68533cbe6ef05ce014cd88b920b58dc4a42b3e566077cdccee072d86c",
-    "common/goods/00_goods.txt": "e5d8ed5e5deaf3d2c7193bc6b749555c63c78631aecaf87784a2e34051ddfa48",
-    "common/ideologies/00_ig_ideologies.txt": "4c8bc020d2d1060795e5a615b850736b731a31193862399363ec2e1829639b05",
-    "common/journal_entries/00_urbanization.txt": "0be06294448f31679d2b14280b4e6c1991f0d2fa34f97ccc0452068c7cdc5ee6",
-    "common/objective_subgoals/00_subgoals_tutorial.txt": "ca2052a10b208fb311e219b9ec2589875b4b0876cc86d92c5728cabaaba080ed",
-    "common/political_movements/00_ideological_movements.txt": "834a1b97f09c65b9b64eafdaffe4ee68965aaac262066140793a482eefd23a6b",
-    "common/political_movements/05_slave_revolt_movements.txt": "903ca4c58fcbc0a4eded9e0e710ffbf55b27c60fa80ec56d36dca3b4045b0918",
-    "common/pop_types/laborers.txt": "90e109f061ca04c308d3d60cf6ba6d91cbe3769759ff28f0a9a0bd34e169a2d5",
-    "common/pop_types/machinists.txt": "e0ddad8032fd6be5d0eb77533cf9f711a5baf5fe275d20819bc5ba8e3f6785ee",
-    "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
-    "events/french_pretenders_pulse.txt": "3ed2ebf66cef1b0159ae352177cebd0a8d5c6e6de1bbab8732ef6a17e82d94bb",
-    "events/law_events/children_rights_events.txt": "13414a1a5e817c98a2f2e8244c9ae997bf9d89cf96d1d68b3bd9244bcfaf50b8",
-    "events/law_events/state_atheism.txt": "156c7e20ba3326e8aacb0bc3c91acdb9b6bf84988a15d9357467e707ee9e30ec",
-    "events/tech_events/trench_warfare.txt": "d859e625e0843d5d56d515b647e7833a0cb5eb3e5d85b233d4d1be697be1a93e",
-}
-_PARAMETER_115_SOURCE = engine_scope.REPO / "research/situated/1.15.0/inventory-parameters.json"
+# Independently reviewed argument definitions remain separate from discovery.
+_PARAMETER_EVIDENCE_SOURCES = frozenset(
+    {
+        "common/achievements/base_achievements.txt",
+        "common/achievements/ep1_sphere_of_influence_achievements.txt",
+        "common/achievements/ip2_pivot_of_empire_achievements.txt",
+        "common/achievements/ip4_iberian_twilight_achievements.txt",
+        "common/alert_types/00_alert_types.txt",
+        "common/combat_unit_types/00_land_combat_unit_types.txt",
+        "common/goods/00_goods.txt",
+        "common/ideologies/00_ig_ideologies.txt",
+        "common/journal_entries/00_urbanization.txt",
+        "common/objective_subgoals/00_subgoals_tutorial.txt",
+        "common/political_movements/00_ideological_movements.txt",
+        "common/political_movements/05_slave_revolt_movements.txt",
+        "common/pop_types/laborers.txt",
+        "common/pop_types/machinists.txt",
+        "common/pop_types/peasants.txt",
+        "events/french_pretenders_pulse.txt",
+        "events/law_events/children_rights_events.txt",
+        "events/law_events/state_atheism.txt",
+        "events/tech_events/trench_warfare.txt",
+    }
+)
 _PARAMETER_CURRENT_SHA256 = "5d44d6c43eb3e88b166397b4fc82f2e525da065f92ff838c9e1bf4d833184f1a"
-_PARAMETER_1151_SHA256 = "bda817a819da75d5d8cb7843b2b1bfdba92979a711cbde9eb7bd03930ddeb7ec"
-_PARAMETER_115_SHA256 = "23d3f599515b08e1defda6f6e3abafbf644b8a0e1881afb403b2ee260c4bbb75"
 
 
 def _parameter_evidence_contract() -> dict[str, str]:
-    version = version_contracts.active_version()
-    if version == "1.14.5":
-        return _PARAMETER_EVIDENCE_HASHES
-    raw = (
-        _PARAMETER_115_SOURCE
-        if version == "1.15.0"
-        else version_contracts.research_path("situated", "inventory-parameters.json")
-    ).read_bytes()
-    expected = {
-        "1.15.0": _PARAMETER_115_SHA256,
-        "1.15.1": _PARAMETER_1151_SHA256,
-        version_contracts.CURRENT_VERSION: _PARAMETER_CURRENT_SHA256,
-    }[version]
-    if hashlib.sha256(raw).hexdigest() != expected:
+    raw = version_contracts.research_path("situated", "inventory-parameters.json").read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _PARAMETER_CURRENT_SHA256:
         raise ValueError("1.15 参数原版来源合同漂移")
     data = json.loads(raw)
     if (
@@ -114,7 +99,7 @@ def _parameter_evidence_contract() -> dict[str, str]:
         or data["version"] != version_contracts.active_version()
         or data["evidence_kind"] != "native_static"
         or data["runtime"] != "unknown"
-        or set(data["sources"]) != set(_PARAMETER_EVIDENCE_HASHES)
+        or set(data["sources"]) != _PARAMETER_EVIDENCE_SOURCES
     ):
         raise ValueError("1.15 参数原版来源集合或证据边界漂移")
     return cast("dict[str, str]", data["sources"])
@@ -1836,8 +1821,6 @@ def _road_maintenance_scope(
     a home-state variable through scope:country. The deciding country is not
     inferred from state ownership. This adds no declaration to discovery.
     """
-    if version_contracts.active_version() not in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        return _Scope()
     from . import r2_reader_authority  # noqa: PLC0415
 
     expected_source = "common/decrees/00_decree.txt"
@@ -2462,7 +2445,7 @@ def _scope(
             )
             actor = "state"
         else:
-            # 1.14.5's shipped documentation uses the historical spelling
+            # The shipped documentation uses the spelling
             # ``ai_privatization_deisre`` while definitions use
             # ``ai_nationalization_desire``. Keep that exact spelling in the
             # evidence marker instead of inferring a name equivalence.
