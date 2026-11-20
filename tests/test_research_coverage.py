@@ -90,6 +90,17 @@ def _capability(source: ArtifactRef) -> CapabilityRecord:
     )
 
 
+def _report_object(value: object) -> dict[str, object]:
+    assert isinstance(value, dict)
+    return value
+
+
+def _coverage_rows(totals: dict[str, object]) -> list[dict[str, object]]:
+    rows = totals["coverage"]
+    assert isinstance(rows, list)
+    return [_report_object(row) for row in rows]
+
+
 @pytest.mark.unit
 def test_independent_denominator_retains_missing_and_mismatched_files():
     good = _source("base/good.txt")
@@ -124,13 +135,15 @@ def test_independent_denominator_retains_missing_and_mismatched_files():
     )
     payload = report.to_dict()
     assert report.file_set_sha256 == file_set_digest(denominator)
-    totals = payload["totals"]
+    totals = _report_object(payload["totals"])
     assert totals["denominator"] == 5
-    assert totals["coverage"][0]["ratio"] == 2 / 5
-    assert totals["coverage"][2]["ratio"] == 1 / 5
+    coverage = _coverage_rows(totals)
+    assert coverage[0]["ratio"] == 2 / 5
+    assert coverage[2]["ratio"] == 1 / 5
     assert totals["read_status"] == {"failed": 1, "read": 2, "unverified": 2}
     assert totals["parse_status"] == {"complete": 1, "unobserved": 4}
-    assert payload["by_category"]["unknown"]["denominator"] == 1
+    categories = _report_object(payload["by_category"])
+    assert _report_object(categories["unknown"])["denominator"] == 1
     assert payload["gaps"] == {
         blocked.path: ("source_failed",),
         missing.path: ("missing_observation", "unknown_format"),
@@ -160,14 +173,15 @@ def test_counts_distinguish_partial_failed_unattempted_and_not_applicable():
         ],
         denominator_status="partial",
     ).to_dict()
-    totals = report["totals"]
+    totals = _report_object(report["totals"])
     assert totals["decode_status"] == {"complete": 2, "failed": 1, "not_attempted": 2}
     assert totals["parse_status"] == dict.fromkeys(
         ("complete", "failed", "partial", "not_attempted", "not_applicable"), 1
     )
-    assert all(layer["ratio"] is None for layer in totals["coverage"])
-    assert totals["coverage"][2]["not_applicable"] == 1
-    assert totals["coverage"][2]["unknown"] == 3
+    coverage = _coverage_rows(totals)
+    assert all(layer["ratio"] is None for layer in coverage)
+    assert coverage[2]["not_applicable"] == 1
+    assert coverage[2]["unknown"] == 3
 
 
 @pytest.mark.unit
@@ -197,9 +211,11 @@ def test_format_headers_and_classification_do_not_establish_full_structure_or_se
     assert no_proof["format_structure_evidence"] == [
         {"format": "dds", "scope": "metadata", "status_counts": {"complete": 1}}
     ]
-    assert no_proof["by_category"]["image_map"]["parse_status"] == {"not_attempted": 1}
-    assert no_proof["totals"]["semantic"]["proven_objects"] == 0
-    assert no_proof["totals"]["semantic"]["ratio"] is None
+    categories = _report_object(no_proof["by_category"])
+    assert _report_object(categories["image_map"])["parse_status"] == {"not_attempted": 1}
+    semantic = _report_object(_report_object(no_proof["totals"])["semantic"])
+    assert semantic["proven_objects"] == 0
+    assert semantic["ratio"] is None
     assert no_proof["gaps"] == {
         image.path: (
             "format_evidence_source_mismatch",
@@ -219,9 +235,10 @@ def test_format_headers_and_classification_do_not_establish_full_structure_or_se
         denominator_status="complete",
         capabilities=(valid, valid),
     ).to_dict()
-    assert with_proof["totals"]["semantic"]["proven_objects"] == 1
+    semantic = _report_object(_report_object(with_proof["totals"])["semantic"])
+    assert semantic["proven_objects"] == 1
     assert with_proof["semantic_sources"] == {script.path: (valid.capability_id,)}
-    assert with_proof["totals"]["semantic"]["ratio"] is None
+    assert semantic["ratio"] is None
 
 
 @pytest.mark.unit
@@ -229,9 +246,10 @@ def test_empty_scope_cannot_report_complete_coverage():
     result = build_research_coverage(
         (), InputInventory(_EPOCH, (), "complete", ()), (), denominator_status="complete"
     ).to_dict()
-    assert result["totals"]["denominator"] == 0
-    assert all(layer["ratio"] is None for layer in result["totals"]["coverage"])
-    assert result["totals"]["semantic"]["ratio"] is None
+    totals = _report_object(result["totals"])
+    assert totals["denominator"] == 0
+    assert all(layer["ratio"] is None for layer in _coverage_rows(totals))
+    assert _report_object(totals["semantic"])["ratio"] is None
 
 
 @pytest.mark.unit
