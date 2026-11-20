@@ -80,7 +80,6 @@ def implementation_digest() -> str:
         "shader_structure.py",
         "script_research.py",
         "script_research_index.py",
-        "situated/version_inventory.py",
     )
     return hashlib.sha256(
         _json([(name, _digest(root / name)) for name in names]).encode()

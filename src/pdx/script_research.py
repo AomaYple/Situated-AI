@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Literal
 
+from .input_inventory import CONTENT_ROOTS
 from .model import Assignment, Block, Scalar
 from .references import (
     NUMERIC_FIELDS,
@@ -14,7 +15,6 @@ from .references import (
     SCRIPT_REFERENCE_KINDS,
     SCRIPT_SYMBOL_CATEGORIES,
 )
-from .situated.version_inventory import CONTENT_ROOTS
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping

@@ -17,10 +17,11 @@ from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
+from pdx.input_inventory import CONTENT_ROOTS
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.references import EXPRESSION_FIELDS, SCRIPT_SYMBOL_CATEGORIES, script_symbol_references
-from pdx.situated.version_inventory import CONTENT_ROOTS, TEXT_EXTENSIONS, canonical_json
+from pdx.situated.version_inventory import TEXT_EXTENSIONS, canonical_json
 from pdx.version_contracts import active_version, require_current, verify_installation_identity
 
 if TYPE_CHECKING:
