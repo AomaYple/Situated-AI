@@ -1,4 +1,4 @@
-"""Build the Python wheel and verify that it contains every project module."""
+"""Build the Python wheel and verify the source modules and artifact boundary."""
 
 from __future__ import annotations
 
@@ -18,6 +18,9 @@ if TYPE_CHECKING:
 
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = REPO / "src" / "pdx"
+WHEEL_METADATA_FILES = frozenset(
+    {"METADATA", "WHEEL", "entry_points.txt", "top_level.txt", "RECORD", "licenses/LICENSE"}
+)
 
 
 def source_modules(source: Path = SOURCE) -> set[str]:
@@ -48,13 +51,21 @@ def missing_modules(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
 
 
 def wheel_issues(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
-    """Check exact module membership, bytes, ZIP integrity and duplicate paths."""
+    """Check module membership, bytes, allowed metadata, integrity and duplicates."""
     expected = source_modules(source)
+    # Wheel filenames start with the normalized distribution and version.
+    wheel_identity = wheel.stem.split("-", 2)
+    allowed_metadata = set()
+    if len(wheel_identity) == 3:
+        distribution, version, _tags = wheel_identity
+        allowed_metadata = {
+            f"{distribution}-{version}.dist-info/{name}" for name in WHEEL_METADATA_FILES
+        }
     with zipfile.ZipFile(wheel) as archive:
         counts = Counter(archive.namelist())
         actual = _package_modules(counts)
         issues = [f"missing: {name}" for name in expected - actual]
-        issues.extend(f"unexpected: {name}" for name in actual - expected)
+        issues.extend(f"unexpected: {name}" for name in counts.keys() - expected - allowed_metadata)
         issues.extend(f"duplicate: {name}" for name, count in counts.items() if count > 1)
         damaged = archive.testzip()
         if damaged is None:
@@ -113,7 +124,10 @@ def main(argv: list[str] | None = None) -> int:
         if issues:
             print(f"[python-package] wheel 校验失败：{list(issues)}")
             return 1
-        print(f"[python-package] wheel 精确包含全部 {len(source_modules(SOURCE))} 个 Python 源模块")
+        print(
+            f"[python-package] wheel 包含全部 {len(source_modules(SOURCE))} 个 Python 源模块，"
+            "其余条目均为项目打包元数据"
+        )
     return 0
 
 
