@@ -157,8 +157,6 @@ def build_research_coverage(
     read_sources: dict[str, str] = {}
     for path, expected in expected_by_path.items():
         actual = observed_by_path.get(path)
-        if expected.category == "unknown":
-            gaps[path].add("unknown_format")
         if actual is None:
             gaps[path].add("missing_observation")
         elif actual.read_status != "read":
@@ -221,6 +219,7 @@ def build_research_coverage(
     for path, expected in expected_by_path.items():
         actual = observed_by_path.get(path)
         disposition = dispositions_by_path.get(path)
+        category = expected.category
         read_status = "unverified"
         decode_status = parse_status = "unobserved"
         if path in read_sources:
@@ -228,6 +227,7 @@ def build_research_coverage(
             if disposition is None:
                 gaps[path].add("missing_disposition")
             else:
+                category = disposition.category
                 decode_status = disposition.decode_status
                 parse_status = disposition.parse_status
                 if disposition.diagnostics:
@@ -235,6 +235,8 @@ def build_research_coverage(
         elif actual is not None and actual.read_status != "read":
             read_status = actual.read_status
 
+        if category == "unknown":
+            gaps[path].add("unknown_format")
         if decode_status == "failed":
             gaps[path].add("decode_failed")
         if parse_status in {"failed", "partial", "not_attempted"}:
@@ -249,8 +251,8 @@ def build_research_coverage(
         suffix = PurePosixPath(path).suffix.casefold()
         for counts in (
             totals,
-            by_category[expected.category],
-            by_format[expected.category, suffix],
+            by_category[category],
+            by_format[category, suffix],
         ):
             counts.files += 1
             counts.bytes += expected.size or 0
