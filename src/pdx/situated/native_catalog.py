@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
+from pdx.references import EXPRESSION_FIELDS, SCRIPT_SYMBOL_CATEGORIES, script_symbol_references
 from pdx.situated.version_inventory import CONTENT_ROOTS, TEXT_EXTENSIONS, canonical_json
 from pdx.version_contracts import active_version, require_current, verify_installation_identity
 
@@ -26,12 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 SCHEMA = "situated-ai.native-consumer-catalog/1"
-SYMBOL_CATEGORIES = {
-    "script_values": "script_value",
-    "scripted_values": "script_value",
-    "scripted_triggers": "scripted_trigger",
-    "scripted_effects": "scripted_effect",
-}
 # Map containers are structural, and never replace their individual native leaves.
 # This is a syntax routing rule, not the former version's semantic/scope approval.
 MAP_FIELDS = frozenset(
@@ -53,35 +48,6 @@ MAP_FIELDS = frozenset(
         "strait_scores",
         "ai_construction_targets",
     }
-)
-EXPRESSION_FIELDS = frozenset(
-    {
-        "value",
-        "base",
-        "add",
-        "subtract",
-        "multiply",
-        "divide",
-        "min",
-        "max",
-        "if",
-        "else_if",
-        "else",
-        "limit",
-        "always",
-        "exists",
-        "NOT",
-        "OR",
-        "AND",
-        "NOR",
-        "NAND",
-        "trigger",
-        "score",
-        "potential",
-    }
-)
-NUMERIC_FIELDS = frozenset(
-    {"value", "add", "subtract", "multiply", "divide", "min", "max", "base", "weight", "score"}
 )
 # Explicit AI fields in native content categories, irrespective of ai_ heuristic
 # candidates in the earlier raw inventory. Unlisted categories remain unresolved
@@ -130,9 +96,6 @@ AI_FIELD_CATEGORIES = frozenset(
 )
 _DOC_FIELD = re.compile(r"^\s*(?:#\s*)?([\w]+)\s*(?:=|\s{2,})")
 _DOC_AI = re.compile(r"\bAI\b|\bai\b|score|weight|selection|prioriti[sz]", re.IGNORECASE)
-_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
-_EXPLICIT_REF = re.compile(r"(?:script(?:ed)?_value|scripted_trigger|scripted_effect):([\w$]+)")
-_PARAMETER = re.compile(r"\$[A-Za-z_0-9]+\$")
 
 
 def _hash(value: object) -> str:
@@ -445,105 +408,13 @@ def _discover_consumers(
                     item,
                     field,
                     address,
-                    "observational" if inside or category in SYMBOL_CATEGORIES else "unresolved",
+                    "observational"
+                    if inside or category in SCRIPT_SYMBOL_CATEGORIES
+                    else "unresolved",
                     "raw_inventory_heuristic_without_consumer_contract",
                     [],
                 )
     return list(rows.values())
-
-
-def _symbol_references(
-    item: Assignment | Scalar, names: set[str], parents: tuple[str, ...]
-) -> list[tuple[str, str, str, str | None]]:
-    """Return symbol, expression, syntax, requested kind; keep unknown explicit calls."""
-    result: list[tuple[str, str, str, str | None]] = []
-    if isinstance(item, Assignment):
-        if item.key in names and parents:
-            result.append((item.key, item.full_key, "assignment_key_call", None))
-        elif parents and item.key.endswith(("_scripted_trigger", "_scripted_effect")):
-            result.append((item.key, item.full_key, "unresolved_call_shaped_key", None))
-        value = item.value
-        if not isinstance(value, Scalar):
-            return result
-        expression = value.unquoted
-        numeric = item.key in NUMERIC_FIELDS
-        requested = SYMBOL_CATEGORIES.get(
-            item.key, item.key if item.key.startswith("scripted_") else None
-        )
-    else:
-        expression = item.unquoted
-        numeric = bool(parents and parents[-1] in NUMERIC_FIELDS)
-        requested = None
-    quoted = (isinstance(item, Scalar) and item.quoted) or (
-        isinstance(item, Assignment) and isinstance(item.value, Scalar) and item.value.quoted
-    )
-    if quoted:
-        # A quoted token can be a localization/path/string mention. Preserve
-        # identifier-shaped names as observations, but never resolve them as
-        # executable calls, including explicit ``scripted_value:`` prefixes.
-        field_name = item.key if isinstance(item, Assignment) else (parents[-1] if parents else "")
-        symbolish_field = (
-            field_name in NUMERIC_FIELDS
-            or field_name in EXPRESSION_FIELDS
-            or field_name.startswith("scripted_")
-            or expression in names
-        )
-        if symbolish_field and (
-            _IDENTIFIER.fullmatch(expression) or _EXPLICIT_REF.fullmatch(expression)
-        ):
-            return [(expression, expression, "quoted_symbol_observation", requested)]
-        return result
-    explicit = list(_EXPLICIT_REF.finditer(expression))
-    if explicit:
-        for match in explicit:
-            prefix = match.group(0).split(":")[0]
-            kind = "script_value" if "value" in prefix else prefix
-            result.append((match.group(1), expression, "explicit_symbol_prefix", kind))
-        return result
-    if requested in {"scripted_value", "script_value", "scripted_trigger", "scripted_effect"}:
-        result.append(
-            (
-                expression,
-                expression,
-                "explicit_reference_field",
-                "script_value" if "value" in requested else requested,
-            )
-        )
-        return result
-    if _PARAMETER.search(expression):
-        result.append((expression, expression, "parameterized_reference", requested))
-        return result
-    words = _IDENTIFIER.findall(expression)
-    known = [word for word in words if word in names]
-    for word in dict.fromkeys(known):
-        syntax = (
-            "quoted_symbol_observation"
-            if (
-                (isinstance(item, Scalar) and item.quoted)
-                or (
-                    isinstance(item, Assignment)
-                    and isinstance(item.value, Scalar)
-                    and item.value.quoted
-                )
-            )
-            else "scalar_or_scope_chained_call"
-        )
-        result.append((word, expression, syntax, "script_value" if numeric else None))
-    if (
-        not known
-        and numeric
-        and re.fullmatch(r"[A-Za-z_][\w.:]*", expression)
-        and expression not in {"yes", "no"}
-    ):
-        result.append(
-            (
-                expression,
-                expression,
-                "unresolved_numeric_identifier_or_engine_getter",
-                "script_value",
-            )
-        )
-    return result
 
 
 def _cycles(
@@ -699,7 +570,7 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
     symbol_lookup: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for path, raw in sorted(inputs.items()):
         category = _category(path)
-        if category not in SYMBOL_CATEGORIES or not path.endswith(".txt"):
+        if category not in SCRIPT_SYMBOL_CATEGORIES or not path.endswith(".txt"):
             continue
         for index, item in enumerate(parse_bytes(raw, path=path).root.items):
             if not isinstance(item, Assignment) or item.is_variable:
@@ -707,7 +578,7 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
             symbol = {
                 "symbol_id": _hash([path, [index]]),
                 "name": item.key,
-                "kind": SYMBOL_CATEGORIES[category],
+                "kind": SCRIPT_SYMBOL_CATEGORIES[category],
                 "source": _source(path, records[path]["sha256"], item, (index,)),
                 "source_validity": records[path]["parse_status"],
                 "definition_status": "observed_native_definition_semantics_unknown",
@@ -745,7 +616,7 @@ def build_native_catalog(installation: Path, inventory: dict[str, Any]) -> dict[
             failures.append({"kind": "catalog_parse_failure", "path": path, "scope": "whole_file"})
         for item, address, parents in _walk(parsed.root):
             for occurrence, (name, expression, syntax, kind) in enumerate(
-                _symbol_references(item, names, parents)
+                script_symbol_references(item, names, parents)
             ):
                 targets = [
                     symbol
