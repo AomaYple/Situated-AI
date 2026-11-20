@@ -50,10 +50,12 @@ from .input_inventory import (
     classify_path,
 )
 from .localization import SUFFIXES, parse_loc_entries_with_lines
+from .map_structure import map_structure_format, read_map_structure
 from .model import Assignment, Block, ParseError, Scalar
 from .parser import parse_bytes
 from .research_coverage import FormatStructureEvidence
 from .scan import FileEntry, walk_files
+from .shader_structure import read_shader_structure
 from .structured_csv import parse_map_table
 from .structured_json import parse_json
 
@@ -897,6 +899,7 @@ def _build_research_index(
                 resource_category = "asset_entity_dna"
             category = record.category
             map_table = relative == MAP_ADJACENCIES
+            map_structure_selected = map_structure_format(record.path) is not None
             if category == "unknown" or map_table or suffix in FLAT_PDX_RESOURCE_SUFFIXES:
                 # 历史盘点的类别属于已提交原件，更新只写入派生处置。
                 category = classify_path(record.path)
@@ -940,6 +943,7 @@ def _build_research_index(
                     or read_xml
                     or developer_text
                     or map_table
+                    or map_structure_selected
                     or shader_source
                     or python_tool
                     or binary_probe,
@@ -1123,7 +1127,7 @@ def _build_research_index(
                     elif developer_text:
                         reason = "developer text lines indexed; editor format not interpreted"
                     else:
-                        reason = "shader source lines indexed; mixed PDX/shader grammar pending"
+                        reason = "shader source lines indexed; shader declarations have separate structure evidence"
             elif binary_probe and raw is not None:
                 header = binary_header(suffix, raw)
                 reason = f"binary_header_{header['status']}; payload parser unavailable"
@@ -1170,6 +1174,29 @@ def _build_research_index(
             writer.add_source(record, row)
             if header is not None:
                 writer.add_details(record.path, binary_header=header)
+            if raw is not None and record.sha256 is not None:
+                map_structure = (
+                    read_map_structure(record.path, raw, parsed=parsed)
+                    if map_structure_selected
+                    else None
+                )
+                shader_structure = (
+                    read_shader_structure(record.path, raw) if shader_source else None
+                )
+                if map_structure is not None:
+                    writer.add_details(record.path, map_structure=asdict(map_structure))
+                if shader_structure is not None:
+                    writer.add_details(record.path, shader_structure=asdict(shader_structure))
+                format_evidence.extend(
+                    FormatStructureEvidence(
+                        ArtifactRef("installation", record.path, record.sha256),
+                        structure.format,
+                        structure.status,
+                        "metadata",
+                    )
+                    for structure in (map_structure, shader_structure)
+                    if structure is not None
+                )
             if localization:
                 writer.add_details(record.path, localization_language=language)
             writer.add_container_members(record.path, members)

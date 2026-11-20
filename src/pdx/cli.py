@@ -447,6 +447,9 @@ def research_query_cmd(
     directory: Annotated[Path, typer.Argument(help="包含 COMPLETE.json 的本机研究目录")],
     source: Annotated[list[str] | None, typer.Option(help="来源相对路径，可重复")] = None,
     key: Annotated[str | None, typer.Option(help="精确结构键")] = None,
+    source_details: Annotated[
+        bool, typer.Option("--source-details", help="包括 --source 所选文件的格式元数据")
+    ] = False,
     after: Annotated[str, typer.Option(help="上一页的最后一个位置 ID")] = "",
     limit: Annotated[int, typer.Option(min=1, max=10000, help="每组查询的最大行数")] = 100,
     coverage_report: Annotated[
@@ -457,6 +460,8 @@ def research_query_cmd(
     ] = False,
 ) -> None:
     """核对完整研究目录，返回覆盖统计和所选位置的 JSON。"""
+    if source_details and not source:
+        _fail("--source-details 须提供 --source")
     try:
         with research_catalog.open_published(
             directory, historical_locators=historical_locators
@@ -487,6 +492,12 @@ def research_query_cmd(
             }
             if coverage_report:
                 result["research_coverage"] = publication.research_coverage
+            if source_details:
+                assert source
+                result["source_details"] = {
+                    path: publication.index.source_metadata_in_connection(connection, path)
+                    for path in source
+                }
     except (OSError, ValueError, sqlite3.Error) as exc:
         _fail(f"研究目录读取失败：{exc}", EXIT_FAILED)
     typer.echo(json.dumps(result, ensure_ascii=False, indent=2))

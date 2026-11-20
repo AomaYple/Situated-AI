@@ -74,6 +74,8 @@ def implementation_digest() -> str:
         "research_output.py",
         "native_rename.py",
         "binary_headers.py",
+        "map_structure.py",
+        "shader_structure.py",
     )
     return hashlib.sha256(
         _json([(name, _digest(root / name)) for name in names]).encode()
@@ -301,16 +303,25 @@ class OccurrenceIndex:
                 _occurrence(row) for row in connection.execute(query + " ORDER BY id", args)
             )
 
+    @staticmethod
+    def source_metadata_in_connection(
+        connection: sqlite3.Connection, source: str
+    ) -> dict[str, Any] | None:
+        row = connection.execute(
+            "SELECT details FROM source_details WHERE source=?", (source,)
+        ).fetchone()
+        if row is None:
+            return None
+        result = json.loads(row[0])
+        if not isinstance(result, dict):
+            raise ValueError("来源元数据不是对象")
+        return result
+
     def source_metadata(self, source: str) -> dict[str, Any]:
         with self.connect() as connection:
-            row = connection.execute(
-                "SELECT details FROM source_details WHERE source=?", (source,)
-            ).fetchone()
-            if row is None:
+            result = self.source_metadata_in_connection(connection, source)
+            if result is None:
                 raise KeyError(source)
-            result = json.loads(row[0])
-            if not isinstance(result, dict):
-                raise ValueError("来源元数据不是对象")
             return result
 
     def container_members(self, source: str) -> tuple[dict[str, Any], ...]:

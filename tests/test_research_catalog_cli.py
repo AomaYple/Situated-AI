@@ -468,6 +468,43 @@ def test_research_query_rejects_marker_catalog_mismatch(
     assert "epoch" in result.output
 
 
+def test_research_query_reports_map_and_shader_structure_without_payload(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    shader = "game/gfx/shaders/example.shader"
+    nodes = "game/map_data/nodes.dat"
+    map_text = "game/map_data/default.txt"
+    samples = {
+        shader: b'Includes = { "shared.fxh" }\nCode [[ synthetic_shader_body ]]\n',
+        nodes: b"opaque map sample",
+        map_text: b'provinces = "map_data/provinces.png"\n',
+    }
+    for path, raw in samples.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+    output = tmp_path / "map-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    query = ["research-query", str(output), "--source-details", "--coverage-report"]
+    for path in samples:
+        query.extend(["--source", path])
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    details = payload["source_details"]
+    assert details[shader]["shader_structure"]["scope"] == "shader_declarations"
+    assert details[shader]["disposition"]["parse_status"] == "not_attempted"
+    assert details[nodes]["map_structure"]["status"] == "not_attempted"
+    assert details[nodes]["map_structure"]["metadata"]["payload_status"] == "unknown"
+    assert details[map_text]["map_structure"]["status"] == "complete"
+    assert any(
+        row["format"] == "map_nodes" and row["scope"] == "metadata"
+        for row in payload["research_coverage"]["format_structure_evidence"]
+    )
+    assert b"synthetic_shader_body" not in (output / "occurrences.sqlite").read_bytes()
+
+
 def test_analyze_installation_refuses_drift_after_indexing(
     tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
