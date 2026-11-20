@@ -69,7 +69,7 @@ CPython 3.15.2 的运行期和 `dev` 依赖闭包。复现该环境时，先用�
 
 ## 完整安装研究
 
-将 `V3_ROOT` 指向锁定游戏安装，运行以下命令从本机只读盘点和分析全部安装路径。输出包括相对路径、原字节摘要、结构位置和分层覆盖。命令核对当前默认策略摘要。输入身份中的起止时点界定初次盘点，报告另外记录末次完整盘点通过的时点。安装身份、字节或目录分母漂移时拒绝发布。
+将 `V3_ROOT` 指向锁定游戏安装，运行以下命令从本机只读盘点和分析全部安装路径。输出包括相对路径、原字节摘要、结构位置和分层覆盖。命令核对当前默认策略摘要。输入身份中的起止时点界定初次盘点，报告另外记录末次完整盘点通过的时点。现场安装有文件未能读取，或安装身份、文件字节或目录分母发生漂移时，命令拒绝生成正式完成的研究目录。
 
 ```text
 python -m pdx.cli analyze --installation --output-dir <本机研究目录>
@@ -97,6 +97,7 @@ python -m pdx.cli research-query "tools/out/installation-research" --source game
 - `--symbol` 按选定名称独立查询整个索引，可重复指定。引用续页时保留同一符号的查询，将上一页末条引用的 `occurrence_id` 和 `ordinal` 以 `--reference-after <occurrence_id>:<ordinal>` 传入。`--limit` 是每组查询的行数上限。
 - 使用 `--source` 和 `--script-references` 可查看指定文件的全部已登记引用候选，包括没有固定名称的 `dynamic` 和状态为 `unknown` 的候选。按来源续页时，保留相同的来源和选项，并用其末条引用的 `occurrence_id:ordinal` 作为 `--reference-after`。
 - 已登记的旧实现现场定位索引可加 `--historical-locators` 读取。仍须通过该目录的原始身份与摘要校验，查询范围限于旧产物所保存的定位资料。需要当前格式证据或脚本符号候选时，用当前工具生成新目录。
+- 覆盖层 `structure` 按通用逐文件解析结果计数。地图、Shader 和二进制格式的专用结构证据由 `--coverage-report` 在 `format_structure_evidence` 分列，各来源的具体处置可通过 `--source-details` 查看。
 - 格式处置和引用候选属于静态证据。按报告中的逐项处置解释完整解析、局部结构、未解析或未知等状态。实际脚本求值、合法运行期读取及 Mod 生产接线需要各自的证据。
 
 例如，可在同一份 1.15.2 研究目录中查看默认 AI 策略文件的引用候选，并用实际符号 `has_friendly_diplomatic_pact` 查看全索引中的定义和引用。
@@ -105,7 +106,7 @@ python -m pdx.cli research-query "tools/out/installation-research" --source game
 python -m pdx.cli research-query "tools/out/installation-research" --source game/common/ai_strategies/00_default_strategy.txt --script-references --symbol has_friendly_diplomatic_pact --limit 25
 ```
 
-逐来源状态表示该文件的脚本索引处置。`complete` 表示完整解析，`partial` 表示保留可解析片段，`failed` 表示解析失败，`not_attempted` 表示该来源未做脚本索引，`unknown_source` 表示目录中没有登记该来源。引用为空时，结合来源状态判断覆盖范围。
+逐来源状态表示该文件的脚本索引处置。`complete` 表示完整解析，`partial` 表示保留可解析片段，`failed` 表示解析失败，`not_attempted` 表示该来源未做脚本索引，`unknown_source` 表示该来源未登记在查询目录的冻结输入分母中，当前机器上的文件状态需另行核对。引用为空时，结合来源状态判断覆盖范围。
 
 `incomplete_definition_sources` 列出未完整处理的定义来源。同一类别中只要有定义来源缺失或未完整解析，已索引到的定义仍可定位，引用在无法判断目标唯一或缺失时保留 `unknown`。例如，已见一个定义候选时，未完整处理的同类来源仍可能包含另一个定义。
 
