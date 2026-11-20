@@ -84,6 +84,7 @@ from pdx import (
     observe,
     political_surface,
     research_catalog,
+    script_research_index,
     situated,
     snapshot,
     tables_offline,
@@ -447,6 +448,10 @@ def research_query_cmd(
     directory: Annotated[Path, typer.Argument(help="包含 COMPLETE.json 的本机研究目录")],
     source: Annotated[list[str] | None, typer.Option(help="来源相对路径，可重复")] = None,
     key: Annotated[str | None, typer.Option(help="精确结构键")] = None,
+    symbol: Annotated[list[str] | None, typer.Option(help="脚本符号名称，可重复")] = None,
+    reference_after: Annotated[
+        str | None, typer.Option(help="引用续页位置，格式为 occurrence_id:ordinal")
+    ] = None,
     source_details: Annotated[
         bool, typer.Option("--source-details", help="包括 --source 所选文件的格式元数据")
     ] = False,
@@ -462,6 +467,15 @@ def research_query_cmd(
     """核对完整研究目录，返回覆盖统计和所选位置的 JSON。"""
     if source_details and not source:
         _fail("--source-details 须提供 --source")
+    if reference_after is not None:
+        if not symbol:
+            _fail("--reference-after 须提供 --symbol")
+        try:
+            symbol_cursor = script_research_index.reference_cursor(reference_after)
+        except ValueError as exc:
+            _fail(str(exc))
+    else:
+        symbol_cursor = ("", -1)
     try:
         with research_catalog.open_published(
             directory, historical_locators=historical_locators
@@ -498,6 +512,20 @@ def research_query_cmd(
                     path: publication.index.source_metadata_in_connection(connection, path)
                     for path in source
                 }
+            if symbol:
+                result["script_symbols"] = (
+                    {"status": "historical_locators_only", "queries": []}
+                    if publication.implementation_status == "historical_locators"
+                    else {
+                        "status": "static_candidates",
+                        "queries": [
+                            script_research_index.query_symbol(
+                                connection, name, limit=limit, after=symbol_cursor
+                            )
+                            for name in symbol
+                        ],
+                    }
+                )
     except (OSError, ValueError, sqlite3.Error) as exc:
         _fail(f"研究目录读取失败：{exc}", EXIT_FAILED)
     typer.echo(json.dumps(result, ensure_ascii=False, indent=2))

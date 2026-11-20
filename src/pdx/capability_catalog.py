@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from . import script_research_index
 from .committed_raw import read_source, validate_inputs, verified_catalog_inputs
 from .input_contracts import UnknownFrontier, dumps_contract
 from .input_inventory import STRUCTURED_JSON_SUFFIXES, open_inventory_source
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from .input_contracts import InputIdentity, InputInventory, InventoryRecord, ParseStatus
+    from .script_research import ScriptDefinition, ScriptReference
     from .structured_csv import CsvResult
 
 
@@ -76,6 +78,9 @@ def implementation_digest() -> str:
         "binary_headers.py",
         "map_structure.py",
         "shader_structure.py",
+        "script_research.py",
+        "script_research_index.py",
+        "situated/version_inventory.py",
     )
     return hashlib.sha256(
         _json([(name, _digest(root / name)) for name in names]).encode()
@@ -342,6 +347,10 @@ class OccurrenceIndex:
         return result
 
 
+def _occurrence_id(source: str, address: tuple[int, ...]) -> str:
+    return hashlib.sha256(_json((source, address)).encode()).hexdigest()
+
+
 class OccurrenceWriter:
     """一次构建事务；异常或中断不发布候选，也不覆盖上一次索引。"""
 
@@ -387,6 +396,7 @@ class OccurrenceWriter:
                 CREATE INDEX occurrence_scalar ON occurrences(scalar);
                 CREATE INDEX occurrence_source_path ON occurrences(source,path);
             """)
+            script_research_index.create_tables(self.connection)
         except BaseException:
             self.__exit__(True, None, None)
             raise
@@ -442,6 +452,15 @@ class OccurrenceWriter:
             "UPDATE source_details SET details=? WHERE source=?", (_json(details), source)
         )
 
+    def add_script_rows(
+        self,
+        definitions: Iterable[ScriptDefinition],
+        references: Iterable[ScriptReference],
+    ) -> None:
+        script_research_index.add_source_rows(
+            self.connection, definitions, references, _occurrence_id
+        )
+
     def add(
         self,
         source: str,
@@ -460,7 +479,7 @@ class OccurrenceWriter:
         value_kind: str = "scalar",
         value_line: int | None = None,
     ) -> str:
-        occurrence_id = hashlib.sha256(_json((source, address)).encode()).hexdigest()
+        occurrence_id = _occurrence_id(source, address)
         self.connection.execute(
             "INSERT INTO occurrences VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (

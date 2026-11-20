@@ -19,7 +19,7 @@ import re
 import stat
 import tempfile
 import zipfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
@@ -55,6 +55,7 @@ from .model import Assignment, Block, ParseError, Scalar
 from .parser import parse_bytes
 from .research_coverage import FormatStructureEvidence
 from .scan import FileEntry, walk_files
+from .script_research import definition_kind, iter_definitions, iter_references
 from .shader_structure import read_shader_structure
 from .structured_csv import parse_map_table
 from .structured_json import parse_json
@@ -870,6 +871,19 @@ def _build_research_index(
             record, root=installation, relative=record.path, retain=retain, prefix_size=prefix_size
         )
 
+    names: dict[str, Counter[str]] = defaultdict(Counter)
+    for record in inventory.records:
+        if record.read_status != "read" or record.sha256 is None:
+            continue
+        if definition_kind(record.path) is None:
+            continue
+        definition_raw = read(record, retain=True)
+        if definition_raw is None:
+            raise ValueError(f"已登记脚本定义源不可读：{record.path}")
+        definition_ast = parse_bytes(definition_raw, record.path, encoding="utf-8-sig")
+        for definition in iter_definitions(record.path, record.sha256, definition_ast):
+            names[definition.name][definition.kind] += 1
+
     with OccurrenceWriter(
         index_path, identity, inventory, metadata_only=raw_root is None
     ) as writer:
@@ -1206,6 +1220,11 @@ def _build_research_index(
                 writer.add_structured_json(record, json_result)
             if parsed is not None:
                 writer.add_parsed(record, parsed)
+                assert record.sha256 is not None
+                writer.add_script_rows(
+                    iter_definitions(record.path, record.sha256, parsed),
+                    iter_references(record.path, record.sha256, parsed, names),
+                )
                 if raw_root is None:
                     continue
                 if parsed.parse_status == "complete":

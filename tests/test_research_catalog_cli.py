@@ -505,6 +505,46 @@ def test_research_query_reports_map_and_shader_structure_without_payload(
     assert b"synthetic_shader_body" not in (output / "occurrences.sqlite").read_bytes()
 
 
+def test_research_query_returns_script_definitions_and_paged_references(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    definition_path = "game/common/scripted_triggers/trigger.txt"
+    event_path = "game/events/example.txt"
+    for path, raw in {
+        definition_path: b"sample_trigger = { always = yes }\nsample_trigger = { always = yes }",
+        event_path: (
+            b"example.1 = { trigger = { sample_trigger = yes sample_trigger = yes } "
+            b'custom = "private_sample_value" }'
+        ),
+    }.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+    output = tmp_path / "script-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    query = ["research-query", str(output), "--symbol", "sample_trigger", "--limit", "1"]
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 0, result.output
+    first = json.loads(result.stdout)["script_symbols"]["queries"][0]
+    assert first["definition_count"] == 2
+    assert first["definitions"][0]["source"] == definition_path
+    reference = first["references"][0]
+    assert reference["source"] == event_path
+    assert reference["status"] == "ambiguous"
+    assert reference["path"] == ["example.1", "trigger", "sample_trigger"]
+
+    cursor = f"{reference['occurrence_id']}:{reference['ordinal']}"
+    result = CliRunner().invoke(cli.app, [*query, "--reference-after", cursor])
+    assert result.exit_code == 0, result.output
+    second = json.loads(result.stdout)["script_symbols"]["queries"][0]
+    assert second["references"][0]["occurrence_id"] != reference["occurrence_id"]
+    assert second["definition_count"] == 2
+    assert b"private_sample_value" not in (output / "occurrences.sqlite").read_bytes()
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
 def test_analyze_installation_refuses_drift_after_indexing(
     tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
