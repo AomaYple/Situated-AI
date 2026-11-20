@@ -19,7 +19,7 @@ import re
 import stat
 import tempfile
 import zipfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
@@ -50,9 +50,18 @@ from .input_inventory import (
     classify_path,
 )
 from .localization import SUFFIXES, parse_loc_entries_with_lines
+from .map_structure import map_structure_format, read_map_structure
 from .model import Assignment, Block, ParseError, Scalar
 from .parser import parse_bytes
+from .research_coverage import FormatStructureEvidence
 from .scan import FileEntry, walk_files
+from .script_research import (
+    definition_kind,
+    iter_definitions,
+    iter_references,
+    supports_references,
+)
+from .shader_structure import read_shader_structure
 from .structured_csv import parse_map_table
 from .structured_json import parse_json
 
@@ -62,6 +71,7 @@ if TYPE_CHECKING:
 
     from .input_contracts import CaptureCheck, InputIdentity, InputInventory, InventoryRecord
     from .model import ParsedFile
+    from .research_coverage import ResearchCoverage
 
 
 class InformationStatus(StrEnum):
@@ -292,6 +302,8 @@ class ResearchInformationCatalog(InformationCatalog):
 
     layered: LayeredCatalog = field(kw_only=True)
     final_installation_check: CaptureCheck | None = field(default=None, kw_only=True)
+    format_evidence: tuple[FormatStructureEvidence, ...] = field(default=(), kw_only=True)
+    research_coverage: ResearchCoverage | None = field(default=None, kw_only=True)
     format_version: int = 2
 
     def to_dict(self) -> dict[str, object]:
@@ -302,6 +314,8 @@ class ResearchInformationCatalog(InformationCatalog):
                 "input_identity_capture_check_scope": "initial_inventory",
                 "final_inventory": asdict(self.final_installation_check),
             }
+        if self.research_coverage is not None:
+            layers["research_coverage"] = self.research_coverage.to_dict()
         result["分层目录"] = layers
         return result
 
@@ -845,11 +859,20 @@ def _developer_xml_elements(
     return elements, None
 
 
+def _research_pdx_script(suffix: str, category: str, *, pdx_resource: bool = False) -> bool:
+    return category != "documentation" and (
+        suffix in config.SCRIPTABLE_SUFFIXES
+        or suffix in {".dna", ".entity", ".gfx", ".dlc"}
+        or pdx_resource
+    )
+
+
 def _build_research_index(
     identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path | None
 ) -> ResearchInformationCatalog:
     items: list[InformationItem] = []
     dispositions: list[FileDisposition] = []
+    format_evidence: list[FormatStructureEvidence] = []
     installation = Path(identity.installation_root)
 
     def read(
@@ -860,6 +883,28 @@ def _build_research_index(
         return read_record(
             record, root=installation, relative=record.path, retain=retain, prefix_size=prefix_size
         )
+
+    names: dict[str, Counter[str]] = defaultdict(Counter)
+    definition_sources: dict[str, str] = {}
+    incomplete_definition_kinds: set[str] = set()
+    for record in inventory.records:
+        kind = definition_kind(record.path)
+        if kind is None or not _research_pdx_script(
+            Path(record.path).suffix.casefold(), classify_path(record.path)
+        ):
+            continue
+        definition_sources[record.path] = kind
+        if record.read_status != "read" or record.sha256 is None:
+            incomplete_definition_kinds.add(kind)
+            continue
+        definition_raw = read(record, retain=True)
+        if definition_raw is None:
+            raise ValueError(f"已登记脚本定义源不可读：{record.path}")
+        definition_ast = parse_bytes(definition_raw, record.path, encoding="utf-8-sig")
+        if definition_ast.parse_status != "complete":
+            incomplete_definition_kinds.add(kind)
+        for definition in iter_definitions(record.path, record.sha256, definition_ast):
+            names[definition.name][definition.kind] += 1
 
     with OccurrenceWriter(
         index_path, identity, inventory, metadata_only=raw_root is None
@@ -890,15 +935,17 @@ def _build_research_index(
                 resource_category = "asset_entity_dna"
             category = record.category
             map_table = relative == MAP_ADJACENCIES
-            if category == "unknown" or map_table or suffix in FLAT_PDX_RESOURCE_SUFFIXES:
+            map_structure_selected = map_structure_format(record.path) is not None
+            if (
+                category == "unknown"
+                or map_table
+                or suffix in FLAT_PDX_RESOURCE_SUFFIXES
+                or supports_references(record.path)
+            ):
                 # 历史盘点的类别属于已提交原件，更新只写入派生处置。
                 category = classify_path(record.path)
             pdx_resource = resource_category is not None and category == resource_category
-            script = category != "documentation" and (
-                suffix in config.SCRIPTABLE_SUFFIXES
-                or suffix in {".dna", ".entity", ".gfx", ".dlc"}
-                or pdx_resource
-            )
+            script = _research_pdx_script(suffix, category, pdx_resource=pdx_resource)
             localization = category == "localization"
             developer_text = relative in DEVELOPER_TEXT_PATHS
             document = category == "documentation" and (
@@ -933,6 +980,7 @@ def _build_research_index(
                     or read_xml
                     or developer_text
                     or map_table
+                    or map_structure_selected
                     or shader_source
                     or python_tool
                     or binary_probe,
@@ -1116,10 +1164,22 @@ def _build_research_index(
                     elif developer_text:
                         reason = "developer text lines indexed; editor format not interpreted"
                     else:
-                        reason = "shader source lines indexed; mixed PDX/shader grammar pending"
+                        reason = "shader source lines indexed; shader declarations have separate structure evidence"
             elif binary_probe and raw is not None:
                 header = binary_header(suffix, raw)
                 reason = f"binary_header_{header['status']}; payload parser unavailable"
+                assert record.sha256 is not None
+                structure_status: ParseStatus = (
+                    "complete" if header["status"] == "observed" else "failed"
+                )
+                format_evidence.append(
+                    FormatStructureEvidence(
+                        ArtifactRef("installation", record.path, record.sha256),
+                        suffix.removeprefix("."),
+                        structure_status,
+                        "metadata",
+                    )
+                )
             elif category in {"image_map", "font", "audio_video", "binary"}:
                 parse_status = "not_applicable"
                 reason = "binary/media raw engineering input; no text reader or engine observation inferred"
@@ -1149,8 +1209,33 @@ def _build_research_index(
             )
             dispositions.append(row)
             writer.add_source(record, row)
+            if script and supports_references(record.path):
+                writer.add_script_source(record.path, definition_sources.get(record.path))
             if header is not None:
                 writer.add_details(record.path, binary_header=header)
+            if raw is not None and record.sha256 is not None:
+                map_structure = (
+                    read_map_structure(record.path, raw, parsed=parsed)
+                    if map_structure_selected
+                    else None
+                )
+                shader_structure = (
+                    read_shader_structure(record.path, raw) if shader_source else None
+                )
+                if map_structure is not None:
+                    writer.add_details(record.path, map_structure=asdict(map_structure))
+                if shader_structure is not None:
+                    writer.add_details(record.path, shader_structure=asdict(shader_structure))
+                format_evidence.extend(
+                    FormatStructureEvidence(
+                        ArtifactRef("installation", record.path, record.sha256),
+                        structure.format,
+                        structure.status,
+                        "metadata",
+                    )
+                    for structure in (map_structure, shader_structure)
+                    if structure is not None
+                )
             if localization:
                 writer.add_details(record.path, localization_language=language)
             writer.add_container_members(record.path, members)
@@ -1160,6 +1245,12 @@ def _build_research_index(
                 writer.add_structured_json(record, json_result)
             if parsed is not None:
                 writer.add_parsed(record, parsed)
+                assert record.sha256 is not None
+                writer.add_script_rows(
+                    iter_definitions(record.path, record.sha256, parsed),
+                    iter_references(record.path, record.sha256, parsed, names),
+                    incomplete_definition_kinds,
+                )
                 if raw_root is None:
                     continue
                 if parsed.parse_status == "complete":
@@ -1251,6 +1342,7 @@ def _build_research_index(
         layered=LayeredCatalog(
             identity, inventory, rows, index, base_frontier(identity, rows), raw_root
         ),
+        format_evidence=tuple(format_evidence),
     )
 
 

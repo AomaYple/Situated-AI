@@ -69,19 +69,46 @@ CPython 3.15.2 的运行期和 `dev` 依赖闭包。复现该环境时，先用�
 
 ## 完整安装研究
 
-将 `V3_ROOT` 指向锁定游戏安装，运行以下命令从本机只读盘点和分析全部安装路径。输出包括相对路径、原字节摘要、结构位置和分层覆盖。命令核对当前默认策略摘要。输入身份中的起止时点界定初次盘点，报告另外记录末次完整盘点通过的时点。安装身份、字节或目录分母漂移时拒绝发布。
+将 `V3_ROOT` 指向锁定游戏安装，运行以下命令从本机只读盘点和分析全部安装路径。输出包括相对路径、原字节摘要、结构位置和分层覆盖。命令核对当前默认策略摘要。输入身份中的起止时点界定初次盘点，报告另外记录末次完整盘点通过的时点。现场安装有文件未能读取，或安装身份、文件字节或目录分母发生漂移时，命令拒绝生成正式完成的研究目录。
 
 ```text
 python -m pdx.cli analyze --installation --output-dir <本机研究目录>
 ```
 
-已有当前版本的已提交原件时，使用下面的命令生成本机研究目录。输出目录必须尚不存在，且须与安装和原件目录分离。
+已有当前版本的已提交原件时，可指定原件目录和 epoch 的 SHA-256。
 
 ```text
 python -m pdx.cli analyze --raw-root <原件目录> --epoch <epoch摘要> --output-dir <本机研究目录>
 ```
 
-`COMPLETE.json` 绑定安装分母及两个输出的摘要。`information-catalog.json` 保留每个文件的处置、按格式汇总的解码和解析状态，以及五层证据覆盖。`occurrences.sqlite` 可按来源、键、路径和出现位置查询 PDX 脚本、地图邻接表、本地化及其他已读取资料。普通 `analyze` 继续生成现场概览和 Mod 交叉报告。研究目录供本机使用，其中含原版资料。
+两个入口均要求目标目录尚不存在、父目录已存在，且目标与安装目录和原件目录分离。生成研究产物时使用系统临时目录。若系统临时目录与输出目标位于不同卷，发布时会另在目标父目录暂存研究产物。请为系统临时目录和输出所在卷预留足够空间。仓库内的研究输出使用 Git 忽略路径，并与原件一起留在本机。
+
+`COMPLETE.json` 绑定安装分母和两个产物的 SHA-256。`information-catalog.json` 记录逐文件处置、各格式的解码与解析范围，以及各层覆盖的分母和缺口。`occurrences.sqlite` 保存来源、结构键、路径和出现位置，并把脚本定义和引用候选关联到同一套来源位置。普通 `analyze` 生成现场概览和 Mod 交叉报告。
+
+### 查询研究目录
+
+将已生成的目录作为 `research-query` 的第一个参数。命令以只读方式验证目录身份、文件摘要和索引合同，将结果写为 JSON。下面的命令查看两个来源的格式元数据及结构位置，并包含逐项覆盖报告。
+
+```text
+python -m pdx.cli research-query "tools/out/installation-research" --source game/common/ai_strategies/00_default_strategy.txt --source game/map_data/nodes.dat --source-details --coverage-report --limit 25
+```
+
+- `--source` 使用安装根相对路径和正斜杠，可重复指定。`--source-details` 需要至少一个来源。`--key` 按精确结构键查询，结构位置以末条记录的 ID 通过 `--after` 续页。
+- `--symbol` 按选定名称独立查询整个索引，可重复指定。引用续页时保留同一符号的查询，将上一页末条引用的 `occurrence_id` 和 `ordinal` 以 `--reference-after <occurrence_id>:<ordinal>` 传入。`--limit` 是每组查询的行数上限。
+- 使用 `--source` 和 `--script-references` 可查看指定文件的全部已登记引用候选，包括没有固定名称的 `dynamic` 和状态为 `unknown` 的候选。按来源续页时，保留相同的来源和选项，并用其末条引用的 `occurrence_id:ordinal` 作为 `--reference-after`。
+- 已登记的旧实现现场定位索引可加 `--historical-locators` 读取。仍须通过该目录的原始身份与摘要校验，查询范围限于旧产物所保存的定位资料。需要当前格式证据或脚本符号候选时，用当前工具生成新目录。
+- 覆盖层 `structure` 按通用逐文件解析结果计数。地图、Shader 和二进制格式的专用结构证据由 `--coverage-report` 在 `format_structure_evidence` 分列，各来源的具体处置可通过 `--source-details` 查看。
+- 格式处置和引用候选属于静态证据。按报告中的逐项处置解释完整解析、局部结构、未解析或未知等状态。实际脚本求值、合法运行期读取及 Mod 生产接线需要各自的证据。
+
+例如，可在同一份 1.15.2 研究目录中查看默认 AI 策略文件的引用候选，并用实际符号 `has_friendly_diplomatic_pact` 查看全索引中的定义和引用。
+
+```text
+python -m pdx.cli research-query "tools/out/installation-research" --source game/common/ai_strategies/00_default_strategy.txt --script-references --symbol has_friendly_diplomatic_pact --limit 25
+```
+
+逐来源状态表示该文件的脚本索引处置。`complete` 表示完整解析，`partial` 表示保留可解析片段，`failed` 表示解析失败，`not_attempted` 表示该来源未做脚本索引，`unknown_source` 表示该来源未登记在查询目录的冻结输入分母中，当前机器上的文件状态需另行核对。引用为空时，结合来源状态判断覆盖范围。
+
+`incomplete_definition_sources` 列出未完整处理的定义来源。同一类别中只要有定义来源缺失或未完整解析，已索引到的定义仍可定位，引用在无法判断目标唯一或缺失时保留 `unknown`。例如，已见一个定义候选时，未完整处理的同类来源仍可能包含另一个定义。
 
 ## Mod 生成与打包
 
@@ -146,13 +173,12 @@ python tools/ci/run_check.py hygiene
 python tools/ci/run_check.py lint .
 python tools/ci/run_check.py format --check .
 python tools/ci/run_check.py types
-python tools/ci/run_check.py baseline
+python tools/ci/run_check.py baseline-offline
 ```
 
-`baseline` 已包含依赖一致性、离线断言、离线表格、`modguard --offline`、`decision-audit --offline`、`ai-surface --check`
-和死代码审计，无需另行重复运行。
+`baseline-offline` 与三平台 CI 使用同一入口，依次核对依赖、离线断言、离线生成表格、Mod 门禁、情境决策合同、AI 可执行面和死代码报告。`baseline` 复用这七项，指定 `--profile` 时追加实装检查。
 
-静态基线追加当前版本的生产生成检查，需要本机安装锁定原版。完整验收也核对同一安装身份。
+带 `--profile` 的静态基线追加生产生成检查，需要本机锁定安装。完整验收始终核对当前安装身份。
 
 ```text
 python tools/ci/run_check.py baseline --profile 1.15.2
@@ -161,7 +187,7 @@ python tools/ci/run_check.py full-acceptance --profile 1.15.2 --quiet
 
 两个入口默认使用当前版本。`--profile` 可显式核对当前版本。历史验收必须绑定其原输入与合同。
 
-涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目；构建不应在工作树留下 `build/` 或 egg-info：
+涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目，并拒绝项目打包元数据允许清单之外的条目。构建结束后检查工作树中的 `build/` 和 egg-info 残留。
 
 ```text
 python tools/ci/python_package.py
@@ -175,7 +201,7 @@ pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录�
 统一检查入口禁止当前及嵌套 Python 写入字节码；测试和静态工具仍可能生成其他缓存。结束后清理可再生目录，再运行 `hygiene` 作为最后的卫生检查；
 不要与测试并行运行 hygiene，否则会把测试正在创建的缓存误报成残留。
 可用 `python -m tools.ci.repo_hygiene --clean` 预览清理白名单；实际清理追加 `--apply`。
-该入口只清理缓存、字节码、根目录构建物和 `src/` 直系 egg-info，链接、reparse point、环境及证据目录不在清理范围。
+该入口仅清理白名单中的缓存、字节码、根目录构建物和 `src/` 直系 egg-info，并保护 Git 已跟踪文件及其父目录。链接、reparse point、环境和证据目录按原保护范围保留。卫生检查也会报告被仓库忽略规则命中且已强制入库的路径。历史与当前共六份精简快照及登记的 G1 证据以 `.gitignore` 的精确路径为准。
 
 历史工具 `tools/ci/situated_closeout.py` 只核验归档 A2 身份，不是当前完成门；其历史实现与证据保留在原有源码、测试及归档收据中，不代替当前工程或产品验收。
 

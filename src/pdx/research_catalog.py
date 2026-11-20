@@ -2,20 +2,24 @@
 
 import hashlib
 import json
+import re
 import tempfile
-from contextlib import ExitStack
-from dataclasses import replace
+from contextlib import ExitStack, contextmanager
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from . import information_catalog, version_contracts
-from .committed_raw import identity_sources_digest, open_committed_capture
+from .capability_catalog import INDEX_SCHEMA, OccurrenceIndex
+from .committed_raw import identity_sources_digest, open_committed_capture, validate_inputs
 from .input_contracts import (
     ArtifactRef,
     CaptureCheck,
     InputIdentity,
     InputInventory,
     SnapshotProvenance,
+    loads_contract,
 )
 from .input_inventory import (
     DEFAULT_STRATEGY_ANCHOR,
@@ -23,8 +27,120 @@ from .input_inventory import (
     _root_path,
     inventory_installation,
     matches_default_strategy,
+    open_inventory_source,
 )
+from .research_coverage import build_research_coverage
 from .research_output import open_local_evidence_output, validate_local_output
+
+if TYPE_CHECKING:
+    import sqlite3
+    from collections.abc import Iterator
+
+
+_CATALOG_NAME = "information-catalog.json"
+_INDEX_NAME = "occurrences.sqlite"
+_COMPLETE_NAME = "COMPLETE.json"
+
+
+@dataclass(frozen=True, slots=True)
+class PublishedResearch:
+    index: OccurrenceIndex
+    projection: str
+    implementation_status: str
+    coverage: list[dict[str, Any]]
+    research_coverage: dict[str, Any] | None
+
+
+def _object(value: object) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("研究目录记录不是 JSON 对象")
+    return value
+
+
+def _sha256(value: object) -> str:
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+        raise ValueError("研究目录包含无效的 SHA-256")
+    return value
+
+
+def _count(value: object) -> int:
+    if type(value) is not int or value < 0:
+        raise ValueError("研究目录包含无效的计数")
+    return value
+
+
+@contextmanager
+def open_published(
+    directory: Path, *, historical_locators: bool = False
+) -> Iterator[tuple[PublishedResearch, sqlite3.Connection]]:
+    """Read one completed publication using one verified index connection."""
+    root = directory.absolute()
+    with (
+        open_inventory_source(root, _COMPLETE_NAME) as marker_stream,
+        open_inventory_source(root, _CATALOG_NAME) as catalog_stream,
+    ):
+        marker = _object(json.load(marker_stream))
+        files = _object(marker.get("files"))
+        if (
+            type(marker.get("schema")) is not int
+            or marker["schema"] != 1
+            or set(marker) != {"schema", "epoch_id", "file_set_sha256", "files"}
+            or set(files) != {_CATALOG_NAME, _INDEX_NAME}
+        ):
+            raise ValueError("完整研究标记不符合发布合同")
+        raw = catalog_stream.read()
+        if hashlib.sha256(raw).hexdigest() != _sha256(files[_CATALOG_NAME]):
+            raise ValueError("研究目录 JSON 摘要漂移")
+        layered = _object(_object(json.loads(raw)).get("分层目录"))
+        del raw
+        identity = loads_contract(json.dumps(layered.get("input_identity")))
+        inventory = loads_contract(json.dumps(layered.get("input_inventory")))
+        if not isinstance(identity, InputIdentity) or not isinstance(inventory, InputInventory):
+            raise ValueError("研究目录缺少完整输入身份或盘点")
+        validate_inputs(identity, inventory)
+        indexed = _object(layered.get("index"))
+        index = OccurrenceIndex(
+            root / _INDEX_NAME,
+            _sha256(indexed.get("epoch_id")),
+            _sha256(indexed.get("file_set_sha256")),
+            _sha256(indexed.get("implementation_sha256")),
+            _sha256(indexed.get("sha256")),
+            _count(indexed.get("occurrence_count")),
+            _count(indexed.get("file_count")),
+        )
+        if (
+            indexed.get("schema") != INDEX_SCHEMA
+            or index.epoch_id != layered.get("epoch_id")
+            or index.epoch_id != marker.get("epoch_id")
+            or index.epoch_id != identity.epoch_id
+            or index.file_set_sha256 != marker.get("file_set_sha256")
+            or index.file_set_sha256 != identity.file_set_sha256
+            or index.sha256 != _sha256(files[_INDEX_NAME])
+            or index.file_count != identity.file_count
+        ):
+            raise ValueError("研究目录与索引 epoch/分母/摘要不相同")
+        projection = layered.get("index_projection")
+        if projection not in ("source_locators", "full_private_index"):
+            raise ValueError("研究目录包含未知的索引投影")
+        status = index.implementation_status(historical_locators=historical_locators)
+        if status == "historical_locators" and projection != "source_locators":
+            raise ValueError("历史读取仅支持已登记的现场定位索引")
+        coverage = layered.get("coverage")
+        if not isinstance(coverage, list):
+            raise ValueError("研究目录缺少覆盖统计")
+        report_payload = layered.get("research_coverage")
+        report = None if report_payload is None else _object(report_payload)
+        if report is not None and (
+            report.get("epoch_id") != index.epoch_id
+            or report.get("file_set_sha256") != index.file_set_sha256
+        ):
+            raise ValueError("研究覆盖分母与索引身份不相同")
+        published = PublishedResearch(
+            index, projection, status, [_object(row) for row in coverage], report
+        )
+        del layered, inventory
+        with index.connect(historical_locators=historical_locators) as connection:
+            yield published, connection
 
 
 def _check_boundaries(output: Path, staging: Path, *sources: Path) -> None:
@@ -51,7 +167,7 @@ def _stage(parent: Path, scope: ExitStack) -> Path:
 def _products(
     catalog: information_catalog.ResearchInformationCatalog, staging: Path, destination: Path
 ) -> tuple[tuple[tuple[Path, str], ...], bytes]:
-    catalog_path = staging / "information-catalog.json"
+    catalog_path = staging / _CATALOG_NAME
     layer = catalog.layered
     index = replace(layer.index, path=destination / layer.index.path.name)
     replace(catalog, layered=replace(layer, index=index)).write(catalog_path)
@@ -85,9 +201,18 @@ def write(raw_root: Path, epoch: str, output_dir: Path) -> Path:
                 identity=identity,
                 inventory=inventory,
                 raw_root=raw_root,
-                index_path=staging / "occurrences.sqlite",
+                index_path=staging / _INDEX_NAME,
             )
-            files, encoded = _products(catalog, staging, destination.root)
+            report = build_research_coverage(
+                inventory.records,
+                inventory,
+                catalog.layered.dispositions,
+                denominator_status=inventory.completeness,
+                format_evidence=catalog.format_evidence,
+            )
+            files, encoded = _products(
+                replace(catalog, research_coverage=report), staging, destination.root
+            )
         return destination.publish(files, encoded, scratch=staging)
 
 
@@ -131,7 +256,7 @@ def write_installation(installation: Path, output_dir: Path) -> Path:
         inventory = InputInventory(identity.epoch_id, scan.records, "complete", ())
         staging = _stage(staging_parent, staging_scope)
         catalog = information_catalog._build_research_index(
-            identity, inventory, staging / "occurrences.sqlite", raw_root=None
+            identity, inventory, staging / _INDEX_NAME, raw_root=None
         )
         checked = inventory_installation(root, verified=verified)
         if checked.scan_status != "complete" or (
@@ -143,6 +268,13 @@ def write_installation(installation: Path, output_dir: Path) -> Path:
         final_check = CaptureCheck(
             datetime.now(UTC).isoformat(), identity_digest, scan.file_set_sha256, "stable"
         )
-        catalog = replace(catalog, final_installation_check=final_check)
+        report = build_research_coverage(
+            checked.records,
+            inventory,
+            catalog.layered.dispositions,
+            denominator_status=inventory.completeness,
+            format_evidence=catalog.format_evidence,
+        )
+        catalog = replace(catalog, final_installation_check=final_check, research_coverage=report)
         files, encoded = _products(catalog, staging, destination.root)
         return destination.publish(files, encoded, scratch=staging)

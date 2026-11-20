@@ -38,6 +38,7 @@ subparsers 的脚本、2 个裸脚本（``show_outputs.py`` 连 ``main()`` 都�
 from __future__ import annotations
 
 import json
+import sqlite3
 import time
 from collections import deque
 from dataclasses import asdict
@@ -83,6 +84,7 @@ from pdx import (
     observe,
     political_surface,
     research_catalog,
+    script_research_index,
     situated,
     snapshot,
     tables_offline,
@@ -439,6 +441,108 @@ def analyze_cmd(
         console.print(table)
 
     console.print(f"\n总耗时 {elapsed:.1f} 秒")
+
+
+@app.command("research-query")
+def research_query_cmd(
+    directory: Annotated[Path, typer.Argument(help="包含 COMPLETE.json 的本机研究目录")],
+    source: Annotated[list[str] | None, typer.Option(help="来源相对路径，可重复")] = None,
+    key: Annotated[str | None, typer.Option(help="精确结构键")] = None,
+    symbol: Annotated[list[str] | None, typer.Option(help="脚本符号名称，可重复")] = None,
+    script_references: Annotated[
+        bool, typer.Option("--script-references", help="包括 --source 所选文件的全部脚本引用候选")
+    ] = False,
+    reference_after: Annotated[
+        str | None, typer.Option(help="引用续页位置，格式为 occurrence_id:ordinal")
+    ] = None,
+    source_details: Annotated[
+        bool, typer.Option("--source-details", help="包括 --source 所选文件的格式元数据")
+    ] = False,
+    after: Annotated[str, typer.Option(help="上一页的最后一个位置 ID")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=10000, help="每组查询的最大行数")] = 100,
+    coverage_report: Annotated[
+        bool, typer.Option("--coverage-report", help="包含按独立分母汇总的全部逐项覆盖与缺口")
+    ] = False,
+    historical_locators: Annotated[
+        bool, typer.Option("--historical-locators", help="读取已登记的旧实现位置索引")
+    ] = False,
+) -> None:
+    """核对完整研究目录，返回覆盖统计和所选位置的 JSON。"""
+    if source_details and not source:
+        _fail("--source-details 须提供 --source")
+    if script_references and not source:
+        _fail("--script-references 须提供 --source")
+    if reference_after is not None:
+        if not (symbol or script_references):
+            _fail("--reference-after 须提供 --symbol 或 --script-references")
+        try:
+            symbol_cursor = script_research_index.reference_cursor(reference_after)
+        except ValueError as exc:
+            _fail(str(exc))
+    else:
+        symbol_cursor = ("", -1)
+    try:
+        with research_catalog.open_published(
+            directory, historical_locators=historical_locators
+        ) as (publication, connection):
+            sources: list[str | None] = list(source) if source else [None]
+            queries = [
+                {
+                    "source": path,
+                    "key": key,
+                    "occurrences": [
+                        asdict(row)
+                        for row in publication.index.find_in_connection(
+                            connection, source=path, key=key, after=after, limit=limit
+                        )
+                    ],
+                }
+                for path in sources
+                if path is not None or key is not None
+            ]
+            result: dict[str, object] = {
+                "epoch_id": publication.index.epoch_id,
+                "file_set_sha256": publication.index.file_set_sha256,
+                "implementation_sha256": publication.index.implementation_sha256,
+                "implementation_status": publication.implementation_status,
+                "index_projection": publication.projection,
+                "coverage": publication.coverage,
+                "queries": queries,
+            }
+            if coverage_report:
+                result["research_coverage"] = publication.research_coverage
+            if source_details:
+                assert source
+                result["source_details"] = {
+                    path: publication.index.source_metadata_in_connection(connection, path)
+                    for path in source
+                }
+            if symbol or script_references:
+                if publication.implementation_status == "historical_locators":
+                    result["script_symbols"] = {"status": "historical_locators_only", "queries": []}
+                else:
+                    result["script_symbols"] = {
+                        "status": "static_candidates",
+                        "incomplete_definition_sources": (
+                            script_research_index.incomplete_definition_sources(connection)
+                        ),
+                        "queries": [
+                            script_research_index.query_symbol(
+                                connection, name, limit=limit, after=symbol_cursor
+                            )
+                            for name in (symbol or [])
+                        ],
+                        "source_references": [
+                            script_research_index.query_source(
+                                connection, path, limit=limit, after=symbol_cursor
+                            )
+                            for path in (source or [])
+                            if script_references
+                        ],
+                    }
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        _fail(f"研究目录读取失败：{exc}", EXIT_FAILED)
+    typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 @app.command("input-inventory")

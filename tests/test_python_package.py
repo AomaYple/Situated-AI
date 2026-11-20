@@ -63,6 +63,32 @@ def test_wheel_validation_rejects_duplicate_entries(tmp_path: Path) -> None:
     assert python_package.wheel_issues(wheel, source) == ("duplicate: pdx/__init__.py",)
 
 
+def test_wheel_validation_rejects_non_module_payload(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "pdx"
+    source.mkdir(parents=True)
+    (source / "__init__.py").write_bytes(b"")
+    wheel = tmp_path / "situated_ai_v3tools-0.3.0-py3-none-any.whl"
+    metadata = "situated_ai_v3tools-0.3.0.dist-info"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr("pdx/__init__.py", b"")
+        archive.writestr(f"{metadata}/WHEEL", b"Wheel-Version: 1.0\n")
+        archive.writestr(f"{metadata}/licenses/LICENSE", b"")
+    assert python_package.wheel_issues(wheel, source) == ()
+
+    unexpected = {
+        "pdx/analysis-cache.sqlite",
+        "research/original.txt",
+        "pdx_stale-0.3.0.dist-info/WHEEL",
+        f"{metadata}/licenses/appendix.txt",
+    }
+    with zipfile.ZipFile(wheel, "a") as archive:
+        for name in sorted(unexpected):
+            archive.writestr(name, b"")
+    assert set(python_package.wheel_issues(wheel, source)) == {
+        f"unexpected: {name}" for name in unexpected
+    }
+
+
 def test_wheel_validation_reports_corrupt_python_module(tmp_path: Path) -> None:
     source = tmp_path / "src" / "pdx"
     source.mkdir(parents=True)

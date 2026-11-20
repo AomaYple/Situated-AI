@@ -3,16 +3,6 @@
 文档按“当前规则 → 当前设计与状态 → 历史计划 → 结果与知识库”组织。导航页只提供入口和短摘要，
 不复制规则正文、机械统计或实验结论。当前兼容基线、计划版本和用户验收边界以各自权威页为准。
 
-## 本机原件研究目录
-
-```text
-v3 information-catalog --raw-root <raw根> --epoch <已提交epoch的SHA-256> --output-dir <本机新目录>
-```
-
-三个选项须一起提供，需要本机已有来自当前锁定底本 Victoria 3 1.15.2 的 schema 3 已提交 raw epoch。保全目录须处于提交时登记的位置。命令从该分母回读原件，并生成研究目录和 SQLite 出现位置索引。部分解析、失败、不可用和未知处置都在结果中登记。%LOCALAPPDATA% 记录只保留来源指纹和处置。
-
-输出目录的父目录须存在，输出目录本身须尚未创建。以 `COMPLETE.json` 核对 epoch 与两份结果的 SHA-256。结果留在本机，仓库内输出须放入 Git 忽略路径。
-
 ## 当前入口
 
 | 目的 | 文档 |
@@ -34,7 +24,8 @@ v3 information-catalog --raw-root <raw根> --epoch <已提交epoch的SHA-256> --
 | 历史 A2 架构检查与逐项证据 | [架构重设计结果](design/exec/架构重设计-结果.md)、[架构阶段收据](design/exec/架构阶段收据.json)；局部通过不等于阶段完成 |
 | 当前交付与历史版本证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.3.0 交付结果](design/exec/3.3.0-交付结果.md)；历史内核与分层收据由执行索引导航 |
 | 创意工坊文案（Steam BBCode，发布前核对固定包） | [全部 11 种语言](publishing/README.md) |
-| 工具使用 | [工具手册](../tools/README.md) |
+| 本机安装盘点与原件研究 | [贡献指南](../CONTRIBUTING.md#完整安装研究) |
+| 工具与诊断入口 | [工具手册](../tools/README.md) |
 | Victoria 3 当前知识库 | [Victoria 3 1.15.2 知识库](victoria3-modding-1.15.2/README.md) |
 | Victoria 3 历史知识库 | [1.15.1](victoria3-modding-1.15.1/README.md)、[1.15.0](victoria3-modding-1.15.0/README.md)、[1.14.5](victoria3-modding/README.md) |
 
@@ -64,9 +55,3 @@ v3 information-catalog --raw-root <raw根> --epoch <已提交epoch的SHA-256> --
 | 已登记表格与绑定归属标记的正文数字 | `v3 refresh --dry-run` 查看差异，`v3 refresh` 更新 |
 
 以上入口也可用 `python -m pdx.cli` 调用。数字或版本漂移按 EP-26 和 EP-09 核对输入身份。本地与 CI 的验证流程见[贡献指南](../CONTRIBUTING.md)。
-
-## 文档维护
-
-规则进入规则页，流程进入 `CONTRIBUTING.md`，产品架构进入设计页，计划状态进入主计划入口，已结束计划归档，事实进入少量结果
-收据。机械统计、指纹和表格通过 Python 生成器维护；不要手改生成物。删除或移动前核对链接、测试、生成入口
-和证据引用。历史文档保留在 Git 历史，不进入标准 Mod ZIP。

@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from .version_contracts import VerifiedInstallation
 
 ScanStatus = Literal["complete", "partial", "failed"]
+CONTENT_ROOTS = ("game", "clausewitz", "jomini")
 _CHUNK_SIZE = 1024 * 1024
 _POSIX_DIR_FD_OPEN_SUPPORTED = os.open in os.supports_dir_fd
 # 已在锁定安装中验证 PDX 块结构的开发期资料类型。
@@ -1016,7 +1017,6 @@ def compare_legacy_scope(scan: InventoryScan) -> tuple[LegacyScopeDisposition, .
     # 延迟导入避免纯枚举依赖 PDX parser 初始化；规则仍取唯一当前来源。
     from . import config  # noqa: PLC0415
     from .situated.version_inventory import (  # noqa: PLC0415
-        CONTENT_ROOTS,
         IDENTITY_PATHS,
         TEXT_EXTENSIONS,
     )

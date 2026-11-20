@@ -104,14 +104,15 @@ def test_profiles_preserve_arguments_and_exit_status(monkeypatch, profile):
     ]
 
 
-def test_baseline_stops_at_first_failure(monkeypatch):
+@pytest.mark.parametrize("command", ["baseline", "baseline-offline"])
+def test_baseline_stops_at_first_failure(monkeypatch, command):
     calls = []
 
     def run(argv, **kwargs):
         calls.append((argv, kwargs))
         return SimpleNamespace(returncode=0 if len(calls) == 1 else 7)
 
-    monkeypatch.setattr(sys, "argv", ["run_check.py", "baseline"])
+    monkeypatch.setattr(sys, "argv", ["run_check.py", command])
     monkeypatch.setattr(run_check.subprocess, "run", run)
     assert run_check.main() == 7
     assert len(calls) == 2
@@ -160,6 +161,22 @@ def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
         ["pdx.cli", "modguard", "--profile", selected, "--offline"],
         ["pdx.cli", "decision-audit", "--profile", selected, "--offline"],
     ]
+
+
+def test_offline_baseline_runs_the_shared_gates_without_live_generation(monkeypatch):
+    selected = version_contracts.CURRENT_VERSION
+    calls = []
+
+    def run(argv, **kwargs):
+        assert kwargs["env"][version_contracts.ENVIRONMENT_VARIABLE] == selected
+        calls.append(argv[argv.index("-m") + 1 :])
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(sys, "argv", ["run_check.py", "baseline-offline", "--profile", selected])
+    monkeypatch.setattr(run_check.subprocess, "run", run)
+
+    assert run_check.main() == 0
+    assert calls == [command for _, command in run_check.BASELINE_COMMANDS]
 
 
 @pytest.mark.parametrize(

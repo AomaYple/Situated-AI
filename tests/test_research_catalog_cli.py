@@ -387,6 +387,231 @@ def test_analyze_installation_binds_full_denominator_and_publishes_only_locators
     assert catalog["coverage"][-1]["denominator_status"] == "unknown"
 
 
+def test_research_query_checks_historical_identity_and_reads_once(
+    tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pdx import capability_catalog
+
+    output = tmp_path / "historical-research"
+    monkeypatch.setattr(
+        capability_catalog,
+        "implementation_digest",
+        lambda: "204381950006cc8241098aa12ac46042a3c2b719b8014cf5623e53ccabefa6e1",
+    )
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    monkeypatch.setattr(capability_catalog, "implementation_digest", lambda: "a" * 64)
+
+    query = [
+        "research-query",
+        str(output),
+        "--source",
+        "game/common/ample/sample.txt",
+        "--source",
+        _STRATEGY_ANCHOR,
+        "--limit",
+        "5",
+    ]
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 1
+    assert "历史定位" in "".join(result.output.splitlines())
+
+    index_reads = []
+    original = capability_catalog.open_inventory_source
+
+    def count_read(root: Path, relative: str):
+        index_reads.append(relative)
+        return original(root, relative)
+
+    monkeypatch.setattr(capability_catalog, "open_inventory_source", count_read)
+    result = CliRunner().invoke(cli.app, [*query, "--historical-locators"])
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert document["implementation_status"] == "historical_locators"
+    assert document["index_projection"] == "source_locators"
+    assert len(document["queries"]) == 2
+    assert "sample_key" in {row["key"] for row in document["queries"][0]["occurrences"]}
+    assert index_reads == ["occurrences.sqlite"]
+
+    with (output / "occurrences.sqlite").open("ab") as stream:
+        stream.write(b"tamper")
+    result = CliRunner().invoke(cli.app, [*query, "--historical-locators"])
+    assert result.exit_code == 1
+    assert "digest mismatch" in result.output
+
+
+def test_research_query_rejects_marker_catalog_mismatch(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    output = tmp_path / "current-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    query = ["research-query", str(output), "--key", "sample_key", "--coverage-report"]
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert document["implementation_status"] == "current"
+    report = document["research_coverage"]
+    assert report["file_set_sha256"] == document["file_set_sha256"]
+    assert report["totals"]["denominator"] == len(
+        [path for path in live_installation.rglob("*") if path.is_file()]
+    )
+    assert report["denominator_status"] == "complete"
+    assert report["totals"]["semantic"]["object_denominator_status"] == "unknown"
+
+    marker_path = output / "COMPLETE.json"
+    marker = json.loads(marker_path.read_bytes())
+    marker["epoch_id"] = "f" * 64
+    marker_path.write_text(json.dumps(marker), encoding="utf-8")
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 1
+    assert "epoch" in result.output
+
+
+def test_research_query_reports_map_and_shader_structure_without_payload(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    shader = "game/gfx/shaders/example.shader"
+    nodes = "game/map_data/nodes.dat"
+    map_text = "game/map_data/default.txt"
+    samples = {
+        shader: b'Includes = { "shared.fxh" }\nCode [[ synthetic_shader_body ]]\n',
+        nodes: b"opaque map sample",
+        map_text: b'provinces = "map_data/provinces.png"\n',
+    }
+    for path, raw in samples.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+    output = tmp_path / "map-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    query = ["research-query", str(output), "--source-details", "--coverage-report"]
+    for path in samples:
+        query.extend(["--source", path])
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    details = payload["source_details"]
+    assert details[shader]["shader_structure"]["scope"] == "shader_declarations"
+    assert details[shader]["disposition"]["parse_status"] == "not_attempted"
+    assert details[nodes]["map_structure"]["status"] == "not_attempted"
+    assert details[nodes]["map_structure"]["metadata"]["payload_status"] == "unknown"
+    assert details[map_text]["map_structure"]["status"] == "complete"
+    assert any(
+        row["format"] == "map_nodes" and row["scope"] == "metadata"
+        for row in payload["research_coverage"]["format_structure_evidence"]
+    )
+    assert b"synthetic_shader_body" not in (output / "occurrences.sqlite").read_bytes()
+
+
+def test_research_query_returns_script_definitions_and_paged_references(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    definition_path = "game/common/scripted_triggers/trigger.txt"
+    event_path = "game/events/example.txt"
+    for path, raw in {
+        definition_path: b"sample_trigger = { always = yes }\nsample_trigger = { always = yes }",
+        event_path: (
+            b"example.1 = { trigger = { sample_trigger = yes sample_trigger = yes } "
+            b'custom = "private_sample_value" }'
+        ),
+    }.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+    output = tmp_path / "script-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    query = ["research-query", str(output), "--symbol", "sample_trigger", "--limit", "1"]
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 0, result.output
+    first = json.loads(result.stdout)["script_symbols"]["queries"][0]
+    assert first["definition_count"] == 2
+    assert first["definitions"][0]["source"] == definition_path
+    reference = first["references"][0]
+    assert reference["source"] == event_path
+    assert reference["status"] == "ambiguous"
+    assert reference["path"] == ["example.1", "trigger", "sample_trigger"]
+
+    cursor = f"{reference['occurrence_id']}:{reference['ordinal']}"
+    result = CliRunner().invoke(cli.app, [*query, "--reference-after", cursor])
+    assert result.exit_code == 0, result.output
+    second = json.loads(result.stdout)["script_symbols"]["queries"][0]
+    assert second["references"][0]["occurrence_id"] != reference["occurrence_id"]
+    assert second["definition_count"] == 2
+    assert b"private_sample_value" not in (output / "occurrences.sqlite").read_bytes()
+    with closing(sqlite3.connect(output / "occurrences.sqlite")) as database:
+        assert database.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def test_research_query_tracks_definition_scope_and_unnamed_references(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    partial = "game/common/scripted_triggers/partial.txt"
+    readme = "game/common/scripted_triggers/README.txt"
+    event = "game/events/research_scope.txt"
+    for path, raw in {
+        partial: b"known_trigger = { always = yes }\nbroken_trigger = {",
+        readme: b"fake_trigger = { always = yes }",
+        event: (
+            b"example.1 = { trigger = { known_trigger = yes fake_trigger = yes "
+            b"scripted_trigger:missing_trigger = yes } "
+            b"immediate = { add_modifier = { name = $DYNAMIC$ } } }"
+        ),
+    }.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+
+    output = tmp_path / "incomplete-symbol-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "research-query",
+            str(output),
+            "--source",
+            event,
+            "--source",
+            readme,
+            "--source",
+            "game/events/missing.txt",
+            "--source",
+            _STRATEGY_ANCHOR,
+            "--symbol",
+            "known_trigger",
+            "--symbol",
+            "fake_trigger",
+            "--symbol",
+            "missing_trigger",
+            "--script-references",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.stdout)["script_symbols"]
+    assert [row["source"] for row in report["incomplete_definition_sources"]] == [partial]
+    known, fake, missing = report["queries"]
+    assert known["definition_count"] == 1
+    assert known["definitions"][0]["source"] == partial
+    assert known["references"][0]["status"] == "unknown"
+    assert known["references"][0]["target_definition_sources_incomplete"]
+    assert fake["definition_count"] == 0
+    assert fake["references"] == []
+    assert missing["references"][0]["status"] == "unknown"
+    assert missing["references"][0]["target_definition_sources_incomplete"]
+    event_refs, readme_refs, absent_refs, empty_refs = report["source_references"]
+    assert event_refs["status"] == "complete"
+    assert any(
+        row["name"] is None and row["status"] == "dynamic" for row in event_refs["references"]
+    )
+    assert readme_refs == {"source": readme, "status": "not_attempted", "references": []}
+    assert absent_refs["status"] == "unknown_source"
+    assert empty_refs["status"] == "complete"
+    assert empty_refs["references"] == []
+
+
 def test_analyze_installation_refuses_drift_after_indexing(
     tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

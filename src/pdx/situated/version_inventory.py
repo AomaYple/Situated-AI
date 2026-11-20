@@ -16,6 +16,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from pdx.input_inventory import CONTENT_ROOTS
 from pdx.lexer import ATOM, EOF, LBRACE, OP, RBRACE, STRING, tokenize
 from pdx.localization_languages import LANGUAGE_HEADER_RE
 from pdx.model import Assignment, Block, Scalar
@@ -29,7 +30,6 @@ from pdx.version_contracts import (
 )
 
 SCHEMA = "situated-ai.native-inventory/1"
-CONTENT_ROOTS = ("game", "clausewitz", "jomini")
 REQUIRED_ROOTS = ("game/common", "game/events", "game/localization", "game/dlc", "launcher")
 TEXT_EXTENSIONS = TEXT_SUFFIXES | {".dlc", ".gfx", ".lua", ".shader", ".fx", ".hlsl"}
 PDX_EXTENSIONS = frozenset({".txt", ".gui", ".gfx", ".asset", ".settings", ".profile", ".dlc"})

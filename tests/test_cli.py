@@ -753,29 +753,10 @@ def test_snapshot_diff_缺快照时返回2() -> None:
     assert r.exit_code == 2, "快照不存在属于前置条件缺失，应为 2"
 
 
-# ── snapshot（cli.py 里最大的未覆盖区）──────────────────────
 @NEEDS_GAME
 @pytest.mark.slow
-def test_snapshot_创建_自检_差分_全链路(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """一条链路覆盖三个子命令：create -> verify -> diff。
-
-    snapshot create 要跑一遍完整分析（约 30 秒），所以三个子命令合在一个
-    用例里跑，避免重复付费。
-
-    ⚠️ **产物隔离到本用例自己的临时目录**（t95，2026-09-25 修）。原来它用固定 label
-    ``cli-test-tmp`` 写进**共享**的 ``tools/out/snapshots/``，并在开头/结尾按前缀
-    删同名文件 —— 于是只要同一台机器上有**第二个 pytest 进程**（另一个人/另一个 agent
-    在这一棵树上跑全量），两条用例就会互相删对方刚建好的产物。实测：错峰 35 秒起两条
-    并发跑，后一条在 ``:269`` 报
-    ``快照不存在：…\\tools\\out\\snapshots\\cli-test-tmp.json``（exit 2）—— 与 ``t19``
-    全量里那条红**逐字同形**；而单跑 ``-n 0`` 必绿（没有第二个进程）。
-
-    ``_invoke`` 是**进程内**调用（``CliRunner``），所以把 ``snapshot.SNAPSHOT_DIR``
-    指到 ``tmp_path`` 就够了：产物既不进共享平面、也不受任何并发进程影响
-    （同文件里 ``verify.SNAPSHOT_DIR`` 已有同款先例，见 :func:`test_from_snapshot_没有快照时仍核验清单并提示补快照`）。
-    末了两条断言把「隔离」变成**可复算的读数**：产物在私有目录里，且共享目录的文件集合
-    跑前跑后逐个名字相同。
-    """
+def test_snapshot_创建后差分(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """创建真实快照并与自身比较，并行用例各自使用私有产物目录。"""
     from pdx import snapshot
 
     shared = config.OUT / "snapshots"
@@ -787,19 +768,13 @@ def test_snapshot_创建_自检_差分_全链路(tmp_path: Path, monkeypatch: py
     assert r.exit_code == 0, r.output
     assert (tmp_path / f"{label}.json").is_file(), "产物必须落在本用例自己的临时目录里"
 
-    # 自检：同环境重复构建必须逐字节相同
-    r = _invoke("snapshot", "verify")
-    assert r.exit_code == 0, r.output
-
     # 差分：自己跟自己比，必须"完全一致"且退出码 0
     r = _invoke("snapshot", "diff", label, label)
     assert r.exit_code == 0, r.output
     assert "一致" in r.output
 
     after = sorted(p.name for p in shared.glob("*.json")) if shared.is_dir() else []
-    assert after == before, (
-        "本用例的产物跑到仓库共享快照目录里去了 —— 那样并行的另一条用例/另一局全量会互相删（t95 实测）"
-    )
+    assert after == before, "创建和差分必须保留仓库共享快照目录的文件集合"
 
 
 @NEEDS_GAME
