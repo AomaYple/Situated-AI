@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 _STAGES = frozenset(
     {"VertexShader", "PixelShader", "GeometryShader", "ComputeShader", "HullShader", "DomainShader"}
 )
+_NAMED_BLOCKS = frozenset({"Effect", "MainCode"})
 _SUFFIXES = frozenset({".shader", ".fxh"})
 _IDENTIFIER = r"[A-Za-z_][A-Za-z_0-9]*"
 _TOKEN = re.compile(
@@ -122,7 +123,7 @@ def _collect(tokens: list[_Token], diagnostics: list[Diagnostic]) -> dict[str, o
     include_blocks = 0
 
     for index, token in enumerate(tokens):
-        following = tokens[index + 1 : index + 3]
+        following = tokens[index + 1 : index + 4]
         preceding = tokens[max(0, index - 2) : index]
         if token.kind == "code":
             code_blocks += 1
@@ -167,24 +168,36 @@ def _collect(tokens: list[_Token], diagnostics: list[Diagnostic]) -> dict[str, o
             else:
                 diagnostics.append({"code": "shader_invalid_include_entry", **token.location()})
         elif token.text.casefold() == "includes":
-            if [item.text for item in following] != ["=", "{"]:
+            if [item.text for item in following[:2]] != ["=", "{"]:
                 diagnostics.append({"code": "shader_invalid_includes_block", **token.location()})
-        elif (
-            token.text in _STAGES
-            and blocks
-            and blocks[-1][1] == "Effect"
-            and len(following) == 2
-            and following[0].text == "="
-            and following[1].kind == "string"
-        ):
-            references.append(
-                {
-                    "effect": blocks[-1][2],
-                    "stage": token.text,
-                    "target": following[1].text[1:-1],
-                    **token.location(),
-                }
-            )
+        elif token.text in _NAMED_BLOCKS and not (preceding and preceding[-1].text == "="):
+            if not following or _declaration_name(following[0]) is None:
+                diagnostics.append({"code": "shader_missing_declaration_name", **token.location()})
+            elif len(following) < 2 or following[1].text != "{":
+                diagnostics.append({"code": "shader_missing_declaration_block", **token.location()})
+        elif token.text in _STAGES and blocks and blocks[-1][1] == "Effect":
+            starts_assignment = bool(following and following[0].text == "=")
+            # "=" 左边的阶段名可与右边的不带引号入口名相同。
+            if preceding and preceding[-1].text == "=" and not starts_assignment:
+                continue
+            target = None
+            if starts_assignment and len(following) >= 2:
+                next_is_assignment = len(following) == 3 and following[2].text == "="
+                if not next_is_assignment:
+                    target = _declaration_name(following[1])
+            if target is None:
+                diagnostics.append(
+                    {"code": "shader_missing_effect_stage_value", **token.location()}
+                )
+            else:
+                references.append(
+                    {
+                        "effect": blocks[-1][2],
+                        "stage": token.text,
+                        "target": target,
+                        **token.location(),
+                    }
+                )
 
     diagnostics.extend(
         {"code": "shader_unclosed_brace", **opener.location()} for opener, _, _ in blocks
@@ -201,15 +214,24 @@ def _collect(tokens: list[_Token], diagnostics: list[Diagnostic]) -> dict[str, o
     }
 
 
+def _declaration_name(token: _Token) -> str | None:
+    if token.kind == "name":
+        return token.text
+    if token.kind == "string" and token.text[1:-1].strip():
+        return token.text[1:-1]
+    return None
+
+
 def _block_owner(preceding: list[_Token]) -> tuple[str, str]:
     if len(preceding) != 2:
         return "", ""
     first, second = preceding
+    if first.text in _NAMED_BLOCKS:
+        name = _declaration_name(second)
+        return (first.text, name) if name is not None else ("", "")
     if first.kind == "name" and second.text == "=":
         label = "Includes" if first.text.casefold() == "includes" else first.text
         return label, ""
-    if first.text in {"MainCode", "Effect"} and second.kind in {"name", "string"}:
-        return first.text, second.text.strip('"')
     return "", ""
 
 

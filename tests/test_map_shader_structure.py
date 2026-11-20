@@ -192,3 +192,79 @@ def test_shader_empty_include_block_and_code_with_index_next_to_close() -> None:
     assert result.metadata["includes"] == []
     assert result.metadata["include_block_count"] == 1
     assert result.metadata["opaque_code_block_count"] == 1
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        b"Effect = {}",
+        b"Effect {}",
+        b'Effect "" {}',
+        b'MainCode "  " {}',
+        b"MainCode",
+    ],
+)
+def test_shader_named_declarations_require_a_name(raw: bytes) -> None:
+    result = read_shader_structure("test.shader", raw)
+    assert result is not None
+    assert result.status == "partial"
+    assert result.diagnostics == (
+        {"code": "shader_missing_declaration_name", "line": 1, "column": 1},
+    )
+    assert result.metadata["effects"] == []
+    assert result.metadata["entry_points"] == []
+
+
+@pytest.mark.parametrize(
+    "assignment",
+    [b"VertexShader =", b'VertexShader = ""', b"VertexShader", b"VertexShader = 123"],
+)
+def test_shader_effect_stages_require_a_value(assignment: bytes) -> None:
+    raw = b"Effect Example { " + assignment + b'\nPixelShader = "KnownPixel" }'
+    result = read_shader_structure("test.shader", raw)
+    assert result is not None
+    assert result.status == "partial"
+    assert result.diagnostics == (
+        {"code": "shader_missing_effect_stage_value", "line": 1, "column": 18},
+    )
+    assert result.metadata["effect_stage_references"] == [
+        {
+            "effect": "Example",
+            "stage": "PixelShader",
+            "target": "KnownPixel",
+            "line": 2,
+            "column": 1,
+        }
+    ]
+
+
+def test_shader_named_declaration_requires_a_block() -> None:
+    result = read_shader_structure("test.shader", b"Effect Example")
+    assert result is not None
+    assert result.status == "partial"
+    assert result.diagnostics == (
+        {"code": "shader_missing_declaration_block", "line": 1, "column": 1},
+    )
+
+
+def test_shader_retains_unquoted_stage_values_that_match_stage_names() -> None:
+    raw = b"Effect Example { VertexShader = VertexShader PixelShader = NamedPixel }"
+    result = read_shader_structure("test.shader", raw)
+    assert result is not None
+    assert result.status == "complete"
+    assert result.metadata["effect_stage_references"] == [
+        {
+            "effect": "Example",
+            "stage": "VertexShader",
+            "target": "VertexShader",
+            "line": 1,
+            "column": 18,
+        },
+        {
+            "effect": "Example",
+            "stage": "PixelShader",
+            "target": "NamedPixel",
+            "line": 1,
+            "column": 46,
+        },
+    ]
