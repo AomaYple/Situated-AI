@@ -161,6 +161,10 @@ SCRIPT_SYMBOL_CATEGORIES = {
     "scripted_triggers": "scripted_trigger",
     "scripted_effects": "scripted_effect",
 }
+SCRIPT_REFERENCE_KINDS = {
+    **{kind: kind for kind in SCRIPT_SYMBOL_CATEGORIES.values()},
+    "scripted_value": "script_value",
+}
 NUMERIC_FIELDS = frozenset(
     {"value", "add", "subtract", "multiply", "divide", "min", "max", "base", "weight", "score"}
 )
@@ -191,8 +195,8 @@ EXPRESSION_FIELDS = frozenset(
     }
 )
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
-_EXPLICIT_REF = re.compile(r"(?:script(?:ed)?_value|scripted_trigger|scripted_effect):([\w$]+)")
-_PARAMETER = re.compile(r"\$[A-Za-z_0-9]+\$")
+_EXPLICIT_REF = re.compile(rf"(?:{'|'.join(SCRIPT_REFERENCE_KINDS)}):([\w$]+)")
+SCRIPT_PARAMETER = re.compile(r"\$[A-Za-z_0-9]+\$")
 
 
 def script_symbol_references(
@@ -240,20 +244,20 @@ def script_symbol_references(
     if explicit:
         for match in explicit:
             prefix = match.group(0).split(":")[0]
-            kind = "script_value" if "value" in prefix else prefix
+            kind = SCRIPT_REFERENCE_KINDS[prefix]
             result.append((match.group(1), expression, "explicit_symbol_prefix", kind))
         return result
-    if requested in {"scripted_value", "script_value", "scripted_trigger", "scripted_effect"}:
+    if requested in SCRIPT_REFERENCE_KINDS:
         result.append(
             (
                 expression,
                 expression,
                 "explicit_reference_field",
-                "script_value" if "value" in requested else requested,
+                SCRIPT_REFERENCE_KINDS[requested],
             )
         )
         return result
-    if _PARAMETER.search(expression):
+    if SCRIPT_PARAMETER.search(expression):
         result.append((expression, expression, "parameterized_reference", requested))
         return result
     words = _IDENTIFIER.findall(expression)
