@@ -10,7 +10,7 @@
 |---|---|
 | `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、full-acceptance、offline、decision-audit、baseline-offline、baseline、deadcode、python-package |
 | `tools/ci/repo_hygiene.py` | 检查物理残留及被仓库忽略规则命中的已跟踪路径。`--clean` 预览，追加 `--apply` 执行白名单清理，保留已跟踪内容 |
-| `tools/ci/python_package.py` | 在临时源码副本中构建 wheel，核对源码模块集合、字节、ZIP 重复条目与完整性 |
+| `tools/ci/python_package.py` | 在临时源码副本中构建 wheel，核对源码模块集合、字节、ZIP 重复条目与完整性，并拒绝允许清单之外的条目 |
 
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |
@@ -63,7 +63,7 @@ SHA-256 校验。它不会启动、暂停、加速或向游戏窗口发送输入
 
 ## CLI 分层
 
-- 普通 `v3 analyze` 生成现场概览。完整安装和已提交原件的只读研究入口见[贡献指南](../CONTRIBUTING.md#完整安装研究)。`v3 snapshot` 用于生成可核验的版本快照。
+- 普通 `v3 analyze` 生成现场概览。完整安装和已提交原件的只读研究入口见[贡献指南](../CONTRIBUTING.md#完整安装研究)。查询已生成研究目录的方式见[研究目录查询](../CONTRIBUTING.md#查询研究目录)。`v3 snapshot` 用于生成可核验的版本快照。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
 - `python -m pdx.cli package`、`pdx.distribution.validate_package`：按生产源版本生成并核对标准 ZIP 和 manifest；标签、Release 和包哈希见
   [版本交付索引](../docs/design/exec/版本交付-结果.md)，候选与部署事实见[当前工作清单](../docs/design/当前工作清单.md)。命令成功不能证明已发布或已部署。

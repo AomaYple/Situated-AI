@@ -75,13 +75,28 @@ CPython 3.15.2 的运行期和 `dev` 依赖闭包。复现该环境时，先用�
 python -m pdx.cli analyze --installation --output-dir <本机研究目录>
 ```
 
-已有当前版本的已提交原件时，使用下面的命令生成本机研究目录。输出目录必须尚不存在，且须与安装和原件目录分离。
+已有当前版本的已提交原件时，可指定原件目录和 epoch 的 SHA-256。
 
 ```text
 python -m pdx.cli analyze --raw-root <原件目录> --epoch <epoch摘要> --output-dir <本机研究目录>
 ```
 
-输出目录的父目录须存在。`COMPLETE.json` 绑定安装分母及两个输出的摘要。`information-catalog.json` 保留每个文件的处置、按格式汇总的解码和解析状态，以及五层证据覆盖。`occurrences.sqlite` 可按来源、键、路径和出现位置查询 PDX 脚本、地图邻接表、本地化及其他已读取资料。普通 `analyze` 继续生成现场概览和 Mod 交叉报告。研究目录供本机使用，其中含原版资料。仓库内的研究输出使用 Git 忽略路径。
+两个入口均要求目标目录尚不存在、父目录已存在，且目标与安装目录和原件目录分离。生成期间会在目标父目录暂存结果，请预留本地磁盘空间。仓库内的研究输出使用 Git 忽略路径，并与原件一起留在本机。
+
+`COMPLETE.json` 绑定安装分母和两个产物的 SHA-256。`information-catalog.json` 记录逐文件处置、各格式的解码与解析范围，以及各层覆盖的分母和缺口。`occurrences.sqlite` 保存来源、结构键、路径和出现位置，并把脚本定义和引用候选关联到同一套来源位置。普通 `analyze` 生成现场概览和 Mod 交叉报告。
+
+### 查询研究目录
+
+将已生成的目录作为 `research-query` 的第一个参数。命令以只读方式验证目录身份、文件摘要和索引合同，将结果写为 JSON。下面的命令查看两个来源的格式元数据及结构位置，同时查询 `ig_industrialists` 的定义和引用候选，并包含逐项覆盖报告。
+
+```text
+python -m pdx.cli research-query "tools/out/installation-research" --source game/common/ai_strategies/00_default_strategy.txt --source game/map_data/nodes.dat --source-details --coverage-report --symbol ig_industrialists --limit 25
+```
+
+- `--source` 使用安装根相对路径和正斜杠，可重复指定。`--source-details` 需要至少一个来源。`--key` 按精确结构键查询，结构位置以末条记录的 ID 通过 `--after` 续页。
+- `--symbol` 按选定名称独立查询整个索引，可重复指定。引用续页时保留同一符号的查询，将上一页末条引用的 `occurrence_id` 和 `ordinal` 以 `--reference-after <occurrence_id>:<ordinal>` 传入。`--limit` 是每组查询的行数上限。
+- 已登记的旧实现现场定位索引可加 `--historical-locators` 读取。仍须通过该目录的原始身份与摘要校验，查询范围限于旧产物所保存的定位资料。需要当前格式证据或脚本符号候选时，用当前工具生成新目录。
+- 格式处置和引用候选属于静态证据。按报告中的逐项处置解释完整解析、局部结构、未解析或未知等状态。实际脚本求值、合法运行期读取及 Mod 生产接线需要各自的证据。
 
 ## Mod 生成与打包
 
@@ -160,7 +175,7 @@ python tools/ci/run_check.py full-acceptance --profile 1.15.2 --quiet
 
 两个入口默认使用当前版本。`--profile` 可显式核对当前版本。历史验收必须绑定其原输入与合同。
 
-涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目；构建不应在工作树留下 `build/` 或 egg-info：
+涉及 Python 包布局、构建配置或正式交付时，额外在临时源码副本构建 wheel，核对全部源码模块的集合与原始字节、ZIP 完整性和重复条目，并拒绝项目打包元数据允许清单之外的条目。构建结束后检查工作树中的 `build/` 和 egg-info 残留。
 
 ```text
 python tools/ci/python_package.py
