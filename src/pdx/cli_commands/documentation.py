@@ -301,7 +301,7 @@ def refresh_cmd(
     if dry_run:
         try:
             table_drift = docgen.check_all()
-        except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+        except (doc_tables.TableNotFoundError, ValueError, OSError) as exc:
             _fail(f"核对表格失败：{type(exc).__name__}: {exc}")
         if table_drift:
             console.print(f"  [yellow]--dry-run：{len(table_drift)} 行与生成结果不一致[/]")
@@ -320,9 +320,7 @@ def refresh_cmd(
         _require_current_output()
         try:
             originals = {path: path.read_bytes() for path in config.docs_root().glob("*.md")}
-            documents, written = docgen.render_documents()
-            if unexpected := documents.keys() - originals.keys():
-                raise ValueError(f"生成表路径不在当前知识库：{sorted(unexpected)}")
+            documents, written, _ = docgen.render_documents(originals)
             console.rule("[bold]2/3 按归属标记改写正文数字[/]")
             with TemporaryDirectory(prefix="sitai-doc-refresh-") as directory:
                 preview = Path(directory)
@@ -365,10 +363,8 @@ def refresh_cmd(
         raise typer.Exit(EXIT_FAILED)
     if not dry_run:
         try:
-            if any(path.read_bytes() != content for path, content in originals.items()):
-                raise ValueError("文档在准备写入期间已变更")
             with GenerationTransaction() as transaction:
-                transaction.replace(outputs)
+                transaction.replace(outputs, expected=originals)
         except (ValueError, OSError) as exc:
             _fail(f"写回文档失败：{exc}")
         console.print(f"  [green]重算 {len(written)} 张表 / {sum(written.values())} 行[/]")
@@ -421,7 +417,7 @@ def tables_cmd(
     if write:
         try:
             done = docgen.write_all()
-        except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+        except (doc_tables.TableNotFoundError, ValueError, OSError) as exc:
             _fail(f"重算表格失败：{type(exc).__name__}: {exc}")
         table = Table(title="已重算的表格", show_lines=False)
         table.add_column("文档 · 表")
@@ -433,7 +429,7 @@ def tables_cmd(
 
     try:
         diff = docgen.check_all()
-    except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+    except (doc_tables.TableNotFoundError, ValueError, OSError) as exc:
         _fail(f"核对表格失败：{type(exc).__name__}: {exc}")
 
     if not diff:
@@ -469,7 +465,7 @@ def _tables_offline(*, write: bool, only: str) -> None:
     if write:
         try:
             done = tables_offline.restore(recorded, only=only)
-        except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+        except (doc_tables.TableNotFoundError, ValueError, OSError) as exc:
             _fail(f"按快照恢复表格失败：{type(exc).__name__}: {exc}")
         if not done:
             console.print("[green]全部生成表都与快照记录一致，无需改动[/]")
@@ -484,7 +480,7 @@ def _tables_offline(*, write: bool, only: str) -> None:
 
     try:
         diffs, missing, orphans = tables_offline.compare(recorded, only=only)
-    except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+    except (doc_tables.TableNotFoundError, ValueError, OSError) as exc:
         _fail(f"离线核对表格失败：{type(exc).__name__}: {exc}")
 
     if diffs:

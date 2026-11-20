@@ -183,7 +183,9 @@ def test_live_doc08_version_refuses_missing_or_other_installation(monkeypatch, t
         ({}, "narrative metadata is incomplete"),
     ],
 )
-def test_current_doc08_map_table_rejects_malformed_manifest(tmp_path, monkeypatch, entries, message):
+def test_current_doc08_map_table_rejects_malformed_manifest(
+    tmp_path, monkeypatch, entries, message
+):
     from pdx import install_tree
     from pdx.doc_tables import KeyedTableSpec, TableMalformedError
 

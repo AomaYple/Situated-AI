@@ -97,6 +97,7 @@ def test_current_engine_reader_rejects_rebound_executable_with_changed_range(
     for manifest in manifests.values():
         source_maps = [manifest["script_hashes"]]
         if manifest is manifests.get("strategy"):
+            assert isinstance(manifest, dict)
             for key in ("institution_definition_sources", "stance_definition_sources"):
                 sources = manifest[key]
                 monkeypatch.setitem(engine_strategy_1152.CONTRACTS, key, sources)

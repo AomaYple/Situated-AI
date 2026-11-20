@@ -50,6 +50,7 @@ from .doc_tables import (
 from .generation_transaction import GenerationTransaction
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
 
@@ -243,29 +244,35 @@ def check_all() -> list[tuple[str, int, str, str]]:
     return out
 
 
-def render_documents() -> tuple[dict[Path, str], dict[str, int]]:
+def render_documents(
+    originals: Mapping[Path, bytes] | None = None,
+) -> tuple[dict[Path, str], dict[str, int], Mapping[Path, bytes]]:
     """Render every target, applying all table specs for each document together."""
     by_path: dict[Path, list[TableSpec | KeyedTableSpec]] = {}
     for target in targets():
         by_path.setdefault(target.path, []).extend(target.specs)
+    if originals is None:
+        originals = {path: path.read_bytes() for path in by_path}
+    if unexpected := by_path.keys() - originals.keys():
+        raise ValueError(f"生成表路径不在当前知识库：{sorted(unexpected)}")
     documents: dict[Path, str] = {}
     counts: dict[str, int] = {}
     for path, specs in by_path.items():
-        documents[path], replaced = render_document(path, specs)
+        documents[path], replaced = render_document(path, specs, source=originals[path])
         counts.update({f"{path.name} · {name}": count for name, count in replaced.items()})
-    return documents, counts
+    return documents, counts, originals
 
 
 def write_all() -> dict[str, int]:
     """Render all generated tables and replace the changed documents together."""
-    documents, counts = render_documents()
+    documents, counts, originals = render_documents()
     changed = {}
     for path, text in documents.items():
         encoded = text.encode("utf-8")
-        if path.read_bytes() != encoded:
+        if originals[path] != encoded:
             changed[path] = encoded
     with GenerationTransaction() as transaction:
-        transaction.replace(changed)
+        transaction.replace(changed, expected=originals)
     return counts
 
 

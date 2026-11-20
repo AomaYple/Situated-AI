@@ -30,6 +30,8 @@ import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .textio import decode_document
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from pathlib import Path
@@ -132,10 +134,12 @@ def patch_doc(
 
 
 def render_document(
-    doc: Path, specs: Sequence[TableSpec | KeyedTableSpec]
+    doc: Path, specs: Sequence[TableSpec | KeyedTableSpec], *, source: bytes | None = None
 ) -> tuple[str, dict[str, int]]:
     """Render all registered tables before the caller publishes the document."""
-    lines = doc.read_text(encoding="utf-8").splitlines(keepends=True)
+    lines = decode_document(doc.read_bytes() if source is None else source).splitlines(
+        keepends=True
+    )
     replaced: dict[str, int] = {}
 
     for spec in specs:

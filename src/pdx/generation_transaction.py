@@ -26,6 +26,7 @@ class GenerationTransaction:
     def __init__(self) -> None:
         self._originals: dict[Path, Path | None] = {}
         self._touched: list[Path] = []
+        self._published: dict[Path, bytes | None] = {}
         self._temporary: set[Path] = set()
         self._directories: list[Path] = []
 
@@ -53,28 +54,56 @@ class GenerationTransaction:
         temporary.write_bytes(content)
         return temporary
 
-    def replace(self, files: Mapping[Path, bytes | None]) -> None:
-        """Stage all originals and replacements before changing any batch member."""
+    @staticmethod
+    def _read(target: Path) -> bytes | None:
+        if target.is_symlink():
+            raise ValueError(f"生成事务不替换符号链接：{target}")
+        try:
+            return target.read_bytes()
+        except FileNotFoundError:
+            return None
+
+    def replace(
+        self,
+        files: Mapping[Path, bytes | None],
+        *,
+        expected: Mapping[Path, bytes] | None = None,
+    ) -> None:
+        """Stage the batch and verify any supplied source bytes before publication."""
+        expected_bytes: dict[Path, bytes | None] = {
+            path.absolute(): raw for path, raw in (expected or {}).items()
+        }
         staged: dict[Path, Path | None] = {}
+        published: dict[Path, bytes | None] = {}
         for name, content in files.items():
             target = name.absolute()
-            if target.is_symlink():
-                raise ValueError(f"生成事务不替换符号链接：{target}")
+            original = self._read(target)
+            if target in expected_bytes and original != expected_bytes[target]:
+                raise ValueError(f"文档在准备写入期间已变更：{target}")
             if target not in self._originals:
-                try:
-                    original = target.read_bytes()
-                except FileNotFoundError:
-                    self._originals[target] = None
-                else:
-                    self._originals[target] = self._stage(target, original)
+                self._originals[target] = (
+                    None if original is None else self._stage(target, original)
+                )
             staged[target] = None if content is None else self._stage(target, content)
+            published[target] = content
+        for target, raw in expected_bytes.items():
+            if self._read(target) != raw:
+                raise ValueError(f"文档在准备写入期间已变更：{target}")
         for target, temporary in staged.items():
+            if target in expected_bytes and self._read(target) != expected_bytes[target]:
+                raise ValueError(f"文档在写入期间已变更：{target}")
             if temporary is None:
                 target.unlink(missing_ok=True)
             else:
                 temporary.replace(target)
                 self._temporary.discard(temporary)
             self._touched.append(target)
+            if target in expected_bytes:
+                self._published[target] = published[target]
+                expected_bytes[target] = published[target]
+        for target, raw in expected_bytes.items():
+            if self._read(target) != raw:
+                raise ValueError(f"文档在写入期间已变更：{target}")
 
     def __exit__(
         self,
@@ -91,12 +120,15 @@ class GenerationTransaction:
                 restored.add(target)
                 original = self._originals[target]
                 try:
+                    if target in self._published and self._read(target) != self._published[target]:
+                        failures.append(f"{target} 已被外部修改，保留现有内容，原件备份={original}")
+                        continue
                     if original is None:
                         target.unlink(missing_ok=True)
                     else:
                         original.replace(target)
                         self._temporary.discard(original)
-                except OSError as error:
+                except (ValueError, OSError) as error:
                     failures.append(f"{target}: {error}; 原件备份={original}")
         # If recovery itself is blocked, retain the original backups for manual
         # recovery and make that failure explicit instead of claiming success.

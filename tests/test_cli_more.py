@@ -19,9 +19,10 @@ import pytest
 from _helpers import run_cli as _run
 from conftest import NEEDS_GAME, configure_current_identity
 
-from pdx import config, docgen, snapshot, verify
+from pdx import config, docgen, snapshot, tables_offline, verify
 from pdx.cli_commands import common
 from pdx.doc_tables import TableSpec
+from pdx.generation_transaction import GenerationTransaction
 from pdx.version_contracts import CURRENT_VERSION
 
 if TYPE_CHECKING:
@@ -231,6 +232,52 @@ def test_refresh_prevalidates_all_documents(tmp_path, monkeypatch, failure) -> N
         assert "2<!--claim:known.count-->" in first.read_text(encoding="utf-8")
         assert "| a | 2 |" in first.read_text(encoding="utf-8")
         assert "| z | 2 |" in last.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "command",
+    [("tables", "--write"), ("tables", "--offline", "--write"), ("verify", "--fix"), ("refresh",)],
+)
+def test_document_writer_rejects_source_change_during_staging(
+    tmp_path, monkeypatch, command
+) -> None:
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(config, "docs_root", lambda: tmp_path)
+    first = tmp_path / "a.md"
+    last = tmp_path / "z.md"
+    original = b"Count 1<!--claim:known.count-->\n\n| Key | Value |\n| --- | --- |\n| a | 1 |\n"
+    for path in (first, last):
+        path.write_bytes(original)
+    spec = TableSpec("fixture", "| Key | Value |", lambda: ["| a | 2 |"])
+    monkeypatch.setattr(
+        docgen,
+        "targets",
+        lambda: (docgen.DocTarget(first, (spec,)), docgen.DocTarget(last, (spec,))),
+    )
+    monkeypatch.setattr(
+        tables_offline,
+        "load_tables",
+        lambda: {"a.md::fixture": ["| a | 2 |"], "z.md::fixture": ["| a | 2 |"]},
+    )
+    monkeypatch.setattr(
+        verify, "CLAIMS", [verify.Claim("known.count", first.name, "count", "fixture", "", 2)]
+    )
+    monkeypatch.setitem(verify._CHECKS, "fixture", lambda _arg: 2)
+    stage = GenerationTransaction._stage
+    external = original.replace(b"\n", b"\r\n")
+
+    def edit_after_stage(transaction, path, content):
+        result = stage(transaction, path, content)
+        if path == last and content != original:
+            path.write_bytes(external)
+        return result
+
+    monkeypatch.setattr(GenerationTransaction, "_stage", edit_after_stage)
+    result = _run(*command)
+    assert result.exit_code == 2, result.output
+    assert "已变更" in result.output
+    assert first.read_bytes() == original
+    assert last.read_bytes() == external
 
 
 def test_verify_fix_在一致时早退() -> None:

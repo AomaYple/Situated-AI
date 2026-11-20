@@ -192,7 +192,10 @@ def verify_cmd(
 
     if fix:
         _require_current_output()
-        changes = verify.fix_markers(write=True)
+        try:
+            changes = verify.fix_markers(write=True)
+        except (ValueError, OSError) as exc:
+            _fail(f"改写文档标记失败：{exc}")
         if not changes:
             console.print("[green]带标记的数字全都与断言一致，无需改动[/]")
             return

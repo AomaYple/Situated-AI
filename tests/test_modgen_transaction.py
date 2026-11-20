@@ -411,3 +411,32 @@ def test_backup_cleanup_failure_reports_completed_commit_and_retains_backup(
     assert target.read_bytes() == b"committed"
     assert "临时文件清理失败" in caplog.text
     assert any(p.read_bytes() == b"original" for p in tmp_path.glob(".sitai-generation-*"))
+
+
+@pytest.mark.parametrize("target_index", [0, 1])
+def test_expected_source_transaction_preserves_external_write(tmp_path, monkeypatch, target_index):
+    first = tmp_path / "first.md"
+    last = tmp_path / "last.md"
+    paths = [first, last]
+    for path in paths:
+        path.write_bytes(b"original")
+    edited = paths[target_index]
+    replace = Path.replace
+
+    def write_after_first(source, target):
+        result = replace(source, target)
+        if target == first and target.read_bytes() == b"generated":
+            edited.write_bytes(b"external")
+        return result
+
+    monkeypatch.setattr(Path, "replace", write_after_first)
+    with (
+        pytest.raises((ValueError, OSError), match=r"已变更|已被外部修改"),
+        GenerationTransaction() as transaction,
+    ):
+        transaction.replace(
+            dict.fromkeys(paths, b"generated"),
+            expected=dict.fromkeys(paths, b"original"),
+        )
+    assert edited.read_bytes() == b"external"
+    assert paths[1 - target_index].read_bytes() == b"original"
