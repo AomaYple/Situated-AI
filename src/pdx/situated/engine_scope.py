@@ -5,15 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, replace
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
+lazy from pathlib import Path
+
+from pdx import config
 
 from . import engine_scope_115, engine_strategy_115
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = config.REPO
 
 
 def _company_manifest(*, default: bool = False) -> tuple[Path, str, str]:

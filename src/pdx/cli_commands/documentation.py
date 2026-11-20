@@ -26,7 +26,7 @@ from pdx.generation_transaction import GenerationTransaction
 from pdx.parser import parse_file
 
 from . import common
-from .common import EXIT_FAILED, console
+from .common import EXIT_FAILED, console, require_workspace
 from .common import fail as _fail
 from .common import relative as _relative
 from .common import require_current_output as _require_current_output
@@ -168,6 +168,8 @@ def index_cmd(
     取代早期用 PowerShell 正则生成的那一版：本版由 pdx 包驱动，因此自动
     获得 BOM 剥离、引号感知注释、花括号深度判定与连字符键名支持。
     """
+    if not dry_run:
+        require_workspace()
     common.require_game()
     text, stats = _build_index_doc()
 
@@ -208,6 +210,7 @@ def mirror_check() -> None:
     一条跑不了的检查不该把退出码弄脏，否则这个门禁在任何 CI 上都是红的。
     两条都跑不了才算「什么都没查成」，此时退出 2（前置条件缺失）—— 免得空过。
     """
+    require_workspace()
     if not docs_mirror.load_manifest():
         _fail(f"读不到 {docs_mirror.MANIFEST_NAME} —— 先跑 `v3 mirror write`")
 
@@ -257,6 +260,7 @@ def mirror_write(
     见 :mod:`pdx.docs_mirror` 的模块文档 —— 那里也写明了
     「移出版本控制 ≠ 从历史里清除」这个限制。
     """
+    require_workspace()
     common.require_game()
     path = docs_mirror.write_manifest()
     data = docs_mirror.load_manifest()
@@ -296,6 +300,7 @@ def refresh_cmd(
     正是这个仓库反复踩的坑（doc 04 的 682 行活了整整一个版本、README 的
     164/226 停了两轮）。跑完退出码 0 表示全绿；否则 1，并列出剩余项。
     """
+    require_workspace()
     common.require_game()
     console.rule("[bold]1/3 重算生成表[/]")
     if dry_run:
@@ -405,6 +410,7 @@ def tables_cmd(
     它证明的是「表与入库快照一致」，**不是**「表与现在的游戏一致」
     （后者仍是 `v3 refresh` 的活）。口径见 :mod:`pdx.tables_offline`。
     """
+    require_workspace()
     if write:
         _require_current_output()
     if offline:
@@ -576,6 +582,7 @@ def unverified_cmd(
     没有未确认项时退出码 0；有则打印清单（退出码 0 —— 它是**清单**不是门禁，
     真正的门禁是 `v3 verify` 与 pytest）。
     """
+    require_workspace()
     items = unknowns.unverified_items(doc=doc)
     if not items:
         scope = f"（doc {doc}）" if doc else ""

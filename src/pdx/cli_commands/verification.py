@@ -14,7 +14,7 @@ from pdx import (
 )
 
 from . import common
-from .common import EXIT_FAILED, console
+from .common import EXIT_FAILED, console, require_workspace
 from .common import READ_ERRORS as _READ_ERRORS
 from .common import fail as _fail
 from .common import require_current_output as _require_current_output
@@ -154,6 +154,7 @@ def verify_cmd(
     量错了就把错误一起写进闸门 —— 只该在"版本演练"里、且人逐条看过改动清单之后跑。
     ``--only`` 可以缩小到某几条（如 ``--only dip.``），改动清单永远逐条打印。
     """
+    require_workspace()
     if fix_claims:
         common.require_game()
         edits, skipped = verify.fix_claims(write=True, only=only or "")

@@ -10,11 +10,11 @@ import json
 import re
 import tomllib
 from dataclasses import asdict, dataclass
-from pathlib import Path
+lazy from pathlib import Path
 
-from pdx import decision_adapters, decision_rules, version_contracts
+from pdx import config, decision_adapters, decision_rules, version_contracts
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = config.REPO
 DEFAULT_SOURCE = (
     REPO / "mod" / "decisions" / version_contracts.CURRENT_VERSION / "action_bindings.toml"
 )

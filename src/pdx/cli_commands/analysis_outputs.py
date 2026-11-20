@@ -17,7 +17,7 @@ from pdx import (
     version_contracts,
 )
 
-from .common import EXIT_FAILED, console
+from .common import EXIT_FAILED, console, require_workspace
 from .common import READ_ERRORS as _READ_ERRORS
 from .common import fail as _fail
 from .common import relative as _relative
@@ -118,6 +118,7 @@ def check_outputs_cmd() -> None:
 
     缺少产物时退出码 2（先跑 `v3 analyze`），不一致时退出码 1。
     """
+    require_workspace()
     game, _ = _load_game_product(config.OUT_GAME / "游戏本体.json")
     mods, _ = _load_product(config.OUT_MODS / "mod.json", "mod 分析")
 
@@ -161,6 +162,7 @@ def show_cmd() -> None:
     「一个 mod」记录了哪些内容 —— 改动提取逻辑后用它快速确认产物里
     到底有什么。产物不存在时退出码 2。
     """
+    require_workspace()
     products = [
         ("游戏本体 JSON", config.OUT_GAME / "游戏本体.json"),
         ("mod JSON", config.OUT_MODS / "mod.json"),

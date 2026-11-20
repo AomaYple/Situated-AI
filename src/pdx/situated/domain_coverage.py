@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from pdx import decision_adapters, decision_rules, version_contracts
+from pdx import config, decision_adapters, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.textio import normalized_text
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from .r2_native import NetworkProgramBinding
     from .vanilla_inventory import VanillaInventory, VanillaSurface
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = config.REPO
 DEFAULT_SOURCE = (
     REPO / "mod" / "decisions" / version_contracts.CURRENT_VERSION / "domain_actions.toml"
 )

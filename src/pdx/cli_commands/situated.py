@@ -15,7 +15,7 @@ from pdx import (
 from pdx.situated import inventory as situated_inventory
 
 from . import common
-from .common import EXIT_FAILED, console
+from .common import EXIT_FAILED, console, require_workspace
 from .common import fail as _fail
 from .common import relative as _relative
 from .common import write_json as _write_json
@@ -23,6 +23,7 @@ from .common import write_json as _write_json
 
 def situated_audit_cmd() -> None:
     """检查处境行动内核的源、关系、预算和生产接线合同。"""
+    require_workspace()
     common.require_game(optional=True)
     try:
         problems = situated.audit.check()
@@ -56,6 +57,7 @@ def situated_inventory_cmd(
     ] = None,
 ) -> None:
     """生成 K0 原版决策面盘点和旧规则迁移台账。"""
+    require_workspace()
     target = output or (config.OUT / "ci" / "situated-inventory")
     try:
         inventory_path, migration_path = situated_inventory.write(target)
@@ -82,6 +84,7 @@ def situated_report_cmd(
     ),
 ) -> None:
     """输出处境行动内核的可追溯合同报告。"""
+    require_workspace()
     common.require_game(optional=not native)
     target = output or (config.OUT / "ci" / "situated-report.json")
     try:
@@ -99,6 +102,7 @@ def situated_report_cmd(
 
 def situated_explain_cmd() -> None:
     """列出行动卡、消费者和未知回退，供静态审查使用。"""
+    require_workspace()
     try:
         model = situated.load_model()
     except (OSError, ValueError) as exc:

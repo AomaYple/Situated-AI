@@ -15,8 +15,8 @@ import re
 import tomllib
 from dataclasses import dataclass, replace
 from functools import lru_cache
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+lazy from pathlib import Path
 
 from .. import (  # noqa: TID252
     config,
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 
     from .decision_ir import ConsumerIRBundle
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = config.REPO
 DECISIONS = REPO / "mod" / "decisions"
 FACTS = DECISIONS / "facts.toml"
 ACTIONS = DECISIONS / "actions.toml"

@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from . import (
     building_opportunities,
-    company_sectors,
     config,
     decision_intents,
     decision_interfaces,
@@ -39,6 +38,7 @@ from .parser import parse_text
 from .situated import supply_program
 from .situated.supply_program import SupplyAction, SupplyProgram
 from .textio import normalized_text
+lazy from . import company_sectors
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

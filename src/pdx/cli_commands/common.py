@@ -72,6 +72,12 @@ def relative(path: Path) -> str:
         return str(path)
 
 
+def require_workspace() -> None:
+    """Reject operations that need the repository's files or output directories."""
+    if config.WORKSPACE_ROOT is None:
+        fail("此命令需要完整的 Situated AI 工作区。请在项目根目录运行。")
+
+
 def require_game(*, optional: bool = False) -> None:
     """在读取本机原版前核对安装身份。"""
     if optional and not config.ROOT.is_dir() and not config.GAME.is_dir():

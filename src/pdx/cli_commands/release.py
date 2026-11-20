@@ -10,7 +10,6 @@ import typer
 from rich.markup import escape
 
 from pdx import (
-    company_sectors,
     config,
     country_state,
     decision_report,
@@ -27,8 +26,9 @@ from pdx.situated import bindings as situated_bindings
 from pdx.situated import domain_coverage as situated_domain_coverage
 from pdx.situated import production_profile as situated_production_profile
 from pdx.situated import profile_configuration
+lazy from pdx import company_sectors
 
-from .common import EXIT_FAILED, console
+from .common import EXIT_FAILED, console, require_workspace
 from .common import fail as _fail
 from .common import write_json as _write_json
 
@@ -73,6 +73,7 @@ def modgen_cmd(
     ] = None,
 ) -> None:
     """从生产 TOML 和锁定原版底本生成标准 Mod；生成物禁止手改。"""
+    require_workspace()
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
@@ -137,6 +138,7 @@ def package_cmd(
     ] = None,
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
+    require_workspace()
     try:
         _production_profile(profile)
         target = distribution.package(output, configuration=_profile_configuration(configuration))
@@ -153,6 +155,7 @@ def modguard_cmd(
     ] = None,
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
+    require_workspace()
     try:
         _production_profile(profile, offline=offline)
         if offline:
@@ -220,6 +223,7 @@ def decision_audit_cmd(
     默认复用一次生产构建得到的 engineering metadata。``--offline`` 从入库生产源和
     原版声明核对静态合同，供无游戏目录的 CI 使用。AI 行为和平衡仍需实机验收。
     """
+    require_workspace()
     target = output or (config.OUT / "ci" / "decision-audit.json")
     try:
         _production_profile(profile, offline=offline)

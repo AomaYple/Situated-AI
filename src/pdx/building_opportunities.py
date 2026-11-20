@@ -21,7 +21,8 @@ import tomllib
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from . import company_sectors, config
+from . import config
+lazy from . import company_sectors
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .decision_ir import ConsumerIRBundle, WriterDecisionIR
     from .production_profile import ConsumerDeclaration
 
-DEFAULT_SOURCE = Path(__file__).resolve().parents[3] / "research/situated/v3.0.1-migration.json"
+DEFAULT_SOURCE = config.REPO / "research/situated/v3.0.1-migration.json"
 RETIREMENTS_SOURCE = DEFAULT_SOURCE.with_name("a2-retirements.json")
 _MANIFEST_SHA256 = "fcce11e045e9933c13644a361da3a448330208c0b712ac3df615eed307aa55e6"
 _RETIREMENTS_SHA256 = "ff40ad701d19c16d08b5c246a4b9f34c3b3a21bf2199e0d4ab2e95f972d7c77b"

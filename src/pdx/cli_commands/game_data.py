@@ -308,6 +308,8 @@ def ai_surface_cmd(
     # 实测过：不挡的话 `--check` 会在读 `common/defines/00_ai.txt` 时抛
     # `FileNotFoundError` 并把整个 traceback 打到用户脸上。
     # 与 `v3 modguard` / `v3 tables` 同一口径：报"前置条件缺失"，退出码 2。
+    if write or check or offline:
+        common.require_workspace()
     if write:
         _require_current_output()
     if offline:
@@ -398,6 +400,8 @@ def political_surface_cmd(
     IG/运动偏好，并保留每个条件加法的来源行。它不计算引擎最终启动概率、
     候选排序或随机抽签；这些仍需实机 Getter 或行为证据。
     """
+    if write or check:
+        common.require_workspace()
     common.require_game()
     try:
         strategies = political_surface.read_strategies(config.GAME)

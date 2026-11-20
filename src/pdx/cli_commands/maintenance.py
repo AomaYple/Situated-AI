@@ -14,7 +14,7 @@ from pdx import (
     lockfile,
 )
 
-from .common import EXIT_FAILED, console
+from .common import EXIT_FAILED, console, require_workspace
 from .common import fail as _fail
 
 
@@ -29,6 +29,7 @@ def lock_cmd(
     `Requires-Dist` 展开闭包，并核对版本约束。默认与 `requirements.lock` 对账，
     有差异时退出码为 1。Windows 开发环境可用 `--write` 更新锁文件。
     """
+    require_workspace()
     if write:
         try:
             count = lockfile.write()
@@ -83,6 +84,7 @@ def cov_cmd(
     完整覆盖率使用自适应并行预算，实际耗时见回归记录；这条**不进 CI**（CI 上没有游戏，
     覆盖率口径完全不同，理由见 `.github/workflows/ci.yml` 的文件头注释）。
     """
+    require_workspace()
     code = 0
     if not check_only:
         code = covgate.run_pytest()

@@ -16,7 +16,6 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from pdx import (
-    company_sectors,
     config,
     country_state,
     decision_intents,
@@ -38,6 +37,7 @@ from pdx.situated import (
     r2_reader_authority,
 )
 from pdx.textio import GAME_SUFFIXES, text_bytes
+lazy from pdx import company_sectors
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping

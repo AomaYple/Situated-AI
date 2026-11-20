@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from pdx import decision_rules, version_contracts
+from pdx import config, decision_rules, version_contracts
 from pdx.model import Assignment, Block
 from pdx.parser import parse_bytes
 
@@ -40,7 +40,7 @@ from .decision_ir import (
 from .domain_registry import DomainManifest, ValidatedModel
 from .schema import UnknownPolicy  # noqa: TC001
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = config.REPO
 DECLARATION = ROOT / "mod" / "decisions" / "architecture_1152.toml"
 
 

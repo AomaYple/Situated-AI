@@ -144,6 +144,8 @@ def analyze_cmd(
                 _fail(f"现场研究构建失败：{exc}", EXIT_FAILED)
             console.print(f"[green]安装研究目录已写入[/] {escape(str(marker.parent))}")
         return
+    if write:
+        common.require_workspace()
     common.require_game()
     started = time.perf_counter()
 
@@ -446,6 +448,13 @@ def information_catalog_cmd(
             "[red]--candidate-dispositions-output 需要 --candidate-metadata 或 --candidate-production[/]"
         )
         raise typer.Exit(EXIT_USAGE)
+    if (
+        output is None
+        or consumer_matrix_output is None
+        or (localization and localization_keys_output is None)
+        or candidate_production
+    ):
+        common.require_workspace()
     target = output or (config.OUT_GAME / "information-catalog.json")
     matrix_target = consumer_matrix_output or (config.OUT_GAME / "consumer-matrix.json")
     coverage_target = candidate_coverage_output or target.with_name("candidate-coverage.json")

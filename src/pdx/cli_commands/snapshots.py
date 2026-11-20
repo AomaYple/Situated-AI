@@ -18,7 +18,7 @@ from pdx import (
 )
 
 from . import common
-from .common import EXIT_FAILED, console
+from .common import EXIT_FAILED, console, require_workspace
 from .common import READ_ERRORS as _READ_ERRORS
 from .common import fail as _fail
 from .common import relative as _relative
@@ -55,6 +55,7 @@ def snap_create(
     将本地化条目压缩为计数与指纹，便于随仓库分发和比较版本变化。
     实际体积和条目数取决于当前游戏版本，以生成结果为准。
     """
+    require_workspace()
     common.require_game()
     snap = snapshot.build(compact=compact, verbose=True)
     target = label or snap.version_label.replace("/", "-")
@@ -85,6 +86,7 @@ def snap_create(
 
 def snap_list() -> None:
     """列出已有快照及其规模。"""
+    require_workspace()
     paths = snapshot.list_snapshots()
     if not paths:
         console.print("[yellow]尚无快照。先运行 `v3 snapshot create`。[/]")
@@ -135,6 +137,7 @@ def snap_diff(
     检测到变更**不算失败**（退出码仍为 0）—— 变更是这个命令要报告的事实，
     不是错误。快照文件不存在时退出码 2。
     """
+    require_workspace()
     a_path = snapshot.snapshot_path(older)
     b_path = snapshot.snapshot_path(newer)
     for path in (a_path, b_path):
@@ -239,6 +242,7 @@ def snap_verify() -> None:
 
     不稳定就退出码 1 —— 快照一抖，diff 里全是噪声，整个机制失去意义。
     """
+    require_workspace()
     common.require_game()
     console.print("构建快照两次并比较 …")
     first = snapshot.build()

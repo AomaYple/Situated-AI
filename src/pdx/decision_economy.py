@@ -12,9 +12,11 @@ import hashlib
 import math
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+lazy from pathlib import Path
 
-SOURCE = Path(__file__).parents[2] / "mod" / "decisions" / "economy.toml"
+from pdx import config
+
+SOURCE = config.REPO / "mod" / "decisions" / "economy.toml"
 
 
 @dataclass(frozen=True, slots=True)

@@ -193,8 +193,23 @@ MOD_ID = "situated-ai"
 #: Mod 脚本资源的命名空间前缀。它不再决定启动器 Mod ID。
 NAMESPACE_PREFIX = "sitai_"
 
-#: 本仓库根目录（tools/ 的上一级）
-REPO = Path(__file__).resolve().parents[2]
+
+def _workspace_root(source_root: Path, working_directory: Path) -> Path | None:
+    """Find the development checkout or the project root used by an installed wheel."""
+    for root in (source_root, working_directory):
+        if (
+            (root / "pyproject.toml").is_file()
+            and (root / "src/pdx/config.py").is_file()
+            and (root / "mod/decisions").is_dir()
+            and (root / "research").is_dir()
+        ):
+            return root
+    return None
+
+
+_SOURCE_ROOT = Path(__file__).resolve().parents[2]
+WORKSPACE_ROOT = _workspace_root(_SOURCE_ROOT, Path.cwd())
+REPO = WORKSPACE_ROOT or _SOURCE_ROOT
 
 #: 文档与资料目录
 DOCS = REPO / "docs" / CURRENT_CONTRACT.docs_subdir

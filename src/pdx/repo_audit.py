@@ -12,7 +12,9 @@ import subprocess
 from collections import Counter
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[2]
+from pdx import config
+
+REPO = config.REPO
 CHUNK_SIZE = 64 * 1024
 BINARY_SUFFIXES = frozenset(
     [

@@ -6,9 +6,11 @@ observations identify the reviewed binary; runtime behavior remains unknown.
 
 from __future__ import annotations
 
-from pathlib import Path
+lazy from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+from pdx import config
+
+ROOT = config.REPO
 EXE_SHA256 = "57c4950e9f1046d61729e8faeedbbdbb7aa30ff2a45788217285eb735491ad36"
 EXE_BYTES = 100_280_440
 MANIFESTS = {

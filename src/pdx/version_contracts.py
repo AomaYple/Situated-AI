@@ -161,13 +161,9 @@ def research_path(category: str, filename: str, version: str | None = None) -> P
     relative = Path(filename)
     if relative.is_absolute() or ".." in relative.parts:
         raise ValueError(f"版本证据路径越界：{filename!r}")
-    return (
-        Path(__file__).resolve().parents[2]
-        / "research"
-        / category
-        / active_version(version)
-        / relative
-    )
+    from . import config  # noqa: PLC0415 - config imports the version contract.
+
+    return config.RESEARCH / category / active_version(version) / relative
 
 
 def journal_completion(journal: Block, *, effect: bool = False) -> Block:
