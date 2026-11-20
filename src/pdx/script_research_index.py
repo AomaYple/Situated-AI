@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import sqlite3
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Set
     from typing import Any
 
     from .script_research import ScriptDefinition, ScriptReference
@@ -17,45 +17,61 @@ if TYPE_CHECKING:
 def create_tables(connection: sqlite3.Connection) -> None:
     # Source hash, path and stable ordinal address remain in the shared occurrence row.
     connection.executescript("""
+        CREATE TABLE script_sources(
+            source TEXT PRIMARY KEY REFERENCES sources(path), definition_kind TEXT
+        );
+        CREATE INDEX script_source_definition_kind ON script_sources(definition_kind,source);
         CREATE TABLE script_definitions(
             occurrence_id TEXT PRIMARY KEY REFERENCES occurrences(id),
             kind TEXT NOT NULL, name TEXT NOT NULL
         );
-        CREATE INDEX script_definition_lookup ON script_definitions(name,kind,occurrence_id);
+        CREATE INDEX script_definition_lookup ON script_definitions(name,occurrence_id);
         CREATE TABLE script_references(
             occurrence_id TEXT REFERENCES occurrences(id) NOT NULL,
             ordinal INTEGER NOT NULL, line INTEGER NOT NULL, name TEXT,
             requested_kind TEXT, syntax TEXT NOT NULL, status TEXT NOT NULL,
+            target_definition_sources_incomplete INTEGER NOT NULL,
             PRIMARY KEY(occurrence_id,ordinal)
         );
-        CREATE INDEX script_reference_lookup ON script_references(name,requested_kind,occurrence_id);
+        CREATE INDEX script_reference_lookup ON script_references(name,occurrence_id,ordinal);
     """)
+
+
+def add_source(connection: sqlite3.Connection, source: str, definition_kind: str | None) -> None:
+    connection.execute("INSERT INTO script_sources VALUES(?,?)", (source, definition_kind))
 
 
 def add_source_rows(
     connection: sqlite3.Connection,
     definitions: Iterable[ScriptDefinition],
     references: Iterable[ScriptReference],
+    incomplete_definition_kinds: Set[str],
     occurrence_id: Callable[[str, tuple[int, ...]], str],
 ) -> None:
     connection.executemany(
         "INSERT INTO script_definitions VALUES(?,?,?)",
         ((occurrence_id(row.source, row.address), row.kind, row.name) for row in definitions),
     )
+
+    def reference_row(
+        ordinal: int, row: ScriptReference
+    ) -> tuple[str, int, int, str | None, str | None, str, str, bool]:
+        incomplete = row.requested_kind in incomplete_definition_kinds
+        status = "unknown" if incomplete and row.status in {"candidate", "missing"} else row.status
+        return (
+            occurrence_id(row.source, row.address),
+            ordinal,
+            row.line,
+            row.name,
+            row.requested_kind,
+            row.syntax,
+            status,
+            incomplete,
+        )
+
     connection.executemany(
-        "INSERT INTO script_references VALUES(?,?,?,?,?,?,?)",
-        (
-            (
-                occurrence_id(row.source, row.address),
-                ordinal,
-                row.line,
-                row.name,
-                row.requested_kind,
-                row.syntax,
-                row.status,
-            )
-            for ordinal, row in enumerate(references)
-        ),
+        "INSERT INTO script_references VALUES(?,?,?,?,?,?,?,?)",
+        (reference_row(ordinal, row) for ordinal, row in enumerate(references)),
     )
 
 
@@ -107,8 +123,52 @@ def query_symbol(
     }
 
 
+def query_source(
+    connection: sqlite3.Connection,
+    source: str,
+    *,
+    limit: int,
+    after: tuple[str, int] = ("", -1),
+) -> dict[str, object]:
+    state = connection.execute(
+        """SELECT s.parse_status,ss.source AS scanned
+           FROM sources s LEFT JOIN script_sources ss ON s.path=ss.source WHERE s.path=?""",
+        (source,),
+    ).fetchone()
+    if state is None:
+        status = "unknown_source"
+    elif state["scanned"] is None:
+        status = "not_attempted"
+    else:
+        status = state["parse_status"]
+    rows = connection.execute(
+        """SELECT r.*,o.source,o.source_sha256,o.address,o.path,o.parse_status
+           FROM occurrences o JOIN script_references r ON o.id=r.occurrence_id
+           WHERE o.source=? AND (r.occurrence_id,r.ordinal)>(?,?)
+           ORDER BY r.occurrence_id,r.ordinal LIMIT ?""",
+        (source, *after, limit),
+    )
+    return {"source": source, "status": status, "references": [_location(row) for row in rows]}
+
+
+def incomplete_definition_sources(connection: sqlite3.Connection) -> list[dict[str, object]]:
+    return [
+        dict(row)
+        for row in connection.execute(
+            """SELECT ss.definition_kind,s.path AS source,s.sha256,s.parse_status
+               FROM script_sources ss JOIN sources s ON s.path=ss.source
+               WHERE ss.definition_kind IS NOT NULL AND s.parse_status<>'complete'
+               ORDER BY ss.definition_kind,s.path"""
+        )
+    ]
+
+
 def _location(row: sqlite3.Row) -> dict[str, Any]:
     location = dict(row)
     location["address"] = json.loads(location["address"])
     location["path"] = json.loads(location["path"])
+    if "target_definition_sources_incomplete" in location:
+        location["target_definition_sources_incomplete"] = bool(
+            location["target_definition_sources_incomplete"]
+        )
     return location

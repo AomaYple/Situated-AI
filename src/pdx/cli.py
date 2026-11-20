@@ -449,6 +449,9 @@ def research_query_cmd(
     source: Annotated[list[str] | None, typer.Option(help="来源相对路径，可重复")] = None,
     key: Annotated[str | None, typer.Option(help="精确结构键")] = None,
     symbol: Annotated[list[str] | None, typer.Option(help="脚本符号名称，可重复")] = None,
+    script_references: Annotated[
+        bool, typer.Option("--script-references", help="包括 --source 所选文件的全部脚本引用候选")
+    ] = False,
     reference_after: Annotated[
         str | None, typer.Option(help="引用续页位置，格式为 occurrence_id:ordinal")
     ] = None,
@@ -467,9 +470,11 @@ def research_query_cmd(
     """核对完整研究目录，返回覆盖统计和所选位置的 JSON。"""
     if source_details and not source:
         _fail("--source-details 须提供 --source")
+    if script_references and not source:
+        _fail("--script-references 须提供 --source")
     if reference_after is not None:
-        if not symbol:
-            _fail("--reference-after 须提供 --symbol")
+        if not (symbol or script_references):
+            _fail("--reference-after 须提供 --symbol 或 --script-references")
         try:
             symbol_cursor = script_research_index.reference_cursor(reference_after)
         except ValueError as exc:
@@ -512,20 +517,29 @@ def research_query_cmd(
                     path: publication.index.source_metadata_in_connection(connection, path)
                     for path in source
                 }
-            if symbol:
-                result["script_symbols"] = (
-                    {"status": "historical_locators_only", "queries": []}
-                    if publication.implementation_status == "historical_locators"
-                    else {
+            if symbol or script_references:
+                if publication.implementation_status == "historical_locators":
+                    result["script_symbols"] = {"status": "historical_locators_only", "queries": []}
+                else:
+                    result["script_symbols"] = {
                         "status": "static_candidates",
+                        "incomplete_definition_sources": (
+                            script_research_index.incomplete_definition_sources(connection)
+                        ),
                         "queries": [
                             script_research_index.query_symbol(
                                 connection, name, limit=limit, after=symbol_cursor
                             )
-                            for name in symbol
+                            for name in (symbol or [])
+                        ],
+                        "source_references": [
+                            script_research_index.query_source(
+                                connection, path, limit=limit, after=symbol_cursor
+                            )
+                            for path in (source or [])
+                            if script_references
                         ],
                     }
-                )
     except (OSError, ValueError, sqlite3.Error) as exc:
         _fail(f"研究目录读取失败：{exc}", EXIT_FAILED)
     typer.echo(json.dumps(result, ensure_ascii=False, indent=2))

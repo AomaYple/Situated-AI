@@ -55,7 +55,12 @@ from .model import Assignment, Block, ParseError, Scalar
 from .parser import parse_bytes
 from .research_coverage import FormatStructureEvidence
 from .scan import FileEntry, walk_files
-from .script_research import definition_kind, iter_definitions, iter_references
+from .script_research import (
+    definition_kind,
+    iter_definitions,
+    iter_references,
+    supports_references,
+)
 from .shader_structure import read_shader_structure
 from .structured_csv import parse_map_table
 from .structured_json import parse_json
@@ -854,6 +859,14 @@ def _developer_xml_elements(
     return elements, None
 
 
+def _research_pdx_script(suffix: str, category: str, *, pdx_resource: bool = False) -> bool:
+    return category != "documentation" and (
+        suffix in config.SCRIPTABLE_SUFFIXES
+        or suffix in {".dna", ".entity", ".gfx", ".dlc"}
+        or pdx_resource
+    )
+
+
 def _build_research_index(
     identity: InputIdentity, inventory: InputInventory, index_path: Path, raw_root: Path | None
 ) -> ResearchInformationCatalog:
@@ -872,15 +885,24 @@ def _build_research_index(
         )
 
     names: dict[str, Counter[str]] = defaultdict(Counter)
+    definition_sources: dict[str, str] = {}
+    incomplete_definition_kinds: set[str] = set()
     for record in inventory.records:
-        if record.read_status != "read" or record.sha256 is None:
+        kind = definition_kind(record.path)
+        if kind is None or not _research_pdx_script(
+            Path(record.path).suffix.casefold(), classify_path(record.path)
+        ):
             continue
-        if definition_kind(record.path) is None:
+        definition_sources[record.path] = kind
+        if record.read_status != "read" or record.sha256 is None:
+            incomplete_definition_kinds.add(kind)
             continue
         definition_raw = read(record, retain=True)
         if definition_raw is None:
             raise ValueError(f"已登记脚本定义源不可读：{record.path}")
         definition_ast = parse_bytes(definition_raw, record.path, encoding="utf-8-sig")
+        if definition_ast.parse_status != "complete":
+            incomplete_definition_kinds.add(kind)
         for definition in iter_definitions(record.path, record.sha256, definition_ast):
             names[definition.name][definition.kind] += 1
 
@@ -914,15 +936,16 @@ def _build_research_index(
             category = record.category
             map_table = relative == MAP_ADJACENCIES
             map_structure_selected = map_structure_format(record.path) is not None
-            if category == "unknown" or map_table or suffix in FLAT_PDX_RESOURCE_SUFFIXES:
+            if (
+                category == "unknown"
+                or map_table
+                or suffix in FLAT_PDX_RESOURCE_SUFFIXES
+                or supports_references(record.path)
+            ):
                 # 历史盘点的类别属于已提交原件，更新只写入派生处置。
                 category = classify_path(record.path)
             pdx_resource = resource_category is not None and category == resource_category
-            script = category != "documentation" and (
-                suffix in config.SCRIPTABLE_SUFFIXES
-                or suffix in {".dna", ".entity", ".gfx", ".dlc"}
-                or pdx_resource
-            )
+            script = _research_pdx_script(suffix, category, pdx_resource=pdx_resource)
             localization = category == "localization"
             developer_text = relative in DEVELOPER_TEXT_PATHS
             document = category == "documentation" and (
@@ -1186,6 +1209,8 @@ def _build_research_index(
             )
             dispositions.append(row)
             writer.add_source(record, row)
+            if script and supports_references(record.path):
+                writer.add_script_source(record.path, definition_sources.get(record.path))
             if header is not None:
                 writer.add_details(record.path, binary_header=header)
             if raw is not None and record.sha256 is not None:
@@ -1224,6 +1249,7 @@ def _build_research_index(
                 writer.add_script_rows(
                     iter_definitions(record.path, record.sha256, parsed),
                     iter_references(record.path, record.sha256, parsed, names),
+                    incomplete_definition_kinds,
                 )
                 if raw_root is None:
                     continue

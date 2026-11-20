@@ -271,6 +271,20 @@ def _key_reference(
     return None
 
 
+def supports_references(path: str) -> bool:
+    """Return whether this path participates in the declared script reference scan."""
+    return _supports_references(PurePosixPath(path).parts)
+
+
+def _supports_references(parts: tuple[str, ...]) -> bool:
+    return (
+        len(parts) >= 3
+        and parts[0] in CONTENT_ROOTS
+        and parts[1] in {"common", "events", "history"}
+        and parts[-1].endswith(".txt")
+    )
+
+
 def iter_references(
     path: str,
     source_sha256: str,
@@ -280,13 +294,7 @@ def iter_references(
     """沿单个源的 AST 顺序保留命名候选，状态只反映已登记的静态定义。"""
     parts = PurePosixPath(path).parts
     parse_status = parsed.parse_status
-    if (
-        parse_status == "failed"
-        or len(parts) < 3
-        or parts[0] not in CONTENT_ROOTS
-        or parts[1] not in {"common", "events", "history"}
-        or not parts[-1].endswith(".txt")
-    ):
+    if parse_status == "failed" or not _supports_references(parts):
         return
     script_kind = _definition_kind(parts)
     category = parts[1:3]

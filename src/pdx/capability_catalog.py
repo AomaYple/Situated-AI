@@ -26,7 +26,7 @@ from .references import SCRIPT_SYMBOL_CATEGORIES, script_symbol_references
 from .structured_json import JsonDocument, JsonResult, load_payload, parse_json
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Iterable, Iterator, Mapping, Set
     from typing import Any
 
     from .input_contracts import InputIdentity, InputInventory, InventoryRecord, ParseStatus
@@ -452,13 +452,17 @@ class OccurrenceWriter:
             "UPDATE source_details SET details=? WHERE source=?", (_json(details), source)
         )
 
+    def add_script_source(self, source: str, definition_kind: str | None) -> None:
+        script_research_index.add_source(self.connection, source, definition_kind)
+
     def add_script_rows(
         self,
         definitions: Iterable[ScriptDefinition],
         references: Iterable[ScriptReference],
+        incomplete_definition_kinds: Set[str],
     ) -> None:
         script_research_index.add_source_rows(
-            self.connection, definitions, references, _occurrence_id
+            self.connection, definitions, references, incomplete_definition_kinds, _occurrence_id
         )
 
     def add(

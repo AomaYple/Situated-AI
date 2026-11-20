@@ -545,6 +545,73 @@ def test_research_query_returns_script_definitions_and_paged_references(
         assert database.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
+def test_research_query_tracks_definition_scope_and_unnamed_references(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    partial = "game/common/scripted_triggers/partial.txt"
+    readme = "game/common/scripted_triggers/README.txt"
+    event = "game/events/research_scope.txt"
+    for path, raw in {
+        partial: b"known_trigger = { always = yes }\nbroken_trigger = {",
+        readme: b"fake_trigger = { always = yes }",
+        event: (
+            b"example.1 = { trigger = { known_trigger = yes fake_trigger = yes "
+            b"scripted_trigger:missing_trigger = yes } "
+            b"immediate = { add_modifier = { name = $DYNAMIC$ } } }"
+        ),
+    }.items():
+        target = live_installation / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+
+    output = tmp_path / "incomplete-symbol-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "research-query",
+            str(output),
+            "--source",
+            event,
+            "--source",
+            readme,
+            "--source",
+            "game/events/missing.txt",
+            "--source",
+            _STRATEGY_ANCHOR,
+            "--symbol",
+            "known_trigger",
+            "--symbol",
+            "fake_trigger",
+            "--symbol",
+            "missing_trigger",
+            "--script-references",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.stdout)["script_symbols"]
+    assert [row["source"] for row in report["incomplete_definition_sources"]] == [partial]
+    known, fake, missing = report["queries"]
+    assert known["definition_count"] == 1
+    assert known["definitions"][0]["source"] == partial
+    assert known["references"][0]["status"] == "unknown"
+    assert known["references"][0]["target_definition_sources_incomplete"]
+    assert fake["definition_count"] == 0
+    assert fake["references"] == []
+    assert missing["references"][0]["status"] == "unknown"
+    assert missing["references"][0]["target_definition_sources_incomplete"]
+    event_refs, readme_refs, absent_refs, empty_refs = report["source_references"]
+    assert event_refs["status"] == "complete"
+    assert any(
+        row["name"] is None and row["status"] == "dynamic" for row in event_refs["references"]
+    )
+    assert readme_refs == {"source": readme, "status": "not_attempted", "references": []}
+    assert absent_refs["status"] == "unknown_source"
+    assert empty_refs["status"] == "complete"
+    assert empty_refs["references"] == []
+
+
 def test_analyze_installation_refuses_drift_after_indexing(
     tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
