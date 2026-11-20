@@ -62,7 +62,7 @@ def requires_python(root: Path | None = None) -> str:
 
 
 def current_python_version() -> tuple[int, int, int]:
-    """当前生成器解释器的稳定三段版本。"""
+    """当前生成器解释器的三段版本号。"""
     return (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
 
 
@@ -70,9 +70,18 @@ def validate_python_version(
     actual: tuple[int, int, int] | None = None,
     requirement: str | None = None,
 ) -> None:
-    """拒绝不满足项目合同的解释器，避免生成不可用的锁。"""
+    """核对当前正式 CPython，或核对锁头记录的三段版本号。"""
     version = current_python_version() if actual is None else actual
     expected = requires_python() if requirement is None else requirement
+    if actual is None and (
+        sys.implementation.name != "cpython" or sys.version_info.releaselevel != "final"
+    ):
+        implementation = sys.implementation.name
+        release = sys.version_info.releaselevel
+        current = ".".join(map(str, version))
+        raise RuntimeError(
+            f"要求 CPython 正式版 {expected}；实际解释器为 {implementation} {current} {release}"
+        )
     if SpecifierSet(expected).contains(".".join(map(str, version)), prereleases=True):
         return
     actual_text = ".".join(map(str, version))
@@ -162,6 +171,7 @@ def resolve() -> dict[str, str]:
 def render(pinned: dict[str, str]) -> str:
     """把闭包渲染成锁文件文本（含头部说明）。"""
     requirement = requires_python()
+    validate_python_version(requirement=requirement)
     interpreter = current_python_version()
     lines = [
         HEADER,

@@ -3,16 +3,42 @@
 from __future__ import annotations
 
 import hashlib
+from itertools import pairwise
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from pdx.situated.native_catalog import build_native_catalog
+from pdx.situated.native_catalog import _cycles, build_native_catalog
 from pdx.situated.version_inventory import canonical_json
 from pdx.version_contracts import CURRENT_VERSION
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def test_cycle_detection_is_iterative_and_preserves_component_evidence() -> None:
+    chain = [f"chain-{index}" for index in range(1_500)]
+    definitions = [
+        {"symbol_id": name, "name": name} for name in ("a", "b", "self", "observational", *chain)
+    ]
+
+    def reference(source: str, target: str, status: str = "resolved") -> dict[str, Any]:
+        return {"caller_symbol_id": source, "resolved_to": [target], "status": status}
+
+    references = [
+        reference("a", "b"),
+        reference("b", "a"),
+        reference("a", "self", "partial_source"),
+        reference("self", "self", "partial_source"),
+        reference("observational", "observational", "observational"),
+        *(reference(source, target) for source, target in pairwise(chain)),
+    ]
+    actual = _cycles(definitions, references)
+    assert actual == _cycles(definitions[::-1], references[::-1])
+    assert {tuple(row["symbols"]): row["evidence_completeness"] for row in actual} == {
+        ("a", "b"): "complete_within_declared_sources",
+        ("self",): "partial",
+    }
 
 
 def _input(root: Path, sources: dict[str, str]) -> dict[str, Any]:

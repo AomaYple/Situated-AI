@@ -43,7 +43,8 @@ import pytest
 from conftest import NEEDS_GAME, configure_current_identity
 from typer.testing import CliRunner
 
-from pdx import analyze, cli, config, decisions, verify
+from pdx import analyze, cli, config, decisions, engine_log, verify
+from pdx.cli_commands import common
 from pdx.version_contracts import CURRENT_VERSION, ENVIRONMENT_VARIABLE
 
 pytestmark = pytest.mark.cli
@@ -423,7 +424,7 @@ def test_crosscheck_与引擎日志一致(tmp_path, monkeypatch) -> None:
 def test_crosscheck_真错配仍判红_阴性对照(monkeypatch) -> None:
     """**阴性对照**：真错配必须仍然判红，证明"把这一档改成不可核对"没把判据放宽。
 
-    夹具**离线、确定性**：把 ``cli.engine_log`` 的日志读取与核对整条换成构造对象，
+    夹具**离线、确定性**：把 ``engine_log`` 的日志读取与核对整条换成构造对象，
     所以不依赖本机有没有日志、也不需要游戏。夹具只造 ``cross_check`` 真能产生的状态
     （``overridden_files`` 由行数派生，见下面 ``_report`` 的说明）。四个方向各钉一次
     （形状取自 ``test_engine_log_offline.py`` 的用例）：
@@ -477,18 +478,18 @@ def test_crosscheck_真错配仍判红_阴性对照(monkeypatch) -> None:
     claim = engine_log.EngineClaim(
         kind="token_at", detail="", file_rel="gui/panel.gui", line=2, token="KEY_HERE"
     )
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
-    monkeypatch.setattr(cli.engine_log, "parse_logs", lambda: ([claim], "1.14.4"))
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(engine_log, "parse_logs", lambda: ([claim], "1.14.4"))
     # 覆盖来源要给得出（"不可核对"那一档的输出要求写出它）。
     monkeypatch.setattr(
-        cli.engine_log,
+        engine_log,
         "build_override_map",
         lambda: {"gui/panel.gui": config.GAME / "gui" / "panel.gui"},
     )
 
     # ① 行数相同 ⇒ 行号可比 ⇒ 真错配，必须判红。
     monkeypatch.setattr(
-        cli.engine_log, "cross_check", lambda *_args, **_kwargs: _report({"gui/panel.gui": (2, 2)})
+        engine_log, "cross_check", lambda *_args, **_kwargs: _report({"gui/panel.gui": (2, 2)})
     )
     r = _invoke("crosscheck")
     assert r.exit_code == 1, f"行号可比的真错配没判红：\n{r.output}"
@@ -498,7 +499,7 @@ def test_crosscheck_真错配仍判红_阴性对照(monkeypatch) -> None:
 
     # ② 行数不同 ⇒ 行号不可比 ⇒ 不可核对，退出码 3（不是 1）。
     monkeypatch.setattr(
-        cli.engine_log, "cross_check", lambda *_args, **_kwargs: _report({"gui/panel.gui": (2, 1)})
+        engine_log, "cross_check", lambda *_args, **_kwargs: _report({"gui/panel.gui": (2, 1)})
     )
     r3 = _invoke("crosscheck")
     assert r3.exit_code == 3, f"行号不可比却没报不可核对：\n{r3.output}"
@@ -508,7 +509,7 @@ def test_crosscheck_真错配仍判红_阴性对照(monkeypatch) -> None:
     # ③ 前缀关系（引擎报的 token 是同一行上更长 token 的前缀）⇒ 断言成立，
     #    既不判红也不用报不可核对 —— 三态只动"行号可不可比"，不碰"断言成不成立"。
     monkeypatch.setattr(
-        cli.engine_log,
+        engine_log,
         "cross_check",
         lambda *_args, **_kwargs: _report({"gui/panel.gui": (2, 2)}, prefix_on_line=True),
     )
@@ -541,7 +542,7 @@ def test_crosscheck_真错配仍判红_阴性对照(monkeypatch) -> None:
     #    （这正是改前分析器与命令层结论相反的那一处：夹具的 line_counts 两值相等，
     #    旧命令层判据 `line_counts.get(rel, (0, 0))` 会判「真错配」）。
     monkeypatch.setattr(
-        cli.engine_log,
+        engine_log,
         "cross_check",
         lambda *_args, **_kwargs: _report(
             {"gui/panel.gui": (2, 2)}, missing=True, tokens_anywhere=None
@@ -609,7 +610,7 @@ def test_crosscheck_行号不可比不判红_真报告阴性对照(tmp_path, mon
 
 def test_crosscheck_无日志时返回2(tmp_path, monkeypatch) -> None:
     """日志不是仓库的一部分，缺失是正常情况 —— 必须报前置条件缺失而非假装通过。"""
-    monkeypatch.setattr(cli.engine_log, "default_log_dir", lambda: tmp_path / "nope")
+    monkeypatch.setattr(engine_log, "default_log_dir", lambda: tmp_path / "nope")
     r = _invoke("crosscheck")
     assert r.exit_code == 2, r.output
     assert "找不到引擎日志" in r.output
@@ -619,7 +620,7 @@ def test_crosscheck_无日志时返回2(tmp_path, monkeypatch) -> None:
 def test_check_outputs_缺产物时返回2(tmp_path, monkeypatch) -> None:
     """产物不存在必须是 2 并给出可操作的提示，而不是抛裸 traceback。"""
     monkeypatch.setattr(config, "OUT_GAME", tmp_path / "nope")
-    monkeypatch.setattr(cli.config, "OUT_GAME", tmp_path / "nope")
+    monkeypatch.setattr(config, "OUT_GAME", tmp_path / "nope")
     r = _invoke("check-outputs")
     assert r.exit_code == 2, r.output
     assert "缺少产物" in r.output or "analyze" in r.output
@@ -692,9 +693,9 @@ def test_check_outputs_现场原版分析产物通过(tmp_path, monkeypatch) -> 
     monkeypatch.setattr(config, "OUT_MODS", tmp_path / "mods")
     monkeypatch.setattr(config, "OUT_CROSS", tmp_path / "cross")
     monkeypatch.setattr(config, "REPORTS", tmp_path / "reports")
-    monkeypatch.setattr(cli.analyze, "GAME_OUT", config.OUT_GAME)
-    monkeypatch.setattr(cli.analyze, "MODS_OUT", config.OUT_MODS)
-    monkeypatch.setattr(cli.analyze, "CROSS_OUT", config.OUT_CROSS)
+    monkeypatch.setattr(analyze, "GAME_OUT", config.OUT_GAME)
+    monkeypatch.setattr(analyze, "MODS_OUT", config.OUT_MODS)
+    monkeypatch.setattr(analyze, "CROSS_OUT", config.OUT_CROSS)
     claims = [claim for claim in verify.CLAIMS if claim.scope == "native_installation"]
     assert claims
     monkeypatch.setattr(verify, "CLAIMS", claims)
@@ -713,7 +714,7 @@ def test_ai_surface_没有游戏时返回2(tmp_path, monkeypatch) -> None:
     `FileNotFoundError`，把 traceback 打到用户脸上（退出码 1），
     与 `v3 modguard` / `v3 tables` 的"缺前置条件是 2、不是失败"口径不一致。
     """
-    monkeypatch.setattr(cli.config, "GAME", tmp_path / "nope")
+    monkeypatch.setattr(config, "GAME", tmp_path / "nope")
     r = _invoke("ai-surface", "--check")
     assert r.exit_code == 2, r.output
     assert "前置条件缺失" in r.output
@@ -798,12 +799,12 @@ def test_snapshot_list_列出快照() -> None:
 
 
 def test_snapshot_create_输出口径不互相覆盖(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from pdx import cli as cli_module
     from pdx import snapshot as snapshot_module
+    from pdx.cli_commands import snapshots
 
     monkeypatch.setattr(snapshot_module, "SNAPSHOT_DIR", tmp_path)
-    full = cli_module._snapshot_output_path("probe", compact=False)
-    compact = cli_module._snapshot_output_path("probe", compact=True)
+    full = snapshots._snapshot_output_path("probe", compact=False)
+    compact = snapshots._snapshot_output_path("probe", compact=True)
     assert full == tmp_path / "probe.json"
     assert compact == tmp_path / "probe.compact.json"
     assert full != compact

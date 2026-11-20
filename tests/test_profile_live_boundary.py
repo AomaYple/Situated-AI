@@ -19,6 +19,7 @@ from test_compatibility_live_boundary import complete_inputs, standard_tree  # n
 from typer.testing import CliRunner
 
 from pdx import cli, config, distribution, version_contracts
+from pdx.cli_commands import release
 from pdx.situated import r2_reader_authority as authority
 
 
@@ -29,22 +30,22 @@ def test_cli_offline_profile_asserts_current_without_installation(monkeypatch, s
     else:
         monkeypatch.setenv("V3_CONTRACT_PROFILE", selected)
     with pytest.raises(ValueError, match="合同版本"):
-        cli._production_profile("1.15.0", offline=True)
+        release._production_profile("1.15.0", offline=True)
     if selected is None:
-        cli._production_profile(None, offline=True)
+        release._production_profile(None, offline=True)
     else:
         with pytest.raises(ValueError, match="合同版本"):
-            cli._production_profile(None, offline=True)
+            release._production_profile(None, offline=True)
 
 
 def test_fresh_cli_does_not_allow_explicit_current_to_hide_unknown_environment():
     environment = {**os.environ, "V3_CONTRACT_PROFILE": "unknown"}
     code = (
-        "from pdx import cli\n"
+        "from pdx.cli_commands import release\n"
         "from pdx.version_contracts import CURRENT_VERSION\n"
         "for profile in (None, CURRENT_VERSION):\n"
         "    try:\n"
-        "        cli._production_profile(profile, offline=True)\n"
+        "        release._production_profile(profile, offline=True)\n"
         "    except ValueError as error:\n"
         "        assert '合同版本' in str(error)\n"
         "    else:\n"

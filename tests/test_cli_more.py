@@ -20,6 +20,7 @@ from _helpers import run_cli as _run
 from conftest import NEEDS_GAME, configure_current_identity
 
 from pdx import config, docgen, snapshot, verify
+from pdx.cli_commands import common
 from pdx.doc_tables import TableSpec
 from pdx.version_contracts import CURRENT_VERSION
 
@@ -188,6 +189,48 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, state) -> None:
         assert result.exit_code == 0, result.output
         assert "0 处需要改" in result.output
         assert "全部一致" in result.output
+
+
+@pytest.mark.parametrize("failure", ["bad-table", "bad-marker", "claim-drift", None])
+def test_refresh_prevalidates_all_documents(tmp_path, monkeypatch, failure) -> None:
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(config, "docs_root", lambda: tmp_path)
+    first = tmp_path / "a.md"
+    last = tmp_path / "z.md"
+    first.write_text(
+        "计数 1<!--claim:known.count-->。\n\n| 键 | 数值 |\n| --- | --- |\n| a | 1 |\n",
+        encoding="utf-8",
+    )
+    last.write_text(
+        ("同一计数 3<!--claim:unknown.count-->。\n" if failure == "bad-marker" else "")
+        + "| 键 | 数值 |\n"
+        + ("缺少分隔行\n" if failure == "bad-table" else "| --- | --- |\n")
+        + "| z | 1 |\n",
+        encoding="utf-8",
+    )
+    first_spec = TableSpec("first", "| 键 | 数值 |", lambda: ["| a | 2 |"])
+    last_spec = TableSpec("last", "| 键 | 数值 |", lambda: ["| z | 2 |"])
+    monkeypatch.setattr(
+        docgen,
+        "targets",
+        lambda: (docgen.DocTarget(first, (first_spec,)), docgen.DocTarget(last, (last_spec,))),
+    )
+    claim = verify.Claim("known.count", first.name, "计数", "fixture", "", 2)
+    monkeypatch.setattr(verify, "CLAIMS", [claim])
+    monkeypatch.setitem(
+        verify._CHECKS, "fixture", lambda _arg: 1 if failure == "claim-drift" else 2
+    )
+
+    before = first.read_bytes(), last.read_bytes()
+    result = _run("refresh")
+    if failure:
+        assert result.exit_code == (2 if failure == "bad-table" else 1), result.output
+        assert (first.read_bytes(), last.read_bytes()) == before
+    else:
+        assert result.exit_code == 0, result.output
+        assert "2<!--claim:known.count-->" in first.read_text(encoding="utf-8")
+        assert "| a | 2 |" in first.read_text(encoding="utf-8")
+        assert "| z | 2 |" in last.read_text(encoding="utf-8")
 
 
 def test_verify_fix_在一致时早退() -> None:

@@ -14,15 +14,12 @@ import time
 import tracemalloc
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING
 
 import psutil
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
-
-P = ParamSpec("P")
-T = TypeVar("T")
+    from collections.abc import Callable, Generator, Sequence
 
 
 class StageTimings:
@@ -34,7 +31,7 @@ class StageTimings:
         self.intervals: list[dict[str, object]] = []
 
     @contextmanager
-    def phase(self, name: str) -> Iterator[None]:
+    def phase(self, name: str) -> Generator[None]:
         start = self.clock() - self.started
         record: dict[str, object] = {"name": name, "start_s": start, "status": "ok"}
         try:
@@ -47,7 +44,9 @@ class StageTimings:
             record.update(end_s=end, wall_s=end - start)
             self.intervals.append(record)
 
-    def call(self, name: str, action: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
+    def call[**P, T](
+        self, name: str, action: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> T:
         with self.phase(name):
             return action(*args, **kwargs)
 

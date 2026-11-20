@@ -8,7 +8,8 @@ import zipfile
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, decisions, distribution, version_contracts
+from pdx import cli, decision_report, decisions, distribution, version_contracts
+from pdx.cli_commands import release
 from pdx.situated import network_profile, production_profile
 from pdx.situated.profile_configuration import ProfileConfiguration, load
 
@@ -64,7 +65,7 @@ def test_cli_audit_resolves_configuration_once_for_current_network(tmp_path, mon
     path = tmp_path / "profile.toml"
     path.write_text('schema=1\ncore=true\ndomains=["economy"]\nmode="policy"\n', encoding="utf-8")
     selected = load(path)
-    resolver = cli._profile_configuration
+    resolver = release._profile_configuration
     resolved = []
 
     def resolve(*args, **kwargs):
@@ -83,8 +84,8 @@ def test_cli_audit_resolves_configuration_once_for_current_network(tmp_path, mon
             ),
         }
 
-    monkeypatch.setattr(cli, "_profile_configuration", resolve)
-    monkeypatch.setattr(cli.decision_report, "source_metadata", source_metadata)
+    monkeypatch.setattr(release, "_profile_configuration", resolve)
+    monkeypatch.setattr(decision_report, "source_metadata", source_metadata)
 
     def build(metadata):
         return {
@@ -97,7 +98,7 @@ def test_cli_audit_resolves_configuration_once_for_current_network(tmp_path, mon
             "consumer_rule_count": 0,
         }
 
-    monkeypatch.setattr(cli.decision_report, "build", build)
+    monkeypatch.setattr(decision_report, "build", build)
     report_path = tmp_path / "audit.json"
     result = CliRunner().invoke(
         cli.app,

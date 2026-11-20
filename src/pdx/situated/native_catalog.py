@@ -17,6 +17,8 @@ from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
+lazy from networkx import DiGraph, strongly_connected_components
+
 from pdx.input_inventory import CONTENT_ROOTS
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
@@ -421,56 +423,31 @@ def _discover_consumers(
 def _cycles(
     definitions: list[dict[str, Any]], references: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Iterative SCC traversal avoids recursion limits on native call chains."""
+    """Report cyclic components of the resolved, non-observational call graph."""
     names = {row["symbol_id"]: row["name"] for row in definitions}
-    graph: dict[str, set[str]] = {symbol: set() for symbol in names}
-    reverse: dict[str, set[str]] = {symbol: set() for symbol in names}
+    graph: DiGraph[str] = DiGraph()
+    graph.add_nodes_from(names)
+    partial_targets: dict[str, set[str]] = defaultdict(set)
     for reference in references:
         source = reference["caller_symbol_id"]
-        if source not in graph or reference["status"] == "observational":
+        if source not in names or reference["status"] == "observational":
             continue
+        is_partial = reference["status"] == "partial_source"
         for target in reference["resolved_to"]:
-            graph[source].add(target)
-            reverse[target].add(source)
-    visited: set[str] = set()
-    order: list[str] = []
-    for origin in sorted(graph):
-        if origin in visited:
-            continue
-        stack = [(origin, False)]
-        while stack:
-            node, leaving = stack.pop()
-            if leaving:
-                order.append(node)
-            elif node not in visited:
-                visited.add(node)
-                stack.append((node, True))
-                stack.extend(
-                    (child, False)
-                    for child in sorted(graph[node], reverse=True)
-                    if child not in visited
-                )
-    visited.clear()
+            if target not in names:
+                raise KeyError(target)
+            graph.add_edge(source, target)
+            if is_partial:
+                partial_targets[source].add(target)
+
     result = []
-    for origin in reversed(order):
-        if origin in visited:
-            continue
-        members = []
-        pending = [origin]
-        while pending:
-            node = pending.pop()
-            if node in visited:
-                continue
-            visited.add(node)
-            members.append(node)
-            pending.extend(sorted(reverse[node] - visited))
-        if len(members) > 1 or origin in graph[origin]:
-            member_set = set(members)
+    for members in strongly_connected_components(graph):
+        origin = next(iter(members))
+        if len(members) > 1 or graph.has_edge(origin, origin):
             partial = any(
-                reference["status"] == "partial_source"
-                and reference["caller_symbol_id"] in member_set
-                and any(target in member_set for target in reference["resolved_to"])
-                for reference in references
+                not members.isdisjoint(partial_targets[member])
+                for member in members
+                if member in partial_targets
             )
             result.append(
                 {

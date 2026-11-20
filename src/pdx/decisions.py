@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import math
 import re
@@ -58,14 +57,11 @@ from .vanilla_index import (
     game_index,
     script_value_accessors,
 )
+lazy from . import country_state as _country_state
 
 if TYPE_CHECKING:
     from .country_state import CountryPolicy
     from .situated.profile_configuration import ProfileConfiguration
-
-
-def _country_state_module():
-    return importlib.import_module("pdx.country_state")
 
 
 _FISCAL_REFERENCE_SOURCE = "common/script_values/war_support_values.txt"
@@ -1089,8 +1085,7 @@ def source_fingerprint(
     if extensions.diplomacy_enabled:
         result["diplomacy_source_sha256"] = decision_diplomacy.load().source_sha256
     if country_policy is not None:
-        country_state = _country_state_module()
-
+        country_state = _country_state
         result.update(
             country_state_source_sha256=country_policy.source_sha256,
             country_state_generator_sha256=hashlib.sha256(
@@ -1221,7 +1216,7 @@ def metadata_payload(
 
 def attach_country_metadata(metadata: dict[str, object], country_policy: CountryPolicy) -> None:
     """Attach observations evaluated on demand by each vanilla consumer."""
-    country_state = _country_state_module()
+    country_state = _country_state
 
     state_contract = country_state.contract(country_policy)
     metadata["country_state"] = state_contract
@@ -1458,7 +1453,7 @@ def build(
             ):
                 raise ValueError(f"旧模块或全域规则与消费者适配重复写入字段：{'.'.join(path)}")
             field_owners[path] = owner
-    country_state = _country_state_module()
+    country_state = _country_state
 
     languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
     state_owned_triggers = (
@@ -1888,8 +1883,7 @@ def validate(
     """
     interfaces = set()
     if country_policy is not None:
-        country_state = _country_state_module()
-
+        country_state = _country_state
         try:
             country_state.validate(country_policy, game, snapshot=snapshot)
         except (ValueError, OSError) as exc:

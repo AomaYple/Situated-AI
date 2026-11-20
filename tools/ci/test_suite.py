@@ -691,7 +691,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--allow-concurrent", action="store_true")
     parser.add_argument("--reference", type=Path)
-    from pdx import version_contracts  # noqa: PLC0415
+    from pdx import lockfile, version_contracts  # noqa: PLC0415
 
     parser.add_argument(
         "--profile",
@@ -703,6 +703,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(raw[:split])
     try:
         version_contracts.require_current(args.profile)
+        lockfile.validate_python_version(requirement=lockfile.requires_python(ROOT))
         pytest_args = validate_pytest_args(raw[split + 1 :])
         if os.environ.get("PYTEST_ADDOPTS"):
             raise ValueError("完整验收拒绝外部 PYTEST_ADDOPTS；请显式声明诊断参数")
@@ -715,7 +716,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("完整验收拒绝外部覆盖率配置覆盖")
         if not math.isfinite(args.timeout_s) or not 0 < args.timeout_s <= 3600:
             raise ValueError("timeout-s 必须在 (0, 3600]，不得提高原验收预算")
-    except ValueError as exc:
+    except (RuntimeError, ValueError) as exc:
         parser.error(str(exc))
     out = create_run_dir(args.output_root)
     print(f"[full-acceptance] 输出目录：{out}", flush=True)

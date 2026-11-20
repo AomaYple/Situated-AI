@@ -8,7 +8,6 @@ RuleSet 输入保留历史兼容语义。没有读取依据时不生成，也不
 from __future__ import annotations
 
 import hashlib
-import importlib
 import math
 import operator
 import re
@@ -24,6 +23,7 @@ from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
+lazy from . import country_state
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -39,10 +39,6 @@ _SCOPES = frozenset({"root", "target_country", "target_state", "overlord", "inte
 _OPS = {"=": operator.eq, "<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge}
 # 静态增长护栏，不是游戏运行耗时承诺；扩大须重新冻结并测量候选。
 STATIC_BUDGET = decision_intents.STATIC_BUDGET
-
-
-def _country_state_module():
-    return importlib.import_module("pdx.country_state")
 
 
 def _finite(value: object) -> bool:
@@ -1098,7 +1094,6 @@ def patch(
     if coordination_readers:
         if country_policy is None:
             raise ValueError("协调读取器必须显式提供 country_policy")
-        country_state = _country_state_module()
         actual_triggers = set(country_state.owned_triggers(country_policy))
         supplied_triggers = actual_triggers if owned_triggers is None else set(owned_triggers)
         if (

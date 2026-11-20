@@ -9,6 +9,7 @@ import pytest
 from _helpers import run_cli
 
 from pdx import cli, snapshot, version_contracts
+from pdx.cli_commands import common, snapshots
 
 pytestmark = pytest.mark.unit
 
@@ -32,7 +33,7 @@ pytestmark = pytest.mark.unit
 def test_streamed_comparison_matches_complete_json_text(first, second):
     encoded = json.dumps(first, ensure_ascii=False, indent=1, sort_keys=True)
     other = json.dumps(second, ensure_ascii=False, indent=1, sort_keys=True)
-    assert cli._matches_json_text(first, second) is (encoded == other)
+    assert snapshots._matches_json_text(first, second) is (encoded == other)
 
 
 @pytest.mark.parametrize(
@@ -40,7 +41,7 @@ def test_streamed_comparison_matches_complete_json_text(first, second):
     [({}, {"a": []}), ({"a": []}, {"a": [], "b": []}), ({"a": ["long"]}, {"a": ["tiny"]})],
 )
 def test_streamed_comparison_checks_complete_encoded_length(first, second):
-    assert not cli._matches_json_text(first, second)
+    assert not snapshots._matches_json_text(first, second)
 
 
 @pytest.mark.parametrize("error", ["unsupported", "circular"])
@@ -53,7 +54,7 @@ def test_initial_difference_does_not_hide_later_encoding_error(error):
     with pytest.raises((TypeError, ValueError)) as complete:
         json.dumps(value, ensure_ascii=False, indent=1, sort_keys=True)
     with pytest.raises(type(complete.value), match=str(complete.value)):
-        cli._matches_json_text({"a": "other"}, value)
+        snapshots._matches_json_text({"a": "other"}, value)
 
 
 def test_first_encoding_error_takes_precedence_after_second_starts():
@@ -61,7 +62,7 @@ def test_first_encoding_error_takes_precedence_after_second_starts():
     second: dict[str, list[object]] = {"a": []}
     second["a"].append(second)
     with pytest.raises(TypeError, match="not JSON serializable"):
-        cli._matches_json_text(first, second)
+        snapshots._matches_json_text(first, second)
 
 
 @pytest.mark.parametrize("equal", [True, False])
@@ -75,7 +76,7 @@ def test_snapshot_verify_keeps_output_exit_and_original_difference_details(monke
         sections={"sample": {"names": ["first", "second" if equal else "changed"]}},
     )
     pending = iter((first, second))
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
+    monkeypatch.setattr(common, "require_game", lambda: None)
     monkeypatch.setattr(snapshot, "build", lambda: next(pending))
     expected_changes = snapshot.compare(first, second)
 
@@ -98,7 +99,7 @@ def test_snapshot_verify_propagates_encoding_error_before_difference_report(monk
 
     first = snapshot.Snapshot(sections={"a": {"name": ["unchanged"]}})
     pending = iter((first, InvalidSnapshot()))
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
+    monkeypatch.setattr(common, "require_game", lambda: None)
     monkeypatch.setattr(snapshot, "build", lambda: next(pending))
     result = run_cli("snapshot", "verify")
     assert isinstance(result.exception, TypeError)

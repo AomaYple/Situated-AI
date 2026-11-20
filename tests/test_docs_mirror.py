@@ -203,7 +203,7 @@ def test_内容改动与字节数篡改都会被抓(tmp_path: Path, monkeypatch:
 def _run_check(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, manifest: bool, mirror: bool
 ) -> int:
-    from pdx import cli
+    from pdx.cli_commands import documentation
 
     configure_current_identity(tmp_path, monkeypatch)
     research = tmp_path / "research"
@@ -221,7 +221,7 @@ def _run_check(
     )
     code = 0
     try:
-        cli.mirror_check()
+        documentation.mirror_check()
     except typer.Exit as exc:  # 一致性检查通过时 typer 不抛异常，那就是 0
         code = int(exc.exit_code or 0)
     return code
@@ -298,7 +298,7 @@ def test_清单为空时提示重新生成(monkeypatch: pytest.MonkeyPatch, tmp_
 
 def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``v3 mirror write --sync``：把原文从游戏拷到本机镜像（本机那份不入库）。"""
-    from pdx import cli
+    from pdx.cli_commands import documentation
 
     fake = _fake_roots(tmp_path, monkeypatch)
     research = tmp_path / "research"
@@ -307,7 +307,7 @@ def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.Monk
     monkeypatch.setattr(config, "GAME", fake / "game")
     monkeypatch.setattr(config, "OFFICIAL_DOCS_MIRROR", mirror)
 
-    cli.mirror_write(sync=True)
+    documentation.mirror_write(sync=True)
 
     assert (mirror / "game/common/a.md").read_bytes() == b"\xe7\x94\xb2\n"
     assert (mirror / "jomini/docs/a.md").read_bytes() == b"\xe4\xb9\x99\n"

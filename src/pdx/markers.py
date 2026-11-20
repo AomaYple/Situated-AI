@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from . import config
+from .generation_transaction import GenerationTransaction
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -159,6 +160,7 @@ def apply_fixes(
     """
     fixes: list[MarkerFix] = []
     checked = 0
+    outputs = {}
     for path in sorted(docs_dir.glob("*.md")):
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
         changed = False
@@ -199,7 +201,10 @@ def apply_fixes(
             if newline != line:
                 lines[lineno - 1] = newline
         if changed and write:
-            path.write_text("".join(lines), encoding="utf-8", newline="\n")
+            outputs[path] = "".join(lines).encode("utf-8")
+    if outputs:
+        with GenerationTransaction() as transaction:
+            transaction.replace(outputs)
     return fixes, checked
 
 

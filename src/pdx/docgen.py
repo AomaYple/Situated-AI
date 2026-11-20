@@ -43,10 +43,11 @@ from .doc_tables import (
     check_doc,
     current_rows,
     merge_rows,
-    patch_doc,
+    render_document,
     spec_key,
     split_row,
 )
+from .generation_transaction import GenerationTransaction
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -242,13 +243,30 @@ def check_all() -> list[tuple[str, int, str, str]]:
     return out
 
 
-def write_all() -> dict[str, int]:
-    """重算并写回全部生成表，返回 ``{文档名 + 表名: 行数}``。"""
-    out: dict[str, int] = {}
+def render_documents() -> tuple[dict[Path, str], dict[str, int]]:
+    """Render every target, applying all table specs for each document together."""
+    by_path: dict[Path, list[TableSpec | KeyedTableSpec]] = {}
     for target in targets():
-        for name, n in patch_doc(target.path, target.specs, write=True).items():
-            out[f"{target.name} · {name}"] = n
-    return out
+        by_path.setdefault(target.path, []).extend(target.specs)
+    documents: dict[Path, str] = {}
+    counts: dict[str, int] = {}
+    for path, specs in by_path.items():
+        documents[path], replaced = render_document(path, specs)
+        counts.update({f"{path.name} · {name}": count for name, count in replaced.items()})
+    return documents, counts
+
+
+def write_all() -> dict[str, int]:
+    """Render all generated tables and replace the changed documents together."""
+    documents, counts = render_documents()
+    changed = {}
+    for path, text in documents.items():
+        encoded = text.encode("utf-8")
+        if path.read_bytes() != encoded:
+            changed[path] = encoded
+    with GenerationTransaction() as transaction:
+        transaction.replace(changed)
+    return counts
 
 
 def render_all() -> dict[str, list[str]]:

@@ -28,7 +28,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from . import docgen
-from .doc_tables import current_rows, spec_key, write_rows
+from .doc_tables import current_rows, restore_rows, spec_key
+from .generation_transaction import GenerationTransaction
 from .snapshot import Snapshot
 from .verify import latest_compact_snapshot
 
@@ -112,7 +113,9 @@ def compare(
 def restore(recorded: dict[str, list[str]] | None = None, *, only: str = "") -> dict[str, int]:
     """按快照里的行把文档表格写回去，返回 ``{表标识: 行数}``。"""
     recorded = load_tables() if recorded is None else recorded
+    previews: dict[Path, list[str]] = {}
     out: dict[str, int] = {}
+    changed: set[Path] = set()
     for target in docgen.targets():
         if only and only not in target.name:
             continue
@@ -121,9 +124,20 @@ def restore(recorded: dict[str, list[str]] | None = None, *, only: str = "") -> 
             rows = recorded.get(key)
             if rows is None:
                 continue
-            if current_rows(target.path, spec) == rows:
-                continue
-            out[key] = write_rows(target.path, spec, rows)
+            path = target.path
+            if path not in previews:
+                previews[path] = path.read_text(encoding="utf-8").splitlines(keepends=True)
+            if restore_rows(previews[path], path, spec, rows):
+                out[key] = len(rows)
+                changed.add(path)
+    with GenerationTransaction() as transaction:
+        transaction.replace(
+            {
+                path: "".join(lines).encode("utf-8")
+                for path, lines in previews.items()
+                if path in changed
+            }
+        )
     return out
 
 

@@ -125,6 +125,16 @@ def patch_doc(
     ``write=False``（默认）只做核对：算出结果、与文档现值比对，
     但**不落盘**。调用方据此报告「有几张表需要更新」。
     """
+    rendered, replaced = render_document(doc, specs)
+    if write:
+        doc.write_text(rendered, encoding="utf-8", newline="\n")
+    return replaced
+
+
+def render_document(
+    doc: Path, specs: Sequence[TableSpec | KeyedTableSpec]
+) -> tuple[str, dict[str, int]]:
+    """Render all registered tables before the caller publishes the document."""
     lines = doc.read_text(encoding="utf-8").splitlines(keepends=True)
     replaced: dict[str, int] = {}
 
@@ -154,9 +164,7 @@ def patch_doc(
         lines[start + 2 : end] = [row + "\n" for row in want]
         replaced[spec.name] = len(want)
 
-    if write:
-        doc.write_text("".join(lines), encoding="utf-8", newline="\n")
-    return replaced
+    return "".join(lines), replaced
 
 
 def _find_header(lines: list[str], doc: Path, spec: TableSpec | KeyedTableSpec) -> int:
@@ -533,21 +541,21 @@ def current_rows(doc: Path, spec: TableSpec | KeyedTableSpec) -> list[str]:
     return lines[start + 2 : end]
 
 
-def write_rows(doc: Path, spec: TableSpec | KeyedTableSpec, rows: Sequence[str]) -> int:
-    """把 ``rows`` 写进文档里该表的位置（行数可增可减），返回写入行数。
-
-    `v3 tables --offline --write` 用它：**离线**（不读游戏）按快照里记录的
-    行把文档恢复成「当时算出来的样子」。表头、分隔线与表格前后的散文一律不动 ——
-    与 :func:`patch_doc` 同一套约定。
-    """
-    lines = doc.read_text(encoding="utf-8").splitlines(keepends=True)
+def restore_rows(
+    lines: list[str], doc: Path, spec: TableSpec | KeyedTableSpec, rows: Sequence[str]
+) -> bool:
+    """Validate a recorded table and restore its data rows in the document preview."""
     start = _find_header(lines, doc, spec)
+    if start + 1 >= len(lines) or not _is_separator(lines[start + 1]):
+        raise TableMalformedError(f"{doc.name} 的表 {spec.name!r} 下面没有 |---| 分隔线")
     end = start + 2
     while end < len(lines) and lines[end].lstrip().startswith("|"):
         end += 1
-    lines[start + 2 : end] = [row.rstrip("\n") + "\n" for row in rows]
-    doc.write_text("".join(lines), encoding="utf-8", newline="\n")
-    return len(rows)
+    wanted = [row.rstrip("\n") + "\n" for row in rows]
+    if lines[start + 2 : end] == wanted:
+        return False
+    lines[start + 2 : end] = wanted
+    return True
 
 
 def spec_key(doc_name: str, spec: TableSpec | KeyedTableSpec) -> str:

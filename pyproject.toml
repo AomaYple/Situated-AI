@@ -38,6 +38,7 @@ dependencies = [
     "psutil>=7.2.2",   # 三平台进程树 RSS / CPU / 内存测量。
     "typer>=0.29.2",   # 统一 CLI 的命令与参数解析。
     "rich>=15.0",      # 终端表格与格式化输出。
+    "networkx>=3.7",   # 原版符号依赖图的强连通分量。
 ]
 
 [project.urls]
@@ -48,6 +49,7 @@ Issues = "https://github.com/AomaYple/Situated-AI/issues"
 [project.optional-dependencies]
 # 测试与静态检查。一次装齐，避免后续「这个库没装」的反复。
 dev = [
+    "types-networkx>=3.6.1.20261119", # 原版符号图依赖的类型桩。
     "types-psutil>=7.2.2.20261111", # 跨平台性能测量库的类型桩
     # ── 测试框架与插件 ────────────────────────────────────
     # pytest 9.2 内置 subtests；pytest-benchmark 5.3.1 与该版本兼容。

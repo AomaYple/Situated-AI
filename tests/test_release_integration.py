@@ -11,6 +11,7 @@ from test_network_profile import _parsed, _score
 from typer.testing import CliRunner
 
 from pdx import cli, config, decisions, distribution, version_contracts
+from pdx.cli_commands import release
 from pdx.model import Block, Scalar
 from pdx.situated import network_profile as network
 from pdx.situated import production_profile as native
@@ -263,7 +264,7 @@ def test_complete_default_package_contains_three_unique_current_writers_and_lega
 @pytest.mark.parametrize("name", ["1.15.3", "1.16.0", "../1.15.1", "research/vanilla-ai/1.15.1"])
 def test_future_and_path_profile_values_fail_closed(name):
     with pytest.raises(ValueError):
-        cli._production_profile(name, offline=True)
+        release._production_profile(name, offline=True)
     with pytest.raises(ValueError):
         network.source_path(name)
 

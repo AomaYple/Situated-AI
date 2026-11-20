@@ -169,12 +169,13 @@ def test_cli只扫描显式路径并拒绝空引用集(tmp_path: Path, monkeypat
     from typer.testing import CliRunner
 
     from pdx import cli
+    from pdx.cli_commands import common
 
     game = _fake_game(tmp_path / "game", {"common/defines/00_ai.txt": "value = 1\n"})
     source = tmp_path / "notes.md"
     source.write_text("依据见 common/defines/00_ai.txt:1\n", encoding="utf-8")
     monkeypatch.setattr(citations.config, "GAME", game)
-    monkeypatch.setattr(cli, "_require_game", lambda **_kwargs: None)
+    monkeypatch.setattr(common, "require_game", lambda **_kwargs: None)
     runner = CliRunner()
     assert runner.invoke(cli.app, ["citations", str(source)]).exit_code == 0
     assert runner.invoke(cli.app, ["citations"]).exit_code != 0

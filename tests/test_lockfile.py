@@ -73,11 +73,29 @@ def test_锁头记录_python_要求和生成解释器() -> None:
     assert "# 解释器：Python " in text
 
 
-def test_旧解释器生成的锁不被静默接受(tmp_path) -> None:
+@pytest.mark.parametrize(
+    ("implementation", "releaselevel"),
+    [("cpython", "alpha"), ("cpython", "beta"), ("cpython", "candidate"), ("pypy", "final")],
+)
+def test_runtime_identity_must_be_final_cpython(implementation, releaselevel, monkeypatch) -> None:
+    version = SimpleNamespace(major=3, minor=15, micro=2, releaselevel=releaselevel)
+    monkeypatch.setattr(
+        lockfile,
+        "sys",
+        SimpleNamespace(version_info=version, implementation=SimpleNamespace(name=implementation)),
+    )
+    with pytest.raises(RuntimeError, match=rf"正式版.*{implementation} 3\.15\.2 {releaselevel}"):
+        lockfile.validate_python_version()
+    with pytest.raises(RuntimeError, match="正式版"):
+        lockfile.render({"sample-package": "1.0"})
+
+
+@pytest.mark.parametrize("version", ["3.14.7", "3.15.2rc1"])
+def test_不匹配解释器生成的锁不被静默接受(tmp_path, version) -> None:
     target = tmp_path / lockfile.LOCK_FILE
     current = ".".join(map(str, lockfile.current_python_version()))
     text = lockfile.render({"sample-package": "1.0"}).replace(
-        f"# 解释器：Python {current}", "# 解释器：Python 3.14.7"
+        f"# 解释器：Python {current}", f"# 解释器：Python {version}"
     )
     target.write_text(text, encoding="utf-8", newline="\n")
     assert lockfile.read(target) == {}

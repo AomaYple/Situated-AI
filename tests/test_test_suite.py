@@ -15,7 +15,7 @@ from unittest.mock import Mock
 import pytest
 from conftest import configure_current_identity
 
-from pdx import covgate, version_contracts
+from pdx import covgate, lockfile, version_contracts
 from tools.ci import test_suite
 from tools.ci.acceptance_scheduler import AcceptanceScheduling
 
@@ -121,6 +121,21 @@ def test_full_acceptance_rejects_unsupported_profile_before_launch(tmp_path, mon
     with pytest.raises(SystemExit) as caught:
         test_suite.main(["--output-root", str(tmp_path), "--profile", profile])
     assert caught.value.code == 2
+    assert not list(tmp_path.iterdir())
+
+
+def test_full_acceptance_rejects_prerelease_before_launch(tmp_path, monkeypatch, capsys) -> None:
+    version = SimpleNamespace(major=3, minor=15, micro=2, releaselevel="candidate")
+    monkeypatch.setattr(
+        lockfile,
+        "sys",
+        SimpleNamespace(version_info=version, implementation=SimpleNamespace(name="cpython")),
+    )
+    monkeypatch.setattr(test_suite, "execute", lambda *_args: pytest.fail("launch"))
+    with pytest.raises(SystemExit) as caught:
+        test_suite.main(["--output-root", str(tmp_path)])
+    assert caught.value.code == 2
+    assert "cpython 3.15.2 candidate" in capsys.readouterr().err
     assert not list(tmp_path.iterdir())
 
 

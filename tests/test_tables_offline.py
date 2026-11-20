@@ -14,6 +14,7 @@ from __future__ import annotations
 import pytest
 
 from pdx import docgen, tables_offline
+from pdx.doc_tables import TableMalformedError, TableSpec
 
 pytestmark = pytest.mark.unit
 
@@ -37,8 +38,6 @@ def _doc_text(rows: list[str]) -> str:
 
 
 def _setup(tmp_path, rows, monkeypatch, spec_rows=None):
-    from pdx.doc_tables import TableSpec
-
     doc = tmp_path / "99-测试.md"
     doc.write_text(_doc_text(rows), encoding="utf-8")
     spec = TableSpec("测试表", "| 名字 | 数量 |", lambda: list(spec_rows or rows))
@@ -91,6 +90,41 @@ def test_恢复只动数据行(tmp_path, monkeypatch) -> None:
     assert "前言。" in after
     assert "后记（不许被生成器碰）。" in after
     assert after.count("| --- | ---: |") == 1
+
+
+def test_restore_validates_selected_batch_before_writing(tmp_path, monkeypatch) -> None:
+    first = tmp_path / "a.md"
+    last = tmp_path / "z.md"
+    first.write_text(
+        _doc_text(["| alpha | 1 |"]) + "\n" + _doc_text(["| beta | 1 |"]), encoding="utf-8"
+    )
+    last.write_text("| 名字 | 数量 |\n缺少分隔行\n| z | 1 |\n", encoding="utf-8")
+    spec = TableSpec("first", "| 名字 | 数量 |", list)
+    second = TableSpec("second", "| 名字 | 数量 |", list, occurrence=1)
+    monkeypatch.setattr(
+        docgen,
+        "targets",
+        lambda: (
+            docgen.DocTarget(first, (spec,)),
+            docgen.DocTarget(first, (second,)),
+            docgen.DocTarget(last, (spec,)),
+        ),
+    )
+    recorded = {
+        "a.md::first": ["| alpha | 2 |", "| extra | 3 |"],
+        "a.md::second#1": ["| beta | 2 |"],
+        "z.md::first": ["| z | 2 |"],
+    }
+    before = first.read_bytes(), last.read_bytes()
+    with pytest.raises(TableMalformedError):
+        tables_offline.restore(recorded)
+    assert (first.read_bytes(), last.read_bytes()) == before
+    assert tables_offline.restore(recorded, only="a.md") == {"a.md::first": 2, "a.md::second#1": 1}
+    assert first.read_text(encoding="utf-8") == (
+        _doc_text(["| alpha | 2 |", "| extra | 3 |"]) + "\n" + _doc_text(["| beta | 2 |"])
+    )
+    assert last.read_bytes() == before[1]
+    assert tables_offline.restore(recorded, only="a.md") == {}
 
 
 def test_快照缺表只算缺不算错(tmp_path, monkeypatch) -> None:

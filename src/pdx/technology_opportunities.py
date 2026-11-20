@@ -9,7 +9,6 @@ supplied native sources. Candidate definitions never become runtime scopes.
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import math
 import re
@@ -25,6 +24,9 @@ from ._query_parse import parse_query_source
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
+
+# Resolve company_sectors after observation query registration in decision_rules.
+lazy from . import company_sectors
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -56,12 +58,6 @@ _FAMILIES = frozenset(
 _NAME = re.compile(r"[a-z][a-z0-9_-]*\Z")
 
 
-@cache
-def _company():
-    # Lazy import keeps observation query registration below decision_rules.
-    return importlib.import_module("pdx.company_sectors")
-
-
 def _family(source: str) -> str | None:
     path = PurePosixPath(source)
     if path.is_absolute() or ".." in path.parts or "\\" in source or ":" in source:
@@ -76,7 +72,7 @@ def _family(source: str) -> str | None:
 def _child(block: Block, key: str) -> Block | None:
     # Share the company's strict unique-reference/list/recipe contracts. This
     # adapter only indexes additional native families; it is not a PDX parser.
-    row = _company()._one(block, key)
+    row = company_sectors._one(block, key)
     if row is None:
         return None
     if row.op != "=" or row.prefix is not None or not isinstance(row.value, Block):
@@ -85,7 +81,7 @@ def _child(block: Block, key: str) -> Block | None:
 
 
 def _scalar(block: Block, key: str, default: str = "") -> str:
-    row = _company()._one(block, key)
+    row = company_sectors._one(block, key)
     if row is None:
         return default
     if row.op != "=" or row.prefix is not None or not isinstance(row.value, Scalar):
@@ -205,7 +201,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
     all_technologies = {}
     for identity, (source, definition) in sorted(indices["technologies"].items()):
         all_technologies[identity] = list(
-            _company()._list(definition.value, "unlocking_technologies")
+            company_sectors._list(definition.value, "unlocking_technologies")
         )
         if identity not in consumers:
             continue
@@ -244,7 +240,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         return frozenset(result)
 
     recipes = {
-        identity: _company()._recipe(indices, identity)
+        identity: company_sectors._recipe(indices, identity)
         for identity in sorted(indices["production_methods"])
     }
     methods = {}
@@ -253,7 +249,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         methods[identity] = {
             "source": recipe["source"],
             "line": recipe["line"],
-            "technologies": list(_company()._list(definition.value, "unlocking_technologies")),
+            "technologies": list(company_sectors._list(definition.value, "unlocking_technologies")),
             "outputs": _basket(recipe, "output"),
             "inputs": _basket(recipe, "input"),
             "employment": sum(
@@ -263,7 +259,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
             ),
             "services": _services(definition.value),
             "law_gates": {
-                key: list(_company()._list(definition.value, key))
+                key: list(company_sectors._list(definition.value, key))
                 for key in ("unlocking_laws", "disallowing_laws")
             },
             "special_gates": [
@@ -274,9 +270,9 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         }
     groups = {}
     for identity, (source, definition) in sorted(indices["production_method_groups"].items()):
-        selected = _company()._list(definition.value, "production_methods", required=True)
+        selected = company_sectors._list(definition.value, "production_methods", required=True)
         for method in selected:
-            _company()._reference(indices, "production_methods", method)
+            company_sectors._reference(indices, "production_methods", method)
         groups[identity] = {"source": source, "line": definition.line, "methods": list(selected)}
     buildings = {}
 
@@ -291,8 +287,8 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         )
 
     for building, (source, definition) in sorted(indices["buildings"].items()):
-        group_ids = _company()._list(definition.value, "production_method_groups")
-        prerequisites = list(_company()._list(definition.value, "unlocking_technologies"))
+        group_ids = company_sectors._list(definition.value, "production_method_groups")
+        prerequisites = list(company_sectors._list(definition.value, "unlocking_technologies"))
         buildings[building] = {
             "source": source,
             "line": definition.line,
@@ -412,7 +408,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         identity: {
             "source": source,
             "line": definition.line,
-            "market": _company()._market_reason(indices, identity) is None,
+            "market": company_sectors._market_reason(indices, identity) is None,
             "local": _scalar(definition.value, "local") == "yes",
         }
         for identity, (source, definition) in sorted(indices["goods"].items())
@@ -427,8 +423,8 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         "decrees",
     ):
         for identity, (source, definition) in sorted(indices[family].items()):
-            prerequisites = _company()._list(definition.value, "unlocking_technologies")
-            relevant = set(prerequisites) & technologies.keys()
+            object_prerequisites = company_sectors._list(definition.value, "unlocking_technologies")
+            relevant = set(object_prerequisites) & technologies.keys()
             if not relevant:
                 continue
             row = {
@@ -436,7 +432,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
                 "family": family,
                 "source": source,
                 "line": definition.line,
-                "technologies": list(prerequisites),
+                "technologies": list(object_prerequisites),
             }
             if family in {
                 "combat_unit_types",
@@ -1469,7 +1465,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
             continue
         frozen = _query_catalog()["buildings"][row["building"]]
         building = company_observations._child(roots[frozen["source"]], row["building"])
-        if list(_company()._list(building, "production_method_groups")) != frozen["groups"]:
+        if list(company_sectors._list(building, "production_method_groups")) != frozen["groups"]:
             raise ValueError("科技查询建筑PMG成员漂移")
         references.append(f"{frozen['source']}:{frozen['line']}")
         for group in frozen["groups"]:
@@ -1477,7 +1473,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
             if expected["source"] not in roots:
                 continue
             actual = company_observations._child(roots[expected["source"]], group)
-            if list(_company()._list(actual, "production_methods")) != expected["methods"]:
+            if list(company_sectors._list(actual, "production_methods")) != expected["methods"]:
                 raise ValueError("科技查询PMG实际PM成员漂移")
             references.append(f"{expected['source']}:{expected['line']}")
     state = _COMPANY in roots

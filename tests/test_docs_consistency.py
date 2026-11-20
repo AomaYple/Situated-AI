@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from pdx import config, verify
+from pdx.localization_languages import DEFAULT_LANGUAGES
 
 pytestmark = pytest.mark.docs
 
@@ -163,6 +164,21 @@ def test_所有相对_markdown_链接都指向仓库文件() -> None:
             if relative and not (doc.parent / relative).resolve().exists():
                 missing.append(f"{name}: {target}")
     assert not missing, "Markdown 存在失效相对链接：\n" + "\n".join(missing)
+
+
+def test_workshop_language_index_matches_current_localization() -> None:
+    """Each supported game locale has one distinct Steam language and BBCode document."""
+    folder = config.REPO / "docs/publishing"
+    rows = re.findall(
+        r"^\| (\w+) \| \[[^]]+\]\((创意工坊描述[^)]*\.md)\) \| (\w+) \|$",
+        (folder / "README.md").read_text(encoding="utf-8"),
+        flags=re.MULTILINE,
+    )
+    directories, files, steam_languages = zip(*rows, strict=True)
+    assert len(directories) == len(set(directories))
+    assert set(directories) == {language.directory for language in DEFAULT_LANGUAGES}
+    assert len(files) == len(set(files)) == len(set(steam_languages))
+    assert set(files) == {path.name for path in folder.glob("创意工坊描述*.md")}
 
 
 def test_断言id唯一() -> None:

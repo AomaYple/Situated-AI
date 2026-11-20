@@ -10,7 +10,8 @@ from dataclasses import replace
 import pytest
 from typer.testing import CliRunner
 
-from pdx import candidate_coverage, cli, config
+from pdx import candidate_coverage, cli, config, distribution, information_catalog
+from pdx.cli_commands import common
 from pdx.information_catalog import (
     ImpactLevel,
     InformationCatalog,
@@ -560,8 +561,8 @@ def test_cli_connects_actual_metadata_to_the_same_catalog(inputs, monkeypatch, t
         calls.append(kwargs)
         return catalog
 
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
-    monkeypatch.setattr(cli.information_catalog, "build", build)
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(information_catalog, "build", build)
     source = tmp_path / "metadata.json"
     source.write_text(json.dumps(metadata), encoding="utf-8", newline="\n")
     output = tmp_path / "catalog.json"
@@ -606,9 +607,9 @@ def test_cli_builds_integrated_contract_from_current_production_source(
         assert include_engineering_metadata is True
         return None, None, {".metadata/metadata.json": json.dumps(metadata)}
 
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
-    monkeypatch.setattr(cli.information_catalog, "build", build)
-    monkeypatch.setattr(cli.distribution, "package_inputs", package_inputs)
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(information_catalog, "build", build)
+    monkeypatch.setattr(distribution, "package_inputs", package_inputs)
     output = tmp_path / "catalog.json"
     matrix = tmp_path / "matrix.json"
     result = CliRunner().invoke(
@@ -638,7 +639,7 @@ def test_cli_builds_integrated_contract_from_current_production_source(
 
 
 def test_cli_rejects_dispositions_output_without_candidate(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "_require_game", lambda: pytest.fail("must reject before game scan"))
+    monkeypatch.setattr(common, "require_game", lambda: pytest.fail("must reject before game scan"))
     output = tmp_path / "dispositions.jsonl.gz"
     result = CliRunner().invoke(
         cli.app,
@@ -658,8 +659,8 @@ def test_cli_rejects_dispositions_output_without_candidate(monkeypatch, tmp_path
 
 def test_cli_reports_disposition_output_io_failure_without_traceback(inputs, monkeypatch, tmp_path):
     catalog, metadata = inputs
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
-    monkeypatch.setattr(cli.information_catalog, "build", lambda **_kwargs: catalog)
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(information_catalog, "build", lambda **_kwargs: catalog)
     source = tmp_path / "metadata.json"
     source.write_text(json.dumps(metadata), encoding="utf-8", newline="\n")
     invalid_parent = tmp_path / "not-a-directory"
@@ -696,8 +697,8 @@ def test_cli_rejects_invalid_candidate_instead_of_claiming_coverage(
     inputs, monkeypatch, tmp_path, case
 ):
     catalog, _metadata = inputs
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
-    monkeypatch.setattr(cli.information_catalog, "build", lambda **_kwargs: catalog)
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(information_catalog, "build", lambda **_kwargs: catalog)
     source = tmp_path / "metadata.json"
     if case == "invalid_json":
         source.write_text("{", encoding="utf-8", newline="\n")
@@ -732,8 +733,8 @@ def test_cli_failed_validation_preserves_previous_reports_without_claiming_a_new
         metadata["id"] = "wrong"
     else:
         metadata["source_fingerprint"]["strategic_source_sha256"] = "0" * 64
-    monkeypatch.setattr(cli, "_require_game", lambda: None)
-    monkeypatch.setattr(cli.information_catalog, "build", lambda **_kwargs: catalog)
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(information_catalog, "build", lambda **_kwargs: catalog)
     source = tmp_path / "metadata.json"
     source.write_text(json.dumps(metadata), encoding="utf-8", newline="\n")
     output = tmp_path / "catalog.json"
