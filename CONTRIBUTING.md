@@ -95,8 +95,19 @@ python -m pdx.cli research-query "tools/out/installation-research" --source game
 
 - `--source` 使用安装根相对路径和正斜杠，可重复指定。`--source-details` 需要至少一个来源。`--key` 按精确结构键查询，结构位置以末条记录的 ID 通过 `--after` 续页。
 - `--symbol` 按选定名称独立查询整个索引，可重复指定。引用续页时保留同一符号的查询，将上一页末条引用的 `occurrence_id` 和 `ordinal` 以 `--reference-after <occurrence_id>:<ordinal>` 传入。`--limit` 是每组查询的行数上限。
+- 使用 `--source` 和 `--script-references` 可查看指定文件的全部已登记引用候选，包括没有固定名称的 `dynamic` 和状态为 `unknown` 的候选。按来源续页时，保留相同的来源和选项，并用其末条引用的 `occurrence_id:ordinal` 作为 `--reference-after`。
 - 已登记的旧实现现场定位索引可加 `--historical-locators` 读取。仍须通过该目录的原始身份与摘要校验，查询范围限于旧产物所保存的定位资料。需要当前格式证据或脚本符号候选时，用当前工具生成新目录。
 - 格式处置和引用候选属于静态证据。按报告中的逐项处置解释完整解析、局部结构、未解析或未知等状态。实际脚本求值、合法运行期读取及 Mod 生产接线需要各自的证据。
+
+例如，可在同一份 1.15.2 研究目录中查看默认 AI 策略文件的引用候选，并用实际符号 `has_friendly_diplomatic_pact` 查看全索引中的定义和引用。
+
+```text
+python -m pdx.cli research-query "tools/out/installation-research" --source game/common/ai_strategies/00_default_strategy.txt --script-references --symbol has_friendly_diplomatic_pact --limit 25
+```
+
+逐来源状态表示该文件的脚本索引处置。`complete` 表示完整解析，`partial` 表示保留可解析片段，`failed` 表示解析失败，`not_attempted` 表示该来源未做脚本索引，`unknown_source` 表示目录中没有登记该来源。引用为空时，结合来源状态判断覆盖范围。
+
+`incomplete_definition_sources` 列出未完整处理的定义来源。同一类别中只要有定义来源缺失或未完整解析，已索引到的定义仍可定位，引用在无法判断目标唯一或缺失时保留 `unknown`。例如，已见一个定义候选时，未完整处理的同类来源仍可能包含另一个定义。
 
 ## Mod 生成与打包
 
