@@ -14,15 +14,12 @@ import time
 import tracemalloc
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING
 
 import psutil
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
-
-P = ParamSpec("P")
-T = TypeVar("T")
+    from collections.abc import Callable, Generator, Sequence
 
 
 class StageTimings:
@@ -34,7 +31,7 @@ class StageTimings:
         self.intervals: list[dict[str, object]] = []
 
     @contextmanager
-    def phase(self, name: str) -> Iterator[None]:
+    def phase(self, name: str) -> Generator[None]:
         start = self.clock() - self.started
         record: dict[str, object] = {"name": name, "start_s": start, "status": "ok"}
         try:
@@ -47,7 +44,9 @@ class StageTimings:
             record.update(end_s=end, wall_s=end - start)
             self.intervals.append(record)
 
-    def call(self, name: str, action: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
+    def call[**P, T](
+        self, name: str, action: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> T:
         with self.phase(name):
             return action(*args, **kwargs)
 
@@ -137,7 +136,9 @@ def command(
 
 def workloads(*, rounds: int = 5) -> dict[str, object]:
     """有输出指纹的实际功能负载；每项独立，禁止为快而改变结果。"""
-    from pdx import citations, config, decisions, localization, version_contracts  # noqa: PLC0415
+    from dataclasses import replace  # noqa: PLC0415
+
+    from pdx import citations, decisions, localization, version_contracts  # noqa: PLC0415
 
     with tempfile.TemporaryDirectory(prefix="sitai-perf-") as folder:
         root = Path(folder)
@@ -154,12 +155,22 @@ def workloads(*, rounds: int = 5) -> dict[str, object]:
             result = citations.scan_text(refs, where="benchmark", root=root)
             return (len(result), sum(item.ok for item in result))
 
-        def generator() -> object:
-            # This is the historical offline core workload, never current live
-            # production. The latter retains its installed-source/EXE checks.
-            with version_contracts.select_version("1.14.5"):
-                files = decisions.build()
-            return hashlib.sha256(json.dumps(files, sort_keys=True).encode("utf-8")).hexdigest()
+        strategy = (
+            "ai_strategy_default = {\n"
+            "\tdiplomatic_play_neutrality = { value = 0 }\n"
+            "\taggression = { value = 0 }\n"
+            + "\t# retained in the patched strategy\n" * 2000
+            + "}\n"
+        )
+        strategy_digest = hashlib.sha256(strategy.encode("utf-8")).hexdigest()
+        policy_copy = root / "fiscal.toml"
+        policy_bytes = decisions.SOURCE.read_bytes()
+        policy_copy.write_bytes(policy_bytes)
+        policy = replace(decisions.load(policy_copy), baseline_sha256=strategy_digest)
+
+        def patch_strategy() -> object:
+            patched = decisions.patch_default(strategy, policy)
+            return hashlib.sha256(patched.encode("utf-8")).hexdigest()
 
         return {
             "schema": 1,
@@ -169,20 +180,11 @@ def workloads(*, rounds: int = 5) -> dict[str, object]:
                 "cpu": platform.processor(),
             },
             "input_identity": {
-                "decisions.core_inputs": {
-                    "profile": "1.14.5",
-                    "evidence": "historical_offline_core_not_current_production",
-                    "source_sha256": {
-                        path.relative_to(config.REPO).as_posix(): hashlib.sha256(
-                            path.read_bytes()
-                        ).hexdigest()
-                        for folder in (
-                            config.REPO / "mod/decisions",
-                            config.REPO / "research/vanilla-ai/1.14.5",
-                        )
-                        for path in sorted(folder.rglob("*"))
-                        if path.is_file()
-                    },
+                "decisions.patch_strategy": {
+                    "profile": version_contracts.CURRENT_VERSION,
+                    "evidence": "synthetic_strategy_patch",
+                    "fiscal_policy_sha256": hashlib.sha256(policy_bytes).hexdigest(),
+                    "strategy_sha256": strategy_digest,
                 }
             },
             "workloads": {
@@ -190,7 +192,7 @@ def workloads(*, rounds: int = 5) -> dict[str, object]:
                 "localization.header_large_file": measure(
                     lambda: dict(localization.language_header_counts(root)), rounds=rounds
                 ),
-                "decisions.core_inputs": measure(generator, rounds=rounds),
+                "decisions.patch_strategy": measure(patch_strategy, rounds=rounds),
             },
         }
 

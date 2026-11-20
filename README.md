@@ -3,22 +3,14 @@
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
-Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
+面向 Victoria 3 的 AI Mod 与开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-Mod ID 为 `situated-ai`。主线生产、工具链与公开发布的状态见[当前工作清单](docs/design/当前工作清单.md)和[版本交付索引](docs/design/exec/版本交付-结果.md)。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。
-
-## 当前决策方式
-
-已发布3.2.0的生产决策链、国家协调及排他路线退役见[拓展结果](docs/design/exec/广度深度拓展-结果.md)，联合决策合同见[工程交付基线](docs/design/exec/工程基线-1.0.md)。调整只影响原版 AI 的局部倾向，资格、实际成本、政治支持、随机、拒绝、终结零分与执行继续由原版决定。
-
-3.3.0 将完整生产链与 R2 的道路、学校和改善关系三个消费者统一接线。R2 学校网络使用加法评价，贸易供给立场扩展了对应的原版激活条件。25 个未来领域仍处于目标和接口定义阶段。1.15.1 的静态复核、工程验收和正式交付取证见[3.3.0 交付结果](docs/design/exec/3.3.0-交付结果.md)。
-
-跨域反馈依赖已发生的世界事实。例如，当前公校法律、实际学校制度与识字状态可以改变教育和生产配置的相关增量；候选行动评分较高不代表行动已经执行，也不证明后续变化由 Mod 导致。完整领域范围和阶段验收仍以[当前工作清单](docs/design/当前工作清单.md)及对应收据为准。
+Mod ID 为 `situated-ai`。现行游戏与 Python 基线、生产范围和推进状态见[当前工作清单](docs/design/当前工作清单.md)，标准包与公开发布身份见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
 ## 先读什么
 
 - 了解项目设计、当前状态、版本和知识库，请从[文档导航](docs/README.md)进入。
-- 产品阶段与目标见[架构主计划](docs/design/架构主计划.md)和[架构子计划](docs/design/架构子计划.md)。旧 31.4 阶段沿革见[处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)。
+- 产品阶段与目标见[架构主计划](docs/design/架构主计划.md)和[架构子计划](docs/design/架构子计划.md)。旧 31.4 阶段沿革见[历史归档](docs/design/archive/README.md#冻结版本)。
 - 修改、生成、验证或打包，请阅读[贡献指南](CONTRIBUTING.md)。
 - 代理任务接手与修改边界见[AGENTS.md](AGENTS.md)。
 
@@ -39,7 +31,7 @@ dist/                   可再生发布 ZIP（忽略）
 
 ## 标准包
 
-包包含标准 metadata、生成的 `common/`、锁定版本支持的全部语言、封面、manifest 和安装说明，不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。`package` 按生产源中的版本打包，不代表该版本已经发布。已发布基线与目标版本的标签、包哈希和 GitHub Release 状态只在[版本交付索引](docs/design/exec/版本交付-结果.md)维护；Workshop 页面由发布者在固定包上单独验收和发布。
+标准包的生成、内容与回读校验见[工程交付基线](docs/design/exec/工程基线-1.0.md)。各实际渠道的状态见版本交付索引。
 
 安装时将 ZIP 解压到 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset；不要覆盖游戏本体。文本编码规则见[工程原则](docs/principles/工程原则.md)。
 
@@ -50,7 +42,7 @@ dist/                   可再生发布 ZIP（忽略）
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py test-offline
 ```
 
-完整矩阵、性能口径、清理和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态检查、快照和模拟只能证明明确覆盖的工程合同。引擎运行期语义、AI 行为质量、长期行为、平衡、后期性能、本地化呈现和 Workshop 体验需要用户在固定包上验收；工程通过不能代替这些结论。日志、存档和观察器提供辅助证据，其摘要不能单独证明这些结果。
+完整矩阵、性能口径、清理和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态检查、快照和模拟只能证明明确覆盖的工程合同。引擎运行期语义、AI 行为质量、长期行为、平衡、后期性能、本地化呈现和 Workshop 体验需要用户在固定包上验收；工程通过不能代替这些结论。日志和存档提供辅助证据，其摘要不能单独证明这些结果。
 
 ## 许可证
 

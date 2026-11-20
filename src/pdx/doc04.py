@@ -26,7 +26,7 @@ import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import config, version_contracts
+from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, TableSpec
 from .model import Block
@@ -97,7 +97,7 @@ def scripted_guis_rows() -> list[tuple[str, dict[int, str]]]:
 def _field_rows(dir_rel: str, col: int) -> Callable[[], list[tuple[str, dict[int, str]]]]:
     def rows() -> list[tuple[str, dict[int, str]]]:
         result = _rows_plain(field_occurrences(dir_rel), col)
-        if version_contracts.is_115() and dir_rel in {
+        if dir_rel in {
             "events",
             "common/scripted_progress_bars",
         }:
@@ -134,10 +134,8 @@ def _doc04_field_specs() -> list[KeyedTableSpec]:
                 header=header,
                 cells=_field_rows(d, col),
                 occurrence=occ,
-                append_new=version_contracts.is_115()
-                and d in {"events", "common/scripted_progress_bars"},
-                allow_drop=version_contracts.is_115()
-                and d in {"events", "common/scripted_progress_bars"},
+                append_new=d in {"events", "common/scripted_progress_bars"},
+                allow_drop=d in {"events", "common/scripted_progress_bars"},
             )
             for n, (header, occ, col, d) in enumerate(_DOC04_FIELD_TABLES, start=1)
         ],
@@ -145,39 +143,6 @@ def _doc04_field_specs() -> list[KeyedTableSpec]:
 
 
 # ────────────────────── 口径二：取值分布 ──────────────────────
-
-#: JE 分组表（两栏并排）里**作者选定**的行键 —— 版面是作者的，生成器只填数字。
-#: 左栏 12 个、右栏 14 个（与文档的 14 行版式一致）。
-_JE_GROUP_LEFT: tuple[str, ...] = (
-    "`je_group_historical_content`",
-    "`je_group_objectives`",
-    "`je_group_internal_affairs`",
-    "`je_group_tutorial`",
-    "`je_group_technology`",
-    "`je_group_foreign_affairs`",
-    "`je_group_crises`",
-    "`je_group_british_india`",
-    "`je_group_russia_expansion`",
-    "`je_group_brazil`",
-    "`je_group_global_international_situations`",
-    "`je_group_tanzimat`",
-)
-_JE_GROUP_RIGHT: tuple[str, ...] = (
-    "`je_group_usa_manifest_destiny`",
-    "`je_group_spa_economic_regeneration`",
-    "`je_group_usa_american_civil_war`",
-    "`je_group_meiji_restoration`",
-    "`je_group_qing`",
-    "`je_group_france_expansion`",
-    "`je_group_expeditions`",
-    "`je_group_german_unification`",
-    "`je_group_russia_great_reformer`",
-    "`je_group_brazil_pedro`",
-    "`je_group_poland`",
-    "`je_group_france_divided_monarchists`",
-    "`je_group_global_test`",
-    "`je_group_iberia`",
-)
 
 
 def je_group_counts() -> Counter[str]:
@@ -187,30 +152,8 @@ def je_group_counts() -> Counter[str]:
     )
 
 
-def _je_group_rows(keys: tuple[str, ...], col: int) -> list[tuple[str, dict[int, str]]]:
-    counter = je_group_counts()
-    return [(k, {col: f"{counter.get(k, 0)}"}) for k in keys]
-
-
-def _je_group_specs() -> list[TableSpec | KeyedTableSpec]:
+def _je_group_specs() -> list[TableSpec]:
     header = "| 分组 | 使用次数 | | 分组 | 使用次数 |"
-    if version_contracts.active_version() == "1.14.5":
-        return [
-            KeyedTableSpec(
-                name="doc04 JE 分组左栏",
-                header=header,
-                cells=lambda: _je_group_rows(_JE_GROUP_LEFT, 1),
-                key_column=0,
-                append_new=False,
-            ),
-            KeyedTableSpec(
-                name="doc04 JE 分组右栏",
-                header=header,
-                cells=lambda: _je_group_rows(_JE_GROUP_RIGHT, 4),
-                key_column=3,
-                append_new=False,
-            ),
-        ]
 
     def rows() -> list[str]:
         counter = je_group_counts()

@@ -41,7 +41,6 @@ import typer
 from conftest import NEEDS_GAME, configure_current_identity
 
 from pdx import config, docs_mirror
-from pdx.version_contracts import active_version
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,14 +48,14 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.unit
 
 #: 官方 .md 的篇数。1.14.3 实测 92（game 91 + jomini 1）；1.14.4 实测 94（game 93 + jomini 1）。
-EXPECTED_DOCS = {"1.14.5": 94, "1.15.0": 99, "1.15.1": 100, "1.15.2": 100}
+EXPECTED_DOCS = 100
 
 
 def test_清单存在且可读() -> None:
     data = docs_mirror.load_manifest()
     assert data, f"读不到 {docs_mirror.MANIFEST_NAME} —— 跑 `v3 mirror write` 生成"
     got = docs_mirror.entries(data)
-    expected = EXPECTED_DOCS[active_version()]
+    expected = EXPECTED_DOCS
     assert len(got) == expected, f"清单里有 {len(got)} 篇，预期 {expected}"
     assert data.get("版本"), "清单必须记录生成时的游戏版本，否则不知道它属于哪一版"
 
@@ -204,7 +203,7 @@ def test_内容改动与字节数篡改都会被抓(tmp_path: Path, monkeypatch:
 def _run_check(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, manifest: bool, mirror: bool
 ) -> int:
-    from pdx import cli
+    from pdx.cli_commands import documentation
 
     configure_current_identity(tmp_path, monkeypatch)
     research = tmp_path / "research"
@@ -222,7 +221,7 @@ def _run_check(
     )
     code = 0
     try:
-        cli.mirror_check()
+        documentation.mirror_check()
     except typer.Exit as exc:  # 一致性检查通过时 typer 不抛异常，那就是 0
         code = int(exc.exit_code or 0)
     return code
@@ -299,7 +298,7 @@ def test_清单为空时提示重新生成(monkeypatch: pytest.MonkeyPatch, tmp_
 
 def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``v3 mirror write --sync``：把原文从游戏拷到本机镜像（本机那份不入库）。"""
-    from pdx import cli
+    from pdx.cli_commands import documentation
 
     fake = _fake_roots(tmp_path, monkeypatch)
     research = tmp_path / "research"
@@ -308,7 +307,7 @@ def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.Monk
     monkeypatch.setattr(config, "GAME", fake / "game")
     monkeypatch.setattr(config, "OFFICIAL_DOCS_MIRROR", mirror)
 
-    cli.mirror_write(sync=True)
+    documentation.mirror_write(sync=True)
 
     assert (mirror / "game/common/a.md").read_bytes() == b"\xe7\x94\xb2\n"
     assert (mirror / "jomini/docs/a.md").read_bytes() == b"\xe4\xb9\x99\n"

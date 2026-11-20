@@ -11,14 +11,20 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from functools import partial
 from itertools import zip_longest
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
 
-from pdx import config, snapshot, version_contracts
+from pdx import config, snapshot, verify, version_contracts
 from pdx.input_profile import InputAction, ProfileCheck
+from pdx.model import ParseError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def test_精简本地化与完整键列表指纹一致(tmp_path):
@@ -111,10 +117,12 @@ class TestScriptableSnapshot(unittest.TestCase):
             path.parent.mkdir(parents=True)
             path.write_text("foo = { bar = 1  baz = { nested = 2 } }\n", encoding="utf-8")
 
-            names, fields = snapshot._scriptable_snapshot(root, "events")
+            parse_gaps: dict[str, list[str]] = {}
+            names, fields = snapshot._scriptable_snapshot(root, "events", parse_gaps=parse_gaps)
 
         self.assertEqual(names, {"sample.txt": ["foo"]})
         self.assertEqual(fields["sample.txt/foo"], ["bar", "baz"])
+        self.assertEqual(parse_gaps, {})
 
     def test_engine_sections_use_content_root_prefix(self):
         with tempfile.TemporaryDirectory() as td:
@@ -122,9 +130,7 @@ class TestScriptableSnapshot(unittest.TestCase):
             path = root / "common" / "sample.txt"
             path.parent.mkdir(parents=True)
             path.write_text("engine_entry = { field = 1 }\n", encoding="utf-8")
-            sections = snapshot._scriptable_domain_sections(
-                root, label="jomini", include_common=True
-            )
+            sections = snapshot._scriptable_domain_sections(root, parse_gaps={}, label="jomini")
         self.assertEqual(sections["jomini/common_entries"], {"sample.txt": ["engine_entry"]})
 
     def test_dlc_descriptor_snapshot_keeps_source_and_duplicates(self):
@@ -136,6 +142,78 @@ class TestScriptableSnapshot(unittest.TestCase):
             (dlc / "b.dlc").write_text('name = "Alpha local"\n', encoding="utf-8")
             result = snapshot._dlc_descriptor_snapshot(root)
         self.assertEqual(result["alpha"], ["a.dlc:name=Alpha", "b.dlc:name=Alpha local"])
+
+
+@pytest.mark.parametrize("compact", [False, True])
+def test_partial_script_keeps_available_data_and_serializes_gap(tmp_path, monkeypatch, compact):
+    source = tmp_path / "jomini" / "common" / "defs" / "test.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("sample = { field = 1\n", encoding="utf-8")
+    monkeypatch.setattr(config, "ROOT", tmp_path)
+    for name in ("GAME", "JOMINI", "CLAUSEWITZ"):
+        monkeypatch.setattr(config, name, tmp_path / name.lower())
+    monkeypatch.setattr(
+        config,
+        "game_version",
+        lambda: {"caligula_branch": f"release/{version_contracts.CURRENT_VERSION}"},
+    )
+    monkeypatch.setattr(snapshot, "_doc_tables_snapshot", dict)
+
+    snap = snapshot.build(compact=compact)
+    sections = snap.sections
+    assert sections["jomini/common_entries"] == {"defs": ["sample"]}
+    assert sections["jomini/common_fields"] == {"defs/sample": ["field"]}
+    gaps = sections["script_parse_gaps"]
+    assert gaps == {
+        "jomini/common/defs/test.txt": ["parse_status=partial: unclosed_block（第 1 行第 10 列）"]
+    }
+
+    artifact = tmp_path / "snapshot.json"
+    snap.write(artifact)
+    assert snapshot.Snapshot.load(artifact).sections["script_parse_gaps"] == gaps
+
+
+@pytest.mark.parametrize("kind", ["script", "localization", "localization_digest", "dlc"])
+@pytest.mark.parametrize("failure", ["invalid_utf8", "read_denied"])
+def test_snapshot_input_failures_have_the_source_path(tmp_path, monkeypatch, kind, failure):
+    read: Callable[[], object]
+    match kind:
+        case "script":
+            path = tmp_path / "events" / "test.txt"
+            read = partial(snapshot._scriptable_snapshot, tmp_path, "events", parse_gaps={})
+        case "localization":
+            path = tmp_path / "localization" / "test.yml"
+            read = partial(snapshot._localization_keys, tmp_path)
+        case "localization_digest":
+            path = tmp_path / "localization" / "test.yml"
+            read = partial(snapshot._localization_digest, tmp_path)
+        case "dlc":
+            path = tmp_path / "dlc" / "alpha" / "test.dlc"
+            read = partial(snapshot._dlc_descriptor_snapshot, tmp_path)
+
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"key = \xff\n")
+    if failure == "read_denied":
+
+        def deny(self, *_args, **_kwargs):
+            raise PermissionError(f"injected read failure: {self}")
+
+        monkeypatch.setattr(Path, "read_bytes" if kind == "script" else "read_text", deny)
+    with pytest.raises(ParseError if failure == "invalid_utf8" else PermissionError) as error:
+        read()
+    assert str(path) in str(error.value)
+
+
+def test_snapshot_input_walk_propagates_directory_error(tmp_path, monkeypatch):
+    localization = tmp_path / "localization"
+    localization.mkdir()
+
+    def deny_walk(self, *, on_error=None):
+        on_error(PermissionError(f"injected walk failure: {self}"))
+
+    monkeypatch.setattr(Path, "walk", deny_walk)
+    with pytest.raises(PermissionError, match="injected walk failure"):
+        snapshot._localization_keys(tmp_path)
 
 
 class TestSnapshotShape(unittest.TestCase):
@@ -176,12 +254,10 @@ class TestSnapshotShape(unittest.TestCase):
         self.assertTrue(self.snap.version.get("caligula_rev"))
 
     def test_common_entries_covers_all_dirs(self):
-        """必须覆盖全部数据目录（1.14.4 是 138 个）—— 曾经因路径口径错误变成 0。"""
+        """必须覆盖全部数据目录（1.15.2 是 141 个）—— 曾经因路径口径错误变成 0。"""
         self.assertEqual(
             len(self.snap.sections["common_entries"]),
-            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
-                version_contracts.active_version()
-            ],
+            141,
         )
 
     def test_common_entries_not_empty(self):
@@ -193,24 +269,20 @@ class TestSnapshotShape(unittest.TestCase):
 
     def test_defines_merges_repeated_namespaces(self):
         """NGUI 在 24 个块里出现，必须合并成一个键而非坍缩。
-        实测唯一命名空间 50（game）+ 17（jomini）= 67。
+        1.15.2 实测 69 个唯一命名空间。
         """
         self.assertEqual(
             len(self.snap.sections["defines"]),
-            {"1.14.5": 67, "1.15.0": 69, "1.15.1": 69, "1.15.2": 69}[
-                version_contracts.active_version()
-            ],
+            69,
         )
 
     def test_localization_has_11_languages(self):
         self.assertEqual(len(self.snap.sections["localization"]), 11)
 
-    def test_dlc_count_is_17(self):
+    def test_dlc_count_is_18(self):
         self.assertEqual(
             len(self.snap.sections["dlc"]),
-            {"1.14.5": 17, "1.15.0": 18, "1.15.1": 18, "1.15.2": 18}[
-                version_contracts.active_version()
-            ],
+            18,
         )
 
 
@@ -485,9 +557,7 @@ class TestCompactSnapshot(unittest.TestCase):
                     self.assertIn(f"{top}_{suffix}", self.snap.sections)
         self.assertEqual(
             len(self.snap.sections["common_entries"]),
-            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
-                version_contracts.active_version()
-            ],
+            141,
         )
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 
@@ -541,24 +611,22 @@ class TestCommittedCompactSnapshot(unittest.TestCase):
     """
 
     def test_至少有一份精简快照入库(self):
-        tracked = sorted(snapshot.SNAPSHOT_DIR.glob("*.compact.json"))
-        self.assertTrue(
-            tracked,
-            "tools/out/snapshots/ 下没有 *.compact.json —— "
-            "跑 `v3 snapshot create --compact` 生成一份（它是入库的）",
+        expected_name = f"{version_contracts.CURRENT_CONTRACT.snapshot_label}.compact.json"
+        self.assertEqual(
+            verify.latest_compact_snapshot_path(),
+            snapshot.SNAPSHOT_DIR / expected_name,
         )
 
     def test_精简快照能被读出来且标记正确(self):
-        for path in sorted(snapshot.SNAPSHOT_DIR.glob("*.compact.json")):
-            with self.subTest(快照=path.name):
-                snap = snapshot.Snapshot.load(path)
-                self.assertTrue(snap.compact)
-                self.assertIn("localization_digest", snap.sections)
-                self.assertNotIn("localization", snap.sections)
-                self.assertTrue(snap.version.get("caligula_branch"))
-                # 结构域是它的全部价值所在，缺一个就白存了
-                for sec in ("common_entries", "fields", "defines", "dlc", "config"):
-                    self.assertIn(sec, snap.sections)
+        snap = verify.latest_compact_snapshot()
+        assert snap is not None, "缺少当前版本的入库精简快照"
+        self.assertTrue(snap.compact)
+        self.assertIn("localization_digest", snap.sections)
+        self.assertNotIn("localization", snap.sections)
+        self.assertEqual(snap.version_label, f"release/{version_contracts.CURRENT_VERSION}")
+        for sec in ("common_entries", "fields", "defines", "dlc", "config"):
+            with self.subTest(section=sec):
+                self.assertIn(sec, snap.sections)
 
 
 if __name__ == "__main__":

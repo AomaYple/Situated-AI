@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -92,16 +91,51 @@ def test_profiles_preserve_arguments_and_exit_status(monkeypatch, profile):
     assert calls[0][1]["cwd"] == run_check.ROOT
     assert calls[0][1]["check"] is False
     assert calls[0][1]["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
-    if profile in {"test", "test-offline"}:
-        assert (
-            calls[0][1]["env"][version_contracts.ENVIRONMENT_VARIABLE]
-            == version_contracts.CURRENT_VERSION
-        )
-    assert calls[0][1]["env"]["PYTHONPATH"].split(os.pathsep) == [
-        str(run_check.ROOT / "src"),
-        str(run_check.ROOT),
-        "preserved-path",
-    ]
+    assert version_contracts.ENVIRONMENT_VARIABLE not in calls[0][1]["env"]
+
+
+@pytest.mark.parametrize(
+    ("command", "options", "expected"),
+    [
+        (
+            "test-offline-ci",
+            ["--junitxml=tools/out/ci/test-results.xml"],
+            [
+                "pytest",
+                "-m",
+                "not integration and not benchmark",
+                "--max-worker-restart=0",
+                "-vv",
+                "--durations=25",
+                "--junitxml=tools/out/ci/test-results.xml",
+            ],
+        ),
+        (
+            "test-benchmark",
+            [],
+            [
+                "pytest",
+                "tests/test_benchmarks.py",
+                "-o",
+                "addopts=",
+                "--benchmark-only",
+                "--benchmark-json=bench.json",
+                "-q",
+            ],
+        ),
+    ],
+)
+def test_ci_routes_preserve_pytest_arguments_and_exit_status(
+    monkeypatch, command, options, expected
+):
+    def run(argv, **kwargs):
+        assert argv[5:] == expected
+        assert kwargs["cwd"] == run_check.ROOT
+        return SimpleNamespace(returncode=5)
+
+    monkeypatch.setattr(sys, "argv", ["run_check.py", command, *options])
+    monkeypatch.setattr(run_check.subprocess, "run", run)
+    assert run_check.main() == 5
 
 
 @pytest.mark.parametrize("command", ["baseline", "baseline-offline"])
@@ -145,7 +179,7 @@ def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
     calls = []
 
     def run(argv, **kwargs):
-        assert kwargs["env"]["V3_CONTRACT_PROFILE"] == selected
+        assert version_contracts.ENVIRONMENT_VARIABLE not in kwargs["env"]
         calls.append(argv[argv.index("-m") + 1 :])
         return SimpleNamespace(returncode=0)
 
@@ -168,7 +202,7 @@ def test_offline_baseline_runs_the_shared_gates_without_live_generation(monkeypa
     calls = []
 
     def run(argv, **kwargs):
-        assert kwargs["env"][version_contracts.ENVIRONMENT_VARIABLE] == selected
+        assert version_contracts.ENVIRONMENT_VARIABLE not in kwargs["env"]
         calls.append(argv[argv.index("-m") + 1 :])
         return SimpleNamespace(returncode=0)
 
@@ -229,7 +263,7 @@ def test_baseline_rejects_invalid_environment_before_launch(monkeypatch, selecte
     assert caught.value.code == 2
 
 
-@pytest.mark.parametrize("command", ["test", "test-offline"])
+@pytest.mark.parametrize("command", ["test", "test-offline", "test-offline-ci"])
 def test_pytest_routes_reject_historical_environment_before_launch(monkeypatch, command):
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
     monkeypatch.setattr(sys, "argv", ["run_check.py", command])

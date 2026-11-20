@@ -510,9 +510,7 @@ def final_disabled(final_candidate):
             economy_enabled=False,
             diplomacy_enabled=False,
         ),
-        configuration=ProfileConfiguration(core=False)
-        if version_contracts.active_version() == version_contracts.CURRENT_VERSION
-        else None,
+        configuration=ProfileConfiguration(core=False),
     )
 
 
@@ -548,8 +546,7 @@ def final_supply(final_candidate, final_disabled):
     assert state == "found"
     assert disabled_map is not None
     assert supply_ast(disabled_map.value) == supply_ast(original_map.value)
-    version = version_contracts.active_version()
-    assert len(originals) == {"1.14.5": 17, "1.15.0": 18, "1.15.1": 21, "1.15.2": 21}[version]
+    assert len(originals) == 21
     actual_map, status = _resolve(current, "ai_strategy_default", "goods_stances")
     assert status == "found"
     assert actual_map is not None
@@ -557,7 +554,7 @@ def final_supply(final_candidate, final_disabled):
     actual_nodes = list(actual_map.value.assignments())
     assert len(actual_nodes) == len({item.key for item in actual_nodes})
     assert {item.key for item in actual_nodes} == set(originals) | set(SUPPLY_GOODS)
-    merged = {"oil", "radios", "telephones"} if version in {"1.15.1", "1.15.2"} else set()
+    merged = {"oil", "radios", "telephones"}
     assert set(originals) & set(SUPPLY_GOODS) == merged
     actual_originals = {}
     for original_node in original_map.value.assignments():
@@ -930,28 +927,25 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
     for good in SUPPLY_GOODS:
         for case in _supply_rows(final_supply, good):
             record(**case)
-    version = version_contracts.active_version()
-    current_r2 = version == version_contracts.CURRENT_VERSION
-    expected_legacy = {"1.14.5": 927, "1.15.0": 937, "1.15.1": 936, "1.15.2": 936}[version]
+    expected_legacy = 936
     r2_identities: set[tuple[str, str, str]] = set()
-    if current_r2:
-        with decision_rules.SOURCE.open("rb") as handle:
-            information = tomllib.load(handle)
-        historical = {
-            (legacy.INFO, tuple(rule["field"].split("."))) for rule in information["rules"]
-        } | {(source, rule.field) for source, policy in adapters.policies for rule in policy.rules}
-        school = (legacy.INFO, ("institution_scores", "institution_schools"))
-        assert len(historical) == 937
-        assert set(legacy.IDENTITIES) == historical - {school}
-        migrated = [rule for rule in information["rules"] if rule["field"] == ".".join(school[1])]
-        assert len(migrated) == 6
-        assert {rule["id"] for rule in migrated} == set(network_profile.SCHOOL_MIGRATION)
-        for case in _r2_rows(candidate, disabled):
-            r2_identities.update(
-                (item["path"], item["definition"], item["field"]) for item in case["consumers"]
-            )
-            record(**case)
-        assert len(r2_identities) == 3
+    with decision_rules.SOURCE.open("rb") as handle:
+        information = tomllib.load(handle)
+    historical = {
+        (legacy.INFO, tuple(rule["field"].split("."))) for rule in information["rules"]
+    } | {(source, rule.field) for source, policy in adapters.policies for rule in policy.rules}
+    school = (legacy.INFO, ("institution_scores", "institution_schools"))
+    assert len(historical) == 937
+    assert set(legacy.IDENTITIES) == historical - {school}
+    migrated = [rule for rule in information["rules"] if rule["field"] == ".".join(school[1])]
+    assert len(migrated) == 6
+    assert {rule["id"] for rule in migrated} == set(network_profile.SCHOOL_MIGRATION)
+    for case in _r2_rows(candidate, disabled):
+        r2_identities.update(
+            (item["path"], item["definition"], item["field"]) for item in case["consumers"]
+        )
+        record(**case)
+    assert len(r2_identities) == 3
     assert len(legacy.IDENTITIES) == expected_legacy
     assert len(explicit.CARDS) == 11
     # The external fleet script body and its actual strategy reference are

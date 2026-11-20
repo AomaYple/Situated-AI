@@ -1,70 +1,36 @@
 """法律定义资格门的精确来源、形状和重复声明拒收合同。"""
 
 import hashlib
-import json
-import struct
 
 import pytest
+from _engine_evidence import compact_image, current_manifest, repin_manifest
+from conftest import configure_current_identity
 
-from pdx import version_contracts
-from pdx.situated import engine_scope, vanilla_inventory
+from pdx.situated import engine_scope, engine_scope_115, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_engine_contract():
-    """Synthetic historical fixtures must not borrow the current EXE identity."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.fixture
 def law_proof(tmp_path, monkeypatch):
+    configure_current_identity(tmp_path, monkeypatch)
     game = tmp_path / "game"
     game.mkdir()
-    for key in ("caligula_branch", "caligula_rev", "clausewitz_branch", "clausewitz_rev"):
-        (tmp_path / f"{key}.txt").write_text(
-            "release/1.14.5" if key == "caligula_branch" else "fixture", encoding="utf-8"
-        )
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(b"fixed law image")
     source = "common/laws/sample.txt"
-    inputs = {source: b"sample = { ai_will_do = { always = yes } }"}
-    data = {
-        "exe": {
-            "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-            "bytes": exe.stat().st_size,
-        },
-        "contract": {
-            "family": "laws",
-            "hook": "ai_will_do",
-            "actor": "country",
-            "target": "definition_only:law_type",
-            "operation": "eligibility",
-            "capability": "direct",
-            "named_targets_proven": [],
-        },
-        "script_hashes": {},
-        "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
-    }
-    manifest = tmp_path / "law.json"
+    inputs = {source: b"sample = { ai_will_do = { always = yes } }\n"}
+    data = current_manifest("law")
+    executable = compact_image(tmp_path, data)
 
     def freeze():
         data["script_hashes"] = {source: hashlib.sha256(inputs[source]).hexdigest()}
-        raw = json.dumps(data).encode()
-        manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "LAW_MANIFEST", manifest, raising=False)
-        monkeypatch.setattr(
-            engine_scope, "LAW_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest(), raising=False
-        )
+        repin_manifest(monkeypatch, tmp_path / "proof.json", "law", data)
 
     freeze()
     monkeypatch.setattr(
         vanilla_inventory, "_inputs", lambda _: (dict(inputs), ("laws",), ("game",))
     )
-    return game, exe, source, inputs, data, freeze
+
+    return game, executable, source, inputs, data, freeze
 
 
 def test_law_predicate_proves_definition_identity_only(law_proof):
@@ -82,8 +48,8 @@ def test_law_predicate_proves_definition_identity_only(law_proof):
     assert row.responsibility_step == "D4.06"
     assert row.getter is None
     assert "scope:law" not in row.target_scope
-    assert any("0x141548e39" in ref for ref in row.scope_evidence)
-    assert f"@evidence/{engine_scope.LAW_MANIFEST_ID}" in result.source_hashes
+    assert any("0x1415fcd19" in ref for ref in row.scope_evidence)
+    assert f"@evidence/{engine_scope_115.manifest('law')[1]}" in result.source_hashes
 
 
 @pytest.mark.parametrize("change", ["missing_exe", "exe_drift", "script_drift", "missing_script"])
@@ -158,12 +124,12 @@ def test_duplicate_law_definition_blocks_all_sides(law_proof, override, same_sou
 def test_corrupt_law_attestation_is_error(law_proof, corruption):
     game, _, _, inputs, data, freeze = law_proof
     if corruption == "manifest":
-        engine_scope.LAW_MANIFEST.write_bytes(b"{}")
+        engine_scope_115.manifest("law")[0].write_bytes(b"{}")
     else:
         if corruption == "length":
             data["exe"]["bytes"] += 1
         elif corruption == "bytes":
-            data["observations"][0]["bytes"] = "00"
+            data["observations"][0]["sha256"] = "0" * 64
         else:
             data["contract"]["target"] = "scope:law=law"
         freeze()
@@ -182,41 +148,13 @@ def test_law_declaration_identity_survives_scope_reclassification(law_proof):
     assert unknown.surfaces[0].capability == "pending"
 
 
-def test_frozen_law_manifest_retains_complete_source_and_control_flow_evidence():
-    raw = engine_scope.LAW_MANIFEST.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == engine_scope.LAW_MANIFEST_SHA256
-    data = json.loads(raw)
+def test_current_law_manifest_retains_complete_source_and_control_flow_evidence():
+    data = current_manifest("law")
     assert data["evidence_category"] == "static_check"
-    assert len(data["script_hashes"]) == 21
-    assert data["inventory_snapshot"]["declarations"] == 59
+    assert len(data["script_hashes"]) == 25
     assert data["contract"]["named_targets_proven"] == []
-    checks = {point["label"]: point for point in data["control_flow_checks"]}
-    assert checks["candidate false skips current"]["target_va"] == "0x1415490d8"
-    assert checks["law trigger wrapper"]["target_va"] == "0x14170c2a0"
-    assert checks["CLawType constructor"]["target_va"] == "0x1417082b0"
-    points = {point["label"]: point for point in data["observations"]}
-    assert points["country-law-db-registration"]["va"] == "0x140efaf60"
-    assert len(bytes.fromhex(points["country-law-creation"]["bytes"])) == 0x35F
-    assert len(data["observations"]) >= 40
-
-
-def test_frozen_law_control_flow_targets_follow_attested_instruction_bytes():
-    data = json.loads(engine_scope.LAW_MANIFEST.read_bytes())
-    points = data["observations"]
-    for check in data["control_flow_checks"]:
-        address = int(check["instruction_va"], 16)
-        raw = bytes.fromhex(check["instruction_bytes"])
-        assert raw[:1] == b"\xe8" or raw[:2] == b"\x0f\x84"
-        displacement = struct.unpack_from("<i", raw, len(raw) - 4)[0]
-        assert address + len(raw) + displacement == int(check["target_va"], 16)
-        assert any(
-            address - int(point["va"], 16) >= 0
-            and bytes.fromhex(point["bytes"])[
-                address - int(point["va"], 16) : address - int(point["va"], 16) + len(raw)
-            ]
-            == raw
-            for point in points
-        )
+    assert len(data["observations"]) == 19
+    assert data["reference_sites"]
 
 
 @pytest.mark.parametrize(
@@ -243,7 +181,7 @@ def test_verified_law_evidence_is_limited_to_frozen_sources(law_proof):
     evidence = engine_scope.law_evidence(game, inputs)
     assert evidence.verified
     assert evidence.sources == (source,)
-    assert any("0x141548e39" in ref for ref in evidence.references)
+    assert any("0x1415fcd19" in ref for ref in evidence.references)
     exe.unlink()
     unavailable = engine_scope.law_evidence(game, inputs)
     assert not unavailable.verified

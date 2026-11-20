@@ -15,7 +15,7 @@ coverage==7.17.3
 distlib==0.4.4
 execnet==2.1.2
 filelock==4.2.12
-hypothesis==6.170.15
+hypothesis==6.170.17
 identify==2.6.20
 iniconfig==2.3.1
 librt==0.17.0
@@ -23,10 +23,11 @@ markdown-it-py==4.3.0
 mdurl==0.1.2
 mypy==2.4.1
 mypy-extensions==1.2.0
+networkx==3.7
 nodeenv==1.12.0
 packaging==26.3
 pathspec==1.1.1
-platformdirs==4.14.7
+platformdirs==4.14.8
 pluggy==1.7.0
 pre-commit==4.7.0
 psutil==7.2.2
@@ -50,6 +51,7 @@ ruff==0.17.6
 shellingham==1.5.4
 sortedcontainers==2.4.0
 typer==0.29.2
+types-networkx==3.6.1.20261119
 types-psutil==7.2.2.20261111
 typing-extensions==4.16.0
 typing-inspection==0.4.5

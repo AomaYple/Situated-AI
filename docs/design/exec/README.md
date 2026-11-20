@@ -10,10 +10,16 @@
 
 ## 工程与架构收据
 
+- [工程原则逐条复核](工程原则逐条复核-结果.md)登记工程条款的当前依据和验收待项，[旧版清退测试责任](旧版本测试责任迁移-结果.md)登记测试和证据的迁移。
 - [2026-11-18 主线工程治理](主线工程治理-2026-11-18-结果.md)和[早期主线工程治理](工程治理主线交付-结果.md)分别记录独立治理的验证范围。
 - [1.15 架构深化](1.15架构深化-结果.md)记录 R2 设计决策，[实施计划](1.15架构-实施计划.md)记录 S0、A0–A6 的顺序，[需求验收矩阵](1.15-R2-需求验收矩阵.md)与[最终验收结果](1.15-R2-最终验收结果.md)绑定 1.15.0 的静态完成范围。
-- [架构重设计](架构重设计-结果.md)及[阶段收据](架构阶段收据.json)绑定历史 A2 的逐项处置。[广度深度拓展](广度深度拓展-结果.md)、[3.0.0 行动内核](K6-K13-结果.md)、[2.0.0 处境行动内核](处境行动内核-执行结果.md)、[1.5.0 分层联动](分层联动-执行结果.md)和[终极方案 4.0](终极方案4.0-执行结果.md)各自记录对应阶段事实。
-- [历史归档](../archive/README.md)登记 X1 原件及其他冻结路径。[处境行动决策内核实施计划](mod重设计-实施计划.md)保留已停止执行的 31.4/D0–D14 与 K0–K13 的历史背景。已移除的早期执行页可按相应提交或发布标签从 Git 历史追溯。
+- [架构重设计](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/%E6%9E%B6%E6%9E%84%E9%87%8D%E8%AE%BE%E8%AE%A1-%E7%BB%93%E6%9E%9C.md)及[阶段收据](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/%E6%9E%B6%E6%9E%84%E9%98%B6%E6%AE%B5%E6%94%B6%E6%8D%AE.json)绑定历史 A2 的逐项处置。[广度深度拓展](广度深度拓展-结果.md)、[3.0.0 行动内核](K6-K13-结果.md)、[2.0.0 处境行动内核](处境行动内核-执行结果.md)、[1.5.0 分层联动](分层联动-执行结果.md)和[终极方案 4.0](终极方案4.0-执行结果.md)各自记录对应阶段事实。
+- R2 的分阶段命令与工具、早期 D/K 收口命令随当时的源码和输入一并追溯。[冻结执行目录](https://github.com/AomaYple/Situated-AI/tree/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec)
+- [历史归档](../archive/README.md)登记 X1 原件及其他冻结路径保留已停止执行的 31.4/D0–D14 与 K0–K13 的历史背景。已移除的早期执行页可按相应提交或发布标签从 Git 历史追溯。
+
+## Victoria 3 1.15.1 迁移原件
+
+3.3.0 的交付与渠道状态见[正式交付结果](3.3.0-交付结果.md)。迁移过程和复核细节保留于冻结提交的[发布计划](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-%E8%BF%81%E7%A7%BB%E5%8F%91%E5%B8%83%E8%AE%A1%E5%88%92.md)、[工程结果](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-%E5%B7%A5%E7%A8%8B%E8%BF%81%E7%A7%BB-%E7%BB%93%E6%9E%9C.md)、[Mod 静态复核](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-Mod%E9%9D%99%E6%80%81%E5%A4%8D%E6%A0%B8-%E7%BB%93%E6%9E%9C.md)、[二进制独立复核](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%8B%AC%E7%AB%8B%E5%A4%8D%E6%A0%B8-%E7%BB%93%E6%9E%9C.md)。
 
 ## 旧 D/K 阶段收据与已撤回候选
 

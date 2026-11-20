@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import math
 import re
@@ -57,16 +56,12 @@ from .vanilla_index import (
     VOCABULARY_DIRS,
     game_index,
     script_value_accessors,
-    vocabulary_dir,
 )
+lazy from . import country_state as _country_state
 
 if TYPE_CHECKING:
     from .country_state import CountryPolicy
     from .situated.profile_configuration import ProfileConfiguration
-
-
-def _country_state_module():
-    return importlib.import_module("pdx.country_state")
 
 
 _FISCAL_REFERENCE_SOURCE = "common/script_values/war_support_values.txt"
@@ -77,32 +72,17 @@ _FISCAL_REFERENCE_WORDS = frozenset(
 
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
 PRODUCT = config.REPO / "mod"
-_HISTORICAL_PRODUCT = PRODUCT
-BASELINE = config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
-_HISTORICAL_BASELINE = BASELINE
 
 
 def baseline_path() -> Path:
-    return (
-        situated_compiler.baseline_path()
-        if version_contracts.is_115() and BASELINE == _HISTORICAL_BASELINE
-        else BASELINE
-    )
+    return situated_compiler.baseline_path()
 
 
 def baseline_text() -> str:
-    path = baseline_path()
-    if path == situated_compiler.baseline_path() and (
-        version_contracts.active_version() == version_contracts.CURRENT_VERSION
-    ):
-        return situated_compiler.baseline_text()
-    return path.read_text(encoding="utf-8")
+    return situated_compiler.baseline_text()
 
 
 def product_path() -> Path:
-    """The complete compatibility tree is isolated from historical and R2 output."""
-    if version_contracts.active_version() == "1.15.0" and PRODUCT == _HISTORICAL_PRODUCT:
-        return config.REPO / "tools/out/compatibility/1.15.0"
     return PRODUCT
 
 
@@ -774,7 +754,7 @@ def load(source: Path = SOURCE) -> Policy:
         raise ValueError("决策数据源的 schema 或字段无效")
     if (
         not isinstance(data["game_version"], str)
-        or data["game_version"] != "1.14.5"
+        or data["game_version"] != version_contracts.require_current()
         or not isinstance(data["baseline_sha256"], str)
         or len(data["baseline_sha256"]) != 64
         or any(c not in "0123456789abcdef" for c in data["baseline_sha256"])
@@ -876,30 +856,13 @@ def load(source: Path = SOURCE) -> Policy:
         or not -1 <= policy.aggression <= 0
     ):
         raise ValueError("外交偏置必须为有限数且位于声明方向的保守范围内")
-    if version_contracts.is_115() and source.resolve() == SOURCE.resolve():
-        from .situated import compatibility_115, engine_scope  # noqa: PLC0415
+    if source.resolve() == SOURCE.resolve():
+        from .situated import compatibility_115  # noqa: PLC0415
 
-        current_release = version_contracts.active_version() == version_contracts.CURRENT_VERSION
-        authority = (
-            compatibility_115.declaration() if current_release else compatibility_115.snapshot()
-        )
-        source_identity = raw + authority
-        if not current_release:
-            source_identity += engine_scope.strategy_snapshot()
-        current = json.loads(authority)
-        policy = replace(
-            policy,
-            game_version=version_contracts.active_version(),
-            baseline_sha256=current["baseline_sha256"],
-            package=replace(
-                policy.package,
-                status="candidate"
-                if version_contracts.active_version() == "1.15.0"
-                else "released",
-                parent=f"vanilla-{version_contracts.active_version()}",
-            ),
-            source_sha256=hashlib.sha256(source_identity).hexdigest(),
-        )
+        authority = compatibility_115.declaration()
+        if policy.baseline_sha256 != json.loads(authority)["baseline_sha256"]:
+            raise ValueError("财政原版底本与当前生成合同不一致")
+        policy = replace(policy, source_sha256=hashlib.sha256(raw + authority).hexdigest())
     return policy
 
 
@@ -1005,7 +968,7 @@ def patch_default(
     text = normalized_text(text)
     if hashlib.sha256(text.encode()).hexdigest() != policy.baseline_sha256:
         raise ValueError("默认策略底本哈希不符；升级需重新审核，拒绝盲生成")
-    parsed = parse_text(text, str(BASELINE))
+    parsed = parse_text(text, version_contracts.DEFAULT_STRATEGY_SOURCE)
     if (
         parsed.errors
         or len(parsed.top_assignments) != 1
@@ -1088,11 +1051,10 @@ def source_fingerprint(
 ) -> dict[str, str]:
     """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
 
-    if baseline is None and version_contracts.active_version() == version_contracts.CURRENT_VERSION:
+    if baseline is None:
         baseline_sha256 = version_contracts.contract().baseline_strategy_sha256
     else:
-        source = baseline if baseline is not None else baseline_text()
-        baseline_sha256 = hashlib.sha256(normalized_text(source).encode()).hexdigest()
+        baseline_sha256 = hashlib.sha256(normalized_text(baseline).encode()).hexdigest()
     result = {
         "fiscal_source_sha256": policy.source_sha256,
         "extensions_source_sha256": extensions.source_sha256,
@@ -1123,8 +1085,7 @@ def source_fingerprint(
     if extensions.diplomacy_enabled:
         result["diplomacy_source_sha256"] = decision_diplomacy.load().source_sha256
     if country_policy is not None:
-        country_state = _country_state_module()
-
+        country_state = _country_state
         result.update(
             country_state_source_sha256=country_policy.source_sha256,
             country_state_generator_sha256=hashlib.sha256(
@@ -1255,7 +1216,7 @@ def metadata_payload(
 
 def attach_country_metadata(metadata: dict[str, object], country_policy: CountryPolicy) -> None:
     """Attach observations evaluated on demand by each vanilla consumer."""
-    country_state = _country_state_module()
+    country_state = _country_state
 
     state_contract = country_state.contract(country_policy)
     metadata["country_state"] = state_contract
@@ -1293,10 +1254,9 @@ def build(
     country_policy: CountryPolicy | None = None,
     configuration: ProfileConfiguration | None = None,
 ) -> dict[str, str]:
-    if version_contracts.is_115():
-        from .situated import compatibility_115  # noqa: PLC0415
+    from .situated import compatibility_115  # noqa: PLC0415
 
-        compatibility_115.verify_game(config.GAME)
+    compatibility_115.verify_game(config.GAME)
     policy = policy or load()
     baseline = baseline if baseline is not None else baseline_text()
     extensions = extensions or load_extensions()
@@ -1493,7 +1453,7 @@ def build(
             ):
                 raise ValueError(f"旧模块或全域规则与消费者适配重复写入字段：{'.'.join(path)}")
             field_owners[path] = owner
-    country_state = _country_state_module()
+    country_state = _country_state
 
     languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
     state_owned_triggers = (
@@ -1742,18 +1702,10 @@ def build(
             strategic_source_sha256=strategy.source_sha256,
             strategic_generator_sha256=strategic_contract["generator_sha256"],
         )
-    if (
-        version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
-        and information_rules is not None
-        and consumer_adapters is not None
-    ):
+    if information_rules is not None and consumer_adapters is not None:
         from .situated import network_profile, production_profile  # noqa: PLC0415
 
-        profile = (
-            production_profile.declared_profile()
-            if version_contracts.active_version() == version_contracts.CURRENT_VERSION
-            else production_profile.load_profile(production_profile.baseline_root())
-        )
+        profile = production_profile.declared_profile()
         metadata["action_network"] = network_profile.compose(
             files, profile, configuration=configuration
         )
@@ -1931,8 +1883,7 @@ def validate(
     """
     interfaces = set()
     if country_policy is not None:
-        country_state = _country_state_module()
-
+        country_state = _country_state
         try:
             country_state.validate(country_policy, game, snapshot=snapshot)
         except (ValueError, OSError) as exc:
@@ -1980,14 +1931,7 @@ def validate(
     if extensions.diplomacy_enabled:
         interfaces |= {"recklessness", "in_default", "taking_loans"}
     # 财政值分别由当前锁定脚本的引用和快照词汇支持。
-    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
-    fiscal_words: set[str] = set()
-    if policy.enabled:
-        if current:
-            fiscal_words.update(_FISCAL_REFERENCE_WORDS)
-        else:
-            fiscal_words.update(vocabulary_dir(baseline_path().parent))
-            fiscal_words.update(("credit", "weeks_until_bankruptcy"))
+    fiscal_words = _FISCAL_REFERENCE_WORDS if policy.enabled else frozenset()
     if vocabulary is None:
         vocabulary_words: set[str] = set()
         vocabulary_uncovered = True
@@ -2075,11 +2019,9 @@ def validate(
     else:
         # 兼容以往只检查通用词汇的调用，但把底本自带证据与自产物词汇分开；
         # 新模块所需接口不会被“所有目标词都存在于目标里”这件事验证。
-        if not current:
-            key_words = vocabulary_dir(baseline_path().parent)
         vocabulary_uncovered = True
 
-    if current and (snapshot is not None or game is not None):
+    if snapshot is not None or game is not None:
         # These source assignments have independent, build-specific coverage.
         from .situated import compatibility_115  # noqa: PLC0415
 
@@ -2103,32 +2045,18 @@ def validate(
     if variable_uncovered and "has_variable" in interfaces:
         issues.append("原版变量写入快照缺失；变量 API 检查未覆盖，不算通过")
     if game is not None:
-        if current:
-            try:
-                version_contracts.read_default_strategy(game)
-            except ValueError as exc:
-                issues.append(str(exc))
-        else:
-            path = game / version_contracts.DEFAULT_STRATEGY_SOURCE
-            if (
-                not path.is_file()
-                or normalized_text(path.read_text(encoding="utf-8-sig")) != baseline_text()
-            ):
-                issues.append("本机默认策略与锁定底本不一致，需重审版本")
+        try:
+            version_contracts.read_default_strategy(game)
+        except ValueError as exc:
+            issues.append(str(exc))
     if game is not None and policy.enabled:
         path = game / _FISCAL_REFERENCE_SOURCE
-        if current:
-            matches = (
-                path.is_file()
-                and not path.is_symlink()
-                and path.resolve() == path.absolute()
-                and hashlib.sha256(path.read_bytes()).hexdigest() == _FISCAL_REFERENCE_SHA256
-            )
-        else:
-            reference = baseline_path().parent / "war_support_values.txt"
-            matches = path.is_file() and normalized_text(
-                path.read_text(encoding="utf-8-sig")
-            ) == reference.read_text(encoding="utf-8")
+        matches = (
+            path.is_file()
+            and not path.is_symlink()
+            and path.resolve() == path.absolute()
+            and hashlib.sha256(path.read_bytes()).hexdigest() == _FISCAL_REFERENCE_SHA256
+        )
         if not matches:
             issues.append("本机财政接口参考与锁定底本不一致，需重审版本")
     return issues

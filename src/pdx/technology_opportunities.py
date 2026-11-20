@@ -9,7 +9,6 @@ supplied native sources. Candidate definitions never become runtime scopes.
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import math
 import re
@@ -26,22 +25,18 @@ from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
 
+# Resolve company_sectors after observation query registration in decision_rules.
+lazy from . import company_sectors
+
 if TYPE_CHECKING:
     from pathlib import Path
 
-PARAMETERS = config.REPO / "mod/decisions/technology_opportunities.toml"
-PARAMETERS_115 = PARAMETERS.with_name("technology_opportunities_115.toml")
-PARAMETERS_CURRENT = PARAMETERS.with_name("technology_opportunities_1152.toml")
+PARAMETERS = config.REPO / "mod/decisions/technology_opportunities_1152.toml"
 
 
 def parameter_path() -> Path:
-    """Keep the migrated native catalog separate from the historical policy source."""
-    return {
-        "1.14.5": PARAMETERS,
-        "1.15.0": PARAMETERS_115,
-        "1.15.1": PARAMETERS.with_name("technology_opportunities_1151.toml"),
-        "1.15.2": PARAMETERS_CURRENT,
-    }[version_contracts.active_version()]
+    version_contracts.require_current()
+    return PARAMETERS
 
 
 _FAMILIES = frozenset(
@@ -63,12 +58,6 @@ _FAMILIES = frozenset(
 _NAME = re.compile(r"[a-z][a-z0-9_-]*\Z")
 
 
-@cache
-def _company():
-    # Lazy import keeps observation query registration below decision_rules.
-    return importlib.import_module("pdx.company_sectors")
-
-
 def _family(source: str) -> str | None:
     path = PurePosixPath(source)
     if path.is_absolute() or ".." in path.parts or "\\" in source or ":" in source:
@@ -83,7 +72,7 @@ def _family(source: str) -> str | None:
 def _child(block: Block, key: str) -> Block | None:
     # Share the company's strict unique-reference/list/recipe contracts. This
     # adapter only indexes additional native families; it is not a PDX parser.
-    row = _company()._one(block, key)
+    row = company_sectors._one(block, key)
     if row is None:
         return None
     if row.op != "=" or row.prefix is not None or not isinstance(row.value, Block):
@@ -92,7 +81,7 @@ def _child(block: Block, key: str) -> Block | None:
 
 
 def _scalar(block: Block, key: str, default: str = "") -> str:
-    row = _company()._one(block, key)
+    row = company_sectors._one(block, key)
     if row is None:
         return default
     if row.op != "=" or row.prefix is not None or not isinstance(row.value, Scalar):
@@ -212,7 +201,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
     all_technologies = {}
     for identity, (source, definition) in sorted(indices["technologies"].items()):
         all_technologies[identity] = list(
-            _company()._list(definition.value, "unlocking_technologies")
+            company_sectors._list(definition.value, "unlocking_technologies")
         )
         if identity not in consumers:
             continue
@@ -251,7 +240,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         return frozenset(result)
 
     recipes = {
-        identity: _company()._recipe(indices, identity)
+        identity: company_sectors._recipe(indices, identity)
         for identity in sorted(indices["production_methods"])
     }
     methods = {}
@@ -260,7 +249,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         methods[identity] = {
             "source": recipe["source"],
             "line": recipe["line"],
-            "technologies": list(_company()._list(definition.value, "unlocking_technologies")),
+            "technologies": list(company_sectors._list(definition.value, "unlocking_technologies")),
             "outputs": _basket(recipe, "output"),
             "inputs": _basket(recipe, "input"),
             "employment": sum(
@@ -270,7 +259,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
             ),
             "services": _services(definition.value),
             "law_gates": {
-                key: list(_company()._list(definition.value, key))
+                key: list(company_sectors._list(definition.value, key))
                 for key in ("unlocking_laws", "disallowing_laws")
             },
             "special_gates": [
@@ -281,9 +270,9 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         }
     groups = {}
     for identity, (source, definition) in sorted(indices["production_method_groups"].items()):
-        selected = _company()._list(definition.value, "production_methods", required=True)
+        selected = company_sectors._list(definition.value, "production_methods", required=True)
         for method in selected:
-            _company()._reference(indices, "production_methods", method)
+            company_sectors._reference(indices, "production_methods", method)
         groups[identity] = {"source": source, "line": definition.line, "methods": list(selected)}
     buildings = {}
 
@@ -298,8 +287,8 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         )
 
     for building, (source, definition) in sorted(indices["buildings"].items()):
-        group_ids = _company()._list(definition.value, "production_method_groups")
-        prerequisites = list(_company()._list(definition.value, "unlocking_technologies"))
+        group_ids = company_sectors._list(definition.value, "production_method_groups")
+        prerequisites = list(company_sectors._list(definition.value, "unlocking_technologies"))
         buildings[building] = {
             "source": source,
             "line": definition.line,
@@ -419,7 +408,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         identity: {
             "source": source,
             "line": definition.line,
-            "market": _company()._market_reason(indices, identity) is None,
+            "market": company_sectors._market_reason(indices, identity) is None,
             "local": _scalar(definition.value, "local") == "yes",
         }
         for identity, (source, definition) in sorted(indices["goods"].items())
@@ -434,8 +423,8 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
         "decrees",
     ):
         for identity, (source, definition) in sorted(indices[family].items()):
-            prerequisites = _company()._list(definition.value, "unlocking_technologies")
-            relevant = set(prerequisites) & technologies.keys()
+            object_prerequisites = company_sectors._list(definition.value, "unlocking_technologies")
+            relevant = set(object_prerequisites) & technologies.keys()
             if not relevant:
                 continue
             row = {
@@ -443,7 +432,7 @@ def inventory(inputs: Mapping[str, str], consumers: Mapping[str, str]) -> dict[s
                 "family": family,
                 "source": source,
                 "line": definition.line,
-                "technologies": list(prerequisites),
+                "technologies": list(object_prerequisites),
             }
             if family in {
                 "combat_unit_types",
@@ -540,19 +529,17 @@ def _parameters(values: Mapping[str, object]) -> dict[str, float]:
     return result
 
 
-def load_parameters(path: Path = PARAMETERS) -> dict[str, float]:
-    data = tomllib.loads(
-        (parameter_path() if path == PARAMETERS else path).read_text(encoding="utf-8")
-    )
+def load_parameters(path: Path | None = None) -> dict[str, float]:
+    selected = parameter_path() if path is None else path
+    data = tomllib.loads(selected.read_text(encoding="utf-8"))
     if set(data) != {"schema", "parameters", "catalog_json"} or data["schema"] != 1:
         raise ValueError("科技机会配置schema无效")
     return _parameters(data["parameters"])
 
 
-def load_catalog(path: Path = PARAMETERS) -> dict[str, Any]:
-    data = tomllib.loads(
-        (parameter_path() if path == PARAMETERS else path).read_text(encoding="utf-8")
-    )
+def load_catalog(path: Path | None = None) -> dict[str, Any]:
+    selected = parameter_path() if path is None else path
+    data = tomllib.loads(selected.read_text(encoding="utf-8"))
     if set(data) != {"schema", "parameters", "catalog_json"} or data["schema"] != 1:
         raise ValueError("科技机会配置schema无效")
     catalog = json.loads(data["catalog_json"])
@@ -571,7 +558,7 @@ def write_catalog(game: Path, *, output: Path) -> Path:
     )
 
     game, output = _prepare_capture(game, output, suffix=".toml")
-    reviewed = load_catalog(PARAMETERS_CURRENT)
+    reviewed = load_catalog(PARAMETERS)
     inputs = {
         path.relative_to(game).as_posix(): _source_bytes(
             game, path.relative_to(game).as_posix()
@@ -595,7 +582,7 @@ def write_catalog(game: Path, *, output: Path) -> Path:
     rebuilt["legacy_rules"] = reviewed["legacy_rules"]
     _validate_catalog(rebuilt)
     encoded = json.dumps(rebuilt, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    template = PARAMETERS_CURRENT.read_text(encoding="utf-8")
+    template = PARAMETERS.read_text(encoding="utf-8")
     text, count = re.subn(
         r"catalog_json = '''.*?'''",
         lambda _: f"catalog_json = '''{encoded}'''",
@@ -835,28 +822,6 @@ _SLAVE = "common/political_movements/05_slave_revolt_movements.txt"
 _COMPANY = "common/company_types/00_companies_soi.txt"
 _OPIUM = "common/journal_entries/00_opium.txt"
 QUERY_SOURCE_HASHES = {
-    _ART: "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
-    _CULTURE: "1aaedb1f2760af4e991dc587416d1c3c68f7dc2beea5f825319e6cb660491402",
-    _SLAVE: "14ea7992d4905c694faf204c644f71ae96bcc5be757a57e3d9cf4a7bab2b2303",
-    _COMPANY: "59546f6105092bad8935498d917a6012aa508c58bea873e462dd66a5850f2f1d",
-    _OPIUM: "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8",
-}
-QUERY_SOURCE_HASHES_115 = {
-    "common/journal_entries/00_art_jes.txt": "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
-    "common/script_values/cultural_community_values.txt": "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30",
-    "common/political_movements/05_slave_revolt_movements.txt": "8ce8f69cdf1ca623ed84e475f1721e9c7945998a687a1f099da0c70f44431968",
-    "common/company_types/00_companies_soi.txt": "5d96e85f5fb786240b201e98d900d9a1e88fff9287389a4a12886e874130f46f",
-    "common/journal_entries/00_opium.txt": "4c78209754e956f3823fea1f8595e81508fc887e5b6b9b223119411a783ceaa1",
-}
-
-
-QUERY_SOURCE_HASHES_1151 = {
-    **QUERY_SOURCE_HASHES_115,
-    "common/political_movements/05_slave_revolt_movements.txt": "6eb96f3cefcde036790351c16b90197c763b1b5f0238a86d2a8020717a0a27fd",
-}
-
-
-QUERY_SOURCE_HASHES_CURRENT = {
     _ART: "300104c4016f3a6037fa38b81e0ee3d52363fd47615a4344d1691bc4938fbd8f",
     _CULTURE: "ba52c106fcba3189c069efcc5af89a3880ff00439f9c5f51a159bdda5278ec30",
     _SLAVE: "6eb96f3cefcde036790351c16b90197c763b1b5f0238a86d2a8020717a0a27fd",
@@ -866,12 +831,8 @@ QUERY_SOURCE_HASHES_CURRENT = {
 
 
 def query_source_hashes() -> dict[str, str]:
-    return {
-        "1.14.5": QUERY_SOURCE_HASHES,
-        "1.15.0": QUERY_SOURCE_HASHES_115,
-        "1.15.1": QUERY_SOURCE_HASHES_1151,
-        "1.15.2": QUERY_SOURCE_HASHES_CURRENT,
-    }[version_contracts.active_version()]
+    version_contracts.require_current()
+    return QUERY_SOURCE_HASHES
 
 
 UNKNOWN_POLICY = company_observations.UNKNOWN_POLICY
@@ -1456,11 +1417,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
         hashes.append((source, digest))
     references = []
     journal = company_observations._child(roots[_ART], "je_romanticism")
-    native = (
-        version_contracts.journal_completion(journal)
-        if version_contracts.is_115()
-        else company_observations._child(journal, "complete")
-    )
+    native = version_contracts.journal_completion(journal)
     line = company_observations._exact(
         native,
         "any_scope_building",
@@ -1508,7 +1465,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
             continue
         frozen = _query_catalog()["buildings"][row["building"]]
         building = company_observations._child(roots[frozen["source"]], row["building"])
-        if list(_company()._list(building, "production_method_groups")) != frozen["groups"]:
+        if list(company_sectors._list(building, "production_method_groups")) != frozen["groups"]:
             raise ValueError("科技查询建筑PMG成员漂移")
         references.append(f"{frozen['source']}:{frozen['line']}")
         for group in frozen["groups"]:
@@ -1516,7 +1473,7 @@ def compile_query(query: TechnologyQuery, inputs: Mapping[str, str]) -> Compiled
             if expected["source"] not in roots:
                 continue
             actual = company_observations._child(roots[expected["source"]], group)
-            if list(_company()._list(actual, "production_methods")) != expected["methods"]:
+            if list(company_sectors._list(actual, "production_methods")) != expected["methods"]:
                 raise ValueError("科技查询PMG实际PM成员漂移")
             references.append(f"{expected['source']}:{expected['line']}")
     state = _COMPANY in roots

@@ -1,10 +1,10 @@
-"""Current NAI rankings retain native counts and the historical author selection."""
+"""Current NAI rankings use native counts and deterministic ties."""
 
 from collections import Counter
 
 import pytest
 
-from pdx import ai, config, doc_tables, version_contracts
+from pdx import ai, config, doc_tables
 
 pytestmark = pytest.mark.unit
 
@@ -15,16 +15,12 @@ def test_current_nai_top25_uses_real_ranking_and_stable_boundary_ties(monkeypatc
     winners = {f"WINNER{i:02}": 100 for i in range(24)}
     counts = Counter({"ZULU": 2, "LOWER": 1, "ALPHA": 2, **winners})
     monkeypatch.setattr(ai, "nai_prefix_counts", lambda: counts)
-    with version_contracts.select_version("1.15.0"):
-        rows = ai.nai_prefix_rows()
-        assert {name.strip("`") for name, _ in rows} == {*winners, "ALPHA"}
-        assert rows[-1] == ("`ALPHA`", {1: "2"})
-        assert isinstance(ai.doc_table_specs()[0], doc_tables.TableSpec)
-        counts = Counter(dict(reversed(list(counts.items()))))
-        assert ai.nai_prefix_rows() == rows
-    with version_contracts.select_version("1.14.5"):
-        assert [name.strip("`") for name, _ in ai.nai_prefix_rows()] == list(ai._NAI_PREFIXES)
-        assert isinstance(ai.doc_table_specs()[0], doc_tables.KeyedTableSpec)
+    rows = ai.nai_prefix_rows()
+    assert {name.strip("`") for name, _ in rows} == {*winners, "ALPHA"}
+    assert rows[-1] == ("`ALPHA`", {1: "2"})
+    assert isinstance(ai.doc_table_specs()[0], doc_tables.TableSpec)
+    counts = Counter(dict(reversed(list(counts.items()))))
+    assert ai.nai_prefix_rows() == rows
 
 
 def test_current_ranking_counts_native_nai_keys_and_excludes_other_namespaces(
@@ -37,6 +33,5 @@ def test_current_ranking_counts_native_nai_keys_and_excludes_other_namespaces(
         encoding="utf-8",
     )
     monkeypatch.setattr(config, "GAME", tmp_path)
-    with version_contracts.select_version("1.15.0"):
-        assert ai.nai_prefix_counts() == Counter(ALPHA=2, ZULU=1)
-        assert ai.nai_prefix_rows() == [("`ALPHA`", {1: "2"}), ("`ZULU`", {1: "1"})]
+    assert ai.nai_prefix_counts() == Counter(ALPHA=2, ZULU=1)
+    assert ai.nai_prefix_rows() == [("`ALPHA`", {1: "2"}), ("`ZULU`", {1: "1"})]

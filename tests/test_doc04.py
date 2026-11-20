@@ -26,7 +26,7 @@ from _table_guards import (
     skip_if_no_game,
 )
 
-from pdx import config, doc04, version_contracts
+from pdx import config, doc04
 from pdx.usage import field_occurrences, file_definition_counts
 
 if TYPE_CHECKING:
@@ -72,13 +72,10 @@ def test_参数计数不数注释里的用法() -> None:
     """注释里提到 ``$X$`` 不算一次使用 —— 两个文件各有一处，正是这条的样本。"""
     _skip()
     raw = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*\$")
-    for rel, counted in (
-        ("common/scripted_effects/00_scripted_effects.txt", 8),
+    for rel, expected in (
+        ("common/scripted_effects/00_scripted_effects.txt", 9),
         ("common/scripted_triggers/ip4_negotiation_triggers.txt", 1),
     ):
-        expected = (
-            9 if version_contracts.is_115() and rel.endswith("00_scripted_effects.txt") else counted
-        )
         path = config.GAME / rel
         text = path.read_text(encoding="utf-8-sig", errors="replace")
         in_code = sum(len(raw.findall(ln.split("#", 1)[0])) for ln in text.splitlines())
@@ -91,16 +88,12 @@ def test_JE_分组表声明的取值没有过期() -> None:
     """两栏并排的版面是作者的，所以「游戏里有新分组」不会自己冒出来。"""
     _skip()
     measured = set(doc04.je_group_counts())
-    declared = (
-        {
-            row[column]
-            for row in doc_rows(DOC, "| 分组 | 使用次数 | | 分组 | 使用次数 |", 0)
-            for column in (0, 3)
-            if row[column]
-        }
-        if version_contracts.is_115()
-        else set(doc04._JE_GROUP_LEFT) | set(doc04._JE_GROUP_RIGHT)
-    )
+    declared = {
+        row[column]
+        for row in doc_rows(DOC, "| 分组 | 使用次数 | | 分组 | 使用次数 |", 0)
+        for column in (0, 3)
+        if row[column]
+    }
     assert measured == declared, (
         f"JE 分组取值变了\n  游戏里有、表里没有：{sorted(measured - declared)}\n"
         f"  表里有、游戏里没有：{sorted(declared - measured)}"

@@ -14,17 +14,12 @@ from pdx.situated.native_treatments import native_treatments
 from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface
 
 pytestmark = pytest.mark.unit
-EVIDENCE_PINS = {
-    "1.15.0": "EVIDENCE_115_SHA256",
-    "1.15.1": "EVIDENCE_1151_SHA256",
-    "1.15.2": "EVIDENCE_1152_SHA256",
-}
 
 
 def _set_evidence_pin(monkeypatch, path):
-    pin = EVIDENCE_PINS.get(version_contracts.active_version())
-    if pin is not None:
-        monkeypatch.setattr(country_interfaces, pin, hashlib.sha256(path.read_bytes()).hexdigest())
+    monkeypatch.setattr(
+        country_interfaces, "EVIDENCE_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()
+    )
 
 
 def test_native_parameter_evidence_extends_hashes_without_discovering_consumers(
@@ -104,12 +99,11 @@ def parameter_case(tmp_path, monkeypatch):
             arguments.append({"engine": engine, "argument": argument, "source": name, "line": line})
     evidence = {
         "schema": 1,
+        "baseline_version": version_contracts.CURRENT_VERSION,
         "sources": {name: hashlib.sha256(raw).hexdigest() for name, raw in sources.items()},
         "interfaces": interfaces,
         "arguments": arguments,
     }
-    if version_contracts.is_115():
-        evidence["baseline_version"] = version_contracts.active_version()
     evidence_path = tmp_path / "country-interfaces.json"
     evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
     monkeypatch.setattr(country_interfaces, "evidence_file", lambda: evidence_path)
@@ -203,17 +197,8 @@ def test_exact_stateless_parameter_helpers_bind_native_arguments(parameter_case,
     assert proof["parameter_contract"]["native_sources"]
 
 
-@pytest.fixture(params=tuple(EVIDENCE_PINS))
-def current_parameter_case(monkeypatch, request):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", request.param)
-    return request.getfixturevalue("parameter_case")
-
-
-def test_current_country_parameters_select_current_authority(
-    current_parameter_case, monkeypatch, tmp_path
-):
-    monkeypatch.setattr(country_interfaces, "EVIDENCE", tmp_path / "unavailable-historical.json")
-    row = _report(current_parameter_case)
+def test_current_country_parameters_select_current_authority(parameter_case):
+    row = _report(parameter_case)
     assert row["status"] == "implemented_numeric"
     assert row["interface"]["control_authorized"]
     proof = next(
@@ -225,19 +210,11 @@ def test_current_country_parameters_select_current_authority(
     assert proof["parameter_contract"]["native_sources"]
 
 
-@pytest.mark.parametrize("fault", ["digest", "version", "missing_version", "other_release_pin"])
-def test_current_country_parameters_reject_authority_drift(
-    current_parameter_case, monkeypatch, fault
-):
-    _inventory, _sources, _generated, path = current_parameter_case
-    if fault == "other_release_pin":
-        version = version_contracts.active_version()
-        selected_pin = EVIDENCE_PINS[version]
-        other_pin = EVIDENCE_PINS["1.15.0" if version == "1.15.1" else "1.15.1"]
-        monkeypatch.setattr(country_interfaces, selected_pin, "0" * 64)
-        monkeypatch.setattr(
-            country_interfaces, other_pin, hashlib.sha256(path.read_bytes()).hexdigest()
-        )
+@pytest.mark.parametrize("fault", ["digest", "version", "missing_version", "stale_environment"])
+def test_current_country_parameters_reject_authority_drift(parameter_case, monkeypatch, fault):
+    _inventory, _sources, _generated, path = parameter_case
+    if fault == "stale_environment":
+        monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
     elif fault == "digest":
         path.write_bytes(path.read_bytes() + b"\n")
     else:
@@ -248,7 +225,7 @@ def test_current_country_parameters_reject_authority_drift(
             evidence.pop("baseline_version")
         path.write_text(json.dumps(evidence), encoding="utf-8")
         _set_evidence_pin(monkeypatch, path)
-    row = _report(current_parameter_case)
+    row = _report(parameter_case)
     assert not row["interface"]["control_authorized"]
     assert row["active_unknown_usage"]
     proof = next(
@@ -582,7 +559,6 @@ def _reader_case(kind, tmp_path, monkeypatch):
         decision_rules,
         observation_queries,
         production_inputs,
-        version_contracts,
     )
     from pdx.textio import normalized_text
 
@@ -624,8 +600,6 @@ def _reader_case(kind, tmp_path, monkeypatch):
         body = (
             "outcome={header=je_standard_completion_header "
             "effect_header=je_standard_on_completion_header trigger={" + completion + "}}"
-            if version_contracts.is_115()
-            else "complete={" + completion + "}"
         )
         sources[native_query] = ("je_portugal_regeneration_public_works={" + body + "}").encode()
         monkeypatch.setitem(

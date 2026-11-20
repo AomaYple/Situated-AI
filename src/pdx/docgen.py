@@ -36,7 +36,6 @@ from . import (
     modifiers,
     tabular,
     usage,
-    version_contracts,
 )
 from .doc_tables import (
     KeyedTableSpec,
@@ -44,12 +43,14 @@ from .doc_tables import (
     check_doc,
     current_rows,
     merge_rows,
-    patch_doc,
+    render_document,
     spec_key,
     split_row,
 )
+from .generation_transaction import GenerationTransaction
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
 
@@ -148,9 +149,7 @@ def targets() -> tuple[DocTarget, ...]:
             )
         ),
     )
-    if version_contracts.is_115():
-        return (*base, *_native_file_table_targets())
-    return base
+    return (*base, *_native_file_table_targets())
 
 
 def _native_file_cells(directory: str, byte_column: int) -> list[tuple[str, dict[int, str]]]:
@@ -245,13 +244,36 @@ def check_all() -> list[tuple[str, int, str, str]]:
     return out
 
 
-def write_all() -> dict[str, int]:
-    """重算并写回全部生成表，返回 ``{文档名 + 表名: 行数}``。"""
-    out: dict[str, int] = {}
+def render_documents(
+    originals: Mapping[Path, bytes] | None = None,
+) -> tuple[dict[Path, str], dict[str, int], Mapping[Path, bytes]]:
+    """Render every target, applying all table specs for each document together."""
+    by_path: dict[Path, list[TableSpec | KeyedTableSpec]] = {}
     for target in targets():
-        for name, n in patch_doc(target.path, target.specs, write=True).items():
-            out[f"{target.name} · {name}"] = n
-    return out
+        by_path.setdefault(target.path, []).extend(target.specs)
+    if originals is None:
+        originals = {path: path.read_bytes() for path in by_path}
+    if unexpected := by_path.keys() - originals.keys():
+        raise ValueError(f"生成表路径不在当前知识库：{sorted(unexpected)}")
+    documents: dict[Path, str] = {}
+    counts: dict[str, int] = {}
+    for path, specs in by_path.items():
+        documents[path], replaced = render_document(path, specs, source=originals[path])
+        counts.update({f"{path.name} · {name}": count for name, count in replaced.items()})
+    return documents, counts, originals
+
+
+def write_all() -> dict[str, int]:
+    """Render all generated tables and replace the changed documents together."""
+    documents, counts, originals = render_documents()
+    changed = {}
+    for path, text in documents.items():
+        encoded = text.encode("utf-8")
+        if originals[path] != encoded:
+            changed[path] = encoded
+    with GenerationTransaction() as transaction:
+        transaction.replace(changed, expected=originals)
+    return counts
 
 
 def render_all() -> dict[str, list[str]]:

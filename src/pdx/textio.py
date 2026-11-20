@@ -16,6 +16,11 @@ def normalized_text(text: str) -> str:
     return text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
 
 
+def decode_document(raw: bytes) -> str:
+    """Decode UTF-8 with the universal-newline behavior of Path.read_text."""
+    return raw.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+
+
 def text_bytes(text: str, *, game: bool = False) -> bytes:
     raw = normalized_text(text).encode("utf-8")
     return codecs.BOM_UTF8 + raw if game else raw

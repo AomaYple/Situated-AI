@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from pdx import decision_adapters, decision_rules, version_contracts
+from pdx import config, decision_adapters, decision_rules, version_contracts
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
 from pdx.textio import normalized_text
@@ -27,14 +27,15 @@ if TYPE_CHECKING:
     from .r2_native import NetworkProgramBinding
     from .vanilla_inventory import VanillaInventory, VanillaSurface
 
-REPO = Path(__file__).resolve().parents[3]
-DEFAULT_SOURCE = REPO / "mod" / "decisions" / "domain_actions.toml"
+REPO = config.REPO
+DEFAULT_SOURCE = (
+    REPO / "mod" / "decisions" / version_contracts.CURRENT_VERSION / "domain_actions.toml"
+)
 
 
 def source_path() -> Path:
     """Use the current generated count ledger with unchanged domain contracts."""
-    if version_contracts.is_115():
-        return DEFAULT_SOURCE.parent / version_contracts.active_version() / DEFAULT_SOURCE.name
+    version_contracts.require_current()
     return DEFAULT_SOURCE
 
 
@@ -358,9 +359,7 @@ def _native_context_issue(
         "min_law_chance_to_pass": ("override_pass_chance_threshold", {"add"}),
         "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
         "change_law_chance": (
-            "first_nonzero_active_change_law_chance_else_default"
-            if version_contracts.is_115()
-            else "additive_percentage_chance",
+            "first_nonzero_active_change_law_chance_else_default",
             {"add"},
         ),
         "max_progressiveness": ("override_progressiveness_limit", {"add"}),

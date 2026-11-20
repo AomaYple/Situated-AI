@@ -13,10 +13,9 @@ import tempfile
 import zipfile
 from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from pdx import (
-    company_sectors,
     config,
     country_state,
     decision_intents,
@@ -33,12 +32,12 @@ from pdx.generation_transaction import GenerationTransaction
 from pdx.localization import parse_loc_entries
 from pdx.situated import (
     engine_scope,
-    network_profile,
     production_profile,
     profile_configuration,
     r2_reader_authority,
 )
 from pdx.textio import GAME_SUFFIXES, text_bytes
+lazy from pdx import company_sectors
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -72,16 +71,13 @@ def generation_contract() -> dict[str, object]:
     目录名是用户可见的交付接口；``MOD_ID`` 才是稳定的引擎/元数据身份。
     当前生成链只输出标准 Mod，长期行为验收由用户完成。
     """
-    compatibility = version_contracts.active_version() == "1.15.0"
     return {
         "schema": "sitai-distribution-v2",
         "mod_id": MOD_ID,
         "install_directory": INSTALL_DIRECTORY_NAME,
         "variant": RELEASE_VARIANT,
-        "publication_channel": "unpublished" if compatibility else "stable",
-        "artifact_kind": "engineering_compatibility_candidate"
-        if compatibility
-        else "production_release",
+        "publication_channel": "stable",
+        "artifact_kind": "production_release",
         "delivery_kind": "standard_mod",
         "with_explanation_probe": False,
         "behavior_quality": "not_evaluated",
@@ -520,25 +516,8 @@ def production_configuration(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions]:
     """读取唯一发布 profile；读取配置不需要本机原版。"""
-    if profile is not None and profile.game_version not in {
-        "1.15.1",
-        version_contracts.CURRENT_VERSION,
-    }:
-        # The native profile is verified before any generated file is touched.
-        # Policy lowering is intentionally fail-closed until the A4 rule source
-        # has been reviewed and attached to the same ConsumerIR bundle.
-        production_profile.verify_baseline()
-        raise ValueError(
-            "1.15.0 profile 已锁定原版写点，但政策 RuleSet 尚未完成统一 IR 接线；拒绝生成"
-        )
-    if profile is not None:
-        expected = (
-            production_profile.declared_profile()
-            if profile.game_version == version_contracts.CURRENT_VERSION
-            else production_profile.load_profile(production_profile.baseline_root("1.15.1"))
-        )
-        if profile != expected:
-            raise ValueError("正式 profile 与锁定完整生产身份不一致")
+    if profile is not None and profile != production_profile.declared_profile():
+        raise ValueError("正式 profile 与锁定完整生产身份不一致")
     policy, extensions = decisions.load(), decisions.load_extensions(profile="release")
     policy = replace(
         policy,
@@ -547,7 +526,7 @@ def production_configuration(
         package=replace(
             policy.package,
             product_version=RELEASE_VERSION,
-            status="candidate" if version_contracts.active_version() == "1.15.0" else "released",
+            status="released",
         ),
     )
     if configuration is not None:
@@ -592,25 +571,17 @@ def check_configuration_identity(
 def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     """冻结源码和产物字节；离线只能核对冻结一致性，不能重建原版。"""
     root = decisions.PRODUCT.parent
-    selected = version_contracts.active_version()
-    if selected == version_contracts.CURRENT_VERSION:
-        vanilla_metadata = sorted((root / "research/vanilla-ai" / selected).glob("*.json"))
-    else:
-        baseline = decisions.baseline_path().parent
-        vanilla_metadata = [*sorted(baseline.glob("*.txt")), *sorted(baseline.glob("*.json"))]
+    selected = version_contracts.require_current()
     sources = [
         *sorted((root / "src/pdx").rglob("*.py")),
         *sorted((root / "mod/decisions").glob("*.toml")),
-        *vanilla_metadata,
+        *sorted((root / "research/vanilla-ai" / selected).glob("*.json")),
         *sorted((root / "research/situated").glob("*.json")),
+        *sorted((root / "mod/decisions" / selected).glob("*.toml")),
+        *sorted((root / "research/situated" / selected).glob("*.json")),
+        *sorted((root / "research/situated" / selected).glob("law-enact-context.md")),
+        *sorted((root / "research").glob(version_contracts.contract().official_manifest_name)),
     ]
-    if version_contracts.is_115():
-        sources.extend(sorted((root / "mod/decisions" / selected).glob("*.toml")))
-        sources.extend(sorted((root / "research/situated" / selected).glob("*.json")))
-        if selected == "1.15.1":
-            sources.extend(sorted((root / "research/vanilla-ai/1.15.1/native").rglob("*")))
-            sources.extend(sorted((root / "research/vanilla-ai/1.15.1/r2-readers").rglob("*")))
-            sources = [path for path in sources if path.is_file()]
     if files is None:
         files = read_production_files()
     return (
@@ -646,21 +617,20 @@ def check_generation_lock(files: Mapping[str, str | bytes] | None = None) -> Non
 
 @query_parse_scope()
 def verify_compatibility_installation() -> None:
-    """Recheck the complete legacy read/write closure at every materialization boundary."""
+    """Recheck the complete native read/write closure at every materialization boundary."""
     try:
         engine_scope.verify_strategy_game(config.GAME)
         engine_scope.verify_company_game(config.GAME)
         decision_interfaces.verify_scripted_trigger_game(config.GAME)
-        if version_contracts.is_115():
-            from .situated import (  # noqa: PLC0415
-                compatibility_115,
-                engine_building_115,
-                engine_reader_115,
-            )
+        from .situated import (  # noqa: PLC0415
+            compatibility_115,
+            engine_building_115,
+            engine_reader_115,
+        )
 
-            compatibility_115.verify_game(config.GAME)
-            engine_building_115.verify_game(config.GAME)
-            engine_reader_115.verify_game(config.GAME)
+        compatibility_115.verify_game(config.GAME)
+        engine_building_115.verify_game(config.GAME)
+        engine_reader_115.verify_game(config.GAME)
         engine_scope.verify_company_defaults_game(config.GAME)
         company_sectors.verify_game(config.GAME)
         equipment_opportunities.verify_game(config.GAME)
@@ -699,30 +669,26 @@ def package_inputs(
     configuration: profile_configuration.ProfileConfiguration | None = None,
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
-    if configuration is None and version_contracts.active_version() in {
-        "1.15.1",
-        version_contracts.CURRENT_VERSION,
-    }:
+    if configuration is None:
         configuration = profile_configuration.ProfileConfiguration()
     policy, extensions = production_configuration(profile=profile, configuration=configuration)
     verify_compatibility_installation()
     country_policy = country_state.load()
     if not country_policy.enabled:
         raise ValueError("正式包必须启用 country_state")
-    if configuration is not None and not configuration.enabled_domains:
+    if not configuration.enabled_domains:
         country_policy = replace(country_policy, enabled=False)
     strategy = decision_intents.load()
     information = decisions.decision_rules.load(strategy=strategy)
     adapters = decisions.decision_adapters.load(strategy=strategy)
-    if configuration is not None:
-        profile_configuration.validate_coverage(
-            frozenset(
-                rule.domain
-                for rules in (information, *(item for _, item in adapters.policies))
-                for rule in rules.rules
-            ),
-            decisions.EXTENSION_PROFILE_MODULES,
-        )
+    profile_configuration.validate_coverage(
+        frozenset(
+            rule.domain
+            for rules in (information, *(item for _, item in adapters.policies))
+            for rule in rules.rules
+        ),
+        decisions.EXTENSION_PROFILE_MODULES,
+    )
     consumed = {
         rule.intent
         for policy_rules in (information, *(row for _, row in adapters.policies))
@@ -834,10 +800,10 @@ def package(
         verify_compatibility_installation()
         check_profile_installation(selected_profile)
         if generation_lock({}) != source_lock:
-            raise ValueError("完整兼容打包期间源码发生漂移")
+            raise ValueError("正式打包期间源码发生漂移")
         issues = decisions.check(decisions.product_path(), production_files)
         if issues:
-            raise ValueError("完整兼容打包期间产物发生漂移：" + "; ".join(issues))
+            raise ValueError("正式打包期间产物发生漂移：" + "; ".join(issues))
         check_generation_lock()
 
     return write_zip(
@@ -849,38 +815,6 @@ def package(
     )
 
 
-def write_compatibility_outputs() -> dict[str, str | bytes]:
-    """Freeze complete 1.15 compatibility witnesses in their own checked tree.
-
-    This explicit engineering operation preserves both the historical mod lock
-    and the separately configured R2 candidate. Unknown output files fail closed.
-    """
-    if version_contracts.active_version() != "1.15.0":
-        raise ValueError("完整兼容生成只接受显式 1.15.0 合同")
-    source_lock = generation_lock({})
-    _, _, internal = package_inputs(include_engineering_metadata=True)
-    if generation_lock({}) != source_lock:
-        raise ValueError("完整兼容生成期间源码发生漂移")
-    files = {name: raw for name, raw in _release_files(internal).items() if name != "README.md"}
-    target = decisions.product_path()
-    if target.resolve() == decisions._HISTORICAL_PRODUCT.resolve():
-        raise ValueError("完整兼容生成拒绝覆盖历史正式 Mod")
-    _validate_paths(list(files))
-    lock = generation_lock(files)
-    expected = {
-        name: raw if isinstance(raw, bytes) else raw.encode("utf-8") for name, raw in files.items()
-    }
-    expected["generation-lock.json"] = lock.encode("utf-8")
-    actual = _profile_directory_files(target)
-    extras = sorted(set(actual) - set(expected))
-    if extras:
-        raise ValueError("完整兼容隔离产物包含额外文件，拒绝覆盖：" + ", ".join(extras))
-    with GenerationTransaction() as transaction:
-        transaction.replace({target / name: raw for name, raw in expected.items()})
-        _verify_written_outputs(transaction, target, files, lock, expected, source_lock)
-    return files
-
-
 def _verify_written_outputs(
     transaction: GenerationTransaction,
     target: Path,
@@ -889,7 +823,7 @@ def _verify_written_outputs(
     expected: Mapping[str, bytes],
     source_lock: str,
     *,
-    profile: production_profile.ProductionProfile | None = None,
+    profile: production_profile.ProductionProfile,
 ) -> None:
     """Keep source, output, lock and live checks inside the rollback boundary."""
 
@@ -906,8 +840,7 @@ def _verify_written_outputs(
         raise ValueError("生产生成期间源码发生漂移")
     check_generation_lock({name: actual[name].read_bytes() for name in files})
     verify_compatibility_installation()
-    if profile is not None:
-        check_profile_installation(profile)
+    check_profile_installation(profile)
     # The live verifier can itself overlap source or output changes.
     if generation_lock({}) != source_lock or generation_lock(files) != lock:
         raise ValueError("生产最终原件核验期间源码发生漂移")
@@ -975,128 +908,6 @@ def write_standard_outputs(
     return files
 
 
-def profile_outputs(
-    profile: production_profile.ProductionProfile,
-    *,
-    policy: str | None = None,
-    configuration: profile_configuration.ProfileConfiguration | None = None,
-) -> dict[str, str | bytes]:
-    """Build the isolated 1.15 profile from the frozen native baseline.
-
-    The production profile is policy-bearing by default.  ``policy="neutral"``
-    remains an explicit diagnostic mode for proving reversibility of the native
-    write points; the CLI can select it through the same resolved configuration.
-    """
-    if profile.game_version != "1.15.0":
-        raise ValueError("当前正式 profile 必须通过完整 package_inputs / package 生成")
-    if configuration is None:
-        if policy not in (None, "policy", "neutral"):
-            raise ValueError(f"未知 1.15 profile policy：{policy}")
-        configuration = profile_configuration.ProfileConfiguration(
-            mode="neutral" if policy == "neutral" else "policy"
-        )
-    if policy is not None and configuration.mode != policy:
-        raise ValueError("profile policy 与 resolved configuration 不一致")
-    policy = configuration.mode
-    files: dict[str, str | bytes]
-    if policy == "policy":
-        files = dict(network_profile.build(profile, configuration=configuration))
-    elif policy == "neutral":
-        files = dict(production_profile.build_neutral(profile, core_enabled=configuration.core))
-    else:
-        raise ValueError(f"未知 1.15 profile policy：{policy}")
-    policy_label = "policy" if policy == "policy" else "neutral"
-    metadata = {
-        "name": "Situated AI",
-        "id": MOD_ID,
-        "version": f"1.15.0-{policy_label}",
-        "supported_game_version": profile.game_version,
-        "short_description": (
-            "Situated AI 1.15 situated consumer policy profile"
-            if policy == "policy"
-            else "Situated AI 1.15 mechanically neutral consumer overlay"
-        ),
-        # This isolated profile has no image asset.  An empty launcher picture
-        # is explicit and avoids claiming a missing thumbnail.png.
-        "picture": "",
-        "tags": ["AI"],
-        "relationships": [],
-        "game_custom_data": {
-            "profile": "situated-ai/production/1.15",
-            "policy": policy_label,
-            "configuration": configuration.identity(),
-            "architecture": "R2/action-network-v2",
-        },
-    }
-    files[METADATA_NAME] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
-    files["README.md"] = f"Situated AI 1.15.0 {policy_label} profile\n" + (
-        "The three declared native consumers receive reviewed observed contributions; "
-        "pending facts retain vanilla behavior.\n"
-        if policy == "policy"
-        else "The three declared native consumers receive an additive zero; vanilla tails are retained.\n"
-    )
-    return files
-
-
-def profile_generation_lock(
-    profile: production_profile.ProductionProfile,
-    files: Mapping[str, str | bytes] | None = None,
-) -> str:
-    """Deterministic lock for the isolated 1.15 profile chain."""
-    root = decisions.PRODUCT.parent
-    if files is None:
-        files = profile_outputs(profile)
-    native = production_profile.verify_baseline()
-    reader_authority = r2_reader_authority.verify_frozen(r2_reader_authority.FROZEN_ROOT)
-    reader_sources = cast("list[dict[str, str]]", reader_authority["files"])
-    source_paths = [
-        *sorted((root / "src/pdx").rglob("*.py")),
-        *sorted((root / "mod/decisions").rglob("*.toml")),
-        production_profile.BASELINE_MANIFEST,
-    ]
-    source_hashes = {
-        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in source_paths
-        if path.is_file()
-    }
-    # Reader authority is a generation input, including its original bytes.
-    # Keep these required paths out of the optional-file filter above: a source
-    # disappearing after verification must fail rather than shrink the lock.
-    reader_paths = [
-        r2_reader_authority.FROZEN_ROOT / r2_reader_authority.MANIFEST_NAME,
-        *(r2_reader_authority.FROZEN_ROOT / item["path"] for item in reader_sources),
-    ]
-    for path in reader_paths:
-        source_hashes[path.relative_to(root).as_posix()] = hashlib.sha256(
-            path.read_bytes()
-        ).hexdigest()
-    return (
-        json.dumps(
-            {
-                "schema": 1,
-                "profile": "situated-ai/production/1.15",
-                "game_version": profile.game_version,
-                "build_id": profile.build_id,
-                "baseline": native["files"],
-                "sources": source_hashes,
-                "files": {
-                    name: hashlib.sha256(
-                        raw if isinstance(raw, bytes) else raw.encode("utf-8")
-                    ).hexdigest()
-                    for name, raw in sorted(files.items())
-                },
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n"
-    )
-
-
-def profile_output_root() -> Path:
-    return config.OUT / "production" / "1.15.0"
-
-
 def _profile_directory_files(
     root: Path, *, excluded: frozenset[Path] = frozenset()
 ) -> dict[str, Path]:
@@ -1110,12 +921,12 @@ def _profile_directory_files(
             or (getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
             or path.resolve() != path.absolute()
         ):
-            raise ValueError(f"1.15.0 隔离产物路径不能包含符号链接或重解析点：{path}")
+            raise ValueError(f"生产产物路径不能包含符号链接或重解析点：{path}")
 
     for path in (root, *root.parents):
         reject_redirect(path)
     if root.exists() and not root.is_dir():
-        raise ValueError(f"1.15.0 隔离产物路径必须是目录：{root}")
+        raise ValueError(f"生产产物路径必须是目录：{root}")
     files = {}
     pending = [root] if root.exists() else []
     while pending:
@@ -1141,134 +952,6 @@ def check_profile_installation(
     if installed != profile:
         raise ValueError("本机原版 profile 与声明的生产身份不一致")
     return installed
-
-
-def write_profile_outputs(
-    profile: production_profile.ProductionProfile,
-    *,
-    root: Path | None = None,
-    configuration: profile_configuration.ProfileConfiguration | None = None,
-) -> dict[str, str | bytes]:
-    """Stage the full isolated candidate and restore originals on any exception.
-
-    Unexpected existing files require an explicit cleanup decision; generation
-    never silently deletes them. Source drift during replacement fails inside
-    the transaction, before original backups are discarded.
-    """
-    check_profile_installation(profile)
-    source_lock = profile_generation_lock(profile, {})
-    files: dict[str, str | bytes] = dict(profile_outputs(profile, configuration=configuration))
-    if profile_generation_lock(profile, {}) != source_lock:
-        raise ValueError("1.15.0 构建期间源码发生漂移，已拒绝提交产物")
-    _validate_paths(list(files))
-    lock = profile_generation_lock(profile, files)
-    expected = {
-        name: raw if isinstance(raw, bytes) else raw.encode("utf-8") for name, raw in files.items()
-    }
-    expected["generation-lock.json"] = lock.encode("utf-8")
-    target = profile_output_root() if root is None else Path(root)
-    actual = _profile_directory_files(target)
-    extras = sorted(set(actual) - set(expected))
-    if extras:
-        raise ValueError("1.15.0 隔离产物包含额外文件，拒绝覆盖：" + ", ".join(extras))
-    with GenerationTransaction() as transaction:
-        transaction.replace({target / name: raw for name, raw in expected.items()})
-        if profile_generation_lock(profile, files) != lock:
-            raise ValueError("1.15.0 生成期间源码发生漂移，已拒绝提交产物")
-        check_profile_installation(profile)
-        if profile_generation_lock(profile, files) != lock:
-            raise ValueError("1.15.0 最终原件核验期间源码发生漂移，已拒绝提交产物")
-        if set(_profile_directory_files(target, excluded=transaction.temporary_paths)) != set(
-            expected
-        ):
-            raise ValueError("1.15.0 最终原件核验期间产物文件集合发生漂移")
-        for name, raw in expected.items():
-            if (target / name).read_bytes() != raw:
-                raise ValueError(f"1.15.0 生成期间产物发生漂移：{name}")
-    return files
-
-
-def check_profile_outputs(
-    profile: production_profile.ProductionProfile,
-    *,
-    root: Path | None = None,
-    configuration: profile_configuration.ProfileConfiguration | None = None,
-) -> dict[str, bytes]:
-    """Verify an already generated profile directory and return its bytes.
-
-    Building an expected candidate is deliberately separate from reading the
-    directory.  Packaging and guard commands therefore cannot silently rebuild
-    around a tampered or stale generated output.
-    """
-    expected = profile_outputs(profile, configuration=configuration)
-    expected_bytes = {
-        name: raw if isinstance(raw, bytes) else raw.encode("utf-8")
-        for name, raw in expected.items()
-    }
-    target = profile_output_root() if root is None else Path(root)
-    actual_paths = _profile_directory_files(target)
-    if not target.is_dir():
-        raise ValueError(f"1.15.0 隔离产物目录不存在：{target}")
-    lock = profile_generation_lock(profile, expected)
-    expected_bytes["generation-lock.json"] = lock.encode("utf-8")
-    expected_names = set(expected_bytes)
-    extras = sorted(set(actual_paths) - expected_names)
-    if extras:
-        raise ValueError("1.15.0 隔离产物包含额外文件：" + ", ".join(extras))
-    missing = sorted(expected_names - set(actual_paths))
-    if missing:
-        raise ValueError("1.15.0 隔离产物缺失：" + ", ".join(missing))
-    actual = {name: path.read_bytes() for name, path in actual_paths.items()}
-    for name, raw in expected_bytes.items():
-        if actual[name] != raw:
-            raise ValueError(f"1.15.0 隔离产物缺失或漂移：{actual_paths[name]}")
-    return {name: actual[name] for name in sorted(expected_names - {"generation-lock.json"})}
-
-
-def profile_package(
-    destination: Path,
-    profile: production_profile.ProductionProfile,
-    *,
-    configuration: profile_configuration.ProfileConfiguration | None = None,
-) -> Path:
-    """Package checked outputs only after verifying the installed originals."""
-    check_profile_installation(profile)
-    files = check_profile_outputs(profile, configuration=configuration)
-    lock = profile_generation_lock(profile, files)
-    if (profile_output_root() / "generation-lock.json").read_bytes() != lock.encode("utf-8"):
-        raise ValueError("1.15.0 打包期间 generation-lock.json 发生漂移")
-    # The isolated directory stores repository bytes.  Convert checked game
-    # text through the shared deployment boundary to add exactly one BOM/LF;
-    # byte payloads otherwise intentionally bypass that conversion in write_zip.
-    package_files = {
-        name: raw.decode("utf-8-sig")
-        if PurePosixPath(name).suffix.lower() in GAME_SUFFIXES
-        else raw
-        for name, raw in files.items()
-    }
-
-    def verify_before_replace() -> None:
-        # ZIP assembly and validation can outlive its initial input checks.
-        # Recheck at the atomic commit boundary so any detected installed,
-        # source, lock or generated-output drift preserves the previous ZIP.
-        check_profile_installation(profile)
-        if profile_generation_lock(profile, files) != lock:
-            raise ValueError("1.15.0 打包期间生成源码发生漂移")
-        if check_profile_outputs(profile, configuration=configuration) != files:
-            raise ValueError("1.15.0 打包期间隔离产物发生漂移")
-
-    return write_zip(
-        package_files,
-        destination,
-        generation={
-            "profile": "situated-ai/production/1.15",
-            "game_version": profile.game_version,
-            "build_id": profile.build_id,
-            "lock": json.loads(lock),
-        },
-        release=False,
-        before_replace=verify_before_replace,
-    )
 
 
 def main() -> int:

@@ -1,14 +1,9 @@
-"""快照与比对：捕获某个游戏版本下全部 mod 相关信息的**规范形态**，供版本间 diff。
-
-为什么需要
-----------
-2026-09-16 游戏静默从 1.14.2 升到 1.14.3，``00_ai.txt`` 的 AI 参数从 1,013
-变成 1,017。文档里的数字「看起来一直对得上」，实际已经过期 —— 没有快照
-就无从察觉。
+"""捕获当前游戏安装的结构快照，供同版本的核对和比对。
 
 设计要点
 --------
-**完备**：快照收录全部 mod 相关条目的**名字**（不是数量），因此增删改都能被 diff 出来。
+**输入处置**：快照收录解析所得的条目名与字段名。``script_parse_gaps`` 按内容根和
+相对路径记录部分解析的来源，保留其已识别的片段。当前入库快照如无该域，则未记录此项处置。
 
 **规范**：所有列表排序、所有字典按键排序、不写入时间戳等易变字段 ——
 同一版本重复生成的快照应当**逐字节相同**。这条由测试保证。
@@ -35,12 +30,12 @@ from . import ai_surface, config, input_profile, vanilla_index
 from .cache import memo_lifetime, parse_cached
 from .defines import extract_defines
 from .extract import entry_fields
-from .model import Block
-from .scan import TEXT_SUFFIXES, walk_files
-from .version_contracts import is_115
+from .model import Block, ParseError
+from .scan import TEXT_SUFFIXES
+from .version_contracts import active_version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
 SNAPSHOT_DIR = config.OUT / "snapshots"
 
@@ -58,33 +53,45 @@ def _sorted_names(items: Iterable[str]) -> list[str]:
     return sorted(set(items))
 
 
-def _walk_scriptable(root: Path, top: str):
-    """产出某一级目录下可脚本化的文件及其相对路径。
+def _is_input_directory(path: Path) -> bool:
+    try:
+        return stat.S_ISDIR(path.stat().st_mode)
+    except FileNotFoundError:
+        return False
 
-    注意：``config.is_scriptable`` 期望的路径是**相对内容根**的
-    （因为 ``SCRIPTABLE_DIRS`` 里存的是 ``common`` / ``events`` 这类一级目录名）。
-    直接对 ``game/common`` 做 walk 会得到 ``("buildings", "x.txt")``，
-    一级目录名变成数据目录名，导致全部被判为不相关 —— 这是个真实踩过的错。
-    """
-    for f in walk_files(root / top):
-        try:
-            rel = f.path.relative_to(root)
-        except ValueError:
-            continue
-        if len(rel.parts) < 2 or rel.parts[0] != top:
-            continue
-        if config.is_scriptable(rel.parts, f.suffix):
-            yield f, rel
+
+def _raise_walk_error(error: OSError) -> None:
+    raise error
+
+
+def _walk_input_files(root: Path) -> Iterator[Path]:
+    if _is_input_directory(root):
+        for directory, _, files in root.walk(on_error=_raise_walk_error):
+            for name in files:
+                yield directory / name
 
 
 def _scriptable_snapshot(
-    root: Path, top: str = "common"
+    root: Path,
+    top: str,
+    *,
+    parse_gaps: dict[str, list[str]],
+    label: str = "game",
 ) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
-    """一次遍历并解析一个内容根，同时收集条目名和字段名。"""
+    """收集条目名和字段名，并记录解码成功但仅能局部解析的来源。"""
     names: dict[str, list[str]] = {}
     fields: dict[str, set[str]] = {}
-    for f, rel in _walk_scriptable(root, top):
-        pf = parse_cached(f.path)
+    for path in _walk_input_files(root / top):
+        rel = path.relative_to(root)
+        if not config.is_scriptable(rel.parts, path.suffix.lower()):
+            continue
+        pf = parse_cached(path)
+        try:
+            pf.require_complete()
+        except ParseError as exc:
+            if pf.parse_status != "partial":
+                raise
+            parse_gaps[f"{label}/{rel.as_posix()}"] = [exc.detail]
         bucket = names.setdefault(rel.parts[1], [])
         for assignment in pf.top_assignments:
             if assignment.is_variable:
@@ -99,50 +106,36 @@ def _scriptable_snapshot(
     )
 
 
-def _scriptable_names(root: Path, top: str = "common") -> dict[str, list[str]]:
-    """数据目录到排序后的顶层条目名。"""
-    return _scriptable_snapshot(root, top)[0]
-
-
-def _field_names(root: Path, top: str = "common") -> dict[str, list[str]]:
-    """目录和条目到条目块内出现过的字段名。"""
-    return _scriptable_snapshot(root, top)[1]
-
-
 def _scriptable_domain_sections(
-    root: Path = config.GAME,
+    root: Path | None = None,
     *,
-    label: str = "",
-    include_common: bool = False,
+    parse_gaps: dict[str, list[str]],
+    label: str = "game",
 ) -> dict[str, dict[str, list[str]]]:
     """返回某个内容根下每个可脚本目录的条目域和字段域。
 
     ``game`` 保持历史域名（例如 ``events_entries``），而引擎共享层使用
     ``jomini/events_entries`` 这类带内容根前缀的域名，避免同名目录互相覆盖。
-    ``include_common`` 只对引擎层开启；游戏层的 ``common`` 由调用方单独收集，
-    这样既保持旧快照兼容，又不会漏掉 Jomini/Clausewitz 的 common 定义。
     """
+    content_root = config.GAME if root is None else root
     sections: dict[str, dict[str, list[str]]] = {}
+    prefix = "" if label == "game" else f"{label}/"
     for top in config.SCRIPTABLE_DIRS:
-        if top == "common" and not include_common:
-            continue
-        if not (root / top).is_dir():
-            names: dict[str, list[str]] = {}
-            fields: dict[str, list[str]] = {}
-        else:
-            names, fields = _scriptable_snapshot(root, top)
-        prefix = f"{label}/" if label else ""
+        names, fields = _scriptable_snapshot(content_root, top, parse_gaps=parse_gaps, label=label)
         sections[f"{prefix}{top}_entries"] = names
-        sections[f"{prefix}{top}_fields"] = fields
+        field_section = "fields" if label == "game" and top == "common" else f"{top}_fields"
+        sections[f"{prefix}{field_section}"] = fields
     return sections
 
 
-def _engine_scriptable_sections() -> dict[str, dict[str, list[str]]]:
+def _engine_scriptable_sections(
+    parse_gaps: dict[str, list[str]],
+) -> dict[str, dict[str, list[str]]]:
     """收集 Jomini 与 Clausewitz 内容根的可脚本化域。"""
     sections: dict[str, dict[str, list[str]]] = {}
     for label, root in (("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ)):
-        if root.is_dir():
-            sections.update(_scriptable_domain_sections(root, label=label, include_common=True))
+        if _is_input_directory(root):
+            sections.update(_scriptable_domain_sections(root, parse_gaps=parse_gaps, label=label))
     return sections
 
 
@@ -164,21 +157,21 @@ def _defines_snapshot() -> dict[str, list[str]]:
     return {k: sorted(v) for k, v in sorted(merged.items())}
 
 
+def _read_input_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ParseError(f"不是有效的 UTF-8：{exc}", str(path)) from exc
+
+
 def _localization_keys(root: Path) -> dict[str, list[str]]:
     """``语言 -> 排序后的本地化键``。键的增删能被 diff 出来。"""
     out: dict[str, set[str]] = {}
-    loc = root / "localization"
-    if not loc.is_dir():
-        return {}
-    for f in walk_files(loc):
-        if f.suffix not in (".yml", ".yaml"):
-            continue
-        try:
-            text = f.path.read_text(encoding="utf-8-sig", errors="replace")
-        except OSError:
+    for path in _walk_input_files(root / "localization"):
+        if path.suffix.lower() not in (".yml", ".yaml"):
             continue
         lang = "?"
-        for line in text.splitlines():
+        for line in _read_input_text(path).splitlines():
             s = line.strip()
             if not s or s.startswith("#"):
                 continue
@@ -196,27 +189,25 @@ def _dlc_snapshot() -> dict[str, list[str]]:
     """``DLC 名 -> 顶层条目``。"""
     base = config.GAME / "dlc"
     out: dict[str, list[str]] = {}
-    if not base.is_dir():
+    if not _is_input_directory(base):
         return out
-    for d in sorted(p for p in base.iterdir() if p.is_dir()):
-        out[d.name] = _sorted_names([p.name for p in d.iterdir()] if d.is_dir() else [])
+    for d in sorted(p for p in base.iterdir() if _is_input_directory(p)):
+        out[d.name] = _sorted_names(p.name for p in d.iterdir())
     return out
 
 
-def _dlc_descriptor_snapshot(root: Path = config.GAME) -> dict[str, list[str]]:
+def _dlc_descriptor_snapshot(root: Path | None = None) -> dict[str, list[str]]:
     """保存 DLC 描述符的来源文件与全部键值，包含重复键。"""
-    base = root / "dlc"
+    base = (config.GAME if root is None else root) / "dlc"
     out: dict[str, list[str]] = {}
-    if not base.is_dir():
+    if not _is_input_directory(base):
         return out
-    for dlc in sorted(path for path in base.iterdir() if path.is_dir()):
+    for dlc in sorted(path for path in base.iterdir() if _is_input_directory(path)):
         values: list[str] = []
-        for descriptor in sorted(dlc.glob("*.dlc")):
-            try:
-                text = descriptor.read_text(encoding="utf-8-sig", errors="replace")
-            except OSError:
+        for descriptor in sorted(dlc.iterdir()):
+            if not descriptor.match("*.dlc"):
                 continue
-            for line in text.splitlines():
+            for line in _read_input_text(descriptor).splitlines():
                 if "=" not in line:
                     continue
                 key, _, value = line.partition("=")
@@ -331,8 +322,6 @@ class Snapshot:
 
     def require_version(self, version: str | None = None) -> None:
         """Reject offline evidence from a different or unknown native version."""
-        from .version_contracts import active_version  # noqa: PLC0415
-
         expected = f"release/{active_version(version)}"
         if self.version_label != expected:
             raise SnapshotFormatError(
@@ -359,12 +348,9 @@ def _doc_tables_snapshot() -> dict[str, list[str]]:
     from . import docgen  # noqa: PLC0415 - docgen 依赖各领域模块，导入期较重
 
     rows = docgen.render_all()
-    if is_115():
-        failed = [
-            key for key, values in rows.items() if any(v.startswith("<未取到：") for v in values)
-        ]
-        if failed:
-            raise ValueError("1.15快照生成表取值失败：" + ", ".join(failed))
+    failed = [key for key, values in rows.items() if any(v.startswith("<未取到：") for v in values)]
+    if failed:
+        raise ValueError("快照生成表取值失败：" + ", ".join(failed))
     return rows
 
 
@@ -429,16 +415,15 @@ def _source_identity_snapshot() -> dict[str, list[str]]:
         ):
             raise ValueError(f"快照来源包含未核验链接或越界路径：{path}")
 
-    def fail(error: OSError) -> None:
-        raise error
-
     roots = (("game", config.GAME), ("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ))
     for label, root in roots:
-        if not root.is_dir():
+        if not _is_input_directory(root):
             continue
         boundary = root.resolve(strict=True)
         require_native_path(root, boundary)
-        for directory, directories, files in os.walk(root, followlinks=False, onerror=fail):
+        for directory, directories, files in os.walk(
+            root, followlinks=False, onerror=_raise_walk_error
+        ):
             base = Path(directory)
             require_native_path(base, boundary)
             for name in directories:
@@ -491,29 +476,18 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     """
     snap = Snapshot(version=config.game_version(), compact=compact)
     snap.require_version()
-    if is_115():
-        snap.sections["source_identity"] = _source_identity_snapshot()
+    snap.sections["source_identity"] = _source_identity_snapshot()
     if verbose:
         print(f"  版本: {snap.version_label}  精简: {compact}")
 
-    common_entries, common_fields = _scriptable_snapshot(config.GAME, "common")
-    snap.sections["common_entries"] = common_entries
-    if verbose:
-        print(f"  common 目录: {len(snap.sections['common_entries'])}")
-
-    snap.sections["fields"] = common_fields
-    if verbose:
-        print(f"  字段条目: {len(snap.sections['fields'])}")
-
-    # common 之外的每个可脚本目录独立入域，避免事件、GUI、地图和 DLC
-    # 的新增条目被旧的 common-only 快照悄悄漏掉。
-    scriptable_sections = _scriptable_domain_sections()
+    parse_gaps: dict[str, list[str]] = {}
+    scriptable_sections = _scriptable_domain_sections(parse_gaps=parse_gaps)
     snap.sections.update(scriptable_sections)
-    # 引擎共享层同样可以被 mod 依赖或覆盖；之前只把它们用于在线分析，
-    # 导致版本快照无法发现 Jomini/Clausewitz 层的条目变更。
-    engine_sections = _engine_scriptable_sections()
+    engine_sections = _engine_scriptable_sections(parse_gaps)
     snap.sections.update(engine_sections)
+    snap.sections["script_parse_gaps"] = parse_gaps
     if verbose:
+        print(f"  脚本部分解析: {len(parse_gaps)} 个文件（详见 script_parse_gaps 域）")
         for name in sorted(scriptable_sections):
             print(f"  {name}: {len(snap.sections[name])} 组")
         for name in sorted(engine_sections):
@@ -530,7 +504,7 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     if compact:
         snap.sections["localization_digest"] = _localization_digest(config.GAME)
         for label, root in (("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ)):
-            if root.is_dir():
+            if _is_input_directory(root):
                 snap.sections[f"{label}/localization_digest"] = _localization_digest(root)
         if verbose:
             print(
@@ -539,7 +513,7 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     else:
         snap.sections["localization"] = _localization_keys(config.GAME)
         for label, root in (("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ)):
-            if root.is_dir():
+            if _is_input_directory(root):
                 snap.sections[f"{label}/localization"] = _localization_keys(root)
         if verbose:
             print(f"  本地化语言: {len(snap.sections['localization'])}")
@@ -650,15 +624,7 @@ def list_snapshots() -> list[Path]:
 
 
 def snapshot_path(label: str | None = None) -> Path:
-    """按**快照名**解析出文件路径；只写了版本号时优先完整快照，退回精简快照。
-
-    为什么要退回：**只有精简快照是入库的**（8 MB vs 41 MB），
-    所以「拿 1.14.3 与 1.14.4 比结构」在别的机器上只可能拿到 ``*.compact.json``。
-    早先这里硬拼 ``<label>.json``，于是 `v3 snapshot diff release-1.14.3
-    release-1.14.4` 在只有精简快照的机器上报「快照不存在」——
-    而那正是这条命令最主要的用法（版本演练）。完整快照在本地仍然优先：
-    它多带的本地化明细对 diff 更有用。
-    """
+    """按名称找当前版本快照，优先完整快照，回退到精简文件。"""
     full = SNAPSHOT_DIR / f"{label or 'current'}.json"
     if full.is_file():
         return full

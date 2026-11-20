@@ -7,6 +7,7 @@ import json
 from dataclasses import replace
 
 import pytest
+from _engine_evidence import strategy_image
 
 from pdx import config, decision_rules, equipment_opportunities, version_contracts
 from pdx.model import Block
@@ -14,13 +15,6 @@ from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
-
-
-@pytest.fixture
-def historical_strategy_contract():
-    """Only synthetic revision attacks use the reviewed historical schema."""
-    with version_contracts.select_version("1.14.5"):
-        yield
 
 
 FIELDS = (
@@ -32,66 +26,10 @@ FIELDS = (
 MAPS = ((FIELDS[0], "trade"), (FIELDS[1], "stance_conquer_region"))
 
 
-def test_r7_preserves_r6_original_bytes_and_every_existing_observation(
-    historical_strategy_contract,
-):
-    old_path = engine_scope.REPO / "research/situated/victoria3-1.14.5-strategy-scope-r6.json"
-    raw = old_path.read_bytes()
-    assert (
-        hashlib.sha256(raw).hexdigest()
-        == "39b41be99801353ea76c64a1f6c0dbe4c8debe725f52488b045e4a5de8d7d528"
-    )
-    old = json.loads(raw)
-    data = json.loads(engine_scope.strategy_snapshot())
-    assert len(data["consumers"]) == 33
-    assert len(data["observations"]) == 452
-    assert data["observations"][:388] == old["observations"]
-    assert all(data["consumers"][key] == value for key, value in old["consumers"].items())
-    assert set(data["revision"]["added_consumers"]) == set(FIELDS)
-    assert "colonial_interest_ratio" not in data["consumers"]
-
-
 @pytest.fixture
-def proof(tmp_path, monkeypatch, historical_strategy_contract):
-    data = json.loads(engine_scope.strategy_snapshot())
-    points = data["observations"][388:]
-    image = bytearray()
-    for point in points:
-        point["file_offset"] = hex(len(image))
-        image.extend(bytes.fromhex(point["bytes"]))
-    data["observations"] = points
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(image)
-    data["exe"] = {"sha256": hashlib.sha256(image).hexdigest(), "bytes": len(image)}
-    inputs = {}
-    for source in data["script_hashes"]:
-        inputs[source] = b"active = {}"
-        data["script_hashes"][source] = hashlib.sha256(inputs[source]).hexdigest()
-    path = tmp_path / "strategy.json"
-
-    def freeze():
-        raw = json.dumps(data).encode()
-        path.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", path)
-        monkeypatch.setattr(
-            engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
-
-    freeze()
-    return tmp_path / "game", exe, data, inputs, freeze
-
-
-@pytest.mark.parametrize("index", range(64))
-def test_each_new_raw_span_is_checked_after_exe_repin(proof, index):
-    game, exe, data, inputs, freeze = proof
-    raw = bytearray(exe.read_bytes())
-    raw[int(data["observations"][index]["file_offset"], 16)] ^= 1
-    exe.write_bytes(raw)
-    data["exe"]["sha256"] = hashlib.sha256(raw).hexdigest()
-    freeze()
-    with pytest.raises(ValueError, match="字节不一致"):
-        engine_scope.strategy_evidence(game, inputs)
+def proof(tmp_path, monkeypatch):
+    game, exe, data, inputs, freeze = strategy_image(tmp_path, monkeypatch, b"active = {}")
+    return game, exe, data, inputs, freeze
 
 
 @pytest.mark.parametrize("field", FIELDS)
@@ -116,7 +54,7 @@ def test_new_exact_contracts_fail_closed_even_after_manifest_repin(proof, field,
     else:
         data["consumers"][field][member] = "unknown"
     freeze()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
 
 
@@ -133,7 +71,7 @@ def test_object_identity_definition_set_and_real_active_merge_are_pinned(proof, 
     _, _, data, _, freeze = proof
     data[metadata] = {}
     freeze()
-    with pytest.raises(ValueError, match="证据不一致"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
 
 
@@ -161,7 +99,7 @@ def test_treaty_enum_is_exact_native_order(proof, damage):
     else:
         keys.pop()
     freeze()
-    with pytest.raises(ValueError, match="枚举"):
+    with pytest.raises(ValueError, match="strategy_score_keys"):
         engine_scope.strategy_snapshot()
 
 
@@ -196,9 +134,7 @@ def test_map_rejects_unknown_duplicate_and_substitute_shapes(family, key, damage
 
 
 @pytest.mark.parametrize("field", FIELDS)
-@pytest.mark.parametrize("version", ["1.15.1", version_contracts.CURRENT_VERSION])
-def test_new_contexts_keep_complete_objects_and_all_readers(field, version, monkeypatch, tmp_path):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", version)
+def test_new_contexts_keep_complete_objects_and_all_readers(field, monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     context = compiler._frozen_strategy_contexts()[field]
     reader = decision_rules.Reader("war", "is_at_war", "root", "boolean", "boolean")
@@ -250,9 +186,7 @@ def test_parent_and_non_exact_child_paths_never_become_numeric_contexts(family, 
             compiler.validate_context_readers(path, context, {}, ())
 
 
-@pytest.mark.parametrize("version", ["1.15.1", version_contracts.CURRENT_VERSION])
-def test_shipmod_context_keeps_candidate_and_all_root_readers(version, monkeypatch, tmp_path):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", version)
+def test_shipmod_context_keeps_candidate_and_all_root_readers(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "absent")
     contexts = compiler._frozen_ship_modification_contexts()
     assert len(contexts) == 263
@@ -441,7 +375,7 @@ def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monk
         and row["scope_status"] == "direct"
         and row["ordinary_goods"]
     }
-    expected_goods, expected_writers = (426, 1541) if version_contracts.is_115() else (418, 1517)
+    expected_goods, expected_writers = (426, 1541)
     assert len(materials) == 263
     assert sum(map(len, materials.values())) == expected_goods
     # Each actual material has opportunity, scarcity and high-price pressure;

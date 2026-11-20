@@ -32,6 +32,7 @@ mod 本体
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
@@ -922,6 +923,7 @@ def to_cross_dict(ca: CrossAnalysis) -> dict[str, Any]:
 GAME_OUT = config.OUT_GAME
 MODS_OUT = config.OUT_MODS
 CROSS_OUT = config.OUT_CROSS
+CROSS_PAIRING_NAME = "交叉来源.json"
 
 
 @memo_lifetime()
@@ -929,8 +931,10 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
     """落盘。游戏本体、mod、交叉三者**分别存放**。"""
     for d in (GAME_OUT, MODS_OUT, CROSS_OUT, config.REPORTS):
         d.mkdir(parents=True, exist_ok=True)
+    pairing = CROSS_OUT / CROSS_PAIRING_NAME
+    pairing.unlink(missing_ok=True)
 
-    def dump(obj: Any, path: Path, *, compact: bool = False) -> None:
+    def dump(obj: Any, path: Path, *, compact: bool = False, fingerprint: bool = False) -> str:
         """落盘 JSON。
 
         ``compact=True`` 用无空白的紧凑格式。游戏数据产物有 **12 万条目**，
@@ -954,25 +958,32 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
                     json.dump(obj, stream, ensure_ascii=False, indent=2)
                 stream.flush()
                 os.fsync(stream.fileno())
-            Path(temporary).replace(path)
+            staged = Path(temporary)
+            digest = ""
+            if fingerprint:
+                with staged.open("rb") as stream:
+                    digest = hashlib.file_digest(stream, "sha256").hexdigest()
+            staged.replace(path)
         except BaseException:
             with suppress(FileNotFoundError):
                 Path(temporary).unlink()
             raise
+        return digest
 
     out: dict[str, Path] = {}
+    has_cross = bool(ca.dir_touched_by or ca.changed_entries)
 
     g = GAME_OUT / "游戏本体.json"
-    dump(to_game_dict(ga), g)
+    game_digest = dump(to_game_dict(ga), g, fingerprint=has_cross)
     out["游戏本体 JSON"] = g
 
     m = MODS_OUT / "mod.json"
-    dump(to_mods_dict(ma), m)
+    mods_digest = dump(to_mods_dict(ma), m, fingerprint=has_cross)
     out["mod JSON"] = m
 
-    if ca.dir_touched_by or ca.changed_entries:
+    if has_cross:
         c = CROSS_OUT / "交叉.json"
-        dump(to_cross_dict(ca), c)
+        cross_digest = dump(to_cross_dict(ca), c, fingerprint=True)
         out["交叉 JSON"] = c
 
     # 表格类数据。全库只有 map_data/adjacencies.csv 一个，但它定义
@@ -1024,6 +1035,10 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
     p.write_text(render_mods_markdown(ma, ca), encoding="utf-8", newline="\n")
     out["mod 报告"] = p
 
+    if has_cross:
+        dump({"game": game_digest, "mods": mods_digest, "cross": cross_digest}, pairing)
+    else:
+        pairing.unlink(missing_ok=True)
     return out
 
 

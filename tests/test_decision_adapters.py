@@ -39,18 +39,17 @@ if TYPE_CHECKING:
 def test_current_native_authority_recapture_reproduces_reviewed_bytes_twice(tmp_path, monkeypatch):
     """Exercise the explicit writer against live sources, keeping frozen evidence untouched."""
     installed_version = config.game_version()["caligula_branch"].removeprefix("release/")
-    with version_contracts.select_version(installed_version):
-        reviewed = decision_adapters.native_authority_path().read_bytes()
-        assert hashlib.sha256(reviewed).hexdigest() == decision_adapters.native_authority_sha256()
+    version_contracts.require_current(installed_version)
+    reviewed = decision_adapters.native_authority_path().read_bytes()
+    assert hashlib.sha256(reviewed).hexdigest() == decision_adapters.native_authority_sha256()
     destination = tmp_path / "authority" / "native-authority.json"
     monkeypatch.setattr(decision_adapters, "native_authority_path", lambda: destination)
-    with version_contracts.select_version(installed_version):
-        assert decision_adapters.write_native_authority_115(config.GAME) == destination
-        first = destination.read_bytes()
-        assert first == reviewed
-        assert decision_adapters.write_native_authority_115(config.GAME) == destination
-        assert destination.read_bytes() == first
-        assert decision_adapters.native_authority_115()["game_version"] == installed_version
+    assert decision_adapters.write_native_authority_115(config.GAME) == destination
+    first = destination.read_bytes()
+    assert first == reviewed
+    assert decision_adapters.write_native_authority_115(config.GAME) == destination
+    assert destination.read_bytes() == first
+    assert decision_adapters.native_authority_115()["game_version"] == installed_version
 
 
 @pytest.mark.integration
@@ -60,8 +59,7 @@ def test_current_native_authority_recapture_reproduces_reviewed_bytes_twice(tmp_
 def test_current_native_authority_recapture_rejects_existing_drift_without_overwriting(
     tmp_path, monkeypatch
 ):
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        reviewed = decision_adapters.native_authority_path().read_bytes()
+    reviewed = decision_adapters.native_authority_path().read_bytes()
     destination = tmp_path / "native-authority.json"
     damaged = reviewed + b"\n"
     destination.write_bytes(damaged)
@@ -69,10 +67,8 @@ def test_current_native_authority_recapture_rejects_existing_drift_without_overw
     preserved_file.write_bytes(b"existing evidence must survive")
     before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
     monkeypatch.setattr(decision_adapters, "native_authority_path", lambda: destination)
-    with (
-        version_contracts.select_version(version_contracts.CURRENT_VERSION),
-        pytest.raises(ValueError, match="frozen declaration drift"),
-    ):
+    version_contracts.require_current(version_contracts.CURRENT_VERSION)
+    with pytest.raises(ValueError, match="frozen declaration drift"):
         decision_adapters.write_native_authority_115(config.GAME)
     assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == before
 
@@ -871,13 +867,6 @@ def _expanded_law_negative_contracts():
     return contracts
 
 
-@pytest.fixture
-def historical_owner_collision_contract():
-    """Offline owner collision checks retain their original frozen authority."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 def test_declared_sources_have_consumers_and_real_bounded_conditions():
     adapters = decision_adapters.load()
     rules = [rule for _, policy in adapters.policies for rule in policy.rules]
@@ -1085,9 +1074,8 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                         assert 0.75 <= rule.value <= 1.3
 
 
-def test_historical_information_adapter_owner_collision_is_rejected(
-    historical_owner_collision_contract,
-):
+@pytest.mark.integration
+def test_historical_information_adapter_owner_collision_is_rejected():
     adapters = decision_adapters.load()
     default_name = "common/ai_strategies/00_default_strategy.txt"
     default_policy = dict(adapters.policies)[default_name]
@@ -1161,10 +1149,7 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
             r"\1",
             restored,
         )
-        if (
-            name == "common/ai_strategies/00_default_strategy.txt"
-            and version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
-        ):
+        if name == "common/ai_strategies/00_default_strategy.txt":
             # Independently peel the three reviewed stance unions. Retain the
             # original AND bytes before restoring the original complete body;
             # an unrelated edit or a damaged native condition still fails.
@@ -1705,9 +1690,7 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
                 key in {"radical_fraction", "loyalist_fraction"}
                 and any(item.key == "pop_type" for item in values)
             ):
-                current_population = (
-                    key == "pop_type_percent_country" and version_contracts.is_115()
-                )
+                current_population = key == "pop_type_percent_country"
                 parameter_key = "target" if current_population else "pop_type"
                 parameter_items = [item for item in values if item.key == parameter_key]
                 assert len(parameter_items) == 1
@@ -1944,7 +1927,6 @@ def test_wartime_defense_intent_survives_insolvency_in_generated_script(real_gen
 @pytest.fixture(scope="module")
 def population_candidate():
     source = "law_demo = { ai_enact_weight_modifier = { value = 0 } }\n"
-    current = version_contracts.is_115()
     policy = decision_rules.from_data(
         {
             "schema": 1,
@@ -1958,10 +1940,8 @@ def population_candidate():
                     "unit": "ratio",
                     "minimum": 0,
                     "maximum": 1,
-                    "value_field": "value" if current else "percent",
-                    "parameters": {"target": "pop_type:peasants"}
-                    if current
-                    else {"pop_type": "peasants"},
+                    "value_field": "value",
+                    "parameters": {"target": "pop_type:peasants"},
                 }
             },
             "rules": [
@@ -1985,11 +1965,7 @@ def population_candidate():
         policy,
         baseline=source,
         default_strategy=False,
-        reader_evidence=(
-            "pop_type_percent_country = { target = pop_type:peasants value > 0.6 }"
-            if current
-            else "pop_type_percent_country = { pop_type = peasants percent > 0.6 }"
-        ),
+        reader_evidence=("pop_type_percent_country = { target = pop_type:peasants value > 0.6 }"),
     )
     match = re.search(r"# SITAI BEGIN information:[^\n]+\n(.*?)# SITAI END", script, re.DOTALL)
     assert match is not None
@@ -1999,11 +1975,7 @@ def population_candidate():
 @given(share=st.floats(0, 1, allow_nan=False), is_ai=st.booleans())
 def test_population_selector_matches_independent_generated_ast(population_candidate, share, is_ai):
     policy, block = population_candidate
-    population_identity = (
-        (("target", "pop_type:peasants"),)
-        if version_contracts.is_115()
-        else (("pop_type", "peasants"),)
-    )
+    population_identity = (("target", "pop_type:peasants"),)
     scopes = {"ROOT": {"is_ai": is_ai, ("pop_type_percent_country", population_identity): share}}
     actual = _interpret_adjustments(block, scopes)
     expected = ("add", 5.0) if is_ai and share >= 0.6 else None
@@ -2478,10 +2450,9 @@ def test_supply_cannot_replace_existing_stance_or_reference_unknown_good(supply_
 
 def _relative_data():
     baseline = "ai_strategy_default = { subject_value = { value = 50 if = { limit = { OR = { scope:target_country = { is_subject_of = root } can_reach_target_country = { TARGET_COUNTRY = scope:target_country } } } add = 0 } gdp = 0 } }\n"
-    if version_contracts.is_115():
-        baseline = baseline.replace(
-            "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
-        )
+    baseline = baseline.replace(
+        "can_reach_target_country =", "can_reach_target_country_to_subjugate ="
+    )
     return baseline, {
         "schema": 1,
         "baseline_sha256": hashlib.sha256(baseline.encode()).hexdigest(),
@@ -2604,6 +2575,7 @@ def test_relative_comparison_cannot_mix_units_or_use_unproven_getters(change):
         decision_rules.from_data(data, source_sha256="a" * 64)
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize(
     ("field", "owner"),
     [
@@ -2615,7 +2587,6 @@ def test_relative_comparison_cannot_mix_units_or_use_unproven_getters(change):
 def test_legacy_and_information_field_owners_cannot_silently_stack(
     field,
     owner,
-    historical_owner_collision_contract,
 ):
     baseline, data = _relative_data()
     data["readers"]["target"]["scope"] = "root"

@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import math
 import tomllib
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
@@ -26,7 +26,7 @@ from . import production_profile as native
 from . import r2_reader_authority as authority
 from .profile_configuration import ProfileConfiguration
 
-SOURCE = native.ROOT / "mod/decisions/action_network_115.toml"
+SOURCE = native.ROOT / "mod/decisions/action_network_1152.toml"
 PROOF = "docs/design/exec/1.15-R2-A0-结果.md"
 # docs/design/exec/1.15-A0-纵切合同.md#A0-BUDGET-LOCAL-ONLY
 _ADDITIONAL_BLOCK_DEPTH = 3
@@ -149,7 +149,7 @@ READERS = {
         "boolean",
         "boolean",
         "game/common/ai_strategies/03_political_strategies.txt",
-        135,
+        139,
         argument="je_tp_pool_educational_reform",
     ),
     "protective": _reader(
@@ -180,18 +180,13 @@ READERS = {
         path=("scope:target_country",),
         parameters=(("who", "root"), ("type", "support_separatism")),
     ),
-}
-
-
-READERS_1151 = {
-    **READERS,
     "population": _reader(
         "a0-pol-schools",
         "total_population",
         "number",
         "people",
         "game/common/ai_strategies/00_default_strategy.txt",
-        5576,
+        5595,
         minimum=0,
     ),
     "net-surplus": _reader(
@@ -206,28 +201,12 @@ READERS_1151 = {
 
 
 def readers() -> dict[str, ReaderCapability]:
-    selected = native.expected_version()
-    if selected == version_contracts.CURRENT_VERSION:
-        return {
-            **READERS_1151,
-            "school-agenda": replace(READERS_1151["school-agenda"], line=139),
-            "population": replace(READERS_1151["population"], line=5595),
-        }
-    return READERS_1151 if selected == "1.15.1" else READERS
+    return READERS
 
 
 def source_path(version: str | None = None) -> Path:
-    selected = (
-        native.expected_version() if version is None else version_contracts.active_version(version)
-    )
-    names = {
-        "1.15.0": SOURCE,
-        "1.15.1": SOURCE.with_name("action_network_1151.toml"),
-        version_contracts.CURRENT_VERSION: SOURCE.with_name("action_network_1152.toml"),
-    }
-    if selected not in names:
-        raise ValueError(f"R2 declaration 不支持 {selected}")
-    return names[selected]
+    version_contracts.require_current(version)
+    return SOURCE
 
 
 def _fields(
@@ -312,11 +291,8 @@ def compile_profile(
 ) -> tuple[net.NetworkProgram, ...]:
     """Create one symbolic program per physical consumer, with one policy source."""
     source = source_path(profile.game_version) if source is None else Path(source)
-    if profile.game_version == version_contracts.CURRENT_VERSION:
-        if profile != native.declared_profile():
-            raise ValueError("R2 profile differs from current script declaration")
-    else:
-        authority.verify_frozen()
+    if profile != native.declared_profile():
+        raise ValueError("R2 profile differs from current script declaration")
     if {
         name: capability.source for name, capability in readers().items()
     } != authority.reader_sources():
@@ -903,47 +879,6 @@ def _consumer_block_depth(text: str, row: native.ConsumerDeclaration) -> int:
     return maximum
 
 
-def build(
-    profile: native.ProductionProfile,
-    *,
-    configuration: ProfileConfiguration | None = None,
-    baseline_root: Path | None = None,
-    source: Path | None = None,
-) -> dict[str, str]:
-    baseline_root = (
-        native.baseline_root(profile.game_version) if baseline_root is None else Path(baseline_root)
-    )
-    native.verify_baseline(baseline_root)
-    if profile != native.load_profile(baseline_root):
-        raise ValueError("R2 profile differs from frozen native contract")
-    by_consumer = {
-        item.network.actions[0].definition.consumer_id: item
-        for item in compile_profile(profile, source=source, configuration=configuration)
-    }
-    files = {}
-    for row in profile.declarations:
-        raw = (baseline_root / row.source).read_bytes()
-        original = raw.decode("utf-8-sig")
-        program = by_consumer.get(row.id)
-        text = (
-            original
-            if program is None
-            else native._insert_policy(original, row, render_program(program))
-        )
-        if program is not None and native.strip_policy(text, row) != original:
-            raise ValueError("R2 insertion changed native protected content")
-        native_depth = _consumer_block_depth(original, row)
-        generated_depth = _consumer_block_depth(text, row)
-        if generated_depth > native_depth + _ADDITIONAL_BLOCK_DEPTH:
-            raise ValueError(
-                f"R2 A0-BUDGET-LOCAL-ONLY block depth exceeded for {row.id}: "
-                f"native={native_depth}, generated={generated_depth}, "
-                f"maximum additional={_ADDITIONAL_BLOCK_DEPTH}"
-            )
-        files[row.source.removeprefix("game/")] = text
-    return files
-
-
 SCHOOL_MIGRATION = {
     "remaining_school_catchup_need": "school-need: literacy < 0.5 and population > 0; +2",
     "remaining_school_fiscal": "school-capacity-fiscal: positive net weekly income and nondefault; +0.5 complement",
@@ -981,12 +916,10 @@ def compose(
     """
     from .native_treatments import _digest  # noqa: PLC0415
 
-    if profile.game_version == version_contracts.CURRENT_VERSION:
-        baseline = config.ROOT
-        authority.verify_installation(baseline)
-    else:
-        baseline = native.baseline_root(profile.game_version)
-        native.verify_baseline(baseline)
+    if profile.game_version != version_contracts.require_current():
+        raise ValueError("R2 production profile differs from the current contract")
+    baseline = config.ROOT
+    authority.verify_installation(baseline)
     programs = compile_profile(profile, configuration=configuration)
     by_consumer = {item.network.actions[0].definition.consumer_id: item for item in programs}
     if len(by_consumer) != len(programs):

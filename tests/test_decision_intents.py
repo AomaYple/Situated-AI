@@ -280,11 +280,10 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
     if not has_r2_school_writer:
         fields += (school_field,)
     result = decision_rules.evaluate(policy, values, is_ai=True)
-    if has_r2_school_writer:
-        # The current school consumer has one R2 additive writer. The retired
-        # legacy multipliers must not survive in this rule-only evaluator.
-        assert school_field not in result
-        assert all(".".join(rule.field) != school_field for rule in policy.rules)
+    # The current school consumer has one R2 additive writer. The retired
+    # legacy multipliers must not survive in this rule-only evaluator.
+    assert school_field not in result
+    assert all(".".join(rule.field) != school_field for rule in policy.rules)
     assert all(result[field][1] > 1 for field in fields)
     for change in (
         {"loans": True},

@@ -1,13 +1,26 @@
-"""Complete 1.15.2 documentation claims, computed from the actual installation.
+"""Documentation assertions for Victoria 3 1.15.2.
 
-All historical check kinds and targets are retained. Mod/subscription values
-are explicitly a machine snapshot, not a property of the native release.
-Regenerate integer expectations explicitly with V3_CONTRACT_PROFILE=1.15.2
-``v3 verify --fix-claims`` and review the printed changes.
-Original input identities and table results are in release-1.15.2.compact.json.
+The installation counts and generated table values are recorded in
+release-1.15.2.compact.json. Dated Workshop observations retain their own scope.
 """
 
-from .verify import Claim
+from dataclasses import dataclass
+from typing import Literal
+
+
+@dataclass(slots=True)
+class Claim:
+    """One assertion and the source against which it can be checked."""
+
+    id: str
+    doc: str
+    text: str
+    kind: str
+    target: str
+    expected: object
+    note: str = ""
+    scope: Literal["native_installation", "machine_snapshot"] = "native_installation"
+
 
 CLAIMS: list[Claim] = [
     Claim(
@@ -801,6 +814,7 @@ CLAIMS: list[Claim] = [
         "",
         3,
         "2026-11-10 本机 mod/订阅状态快照；不是原版版本事实。",
+        scope="machine_snapshot",
     ),
     Claim(
         "mod.files",
@@ -810,6 +824,7 @@ CLAIMS: list[Claim] = [
         "",
         1228,
         "2026-11-11 本机 mod/订阅状态快照；不是原版版本事实。不含各 mod 的 metadata.json；文件和相对路径数量随当前订阅集变化，由本机快照复算。旧快照作为历史测量保留。⚠️ 4,828 那一版是把**我们自己部署的 mod** 也数了进去（B83），已修正",
+        scope="machine_snapshot",
     ),
     Claim(
         "pfx.vanilla_zero",
@@ -827,7 +842,8 @@ CLAIMS: list[Claim] = [
         "mods_prefix_total",
         "",
         437,
-        "2026-11-12 本机 mod/订阅状态快照；不是原版版本事实。Steam Workshop 3459869359 的当前原字节共有 437 次 REPLACE_OR_CREATE；六个前缀之和见下面 6 条分项断言，历史 436 快照保留在原版本注册表",
+        "2026-11-12 本机 mod/订阅状态快照；不是原版版本事实。Steam Workshop 3459869359 的当前原字节共有 437 次 REPLACE_OR_CREATE；六个前缀之和见下面 6 条分项断言",
+        scope="machine_snapshot",
     ),
     Claim(
         "pfx.replace_or_create",
@@ -837,6 +853,7 @@ CLAIMS: list[Claim] = [
         "REPLACE_OR_CREATE",
         437,
         "2026-11-12 本机 mod/订阅状态快照；不是原版版本事实。Steam Workshop 3459869359 当前五份脚本原字节复算，非本产品或临时部署目录。",
+        scope="machine_snapshot",
     ),
     Claim(
         "pfx.inject",
@@ -846,6 +863,7 @@ CLAIMS: list[Claim] = [
         "INJECT",
         0,
         "2026-11-10 本机 mod/订阅状态快照；不是原版版本事实。注意 `INJECT:` 与 `INJECT_OR_CREATE:` 是两个不同前缀，别用子串匹配",
+        scope="machine_snapshot",
     ),
     Claim(
         "pfx.try_inject",
@@ -855,6 +873,7 @@ CLAIMS: list[Claim] = [
         "TRY_INJECT",
         0,
         "2026-11-10 本机 mod/订阅状态快照；不是原版版本事实。",
+        scope="machine_snapshot",
     ),
     Claim(
         "pfx.try_replace",
@@ -864,6 +883,7 @@ CLAIMS: list[Claim] = [
         "TRY_REPLACE",
         0,
         "2026-11-10 本机 mod/订阅状态快照；不是原版版本事实。",
+        scope="machine_snapshot",
     ),
     Claim(
         "pfx.replace",
@@ -873,6 +893,7 @@ CLAIMS: list[Claim] = [
         "REPLACE",
         0,
         "2026-11-10 本机 mod/订阅状态快照；不是原版版本事实。",
+        scope="machine_snapshot",
     ),
     Claim(
         "pfx.inject_or_create",
@@ -882,6 +903,7 @@ CLAIMS: list[Claim] = [
         "INJECT_OR_CREATE",
         0,
         "2026-11-10 本机 mod/订阅状态快照；不是原版版本事实。",
+        scope="machine_snapshot",
     ),
     Claim(
         "tree.game",

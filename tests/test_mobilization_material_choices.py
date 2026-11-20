@@ -7,7 +7,6 @@ from typing import Any
 import pytest
 
 from pdx import mobilization_opportunities as mobilization
-from pdx import version_contracts
 
 pytestmark = pytest.mark.unit
 
@@ -47,24 +46,21 @@ def test_each_paid_choice_has_exact_direct_inputs_and_original_utility_evidence(
         assert row["field"] == f"mobilization_option_{short}.ai_weight"
         assert row["goods_unit"] == "native_modifier_quantity_coefficient_not_purchase_or_currency"
         assert row["utility_evidence"]
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        assert set(frozen["candidates"]) == set(candidates)
-        assert all(set(record) == {"sha256"} for record in frozen["originals"].values())
-    else:
-        assert len(frozen["candidates"]) == 2
+    assert set(frozen["candidates"]) == set(candidates)
+    assert all(set(record) == {"sha256"} for record in frozen["originals"].values())
 
 
-def test_current_receipt_preserves_rule_order_across_native_recovery_update():
+def test_current_receipt_preserves_rule_order_and_exact_native_recovery():
     raw: dict[str, Any] = {"sources": {}, "readers": {}, "rules": []}
-    with version_contracts.select_version("1.15.1"):
-        prior = mobilization.derive(raw)
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        data = mobilization.load_baseline()
-        current = mobilization.derive(raw, data)
+    data = mobilization.load_baseline()
+    result = mobilization.derive(raw, data)
     assert data["candidates"]["mobilization_option_first_aid"]["recovery_rate"] == "0.10"
     assert data["candidates"]["mobilization_option_field_hospitals"]["recovery_rate"] == "0.20"
-    for key in ("rules", "readers", "actors", "covered", "uncovered"):
-        assert current[key] == prior[key]
+    rules = result["rules"]
+    priority_base = int(mobilization.load_parameters()["priority_base"])
+    assert [rule["priority"] for rule in rules] == list(
+        range(priority_base, priority_base + len(rules))
+    )
 
 
 def test_existing_medical_and_new_material_rules_share_one_joint_program_contract():

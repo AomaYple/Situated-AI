@@ -44,7 +44,13 @@ if TYPE_CHECKING:
 # 合成语义测试的附加token，仅允许独立解释生成条件，不作为真实本体依据。
 # 真实依据另由integration用例对全部锁定原件核对SHA与接口签名。
 _SYNTHETIC_READER_EVIDENCE = (
-    "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
+    "in_default is_at_war total_population navy_size is_subject "
+    "has_strategy ai_strategy_industrial_expansion ai_strategy_resource_expansion "
+    "ai_strategy_territorial_expansion "
+    "has_technology_researched artillery is_treaty_port country_fervor_primary_culture "
+    "is_homeland_of_country_cultures owner root is_isolated_from_market "
+    "primary_cultures_percent_state target_country "
+    "bureaucracy taking_loans scaled_debt net_total_income legitimacy gdp infamy "
     "has_insurrectionary_interest_groups has_variable recently_lost_war weeks_until_bankruptcy "
     "literacy_rate army_size average_sol gold_reserves market_access "
     "market mg:grain grain mg:tools tools mg:iron iron market_goods_delta market_goods_pricier"
@@ -54,62 +60,57 @@ _SYNTHETIC_READER_EVIDENCE = (
 def _source_data():
     """Current test mutations start from the same exact declaration projection."""
     data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
-    if version_contracts.is_115():
-        data["baseline_sha256"] = decision_adapters.native_authority_115()["sources"][
-            "common/ai_strategies/00_default_strategy.txt"
-        ]
-        engine_reader_115.project_information_readers(data["readers"])
-    if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}:
-        # Independent declaration oracle: name the complete retired set here,
-        # rather than deriving expected rule identities from the production loader.
-        retired = {
-            "remaining_school_catchup_need",
-            "remaining_school_fiscal",
-            "remaining_school_administrative",
-            "remaining_school_capacity",
-            "school_default_pressure",
-            "school_administrative_pressure",
-        }
-        school_rules = {
-            row["id"]
-            for row in data["rules"]
-            if row["field"] == "institution_scores.institution_schools"
-        }
-        assert school_rules == retired
-        data["rules"] = [row for row in data["rules"] if row["id"] not in retired]
-        del data["readers"]["literacy"]
+    data["baseline_sha256"] = decision_adapters.native_authority_115()["sources"][
+        "common/ai_strategies/00_default_strategy.txt"
+    ]
+    engine_reader_115.project_information_readers(data["readers"])
+    # Independent declaration oracle: name the complete retired set here,
+    # rather than deriving expected rule identities from the production loader.
+    retired = {
+        "remaining_school_catchup_need",
+        "remaining_school_fiscal",
+        "remaining_school_administrative",
+        "remaining_school_capacity",
+        "school_default_pressure",
+        "school_administrative_pressure",
+    }
+    school_rules = {
+        row["id"]
+        for row in data["rules"]
+        if row["field"] == "institution_scores.institution_schools"
+    }
+    assert school_rules == retired
+    data["rules"] = [row for row in data["rules"] if row["id"] not in retired]
+    del data["readers"]["literacy"]
     return data
 
 
 def test_current_information_projection_changes_only_reviewed_native_identity_and_two_units():
-    historical = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
-    with version_contracts.select_version("1.15.0"):
-        current = _source_data()
-        assert (
-            current["baseline_sha256"]
-            == hashlib.sha256(decisions.baseline_path().read_bytes()).hexdigest()
-        )
-        assert current["rules"] == historical["rules"]
-        assert current["domains"] == historical["domains"]
-        assert set(current["readers"]) == set(historical["readers"])
-        for key, row in current["readers"].items():
-            if key in {"native_army_capacity", "native_marine_capacity"}:
-                assert row == {**historical["readers"][key], "unit": "barracks_levels"}
-            else:
-                assert row == historical["readers"][key]
-        assert current["readers"]["army"]["unit"] == "battalions"
-    with version_contracts.select_version("1.14.5"):
-        assert _source_data() == historical
+    declared = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
+    current = _source_data()
+    assert current["baseline_sha256"] == version_contracts.contract().baseline_strategy_sha256
+    assert current["domains"] == declared["domains"]
+    assert set(current["readers"]) == set(declared["readers"]) - {"literacy"}
+    retired = [
+        row for row in declared["rules"] if row["field"] == "institution_scores.institution_schools"
+    ]
+    assert len(retired) == 6
+    assert current["rules"] == [row for row in declared["rules"] if row not in retired]
+    for key, row in current["readers"].items():
+        if key in {"native_army_capacity", "native_marine_capacity"}:
+            assert row == {**declared["readers"][key], "unit": "barracks_levels"}
+        else:
+            assert row == declared["readers"][key]
+    assert current["readers"]["army"]["unit"] == "battalions"
 
 
 @pytest.mark.parametrize("scope", ["target_country", "overlord", "enemy_country"])
 def test_current_native_target_units_do_not_authorize_foreign_country_context(scope):
-    with version_contracts.select_version("1.15.0"):
-        rules = decision_rules.load()
-        for key in ("native_army_capacity", "native_marine_capacity"):
-            reader = next(row for row in rules.readers if row.key == key)
-            with pytest.raises(ValueError, match="本国根"):
-                decision_interfaces.reader_scope(replace(reader, scope=scope), ())
+    rules = decision_rules.load()
+    for key in ("native_army_capacity", "native_marine_capacity"):
+        reader = next(row for row in rules.readers if row.key == key)
+        with pytest.raises(ValueError, match="本国根"):
+            decision_interfaces.reader_scope(replace(reader, scope=scope), ())
 
 
 @pytest.mark.parametrize("excess", ["candidates", "field_predicates", "rule_predicates"])
@@ -141,12 +142,55 @@ def rules() -> decision_rules.RuleSet:
 
 @pytest.fixture(scope="module")
 def frozen_strategy(rules):
-    """Exercise current rule semantics on the pinned 1.15.1 strategy sample."""
-    version = "1.15.1"
-    path = version_contracts.research_path("vanilla-ai", "00_default_strategy.txt", version)
-    baseline = path.read_text(encoding="utf-8")
-    digest = version_contracts.contract(version).baseline_strategy_sha256
-    assert hashlib.sha256(baseline.encode("utf-8")).hexdigest() == digest
+    """Compact independent PDX baseline for the current twelve information fields."""
+    baseline = """ai_strategy_default = {
+	combat_unit_group_weights = {
+		combat_unit_group_artillery = {
+			value = 1
+		}
+	}
+	institution_scores = {
+		institution_social_security = {
+			value = 1
+		}
+	}
+	max_active_stances = {
+		value = 1
+		min = 1
+	}
+	max_ship_design_complexity = {
+		value = 1
+	}
+	revolution_aversion = {
+		value = 1
+	}
+	state_value = {
+		value = 1
+		min = 0
+	}
+	treaty_category_scores = {
+		economy = {
+			value = 1
+		}
+		military_defense = {
+			value = 1
+		}
+		trade = {
+			value = 1
+		}
+	}
+	wanted_army_size = {
+		value = 1
+	}
+	wanted_construction_output = {
+		value = 1
+	}
+	wanted_navy_size = {
+		value = 1
+	}
+}
+"""
+    digest = hashlib.sha256(baseline.encode()).hexdigest()
     return baseline, replace(rules, baseline_sha256=digest)
 
 
@@ -305,10 +349,9 @@ def _assert_preserved_strategy(baseline, script, rules):
         assert script.count(f"# SITAI BEGIN information:{'.'.join(field)}\n") == 1
     # 去除全部新增块后原版字节必须完全保留，包括注释、嵌套、空白。
     restored = re.sub(
-        r"\n\t\t# SITAI BEGIN information:[^\n]+\n.*?# SITAI END information:[^\n]+\n\t",
+        r"(?m)\n\t\t# SITAI BEGIN information:[^\n]+\n[\s\S]*?^\t\t# SITAI END information:[^\n]+\n\t",
         "",
         script,
-        flags=re.DOTALL,
     )
     assert restored == baseline
 
@@ -730,11 +773,11 @@ def _geography_branch_value(branch: Block, facts: dict[str, bool]) -> float:
     return float(value.value.text)
 
 
+@pytest.mark.integration
 def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(
-    rules, frozen_strategy, frozen_strategy_script
+    rules, current_native_strategy, current_native_strategy_script
 ):
-    baseline, _ = frozen_strategy
-    _assert_land_adjacency_preserved(baseline, frozen_strategy_script)
+    _assert_land_adjacency_preserved(current_native_strategy, current_native_strategy_script)
     isolation = next(reader for reader in rules.readers if reader.key == "target_isolated")
     assert (isolation.engine, isolation.scope) == ("is_isolated_from_market", "target_state")
     isolation_cost = next(rule for rule in rules.rules if rule.id == "lj14_homeland_isolation_cost")
@@ -868,26 +911,6 @@ def generated_rule_blocks(rules, frozen_strategy_script):
     return _generated_rule_blocks(rules, frozen_strategy_script)
 
 
-@pytest.fixture(params=("1.14.5", "1.15.0"))
-def historical_school_rules(request):
-    # Preserve the historical multiplier contract under its actual version.
-    with version_contracts.select_version(request.param):
-        yield decision_rules.load()
-
-
-@pytest.fixture
-def historical_school_blocks(historical_school_rules):
-    baseline = decisions.baseline_text()
-    generated = decision_rules.patch(
-        baseline,
-        historical_school_rules,
-        baseline=baseline,
-        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
-        country_policy=country_state.load(),
-    )
-    return _generated_rule_blocks(historical_school_rules, generated)
-
-
 def _generated_rule_blocks(rules, generated):
     blocks = {}
     for field in rules.groups():
@@ -949,14 +972,13 @@ def test_development_tiers_and_crisis_priority_in_generated_script(
     assert _evaluate_script(blocks[field], engine) == expected
 
 
-def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
-    historical_school_blocks,
+def test_strong_capacity_coordinates_treaty_cooperation_without_stacking(
+    generated_rule_blocks,
 ):
-    rules, blocks = historical_school_blocks
+    rules, blocks = generated_rule_blocks
     for legitimacy in (60, 80, None):
         values = _values(legitimacy=legitimacy, literacy=0.4, tools_balance=-1, tools_price=0.6)
         result = decision_rules.evaluate(rules, values, is_ai=True)
-        assert result["institution_scores.institution_schools"][1] == 1.25
         assert result["treaty_category_scores.trade"][1] == 1.2
         assert result["treaty_category_scores.economy"][1] == 1.2
         engine = {
@@ -968,34 +990,17 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
         }
         engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
         for field in (
-            "institution_scores.institution_schools",
             "treaty_category_scores.trade",
             "treaty_category_scores.economy",
         ):
             assert _evaluate_script(blocks[field], engine) == result[field][1]
     healthy = decision_rules.evaluate(rules, _values(legitimacy=80), is_ai=True)
-    assert "institution_scores.institution_schools" not in healthy
     assert "treaty_category_scores.trade" not in healthy
     assert "treaty_category_scores.economy" not in healthy
 
 
-def test_small_low_literacy_countries_can_enter_education_capacity_tiers(historical_school_rules):
-    rules = historical_school_rules
-    values = _values(population=1_000_000, literacy=0.3)
-    assert decision_rules.evaluate(rules, values, is_ai=True)[
-        "institution_scores.institution_schools"
-    ] == ("remaining_school_capacity", 1.25)
-    strong = decision_rules.evaluate(rules, {**values, "legitimacy": 80}, is_ai=True)
-    assert strong["institution_scores.institution_schools"] == (
-        "remaining_school_capacity",
-        1.25,
-    )
-    unknown = decision_rules.evaluate(rules, {**values, "population": None}, is_ai=True)
-    assert "institution_scores.institution_schools" not in unknown
-
-
-def test_multifactor_capacity_rules_require_complete_context(historical_school_blocks):
-    rules, blocks = historical_school_blocks
+def test_multifactor_capacity_rules_require_complete_context(generated_rule_blocks):
+    rules, blocks = generated_rule_blocks
 
     def evaluate(values, field):
         result = decision_rules.evaluate(rules, values, is_ai=True)
@@ -1011,9 +1016,6 @@ def test_multifactor_capacity_rules_require_complete_context(historical_school_b
 
     selected, observed = evaluate(_values(tools_balance=-1), "wanted_construction_output")
     assert selected == ("remaining_industrial_construction_need_funded", 1.25)
-    assert observed == 1.25
-    selected, observed = evaluate(_values(literacy=0.4), "institution_scores.institution_schools")
-    assert selected == ("remaining_school_capacity", 1.25)
     assert observed == 1.25
     for field, expected in {
         "wanted_army_size": ("wartime_army_capacity", 1.20),
@@ -1311,9 +1313,7 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
         assert metadata["version"] == distribution.RELEASE_VERSION
-        assert contract["status"] == (
-            "candidate" if version_contracts.active_version() == "1.15.0" else "released"
-        )
+        assert contract["status"] == ("released")
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False
         assert engineering_metadata["consumer_adapters"]["behavior_verified"] is False
@@ -1328,12 +1328,11 @@ def test_release_sources_and_localization_match_actual_package(standard_release_
         )
         # The 1.15 native company definitions add the reviewed IP5 source to
         # the 74 physical consumer files retained by the historical contract.
-        current = version_contracts.is_115()
-        assert contract["consumer_count"] == (75 if current else 74)
+        assert contract["consumer_count"] == (75)
         consumer_sources = {
             row["source"] for row in engineering_metadata["consumer_adapters"]["consumers"]
         }
-        assert ("common/company_types/00_companies_ip5.txt" in consumer_sources) is current
+        assert "common/company_types/00_companies_ip5.txt" in consumer_sources
         assert len(consumer_sources) == contract["consumer_count"]
         assert "information_rules" in contract["enabled_modules"]
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt")

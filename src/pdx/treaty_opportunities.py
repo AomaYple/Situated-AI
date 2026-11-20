@@ -26,31 +26,16 @@ from .textio import normalized_text
 if TYPE_CHECKING:
     from pathlib import Path
 
-BASELINE = config.REPO / "research/situated/treaty-opportunities.json"
-BASELINE_SHA256 = "705c51d333ddde9f0f84791e885ad5ac67a7d0e21e32f993cccf231bbcc546cc"
-BASELINE_115 = config.REPO / "research/situated/1.15.0/treaty-opportunities.json"
-BASELINE_SHA256_1152 = "df697a32de06a90e6447b85404a5b2427a99045726c531773fcf0422150bc997"
-BASELINE_SHA256_1151 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
-BASELINE_SHA256_115 = "f2f972d7a6c97fb52e23f4dc34215e969e69e904c1d5d6a74ff17d6bc4127f60"
+BASELINE_SHA256 = "df697a32de06a90e6447b85404a5b2427a99045726c531773fcf0422150bc997"
 
 
 def baseline_path() -> Path:
-    """Select a reviewed artifact without rewriting the historical baseline."""
-    return (
-        version_contracts.research_path("situated", BASELINE_115.name)
-        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
-        else BASELINE_115
-        if version_contracts.is_115()
-        else BASELINE
-    )
+    return version_contracts.research_path("situated", "treaty-opportunities.json")
 
 
 def baseline_sha256() -> str:
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return BASELINE_SHA256_1152
-    if version_contracts.active_version() == "1.15.1":
-        return BASELINE_SHA256_1151
-    return BASELINE_SHA256_115 if version_contracts.is_115() else BASELINE_SHA256
+    version_contracts.require_current()
+    return BASELINE_SHA256
 
 
 PARAMETERS = config.REPO / "mod/decisions/treaty_opportunities.toml"
@@ -198,15 +183,13 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
     if not inputs.keys() >= _REQUIRED:
         raise ValueError("条约资料缺少ROOT/共同影响力成本/读取器原件")
     texts: dict[str, str] = {}
-    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
+    version_contracts.require_current()
     originals = {}
     for source, raw in sorted(inputs.items()):
         if not isinstance(raw, bytes) or (not _article_source(source) and source not in _REQUIRED):
             raise ValueError("条约资料包含未授权来源或不是原始字节")
         texts[source] = normalized_text(raw.decode("utf-8-sig"))
         originals[source] = {"sha256": hashlib.sha256(raw).hexdigest()}
-        if not current:
-            originals[source]["bytes"] = raw.hex()
     doc = texts[_DOC]
     if not all(
         marker in doc
@@ -321,7 +304,7 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
     if not candidates:
         raise ValueError("条约候选定义缺失")
     return {
-        "schema": 2 if current else 1,
+        "schema": 2,
         "contract": dict(_CONTRACT),
         "sources": {
             source: hashlib.sha256(text.encode()).hexdigest() for source, text in texts.items()
@@ -333,36 +316,9 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
 
 
 def _validate(data: dict[str, Any]) -> dict[str, Any]:
-    """Rebuild every metadata field from frozen native bytes, never trust tags."""
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        if hashlib.sha256(_canonical(data).encode()).hexdigest() != baseline_sha256():
-            raise ValueError("当前条约权威证据漂移")
-        return data
-    try:
-        if set(data) != {
-            "schema",
-            "contract",
-            "sources",
-            "originals",
-            "getter_evidence",
-            "candidates",
-        }:
-            raise ValueError("条约冻结资料schema/键无效")
-        if type(data["schema"]) is not int or data["schema"] != 1 or data["contract"] != _CONTRACT:
-            raise ValueError("条约冻结角色合同无效")
-        if not isinstance(data["originals"], dict) or not data["originals"]:
-            raise ValueError("条约冻结资料缺少原文字节")
-        raw = {}
-        for source, row in data["originals"].items():
-            if set(row) != {"sha256", "bytes"}:
-                raise ValueError("条约冻结原文合同无效")
-            raw[source] = bytes.fromhex(row["bytes"])
-            if hashlib.sha256(raw[source]).hexdigest() != row["sha256"]:
-                raise ValueError("条约冻结原文字节SHA不一致")
-        if _inventory(raw) != data:
-            raise ValueError("条约冻结AST/来源/读取器元数据与原文字节不一致")
-    except (KeyError, TypeError, AttributeError, UnicodeError) as exc:
-        raise ValueError("条约冻结资料结构无效") from exc
+    """Validate the complete frozen authority by its canonical identity."""
+    if hashlib.sha256(_canonical(data).encode()).hexdigest() != baseline_sha256():
+        raise ValueError("当前条约权威证据漂移")
     return data
 
 
@@ -375,7 +331,7 @@ def write_baseline(game: Path) -> Path:
 
 
 def load_baseline() -> dict[str, Any]:
-    """Identify and re-parse offline frozen sources without an installation."""
+    """Validate the pinned offline artifact without reading a game installation."""
     raw = baseline_path().read_bytes()
     if hashlib.sha256(raw).hexdigest() != baseline_sha256():
         raise ValueError("条约冻结资料身份漂移，必须独立复核后重新pin")

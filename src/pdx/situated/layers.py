@@ -9,17 +9,19 @@ from __future__ import annotations
 import re
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
+lazy from pathlib import Path
 
 if TYPE_CHECKING:
     from .schema import ActionCard, Relation
+
+from pdx import config
 
 from .families import FAMILIES
 
 _ID = re.compile(r"^[a-z][a-z0-9_]*$")
 _SCHEMA = 1
-DEFAULT_SOURCE = Path(__file__).resolve().parents[3] / "mod" / "decisions" / "action_layers.toml"
+DEFAULT_SOURCE = config.REPO / "mod" / "decisions" / "action_layers.toml"
 
 
 @dataclass(frozen=True, slots=True)

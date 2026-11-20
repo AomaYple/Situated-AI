@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from pdx import config, country_state, decision_adapters, decision_rules, version_contracts
+from pdx import config, country_state, decision_adapters, decision_rules
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -287,12 +287,11 @@ def test_company_program_bounds_and_exact_reader_identity(production):
                 unit,
             )
         worker = readers["industrial_workforce"]
-        current = version_contracts.is_115()
         assert (worker.engine, worker.path, worker.value_field, worker.parameters) == (
             "pop_type_percent_country",
             (),
-            "value" if current else "percent",
-            (("target", "pop_type:laborers"),) if current else (("pop_type", "laborers"),),
+            "value",
+            (("target", "pop_type:laborers"),),
         )
         assert (worker.unit, worker.minimum, worker.maximum) == ("ratio", 0, 1)
         writers = [
@@ -320,11 +319,7 @@ def test_another_goods_or_population_query_cannot_supply_a_required_fact(product
     )
     facts = _engine(policy, values)
     facts["ROOT"]["market"]["mg:unrelated_good"] = facts["ROOT"]["market"].pop(f"mg:{good}")
-    other_population = (
-        (("target", "pop_type:peasants"),)
-        if version_contracts.is_115()
-        else (("pop_type", "peasants"),)
-    )
+    other_population = (("target", "pop_type:peasants"),)
     facts["ROOT"]["pop_type_percent_country"] = {other_population: 0.9}
     assert pdx_eval.select(_overlay(generated[source], company), facts).delta == 1
 

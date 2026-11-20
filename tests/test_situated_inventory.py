@@ -7,8 +7,8 @@ import json
 import pytest
 from _situated_sources import production_policy_sources
 
-from pdx import config, version_contracts
-from pdx.situated import inventory
+from pdx import config
+from pdx.situated import compiler, inventory
 
 pytestmark = pytest.mark.unit
 
@@ -30,9 +30,8 @@ def offline_inventory(tmp_path_factory: pytest.TempPathFactory) -> inventory.Sur
 
 @pytest.mark.integration
 def test_k0_inventory_has_stable_scope_and_verified_production_witnesses() -> None:
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        first = inventory.discover()
-        second = inventory.discover()
+    first = inventory.discover()
+    second = inventory.discover()
     assert first.scope_hash == second.scope_hash
     assert first.discovered_count >= 1412
     assert first.status_counts == {"implemented": first.discovered_count}
@@ -82,9 +81,10 @@ def test_k0_json_contract_is_recomputable(tmp_path, offline_inventory) -> None:
     assert len(migration_payload["rows"]) == len(production_policy_sources().rules)
 
 
+@pytest.mark.integration
 def test_k0_equivalent_baseline_at_another_path_preserves_legacy_rule_denominator(tmp_path) -> None:
     baseline = tmp_path / "baseline.txt"
-    baseline.write_bytes(inventory.BASELINE.read_bytes())
+    baseline.write_text(compiler.baseline_text(), encoding="utf-8", newline="\n")
     result = inventory.discover(baseline=baseline)
     expected = len(production_policy_sources().rules)
     assert sum(item.kind == "legacy_rule" for item in result.surfaces) == expected
@@ -100,18 +100,6 @@ def test_k0_invalid_alternate_baseline_keeps_strict_model_validation(tmp_path) -
 
 def test_current_inventory_keeps_failed_generation_pending(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        result = inventory.discover()
-    assert result.status_counts == {"pending": result.discovered_count}
-    assert all(surface.evidence_state != "production_witnessed" for surface in result.surfaces)
-
-
-def test_historical_inventory_cannot_borrow_current_mod_tree(monkeypatch, tmp_path):
-    # This is the actual current tree, not invented historical evidence.
-    metadata = json.loads((config.REPO / "mod/.metadata/metadata.json").read_text(encoding="utf-8"))
-    assert metadata["supported_game_version"] == version_contracts.CURRENT_VERSION
-    monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    with version_contracts.select_version("1.14.5"):
-        result = inventory.discover()
+    result = inventory.discover()
     assert result.status_counts == {"pending": result.discovered_count}
     assert all(surface.evidence_state != "production_witnessed" for surface in result.surfaces)

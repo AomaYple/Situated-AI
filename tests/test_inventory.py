@@ -87,34 +87,29 @@ import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
-import pytest
-
-from pdx import config, docgen, usage, version_contracts
+from pdx import config, docgen, usage
 from pdx.doc_tables import merge_rows
-from pdx.version_contracts import is_115
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.parametrize("version", ["1.14.5", "1.15.0", "1.15.1"])
-def test_current_pm_empirical_table_drops_only_absent_native_fields(monkeypatch, version):
+def test_current_pm_empirical_table_drops_only_absent_native_fields(monkeypatch):
     monkeypatch.setattr(
         usage, "field_occurrences", lambda *_args, **_kwargs: Counter(scoring_override=2)
     )
-    with version_contracts.select_version(version):
-        spec = next(
-            spec for spec in usage.doc_table_specs() if spec.name == "doc14 表10 production_methods"
-        )
-        rows = merge_rows(
-            spec,
-            [
-                ["`low_pop_method`", "2", "old.txt:4", "retired"],
-                ["`scoring_override`", "99", "current.txt:4", "current"],
-            ],
-        )
+    spec = next(
+        spec for spec in usage.doc_table_specs() if spec.name == "doc14 表10 production_methods"
+    )
+    rows = merge_rows(
+        spec,
+        [
+            ["`low_pop_method`", "2", "old.txt:4", "retired"],
+            ["`scoring_override`", "99", "current.txt:4", "current"],
+        ],
+    )
     assert any("`scoring_override` | 2 |" in row for row in rows)
-    assert any("`low_pop_method`" in row for row in rows) == (version != "1.15.1")
+    assert all("`low_pop_method`" not in row for row in rows)
 
 
 def test_current_pm_ai_table_uses_each_native_directory_and_keeps_absence_zero(monkeypatch):
@@ -123,15 +118,14 @@ def test_current_pm_ai_table_uses_each_native_directory_and_keeps_absence_zero(m
         "common/production_method_groups": Counter(ai_selection=60),
     }
     monkeypatch.setattr(usage, "field_occurrences", counts.__getitem__)
-    with version_contracts.select_version("1.15.1"):
-        spec = next(spec for spec in usage.doc_table_specs() if spec.name == "doc14 PM/PMG AI 字段")
-        assert dict(spec.cells()) == {
-            "ai_value": {2: "1"},
-            "ai_selection": {2: "60"},
-            "scoring_override": {2: "2"},
-            "ai_will_do": {2: "0"},
-            "ai_weight": {2: "0"},
-        }
+    spec = next(spec for spec in usage.doc_table_specs() if spec.name == "doc14 PM/PMG AI 字段")
+    assert dict(spec.cells()) == {
+        "ai_value": {2: "1"},
+        "ai_selection": {2: "60"},
+        "scoring_override": {2: "2"},
+        "ai_will_do": {2: "0"},
+        "ai_weight": {2: "0"},
+    }
 
 
 #: doc 13 由 `v3 index` **整体重新生成**，其中的数字不可能过期，故不参与盘点。
@@ -371,7 +365,7 @@ def _is_not_generated(doc: str, header: str) -> bool:
 #:
 #: 三类理由（与模块 docstring 的六类对应，这里只挑真正的**不该算**）：
 #:
-#: * **另一台机器**：统计对象是本机订阅的 Workshop mod（doc 02 / 06 / 12 / 14 / README），
+#: * **另一台机器**：统计对象是本机订阅的 Workshop mod（doc 02 / 06 / 12 / 14），
 #:   换台机器、退订一个 mod 就变 —— 与 :data:`NOT_GENERATED` 里那几张表同一个理由；
 #: * **原文如此**：引用官方 `.md` 里写的常量或清单（doc 04 的 4 条、doc 07 的 512 / 41 / 20），
 #:   是引用而不是测量；要核对只能核官方文件的 sha256（另有测试）；
@@ -442,11 +436,6 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     "它要说明的是「官方 md 里只有这一处示例」，数的是 md 的正文而不是游戏数据",
     ("07-官方文档索引.md", 3): "§OOB「仅 3 处标注旗舰」—— **原文如此**：数的是官方 `1836_oob.md`"
     "里标了旗舰的条目（该文档是史实编制清单，不是游戏数据；要核对只能核官方文件的 sha256）",
-    (
-        "11-历史初始状态与AI策略分配.md",
-        3,
-    ): "§x 代码块里的「# 这个 else 分支同样有 3 条 set_strategy」"
-    "—— **原文如此**：那是**官方脚本注释**的逐字引用，改它就不再是引用",
     ("16-外交军事与地图.md", 2): "§x「`contestion_type`（9 个值，但有 2 处差异）」—— 2 是作者对"
     "「官方 `.md` 的取值 vs 实测取值」的**逐行比对结论**（与 NOT_GENERATED 里 doc 17 基因分组同理："
     "两组清单都已由 `v3 tables` 逐行看守，差异标记是人写的判读）",
@@ -467,8 +456,6 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     ): "§6.2 取证数字：`cooldown` 在 `common/scripted_buttons` 下的用法次数"
     "（复算：`v3 evidence cooldown --dir common/scripted_buttons`）—— 支撑的是"
     "「原版确实在用这个字段」这一判断，不是被承诺的量",
-    ("04-脚本系统.md", 98): "同上，同一次取证的另一半：`selected` 的用法次数"
-    "（复算：`v3 evidence selected`）",
     ("04-脚本系统.md", 160): "§7.3 取证数字：`factor` 的用法次数（复算：`v3 evidence factor`）"
     "—— 用来回答「`factor` 是否只能用在 scripted_modifier 里」（结论：不是）",
     (
@@ -479,32 +466,6 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     "「这一份二进制里有哪些名字」，且 `--exe-grep` 默认只列前 40 条、此处已显式取全量",
     ("04-脚本系统.md", 361): "§9.5 取证数字：`show_as_tooltip` 的用法次数"
     "（复算：`v3 evidence show_as_tooltip`），同 49/98/160 那一类",
-    (
-        "README.md",
-        161,
-    ): "索引页「最关键的结论 #1」的引擎侧取证：`victoria3.exe` 里 "
-    "`<键名>_cw_duplicate_compat` 重名策略名的个数（复算："
-    "`v3 evidence --exe-grep _cw_duplicate_compat`）—— 与 doc 04 的 161 同源同性质"
-    "（读的是**这一份二进制**里有哪些名字，属线索层而非承诺）",
-    (
-        "02-Mod结构与加载.md",
-        27723,
-    ): "§5.1.2 与版本提示里的 `game\\` 全树文件数 —— **安装树规模**：数的是"
-    "「本机那个文件夹里有什么」，含任何被外部程序丢进去的文件（实测被看图工具的两个"
-    "缓存文件顶到 27,725，移出后回到 27,723）。与 `tree.game` 断言是**同一个量**，"
-    "属「随本机安装状态漂移」的一类，故不在散文层再登记一条断言",
-    (
-        "02-Mod结构与加载.md",
-        27725,
-    ): "版本提示里记下的**曾经出现过的错值**（外部程序缓存文件造成的 27,725）—— "
-    "与 doc 05 的 6125 / 6121 同类：它存在的意义就是记下「当时为什么会红」，"
-    "天生没有期望值",
-    (
-        "15-政治人口与社会.md",
-        0,
-    ): "§11.6 更正段与版本提示里的**命中数 0**（`pop_types` 里没有 `popneed_*` 引用、"
-    "12 个目录的官方 `.md` 数为 0、六前缀在 1.14.3 仍 0 命中）—— 「0 命中」本身就是"
-    "取证结论，且 `v3 evidence` 的 ① 类只扫 `.txt`/`.gui`，0 只代表「这两类里没有」",
     (
         "06-本地化与界面资源.md",
         4914,
@@ -523,11 +484,6 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     ): "前言与 §1 的**命中数为 0**（`£`+字母、`$Nbsp$`、`$NEWLINE$`、行尾裸 `|`/`>` 等）"
     "—— 「0 命中」本身就是取证结论（复算：`v3 evidence --exe-grep <字样>` 或全树正则），"
     "且 ① 类只扫 `.txt`/`.gui`，所以 0 的含义是「这两类里没有」，不是「不存在」",
-    (
-        "06-本地化与界面资源.md",
-        5,
-    ): "§4.4 引用官方 `accessories\\accessories.md` 的**行数**—— **原文如此**："
-    "数的是官方文档本身（与 doc 07 的 512 / 41 / 20 同类），不是游戏数据里的量",
     ("06-本地化与界面资源.md", 11): "§1 语料计数：`fonts.font` 的 `languages` 块数、"
     "`jomini` 词条文件数、`modifiers\\` 下的语言数 —— 都是**这一份安装**的目录事实，"
     "随 DLC 与版本变（与本节其余目录/文件计数同一份语料）",
@@ -548,21 +504,6 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     ("06-本地化与界面资源.md", 743): "§5.1 / 附录 A 语料计数：`fonts.font` 的实际行数"
     "（四种独立口径一致）—— 随版本变的本机语料事实，同 11 / 44 那一类",
 }
-
-
-if is_115():
-    # 1.15 页首不再携带旧安装树采集值；其历史登记仍保留给 1.14 默认文档。
-    del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27723)]
-    del PROSE_NOT_COMPUTED[("02-Mod结构与加载.md", 27725)]
-    # 下列值在当前同页已有精确 claim，已不属于未看守散文数字。
-    del PROSE_NOT_COMPUTED[("04-脚本系统.md", 98)]  # script.events_md_doc04
-    del PROSE_NOT_COMPUTED[("06-本地化与界面资源.md", 5)]  # loc.je_widgets_doc06
-    # 该页已移除旧版本提示；正文「0 命中」和表格中的 0 不再落入散文扫描口径。
-    del PROSE_NOT_COMPUTED[("15-政治人口与社会.md", 0)]
-
-if version_contracts.active_version() == "1.15.2":
-    # 当前版将包含该数字的脚本示例转为同名历史章节的链接。
-    del PROSE_NOT_COMPUTED[("11-历史初始状态与AI策略分配.md", 3)]
 
 
 def _unguarded_prose() -> dict[str, set[int]]:

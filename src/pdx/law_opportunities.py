@@ -26,27 +26,16 @@ if TYPE_CHECKING:
 PARAMETERS = config.REPO / "mod/decisions/law_opportunities.toml"
 SOURCE_LOCK_CURRENT = PARAMETERS.with_name("law_opportunities_1152.toml")
 
-SOURCE_HASHES_115 = {
-    "common/laws/01_policing.txt": "ce9b5e661196a0ff4dbca693f05a23709958d281ffaa8cadb0995786f575dc4e",
-    "common/laws/00_citizenship.txt": "fe6fc8a3e716ae19181df9c6c71ff44b317a837874db8fbc124f077024c20e76",
-    "common/laws/00_church_and_state.txt": "1483d4e2aa2a42ec0e13bf843b8d4d5941553796787f0bcb5d78cdd2aab78d50",
-    "common/laws/01_taxation.txt": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
-    "common/laws/01_trade_policy.txt": "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
-    "common/laws/02_labour_associations.txt": "5b50400f5e9be0d70a75f1b13c902ee817384473c64ab12bf52935ea98cf23b5",
-    "common/laws/02_migration.txt": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
-    "common/laws/01_land_reform.txt": "dfb2105060dab608a938c8e40be82ced1c7717d5a975e3204247c8180ebc8174",
-    "common/laws/01_economic_system.txt": "ccc2a84f1776e08a65fc105f0143bcac7f2f2b782523ddca48877f187d54b194",
-}
-
-_NATIVE_RETAINED_115 = {
+_NATIVE_RETAINED = {
     "law_official_nationality": "common/laws/00_citizenship.txt",
     "law_caesaropapism": "common/laws/00_church_and_state.txt",
 }
 
 
 def native_retained_candidates() -> dict[str, str]:
-    """Additional 1.15 consumers are counted and retain their entire native policy."""
-    return dict(_NATIVE_RETAINED_115) if version_contracts.is_115() else {}
+    """Return the counted consumers that retain their entire native policy."""
+    version_contracts.require_current()
+    return dict(_NATIVE_RETAINED)
 
 
 # Exact modifier values in the complete hash-locked labour source. Omitted
@@ -138,34 +127,29 @@ def _load_policy() -> dict[str, Any]:
 def load() -> dict[str, Any]:
     data = _load_policy()
     version = version_contracts.active_version()
-    if version == version_contracts.CURRENT_VERSION:
-        lock = tomllib.loads(SOURCE_LOCK_CURRENT.read_text(encoding="utf-8"))
-        sources = lock.get("sources")
-        if (
-            set(lock) != {"schema", "game_version", "sources"}
-            or type(lock["schema"]) is not int
-            or lock["schema"] != 1
-            or lock["game_version"] != version
-            or not isinstance(sources, dict)
-            or set(sources) != set(data["sources"])
-            or any(
-                not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
-                for digest in sources.values()
-            )
-        ):
-            raise ValueError("具体法律机会当前原版来源锁无效")
-        data["sources"] = sources
-    elif version_contracts.is_115():
-        data["sources"] = dict(SOURCE_HASHES_115)
+    lock = tomllib.loads(SOURCE_LOCK_CURRENT.read_text(encoding="utf-8"))
+    sources = lock.get("sources")
+    if (
+        set(lock) != {"schema", "game_version", "sources"}
+        or type(lock["schema"]) is not int
+        or lock["schema"] != 1
+        or lock["game_version"] != version
+        or not isinstance(sources, dict)
+        or set(sources) != set(data["sources"])
+        or any(
+            not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
+            for digest in sources.values()
+        )
+    ):
+        raise ValueError("具体法律机会当前原版来源锁无效")
+    data["sources"] = sources
     return data
 
 
 def policy_bytes() -> bytes:
-    """Bind the policy and its selected native source lock to the adapter fingerprint."""
-    policy = PARAMETERS.read_bytes()
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        policy += b"\0native_sources:" + SOURCE_LOCK_CURRENT.read_bytes()
-    return policy
+    """Bind the policy and its native source lock to the adapter fingerprint."""
+    version_contracts.require_current()
+    return PARAMETERS.read_bytes() + b"\0native_sources:" + SOURCE_LOCK_CURRENT.read_bytes()
 
 
 def write_catalog(game: Path, *, output: Path) -> Path:

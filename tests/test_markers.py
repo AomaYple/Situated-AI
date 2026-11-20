@@ -13,6 +13,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from pdx import config, markers, verify, version_contracts
 
 #: 标记覆盖率的下限（只许涨，不许跌）。
@@ -58,8 +60,7 @@ MARKER_NOT_NEEDED: dict[str, str] = {
 
 
 # 当前版本的正文已绑定该数值；不改历史版本的生成表豁免。
-if version_contracts.is_115():
-    MARKER_NOT_NEEDED.pop("script.lists_doc04")
+MARKER_NOT_NEEDED.pop("script.lists_doc04")
 
 if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
     MARKER_NOT_NEEDED.pop("ai.script_values_doc09")
@@ -159,3 +160,17 @@ def test_标记语法本身没退化() -> None:
     got = [(m.id, m.value, m.raw) for m in markers.iter_markers(text, "x.md")]
     assert got == [("a", 205, "205"), ("b", 42, "42"), ("c", 7, "7"), ("d", 0, "0"), ("e", 0, "0")]
     assert markers.format_value(11705, "11,673") == "11,705", "千分位风格没保留"
+
+
+def test_fix_markers_preserves_earlier_files_on_late_decode_failure(tmp_path, monkeypatch) -> None:
+    first = tmp_path / "a.md"
+    last = tmp_path / "z.md"
+    first.write_bytes(b"1<!--claim:test.count-->\n")
+    last.write_bytes(b"\xff")
+    monkeypatch.setattr(
+        verify, "CLAIMS", [verify.Claim("test.count", first.name, "count", "", "", 2)]
+    )
+    originals = first.read_bytes(), last.read_bytes()
+    with pytest.raises(UnicodeDecodeError):
+        verify.fix_markers(tmp_path, write=True)
+    assert (first.read_bytes(), last.read_bytes()) == originals

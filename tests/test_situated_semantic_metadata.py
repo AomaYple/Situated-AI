@@ -11,7 +11,6 @@ from pdx import (
     decision_rules,
     decisions,
     distribution,
-    version_contracts,
 )
 from pdx.situated import action_instances, lowering
 from pdx.situated.compiler import load_model
@@ -19,14 +18,8 @@ from pdx.situated.compiler import load_model
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture
-def historical_assembly_contract():
-    """Isolate offline metadata assembly using the frozen historical generation."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
-def test_metadata_contains_independent_pdx_semantic_witness(historical_assembly_contract) -> None:
+@pytest.mark.integration
+def test_metadata_contains_independent_pdx_semantic_witness() -> None:
     metadata = json.loads(
         decisions.build(extensions=decisions.load_extensions(profile="release"))[
             ".metadata/metadata.json"
@@ -44,9 +37,8 @@ def test_metadata_contains_independent_pdx_semantic_witness(historical_assembly_
     assert witness["behavior_quality"] == "not_evaluated"
 
 
-def test_offline_metadata_serializes_legacy_behavior_witness_contract(
-    monkeypatch, historical_assembly_contract
-) -> None:
+@pytest.mark.integration
+def test_metadata_serializes_legacy_behavior_witness_contract(monkeypatch) -> None:
     """只隔离最终报告装配；实际 AST 见证由下方冻结树/重生成测试负责。"""
     preserved_file = {"evidence": "metadata_assembly_test_only", "sentinel": ["final_texts"]}
     calls = []
@@ -112,9 +104,8 @@ def test_current_frozen_tree_contains_its_own_legacy_behavior_witness_contract()
         path.relative_to(production).as_posix(): path.read_text(encoding="utf-8")
         for path in (production / "common").rglob("*.txt")
     }
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        instances = action_instances.build(decision_rules.load(), decision_adapters.load(), ())
-        _assert_legacy_contract(action_instances.behavior_witness_contract(instances, files))
+    instances = action_instances.build(decision_rules.load(), decision_adapters.load(), ())
+    _assert_legacy_contract(action_instances.behavior_witness_contract(instances, files))
 
 
 @pytest.mark.integration

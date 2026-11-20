@@ -30,6 +30,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from . import config
+from .generation_transaction import GenerationTransaction
+from .textio import decode_document
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -159,8 +161,12 @@ def apply_fixes(
     """
     fixes: list[MarkerFix] = []
     checked = 0
+    outputs = {}
+    originals = {}
     for path in sorted(docs_dir.glob("*.md")):
-        lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+        original = path.read_bytes()
+        originals[path] = original
+        lines = decode_document(original).splitlines(keepends=True)
         changed = False
         for lineno, line in enumerate(lines, start=1):
             # 逐标记拼装新行：只换 ``num`` 的跨度，其余字符（包裹、空格、标记本身）
@@ -199,7 +205,10 @@ def apply_fixes(
             if newline != line:
                 lines[lineno - 1] = newline
         if changed and write:
-            path.write_text("".join(lines), encoding="utf-8", newline="\n")
+            outputs[path] = "".join(lines).encode("utf-8")
+    if outputs:
+        with GenerationTransaction() as transaction:
+            transaction.replace(outputs, expected=originals)
     return fixes, checked
 
 

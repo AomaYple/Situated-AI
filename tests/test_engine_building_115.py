@@ -50,11 +50,7 @@ def test_rebound_manifest_cannot_expand_exact_initializer_contract(tmp_path, mon
     candidate = tmp_path / "candidate.json"
     candidate.write_bytes(raw)
     monkeypatch.setitem(
-        {
-            "1.15.0": engine_scope_115.MANIFESTS,
-            "1.15.1": engine_scope_115.MANIFESTS_1151,
-            "1.15.2": engine_scope_115.MANIFESTS_1152,
-        }[version_contracts.active_version()],
+        engine_scope_115.MANIFESTS,
         "building-default",
         (str(candidate), hashlib.sha256(raw).hexdigest()),
     )
@@ -64,9 +60,9 @@ def test_rebound_manifest_cannot_expand_exact_initializer_contract(tmp_path, mon
 
 def test_missing_engine_manifest_blocks_adapter_loading(monkeypatch, tmp_path):
     monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
-    _, digest = engine_scope_115.MANIFESTS_1152["building-default"]
+    _, digest = engine_scope_115.MANIFESTS["building-default"]
     monkeypatch.setitem(
-        engine_scope_115.MANIFESTS_1152, "building-default", (str(tmp_path / "absent.json"), digest)
+        engine_scope_115.MANIFESTS, "building-default", (str(tmp_path / "absent.json"), digest)
     )
     with pytest.raises(FileNotFoundError):
         decision_adapters.load()

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 from typing import Any
 
 import pytest
 
-from pdx import config, version_contracts
+from pdx import config
 from pdx import mobilization_opportunities as mobilization
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
@@ -30,19 +31,8 @@ def baseline():
     return mobilization.load_baseline()
 
 
-@pytest.fixture
-def archived_baseline():
-    with version_contracts.select_version("1.15.1"):
-        yield mobilization.load_baseline()
-
-
 def _pin_name():
-    return {
-        "1.14.5": "BASELINE_SHA256",
-        "1.15.0": "BASELINE_SHA256_115",
-        "1.15.1": "BASELINE_SHA256_1151",
-        version_contracts.CURRENT_VERSION: "BASELINE_SHA256_1152",
-    }[version_contracts.active_version()]
+    return "BASELINE_SHA256"
 
 
 def test_context_reuse_preserves_identity_isolation_and_rechecks_pin(monkeypatch):
@@ -76,7 +66,7 @@ def raw():
 
 
 def _inputs(baseline):
-    return {source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()}
+    return {source: (config.GAME / source).read_bytes() for source in baseline["originals"]}
 
 
 def _ast(node):
@@ -86,6 +76,11 @@ def _ast(node):
         return ["assignment", node.key, node.op, node.prefix, _ast(node.value)]
     assert isinstance(node, Block)
     return ["block", [_ast(item) for item in node.items]]
+
+
+def _record(node):
+    document = json.dumps(_ast(node), ensure_ascii=False, indent=2, sort_keys=True)
+    return {"line": node.line, "sha256": hashlib.sha256((document + "\n").encode()).hexdigest()}
 
 
 def _node(root, *path):
@@ -101,31 +96,15 @@ def _node(root, *path):
     return node
 
 
-def test_frozen_raw_hashes_reconstruct_complete_originals(archived_baseline):
-    baseline = archived_baseline
+@pytest.mark.integration
+def test_current_raw_hashes_bind_complete_originals(baseline):
     expected = {
-        SOURCE: "e3e5d52365bc56ec270ab91a6f6f280a07eebd862187e8c604574ae89cc5df40",
+        SOURCE: "43ac95d13c33a6db5fd602b630a9a07c40c313ac9a69a7c6619c0496fb118ea5",
         DOC: "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
-        OWNER: "f5ddefa530c5bdd1a106b0accecdd97f231e046d2e0ac63ed08939f43944b57e",
-        COUNTRY: "d859e625e0843d5d56d515b647e7833a0cb5eb3e5d85b233d4d1be697be1a93e",
-        MODIFIER: "bb5a8d750d0bbcf6f778b85e6f3fdc7467b95391164e9413b8a8a2895cfb09ef",
+        OWNER: "f07648b538fe8fae3347986baf621a4aa0f9b8d0b03e8c74ca930e413f50e444",
+        COUNTRY: "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d",
+        MODIFIER: "764aeaa461b09ba87bc57cb764300fb34f2a7945439fc2fe8317badedec7f40d",
     }
-    if mobilization.version_contracts.is_115():
-        expected = {
-            SOURCE: "954cf50dc677fd61b0aa7da0d5cb9a32f870f2530d78d01cd56e544cdf511c97",
-            DOC: "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
-            OWNER: "ff43a0689abeec36d65076f4fc020f90172cbd60ac1a1d03a233d292edf6dc5b",
-            COUNTRY: "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d",
-            MODIFIER: "764aeaa461b09ba87bc57cb764300fb34f2a7945439fc2fe8317badedec7f40d",
-        }
-    if mobilization.version_contracts.active_version() == "1.15.1":
-        expected = {
-            "common/mobilization_options/00_mobilization_option.txt": "954cf50dc677fd61b0aa7da0d5cb9a32f870f2530d78d01cd56e544cdf511c97",
-            "common/mobilization_options/mobilization_options.md": "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
-            "common/modifier_type_definitions/00_modifier_types.txt": "764aeaa461b09ba87bc57cb764300fb34f2a7945439fc2fe8317badedec7f40d",
-            "common/on_actions/00_code_on_actions.txt": "0bbc933d54ea56f830850decafaf5034694eb2222e49d6c980f2c6122be777a9",
-            "events/tech_events/trench_warfare.txt": "d843ac86ea763f24c9fdd3af742becd49a379784f7b14572f6074b23ab8eaa4d",
-        }
     assert set(baseline["originals"]) == set(expected)
     for source, original in _inputs(baseline).items():
         assert hashlib.sha256(original).hexdigest() == expected[source]
@@ -134,34 +113,29 @@ def test_frozen_raw_hashes_reconstruct_complete_originals(archived_baseline):
             hashlib.sha256(normalized_text(original.decode("utf-8-sig")).encode()).hexdigest()
             == baseline["sources"][source]
         )
-    assert baseline["sources"][SOURCE] == (
-        "4dce33c917b2f2a323de96b7e51602d5d52262207af5f2736de3f17008537296"
-        if mobilization.version_contracts.is_115()
-        else "5b69e5c13fe0278122fc34b256838c5ae76c7db893404184b855accc34672a09"
-    )
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize(
     ("identity", "basket", "recovery", "technology", "other"),
     [
-        (FIRST, {"fabric": "1", "liquor": "2"}, "0.20", "triage", FIELD),
-        (FIELD, {"opium": "2", "tools": "1"}, "0.40", "modern_nursing", FIRST),
+        (FIRST, {"fabric": "1", "liquor": "2"}, "0.10", "triage", FIELD),
+        (FIELD, {"opium": "2", "tools": "1"}, "0.20", "modern_nursing", FIRST),
     ],
 )
 def test_real_candidates_freeze_whole_ast_exact_basket_qualifications_and_lifecycle(
-    archived_baseline, identity, basket, recovery, technology, other
+    baseline, identity, basket, recovery, technology, other
 ):
-    baseline = archived_baseline
     parsed = parse_text(_inputs(baseline)[SOURCE].decode("utf-8-sig"))
     assert not parsed.errors
     row = baseline["candidates"][identity]
     definition = _node(parsed.root, identity)
-    assert row["definition"]["ast"] == _ast(definition)
+    assert row["definition"] == _record(definition)
     assert row["goods"] == basket
     assert row["recovery_rate"] == recovery
-    assert row["weight"]["ast"] == _ast(_node(parsed.root, identity, "ai_weight"))
+    assert row["weight"] == _record(_node(parsed.root, identity, "ai_weight"))
     for section in definition.value.assignments():
-        assert row["sections"][section.key]["ast"] == _ast(section)
+        assert row["sections"][section.key] == _record(section)
     # Handwritten native expected semantics; no derive or metadata feeds these.
     expected = parse_text(f"""
         unlocking_technologies = {{ {technology} }}
@@ -193,10 +167,10 @@ def test_real_candidates_freeze_whole_ast_exact_basket_qualifications_and_lifecy
         assert _ast(_node(definition.value, section.key)) == _ast(section)
 
 
+@pytest.mark.integration
 def test_native_formation_owner_country_and_nonzero_utility_have_independent_witnesses(
-    archived_baseline,
+    baseline,
 ):
-    baseline = archived_baseline
     originals = _inputs(baseline)
     assert "root = military formation" in originals[DOC].decode("utf-8-sig")
     assert "after multiplication, this is compared against the monetary cost" in originals[
@@ -209,8 +183,8 @@ def test_native_formation_owner_country_and_nonzero_utility_have_independent_wit
     event = parse_text(originals[COUNTRY].decode("utf-8-sig")).root
     modifier = parse_text(originals[MODIFIER].decode("utf-8-sig")).root
     assert (
-        _ast(_node(owner, "on_military_formation_created", "effect", "if", "limit", "owner"))
-        == baseline["scope_evidence"]["owner_block"]["ast"]
+        _record(_node(owner, "on_military_formation_created", "effect", "if", "limit", "owner"))
+        == baseline["scope_evidence"]["owner_block"]
     )
     assert _node(event, "trench_warfare.1", "type").value.text == "country_event"
     assert (
@@ -352,7 +326,6 @@ def test_complete_reader_signature_rejects_tampering(raw, baseline, reader, muta
     "mutation",
     [
         "raw_hash",
-        "raw_bytes",
         "scope",
         "actor_guard",
         "goods",
@@ -363,19 +336,15 @@ def test_complete_reader_signature_rejects_tampering(raw, baseline, reader, muta
         "extra",
         "source",
         "utility",
-        "native_guard",
-        "native_key",
     ],
 )
 def test_repin_cannot_hide_frozen_raw_ast_metadata_key_quantity_or_guard_tampering(
-    archived_baseline, mutation
+    baseline, mutation
 ):
-    data = copy.deepcopy(archived_baseline)
+    data = copy.deepcopy(baseline)
     row = data["candidates"][FIRST]
     if mutation == "raw_hash":
         data["originals"][SOURCE]["sha256"] = "0" * 64
-    elif mutation == "raw_bytes":
-        data["originals"][SOURCE]["bytes"] += "20"
     elif mutation == "scope":
         data["contract"]["native_root"] = "country"
     elif mutation == "actor_guard":
@@ -385,9 +354,9 @@ def test_repin_cannot_hide_frozen_raw_ast_metadata_key_quantity_or_guard_tamperi
     elif mutation == "quantity":
         row["goods"]["fabric"] = "3"
     elif mutation == "weight":
-        row["weight"]["ast"][4][1][0][4][1] = "0"
+        row["weight"]["sha256"] = "0" * 64
     elif mutation == "section":
-        row["sections"]["possible"]["ast"][4][1].clear()
+        row["sections"]["possible"]["sha256"] = "0" * 64
     elif mutation == "identity":
         data["candidates"]["mobilization_option_forced_march"] = data["candidates"].pop(FIRST)
     elif mutation == "extra":
@@ -395,22 +364,7 @@ def test_repin_cannot_hide_frozen_raw_ast_metadata_key_quantity_or_guard_tamperi
     elif mutation == "source":
         data["sources"][SOURCE] = "0" * 64
     elif mutation == "utility":
-        data["utility_evidence"]["ai_value"]["ast"][4][1] = "0"
-    else:
-        original = bytes.fromhex(data["originals"][SOURCE]["bytes"])
-        original = (
-            original.replace(
-                b"has_mobilization_option = mobilization_option:mobilization_option_field_hospitals",
-                b"has_mobilization_option = mobilization_option:fake",
-                1,
-            )
-            if mutation == "native_guard"
-            else original.replace(b"on_activate_while_mobilized", b"fake_activate", 1)
-        )
-        data["originals"][SOURCE] = {
-            "bytes": original.hex(),
-            "sha256": hashlib.sha256(original).hexdigest(),
-        }
+        data["utility_evidence"]["ai_value"]["sha256"] = "0" * 64
     with pytest.raises(ValueError):
         mobilization._validate(data)
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import configparser
 import os
 import shutil
 import subprocess
@@ -21,6 +22,13 @@ SOURCE = REPO / "src" / "pdx"
 WHEEL_METADATA_FILES = frozenset(
     {"METADATA", "WHEEL", "entry_points.txt", "top_level.txt", "RECORD", "licenses/LICENSE"}
 )
+REQUIRED_WHEEL_METADATA = frozenset({"METADATA", "WHEEL", "RECORD", "entry_points.txt"})
+
+
+class _EntryPointConfig(configparser.ConfigParser):
+    def optionxform(self, optionstr: str) -> str:
+        # The entry point specification treats script names as case-sensitive.
+        return optionstr
 
 
 def source_modules(source: Path = SOURCE) -> set[str]:
@@ -50,21 +58,36 @@ def missing_modules(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
     return tuple(sorted(source_modules(source) - wheel_modules(wheel)))
 
 
+def _v3_entry_point_issue(archive: zipfile.ZipFile, name: str) -> str | None:
+    entry_points = _EntryPointConfig(interpolation=None, delimiters=("=",))
+    try:
+        entry_points.read_string(archive.read(name).decode("utf-8"))
+    except configparser.Error, UnicodeDecodeError:
+        return f"invalid: {name} (cannot read v3 console script)"
+    target = entry_points.get("console_scripts", "v3", fallback="")
+    module, _, attribute = target.partition(":")
+    if entry_points.defaults() or (module.strip(), attribute.strip()) != ("pdx.cli", "app"):
+        return f"invalid: {name} (expected [console_scripts] v3 = pdx.cli:app)"
+    return None
+
+
 def wheel_issues(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
-    """Check module membership, bytes, allowed metadata, integrity and duplicates."""
+    """Check module bytes, archive integrity, required metadata and the v3 launcher."""
     expected = source_modules(source)
     # Wheel filenames start with the normalized distribution and version.
     wheel_identity = wheel.stem.split("-", 2)
-    allowed_metadata = set()
-    if len(wheel_identity) == 3:
-        distribution, version, _tags = wheel_identity
-        allowed_metadata = {
-            f"{distribution}-{version}.dist-info/{name}" for name in WHEEL_METADATA_FILES
-        }
+    if len(wheel_identity) != 3:
+        return (f"invalid wheel filename: {wheel.name}",)
+    distribution, version, _tags = wheel_identity
+    dist_info = f"{distribution}-{version}.dist-info"
+    allowed_metadata = {f"{dist_info}/{name}" for name in WHEEL_METADATA_FILES}
+    required_metadata = {f"{dist_info}/{name}" for name in REQUIRED_WHEEL_METADATA}
+    entries_path = f"{dist_info}/entry_points.txt"
     with zipfile.ZipFile(wheel) as archive:
         counts = Counter(archive.namelist())
         actual = _package_modules(counts)
         issues = [f"missing: {name}" for name in expected - actual]
+        issues.extend(f"missing: {name}" for name in required_metadata - counts.keys())
         issues.extend(f"unexpected: {name}" for name in counts.keys() - expected - allowed_metadata)
         issues.extend(f"duplicate: {name}" for name, count in counts.items() if count > 1)
         damaged = archive.testzip()
@@ -74,6 +97,10 @@ def wheel_issues(wheel: Path, source: Path = SOURCE) -> tuple[str, ...]:
                 for name in expected & actual
                 if archive.read(name) != (source.parent / name).read_bytes()
             )
+            if counts[entries_path] == 1 and (
+                issue := _v3_entry_point_issue(archive, entries_path)
+            ):
+                issues.append(issue)
         else:
             issues.append(f"corrupt: {damaged}")
     return tuple(sorted(issues))
@@ -126,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(
             f"[python-package] wheel 包含全部 {len(source_modules(SOURCE))} 个 Python 源模块，"
-            "其余条目均为项目打包元数据"
+            "必需元数据与 v3 命令入口完整，其余条目均为允许的打包元数据"
         )
     return 0
 

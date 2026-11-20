@@ -236,7 +236,7 @@ def _boundaries(candidate, witness, requirement, field, *, support=False):
         "native_tail",
         {
             "remove_only_declared_overlays": True,
-            "original_source": str(decisions.BASELINE.relative_to(config.REPO)),
+            "original_source": decisions.baseline_path().relative_to(config.GAME).as_posix(),
             "original_sha256": hashlib.sha256(candidate["baseline"].encode()).hexdigest(),
         },
         {"complete_native_numeric_ast": baseline},

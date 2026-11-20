@@ -15,8 +15,8 @@ import re
 import tomllib
 from dataclasses import dataclass, replace
 from functools import lru_cache
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+lazy from pathlib import Path
 
 from .. import (  # noqa: TID252
     config,
@@ -60,19 +60,16 @@ if TYPE_CHECKING:
 
     from .decision_ir import ConsumerIRBundle
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = config.REPO
 DECISIONS = REPO / "mod" / "decisions"
 FACTS = DECISIONS / "facts.toml"
 ACTIONS = DECISIONS / "actions.toml"
 LAYERS = DECISIONS / "action_layers.toml"
-BINDINGS = DECISIONS / "action_bindings.toml"
-BASELINE = REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
 _DEFAULT_STRATEGY_PROJECTION = REPO / "research/situated/1.15.2/default-strategy-structure.json"
 _DEFAULT_STRATEGY_PROJECTION_SHA256 = (
     "a07ffedcf2ea3f23c9e49ccbef59f202e3b7896aea6adf39ad0e51ea1e0eb277"
 )
-_LAW_DOC = REPO / "research/situated/victoria3-1.14.5-law-enact-context.md"
-_LAW_DOC_MANIFEST = REPO / "research/official-docs.manifest.json"
+_LAW_DOC = REPO / "research/situated/1.15.2/law-enact-context.md"
 _LAW_DOC_SHA256 = "706098c2cb35770cbe477c84620940b716e60d8708f30f7ae72d46ed1e2091d8"
 _LAW_MIRROR_SHA256 = "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
 _LAW_NATIVE_SHA256 = "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c"
@@ -93,39 +90,23 @@ SUPPORTING_SOURCES = (
 
 
 def baseline_path() -> Path:
-    """Locate the full default strategy of the selected native version."""
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return config.GAME / version_contracts.DEFAULT_STRATEGY_SOURCE
-    if version_contracts.is_115():
-        return version_contracts.research_path("vanilla-ai", "00_default_strategy.txt")
-    return BASELINE
+    """Locate the current full default strategy in the installation."""
+    return config.GAME / version_contracts.DEFAULT_STRATEGY_SOURCE
 
 
 def baseline_text() -> str:
-    """Use the verified installation when the current source is required."""
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return version_contracts.read_default_strategy(config.GAME)
-    return baseline_path().read_text(encoding="utf-8")
+    """Read the independently pinned default strategy from the installation."""
+    return version_contracts.read_default_strategy(config.GAME)
 
 
 def support_evaluation_context() -> decision_ir.EvaluationContext:
     """Locate the exact native support tuple in its own ordinary field comments."""
-    path = baseline_path()
-    raw = path.read_bytes()
+    text = baseline_text()
     data = json.loads(engine_scope.strategy_snapshot())
     native_hash = data["script_hashes"][version_contracts.DEFAULT_STRATEGY_SOURCE]
-    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
-    accepted_hashes = {hashlib.sha256(raw).hexdigest()}
-    if not current:
-        accepted_hashes.add(hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest())
-    if native_hash not in accepted_hashes or (
-        current and native_hash != version_contracts.contract().default_strategy_sha256
-    ):
+    if native_hash != version_contracts.contract().default_strategy_sha256:
         raise ValueError("支持程序原版底本与引擎证据不一致")
-    source = (
-        version_contracts.DEFAULT_STRATEGY_SOURCE if current else path.relative_to(REPO).as_posix()
-    )
-    return _support_evaluation_context(raw.decode("utf-8-sig"), source)
+    return _support_evaluation_context(text, version_contracts.DEFAULT_STRATEGY_SOURCE)
 
 
 def _support_evaluation_context(text: str, source: str) -> decision_ir.EvaluationContext:
@@ -388,14 +369,8 @@ def _frozen_law_context() -> decision_ir.EvaluationContext:
     # Only the three documentary context lines are versioned. Blank lines keep
     # their original positions; the ignored full mirror is never an offline input.
     raw = _LAW_DOC.read_bytes()
-    manifest_path = (
-        REPO / "research" / version_contracts.contract().official_manifest_name
-        if version_contracts.is_115()
-        else _LAW_DOC_MANIFEST
-    )
-    # The three documentary lines and full native README are byte-identical
-    # in 1.15. The current manifest and live bytes establish that equality;
-    # the historical excerpt is retained verbatim rather than re-pinned.
+    manifest_path = REPO / "research" / version_contracts.contract().official_manifest_name
+    # The current official manifest and installed bytes fix the excerpt's identity.
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     entry = manifest["文档"]["game/common/laws/readme.md"]
     if (
@@ -435,40 +410,34 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             "target_country",
             "additive_strength_estimate_multiplier",
             "multiplier",
-            "0x1416452bf",
         ),
         "wargoal_maneuvers_fraction": (
             "enemy_country",
             "additive_maneuvers_fraction",
             "fraction",
-            "0x141647b8f",
         ),
         "wanted_construction_output": (
             None,
             "additive_construction_output_target",
             "construction_output",
-            "0x141646580",
         ),
-        "institution_scores": (None, "additive_score", "score", "0x141644a3a"),
+        "institution_scores": (None, "additive_score", "score"),
         "min_law_chance_to_pass": (
             None,
             "override_pass_chance_threshold",
             "pass_chance",
-            "0x141646d23",
         ),
-        "wargoal_scores": ("target_country", "additive_score", "score", "0x1416438ea"),
-        "secret_goal_scores": ("target_country", "additive_score", "score", "0x1416436fd"),
+        "wargoal_scores": ("target_country", "additive_score", "score"),
+        "secret_goal_scores": ("target_country", "additive_score", "score"),
         "wanted_navy_size": (
             None,
             "additive_navy_size_target",
             "naval_administration_levels",
-            "0x1415ad3b7",
         ),
         "ship_construction_output_multiplier": (
             None,
             "additive_ship_construction_output_multiplier",
             "multiplier",
-            "0x1415adadb",
         ),
     }
     specs.update(
@@ -477,56 +446,47 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 "target_country",
                 "additive_aggression",
                 "play_start_tendency",
-                "0x14164546f",
             ),
             "nationalization_desire": (
                 None,
                 "additive_nationalization_desire",
                 "desire",
-                "0x141647ecd",
             ),
-            "max_active_stances": (None, "additive_active_stance_limit", "count", "0x14164805c"),
+            "max_active_stances": (None, "additive_active_stance_limit", "count"),
             "wanted_marines": (
                 None,
                 "additive_marine_size_target",
                 "barracks_levels",
-                "0x14164441d",
             ),
             "economic_vs_government_spending_balance": (
                 None,
                 "additive_spending_balance",
                 "debt_threshold_ratio",
-                "0x14164684d",
             ),
             "target_marine_formation_size": (
                 None,
                 "additive_marine_formation_size_target",
                 "units_per_formation",
-                "0x1416445ad",
             ),
             "unacceptable_infamy_level": (
                 None,
                 "first_positive_infamy_limit_override",
                 "infamy",
-                "0x1416440fd",
             ),
             "undesirable_infamy_level": (
                 None,
                 "first_positive_infamy_limit_override",
                 "infamy",
-                "0x141643f6d",
             ),
             "diplomatic_play_neutrality": (
                 None,
                 "additive_positive_active_neutrality",
                 "score",
-                "0x14164783c",
             ),
             "diplomatic_play_boldness": (
                 None,
                 "native_randomized_additive_boldness",
                 "score",
-                "0x1416476aa",
             ),
         }
     )
@@ -536,38 +496,30 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 None,
                 "additive_treaty_category_score",
                 "score",
-                "0x141643aa9",
             ),
             "strategic_region_stance_type_scores": (
                 None,
                 "additive_region_stance_score",
                 "score",
-                "0x14164842a",
             ),
             "wanted_num_supply_ships": (
                 None,
                 "additive_supply_ship_count_target",
                 "ships",
-                "0x1415ad63f",
             ),
             "max_ship_design_complexity": (
                 None,
                 "additive_ship_design_complexity_limit",
                 "modification_levels",
-                "0x1414b716c",
             ),
         }
     )
     result = {}
     _, source, manifest_sha256 = engine_scope._strategy_manifest()
-    for field, (target, operation, unit, historical_address) in specs.items():
+    for field, (target, operation, unit) in specs.items():
         # strategy_snapshot already verifies the selected version's complete,
         # independently pinned parser/consumer/member and merge contracts.
-        address = (
-            data["consumers"][field]["consumer_va"]
-            if version_contracts.is_115()
-            else historical_address
-        )
+        address = data["consumers"][field]["consumer_va"]
         expected = {
             "actor_scope": "country",
             "target_scope": (
@@ -591,12 +543,7 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             "consumer_va": address,
         }
         actual = data.get("consumers", {}).get(field, {})
-        if (
-            actual != expected
-            if version_contracts.active_version() == "1.14.5"
-            and field in {"recklessness", "wargoal_maneuvers_fraction"}
-            else any(actual.get(key) != value for key, value in expected.items())
-        ):
+        if any(actual.get(key) != value for key, value in expected.items()):
             raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
         entries = list(
             re.finditer(
@@ -685,12 +632,10 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
 def _frozen_institution_contexts(
     context: decision_ir.EvaluationContext,
     *,
-    verified_baseline: str | None = None,
+    verified_baseline: str,
 ) -> dict[str, decision_ir.EvaluationContext]:
     """Project only exact numeric children of the pinned original ordinary map."""
     data = json.loads(engine_scope.strategy_snapshot())
-    if verified_baseline is None:
-        verified_baseline = _frozen_strategy_text(data, "制度")
     parsed = parse_text(verified_baseline)
     definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
     scores = (
@@ -708,12 +653,10 @@ def _frozen_institution_contexts(
 def _frozen_strategy_score_contexts(
     contexts: dict[str, decision_ir.EvaluationContext],
     *,
-    verified_baseline: str | None = None,
+    verified_baseline: str,
 ) -> dict[str, decision_ir.EvaluationContext]:
     """Project pinned enum numeric children without authorizing the map or trigger."""
     data = json.loads(engine_scope.strategy_snapshot())
-    if verified_baseline is None:
-        verified_baseline = _frozen_strategy_text(data, "目标")
     parsed = parse_text(verified_baseline)
     definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
     result = {}
@@ -743,17 +686,6 @@ def _frozen_strategy_score_contexts(
             {f"{family}.{item.key}{suffix}": contexts[family] for item in scores.assignments()}
         )
     return result
-
-
-def _frozen_strategy_text(data: dict[str, Any], kind: str) -> str:
-    raw = baseline_path().read_bytes()
-    accepted = {hashlib.sha256(raw).hexdigest()}
-    if version_contracts.active_version() != version_contracts.CURRENT_VERSION:
-        # The historical repository snapshots omit the native UTF-8 BOM.
-        accepted.add(hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest())
-    if data["script_hashes"][version_contracts.DEFAULT_STRATEGY_SOURCE] not in accepted:
-        raise ValueError(f"冻结{kind}策略原件 SHA 与引擎证据不一致")
-    return raw.decode("utf-8-sig")
 
 
 def _strategy_source_identity() -> dict[str, str | int]:
@@ -830,8 +762,6 @@ def _declared_context(row: dict[str, Any]) -> decision_ir.EvaluationContext:
 
 def declared_support_evaluation_context() -> decision_ir.EvaluationContext:
     """Return the scope contract for model consumers that need no original script."""
-    if version_contracts.active_version() != version_contracts.CURRENT_VERSION:
-        return support_evaluation_context()
     return _declared_context(_default_strategy_projection()["support_context"])
 
 
@@ -922,19 +852,18 @@ def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.Evaluat
     if hashlib.sha256(raw).hexdigest() != mobilization_opportunities.baseline_sha256():
         raise ValueError("动员冻结资料身份漂移，必须独立复核后重新pin")
     source = mobilization_opportunities.baseline_path().relative_to(REPO).as_posix()
-    return dict(_mobilization_context_rows(raw, source, version_contracts.active_version()))
+    return dict(_mobilization_context_rows(raw, source))
 
 
 @lru_cache(maxsize=1)
 def _mobilization_context_rows(
-    raw: bytes, source: str, version: str
+    raw: bytes, source: str
 ) -> tuple[tuple[tuple[str, str], decision_ir.EvaluationContext], ...]:
     """只复用同字节、同证据路径的不可变上下文；每次入口仍核对当前 pin。"""
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
-    with version_contracts.select_version(version):
-        data = mobilization_opportunities.load_baseline(raw=raw)
-        candidates = mobilization_opportunities.candidate_catalog(data)
+    data = mobilization_opportunities.load_baseline(raw=raw)
+    candidates = mobilization_opportunities.candidate_catalog(data)
     text = raw.decode("utf-8")
     line = text.count("\n", 0, text.index('"native_root": "military_formation"')) + 1
     context = decision_ir.EvaluationContext(
@@ -1825,15 +1754,14 @@ def load_model(
         if missing:
             raise ValueError(f"行动 {action.id} 引用了未知事实：{missing}")
         _validate_action_costs(action, {item.id: item for item in facts})
-    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
-    projection = _default_strategy_projection() if current else None
-    if baseline is None and projection is not None:
+    projection = _default_strategy_projection()
+    if baseline is None:
         available = set(projection["block_names"])
         observed_contexts = {
             field: _declared_context(row) for field, row in projection["field_contexts"].items()
         }
     else:
-        source_text = baseline if baseline is not None else baseline_text()
+        source_text = baseline
         if parse_text(source_text).errors:
             raise ValueError("默认策略底本无法解析")
         available = set(re.findall(r"^\s*([a-z][a-z0-9_]*)\s*=\s*\{", source_text, re.MULTILINE))
@@ -1853,18 +1781,9 @@ def load_model(
         consumer_contracts={item.id: item for item in consumers},
     )
     observed_contexts.update(_frozen_strategy_contexts())
-    if projection is None:
-        observed_contexts.update(
-            _frozen_institution_contexts(observed_contexts["institution_scores"])
-        )
-        observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))
-    else:
-        observed_contexts.update(
-            {
-                field: observed_contexts[field.split(".")[0]]
-                for field in projection["numeric_children"]
-            }
-        )
+    observed_contexts.update(
+        {field: observed_contexts[field.split(".")[0]] for field in projection["numeric_children"]}
+    )
     law_context = _frozen_law_context()
     company_context = _frozen_company_context()
     ship_modification_contexts = _frozen_ship_modification_contexts()
@@ -2067,20 +1986,18 @@ def load_model(
             for name in SUPPORTING_SOURCES
         },
     }
-    if version_contracts.is_115():
-        from . import compatibility_115  # noqa: PLC0415
+    from . import compatibility_115  # noqa: PLC0415
 
-        hashes.update(
-            compatibility_production_snapshot=hashlib.sha256(
-                compatibility_115.declaration() if current else compatibility_115.snapshot()
-            ).hexdigest(),
-            building_default_context_snapshot=hashlib.sha256(
-                engine_building_115.snapshot()
-            ).hexdigest(),
-            defensive_pact_reader_snapshot=hashlib.sha256(engine_reader_115.snapshot()).hexdigest(),
-        )
-    if projection is not None:
-        hashes["default_strategy_structure"] = _DEFAULT_STRATEGY_PROJECTION_SHA256
+    hashes.update(
+        compatibility_production_snapshot=hashlib.sha256(
+            compatibility_115.declaration()
+        ).hexdigest(),
+        building_default_context_snapshot=hashlib.sha256(
+            engine_building_115.snapshot()
+        ).hexdigest(),
+        defensive_pact_reader_snapshot=hashlib.sha256(engine_reader_115.snapshot()).hexdigest(),
+    )
+    hashes["default_strategy_structure"] = _DEFAULT_STRATEGY_PROJECTION_SHA256
     return SituatedModel(
         facts,
         consumers,

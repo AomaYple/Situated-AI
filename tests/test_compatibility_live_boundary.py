@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import config, decisions, distribution, version_contracts
+from pdx import config, decisions, distribution
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -20,21 +21,24 @@ R2_DRIFT_MESSAGE = r"R2 reader authority: source drift .*scripted_buttons\.md"
 
 
 @pytest.fixture(scope="module")
-def complete_inputs():
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        return distribution.package_inputs(include_engineering_metadata=True)
+def complete_inputs(tmp_path_factory):
+    inputs = distribution.package_inputs(include_engineering_metadata=True)
+    template = tmp_path_factory.mktemp("standard-template") / "standard"
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(decisions, "product_path", lambda: template)
+        patch.setattr(distribution, "package_inputs", lambda **_kwargs: inputs)
+        distribution.write_standard_outputs()
+    return inputs, template
 
 
 @pytest.fixture
 def standard_tree(tmp_path, monkeypatch, complete_inputs):
-    target = tmp_path / "standard"
+    inputs, template = complete_inputs
+    # Drift and rollback cases each own a writable copy of the real generated tree.
+    target = shutil.copytree(template, tmp_path / "standard")
     monkeypatch.setattr(decisions, "product_path", lambda: target)
-    # Reuse a complete, genuinely generated input bundle. The final live
-    # verifier, source lock, exact tree check and archive validator stay real.
-    monkeypatch.setattr(distribution, "package_inputs", lambda **_kwargs: complete_inputs)
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        distribution.write_standard_outputs()
-        yield target
+    monkeypatch.setattr(distribution, "package_inputs", lambda **_kwargs: inputs)
+    return target
 
 
 @pytest.mark.integration
@@ -188,7 +192,7 @@ def test_change_during_final_live_verification_rolls_back(
 @pytest.mark.parametrize("placement", ["root", "parent", "nested"])
 @pytest.mark.parametrize(
     "entrypoint",
-    ["scan", "compatibility-write", "standard-write", "profile-write", "profile-check"],
+    ["scan", "standard-write"],
 )
 def test_isolated_output_apis_reject_real_junction(tmp_path, monkeypatch, placement, entrypoint):
     external = tmp_path / "external"
@@ -216,26 +220,12 @@ def test_isolated_output_apis_reject_real_junction(tmp_path, monkeypatch, placem
         monkeypatch.setattr(distribution, "package_inputs", lambda **_kwargs: (None, None, files))
         monkeypatch.setattr(distribution, "_release_files", dict)
         monkeypatch.setattr(distribution, "check_profile_installation", lambda profile: profile)
-        monkeypatch.setattr(distribution, "profile_outputs", lambda *_args, **_kwargs: files)
-        monkeypatch.setattr(distribution, "profile_generation_lock", lambda *_args: "{}\n")
-        context = (
-            "1.15.0" if entrypoint == "compatibility-write" else version_contracts.CURRENT_VERSION
-        )
-        with version_contracts.select_version(context):
-            operation: Callable[[], object]
-            if entrypoint == "compatibility-write":
-                operation = distribution.write_compatibility_outputs
-            else:
-                profile = distribution.production_profile.declared_profile()
-                operations: dict[str, Callable[[], object]] = {
-                    "scan": lambda: distribution._profile_directory_files(root),
-                    "standard-write": distribution.write_standard_outputs,
-                    "profile-write": lambda: distribution.write_profile_outputs(profile, root=root),
-                    "profile-check": lambda: distribution.check_profile_outputs(profile, root=root),
-                }
-                operation = operations[entrypoint]
-            with pytest.raises(ValueError, match="重解析点"):
-                operation()
+        operations: dict[str, Callable[[], object]] = {
+            "scan": lambda: distribution._profile_directory_files(root),
+            "standard-write": distribution.write_standard_outputs,
+        }
+        with pytest.raises(ValueError, match="重解析点"):
+            operations[entrypoint]()
         assert preserved_file.read_bytes() == b"external original\n"
         assert list(external.iterdir()) == [preserved_file]
     finally:

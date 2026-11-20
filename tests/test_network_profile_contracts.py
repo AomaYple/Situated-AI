@@ -22,12 +22,12 @@ from pdx.situated import production_profile as native
 
 @pytest.fixture(scope="module")
 def profile():
-    return native.load_profile(native.BASELINE_ROOT)
+    return native.declared_profile()
 
 
 @pytest.fixture(scope="module")
 def declaration():
-    with adapter.SOURCE.open("rb") as handle:
+    with adapter.source_path().open("rb") as handle:
         return tomllib.load(handle)
 
 
@@ -35,7 +35,7 @@ def declaration():
     ("path", "value"),
     [
         (("schema",), True),
-        (("game_version",), ["1.15.0"]),
+        (("game_version",), [version_contracts.CURRENT_VERSION]),
         (("action",), {}),
         (("action",), []),
         (("action", 0, "id"), []),
@@ -86,7 +86,11 @@ def test_decoder_rejects_malformed_shapes_ids_and_numeric_values(
     original_load = tomllib.load
 
     def load(handle, **kwargs):
-        return changed if handle.name == str(adapter.SOURCE) else original_load(handle, **kwargs)
+        return (
+            changed
+            if handle.name == str(adapter.source_path())
+            else original_load(handle, **kwargs)
+        )
 
     monkeypatch.setattr(adapter.tomllib, "load", load)
     with pytest.raises(ValueError):
@@ -109,7 +113,11 @@ def test_decoder_rejects_duplicate_declarations(profile, declaration, monkeypatc
     original_load = tomllib.load
 
     def load(handle, **kwargs):
-        return changed if handle.name == str(adapter.SOURCE) else original_load(handle, **kwargs)
+        return (
+            changed
+            if handle.name == str(adapter.source_path())
+            else original_load(handle, **kwargs)
+        )
 
     monkeypatch.setattr(adapter.tomllib, "load", load)
     with pytest.raises(ValueError):
@@ -332,13 +340,19 @@ def test_renderer_rejects_reader_authority_from_another_consumer():
         adapter.render_program(altered)
 
 
-def test_compile_profile_verifies_the_frozen_reader_evidence(profile, monkeypatch):
-    def fail():
-        raise ValueError("test frozen evidence drift")
+def test_composition_checks_live_reader_evidence_before_lowering(profile, monkeypatch):
+    def fail(_root):
+        raise ValueError("R2 reader authority: source drift")
 
-    monkeypatch.setattr(adapter.authority, "verify_frozen", fail)
-    with pytest.raises(ValueError, match="evidence drift"):
-        adapter.compile_profile(profile)
+    def must_not_compile(*_args, **_kwargs):
+        pytest.fail("reader authority drift reached policy compilation")
+
+    monkeypatch.setattr(adapter.authority, "verify_installation", fail)
+    monkeypatch.setattr(adapter, "compile_profile", must_not_compile)
+    files = {"common/existing.txt": "# previous bytes"}
+    with pytest.raises(ValueError, match="R2 reader authority: source drift"):
+        adapter.compose(files, profile)
+    assert files == {"common/existing.txt": "# previous bytes"}
 
 
 def test_compile_profile_rejects_capability_source_coverage_drift(profile, monkeypatch):
@@ -387,17 +401,14 @@ def test_audit_native_tail_envelope_tracks_the_actual_compiled_bounds(
     original_load = tomllib.load
 
     def load(handle, **kwargs):
-        return changed if handle.name == str(adapter.SOURCE) else original_load(handle, **kwargs)
+        return (
+            changed
+            if handle.name == str(adapter.source_path())
+            else original_load(handle, **kwargs)
+        )
 
     monkeypatch.setattr(adapter.tomllib, "load", load)
     for program in cast("list[dict[str, Any]]", adapter.audit(profile)["programs"]):
         assert program["insertion_bounds"] == [-2, 5]
         expected = [-4.5, 11.25] if program["consumer"] == "a0-econ-road" else [-2, 5]
         assert program["native_tail"]["conservative_delta_envelope"] == expected
-
-
-@pytest.fixture(scope="module", autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
-        yield

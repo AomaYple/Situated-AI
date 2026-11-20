@@ -33,7 +33,8 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from pdx import config, verify, version_contracts
+from pdx import config, verify
+from pdx.localization_languages import DEFAULT_LANGUAGES
 
 pytestmark = pytest.mark.docs
 
@@ -142,11 +143,15 @@ def test_每条断言的检查类型都已实现() -> None:
 
 def test_所有相对_markdown_链接都指向仓库文件() -> None:
     """导航页改名或清理文件时，不能留下静默失效的相对链接。"""
-    raw = subprocess.check_output(["git", "ls-files", "-z", "--", "*.md"])
-    paths = [p.decode("utf-8") for p in raw.split(b"\x00") if p]
+    present = subprocess.check_output(
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md"]
+    )
+    removed = subprocess.check_output(["git", "ls-files", "-z", "--deleted", "--", "*.md"])
+    paths = sorted(set(present.split(b"\x00")) - set(removed.split(b"\x00")) - {b""})
     pattern = re.compile(r"\[[^]]*\]\(([^)]+)\)")
     missing: list[str] = []
-    for name in paths:
+    for encoded_name in paths:
+        name = encoded_name.decode("utf-8")
         doc = config.REPO / name
         for raw_link in pattern.findall(doc.read_text(encoding="utf-8")):
             target = raw_link.strip()
@@ -159,6 +164,21 @@ def test_所有相对_markdown_链接都指向仓库文件() -> None:
             if relative and not (doc.parent / relative).resolve().exists():
                 missing.append(f"{name}: {target}")
     assert not missing, "Markdown 存在失效相对链接：\n" + "\n".join(missing)
+
+
+def test_workshop_language_index_matches_current_localization() -> None:
+    """Each supported game locale has one distinct Steam language and BBCode document."""
+    folder = config.REPO / "docs/publishing"
+    rows = re.findall(
+        r"^\| (\w+) \| \[[^]]+\]\((创意工坊描述[^)]*\.md)\) \| (\w+) \|$",
+        (folder / "README.md").read_text(encoding="utf-8"),
+        flags=re.MULTILINE,
+    )
+    directories, files, steam_languages = zip(*rows, strict=True)
+    assert len(directories) == len(set(directories))
+    assert set(directories) == {language.directory for language in DEFAULT_LANGUAGES}
+    assert len(files) == len(set(files)) == len(set(steam_languages))
+    assert set(files) == {path.name for path in folder.glob("创意工坊描述*.md")}
 
 
 def test_断言id唯一() -> None:
@@ -176,18 +196,12 @@ def test_断言id唯一() -> None:
 #: 显式列出而不是「抽不到就跳过」—— 否则哪天锚点抽取退化了，
 #: 大片断言会静默退出检查而没人发现。下面每条都写明为什么无法定位。
 _NO_ANCHOR_CLAIMS: dict[str, str] = {
-    "script.lists_doc04": "描述「5 个列表」纯中文；目录名未写进描述（该数字在 doc 04 §0.2 生成表里）",
     "def.namespaces": "同上，'defines' 太通用（该数字在 doc 05 §0.4 生成表里）",
     "def.param_names": "同上，'defines' 太通用（同上）",
     "docs.total_bytes": "doc 07 的总字节数在 §0 生成表里（从入库清单现算），没有可定位的英文标识符；"
     "内容时效性另由 test_docs_mirror.py 用 sha256 逐篇比对本体看守",
     "pfx.mods_total": "描述里只有 'mod'，全库出现上千次；统计对象是本机 mod，机器相关",
 }
-
-
-# 1.15 的列表数已在正文逐值绑定；历史页面仍由生成表维护。
-if version_contracts.is_115():
-    _NO_ANCHOR_CLAIMS.pop("script.lists_doc04")
 
 
 def test_抽不出锚点的断言集合没有扩大() -> None:
@@ -250,6 +264,14 @@ def test_漂移检测覆盖了足够多的断言() -> None:
 #: 40 位十六进制串 = 本仓库会写进文档的修订哈希形态。
 _HEX40 = re.compile(r"\b[0-9a-f]{40}\b")
 
+_REPO_HISTORY_REF = re.compile(
+    r"https://github\.com/AomaYple/Situated-AI/(?:blob|commit)/[0-9a-f]{40}(?=[/)#\s]|$)"
+)
+
+
+def _native_revision_candidates(line: str) -> list[str]:
+    return _HEX40.findall(_REPO_HISTORY_REF.sub("", line))
+
 
 def _docs_and_indexes() -> list[Path]:
     """所有应当被核对的 markdown：知识库正文 + 两份 README。"""
@@ -271,9 +293,8 @@ def test_文档里的修订哈希必须与本体一致() -> None:
     任何一条断言上，于是两个错值在那里躺了一整个游戏版本，
     而那一节还自称「判断当前装的是哪个版本的**最权威依据**」。
 
-    做法很直白：文档里出现的每一个 40 位十六进制串，都必须等于本机
+    仓库 GitHub 历史链接中的提交地址用于追溯。其他 40 位十六进制串须等于本机
     ``caligula_rev.txt`` / ``clausewitz_rev.txt`` 里的值之一。
-    写了哈希却对不上，只能是抄错了或者抄旧了。
     """
     if not (config.ROOT / "caligula_rev.txt").is_file():
         pytest.skip("游戏目录不可用")
@@ -287,7 +308,7 @@ def test_文档里的修订哈希必须与本体一致() -> None:
         for n, line in enumerate(md.read_text(encoding="utf-8").splitlines(), start=1):
             bad.extend(
                 f"{md.name}:{n} 写着 {h} —— 本体里没有这个修订号\n    {line.strip()[:100]}"
-                for h in _HEX40.findall(line)
+                for h in _native_revision_candidates(line)
                 if h not in known
             )
     assert not bad, "文档里有对不上本体的修订哈希：\n  " + "\n  ".join(bad)
@@ -306,6 +327,14 @@ def test_哈希扫描本身有效() -> None:
     ]
     # 短哈希（文档里也用 ``bf52e8ef…`` 这种省略写法）不该被当成完整修订号
     assert _HEX40.findall("`bf52e8ef…`") == []
+    native = "bf52e8efe8f45334a3fbd421cc9e06d51077c045"
+    commit = "b3c3356e61b7c080038f7d6a61b84d69aedc58d3"
+    line = (
+        f"Caligula {native} "
+        f"[原件](https://github.com/AomaYple/Situated-AI/blob/{commit}/research/example.json)"
+    )
+    assert _native_revision_candidates(line) == [native]
+    assert _native_revision_candidates(f"{line} {commit}") == [native, commit]
 
 
 # ── 字节数：文档里「文件名 + 字节」的表格行 ───────────────────

@@ -191,19 +191,3 @@ def test_mutmut_配置指向真实模块() -> None:
     for target in ("src/pdx/lexer.py", "src/pdx/markers.py"):
         assert (config.REPO / target).is_file(), f"mutmut 配置里的 {target} 不存在"
         assert target in text, f"{target} 没写进 [tool.mutmut]"
-
-
-def test_性能基准文件可解析且口径齐全() -> None:
-    """`tools/benchmarks/parse_baseline.json` 是可入库的基准记录。
-
-    为什么不拿它当断言：CI 与本机 CPU 差几倍。它的用处是**记录**实测值
-    （供人工对比），断言由上面那条宽松门禁负责。
-    """
-    import json
-
-    path = config.REPO / "tools" / "benchmarks" / "parse_baseline.json"
-    assert path.is_file(), "基准文件不存在"
-    data = json.loads(path.read_text(encoding="utf-8"))
-    assert data["口径"], "得写清怎么复算与门槛口径"
-    assert data["记录"], "基准记录不能是空的"
-    assert data["记录"][0]["解析吞吐行每秒"] > 0

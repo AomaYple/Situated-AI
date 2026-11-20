@@ -22,31 +22,16 @@ from .textio import normalized_text
 if TYPE_CHECKING:
     from pathlib import Path
 
-BASELINE = config.REPO / "research/situated/mobilization-opportunities.json"
-BASELINE_SHA256 = "b731aa77f0c58d5123b748978f825b1980572b988afa2e78ff8d23e62f0000eb"
-BASELINE_115 = config.REPO / "research/situated/1.15.0/mobilization-opportunities.json"
-BASELINE_SHA256_1152 = "46a17a140bd2a7e38acdc2faed1d8838238353d07a8175ae60c67f8a2247257b"
-BASELINE_SHA256_1151 = "8ad52353d98d0a38dd500ea30e0ca6c26281628ed18f9e55ebc1c6a2e9446681"
-BASELINE_SHA256_115 = "7085339294016d23d2e78d7cd85954f3a8328d71fdf599b05c13659f8591777d"
+BASELINE_SHA256 = "46a17a140bd2a7e38acdc2faed1d8838238353d07a8175ae60c67f8a2247257b"
 
 
 def baseline_path() -> Path:
-    """Select a reviewed artifact without rewriting the historical baseline."""
-    return (
-        version_contracts.research_path("situated", BASELINE_115.name)
-        if version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
-        else BASELINE_115
-        if version_contracts.is_115()
-        else BASELINE
-    )
+    return version_contracts.research_path("situated", "mobilization-opportunities.json")
 
 
 def baseline_sha256() -> str:
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return BASELINE_SHA256_1152
-    if version_contracts.active_version() == "1.15.1":
-        return BASELINE_SHA256_1151
-    return BASELINE_SHA256_115 if version_contracts.is_115() else BASELINE_SHA256
+    version_contracts.require_current()
+    return BASELINE_SHA256
 
 
 PARAMETERS = config.REPO / "mod/decisions/mobilization_opportunities.toml"
@@ -61,10 +46,6 @@ _BASKETS = {
     "mobilization_option_field_hospitals": {"opium": "2", "tools": "1"},
 }
 _RECOVERY = {
-    "mobilization_option_first_aid": "0.20",
-    "mobilization_option_field_hospitals": "0.40",
-}
-_RECOVERY_1152 = {
     "mobilization_option_first_aid": "0.10",
     "mobilization_option_field_hospitals": "0.20",
 }
@@ -169,10 +150,7 @@ def _node(root: Block, *path: str) -> Assignment:
 
 def _record(node: Assignment) -> dict[str, Any]:
     ast = _ast(node)
-    record: dict[str, Any] = {"line": node.line, "sha256": _digest(ast)}
-    if version_contracts.active_version() != version_contracts.CURRENT_VERSION:
-        record["ast"] = ast
-    return record
+    return {"line": node.line, "sha256": _digest(ast)}
 
 
 def read_inputs(game: Path) -> dict[str, bytes]:
@@ -190,8 +168,7 @@ def read_inputs(game: Path) -> dict[str, bytes]:
 def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
     if set(inputs) != _REQUIRED or any(not isinstance(raw, bytes) for raw in inputs.values()):
         raise ValueError("动员原件集合漂移或不是完整原始字节")
-    current = version_contracts.active_version() == version_contracts.CURRENT_VERSION
-    recovery_rates = _RECOVERY_1152 if current else _RECOVERY
+    version_contracts.require_current()
     texts = {source: normalized_text(raw.decode("utf-8-sig")) for source, raw in inputs.items()}
     doc = texts[_DOC]
     if not all(
@@ -274,7 +251,7 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
         if _ast(upkeep.value) != _ast(_one(expected, "x").value):
             raise ValueError("医疗动员真实材料/原始系数漂移")
         recovery = _node(native, identity, "unit_modifier")
-        expected = parse_text(f"x = {{ unit_recovery_rate_add = {recovery_rates[identity]} }}").root
+        expected = parse_text(f"x = {{ unit_recovery_rate_add = {_RECOVERY[identity]} }}").root
         if _ast(recovery.value) != _ast(_one(expected, "x").value):
             raise ValueError("医疗动员原版恢复率漂移")
         if _ast(_node(native, identity, "group").value) != ["scalar", "medic_support", False]:
@@ -286,21 +263,18 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
             "weight": _record(weight),
             "goods": dict(basket),
             "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
-            "recovery_rate": recovery_rates[identity],
+            "recovery_rate": _RECOVERY[identity],
             "sections": {item.key: _record(item) for item in definition.value.assignments()},
         }
     data = {
-        "schema": 2 if current else 1,
+        "schema": 2,
         "contract": dict(_CONTRACT),
         "sources": {
             source: hashlib.sha256(text.encode()).hexdigest()
             for source, text in sorted(texts.items())
         },
         "originals": {
-            source: {
-                "sha256": hashlib.sha256(raw).hexdigest(),
-                **({} if current else {"bytes": raw.hex()}),
-            }
+            source: {"sha256": hashlib.sha256(raw).hexdigest()}
             for source, raw in sorted(inputs.items())
         },
         "scope_evidence": {"owner_block": _record(owner), "owner_is_country": _record(country)},
@@ -312,42 +286,14 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
         "candidates": dict(sorted(candidates.items())),
         "native_identities": [item.key for item in definitions],
     }
-    if current:
-        data["candidates"] = _candidate_catalog(data, native, trees[_MODIFIER])
+    data["candidates"] = _candidate_catalog(data, native, trees[_MODIFIER])
     return data
 
 
 def _validate(data: dict[str, Any]) -> dict[str, Any]:
-    """Validate current evidence or reparse the historical original sources."""
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        if hashlib.sha256(_canonical(data).encode()).hexdigest() != baseline_sha256():
-            raise ValueError("当前动员权威证据漂移")
-        return data
-    try:
-        if set(data) != {
-            "schema",
-            "contract",
-            "sources",
-            "originals",
-            "scope_evidence",
-            "utility_evidence",
-            "candidates",
-            "native_identities",
-        }:
-            raise ValueError("动员冻结资料schema/键无效")
-        if type(data["schema"]) is not int or data["schema"] != 1 or data["contract"] != _CONTRACT:
-            raise ValueError("动员冻结上下文合同无效")
-        raw = {}
-        for source, row in data["originals"].items():
-            if set(row) != {"sha256", "bytes"}:
-                raise ValueError("动员原文字节合同无效")
-            raw[source] = bytes.fromhex(row["bytes"])
-            if hashlib.sha256(raw[source]).hexdigest() != row["sha256"]:
-                raise ValueError("动员原文字节SHA不一致")
-        if _inventory(raw) != data:
-            raise ValueError("动员冻结AST/材料/上下文与原文字节不一致")
-    except (KeyError, TypeError, AttributeError, UnicodeError) as exc:
-        raise ValueError("动员冻结资料结构无效") from exc
+    """Validate the complete frozen authority by its canonical identity."""
+    if hashlib.sha256(_canonical(data).encode()).hexdigest() != baseline_sha256():
+        raise ValueError("当前动员权威证据漂移")
     return data
 
 
@@ -379,13 +325,7 @@ def verify_game(game: Path) -> dict[str, Any]:
 def candidate_catalog(baseline: Mapping[str, Any] | None = None) -> dict[str, dict[str, Any]]:
     """Return the reviewed military formation candidates and their material evidence."""
     data = load_baseline() if baseline is None else _validate(dict(baseline))
-    if version_contracts.active_version() == version_contracts.CURRENT_VERSION:
-        return cast("dict[str, dict[str, Any]]", data["candidates"])
-    native = parse_text(bytes.fromhex(data["originals"][SOURCE]["bytes"]).decode("utf-8-sig"))
-    modifiers = parse_text(bytes.fromhex(data["originals"][_MODIFIER]["bytes"]).decode("utf-8-sig"))
-    if native.errors or modifiers.errors:
-        raise ValueError("动员完整原文或效用原件解析失败")
-    return _candidate_catalog(data, native.root, modifiers.root)
+    return cast("dict[str, dict[str, Any]]", data["candidates"])
 
 
 def _candidate_catalog(

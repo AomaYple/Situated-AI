@@ -19,8 +19,11 @@ import pytest
 from _helpers import run_cli as _run
 from conftest import NEEDS_GAME, configure_current_identity
 
-from pdx import config, docgen, snapshot, verify
+from pdx import config, docgen, snapshot, tables_offline, verify
+from pdx.cli_commands import common
 from pdx.doc_tables import TableSpec
+from pdx.generation_transaction import GenerationTransaction
+from pdx.version_contracts import CURRENT_VERSION
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -96,8 +99,8 @@ def test_mirror_check_一致() -> None:
     assert "一致" in result.output
 
 
-@pytest.mark.parametrize("workshop_drift", [False, True], ids=["matching", "workshop-drift"])
-def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> None:
+@pytest.mark.parametrize("state", ["matching", "workshop-drift", "documentation-drift"])
+def test_refresh_dry_run_只报告(tmp_path, monkeypatch, state) -> None:
     installation = tmp_path / "installation"
     game = installation / "game"
     game.mkdir(parents=True)
@@ -110,7 +113,7 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
     (scripts / "baseline.txt").write_text(
         "REPLACE_OR_CREATE:fixture_one = { always = yes }\n", encoding="utf-8"
     )
-    if workshop_drift:
+    if state == "workshop-drift":
         (scripts / "drift.txt").write_text(
             "REPLACE_OR_CREATE:fixture_two = { always = yes }\n", encoding="utf-8"
         )
@@ -120,7 +123,7 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
     docs = tmp_path / "docs"
     docs.mkdir()
     document = docs / "workshop.md"
-    documented_files = 9 if workshop_drift else 1
+    documented_files = 9 if state == "documentation-drift" else 1
     document.write_text(
         f"内容文件 {documented_files}<!--claim:mod.files--> 个。\n\n"
         "| 统计项 | 数量 |\n"
@@ -133,8 +136,32 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
         verify,
         "CLAIMS",
         [
-            verify.Claim("mod.files", document.name, "内容文件", "mods_files", "", 1),
-            verify.Claim("pfx.mods_total", document.name, "前缀总数", "mods_prefix_total", "", 1),
+            verify.Claim(
+                "env.branch",
+                document.name,
+                "原版分支",
+                "game_version_field",
+                "caligula_branch",
+                f"release/{CURRENT_VERSION}",
+            ),
+            verify.Claim(
+                "mod.files",
+                document.name,
+                "内容文件",
+                "mods_files",
+                "",
+                1,
+                scope="machine_snapshot",
+            ),
+            verify.Claim(
+                "pfx.mods_total",
+                document.name,
+                "前缀总数",
+                "mods_prefix_total",
+                "",
+                1,
+                scope="machine_snapshot",
+            ),
             verify.Claim(
                 "pfx.replace_or_create",
                 document.name,
@@ -142,6 +169,7 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
                 "prefix_in_mods",
                 "REPLACE_OR_CREATE",
                 1,
+                scope="machine_snapshot",
             ),
         ],
     )
@@ -152,17 +180,104 @@ def test_refresh_dry_run_只报告(tmp_path, monkeypatch, workshop_drift) -> Non
     result = _run("refresh", "--dry-run")
     assert document.read_bytes() == before
     assert "生成表与文档一致" in result.output
-    if workshop_drift:
+    assert "断言 1 / 1 通过" in result.output
+    if state == "documentation-drift":
         assert result.exit_code == 1, result.output
         assert "1 处需要改" in result.output
-        assert "断言 0 / 3 通过" in result.output
-        for claim_id in ("mod.files", "pfx.mods_total", "pfx.replace_or_create"):
-            assert f"[{claim_id}] 期望 1 实得 2" in result.output
+        assert "标记问题 1" in result.output
+        assert "断言期望 1" in result.output
     else:
         assert result.exit_code == 0, result.output
         assert "0 处需要改" in result.output
-        assert "断言 3 / 3 通过" in result.output
         assert "全部一致" in result.output
+
+
+@pytest.mark.parametrize("failure", ["bad-table", "bad-marker", "claim-drift", None])
+def test_refresh_prevalidates_all_documents(tmp_path, monkeypatch, failure) -> None:
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(config, "docs_root", lambda: tmp_path)
+    first = tmp_path / "a.md"
+    last = tmp_path / "z.md"
+    first.write_text(
+        "计数 1<!--claim:known.count-->。\n\n| 键 | 数值 |\n| --- | --- |\n| a | 1 |\n",
+        encoding="utf-8",
+    )
+    last.write_text(
+        ("同一计数 3<!--claim:unknown.count-->。\n" if failure == "bad-marker" else "")
+        + "| 键 | 数值 |\n"
+        + ("缺少分隔行\n" if failure == "bad-table" else "| --- | --- |\n")
+        + "| z | 1 |\n",
+        encoding="utf-8",
+    )
+    first_spec = TableSpec("first", "| 键 | 数值 |", lambda: ["| a | 2 |"])
+    last_spec = TableSpec("last", "| 键 | 数值 |", lambda: ["| z | 2 |"])
+    monkeypatch.setattr(
+        docgen,
+        "targets",
+        lambda: (docgen.DocTarget(first, (first_spec,)), docgen.DocTarget(last, (last_spec,))),
+    )
+    claim = verify.Claim("known.count", first.name, "计数", "fixture", "", 2)
+    monkeypatch.setattr(verify, "CLAIMS", [claim])
+    monkeypatch.setitem(
+        verify._CHECKS, "fixture", lambda _arg: 1 if failure == "claim-drift" else 2
+    )
+
+    before = first.read_bytes(), last.read_bytes()
+    result = _run("refresh")
+    if failure:
+        assert result.exit_code == (2 if failure == "bad-table" else 1), result.output
+        assert (first.read_bytes(), last.read_bytes()) == before
+    else:
+        assert result.exit_code == 0, result.output
+        assert "2<!--claim:known.count-->" in first.read_text(encoding="utf-8")
+        assert "| a | 2 |" in first.read_text(encoding="utf-8")
+        assert "| z | 2 |" in last.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "command",
+    [("tables", "--write"), ("tables", "--offline", "--write"), ("verify", "--fix"), ("refresh",)],
+)
+def test_document_writer_rejects_source_change_during_staging(
+    tmp_path, monkeypatch, command
+) -> None:
+    monkeypatch.setattr(common, "require_game", lambda: None)
+    monkeypatch.setattr(config, "docs_root", lambda: tmp_path)
+    first = tmp_path / "a.md"
+    last = tmp_path / "z.md"
+    original = b"Count 1<!--claim:known.count-->\n\n| Key | Value |\n| --- | --- |\n| a | 1 |\n"
+    for path in (first, last):
+        path.write_bytes(original)
+    spec = TableSpec("fixture", "| Key | Value |", lambda: ["| a | 2 |"])
+    monkeypatch.setattr(
+        docgen,
+        "targets",
+        lambda: (docgen.DocTarget(first, (spec,)), docgen.DocTarget(last, (spec,))),
+    )
+    monkeypatch.setattr(
+        tables_offline,
+        "load_tables",
+        lambda: {"a.md::fixture": ["| a | 2 |"], "z.md::fixture": ["| a | 2 |"]},
+    )
+    monkeypatch.setattr(
+        verify, "CLAIMS", [verify.Claim("known.count", first.name, "count", "fixture", "", 2)]
+    )
+    monkeypatch.setitem(verify._CHECKS, "fixture", lambda _arg: 2)
+    stage = GenerationTransaction._stage
+    external = original.replace(b"\n", b"\r\n")
+
+    def edit_after_stage(transaction, path, content):
+        result = stage(transaction, path, content)
+        if path == last and content != original:
+            path.write_bytes(external)
+        return result
+
+    monkeypatch.setattr(GenerationTransaction, "_stage", edit_after_stage)
+    result = _run(*command)
+    assert result.exit_code == 2, result.output
+    assert "已变更" in result.output
+    assert first.read_bytes() == original
+    assert last.read_bytes() == external
 
 
 def test_verify_fix_在一致时早退() -> None:
@@ -261,39 +376,41 @@ def test_verify_fix_claims_只跑一条时不碰真断言表() -> None:
         assert result.exit_code == 2, result.output
 
 
-@NEEDS_GAME
-def test_snapshot_diff_自己与自己无差异() -> None:
-    """snapshot diff 收的是**快照名**（不含 .json），不是路径。
+def test_snapshot_diff_自己与自己无差异(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """按标签回退到精简快照并与自身比较。"""
+    monkeypatch.setattr(snapshot, "SNAPSHOT_DIR", tmp_path)
+    snapshot.Snapshot(
+        version={"caligula_branch": f"release/{CURRENT_VERSION}"},
+        sections={"common_entries": {"sample_group": ["sample_definition"]}},
+        compact=True,
+    ).write(tmp_path / "sample.compact.json")
 
-    只写了版本号时要能解析到**精简**快照 —— 入库的只有精简那份，
-    「拿两个版本比结构」在别的机器上只可能拿到它。
-    """
-    snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
-    assert snaps, "入库的精简快照（tools/out/snapshots/*.compact.json）缺失"
-    label = snaps[-1].name.removesuffix(".compact.json")
-    result = _run("snapshot", "diff", label, label)
+    result = _run("snapshot", "diff", "sample", "sample")
     assert result.exit_code == 0, result.output
     assert "无差异" in result.output or "完全一致" in result.output
 
 
-@NEEDS_GAME
-def test_snapshot_diff_域集合不同时会点明() -> None:
-    """两份快照的域集合不同时，差异里混着**格式变化** —— 必须点明，不能静默。
+def test_snapshot_diff_域集合不同时会点明(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """比较同版本精简快照时，明确报告新增的域。"""
+    monkeypatch.setattr(snapshot, "SNAPSHOT_DIR", tmp_path)
+    version = {"caligula_branch": f"release/{CURRENT_VERSION}"}
+    common = {"common_entries": {"sample_group": ["sample_definition"]}}
+    snapshot.Snapshot(version=version, sections=common, compact=True).write(
+        tmp_path / "older.compact.json"
+    )
+    snapshot.Snapshot(
+        version=version,
+        sections={**common, "events_entries": {"sample.txt": ["sample_event"]}},
+        compact=True,
+    ).write(tmp_path / "newer.compact.json")
+    snapshot.Snapshot(version=version, sections=common).write(tmp_path / "newer.json")
 
-    这不是假想：入库的 `release-1.14.3.compact.json` 是上一轮的域集合（6 个域），
-    拿它比 1.14.4（14 个域）会报出百万级「删除」，而真正的原版变化只有几百处。
-    """
-    snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
-    if len(snaps) < 2:
-        pytest.skip("少于两份精简快照，比不出「域集合不同」")
-    # 明确传入 `.compact`，避免旧版本同时有完整快照时被读取回退规则选成
-    # 完整快照，导致两边口径不同；这个用例专门检查域集合扩展。
-    older = snaps[0].name.removesuffix(".json")
-    newer = snaps[-1].name.removesuffix(".json")
-    result = _run("snapshot", "diff", older, newer)
+    result = _run("snapshot", "diff", "older.compact", "newer.compact")
     assert "MarkupError" not in result.output
     assert result.exit_code == 0, result.output
     assert "域集合不同" in result.output
+    assert "只有 B 有：events_entries" in result.output
+    assert "可比的是两侧都有的域：common_entries" in result.output
 
 
 @NEEDS_GAME

@@ -103,9 +103,9 @@ def test_candidate_releases_full_outputs_before_the_next_heavy_stage(
         pass
 
     package = decisions.PackageContract(
-        "3.3.0", "released", "vanilla-1.15.1", "new-game-only", ("windows",), "fixture"
+        "3.3.0", "released", "vanilla-1.15.2", "new-game-only", ("windows",), "fixture"
     )
-    policy = decisions.Policy(True, "1.15.1", "baseline", 1, 1, 1, 1, 1, package)
+    policy = decisions.Policy(True, "1.15.2", "baseline", 1, 1, 1, 1, 1, package)
     extensions = decisions.Extensions(
         reform_enabled=True,
         market_enabled=True,

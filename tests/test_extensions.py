@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import decisions, version_contracts
+from pdx import decisions
 from pdx.parser import parse_text
 from pdx.situated import pdx_eval
 from pdx.situated.compiler import load_model, strategy_overlay
@@ -16,13 +16,7 @@ from pdx.situated.schema import Relation
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_extension_assembly():
-    """Exercise frozen extension assembly; live current release is integration-tested."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
+@pytest.mark.integration
 def test_未验收扩展默认停用():
     policy = decisions.load_extensions()
     assert not policy.reform_enabled
@@ -55,6 +49,7 @@ def test_未知发布_profile_或模块明确失败(tmp_path):
         decisions.load_extensions(profile="missing")
 
 
+@pytest.mark.integration
 def test_启用扩展只追加声明字段且原版逐字保留():
     policy = replace(decisions.load_extensions(), reform_enabled=True, market_enabled=True)
     files = decisions.build(extensions=policy)
@@ -62,7 +57,7 @@ def test_启用扩展只追加声明字段且原版逐字保留():
     restored = re.sub(
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n", "", patched, flags=re.DOTALL
     )
-    assert restored == decisions.baseline_path().read_text(encoding="utf-8")
+    assert restored == decisions.baseline_text()
     assert patched.count("# SITAI BEGIN") == 5
     for name, text in files.items():
         assert "\r" not in text
@@ -75,6 +70,7 @@ def test_启用扩展只追加声明字段且原版逐字保留():
     assert "subtract" in support
 
 
+@pytest.mark.integration
 def test_经济模块开关不制造已经退役的改革互补():
     """当前改革没有跨模块互补，启用经济模块不能凭行政健康制造收益。"""
     policy = replace(
@@ -158,6 +154,7 @@ def test_关闭消费者时撤回其跨模块关系增量():
         assert result.delta == pytest.approx(expected)
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("fiscal_enabled", [False, True])
 def test_外交开关隔离aggression消费者和所有权(fiscal_enabled):
     fiscal = replace(decisions.load(), enabled=fiscal_enabled)

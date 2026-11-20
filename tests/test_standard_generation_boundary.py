@@ -13,8 +13,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, decisions, distribution, version_contracts
+from pdx import cli, config, decisions, distribution, version_contracts
+from pdx.cli_commands import release
 from pdx.generation_transaction import GenerationTransaction
+from pdx.situated import bindings, domain_coverage, profile_configuration
 
 pytestmark = pytest.mark.unit
 
@@ -62,8 +64,7 @@ def standard_tree(tmp_path, monkeypatch):
     monkeypatch.setattr(distribution, "generation_lock", lock)
     monkeypatch.setattr(distribution, "verify_compatibility_installation", lambda: None)
     monkeypatch.setattr(distribution, "check_profile_installation", lambda profile: profile)
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        yield target, ledger
+    return target, ledger
 
 
 def _tree(target):
@@ -381,28 +382,27 @@ def test_current_cli_keeps_generated_ledgers_in_standard_writer_transaction(tmp_
     binding, domain = tmp_path / "binding.toml", tmp_path / "domain.toml"
     binding.write_bytes(b"old-binding\n")
     domain.write_bytes(b"old-domain\n")
-    monkeypatch.setattr(cli.config, "GAME", game)
-    monkeypatch.setattr(cli, "_production_profile", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(cli, "_modgen_verify_sources", lambda: None)
-    monkeypatch.setattr(cli.situated_bindings, "source_path", lambda: binding)
-    monkeypatch.setattr(cli.situated_bindings, "build", lambda: ("one",))
-    monkeypatch.setattr(cli.situated_bindings, "render", lambda _rows: "new-binding\n")
-    monkeypatch.setattr(cli.situated_domain_coverage, "source_path", lambda: domain)
-    monkeypatch.setattr(cli.situated_domain_coverage, "render_counts", lambda _path: "new-domain\n")
+    monkeypatch.setattr(config, "GAME", game)
+    monkeypatch.setattr(release, "_production_profile", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(release, "_modgen_verify_sources", lambda: None)
+    monkeypatch.setattr(bindings, "source_path", lambda: binding)
+    monkeypatch.setattr(bindings, "build", lambda: ("one",))
+    monkeypatch.setattr(bindings, "render", lambda _rows: "new-binding\n")
+    monkeypatch.setattr(domain_coverage, "source_path", lambda: domain)
+    monkeypatch.setattr(domain_coverage, "render_counts", lambda _path: "new-domain\n")
     called = False
 
     def reject(*, configuration, transaction):
         nonlocal called
         called = True
-        assert configuration == cli.profile_configuration.ProfileConfiguration()
+        assert configuration == profile_configuration.ProfileConfiguration()
         assert isinstance(transaction, GenerationTransaction)
         assert binding.read_bytes() == b"new-binding\n"
         assert domain.read_bytes() == b"new-domain\n"
         raise ValueError("final-current-boundary-drift")
 
     monkeypatch.setattr(distribution, "write_standard_outputs", reject)
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        result = CliRunner().invoke(cli.app, ["modgen", "--write"])
+    result = CliRunner().invoke(cli.app, ["modgen", "--write"])
     assert called
     assert result.exit_code == 1, result.output
     assert "final-current-boundary-drift" in result.output

@@ -12,7 +12,7 @@ import pytest
 from conftest import configure_current_identity
 from typer.testing import CliRunner
 
-from pdx import cli, config, decision_adapters, decisions, distribution
+from pdx import cli, config, decision_adapters, decisions, distribution, situated
 from pdx.situated import audit
 from pdx.situated.action_instances import ActionInstance
 from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface
@@ -236,7 +236,7 @@ def test_cli_native_option_runs_real_pipeline_and_does_not_call_legacy_report(
     tmp_path, monkeypatch
 ):
     monkeypatch.setattr(audit, "report", lambda: pytest.fail("legacy report called"))
-    monkeypatch.setattr(cli.situated, "load_model", lambda: pytest.fail("legacy contract called"))
+    monkeypatch.setattr(situated, "load_model", lambda: pytest.fail("legacy contract called"))
     target = tmp_path / "native.json"
     result = CliRunner().invoke(
         cli.app, ["situated", "report", "--native", "--output", str(target)]
@@ -273,7 +273,7 @@ def test_existing_cli_default_path_remains_explicitly_separate(tmp_path, monkeyp
         audit, "native_report", lambda: pytest.fail("native build unexpectedly called")
     )
     monkeypatch.setattr(
-        cli.situated, "load_model", lambda: SimpleNamespace(contract=lambda: {"mode": "legacy"})
+        situated, "load_model", lambda: SimpleNamespace(contract=lambda: {"mode": "legacy"})
     )
     monkeypatch.setattr(
         audit, "report", lambda: SimpleNamespace(as_dict=lambda: {"old_receipt": True})

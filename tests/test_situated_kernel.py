@@ -35,13 +35,6 @@ from pdx.situated.state import derive
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture
-def historical_witness_contract():
-    """Offline assembly/audit witnesses retain their original frozen1145 identity."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 def _max_exclusive_writes(block: Block) -> int:
     """独立沿 AST 的互斥控制流计算最多实际执行的字段写入。"""
     total = 0
@@ -196,7 +189,8 @@ def test_关系对称配对且仅使能关系禁止有向环():
         relations.validate(cyclic)
 
 
-def test_生产元数据登记行动合同(historical_witness_contract):
+@pytest.mark.integration
+def test_生产元数据登记行动合同():
     payload = json.loads(
         decisions.build(extensions=decisions.load_extensions(profile="release"))[
             ".metadata/metadata.json"
@@ -360,8 +354,7 @@ def test_布尔状态保留真假未知且不接受原始数值冒充(raw, known
 
 def test_缺少当前生成原件时审计保留pending而不借历史完成状态(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        report = audit_report()
+    report = audit_report()
     assert report.scope_status == "unverified"
     assert report.native_coverage is None
     assert (

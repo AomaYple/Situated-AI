@@ -2,27 +2,20 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import replace
 
 import pytest
+from _engine_evidence import strategy_image
 
-from pdx import decision_rules, version_contracts
+from pdx import decision_rules
 from pdx.parser import parse_text
 from pdx.situated import compiler, decision_ir, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture
-def historical_strategy_contract():
-    """Only synthetic revision attacks use the reviewed historical schema."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
-def test_min_law_contract_has_country_actor_and_actual_law_instance(historical_strategy_contract):
+def test_min_law_contract_has_country_actor_and_actual_law_instance():
     data = json.loads(engine_scope.strategy_snapshot())
     contract = data["consumers"]["min_law_chance_to_pass"]
     assert contract == {
@@ -31,59 +24,23 @@ def test_min_law_contract_has_country_actor_and_actual_law_instance(historical_s
         "operation": "override_pass_chance_threshold",
         "capability": "direct",
         "unit": "pass_chance",
-        "consumer_va": "0x141646d23",
-        "parser_va": "0x1416418b2",
-        "member_offset": "0x9b8",
+        "consumer_va": "0x14184db83",
+        "parser_va": "0x141848706",
+        "member_offset": "0x9d8",
     }
-    assert len(data["observations"]) == 452
+    assert len(data["observations"]) == 307
     assert data["law_instance_type"]["scope_tag"] == "0x31"
     assert data["law_instance_type"]["native_type"] == "CCountryLaw"
 
 
 @pytest.fixture
-def min_law_proof(tmp_path, monkeypatch, historical_strategy_contract):
-    data = json.loads(engine_scope.strategy_snapshot())
-    points = data["observations"][148:169]
-    assert len(points) == 21
-    image = bytearray()
-    for point in points:
-        point["file_offset"] = hex(len(image))
-        image.extend(bytes.fromhex(point["bytes"]))
-    data["observations"] = points
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(image)
-    data["exe"] = {"sha256": hashlib.sha256(image).hexdigest(), "bytes": len(image)}
-    game = tmp_path / "game"
-    inputs = {}
-    for index, source in enumerate(data["script_hashes"]):
-        raw = f"strategy_{index} = {{ min_law_chance_to_pass = {{ value = 50 }} }}".encode()
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-        inputs[source] = raw
-        data["script_hashes"][source] = hashlib.sha256(raw).hexdigest()
-    for source in data["institution_definition_sources"]:
-        raw = "\n".join(f"{key} = {{}}" for key in data["institution_definitions"]).encode()
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-        data["institution_definition_sources"][source] = hashlib.sha256(raw).hexdigest()
-    for source, raw_hex in data["stance_definition_bytes"].items():
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes.fromhex(raw_hex))
-    manifest = tmp_path / "strategy.json"
-
-    def freeze():
-        raw = json.dumps(data).encode()
-        manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
-        monkeypatch.setattr(
-            engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
-
-    freeze()
+def min_law_proof(tmp_path, monkeypatch):
+    game, exe, data, inputs, freeze = strategy_image(
+        tmp_path,
+        monkeypatch,
+        b"sample = { min_law_chance_to_pass = { value = 50 } }",
+        materialize_definitions=True,
+    )
     return game, exe, data, inputs, freeze
 
 
@@ -110,21 +67,9 @@ def test_repinning_min_law_contract_cannot_authorize_another_scope(min_law_proof
     else:
         data["consumers"]["min_law_chance_to_pass"][member] = "unproven"
     freeze()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
-    with pytest.raises(ValueError, match="消费者字段合同"):
-        engine_scope.strategy_evidence(game, inputs)
-
-
-@pytest.mark.parametrize("index", range(21))
-def test_every_law_instance_type_and_override_byte_span_is_required(min_law_proof, index):
-    game, exe, data, inputs, freeze = min_law_proof
-    image = bytearray(exe.read_bytes())
-    image[int(data["observations"][index]["file_offset"], 16)] ^= 1
-    exe.write_bytes(image)
-    data["exe"]["sha256"] = hashlib.sha256(image).hexdigest()
-    freeze()
-    with pytest.raises(ValueError, match="字节不一致"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_evidence(game, inputs)
 
 

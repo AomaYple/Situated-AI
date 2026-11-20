@@ -8,9 +8,10 @@ import re
 from dataclasses import replace
 
 import pytest
+from _engine_evidence import strategy_image
 from _frozen_reader_words import frozen_reader_words
 
-from pdx import country_state, decision_rules, version_contracts
+from pdx import country_state, decision_rules
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, decision_ir, engine_scope, pdx_eval, vanilla_inventory
@@ -18,16 +19,7 @@ from pdx.situated import compiler, decision_ir, engine_scope, pdx_eval, vanilla_
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture
-def historical_strategy_contract():
-    """Only synthetic revision attacks use the reviewed historical schema."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
-def test_snapshot_authorizes_only_exact_construction_and_institution_consumers(
-    historical_strategy_contract,
-):
+def test_snapshot_authorizes_only_exact_construction_and_institution_consumers():
     contracts = json.loads(engine_scope.strategy_snapshot())["consumers"]
     assert "wanted_construction_output" in contracts
     assert "institution_scores" in contracts
@@ -35,14 +27,14 @@ def test_snapshot_authorizes_only_exact_construction_and_institution_consumers(
     assert construction["actor_scope"] == "country"
     assert construction["target_scope"] == "none"
     assert construction["operation"] == "additive_construction_output_target"
-    assert construction["consumer_va"] == "0x141646580"
-    assert construction["member_offset"] == "0x16a0"
+    assert construction["consumer_va"] == "0x14184d3e0"
+    assert construction["member_offset"] == "0x16c0"
     institution = contracts["institution_scores"]
     assert institution["actor_scope"] == "country"
     assert institution["target_scope"] == "definition_only:institution_type"
     assert institution["operation"] == "additive_score"
-    assert institution["consumer_va"] == "0x141644a3a"
-    assert institution["member_offset"] == "0x3d0"
+    assert institution["consumer_va"] == "0x14184b89a"
+    assert institution["member_offset"] == "0x3f0"
     assert (
         not {
             "wanted_construction_input_goods_surplus_ratio",
@@ -55,50 +47,13 @@ def test_snapshot_authorizes_only_exact_construction_and_institution_consumers(
 
 
 @pytest.fixture
-def construction_institution_proof(tmp_path, monkeypatch, historical_strategy_contract):
-    """Exercise file verification with all 28 observed spans in a compact image."""
-    data = json.loads(engine_scope.strategy_snapshot())
-    observations = data["observations"][120:148]
-    image = bytearray()
-    for point in observations:
-        point["file_offset"] = hex(len(image))
-        image.extend(bytes.fromhex(point["bytes"]))
-    data["observations"] = observations
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(image)
-    data["exe"] = {"sha256": hashlib.sha256(image).hexdigest(), "bytes": len(image)}
-    game = tmp_path / "game"
-    inputs = {}
-    for index, source in enumerate(data["script_hashes"]):
-        raw = f"strategy_{index} = {{ wanted_construction_output = 1 }}\n".encode()
-        inputs[source] = raw
-        data["script_hashes"][source] = hashlib.sha256(raw).hexdigest()
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-    for source in data["institution_definition_sources"]:
-        raw = "\n".join(f"{key} = {{}}" for key in data["institution_definitions"]).encode()
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-        inputs[source] = raw
-        data["institution_definition_sources"][source] = hashlib.sha256(raw).hexdigest()
-    for source, raw_hex in data["stance_definition_bytes"].items():
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes.fromhex(raw_hex))
-    manifest = tmp_path / "strategy.json"
-
-    def freeze():
-        raw = json.dumps(data).encode()
-        manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
-        monkeypatch.setattr(
-            engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
-
-    freeze()
+def construction_institution_proof(tmp_path, monkeypatch):
+    game, exe, data, inputs, freeze = strategy_image(
+        tmp_path,
+        monkeypatch,
+        b"sample = { wanted_construction_output = 1 }",
+        materialize_definitions=True,
+    )
     return game, exe, data, inputs, freeze
 
 
@@ -126,9 +81,9 @@ def test_repinning_consumer_changes_cannot_grant_other_objects_or_members(
     else:
         data["consumers"][field][member] = "unproven"
     freeze()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_evidence(game, inputs)
 
 
@@ -147,22 +102,8 @@ def test_production_verification_keeps_definition_identity_out_of_named_scopes(
     )
     construction = by_field["wanted_construction_output"]
     assert (construction.actor, construction.target) == ("country", "none")
-    assert "@engine/binaries/victoria3.exe:0x141644a3a" in institution.references
-    assert "@engine/binaries/victoria3.exe:0x141646580" in construction.references
-
-
-@pytest.mark.parametrize("index", range(28))
-def test_each_added_original_byte_span_is_required(construction_institution_proof, index):
-    game, exe, data, inputs, freeze = construction_institution_proof
-    point = data["observations"][index]
-    image = bytearray(exe.read_bytes())
-    image[int(point["file_offset"], 16)] ^= 1
-    exe.write_bytes(image)
-    # Repinning the whole-image hash cannot bypass the observed raw bytes.
-    data["exe"]["sha256"] = hashlib.sha256(image).hexdigest()
-    freeze()
-    with pytest.raises(ValueError, match="字节不一致"):
-        engine_scope.strategy_evidence(game, inputs)
+    assert "@engine/binaries/victoria3.exe:0x14184b89a" in institution.references
+    assert "@engine/binaries/victoria3.exe:0x14184d3e0" in construction.references
 
 
 @pytest.mark.parametrize("index", range(5))
@@ -372,10 +313,9 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
         "institution_scores.institution_police": 6,
         "institution_scores.institution_colonial_affairs": 2,
     }
-    if version_contracts.active_version() in {"1.15.1", "1.15.2"}:
-        school = "institution_scores.institution_schools"
-        expected.pop(school)
-        assert all(row.field.removeprefix("ai_strategy_default.") != school for row in selected)
+    school = "institution_scores.institution_schools"
+    expected.pop(school)
+    assert all(row.field.removeprefix("ai_strategy_default.") != school for row in selected)
     assert Counter(row.field.removeprefix("ai_strategy_default.") for row in selected) == expected
     for writer in selected:
         instance = instances[writer.writer_id]
@@ -403,12 +343,6 @@ def installed_numeric_production():
     return _numeric_production(compiler.baseline_text(), decision_rules.load())
 
 
-@pytest.fixture(params=("1.14.5", "1.15.0"))
-def historical_numeric_production(request):
-    with version_contracts.select_version(request.param):
-        yield _numeric_production(compiler.baseline_text(), decision_rules.load())
-
-
 def _numeric_production(native, policy):
     source = "common/ai_strategies/00_default_strategy.txt"
     rules = tuple(
@@ -416,11 +350,7 @@ def _numeric_production(native, policy):
         for rule in policy.rules
         if rule.id in {"fiscal_construction_guard", "remaining_school_catchup_need"}
     )
-    assert {rule.id for rule in rules} == (
-        {"fiscal_construction_guard"}
-        if version_contracts.active_version() in {"1.15.1", "1.15.2"}
-        else {"fiscal_construction_guard", "remaining_school_catchup_need"}
-    )
+    assert {rule.id for rule in rules} == ({"fiscal_construction_guard"})
     keys = frozenset(key for rule in rules for key in rule.input_keys())
     policy = replace(
         policy,
@@ -448,31 +378,6 @@ def _numeric_overlay(text, field):
     begin = text.index(f"# SITAI BEGIN information:{field}")
     end = text.index(f"# SITAI END information:{field}", begin)
     return "\n".join(text[begin:end].splitlines()[1:])
-
-
-@pytest.mark.parametrize(
-    ("field", "values", "root", "base", "expected"),
-    [
-        (
-            "wanted_construction_output",
-            {"default": True, "war": False},
-            {"in_default": True, "is_at_war": False},
-            100,
-            75,
-        ),
-        (
-            "institution_scores.institution_schools",
-            {"literacy": 0.3, "population": 3000000},
-            {"literacy_rate": 0.3, "total_population": 3000000},
-            10,
-            11,
-        ),
-    ],
-)
-def test_generated_numeric_targets_preserve_player_disabled_unknown_and_country_identity(
-    historical_numeric_production, field, values, root, base, expected
-):
-    _assert_numeric_target(historical_numeric_production, field, values, root, base, expected)
 
 
 def test_current_construction_preserves_player_disabled_unknown_and_country_identity(

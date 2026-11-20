@@ -15,12 +15,7 @@ from typing import Any
 from pdx import version_contracts
 
 _VERSION = version_contracts.active_version()
-_SOURCE = {
-    "1.14.5": "technology_opportunities.toml",
-    "1.15.0": "technology_opportunities_115.toml",
-    "1.15.1": "technology_opportunities_1151.toml",
-    "1.15.2": "technology_opportunities_1152.toml",
-}[_VERSION]
+_SOURCE = "technology_opportunities_1152.toml"
 _RAW = tomllib.loads(
     (Path(__file__).resolve().parents[1] / "mod/decisions" / _SOURCE).read_text(encoding="utf-8")
 )

@@ -2,25 +2,18 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections import Counter
 from dataclasses import replace
 
 import pytest
+from _engine_evidence import strategy_image
 
-from pdx import decision_rules, version_contracts
+from pdx import decision_rules
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, vanilla_inventory
 
 pytestmark = pytest.mark.unit
-
-
-@pytest.fixture
-def historical_strategy_contract():
-    """Only synthetic revision attacks use the reviewed historical schema."""
-    with version_contracts.select_version("1.14.5"):
-        yield
 
 
 @pytest.mark.parametrize(
@@ -51,49 +44,11 @@ def test_new_exact_strategy_consumers_have_proven_country_root(field):
 
 
 @pytest.fixture
-def goal_proof(tmp_path, monkeypatch, historical_strategy_contract):
-    data = json.loads(engine_scope.strategy_snapshot())
-    assert len(data["observations"]) >= 388
-    points = data["observations"][169:325]
-    image = bytearray()
-    for point in points:
-        point["file_offset"] = hex(len(image))
-        image.extend(bytes.fromhex(point["bytes"]))
-    data["observations"] = points
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(image)
-    data["exe"] = {"sha256": hashlib.sha256(image).hexdigest(), "bytes": len(image)}
-    game = tmp_path / "game"
-    inputs = {}
-    for source in data["script_hashes"]:
-        raw = b"sample = { wargoal_scores = { annex_country = { value = 10 } } }"
-        inputs[source] = raw
-        data["script_hashes"][source] = hashlib.sha256(raw).hexdigest()
-    path = tmp_path / "strategy.json"
-
-    def freeze():
-        raw = json.dumps(data).encode()
-        path.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", path)
-        monkeypatch.setattr(
-            engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest()
-        )
-
-    freeze()
+def goal_proof(tmp_path, monkeypatch):
+    game, exe, data, inputs, freeze = strategy_image(
+        tmp_path, monkeypatch, b"sample = { wargoal_scores = { annex_country = { value = 10 } } }"
+    )
     return game, exe, data, inputs, freeze
-
-
-@pytest.mark.parametrize("index", range(156))
-def test_every_goal_and_navy_exact_span_is_required_even_with_repin(goal_proof, index):
-    game, exe, data, inputs, freeze = goal_proof
-    raw = bytearray(exe.read_bytes())
-    raw[int(data["observations"][index]["file_offset"], 16)] ^= 1
-    exe.write_bytes(raw)
-    data["exe"]["sha256"] = hashlib.sha256(raw).hexdigest()
-    freeze()
-    with pytest.raises(ValueError, match="字节不一致"):
-        engine_scope.strategy_evidence(game, inputs)
 
 
 @pytest.mark.parametrize(
@@ -128,9 +83,9 @@ def test_repinning_exact_goal_or_navy_consumer_does_not_grant_adjacent_fields(
     else:
         data["consumers"][field][member] = "unknown"
     freeze()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_evidence(game, inputs)
 
 
@@ -149,7 +104,7 @@ def test_enum_keys_are_exact_ordered_original_identities(goal_proof, field, coun
     else:
         keys.pop()
     freeze()
-    with pytest.raises(ValueError, match="枚举"):
+    with pytest.raises(ValueError, match="strategy_score_keys"):
         engine_scope.strategy_snapshot()
 
 

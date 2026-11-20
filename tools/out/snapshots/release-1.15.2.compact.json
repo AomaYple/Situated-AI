@@ -387283,6 +387283,56 @@
     "window_name"
    ]
   },
+  "script_parse_gaps": {
+   "game/common/dna_data/00_bal_gangadhar_tilak.txt": [
+    "parse_status=partial: unclosed_block（第 4 行第 27 列）"
+   ],
+   "game/common/dna_data/00_iwasaki_yataro.txt": [
+    "parse_status=partial: unclosed_block（第 5 行第 22 列）"
+   ],
+   "game/common/dna_data/00_mahatma_gandhi.txt": [
+    "parse_status=partial: unclosed_block（第 4 行第 22 列）"
+   ],
+   "game/common/dna_data/00_rani_lakshmibai.txt": [
+    "parse_status=partial: unclosed_block（第 4 行第 23 列）"
+   ],
+   "game/common/dna_data/00_sarojni_naidu.txt": [
+    "parse_status=partial: unclosed_block（第 4 行第 21 列）"
+   ],
+   "game/common/dna_data/00_zhou_xuexi.txt": [
+    "parse_status=partial: unclosed_block（第 4 行第 18 列）"
+   ],
+   "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_01/female_headgear_japanese_common_01.asset": [
+    "parse_status=partial: unclosed_block（第 18 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_02/female_headgear_japanese_common_02.asset": [
+    "parse_status=partial: unclosed_block（第 18 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_03/female_headgear_japanese_common_03.asset": [
+    "parse_status=partial: unclosed_block（第 18 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/female_headgear/japanese_common/female_headgear_japanese_common_04/female_headgear_japanese_common_04.asset": [
+    "parse_status=partial: unclosed_block（第 19 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/male_headgear/european_military/male_headgear_polish_military_02/male_headgear_polish_military_02.asset": [
+    "parse_status=partial: unclosed_block（第 18 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_01/male_headgear_japanese_common_01.asset": [
+    "parse_status=partial: unclosed_block（第 18 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_02/male_headgear_japanese_common_02.asset": [
+    "parse_status=partial: unclosed_block（第 20 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_03/male_headgear_japanese_common_03.asset": [
+    "parse_status=partial: unclosed_block（第 20 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_common_04/male_headgear_japanese_common_04.asset": [
+    "parse_status=partial: unclosed_block（第 20 行第 10 列）"
+   ],
+   "game/gfx/models/portraits/attachments/male_headgear/japanese_common/male_headgear_japanese_eboshi_01/male_headgear_japanese_eboshi_01.asset": [
+    "parse_status=partial: unclosed_block（第 20 行第 10 列）"
+   ]
+  },
   "script_value_accessors": {
    "common/script_values": [
     "additional_war_support_change",

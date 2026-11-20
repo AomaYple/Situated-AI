@@ -339,9 +339,7 @@ class TestDerivedValues:
 
 # ── 官方更新之后：把实测值写回断言表 ────────────────────────
 #
-# 这一组全用**合成断言表**（临时文件 + monkeypatch），不碰真的 verify.py：
-# ``fix_claims`` 的默认行为是**改自己**，测试若误带 write=True 就会把
-# 真实的断言表改坏 —— 因此每条路径都必须显式传 source=。
+# 写入用例一律使用临时断言表。默认路径用例只读取当前注册表。
 class TestFixClaims:
     @staticmethod
     def _source() -> str:
@@ -495,11 +493,21 @@ class TestFixClaims:
         _, skipped = verify.fix_claims(source=path)
         assert any("ghost" in s and "找不到" in s for s in skipped)
 
-    def test_fix_claims_default_source_is_this_module(self):
-        """默认路径必须指向真的断言表 —— 写错路径会让 --fix-claims 变成空操作。"""
-        default = config.REPO / "src" / "pdx" / "verify.py"
-        src = default.read_text(encoding="utf-8")
-        slots = verify.claim_value_slots(src)
-        real_ids = {c.id for c in verify.CLAIMS}
-        assert len(slots) >= 30
-        assert len(real_ids - set(slots)) == 0, "真表里有断言没有槽位"
+    def test_fix_claims_default_source_is_current_registry(self, monkeypatch):
+        """默认路径读取现行断言表，并报告可定位的实测差异。"""
+        default = config.REPO / "src/pdx/verify_claims_1152.py"
+        before = default.read_bytes()
+        slots = verify.claim_value_slots(before.decode("utf-8"))
+        claims = verify.current_claims()
+        assert slots.keys() == {claim.id for claim in claims}
+
+        claim = next(claim for claim in claims if claim.id == "env.game_files_doc01")
+        assert isinstance(claim.expected, int)
+        measured = claim.expected + 1
+        monkeypatch.setitem(verify._CHECKS, claim.kind, lambda _target: measured)
+        changes, skipped = verify.fix_claims(only=claim.id)
+        assert [(change.id, change.old, change.new) for change in changes] == [
+            (claim.id, claim.expected, measured)
+        ]
+        assert not skipped
+        assert default.read_bytes() == before

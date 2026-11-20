@@ -542,8 +542,7 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
         return (
             "dynamic_numeric"
             if (
-                version_contracts.is_115()
-                and surface.source == "common/ai_strategies/00_default_strategy.txt"
+                surface.source == "common/ai_strategies/00_default_strategy.txt"
                 and surface.definition == "ai_strategy_default"
                 and surface.field == "change_law_chance"
                 and surface.actor_scope == "country"
@@ -607,8 +606,7 @@ def _kind(surface: VanillaSurface, node: Assignment) -> str:
             return "dynamic_numeric"
     elif family == "decrees":
         if (
-            version_contracts.active_version() in {"1.15.1", version_contracts.CURRENT_VERSION}
-            and surface.source == "common/decrees/00_decree.txt"
+            surface.source == "common/decrees/00_decree.txt"
             and surface.definition == "decree_road_maintenance"
             and field == "ai_weight"
             and surface.actor_scope == "state"
@@ -1542,24 +1540,22 @@ class _Dependencies:
                 source: hashlib.sha256(self.native_bytes[source]).hexdigest() for source in sources
             }
 
-        current = version_contracts.is_115()
-        parameter = "target" if current else "pop_type"
         if (
             reader.engine != "pop_type_percent_country"
             or len(reader.parameters) != 1
-            or reader.parameters[0][0] != parameter
+            or reader.parameters[0][0] != "target"
             or reader.kind != "number"
             or reader.unit != "ratio"
-            or reader.value_field != ("value" if current else "percent")
+            or reader.value_field != "value"
             or reader.argument is not None
             or reader.minimum != 0
             or reader.maximum != 1
         ):
             return {}
         argument = reader.parameters[0][1]
-        if current and not argument.startswith("pop_type:"):
+        if not argument.startswith("pop_type:"):
             return {}
-        pop_type = argument.removeprefix("pop_type:") if current else argument
+        pop_type = argument.removeprefix("pop_type:")
         if pop_type not in {"peasants", "laborers", "machinists"}:
             return {}
         # The argument must have independent pinned definition bytes. The
@@ -1587,11 +1583,7 @@ class _Dependencies:
             "possible.pop_type_percent_country",
         )
         expected = parse_bytes(
-            (
-                b"pop_type_percent_country={target=pop_type:peasants value>0.6}"
-                if current
-                else b"pop_type_percent_country={pop_type=peasants percent>0.6}"
-            ),
+            b"pop_type_percent_country={target=pop_type:peasants value>0.6}",
             path="native-population-percentage-example",
         ).root.items[0]
         definition, definition_state = _resolve(self.native.roots[sources[1]], pop_type, "__body__")
@@ -2143,12 +2135,10 @@ class _Dependencies:
                 return {}
             evidence_raw = country_interfaces.evidence_file().read_bytes()
             evidence = json.loads(evidence_raw)
-            if evidence.get("schema") != 1 or (
-                version_contracts.is_115()
-                and (
-                    hashlib.sha256(evidence_raw).hexdigest() != country_interfaces.evidence_sha256()
-                    or evidence.get("baseline_version") != version_contracts.active_version()
-                )
+            if (
+                evidence.get("schema") != 1
+                or hashlib.sha256(evidence_raw).hexdigest() != country_interfaces.evidence_sha256()
+                or evidence.get("baseline_version") != version_contracts.require_current()
             ):
                 return {}
             observed = {}

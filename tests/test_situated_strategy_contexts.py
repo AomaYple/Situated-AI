@@ -5,6 +5,7 @@ import json
 from dataclasses import replace
 
 import pytest
+from _engine_evidence import repin_manifest, strategy_image
 
 from pdx import config, decision_adapters, decision_rules, version_contracts
 from pdx.situated import (
@@ -13,7 +14,6 @@ from pdx.situated import (
     decision_ir,
     engine_scope,
     engine_scope_115,
-    engine_strategy_1152,
     evidence,
     relations,
     support_signals,
@@ -23,17 +23,11 @@ from pdx.situated.schema import RankTerm, Relation
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture
-def historical_strategy_contract():
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.mark.parametrize(
-    ("field", "target", "actor_line", "target_line", "address"),
+    ("field", "target"),
     [
-        ("recklessness", "target_country", 43, 44, "0x1416452bf"),
-        ("wargoal_maneuvers_fraction", "enemy_country", 75, 76, "0x141647b8f"),
+        ("recklessness", "target_country"),
+        ("wargoal_maneuvers_fraction", "enemy_country"),
     ],
 )
 def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
@@ -41,10 +35,6 @@ def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
     tmp_path,
     field,
     target,
-    actor_line,
-    target_line,
-    address,
-    historical_strategy_contract,
 ):
     snapshot = compiler._frozen_strategy_contexts()
     monkeypatch.setattr(config, "GAME", tmp_path / "absent-game")
@@ -82,28 +72,31 @@ def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
     context = snapshot[field]
     assert context.status == "observed"
     assert context.actor_scope is not None
-    assert context.actor_scope.line == actor_line
-    assert context.targets[0].line == target_line
+    actor_line = context.actor_scope.line
+    target_line = context.targets[0].line
     assert context.targets[0].name == target
-    lines = engine_scope.STRATEGY_MANIFEST.read_text(encoding="utf-8").splitlines()
+    path, identity, _ = engine_scope_115.manifest("strategy")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    address = json.loads(path.read_bytes())["consumers"][field]["consumer_va"]
     assert lines[actor_line - 1].strip() == '"actor_scope": "country",'
     assert lines[target_line - 1].strip() == f'"target_scope": "scope:{target}=country",'
     assert all(
-        binding.source == engine_scope.STRATEGY_MANIFEST_ID
+        binding.source == identity
         for binding in (
             context.actor_scope,
             *context.targets,
         )
     )
-    assert f"{engine_scope.STRATEGY_MANIFEST_ID}:consumer={field}:va={address}" in context.evidence
+    assert f"{identity}:consumer={field}:va={address}" in context.evidence
     assert any("evidence=frozen_engine_snapshot" in item for item in context.evidence)
     assert not any(item.startswith("@engine/") for item in context.evidence)
 
 
-def test_snapshot_rejects_manifest_byte_drift(monkeypatch, tmp_path, historical_strategy_contract):
+def test_snapshot_rejects_manifest_byte_drift(monkeypatch, tmp_path):
     path = tmp_path / "manifest.json"
-    path.write_bytes(engine_scope.STRATEGY_MANIFEST.read_bytes() + b" ")
-    monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", path)
+    original, _, digest = engine_scope_115.manifest("strategy")
+    path.write_bytes(original.read_bytes() + b" ")
+    monkeypatch.setitem(engine_scope_115.MANIFESTS, "strategy", (str(path), digest))
     with pytest.raises(ValueError, match="策略作用域证据"):
         compiler._frozen_strategy_contexts()
 
@@ -113,20 +106,16 @@ def test_snapshot_rejects_manifest_byte_drift(monkeypatch, tmp_path, historical_
     ["actor_scope", "target_scope", "operation", "capability", "unit", "consumer_va", "field"],
 )
 def test_repinning_a_changed_consumer_cannot_authorize_another_contract(
-    monkeypatch, tmp_path, member, historical_strategy_contract
+    monkeypatch, tmp_path, member
 ):
-    data = json.loads(engine_scope.STRATEGY_MANIFEST.read_bytes())
+    data = json.loads(engine_scope.strategy_snapshot())
     entry = data["consumers"]["recklessness"]
     if member == "field":
         data["consumers"]["another_field"] = data["consumers"].pop("recklessness")
     else:
         entry[member] = "unproven"
-    raw = json.dumps(data, indent=2).encode()
-    path = tmp_path / "manifest.json"
-    path.write_bytes(raw)
-    monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", path)
-    monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest())
-    with pytest.raises(ValueError, match="消费者字段合同"):
+    repin_manifest(monkeypatch, tmp_path / "manifest.json", "strategy", data)
+    with pytest.raises(ValueError, match="独立字段合同"):
         compiler._frozen_strategy_contexts()
 
 
@@ -299,10 +288,7 @@ def test_card_context_rejects_unproven_actual_inputs(card_inputs, damage):
         compiler._action_context_readers(row, context, declared, signals, readers)
 
 
-def test_historical_strategy_context_remains_readable_without_an_installation(
-    monkeypatch, tmp_path
-):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", "1.15.1")
+def test_current_strategy_context_remains_readable_without_an_installation(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
     contexts = compiler._frozen_strategy_contexts()
     assert contexts["recklessness"].status == "observed"
@@ -344,45 +330,9 @@ def test_production_instances_and_writers_share_frozen_context(monkeypatch):
 
 @pytest.fixture
 def current_game_fixture(monkeypatch, tmp_path):
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
-    game = tmp_path / "game"
-    executable = tmp_path / "binaries/victoria3.exe"
-    executable.parent.mkdir()
-    data = json.loads(engine_scope.strategy_snapshot())
-    image = bytearray()
-    for index, point in enumerate(data["observations"]):
-        point["file_offset"] = hex(len(image))
-        sample = bytes([index % 256]) * point["size"]
-        point["sha256"] = hashlib.sha256(sample).hexdigest()
-        image.extend(sample)
-    executable.write_bytes(image)
-    data["exe"] = {
-        "sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
-        "bytes": executable.stat().st_size,
-    }
-    monkeypatch.setattr(engine_scope_115, "EXE_SHA256_1152", data["exe"]["sha256"])
-    monkeypatch.setattr(engine_scope_115, "EXE_BYTES_1152", data["exe"]["bytes"])
-    for source in data["script_hashes"]:
-        path = game / source
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(source.encode())
-        data["script_hashes"][source] = hashlib.sha256(path.read_bytes()).hexdigest()
-    for field in ("institution_definition_sources", "stance_definition_sources"):
-        for source in data[field]:
-            path = game / source
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(source.encode())
-            data[field][source] = hashlib.sha256(path.read_bytes()).hexdigest()
-        monkeypatch.setitem(engine_strategy_1152.CONTRACTS, field, dict(data[field]))
-    manifest = tmp_path / "manifest.json"
-
-    def freeze():
-        raw = json.dumps(data, indent=2).encode()
-        manifest.write_bytes(raw)
-        digest = hashlib.sha256(raw).hexdigest()
-        monkeypatch.setitem(engine_scope_115.MANIFESTS_1152, "strategy", (str(manifest), digest))
-
-    freeze()
+    game, executable, data, _, freeze = strategy_image(
+        tmp_path, monkeypatch, b"sample = {}", materialize_definitions=True
+    )
     return game, executable, data, freeze
 
 

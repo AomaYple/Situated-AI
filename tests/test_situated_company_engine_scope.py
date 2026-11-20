@@ -4,69 +4,41 @@ import hashlib
 import json
 
 import pytest
+from _engine_evidence import compact_image, current_manifest, repin_manifest
+from conftest import configure_current_identity
 
-from pdx import version_contracts
-from pdx.situated import engine_scope, vanilla_inventory
+from pdx.situated import engine_scope, engine_scope_115, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.fixture(autouse=True)
-def historical_engine_contract():
-    """Synthetic historical fixtures must not borrow the current EXE identity."""
-    with version_contracts.select_version("1.14.5"):
-        yield
-
-
 @pytest.fixture
 def company_proof(tmp_path, monkeypatch):
+    configure_current_identity(tmp_path, monkeypatch)
     game = tmp_path / "game"
     game.mkdir()
-    for key in ("caligula_branch", "caligula_rev", "clausewitz_branch", "clausewitz_rev"):
-        (tmp_path / f"{key}.txt").write_text(
-            "release/1.14.5" if key == "caligula_branch" else "fixture", encoding="utf-8"
-        )
-    exe = tmp_path / "binaries/victoria3.exe"
-    exe.parent.mkdir()
-    exe.write_bytes(b"fixed company image")
     source = "common/company_types/sample.txt"
-    inputs = {source: b"sample = { ai_will_do = { always = yes } ai_weight = { value = 1 } }"}
-    # Retain the reviewed historical member contract while replacing only the
-    # filesystem evidence used by these compact byte/source drift witnesses.
-    data = json.loads(engine_scope.company_snapshot())
-    data.update(
-        {
-            "exe": {
-                "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
-                "bytes": exe.stat().st_size,
-            },
-            "script_hashes": {},
-            "observations": [{"label": "point", "file_offset": "0x0", "bytes": "6669786564"}],
-        }
-    )
-    manifest = tmp_path / "company.json"
+    inputs = {source: b"sample = { ai_will_do = { always = yes } ai_weight = { value = 1 } }\n"}
+    data = current_manifest("company")
+    executable = compact_image(tmp_path, data)
 
     def freeze():
         data["script_hashes"] = {source: hashlib.sha256(inputs[source]).hexdigest()}
-        raw = json.dumps(data).encode()
-        manifest.write_bytes(raw)
-        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", manifest, raising=False)
-        monkeypatch.setattr(
-            engine_scope, "COMPANY_MANIFEST_SHA256", hashlib.sha256(raw).hexdigest(), raising=False
-        )
+        repin_manifest(monkeypatch, tmp_path / "proof.json", "company", data)
 
     freeze()
     monkeypatch.setattr(
         vanilla_inventory, "_inputs", lambda _: (dict(inputs), ("company_types",), ("game",))
     )
-    # This fixture proves explicit company members only. The independent
-    # default-initializer attestation cannot borrow its synthetic parent hash.
+
+    # The default initializer has its own attestation and parent identity.
     monkeypatch.setattr(
         engine_scope,
         "company_default_evidence",
         lambda *_: engine_scope.CompanyScopeEvidence(False, ()),
     )
-    return game, exe, source, inputs, data, freeze
+
+    return game, executable, source, inputs, data, freeze
 
 
 def test_company_fields_have_separate_exact_operations(company_proof):
@@ -130,23 +102,23 @@ def test_company_ambiguous_or_adjacent_field_is_not_proven(company_proof, declar
 def test_company_corrupt_attestation_is_error(company_proof, corruption):
     game, _, _, _, data, freeze = company_proof
     if corruption == "manifest":
-        engine_scope.COMPANY_MANIFEST.write_bytes(b"{}")
+        engine_scope_115.manifest("company")[0].write_bytes(b"{}")
     else:
         if corruption == "length":
             data["exe"]["bytes"] += 1
         else:
-            data["observations"][0]["bytes"] = "00"
+            data["observations"][0]["sha256"] = "0" * 64
         freeze()
     with pytest.raises(ValueError, match="锁定公司作用域证据"):
         vanilla_inventory.discover(game=game)
 
 
 def test_company_frozen_attestation_has_separate_members():
-    raw = engine_scope.COMPANY_MANIFEST.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == engine_scope.COMPANY_MANIFEST_SHA256
+    raw = engine_scope_115.manifest("company")[0].read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == engine_scope_115.manifest("company")[2]
     data = json.loads(raw)
     contracts = {row["field"]: row for row in data["contracts"]}
     assert contracts["ai_will_do"]["trigger_member"] == "0x318"
     assert contracts["ai_weight"]["numeric_member"] == "0x390"
-    assert len(data["script_hashes"]) == 22
-    assert len(data["observations"]) == 30
+    assert len(data["script_hashes"]) == 23
+    assert len(data["observations"]) == 20

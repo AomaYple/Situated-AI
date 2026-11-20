@@ -559,7 +559,6 @@ def test_nested_native_fragment_keeps_all_ancestor_guards_and_exact_body(
 
 @pytest.fixture(params=["laborers", "peasants", "machinists"])
 def population_case(tmp_path, monkeypatch, request):
-    from pdx import version_contracts
 
     case = _reader_case("resource", tmp_path, monkeypatch)
     inventory, native, generated, _ = case
@@ -567,10 +566,7 @@ def population_case(tmp_path, monkeypatch, request):
     getter = "common/journal_entries/00_urbanization.txt"
     pop_type = request.param
     definition = f"common/pop_types/{pop_type}.txt"
-    current = version_contracts.is_115()
-    parameters = (
-        "target=pop_type:peasants value>0.6" if current else "pop_type=peasants percent>0.6"
-    )
+    parameters = "target=pop_type:peasants value>0.6"
     native[getter] = (
         "je_urbanization_events_1={possible={pop_type_percent_country={" + parameters + "}}}"
     ).encode()
@@ -592,8 +588,8 @@ def population_case(tmp_path, monkeypatch, request):
         minimum=0,
         maximum=1,
         path=("owner",),
-        value_field="value" if current else "percent",
-        parameters=(("target", "pop_type:" + pop_type),) if current else (("pop_type", pop_type),),
+        value_field="value",
+        parameters=(("target", "pop_type:" + pop_type),),
     )
     policy = replace(policy, readers=(reader,))
     updated = replace(adapters, policies=((source, policy),))

@@ -1,11 +1,9 @@
 # 05 · defines 与修饰符
 
-> 本页采用 Victoria 3 1.15.2 静态安装证据。登记断言使用 `claim` 标记。官方文档路径和指纹见 `research/official-docs-1.15.2.manifest.json`。正文保留早期研究、机器快照和订阅时点的原有标记。 分析来源与早期示例见[同名历史章节](../victoria3-modding-1.15.1/05-defines与修饰符.md)。
+> 本页采用 Victoria 3 1.15.2 静态安装证据。登记断言使用 `claim` 标记。官方文档路径和指纹见 `research/official-docs-1.15.2.manifest.json`。正文保留早期研究、机器快照和订阅时点的原有标记。
 
-> 原始正文的 1.14.5 采集和交付说明见[历史知识库](../victoria3-modding/README.md)；本目录采用页首列出的 1.15.2 证据范围。
-
-> **适用版本**：Victoria 3 **1.14.5 (Ice Tea)**（本文的模块结构统计已重测到 1.14.5；个别标注为 1.14.2 的结论为历史采集值）
-> 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.5 (Ice Tea)"`、`"rawVersion": "1.14.5"`；`caligula_branch.txt` → `release/1.14.5`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
+> **历史采集版本**：Victoria 3 **1.14.5 (Ice Tea)**（本文的模块结构统计已重测到 1.14.5；个别标注为 1.14.2 的结论为历史采集值）
+> 历史采集的版本依据：`launcher\launcher-settings.json` → `"version": "1.14.5 (Ice Tea)"`、`"rawVersion": "1.14.5"`；`caligula_branch.txt` → `release/1.14.5`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
 > **内容根（下文简称 `GAME`）**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3\game`
 > **安装根**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3`
 

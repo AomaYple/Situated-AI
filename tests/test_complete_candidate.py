@@ -71,20 +71,15 @@ def test_打包命令只生成所选版本唯一变体(tmp_path, monkeypatch, ve
         calls.append(destination)
         return destination
 
-    def capture_profile(*_args, **_kwargs):
-        pytest.fail("打包命令进入了历史候选分支")
-
     # Exercise the real version selection and declaration without a live install.
     from pdx.situated import production_profile
 
     checked: list[production_profile.ProductionProfile] = []
     monkeypatch.setattr(distribution, "check_profile_installation", checked.append)
     monkeypatch.setattr(distribution, "package", capture)
-    monkeypatch.setattr(distribution, "profile_package", capture_profile)
     runner = CliRunner()
     output = tmp_path / "release.zip"
-    with version_contracts.select_version(version):
-        result = runner.invoke(app, ["package", "--profile", version, "--output", str(output)])
+    result = runner.invoke(app, ["package", "--profile", version, "--output", str(output)])
     if version == version_contracts.CURRENT_VERSION:
         assert result.exit_code == 0, result.output
         assert calls == [output]
@@ -252,10 +247,9 @@ def test_实际外部生成分支防御对称不重复加分且有上下文保�
             )
 
 
+@pytest.mark.integration
 def test_完整开关关闭清理外部文件且不删用户文件(tmp_path):
-    # This offline lifecycle witness retains the historical core build inputs.
-    with version_contracts.select_version("1.14.5"):
-        _assert_disabled_output_cleanup(tmp_path)
+    _assert_disabled_output_cleanup(tmp_path)
 
 
 def _assert_disabled_output_cleanup(tmp_path):

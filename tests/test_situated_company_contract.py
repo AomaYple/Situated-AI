@@ -6,8 +6,9 @@ import json
 from dataclasses import replace
 
 import pytest
+from _engine_evidence import compact_image, repin_manifest
 
-from pdx import config, decision_adapters, decision_interfaces, version_contracts
+from pdx import config, decision_adapters, decision_interfaces
 from pdx.situated import compiler, engine_scope, engine_scope_115
 from pdx.textio import normalized_text
 
@@ -16,15 +17,7 @@ SOURCE = "common/company_types/sample.txt"
 
 
 def _repin(monkeypatch, tmp_path, data):
-    raw = json.dumps(data, indent=2).encode()
-    path = tmp_path / "company-manifest.json"
-    path.write_bytes(raw)
-    digest = hashlib.sha256(raw).hexdigest()
-    if version_contracts.active_version() == "1.15.0":
-        monkeypatch.setitem(engine_scope_115.MANIFESTS, "company", (str(path), digest))
-    else:
-        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", path)
-        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST_SHA256", digest)
+    repin_manifest(monkeypatch, tmp_path / "company-manifest.json", "company", data)
 
 
 def test_snapshot_context_has_exact_actor_line_definition_only_and_no_live_claim(
@@ -65,11 +58,8 @@ def test_snapshot_context_has_exact_actor_line_definition_only_and_no_live_claim
 def test_company_snapshot_rejects_even_whitespace_byte_drift(monkeypatch, tmp_path):
     path = tmp_path / "company-manifest.json"
     path.write_bytes(engine_scope.company_snapshot() + b" ")
-    if version_contracts.active_version() == "1.15.0":
-        _, _, digest = engine_scope_115.manifest("company")
-        monkeypatch.setitem(engine_scope_115.MANIFESTS, "company", (str(path), digest))
-    else:
-        monkeypatch.setattr(engine_scope, "COMPANY_MANIFEST", path)
+    _, _, digest = engine_scope_115.manifest("company")
+    monkeypatch.setitem(engine_scope_115.MANIFESTS, "company", (str(path), digest))
     with pytest.raises(ValueError, match="公司作用域证据"):
         engine_scope.company_snapshot()
     with pytest.raises(ValueError, match="公司作用域证据"):
@@ -121,15 +111,8 @@ def test_frozen_context_requires_one_exact_score_field(monkeypatch, tmp_path, da
 @pytest.fixture
 def current_company_game(monkeypatch, tmp_path):
     game = tmp_path / "game"
-    executable = tmp_path / "binaries/victoria3.exe"
-    executable.parent.mkdir()
-    executable.write_bytes(b"pinned-company-image")
     data = json.loads(engine_scope.company_snapshot())
-    data["exe"] = {
-        "sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
-        "bytes": executable.stat().st_size,
-    }
-    data["observations"] = [{"label": "call", "file_offset": "0x0", "bytes": b"pinned".hex()}]
+    executable = compact_image(tmp_path, data)
     for index, source in enumerate(data["script_hashes"]):
         path = game / source
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -148,7 +131,7 @@ def test_current_company_game_verifies_every_locked_script_and_exe(current_compa
     proof = engine_scope.verify_company_game(game)
     assert proof.verified
     assert set(proof.sources) == set(data["script_hashes"])
-    assert len(proof.sources) == (23 if version_contracts.active_version() == "1.15.0" else 22)
+    assert len(proof.sources) == 23
     assert (
         dict(proof.source_hashes)["@engine/binaries/victoria3.exe"]
         == hashlib.sha256(executable.read_bytes()).hexdigest()
@@ -174,7 +157,7 @@ def test_current_game_drift_fails_without_destroying_frozen_history(current_comp
         data["exe"]["bytes"] += 1
         freeze()
     else:
-        data["observations"][0]["bytes"] = b"changed".hex()
+        data["observations"][0]["sha256"] = "0" * 64
         freeze()
     with pytest.raises((ValueError, FileNotFoundError)):
         engine_scope.verify_company_game(game)
@@ -357,10 +340,3 @@ def test_missing_explicit_native_score_cannot_be_initialized_implicitly(tmp_path
     selected = replace(adapters, sources=tuple(row for row in adapters.sources if row[0] == SOURCE))
     with pytest.raises(ValueError):
         decision_adapters.build(selected, texts={SOURCE: native})
-
-
-@pytest.fixture(autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
-        yield

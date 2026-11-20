@@ -7,78 +7,50 @@ import hashlib
 import json
 
 import pytest
+from _engine_evidence import compact_image, repin_manifest
 
 from pdx import version_contracts
-from pdx.situated import engine_scope, engine_scope_115, engine_strategy_115
+from pdx.situated import engine_scope, engine_scope_115, engine_strategy_115, engine_strategy_1152
 
 pytestmark = pytest.mark.unit
-_CURRENT_CONSUMERS = engine_strategy_115._CONTRACTS["consumers"]
+_CURRENT_CONSUMERS = engine_strategy_1152.CONTRACTS["consumers"]
 assert isinstance(_CURRENT_CONSUMERS, dict)
 
 
 @pytest.fixture
 def strategy_data():
-    with version_contracts.select_version("1.15.0"):
-        return json.loads(engine_scope.strategy_snapshot())
+    return json.loads(engine_scope.strategy_snapshot())
 
 
 @pytest.fixture
 def current_strategy_image(monkeypatch, tmp_path):
     """Full current proof; compact offsets are failure instrumentation only."""
-    with version_contracts.select_version("1.15.0"):
-        game = tmp_path / "game"
-        executable = tmp_path / "binaries/victoria3.exe"
-        executable.parent.mkdir()
-        data = json.loads(engine_scope.strategy_snapshot())
-        image = bytearray()
-        for point in data["observations"]:
-            point["file_offset"] = hex(len(image))
-            image.extend(bytes.fromhex(point["bytes"]))
-        executable.write_bytes(image)
-        data["exe"] = {
-            "sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
-            "bytes": executable.stat().st_size,
-        }
-        for source in data["script_hashes"]:
-            path = game / source
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(source.encode())
-            data["script_hashes"][source] = hashlib.sha256(path.read_bytes()).hexdigest()
-        for source in data["institution_definition_sources"]:
-            path = game / source
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(
-                bytes.fromhex(data["institution_definition_bytes"][source])
-                if "institution_definition_bytes" in data
-                else source.encode()
-            )
-            data["institution_definition_sources"][source] = hashlib.sha256(
-                path.read_bytes()
-            ).hexdigest()
-        for source, raw_hex in data["stance_definition_bytes"].items():
-            path = game / source
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(bytes.fromhex(raw_hex))
-        manifest = tmp_path / "manifest.json"
+    game = tmp_path / "game"
+    data = json.loads(engine_scope.strategy_snapshot())
+    executable = compact_image(tmp_path, data)
+    for source in data["script_hashes"]:
+        path = game / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(source.encode())
+        data["script_hashes"][source] = hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest = tmp_path / "manifest.json"
 
-        def freeze():
-            raw = json.dumps(data, indent=2).encode()
-            manifest.write_bytes(raw)
-            digest = hashlib.sha256(raw).hexdigest()
-            if version_contracts.active_version() == "1.15.0":
-                monkeypatch.setitem(engine_scope_115.MANIFESTS, "strategy", (str(manifest), digest))
-            else:
-                monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", manifest)
-                monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST_SHA256", digest)
+    def freeze():
+        repin_manifest(monkeypatch, manifest, "strategy", data)
+        monkeypatch.setattr(
+            engine_scope_115,
+            "executable_identity",
+            lambda: (data["exe"]["sha256"], data["exe"]["bytes"]),
+        )
 
-        freeze()
-        yield game, executable, data, freeze
+    freeze()
+    return game, executable, data, freeze
 
 
 def test_current_strategy_is_independently_pinned_and_never_claims_runtime(strategy_data):
     path, identity, digest = engine_scope_115.manifest("strategy")
     assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
-    assert identity == "research/situated/victoria3-1.15.0-strategy-scope.json"
+    assert identity == f"research/situated/{version_contracts.CURRENT_VERSION}/engine-strategy.json"
     assert strategy_data["exe"]["sha256"] == engine_scope_115.EXE_SHA256
     assert strategy_data["runtime"] == "unknown"
     assert len(strategy_data["consumers"]) == 33
@@ -97,9 +69,9 @@ def test_change_law_chance_uses_first_nonzero_active_and_default_only_as_fallbac
     operation = "first_nonzero_active_change_law_chance_else_default"
     assert strategy_data["consumers"]["change_law_chance"]["operation"] == operation
     assert row["operation"] == operation
-    assert row["active_call"] == "0x1415e0eed"
-    assert row["default_call"] == "0x1415e0f4c"
-    assert row["active_nonzero_exit"] == "0x1415e0efc"
+    assert row["active_call"] == "0x1415fc7bd"
+    assert row["default_call"] == "0x1415fc81c"
+    assert row["active_nonzero_exit"] == "0x1415fc7cc"
     assert "may be negative" in row["selection"]
     strategy_data["consumers"]["change_law_chance"]["operation"] = "additive_percentage_chance"
     with pytest.raises(ValueError, match="独立字段合同"):
@@ -113,10 +85,8 @@ def test_change_law_chance_default_and_active_labels_cannot_be_swapped(strategy_
         engine_strategy_115.validate(strategy_data)
 
 
-def test_current_strategy_missing_executable_cannot_borrow_historical_proof(tmp_path, monkeypatch):
-    monkeypatch.setattr(engine_scope, "STRATEGY_MANIFEST", tmp_path / "must-not-read-old.json")
-    with version_contracts.select_version("1.15.0"):
-        proof = engine_scope.strategy_evidence(tmp_path / "game", {})
+def test_current_strategy_missing_executable_has_no_verified_proof(tmp_path):
+    proof = engine_scope.strategy_evidence(tmp_path / "game", {})
     _, identity, digest = engine_scope_115.manifest("strategy")
     assert not proof.verified
     assert not proof.consumers
@@ -128,7 +98,7 @@ def test_current_strategy_snapshot_drift_is_rejected(tmp_path, monkeypatch):
     changed = tmp_path / "changed.json"
     changed.write_bytes(path.read_bytes() + b" ")
     monkeypatch.setitem(engine_scope_115.MANIFESTS, "strategy", (str(changed), digest))
-    with version_contracts.select_version("1.15.0"), pytest.raises(ValueError, match="变化"):
+    with pytest.raises(ValueError, match="变化"):
         engine_scope.strategy_snapshot()
 
 
@@ -191,15 +161,6 @@ def test_current_strategy_requires_complete_typed_and_merge_closure(strategy_dat
         engine_strategy_115.validate(strategy_data)
 
 
-@pytest.mark.parametrize("family", ["institution", "stance"])
-def test_current_definition_bytes_cannot_disagree_with_definition_identity(strategy_data, family):
-    sources = strategy_data[family + "_definition_bytes"]
-    source = next(iter(sources))
-    sources[source] += "20"
-    with pytest.raises(ValueError, match="原始字节"):
-        engine_strategy_115.validate(strategy_data)
-
-
 @pytest.mark.parametrize("field", tuple(_CURRENT_CONSUMERS))
 @pytest.mark.parametrize("member", ["parser_va", "consumer_va"])
 def test_current_field_proof_requires_own_code_observation(strategy_data, field, member):
@@ -208,9 +169,7 @@ def test_current_field_proof_requires_own_code_observation(strategy_data, field,
     changed["observations"] = [
         point
         for point in changed["observations"]
-        if not int(point["va"], 16)
-        <= address
-        < int(point["va"], 16) + len(bytes.fromhex(point["bytes"]))
+        if not int(point["va"], 16) <= address < int(point["va"], 16) + point["size"]
     ]
     with pytest.raises(ValueError, match="缺少真实观察"):
         engine_strategy_115.validate(changed)
@@ -251,10 +210,3 @@ def test_current_ordered_score_keys_reject_repin(current_strategy_image, field, 
     freeze()
     with pytest.raises(ValueError, match="独立字段合同"):
         engine_scope.strategy_snapshot()
-
-
-@pytest.fixture(autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
-        yield

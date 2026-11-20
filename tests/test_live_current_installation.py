@@ -104,18 +104,27 @@ def test_live_csv_accepts_launcher_platform_paths(installation: Path, exe: str) 
 
 
 @pytest.mark.parametrize("environment", ["", "1.14.5", "1.15.0", "1.15.1", "unknown"])
+@pytest.mark.parametrize("command", ["modgen", "package", "modguard", "decision-audit"])
 def test_explicit_current_does_not_override_old_online_environment(
-    environment: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    environment: str, command: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    def forbidden(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("unsupported environment reached the installation check")
+
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, environment)
-    target = tmp_path / "package.zip"
-    result = CliRunner().invoke(
-        cli.app,
-        ["package", "--profile", version_contracts.CURRENT_VERSION, "--output", str(target)],
-    )
-    assert result.exit_code == cli.EXIT_FAILED, result.output
+    monkeypatch.setattr(distribution, "check_profile_installation", forbidden)
+    args = [command, "--profile", version_contracts.CURRENT_VERSION]
+    target = tmp_path / ("package.zip" if command == "package" else "audit.json")
+    if command in {"package", "decision-audit"}:
+        target.write_bytes(b"existing output\n")
+        args.extend(["--output", str(target)])
+    if command == "modgen":
+        args.append("--write")
+    result = CliRunner().invoke(cli.app, args)
+    assert result.exit_code == cli.EXIT_USAGE, result.output
     assert f"合同版本：{environment!r}" in result.output
-    assert not target.exists()
+    if command in {"package", "decision-audit"}:
+        assert target.read_bytes() == b"existing output\n"
 
 
 @pytest.mark.parametrize(

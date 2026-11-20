@@ -8,15 +8,26 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli
+from pdx import (
+    cli,
+    company_sectors,
+    config,
+    country_state,
+    decisions,
+    distribution,
+    law_opportunities,
+    technology_opportunities,
+)
+from pdx.cli_commands import release
 from pdx.generation_transaction import GenerationTransaction
+from pdx.situated import bindings, domain_coverage, profile_configuration
 
 pytestmark = pytest.mark.unit
 _METADATA = (
     json.dumps(
         {
             name: {} if name == "game_custom_data" else ""
-            for name in cli.distribution.LAUNCHER_METADATA_KEYS
+            for name in distribution.LAUNCHER_METADATA_KEYS
         },
         indent=2,
     )
@@ -74,23 +85,21 @@ def generation(tmp_path, monkeypatch):
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
-    monkeypatch.setattr(cli.config, "GAME", game)
-    monkeypatch.setattr(cli.decisions, "PRODUCT", root)
-    monkeypatch.setattr(cli.situated_bindings, "source_path", lambda: binding)
-    monkeypatch.setattr(cli.situated_domain_coverage, "source_path", lambda: domain)
-    monkeypatch.setattr(cli.situated_bindings, "build", lambda: ("new-binding",))
-    monkeypatch.setattr(cli.situated_bindings, "render", lambda _rows: "new-bindings\n")
-    monkeypatch.setattr(
-        cli.situated_domain_coverage, "render_counts", lambda _path: "new-domains\n"
-    )
-    monkeypatch.setattr(cli, "_modgen_verify_sources", lambda: None)
-    monkeypatch.setattr(cli.distribution, "check_profile_installation", lambda _profile: None)
-    monkeypatch.setattr(cli.distribution, "verify_compatibility_installation", lambda: None)
-    monkeypatch.setattr(cli.distribution, "generation_lock", lambda _files: "new-lock\n")
+    monkeypatch.setattr(config, "GAME", game)
+    monkeypatch.setattr(decisions, "PRODUCT", root)
+    monkeypatch.setattr(bindings, "source_path", lambda: binding)
+    monkeypatch.setattr(domain_coverage, "source_path", lambda: domain)
+    monkeypatch.setattr(bindings, "build", lambda: ("new-binding",))
+    monkeypatch.setattr(bindings, "render", lambda _rows: "new-bindings\n")
+    monkeypatch.setattr(domain_coverage, "render_counts", lambda _path: "new-domains\n")
+    monkeypatch.setattr(release, "_modgen_verify_sources", lambda: None)
+    monkeypatch.setattr(distribution, "check_profile_installation", lambda _profile: None)
+    monkeypatch.setattr(distribution, "verify_compatibility_installation", lambda: None)
+    monkeypatch.setattr(distribution, "generation_lock", lambda _files: "new-lock\n")
 
     def build(*, profile, configuration):
-        assert profile == cli.distribution.production_profile.declared_profile()
-        assert configuration == cli.profile_configuration.ProfileConfiguration()
+        assert profile == distribution.production_profile.declared_profile()
+        assert configuration == profile_configuration.ProfileConfiguration()
         # Production's normal strict readers see only canonical new ledgers.
         assert binding.read_bytes() == b"new-bindings\n"
         assert domain.read_bytes() == b"new-domains\n"
@@ -102,16 +111,16 @@ def generation(tmp_path, monkeypatch):
             {
                 "common/new.txt": "new-production\n",
                 "README.md": "guide\n",
-                cli.distribution.METADATA_NAME: _METADATA,
+                distribution.METADATA_NAME: _METADATA,
             },
         )
 
-    monkeypatch.setattr(cli.distribution, "package_inputs", build)
+    monkeypatch.setattr(distribution, "package_inputs", build)
     for module in (
-        cli.company_sectors,
-        cli.distribution.equipment_opportunities,
-        cli.distribution.treaty_opportunities,
-        cli.distribution.mobilization_opportunities,
+        company_sectors,
+        distribution.equipment_opportunities,
+        distribution.treaty_opportunities,
+        distribution.mobilization_opportunities,
     ):
         monkeypatch.setattr(
             module,
@@ -134,7 +143,7 @@ def test_valid_rule_change_refreshes_stale_ledgers_and_preserves_user_files(gene
         "decisions/action_bindings.toml": b"new-bindings\n",
         "decisions/domain_actions.toml": b"new-domains\n",
         "common/new.txt": b"new-production\n",
-        cli.distribution.METADATA_NAME: _METADATA.encode(),
+        distribution.METADATA_NAME: _METADATA.encode(),
         "generation-lock.json": b"new-lock\n",
     }
     expected.pop("common/scripted_triggers/sitai_country_triggers.txt")
@@ -153,12 +162,12 @@ def test_every_generation_failure_leaves_original_artifacts_unchanged(
         raise ValueError(f"{stage}-source-drift")
 
     owner, attribute = {
-        "preflight": (cli, "_modgen_verify_sources"),
-        "binding": (cli.situated_bindings, "render"),
-        "domain": (cli.situated_domain_coverage, "render_counts"),
-        "build": (cli.distribution, "package_inputs"),
-        "staged_write": (cli.decisions, "write"),
-        "lock": (cli.distribution, "generation_lock"),
+        "preflight": (release, "_modgen_verify_sources"),
+        "binding": (bindings, "render"),
+        "domain": (domain_coverage, "render_counts"),
+        "build": (distribution, "package_inputs"),
+        "staged_write": (decisions, "write"),
+        "lock": (distribution, "generation_lock"),
     }[stage]
     monkeypatch.setattr(owner, attribute, fail)
     result = _run()
@@ -205,11 +214,11 @@ def test_failure_restores_missing_ledger_existence(generation, monkeypatch):
     initial.pop("decisions/action_bindings.toml")
 
     def fail(*, profile, configuration):
-        assert profile == cli.distribution.production_profile.declared_profile()
-        assert configuration == cli.profile_configuration.ProfileConfiguration()
+        assert profile == distribution.production_profile.declared_profile()
+        assert configuration == profile_configuration.ProfileConfiguration()
         raise OSError("missing-artifact build failure")
 
-    monkeypatch.setattr(cli.distribution, "package_inputs", fail)
+    monkeypatch.setattr(distribution, "package_inputs", fail)
     result = _run()
     assert result.exit_code == 1, result.output
     assert "missing-artifact build failure" in result.output
@@ -219,33 +228,33 @@ def test_failure_restores_missing_ledger_existence(generation, monkeypatch):
 def test_readonly_preflight_verifies_existing_pins_without_loading_generated_ledgers(monkeypatch):
     calls = []
     for module, name in (
-        (cli.distribution.engine_scope, "verify_strategy_game"),
-        (cli.distribution.decision_interfaces, "verify_scripted_trigger_game"),
-        (cli.distribution.engine_scope, "verify_company_defaults_game"),
-        (cli.company_sectors, "verify_game"),
-        (cli.distribution.equipment_opportunities, "verify_game"),
-        (cli.distribution.treaty_opportunities, "verify_game"),
-        (cli.distribution.mobilization_opportunities, "verify_game"),
-        (cli.country_state, "validate"),
-        (cli.law_opportunities, "verify_inputs"),
-        (cli.technology_opportunities, "verify_inputs"),
+        (distribution.engine_scope, "verify_strategy_game"),
+        (distribution.decision_interfaces, "verify_scripted_trigger_game"),
+        (distribution.engine_scope, "verify_company_defaults_game"),
+        (company_sectors, "verify_game"),
+        (distribution.equipment_opportunities, "verify_game"),
+        (distribution.treaty_opportunities, "verify_game"),
+        (distribution.mobilization_opportunities, "verify_game"),
+        (country_state, "validate"),
+        (law_opportunities, "verify_inputs"),
+        (technology_opportunities, "verify_inputs"),
     ):
         label = f"{module.__name__}.{name}"
         monkeypatch.setattr(module, name, lambda *_args, label=label: calls.append(label))
-    monkeypatch.setattr(cli.country_state, "load", object)
-    monkeypatch.setattr(cli.decisions.decision_adapters, "load", object)
-    monkeypatch.setattr(cli.decisions.decision_adapters, "read_inputs", lambda _adapters: {})
+    monkeypatch.setattr(country_state, "load", object)
+    monkeypatch.setattr(decisions.decision_adapters, "load", object)
+    monkeypatch.setattr(decisions.decision_adapters, "read_inputs", lambda _adapters: {})
     monkeypatch.setattr(
-        cli.situated_bindings,
+        bindings,
         "load",
         lambda *_a, **_k: pytest.fail("stale binding required before derivation"),
     )
     monkeypatch.setattr(
-        cli.situated_domain_coverage,
+        domain_coverage,
         "load",
         lambda *_a, **_k: pytest.fail("stale count required before derivation"),
     )
-    cli._modgen_verify_sources()
+    release._modgen_verify_sources()
     assert len(calls) == 10
     assert sum("verify_game" in name for name in calls) == 4
 
@@ -333,8 +342,8 @@ def test_multiple_batches_restore_exact_original_and_remove_new_directory(tmp_pa
 
 def test_check_keeps_existing_strict_ledger_validation_and_never_writes(generation, monkeypatch):
     root, initial, _, _ = generation
-    monkeypatch.setattr(cli.situated_bindings, "check", lambda: ["stale binding"])
-    monkeypatch.setattr(cli.situated_domain_coverage, "check_counts", list)
+    monkeypatch.setattr(bindings, "check", lambda: ["stale binding"])
+    monkeypatch.setattr(domain_coverage, "check_counts", list)
     result = CliRunner().invoke(cli.app, ["modgen", "--check"])
     assert result.exit_code == 1
     assert "stale binding" in result.output
@@ -349,7 +358,7 @@ def test_failed_staged_write_cannot_leave_its_partial_files(generation, monkeypa
         (staged / "user-old.bin").write_bytes(b"damaged staged output")
         raise OSError("disk full in stage")
 
-    monkeypatch.setattr(cli.decisions, "write", fail)
+    monkeypatch.setattr(decisions, "write", fail)
     result = _run()
     assert result.exit_code == 1
     assert "disk full in stage" in result.output
@@ -359,19 +368,19 @@ def test_failed_staged_write_cannot_leave_its_partial_files(generation, monkeypa
 @pytest.mark.parametrize("failed_source", ["company", "equipment", "treaty", "mobilization"])
 def test_preflight_cannot_refresh_or_skip_a_drifted_frozen_source(monkeypatch, failed_source):
     for name in ("verify_strategy_game", "verify_company_defaults_game"):
-        monkeypatch.setattr(cli.distribution.engine_scope, name, lambda *_: None)
+        monkeypatch.setattr(distribution.engine_scope, name, lambda *_: None)
     monkeypatch.setattr(
-        cli.distribution.decision_interfaces, "verify_scripted_trigger_game", lambda *_: None
+        distribution.decision_interfaces, "verify_scripted_trigger_game", lambda *_: None
     )
 
     def fail():
         pytest.fail("source verification attempted a frozen baseline write")
 
     for label, module in (
-        ("company", cli.company_sectors),
-        ("equipment", cli.distribution.equipment_opportunities),
-        ("treaty", cli.distribution.treaty_opportunities),
-        ("mobilization", cli.distribution.mobilization_opportunities),
+        ("company", company_sectors),
+        ("equipment", distribution.equipment_opportunities),
+        ("treaty", distribution.treaty_opportunities),
+        ("mobilization", distribution.mobilization_opportunities),
     ):
 
         def verify(_game, label=label):
@@ -381,7 +390,7 @@ def test_preflight_cannot_refresh_or_skip_a_drifted_frozen_source(monkeypatch, f
         monkeypatch.setattr(module, "verify_game", verify)
         monkeypatch.setattr(module, "write_baseline", fail)
     with pytest.raises(ValueError, match=f"{failed_source} native source drift"):
-        cli._modgen_verify_sources()
+        release._modgen_verify_sources()
 
 
 def test_backup_cleanup_failure_reports_completed_commit_and_retains_backup(
@@ -402,3 +411,32 @@ def test_backup_cleanup_failure_reports_completed_commit_and_retains_backup(
     assert target.read_bytes() == b"committed"
     assert "临时文件清理失败" in caplog.text
     assert any(p.read_bytes() == b"original" for p in tmp_path.glob(".sitai-generation-*"))
+
+
+@pytest.mark.parametrize("target_index", [0, 1])
+def test_expected_source_transaction_preserves_external_write(tmp_path, monkeypatch, target_index):
+    first = tmp_path / "first.md"
+    last = tmp_path / "last.md"
+    paths = [first, last]
+    for path in paths:
+        path.write_bytes(b"original")
+    edited = paths[target_index]
+    replace = Path.replace
+
+    def write_after_first(source, target):
+        result = replace(source, target)
+        if target == first and target.read_bytes() == b"generated":
+            edited.write_bytes(b"external")
+        return result
+
+    monkeypatch.setattr(Path, "replace", write_after_first)
+    with (
+        pytest.raises((ValueError, OSError), match=r"已变更|已被外部修改"),
+        GenerationTransaction() as transaction,
+    ):
+        transaction.replace(
+            dict.fromkeys(paths, b"generated"),
+            expected=dict.fromkeys(paths, b"original"),
+        )
+    assert edited.read_bytes() == b"external"
+    assert paths[1 - target_index].read_bytes() == b"original"

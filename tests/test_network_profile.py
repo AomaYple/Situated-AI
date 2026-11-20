@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Literal
 
 import pytest
 
-from pdx import version_contracts
+from pdx import config, version_contracts
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import action_network as net
@@ -221,7 +221,7 @@ def test_lowerable_path_does_not_authorize_production_policy(profile, programs, 
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match=r"production_bound.*path.interaction"):
-        adapter.build(profile, source=source)
+        adapter.compile_profile(profile, source=source)
 
 
 def _block(value: object) -> Block:
@@ -241,9 +241,10 @@ def _parsed(text: str) -> Block:
 
 
 def _marker(consumer: str) -> str:
+    version = re.escape(version_contracts.CURRENT_VERSION)
     return (
-        rf"\n\t# SITAI POLICY 1\.15\.0 BEGIN {re.escape(consumer)}\n"
-        rf"(?P<body>[\s\S]*?)\t# SITAI POLICY 1\.15\.0 END {re.escape(consumer)}\n"
+        rf"\n\t# SITAI POLICY {version} BEGIN {re.escape(consumer)}\n"
+        rf"(?P<body>[\s\S]*?)\t# SITAI POLICY {version} END {re.escape(consumer)}\n"
     )
 
 
@@ -443,7 +444,7 @@ def _score(
 
 @pytest.fixture(scope="module")
 def profile():
-    return native.load_profile(native.BASELINE_ROOT)
+    return native.declared_profile()
 
 
 @pytest.fixture(scope="module")
@@ -456,21 +457,20 @@ def programs(profile):
 
 @pytest.fixture(scope="module")
 def generated(profile):
-    return adapter.build(profile)
+    outputs: dict[str, str] = {}
+    adapter.compose(outputs, profile)
+    return outputs
 
 
-def _witness(
-    programs, generated, profile, consumer: str, facts: Mapping[str, object], expected: float
-):
-    row = next(item for item in profile.declarations if item.id == consumer)
-    root = _overlay(generated[row.source.removeprefix("game/")], consumer)
+def _witness(programs, consumer: str, facts: Mapping[str, object], expected: float):
+    root = _parsed(adapter.render_program(programs[consumer]))
     assert net.evaluate_network(programs[consumer], dict(facts)).total == expected, facts
     scope = "state" if consumer == ROAD else "actor"
     assert _score(root, {**facts, "ai": True}, scope) == expected, facts
     assert _score(root, {**facts, "ai": False}, scope) == 0, facts
 
 
-def test_road_literal_tiers_boundaries_recovery_and_actor_guard(profile, programs, generated):
+def test_road_literal_tiers_boundaries_recovery_and_actor_guard(programs):
     for infrastructure, active in itertools.product(
         (0.0, 0.249, 0.25, 0.499, 0.5, 0.749, 0.75, 1.3), (False, True)
     ):
@@ -485,8 +485,8 @@ def test_road_literal_tiers_boundaries_recovery_and_actor_guard(profile, program
             else 0
         )
         facts = {"infrastructure": infrastructure, "road-present": active}
-        _witness(programs, generated, profile, ROAD, facts, expected)
-    root = _overlay(generated["common/decrees/00_decree.txt"], ROAD)
+        _witness(programs, ROAD, facts, expected)
+    root = _parsed(adapter.render_program(programs[ROAD]))
     assert (
         _score(
             root,
@@ -509,10 +509,9 @@ def test_road_literal_tiers_boundaries_recovery_and_actor_guard(profile, program
     ],
 )
 def test_road_named_actor_guard_never_uses_state_owner(
-    generated, actor_ai, owner_ai, actor_exists, owner_exists, expected
+    programs, actor_ai, owner_ai, actor_exists, owner_exists, expected
 ):
-    text = generated["common/decrees/00_decree.txt"]
-    root = _overlay(text, ROAD)
+    root = _parsed(adapter.render_program(programs[ROAD]))
     assert (
         _score(
             root,
@@ -565,6 +564,7 @@ def test_road_named_actor_guard_never_uses_state_owner(
         ),
     ],
 )
+@pytest.mark.integration
 def test_complete_road_native_tail_literal_values(
     generated, infrastructure, active, journals, capital, native_value, generated_value
 ):
@@ -575,9 +575,7 @@ def test_complete_road_native_tail_literal_values(
     later in the original source. These are static AST semantics, not an engine run.
     """
     baseline = _consumer(
-        (native.BASELINE_ROOT / "game/common/decrees/00_decree.txt").read_text(
-            encoding="utf-8-sig"
-        ),
+        (config.GAME / "common/decrees/00_decree.txt").read_bytes().decode("utf-8-sig"),
         "decree_road_maintenance",
         "ai_weight",
     )
@@ -598,11 +596,10 @@ def test_complete_road_native_tail_literal_values(
     assert _score(production, {**facts, "ai": False}, "state") == native_value
 
 
+@pytest.mark.integration
 def test_complete_road_player_identity_and_effective_delta_envelope(generated):
     original = _consumer(
-        (native.BASELINE_ROOT / "game/common/decrees/00_decree.txt").read_text(
-            encoding="utf-8-sig"
-        ),
+        (config.GAME / "common/decrees/00_decree.txt").read_bytes().decode("utf-8-sig"),
         "decree_road_maintenance",
         "ai_weight",
     )
@@ -647,32 +644,35 @@ def test_complete_road_player_identity_and_effective_delta_envelope(generated):
     assert max(deltas) == 9
 
 
-def test_school_complete_costs_and_agenda_residual(profile, programs, generated):
-    for literacy, bureaucracy, default, agenda in itertools.product(
-        (0.2, 0.349, 0.35, 0.8), (-1, 0, 100), (False, True), (False, True)
+def test_school_complete_costs_and_agenda_residual(programs):
+    for literacy, population, bureaucracy, default, income, agenda in itertools.product(
+        (0.2, 0.499, 0.5, 0.8), (0, 1), (-1, 0, 100), (False, True), (-1, 1), (False, True)
     ):
+        need = literacy < 0.5 and population > 0
         expected = (
-            (2 if literacy < 0.35 else 0)
+            (2 if need else 0)
             - (2 if bureaucracy < 0 else 0)
             - (2 if default else 0)
-            + (1 if literacy < 0.35 and agenda else 0)
+            + (0.25 if need and bureaucracy > 0 else 0)
+            + (0.5 if need and income > 0 and not default else 0)
+            + (1 if need and agenda else 0)
         )
         _witness(
             programs,
-            generated,
-            profile,
             SCHOOL,
             {
                 "literacy": literacy,
+                "population": population,
                 "bureaucracy": bureaucracy,
                 "default": default,
+                "net-surplus": income,
                 "school-agenda": agenda,
             },
             expected,
         )
 
 
-def test_diplomacy_actual_influence_and_observed_target_pact(profile, programs, generated):
+def test_diplomacy_actual_influence_and_observed_target_pact(programs):
     for protective, influence, interference in itertools.product(
         (False, True), (-50, 199, 200, 500), (False, True)
     ):
@@ -683,8 +683,6 @@ def test_diplomacy_actual_influence_and_observed_target_pact(profile, programs, 
         )
         _witness(
             programs,
-            generated,
-            profile,
             DIPLOMACY,
             {"protective": protective, "influence": influence, "target-interference": interference},
             expected,
@@ -699,27 +697,55 @@ def test_diplomacy_actual_influence_and_observed_target_pact(profile, programs, 
         (ROAD, {"infrastructure": 0.8, "road-present": True}, "road-present", 0),
         (
             SCHOOL,
-            {"literacy": 0.2, "bureaucracy": -1, "default": False, "school-agenda": True},
+            {
+                "literacy": 0.2,
+                "population": 1,
+                "net-surplus": 0,
+                "bureaucracy": -1,
+                "default": False,
+                "school-agenda": True,
+            },
             "bureaucracy",
             0,
         ),
         (
             SCHOOL,
-            {"literacy": 0.2, "bureaucracy": 10, "default": False, "school-agenda": True},
+            {
+                "literacy": 0.2,
+                "population": 1,
+                "net-surplus": 0,
+                "bureaucracy": 10,
+                "default": False,
+                "school-agenda": True,
+            },
             "default",
             0,
         ),
         (
             SCHOOL,
-            {"literacy": 0.2, "bureaucracy": 10, "default": False, "school-agenda": True},
+            {
+                "literacy": 0.2,
+                "population": 1,
+                "net-surplus": 0,
+                "bureaucracy": 10,
+                "default": False,
+                "school-agenda": True,
+            },
             "literacy",
             0,
         ),
         (
             SCHOOL,
-            {"literacy": 0.2, "bureaucracy": 10, "default": False, "school-agenda": True},
+            {
+                "literacy": 0.2,
+                "population": 1,
+                "net-surplus": 0,
+                "bureaucracy": 10,
+                "default": False,
+                "school-agenda": True,
+            },
             "school-agenda",
-            2,
+            2.25,
         ),
         (
             DIPLOMACY,
@@ -767,20 +793,52 @@ def test_clamp_is_applied_once_after_netting_real_generated_contributions(profil
         item.network.actions[0].definition.consumer_id: item
         for item in adapter.compile_profile(profile, source=source)
     }
-    generated = adapter.build(profile, source=source)
     for consumer, facts, expected in (
         (ROAD, {"infrastructure": 0.1, "road-present": False}, 1),
         (ROAD, {"infrastructure": 0.8, "road-present": True}, -1),
-        (SCHOOL, {"literacy": 0.2, "bureaucracy": -1, "default": False, "school-agenda": False}, 0),
-        (SCHOOL, {"literacy": 0.2, "bureaucracy": 0, "default": False, "school-agenda": True}, 1),
-        (SCHOOL, {"literacy": 0.8, "bureaucracy": -1, "default": True, "school-agenda": False}, -1),
+        (
+            SCHOOL,
+            {
+                "literacy": 0.2,
+                "population": 1,
+                "net-surplus": 0,
+                "bureaucracy": -1,
+                "default": False,
+                "school-agenda": False,
+            },
+            0,
+        ),
+        (
+            SCHOOL,
+            {
+                "literacy": 0.2,
+                "population": 1,
+                "net-surplus": 0,
+                "bureaucracy": 0,
+                "default": False,
+                "school-agenda": True,
+            },
+            1,
+        ),
+        (
+            SCHOOL,
+            {
+                "literacy": 0.8,
+                "population": 1,
+                "net-surplus": 0,
+                "bureaucracy": -1,
+                "default": True,
+                "school-agenda": False,
+            },
+            -1,
+        ),
         (DIPLOMACY, {"protective": True, "influence": 100, "target-interference": False}, 0),
         (DIPLOMACY, {"protective": True, "influence": 500, "target-interference": False}, 1),
         (DIPLOMACY, {"protective": False, "influence": 100, "target-interference": False}, -1),
     ):
-        _witness(programs, generated, profile, consumer, facts, expected)
-    for row in profile.declarations:
-        root = _overlay(generated[row.source.removeprefix("game/")], row.id)
+        _witness(programs, consumer, facts, expected)
+    for program in programs.values():
+        root = _parsed(adapter.render_program(program))
         addition = root.first("add")
         if addition is None:
             outer = root.first("if")
@@ -793,6 +851,7 @@ def test_clamp_is_applied_once_after_netting_real_generated_contributions(profil
         assert sum(item.key == "max" for item in operations) == 1
 
 
+@pytest.mark.integration
 def test_generation_changes_only_three_exact_overlays_and_retains_all_native_content(
     profile, generated
 ):
@@ -803,7 +862,8 @@ def test_generation_changes_only_three_exact_overlays_and_retains_all_native_con
         output = generated[row.source.removeprefix("game/")]
         restored, count = re.subn(_marker(row.id), "", output)
         assert count == 1
-        assert restored == (native.BASELINE_ROOT / row.source).read_text(encoding="utf-8-sig")
+        _overlay(output, row.id)
+        assert restored == (config.ROOT / row.source).read_bytes().decode("utf-8-sig")
         # Parse the complete file independently and locate the exact physical
         # consumer. A marker anywhere else in the file cannot satisfy this.
         consumer = _parsed(output)
@@ -832,7 +892,11 @@ def test_generation_changes_only_three_exact_overlays_and_retains_all_native_con
         player_facts: dict[str, object] = {"ai": False}
         if row.id == SCHOOL:
             player_facts.update(
-                literacy=0.2, bureaucracy=-1, default=True, **{"school-agenda": True}
+                literacy=0.2,
+                population=1,
+                bureaucracy=-1,
+                default=True,
+                **{"school-agenda": True, "net-surplus": 1},
             )
         assert _score(Block([inserted]), player_facts, "state" if row.id == ROAD else "actor") == 0
         keys = [entry.key for entry in body.assignments()]
@@ -847,7 +911,6 @@ def test_generation_changes_only_three_exact_overlays_and_retains_all_native_con
         < road.index("multiply = 0")
     )
     assert "common/ai_strategies/03_political_strategies.txt" not in generated
-    native.verify_baseline()
 
 
 def _depth(block: Block) -> int:
@@ -856,10 +919,11 @@ def _depth(block: Block) -> int:
     return max((1 + _depth(child) for child in children), default=0)
 
 
-def test_generated_consumers_respect_the_frozen_additional_depth_budget(profile, generated):
+@pytest.mark.integration
+def test_generated_consumers_respect_the_reviewed_additional_depth_budget(profile, generated):
     expected = {ROAD: (4, 5), SCHOOL: (0, 3), DIPLOMACY: (4, 6)}
     for row in profile.declarations:
-        original = (native.BASELINE_ROOT / row.source).read_text(encoding="utf-8-sig")
+        original = (config.ROOT / row.source).read_bytes().decode("utf-8-sig")
         rewritten = generated[row.source.removeprefix("game/")]
         before = _depth(_consumer(original, row.definition, *row.field))
         after = _depth(_consumer(rewritten, row.definition, *row.field))
@@ -867,7 +931,8 @@ def test_generated_consumers_respect_the_frozen_additional_depth_budget(profile,
         assert after - before <= 3
 
 
-def test_build_rejects_parseable_deep_renderer_output(profile, monkeypatch):
+@pytest.mark.integration
+def test_compose_rejects_parseable_deep_renderer_output(profile, monkeypatch):
     # Simulate a renderer regression after semantic compilation. Both the PDX
     # parser and native byte restoration accept it; the independent output
     # budget must still prevent build from returning a release candidate.
@@ -876,8 +941,8 @@ def test_build_rejects_parseable_deep_renderer_output(profile, monkeypatch):
         condition = "AND = { " + condition + " }"
     output = "add = { value = 0 if = { limit = { " + condition + " } add = 1 } min = -4 max = 4 }\n"
     monkeypatch.setattr(adapter, "render_program", lambda _program: output)
-    with pytest.raises(ValueError, match="A0-BUDGET-LOCAL-ONLY block depth exceeded"):
-        adapter.build(profile)
+    with pytest.raises(ValueError, match="depth exceeds reviewed budget"):
+        adapter.compose({}, profile)
 
 
 @pytest.mark.parametrize(
@@ -888,32 +953,28 @@ def test_build_rejects_parseable_deep_renderer_output(profile, monkeypatch):
         ProfileConfiguration(mode="neutral"),
     ],
 )
+@pytest.mark.integration
 def test_core_or_all_domains_disabled_restore_original_native_files(profile, configuration):
-    outputs = adapter.build(profile, configuration=configuration)
+    outputs: dict[str, str] = {}
+    adapter.compose(outputs, profile, configuration=configuration)
     assert adapter.compile_profile(profile, configuration=configuration) == ()
     for row in profile.declarations:
-        assert outputs[row.source.removeprefix("game/")] == (
-            native.BASELINE_ROOT / row.source
-        ).read_text(encoding="utf-8-sig")
+        original = (config.ROOT / row.source).read_bytes().decode("utf-8-sig")
+        assert outputs[row.source.removeprefix("game/")] == original
 
 
 @pytest.mark.parametrize("disabled", DOMAINS)
+@pytest.mark.integration
 def test_each_domain_switch_restores_its_native_consumer_only(profile, disabled):
     configuration = ProfileConfiguration(domains=frozenset(DOMAINS) - {disabled})
-    outputs = adapter.build(profile, configuration=configuration)
+    outputs: dict[str, str] = {}
+    adapter.compose(outputs, profile, configuration=configuration)
     programs = adapter.compile_profile(profile, configuration=configuration)
     assert len(programs) == 2
     for row in profile.declarations:
         text = outputs[row.source.removeprefix("game/")]
         if row.domain == disabled:
-            assert text == (native.BASELINE_ROOT / row.source).read_text(encoding="utf-8-sig")
-            assert f"SITAI POLICY 1.15.0 BEGIN {row.id}" not in text
+            assert text == (config.ROOT / row.source).read_bytes().decode("utf-8-sig")
+            assert f"SITAI POLICY {profile.game_version} BEGIN {row.id}" not in text
         else:
             assert len(re.findall(_marker(row.id), text)) == 1
-
-
-@pytest.fixture(scope="module", autouse=True)
-def _historical_1150_contract():
-    """Keep the exact archived witness under its original version identity."""
-    with version_contracts.select_version("1.15.0"):
-        yield

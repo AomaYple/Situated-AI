@@ -7,7 +7,6 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import version_contracts
 from pdx.situated import compiler, decision_ir, migration_baseline
 
 pytestmark = pytest.mark.unit
@@ -334,8 +333,7 @@ def test_exact_native_restoration_is_not_business_implementation(native_retentio
 
 @pytest.mark.integration
 def test_current_installed_strategy_preserves_the_retired_native_fields():
-    with version_contracts.select_version(version_contracts.CURRENT_VERSION):
-        migration_baseline.verify_default_strategy_retention(compiler.baseline_text())
+    migration_baseline.verify_default_strategy_retention(compiler.baseline_text())
 
 
 @pytest.mark.parametrize(
@@ -354,7 +352,7 @@ def test_native_retention_rejects_wrong_source_field_bytes_or_completion(
     native_retention_case, key, value
 ):
     native_retention_case[3]["retirements"][0]["native_retention"][key] = value
-    with pytest.raises(ValueError, match="退役"):
+    with pytest.raises(ValueError, match=r"退役|保留字段不一致"):
         validate_case(native_retention_case)
 
 

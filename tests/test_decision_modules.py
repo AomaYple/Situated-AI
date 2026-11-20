@@ -12,7 +12,6 @@ from pdx import (
     decision_economy,
     decisions,
     distribution,
-    version_contracts,
 )
 from pdx.parser import parse_text
 
@@ -141,9 +140,7 @@ def test_generated_route_fallbacks_do_not_emit_empty_boolean_blocks():
 def test_正式候选生成所有脚本和全语言无回退(release_inputs):
     policy, extensions, files = release_inputs
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert policy.package.status == (
-        "candidate" if version_contracts.active_version() == "1.15.0" else "released"
-    )
+    assert policy.package.status == ("released")
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",

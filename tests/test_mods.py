@@ -127,7 +127,6 @@ def test_分析保留完整metadata并解析非txt脚本和本地化(tmp_path) -
 
 _DOC12_NAME = "12-真实mod解剖与改造面地图.md"
 _DOC12 = config.docs_root(version_contracts.CURRENT_VERSION) / _DOC12_NAME
-_HISTORICAL_DOC12 = config.HISTORICAL_DOCS / _DOC12_NAME
 _SUMMARY_SOURCE_VERSION = "1.15.1"
 _VER_ROW = re.compile(r"^(1\.[\d.*]*|空)$")
 _CONTENT_ROOTS = {"common", "localization", "events", "gfx", "gui", "map_data"}
@@ -152,19 +151,15 @@ def _doc12_version_table(text: str) -> dict[str, int]:
 def test_doc12_版本分布表与现场一致() -> None:
     """核对文档保留的分布快照，并从现场 metadata 独立复算订阅分布。"""
     text = _DOC12.read_text(encoding="utf-8")
-    source = config.docs_root(_SUMMARY_SOURCE_VERSION) / _DOC12_NAME
     heading = f"> **历史 {_SUMMARY_SOURCE_VERSION} 机器扫描摘要**"
     introduction = text.partition("\n## ")[0]
     summary_lines = [line for line in introduction.splitlines() if line.startswith(heading)]
     assert len(summary_lines) == 1
     summary_counts = _scan_summary_counts(summary_lines[0])
     assert summary_counts == _scan_summary_counts(text)
-    assert summary_counts == _scan_summary_counts(source.read_text(encoding="utf-8"))
     assert "第 1–9 节保留 1.14.5 时点" in text
     assert "历史表格、目录覆盖率、前缀用量、去重路径和重叠结论不描述当前订阅集合" in text
-    historical = _doc12_version_table(_HISTORICAL_DOC12.read_text(encoding="utf-8"))
-    assert historical
-    assert _doc12_version_table(text) == historical
+    assert sum(_doc12_version_table(text).values()) == 23
 
     scanned = mods.analyse_all()
     if not scanned:
@@ -181,10 +176,8 @@ def test_doc12_重复路径结论与现场一致() -> None:
     assert "历史 1.14.5 订阅快照" in section
     assert "游戏内容目录零重叠" in section
     assert "全量重复项集中在缩略图、说明文件和 IDE 元数据" in section
-    historical = _HISTORICAL_DOC12.read_text(encoding="utf-8")
-    historical_section = historical.split("## 2.", 1)[1].split("### 2.1", 1)[0]
-    assert "全量相对路径中被 2 个及以上 mod 提供的路径数 = 8" in historical_section
-    assert "游戏内容目录中被 2 个及以上 mod 提供的路径数 = 0" in historical_section
+    assert "被 ≥2 个 mod 命中的路径只有 8 条" in text
+    assert "且**没有一条在内容目录**" in text
 
     live = mods.analyse_all()
     if not live:

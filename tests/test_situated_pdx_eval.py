@@ -5,7 +5,6 @@ from functools import lru_cache
 
 import pytest
 
-from pdx import version_contracts
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated.compiler import load_model, strategy_overlay
@@ -200,11 +199,10 @@ def test_complete_parameter_identity_handles_arguments_and_numeric_value_fields(
     assert condition(boolean, facts) is True
     assert condition(boolean, {}) is None
 
-    current = version_contracts.is_115()
-    body = "target = pop_type:laborers value" if current else "pop_type = laborers percent"
+    body = "target = pop_type:laborers value"
     numeric = _condition_block("limit = { pop_type_percent_country = { " + body + " >= 0.2 } }")
-    parameter = "target" if current else "pop_type"
-    prefix = "pop_type:" if current else ""
+    parameter = "target"
+    prefix = "pop_type:"
     numeric_facts = {
         "pop_type_percent_country": {
             ((parameter, prefix + "laborers"),): 0.25,

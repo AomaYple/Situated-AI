@@ -39,14 +39,13 @@ doc 08 §18 把这两个文件逐一点名，读者可以自行扣减。
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from . import config, docs_mirror, scan
-from .doc_tables import KeyedTableSpec, TableMalformedError, TableSpec, split_row
+from .doc_tables import KeyedTableSpec, TableMalformedError, TableSpec
 from .scan import stats_for
-from .version_contracts import CURRENT_VERSION, active_version, verify_installation_identity
+from .version_contracts import CURRENT_VERSION, verify_installation_identity
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -273,7 +272,7 @@ def _doc08_narrative_cells(english_direct: int, map_docs: int) -> dict[str, dict
         raise TableMalformedError("doc08 narrative metadata is incomplete")
     return {
         "游戏版本": {
-            1: f"**{active_version()}**",
+            1: f"**{CURRENT_VERSION}**",
             2: "本机安装的 caligula／clausewitz 分支与当前版本合同",
         },
         "english": {3: f"**英语**（mod 的默认参照语言，{english_direct} 个直接文件）"},
@@ -302,67 +301,6 @@ def _map_document_count() -> int:
     return count
 
 
-def current_doc08_narrative_tables(recorded: dict[str, list[str]]) -> dict[str, list[str]]:
-    """Restore the 1.15.1 narrative from its frozen table metadata."""
-    out = {key: list(rows) for key, rows in recorded.items()}
-    if active_version() != "1.15.1":
-        return out
-    prefix = "08-目录全量清单.md::doc08 "
-    names = ("版本指纹", "localization 语言目录", "gfx 子目录")
-    if not any(prefix + name in out for name in names):
-        return out
-    fixed = prefix + "english 固定子目录#2"
-    if any(prefix + name not in out for name in names) or fixed not in out:
-        raise TableMalformedError("doc08 narrative tables are incomplete")
-
-    def rows_by_key(table: str) -> dict[str, list[str]]:
-        indexed: dict[str, list[str]] = {}
-        for raw in out[table]:
-            cells = split_row(raw)
-            if not cells:
-                raise TableMalformedError("doc08 narrative row is empty")
-            key = cells[0].strip("` ")
-            if key in indexed:
-                raise TableMalformedError(f"doc08 duplicate metadata row: {key}")
-            indexed[key] = cells
-        return indexed
-
-    children = rows_by_key(fixed)
-    required = {"character", "frontend", "historical", "interest_groups", "map"}
-    if set(children) != required:
-        raise TableMalformedError("doc08 English child denominator is incomplete")
-
-    def integer(row: list[str], index: int) -> int:
-        if (
-            len(row) <= index
-            or re.fullmatch(r"(?:0|[1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+)", row[index]) is None
-        ):
-            raise TableMalformedError("doc08 narrative count is not an integer")
-        return int(row[index].replace(",", ""))
-
-    localization = rows_by_key(prefix + names[1])
-    english = localization.get("english")
-    if english is None or integer(english, 2) != len(required):
-        raise TableMalformedError("doc08 English child count does not match")
-    direct = integer(english, 1) - sum(integer(row, 1) for row in children.values())
-    values = _doc08_narrative_cells(direct, _map_document_count())
-    for name, key in zip(names, ("游戏版本", "english", "map"), strict=True):
-        table = prefix + name
-        indexed = rows_by_key(table)
-        if key not in indexed:
-            raise TableMalformedError(f"doc08 narrative row is missing: {key}")
-        changes = values[key]
-        for n, raw in enumerate(out[table]):
-            cells = split_row(raw)
-            if cells[0].strip("` ") == key:
-                if len(cells) <= max(changes):
-                    raise TableMalformedError("doc08 narrative row has missing columns")
-                for index, text in changes.items():
-                    cells[index] = text
-                out[table][n] = "| " + " | ".join(cells) + " |"
-    return out
-
-
 def _spec_version_fingerprint() -> KeyedTableSpec:
     """§0 环境与版本指纹的四行版本号 —— 全部来自 :func:`config.game_version`。
 
@@ -385,23 +323,15 @@ def _spec_version_fingerprint() -> KeyedTableSpec:
 
     def cells() -> list[tuple[str, dict[int, str]]]:
         _require(config.ROOT.is_dir(), "游戏安装根目录")
-        selected = active_version()
-        if selected == CURRENT_VERSION:
-            try:
-                verify_installation_identity(config.ROOT)
-            except ValueError as exc:
-                raise TableMalformedError(str(exc)) from exc
+        try:
+            verify_installation_identity(config.ROOT)
+        except ValueError as exc:
+            raise TableMalformedError(str(exc)) from exc
         version = config.game_version()
         rows = [
             (label, {1: f"`{version[key]}`"}) for label, key in keys.items() if version.get(key)
         ]
-        if selected == "1.15.1" and (
-            version.get("caligula_branch") != "release/1.15.1"
-            or version.get("clausewitz_branch") != "caligula/release/1.15.1"
-        ):
-            raise TableMalformedError("doc08 installed branches do not match the 1.15.1 record")
-        if selected in {"1.15.1", CURRENT_VERSION}:
-            rows.append(("游戏版本", _doc08_narrative_cells(0, 1)["游戏版本"]))
+        rows.append(("游戏版本", _doc08_narrative_cells(0, 1)["游戏版本"]))
         return rows
 
     return KeyedTableSpec(
@@ -510,11 +440,10 @@ def _spec_dir_table(
         result = []
         for row in rows_of(base):
             values = {idx: fmt(row) for idx, fmt in columns.items()}
-            if active_version() in {"1.15.1", CURRENT_VERSION}:
-                if name == "doc08 localization 语言目录" and row.name == "english":
-                    values.update(_doc08_narrative_cells(row.direct_files, 1)["english"])
-                elif name == "doc08 gfx 子目录" and row.name == "map":
-                    values.update(_doc08_narrative_cells(0, _map_document_count())["map"])
+            if name == "doc08 localization 语言目录" and row.name == "english":
+                values.update(_doc08_narrative_cells(row.direct_files, 1)["english"])
+            elif name == "doc08 gfx 子目录" and row.name == "map":
+                values.update(_doc08_narrative_cells(0, _map_document_count())["map"])
             result.append((row.name, values))
         return result
 

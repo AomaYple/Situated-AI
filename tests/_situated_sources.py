@@ -65,10 +65,7 @@ def production_sources(
     from pdx import version_contracts
 
     version = version_contracts.active_version()
-    if information == _ROOT / _INFORMATION_SOURCE and version in {
-        "1.15.1",
-        version_contracts.CURRENT_VERSION,
-    }:
+    if information == _ROOT / _INFORMATION_SOURCE:
         # The authored file preserves historical bytes; the current consumer
         # retires exactly these six multipliers in favor of one R2 school writer.
         retired = {

@@ -16,6 +16,7 @@ from pdx.textio import normalized_text
 
 pytestmark = pytest.mark.integration
 SOURCE = "common/buildings/11_private_infrastructure.txt"
+WAR_ACTIONS_SOURCE = "common/on_actions/00_code_on_actions.txt"
 FIELD = ("building_railway", "ai_value")
 
 
@@ -37,7 +38,11 @@ def rail():
         source=SOURCE,
     )
     inputs = decision_adapters.read_inputs(adapters)
-    assert len(decision_interfaces.verify_state_devastation_sources(inputs)) == 3
+    assert decision_interfaces.verify_state_devastation_sources(inputs) == (
+        f"{decision_interfaces.STATE_DEVASTATION_SOURCE}:2782",
+        f"{decision_interfaces.STATE_DEVASTATION_SOURCE}:2905",
+        f"{WAR_ACTIONS_SOURCE}:3841",
+    )
     words = frozenset(decision_adapters.reader_evidence(inputs))
     text = decision_rules.patch(
         inputs[SOURCE], policy, baseline=inputs[SOURCE], default_strategy=False, reader_words=words
@@ -213,29 +218,31 @@ def test_devastation_and_native_defeat_lifecycle_pin_and_ast_are_enforced(
     _, _, originals, _ = rail
     inputs = dict(originals)
     source = decision_interfaces.STATE_DEVASTATION_SOURCE
+    expected = "州恢复读取器原版来源漂移或缺失"
     if mutation == "missing":
         inputs.pop(source)
     elif mutation == "hash":
         inputs[source] += "# drift"
-    elif mutation == "memory":
-        inputs["common/on_actions/00_code_on_actions.txt"] = inputs[
-            "common/on_actions/00_code_on_actions.txt"
-        ].replace("days = 1825", "days = 1826")
     else:
-        old, new = (
-            ("devastation > 0.2", "devastation > 0.3")
-            if mutation == "threshold"
-            else (
+        expected = "州受创读取器缺少唯一owner到同州devastation完整原版AST"
+        if mutation == "memory":
+            source = WAR_ACTIONS_SOURCE
+            old, new = "days = 1825", "days = 1826"
+            expected = "州恢复失去原版受害者限定与1825天战败记忆生命周期"
+        elif mutation == "threshold":
+            old, new = "devastation > 0.2", "devastation > 0.3"
+        else:
+            old, new = (
                 "any_scope_state = {\n\t\t\t\t\t\tis_incorporated = yes\n\t\t\t\t\t\tdevastation",
                 "any_country = {\n\t\t\t\t\t\tis_incorporated = yes\n\t\t\t\t\t\tdevastation",
             )
-        )
         assert old in inputs[source]
         inputs[source] = inputs[source].replace(old, new)
+        authority = decision_adapters.native_authority_115()
+        sources = dict(authority["sources"])
+        sources[source] = hashlib.sha256(normalized_text(inputs[source]).encode()).hexdigest()
         monkeypatch.setattr(
-            decision_interfaces,
-            "STATE_DEVASTATION_SHA256",
-            hashlib.sha256(normalized_text(inputs[source]).encode()).hexdigest(),
+            decision_adapters, "native_authority_115", lambda: {**authority, "sources": sources}
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=expected):
         decision_interfaces.verify_state_devastation_sources(inputs)
