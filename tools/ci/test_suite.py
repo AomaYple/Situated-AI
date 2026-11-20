@@ -173,6 +173,8 @@ def _effective_config(config: Any) -> dict[str, Any]:
         raise pytest.UsageError("完整验收拒绝 dist=each 或重复执行配置")
     return {
         "numprocesses": workers,
+        "randomly_seed": getattr(option, "randomly_seed", None),
+        "scheduler": getattr(config, "_sitai_scheduler", dist),
         "dist": dist,
         "repeat": repeat,
         "basetemp": str(getattr(option, "basetemp", None)),
@@ -445,6 +447,8 @@ def finalize(out: Path, summary: dict[str, Any], *, reference: Path | None = Non
         if effective["dist"] == "each" or effective["repeat"] != 1:
             errors.append("调度配置改变测试执行次数")
         summary["worker_selection_effective"] = effective
+        if effective.get("randomly_seed") is not None:
+            summary["randomly_seed"] = effective["randomly_seed"]
         summary["group"] = "serial" if not effective["numprocesses"] else "xdist"
         if not nodeids or collection["mismatches"]:
             errors.append("测试收集为空或 worker 身份不一致")
@@ -524,6 +528,8 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
             "MEMBASELINE_TAG": "full",
         }
     )
+    explicit_dist = any(option.partition("=")[0] == "--dist" for option in pytest_args)
+    scheduler_args = [] if explicit_dist else ["-p", "tools.ci.acceptance_scheduler"]
     argv = [
         sys.executable,
         "-X",
@@ -535,6 +541,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
         "tools.ci.test_suite",
         "-p",
         "tools.ci.mem_baseline",
+        *scheduler_args,
         "--cov=pdx",
         "--cov-report=json:" + str(out / "coverage.json"),
         "--junitxml=" + str(out / "junit.xml"),
@@ -594,7 +601,9 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
                 ".coveragerc",
                 "tests/conftest.py",
                 "src/pdx/parallel.py",
+                "tools/ci/acceptance_scheduler.py",
                 "tools/ci/mem_baseline.py",
+                "tools/ci/test_suite.py",
             )
             if (ROOT / name).is_file()
         },

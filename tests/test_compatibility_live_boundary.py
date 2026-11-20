@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,18 +21,23 @@ R2_DRIFT_MESSAGE = r"R2 reader authority: source drift .*scripted_buttons\.md"
 
 
 @pytest.fixture(scope="module")
-def complete_inputs():
-    return distribution.package_inputs(include_engineering_metadata=True)
+def complete_inputs(tmp_path_factory):
+    inputs = distribution.package_inputs(include_engineering_metadata=True)
+    template = tmp_path_factory.mktemp("standard-template") / "standard"
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(decisions, "product_path", lambda: template)
+        patch.setattr(distribution, "package_inputs", lambda **_kwargs: inputs)
+        distribution.write_standard_outputs()
+    return inputs, template
 
 
 @pytest.fixture
 def standard_tree(tmp_path, monkeypatch, complete_inputs):
-    target = tmp_path / "standard"
+    inputs, template = complete_inputs
+    # Drift and rollback cases each own a writable copy of the real generated tree.
+    target = shutil.copytree(template, tmp_path / "standard")
     monkeypatch.setattr(decisions, "product_path", lambda: target)
-    # Reuse a complete, genuinely generated input bundle. The final live
-    # verifier, source lock, exact tree check and archive validator stay real.
-    monkeypatch.setattr(distribution, "package_inputs", lambda **_kwargs: complete_inputs)
-    distribution.write_standard_outputs()
+    monkeypatch.setattr(distribution, "package_inputs", lambda **_kwargs: inputs)
     return target
 
 

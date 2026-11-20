@@ -17,6 +17,7 @@ from conftest import configure_current_identity
 
 from pdx import covgate, version_contracts
 from tools.ci import test_suite
+from tools.ci.acceptance_scheduler import AcceptanceScheduling
 
 
 @pytest.fixture
@@ -552,7 +553,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
 
 def test_collection_hook_retains_repeated_ids_and_worker_disagreement(tmp_path, monkeypatch):
     monkeypatch.setenv("SITAI_TEST_COLLECTION", str(tmp_path / "collection.json"))
-    config = SimpleNamespace()
+    config = SimpleNamespace(option=SimpleNamespace(randomly_seed=4201))
     test_suite.pytest_configure(config)
     node = SimpleNamespace(config=config, gateway=SimpleNamespace(id="gw0"))
     test_suite.pytest_xdist_node_collection_finished(node, ["test_a", "test_a", "test_b"])
@@ -563,6 +564,73 @@ def test_collection_hook_retains_repeated_ids_and_worker_disagreement(tmp_path, 
     assert report["nodeids"] == ["test_a", "test_a", "test_b"]
     assert report["counts"] == {"test_a": 2, "test_b": 1}
     assert report["mismatches"] == ["gw1"]
+    assert report["effective"]["randomly_seed"] == 4201
+
+
+@pytest.fixture
+def acceptance_scheduler():
+    config = Mock()
+    config.getvalue.return_value = ["popen"]
+    return AcceptanceScheduling(config, None)
+
+
+def test_acceptance_scheduler_releases_replacement_with_one_item(acceptance_scheduler):
+    scheduler = acceptance_scheduler
+    node = Mock(shutting_down=False)
+    scheduler.add_node(node)
+    nodeids = ["tests/test_golden.py::test_last"]
+    scheduler.collection = nodeids
+    scheduler.registered_collections[node] = nodeids
+    scheduler.workqueue["tests/test_golden.py"] = {nodeids[0]: False}
+    scheduler.schedule()
+    node.send_runtest_some.assert_called_once_with([0])
+    node.shutdown.assert_called_once()
+
+
+def test_acceptance_scheduler_skips_completed_requeued_scopes(acceptance_scheduler):
+    scheduler = acceptance_scheduler
+    golden = "tests/test_golden.py::test_complete"
+    documents = "tests/test_docs.py::test_complete"
+    pending = "tests/test_release.py::test_pending"
+    later = "tests/test_boundary.py::test_pending"
+    nodeids = [golden, documents, pending, later]
+    crashed = Mock(shutting_down=False)
+    scheduler.add_node(crashed)
+    scheduler.add_node_collection(crashed, nodeids)
+    scheduler.collection = nodeids
+    scheduler.assigned_work[crashed] = {
+        scheduler._split_scope(nodeid): {nodeid: nodeid in {golden, documents}}
+        for nodeid in nodeids
+    }
+    assert scheduler.remove_node(crashed) == pending
+
+    replacement = Mock(shutting_down=False)
+    scheduler.add_node(replacement)
+    scheduler.add_node_collection(replacement, nodeids)
+    scheduler.schedule()
+
+    assert [call.args for call in replacement.send_runtest_some.call_args_list] == [([2],), ([3],)]
+    replacement.shutdown.assert_called_once()
+
+
+def test_acceptance_scheduler_rejects_replacement_collection_mismatch(acceptance_scheduler):
+    scheduler = acceptance_scheduler
+    original = Mock(shutting_down=False)
+    original.gateway.id = "gw0"
+    nodeids = ["tests/test_golden.py::test_original"]
+    scheduler.add_node(original)
+    scheduler.add_node_collection(original, nodeids)
+    scheduler.collection = nodeids
+
+    replacement = Mock(shutting_down=False)
+    replacement.gateway.id = "gw1"
+    scheduler.add_node(replacement)
+    with pytest.raises(
+        pytest.exit.Exception, match="Replacement worker gw1 collected different tests"
+    ) as caught:
+        scheduler.add_node_collection(replacement, ["tests/test_golden.py::test_replacement"])
+    assert caught.value.returncode == pytest.ExitCode.TESTS_FAILED
+    replacement.send_runtest_some.assert_not_called()
 
 
 def test_silent_subprocess_timeout_is_reported(tmp_path, monkeypatch):
