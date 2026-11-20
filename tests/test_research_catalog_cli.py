@@ -387,6 +387,79 @@ def test_analyze_installation_binds_full_denominator_and_publishes_only_locators
     assert catalog["coverage"][-1]["denominator_status"] == "unknown"
 
 
+def test_research_query_checks_historical_identity_and_reads_once(
+    tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pdx import capability_catalog
+
+    output = tmp_path / "historical-research"
+    monkeypatch.setattr(
+        capability_catalog,
+        "implementation_digest",
+        lambda: "204381950006cc8241098aa12ac46042a3c2b719b8014cf5623e53ccabefa6e1",
+    )
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    monkeypatch.setattr(capability_catalog, "implementation_digest", lambda: "a" * 64)
+
+    query = [
+        "research-query",
+        str(output),
+        "--source",
+        "game/common/ample/sample.txt",
+        "--source",
+        _STRATEGY_ANCHOR,
+        "--limit",
+        "5",
+    ]
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 1
+    assert "历史定位" in "".join(result.output.splitlines())
+
+    index_reads = []
+    original = capability_catalog.open_inventory_source
+
+    def count_read(root: Path, relative: str):
+        index_reads.append(relative)
+        return original(root, relative)
+
+    monkeypatch.setattr(capability_catalog, "open_inventory_source", count_read)
+    result = CliRunner().invoke(cli.app, [*query, "--historical-locators"])
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert document["implementation_status"] == "historical_locators"
+    assert document["index_projection"] == "source_locators"
+    assert len(document["queries"]) == 2
+    assert "sample_key" in {row["key"] for row in document["queries"][0]["occurrences"]}
+    assert index_reads == ["occurrences.sqlite"]
+
+    with (output / "occurrences.sqlite").open("ab") as stream:
+        stream.write(b"tamper")
+    result = CliRunner().invoke(cli.app, [*query, "--historical-locators"])
+    assert result.exit_code == 1
+    assert "digest mismatch" in result.output
+
+
+def test_research_query_rejects_marker_catalog_mismatch(
+    tmp_path: Path, live_installation: Path
+) -> None:
+    output = tmp_path / "current-research"
+    result = CliRunner().invoke(cli.app, ["analyze", "--installation", "--output-dir", str(output)])
+    assert result.exit_code == 0, result.output
+    query = ["research-query", str(output), "--key", "sample_key"]
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["implementation_status"] == "current"
+
+    marker_path = output / "COMPLETE.json"
+    marker = json.loads(marker_path.read_bytes())
+    marker["epoch_id"] = "f" * 64
+    marker_path.write_text(json.dumps(marker), encoding="utf-8")
+    result = CliRunner().invoke(cli.app, query)
+    assert result.exit_code == 1
+    assert "epoch" in result.output
+
+
 def test_analyze_installation_refuses_drift_after_indexing(
     tmp_path: Path, live_installation: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

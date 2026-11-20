@@ -38,6 +38,7 @@ subparsers 的脚本、2 个裸脚本（``show_outputs.py`` 连 ``main()`` 都�
 from __future__ import annotations
 
 import json
+import sqlite3
 import time
 from collections import deque
 from dataclasses import asdict
@@ -439,6 +440,50 @@ def analyze_cmd(
         console.print(table)
 
     console.print(f"\n总耗时 {elapsed:.1f} 秒")
+
+
+@app.command("research-query")
+def research_query_cmd(
+    directory: Annotated[Path, typer.Argument(help="包含 COMPLETE.json 的本机研究目录")],
+    source: Annotated[list[str] | None, typer.Option(help="来源相对路径，可重复")] = None,
+    key: Annotated[str | None, typer.Option(help="精确结构键")] = None,
+    after: Annotated[str, typer.Option(help="上一页的最后一个位置 ID")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=10000, help="每组查询的最大行数")] = 100,
+    historical_locators: Annotated[
+        bool, typer.Option("--historical-locators", help="读取已登记的旧实现位置索引")
+    ] = False,
+) -> None:
+    """核对完整研究目录，返回覆盖统计和所选位置的 JSON。"""
+    try:
+        with research_catalog.open_published(
+            directory, historical_locators=historical_locators
+        ) as (publication, connection):
+            queries = [
+                {
+                    "source": path,
+                    "key": key,
+                    "occurrences": [
+                        asdict(row)
+                        for row in publication.index.find_in_connection(
+                            connection, source=path, key=key, after=after, limit=limit
+                        )
+                    ],
+                }
+                for path in (source or [None])
+                if path is not None or key is not None
+            ]
+            result = {
+                "epoch_id": publication.index.epoch_id,
+                "file_set_sha256": publication.index.file_set_sha256,
+                "implementation_sha256": publication.index.implementation_sha256,
+                "implementation_status": publication.implementation_status,
+                "index_projection": publication.projection,
+                "coverage": publication.coverage,
+                "queries": queries,
+            }
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        _fail(f"研究目录读取失败：{exc}", EXIT_FAILED)
+    typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 @app.command("input-inventory")

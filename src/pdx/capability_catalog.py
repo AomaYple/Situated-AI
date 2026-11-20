@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from .committed_raw import read_source, validate_inputs, verified_catalog_inputs
 from .input_contracts import UnknownFrontier, dumps_contract
-from .input_inventory import STRUCTURED_JSON_SUFFIXES
+from .input_inventory import STRUCTURED_JSON_SUFFIXES, open_inventory_source
 from .model import Assignment, Block, ParsedFile, Scalar
 from .parser import PREFIXES
 from .references import SCRIPT_SYMBOL_CATEGORIES, script_symbol_references
@@ -33,6 +33,13 @@ if TYPE_CHECKING:
 
 
 INDEX_SCHEMA = 3
+# Published schema-3 locator indexes from the two 1.15.2 installation scans.
+_HISTORICAL_LOCATOR_IMPLEMENTATIONS = frozenset(
+    {
+        "dc59ca49f90deacb74690c128e1727aa99fb328cd009164708fe520114f0b0bd",
+        "204381950006cc8241098aa12ac46042a3c2b719b8014cf5623e53ccabefa6e1",
+    }
+)
 
 
 def _json(value: object) -> str:
@@ -131,33 +138,46 @@ class OccurrenceIndex:
     occurrence_count: int
     file_count: int
 
-    @contextmanager
-    def connect(self) -> Iterator[sqlite3.Connection]:
-        if _digest(self.path) != self.sha256:
-            raise ValueError("出现位置索引摘要漂移 digest mismatch")
-        if implementation_digest() != self.implementation_sha256:
-            raise ValueError("出现位置索引解析实现已改变，必须重建")
-        connection = sqlite3.connect(self.path.resolve().as_uri() + "?mode=ro", uri=True)
-        connection.row_factory = sqlite3.Row
-        try:
-            metadata = dict(connection.execute("SELECT key,value FROM metadata"))
-            expected = {
-                "schema": str(INDEX_SCHEMA),
-                "epoch_id": self.epoch_id,
-                "file_set_sha256": self.file_set_sha256,
-                "implementation_sha256": self.implementation_sha256,
-                "state": "complete",
-                "file_count": str(self.file_count),
-                "occurrence_count": str(self.occurrence_count),
-            }
-            if metadata != expected:
-                raise ValueError("出现位置索引 epoch/来源/实现身份不匹配")
-            yield connection
-        finally:
-            connection.close()
+    def implementation_status(self, *, historical_locators: bool = False) -> str:
+        if self.implementation_sha256 == implementation_digest():
+            return "current"
+        if (
+            historical_locators
+            and self.implementation_sha256 in _HISTORICAL_LOCATOR_IMPLEMENTATIONS
+        ):
+            return "historical_locators"
+        raise ValueError("出现位置索引解析实现已改变，必须重建或显式读取已登记的历史定位")
 
-    def find(
-        self,
+    @contextmanager
+    def connect(self, *, historical_locators: bool = False) -> Iterator[sqlite3.Connection]:
+        self.implementation_status(historical_locators=historical_locators)
+        with open_inventory_source(self.path.parent.absolute(), self.path.name) as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != self.sha256:
+                raise ValueError("出现位置索引摘要漂移 digest mismatch")
+            connection = sqlite3.connect(
+                self.path.absolute().as_uri() + "?mode=ro&immutable=1", uri=True
+            )
+            connection.row_factory = sqlite3.Row
+            try:
+                metadata = dict(connection.execute("SELECT key,value FROM metadata"))
+                expected = {
+                    "schema": str(INDEX_SCHEMA),
+                    "epoch_id": self.epoch_id,
+                    "file_set_sha256": self.file_set_sha256,
+                    "implementation_sha256": self.implementation_sha256,
+                    "state": "complete",
+                    "file_count": str(self.file_count),
+                    "occurrence_count": str(self.occurrence_count),
+                }
+                if metadata != expected:
+                    raise ValueError("出现位置索引 epoch/来源/实现身份不匹配")
+                yield connection
+            finally:
+                connection.close()
+
+    @staticmethod
+    def find_in_connection(
+        connection: sqlite3.Connection,
         *,
         source: str | None = None,
         key: str | None = None,
@@ -183,8 +203,28 @@ class OccurrenceIndex:
         if limit is not None:
             query += " LIMIT ?"
             values.append(limit)  # type: ignore[arg-type]
+        return tuple(_occurrence(row) for row in connection.execute(query, values))
+
+    def find(
+        self,
+        *,
+        source: str | None = None,
+        key: str | None = None,
+        scalar: str | None = None,
+        path: tuple[str, ...] | None = None,
+        after: str = "",
+        limit: int | None = None,
+    ) -> tuple[Occurrence, ...]:
         with self.connect() as connection:
-            return tuple(_occurrence(row) for row in connection.execute(query, values))
+            return self.find_in_connection(
+                connection,
+                source=source,
+                key=key,
+                scalar=scalar,
+                path=path,
+                after=after,
+                limit=limit,
+            )
 
     def ancestors(self, occurrence_id: str) -> tuple[Occurrence, ...]:
         with self.connect() as connection:
