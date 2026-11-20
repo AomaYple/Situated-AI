@@ -365,7 +365,7 @@ def _is_not_generated(doc: str, header: str) -> bool:
 #:
 #: 三类理由（与模块 docstring 的六类对应，这里只挑真正的**不该算**）：
 #:
-#: * **另一台机器**：统计对象是本机订阅的 Workshop mod（doc 02 / 06 / 12 / 14 / README），
+#: * **另一台机器**：统计对象是本机订阅的 Workshop mod（doc 02 / 06 / 12 / 14），
 #:   换台机器、退订一个 mod 就变 —— 与 :data:`NOT_GENERATED` 里那几张表同一个理由；
 #: * **原文如此**：引用官方 `.md` 里写的常量或清单（doc 04 的 4 条、doc 07 的 512 / 41 / 20），
 #:   是引用而不是测量；要核对只能核官方文件的 sha256（另有测试）；
@@ -466,13 +466,6 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     "「这一份二进制里有哪些名字」，且 `--exe-grep` 默认只列前 40 条、此处已显式取全量",
     ("04-脚本系统.md", 361): "§9.5 取证数字：`show_as_tooltip` 的用法次数"
     "（复算：`v3 evidence show_as_tooltip`），同 49/98/160 那一类",
-    (
-        "README.md",
-        161,
-    ): "索引页「最关键的结论 #1」的引擎侧取证：`victoria3.exe` 里 "
-    "`<键名>_cw_duplicate_compat` 重名策略名的个数（复算："
-    "`v3 evidence --exe-grep _cw_duplicate_compat`）—— 与 doc 04 的 161 同源同性质"
-    "（读的是**这一份二进制**里有哪些名字，属线索层而非承诺）",
     (
         "06-本地化与界面资源.md",
         4914,

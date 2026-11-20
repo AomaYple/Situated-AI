@@ -265,7 +265,8 @@ def test_current_document_indexes_are_complete() -> None:
     assert "-m pdx.cli package" in tools
     assert "[版本交付索引](../docs/design/exec/版本交付-结果.md)" in tools
     assert "K0–K13" in execution
-    assert "[处境行动决策内核实施计划](mod重设计-实施计划.md)" in execution
+    archive = (root / "docs/design/archive/README.md").read_text(encoding="utf-8")
+    assert "[31.4 旧实施计划](../exec/mod重设计-实施计划.md)" in archive
     assert "分层联动-执行结果.md" in execution
     assert "历史收据" in execution
     assert "tools/ci/architecture_witness_capture.py" in tools
@@ -283,7 +284,8 @@ def test_current_document_indexes_are_complete() -> None:
         assert f"[架构主计划]({design_prefix}架构主计划.md)" in content, path
         assert f"[架构子计划]({design_prefix}架构子计划.md)" in content, path
         if path != "tools/README.md":
-            assert f"[处境行动决策内核实施计划]({prefix}mod重设计-实施计划.md)" in content, path
+            assert f"]({design_prefix}archive/README.md" in content, path
+            assert "mod重设计-实施计划.md" not in content, path
         assert "终极方案 4.0 实施计划" not in content, path
         version_links = re.findall(r"\[[^\]]*版本交付索引[^\]]*\]\(([^)]+)\)", content)
         assert version_links, path

@@ -152,6 +152,44 @@ def test_profile_rejects_drift_and_invalid_declarations(installation, change):
         profile.load_profile(root, declaration)
 
 
+@pytest.mark.parametrize(
+    ("change", "error"),
+    [
+        ("extra_input", "必须包含三个写点及非默认学校策略来源"),
+        ("replaced_input", "必须包含三个写点及非默认学校策略来源"),
+        ("duplicate_path", "路径与身份重复"),
+        ("duplicate_key", "无法读取严格 TOML"),
+        ("unknown_field", "未知字段"),
+    ],
+)
+def test_profile_input_declaration_rejects_unreviewed_paths_and_fields(
+    installation: tuple[Path, Path], change: str, error: str
+) -> None:
+    root, declaration = installation
+    source = declaration.read_text(encoding="utf-8")
+    native_path = "game/common/decrees/00_decree.txt"
+    extra_path = "game/common/decrees/unreviewed.txt"
+    raw = (root / native_path).read_bytes()
+    (root / extra_path).write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    reviewed_row = f'path = "{native_path}"\nsha256 = "{digest}"'
+    assert source.count(reviewed_row) == 1
+    extra_row = reviewed_row.replace(native_path, extra_path)
+    replacement = {
+        "extra_input": f"{reviewed_row}\n\n[[input]]\n{extra_row}",
+        "replaced_input": extra_row,
+        "duplicate_path": f"{reviewed_row}\n\n[[input]]\n{reviewed_row}",
+        "duplicate_key": f'{reviewed_row}\nsha256 = "{digest}"',
+        "unknown_field": f"{reviewed_row}\nunreviewed = true",
+    }[change]
+    declaration.write_text(
+        source.replace(reviewed_row, replacement, 1), encoding="utf-8", newline="\n"
+    )
+
+    with pytest.raises(ValueError, match=error):
+        profile.load_profile(root, declaration)
+
+
 def test_profile_rejects_wrong_and_metadata_only_writers(installation):
     loaded = profile.load_profile(*installation)
     with pytest.raises(ValueError, match="未接入"):

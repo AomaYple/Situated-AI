@@ -173,3 +173,24 @@ def test_live_doc08_version_refuses_missing_or_other_installation(monkeypatch, t
     monkeypatch.setattr(install_tree.config, "game_version", lambda: branches)
     with pytest.raises(TableMalformedError):
         install_tree._spec_version_fingerprint().cells()
+
+
+@pytest.mark.parametrize(
+    ("entries", "message"),
+    [
+        ({"game/gfx/map/../a.md": {}}, "official-document entry is malformed"),
+        ({"game/gfx/map/a.md": 1}, "official-document entry is malformed"),
+        ({}, "narrative metadata is incomplete"),
+    ],
+)
+def test_current_doc08_map_table_rejects_malformed_manifest(tmp_path, monkeypatch, entries, message):
+    from pdx import install_tree
+    from pdx.doc_tables import KeyedTableSpec, TableMalformedError
+
+    (tmp_path / "gfx" / "map").mkdir(parents=True)
+    monkeypatch.setattr(install_tree.config, "GAME", tmp_path)
+    monkeypatch.setattr(install_tree.docs_mirror, "load_manifest", lambda: {"文档": entries})
+    table = next(spec for spec in install_tree.doc_table_specs() if spec.name == "doc08 gfx 子目录")
+    assert isinstance(table, KeyedTableSpec)
+    with pytest.raises(TableMalformedError, match=message):
+        table.cells()

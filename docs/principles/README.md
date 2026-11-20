@@ -38,36 +38,69 @@
 
 | 条款 | 执行方式 | 入口与说明 |
 |---|---|---|
-| EP-20 | 强执行 | `.github/workflows/ci.yml` 的三平台解释器矩阵（离线用例） |
-| EP-27 | 强执行 | `run_check.py encoding`（CI、pre-commit）、`tests/test_repo_hygiene.py` |
-| EP-28 | 强执行 | `src/pdx/distribution.py` 的交付文件 BOM/LF 校验 |
-| EP-24 | 强执行 | `tests/test_engineering_enforcement.py` 逐行核对 `.github/workflows/*.yml` 的 `uses:`（本地 action 除外）以 40 位提交 SHA 固定 |
-| EP-03 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
-| EP-04 | 部分执行 | `src/pdx/distribution.py`、`src/pdx/decision_rules.py` 的漂移拒绝；`tests/test_decisions.py`、`tests/test_profile_live_boundary.py` |
-| EP-06、EP-07、EP-09 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
-| EP-10 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
-| EP-14 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
-| EP-16 | 部分执行 | CI 各任务从 `pyproject.toml` 读取解释器要求；`tests/test_engineering_enforcement.py` 拒绝仓库根的独立工具配置文件并核对 pytest、coverage、ruff、mypy 配置段；其余工具的配置集中靠评审 |
-| EP-19 | 部分执行 | `tests/test_portability.py` 拒绝受控 `src`、`tools`、`tests` Python 文件中的机器专属绝对路径；`tests/test_engineering_enforcement.py` 只覆盖 `tests/` 下属性调用形式的 `read_text`/`write_text` 省略 encoding，以及带 `text=`/`universal_newlines=` 的 `subprocess` 属性调用省略 encoding；内建 `open()`、`Path.open()` 的文本模式、`from subprocess import run` 形式，以及 `src`、`tools` 的默认编码与 shell 默认行为都靠评审 |
-| EP-21 | 部分执行 | `run_check.py types` 在 `pyproject.toml` 的 mypy 文件范围检查类型兼容；公共注解完整性与错误合同仍需测试及评审 |
-| EP-22 | 部分执行 | CI 的 `v3 lock` 与 `pip check`；`tests/test_lockfile.py` 覆盖解释器合同、条件依赖、extras、环及缺失闭包拒绝；变更原因靠评审 |
-| EP-23 | 部分执行 | `tests/test_engineering_enforcement.py` 核对 dev 依赖中的 Ruff、mypy 以 `==` 固定且与 `requirements.lock` 版本相等；CI 的 `v3 lock`；升级复核靠评审 |
-| EP-25 | 部分执行 | `v3 modgen --check` 只在本地 `run_check.py baseline`；CI 运行 `v3 modguard --offline` |
-| EP-26 | 部分执行 | 机械表格由 `tests/test_doc_overview.py` 与 CI 的 `v3 tables --offline` 看守；指纹与 manifest 未核实到专门的自动检查入口 |
-| EP-29 | 部分执行 | `tests/test_repo_hygiene.py` 的原版证据路径与哈希合同 |
-| EP-30 | 部分执行 | `src/pdx/distribution.py` 的包内容校验；默认生产路径靠评审 |
-| EP-31 | 部分执行 | `.gitignore`、`run_check.py hygiene`（CI）；凭据靠评审 |
-| EP-34 | 部分执行 | CI 的 `tools/ci/test_summary.py` 拒绝未分类跳过；`tests/test_engineering_enforcement.py` 拒绝无法归类的跳过原因与未登记 xfail；覆盖率总门及核心模块门由本地 `full-acceptance` 核验，其余靠评审 |
-| EP-50 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
-| EP-55 | 部分执行 | `v3 verify --from-snapshot`（CI、pre-commit）与 `tests/test_docs_consistency.py` 只看守已登记的数字断言 |
-| EP-05 | 仅评审 | 失效的相对链接另由 `tests/test_docs_consistency.py` 发现 |
-| EP-36 | 仅评审 | `.github/pull_request_template.md` 提示标明类别 |
-| EP-56、EP-57 | 仅评审 | `tests/test_engineering_contract.py` 只锁定原文，不检查行为 |
-| EP-01、EP-02、EP-08、EP-11、EP-12、EP-13、EP-15、EP-17、EP-18 | 仅评审 | 未核实到自动检查入口 |
-| EP-32、EP-33、EP-35、EP-37、EP-38、EP-39、EP-40、EP-41、EP-42、EP-43、EP-44、EP-45 | 仅评审 | 未核实到自动检查入口 |
-| EP-46、EP-47、EP-48、EP-49、EP-51、EP-52、EP-53、EP-54、EP-58 | 仅评审 | 未核实到自动检查入口 |
-| EP-59、EP-60、EP-61 | 部分执行 | `pyproject.toml` 固定补丁版本，三平台 CI 共用该基线；`tools/ci/run_check.py`、`tests/test_run_check.py` 核验正式 CPython 和虚拟环境记录；旧兼容代码清退和实现选型靠评审 |
-| EP-62、EP-63 | 仅评审 | 信息读取范围与成熟库选型需要专项审查，本轮工具检查不代签产品读取能力 |
+| EP-01 | 仅评审 | 按真实原版重生成、包回读和完整回归评审性能或内存改动 |
+| EP-02 | 部分执行 | `tests/test_cache_release.py`、`tests/test_standard_generation_boundary.py` 核对缓存及写入失败，`pdx.performance` 检查结果指纹 |
+| EP-03 | 部分执行 | `tests/test_parser_completeness.py`、`tests/test_production_profile.py`、`tests/test_native_authority_capture.py` 核对解析、生产合同与捕获拒绝 |
+| EP-04 | 部分执行 | `distribution.verify_compatibility_installation()`，`tests/test_current_release_contract.py`、`tests/test_profile_live_boundary.py` |
+| EP-05 | 部分执行 | `tests/test_docs_consistency.py` 核对相对路径目标，其余调用、动态注册、证据和机械入口靠评审 |
+| EP-06 | 部分执行 | `version_contracts.require_current()`、`tests/test_current_release_contract.py` 把生产入口约束到现行身份 |
+| EP-07 | 部分执行 | `tests/test_current_release_contract.py`、`tests/test_version_contracts.py` 拒绝旧版和未登记合同 |
+| EP-08 | 仅评审 | 当前知识库的环境与版本页保留独立的 Paradox 官方发布公告 |
+| EP-09 | 部分执行 | `tests/test_current_release_contract.py`、`tests/test_live_current_installation.py` 核对安装身份、原版漂移与坏包保留 |
+| EP-10 | 部分执行 | 生产入口拒绝旧 profile，代码、适配、配置和历史引用清退由差异评审确认 |
+| EP-11 | 部分执行 | `tests/test_release_integration.py`、`tests/test_architecture_inventory.py` 经当前生产路线检查共用能力 |
+| EP-12 | 仅评审 | 逐项追溯清退测试的去向，核对仍适用的生产回归和门禁 |
+| EP-13 | 部分执行 | `tests/test_current_release_contract.py` 验证旧 profile 无法调用当前生产命令 |
+| EP-14 | 部分执行 | `tests/test_architecture_receipts.py` 独立读取归档，`tests/test_decisions.py` 核对标准包排除旧资料 |
+| EP-15 | 仅评审 | 清退前核对冻结路径、可恢复字节和活动引用 |
+| EP-16 | 部分执行 | `pyproject.toml`、`run_check.py`、`tests/test_engineering_enforcement.py` 的解释器和配置范围 |
+| EP-17 | 仅评审 | 贡献流程优先仓库 `.venv`，项目依赖选型及环境回退由评审核对 |
+| EP-18 | 仅评审 | 评审复用 `pathlib`、现行解析器、事务、生成和验证接口 |
+| EP-19 | 部分执行 | `tests/test_portability.py` 核对机器专属绝对路径。`tests/test_engineering_enforcement.py` 只核对部分测试读写和 subprocess 默认编码 |
+| EP-20 | 部分执行 | 三平台 CI 离线矩阵、跨平台测量实现和平台环境标记 |
+| EP-21 | 部分执行 | `run_check.py types` 与 mypy 配置范围，公开入口错误的专项反例 |
+| EP-22 | 部分执行 | `v3 lock`、`pip check`、`tests/test_lockfile.py` 约束当前安装闭包及条件依赖 |
+| EP-23 | 部分执行 | `tests/test_engineering_enforcement.py` 检查 Ruff、mypy 精确版本与锁一致 |
+| EP-24 | 强执行 | `tests/test_engineering_enforcement.py` 拒绝工作流外部 Action 缺完整提交 SHA |
+| EP-25 | 部分执行 | `v3 modgen --check`、`modguard --offline`、`tests/test_standard_generation_boundary.py` |
+| EP-26 | 部分执行 | `v3 tables --offline`、`tests/test_doc_overview.py`、`distribution.generation_lock()` 和包清单回读 |
+| EP-27 | 强执行 | `run_check.py encoding`、pre-commit、`tests/test_repo_hygiene.py` |
+| EP-28 | 强执行 | `distribution.py` 及 `tests/test_repository_upgrade.py` 的标准包编码断言 |
+| EP-29 | 部分执行 | `tests/test_architecture_receipts.py`、`tests/test_current_release_contract.py` 分别核对冻结归档与底本字节 |
+| EP-30 | 部分执行 | `distribution.py` 包允许集合与 `tests/test_decisions.py` 排除历史资料 |
+| EP-31 | 部分执行 | `.gitignore`、`run_check.py hygiene` 核对受控路径及物理残留，凭据和登记证据由评审检查 |
+| EP-32 | 仅评审 | 按影响选择单元、属性、离线、集成和真实包验证，完整套件保留既有覆盖 |
+| EP-33 | 部分执行 | 生成与离线一致性检查复用 `distribution.generation_lock()`，在线抽取和快照复用 `vanilla_index` 和 `ai_surface` |
+| EP-34 | 部分执行 | `tools/ci/test_suite.py`、`pdx.covgate`、`tools/ci/test_summary.py` 和 `tests/test_engineering_enforcement.py` |
+| EP-35 | 仅评审 | 标准 Git 保护流程见贡献指南，托管实际状态见对应交付收据 |
+| EP-36 | 部分执行 | 工程交付基线定义证据类别，`tests/test_architecture_inventory.py` 核对当前 R2 预算为 `static_check` |
+| EP-37 | 部分执行 | `tests/test_full_information.py` 验证静态矩阵保持范围，工作清单记录 R/U `unknown` |
+| EP-38 | 部分执行 | `research_catalog.write_installation()` 与 `tests/test_research_catalog_cli.py` 核对安装独立分母 |
+| EP-39 | 部分执行 | `tests/test_decisions.py` 校验生产包排除研究资料，原件使用权限与公开材料由评审核对 |
+| EP-40 | 部分执行 | `tests/test_research_catalog_cli.py`、`tests/test_situated_native_report.py` 核对独立分母、逐项处置和拒绝条件 |
+| EP-41 | 部分执行 | `situated/native_catalog.py` 保持静态语义、作用域及引擎权限未知，`tests/test_information_catalog.py` 验证静态索引边界 |
+| EP-42 | 部分执行 | `tests/test_full_information.py`、`tests/test_native_boundary_closure.py` 核对主体、作用域及无依据权限 |
+| EP-43 | 部分执行 | 研究目录记录部分结果和诊断，`tests/test_information_catalog.py` 有读取及解析故障反例 |
+| EP-44 | 部分执行 | `pdx.performance.regressions()`、`tests/test_repository_upgrade.py` 检查同环境、输入身份和负载输出 |
+| EP-45 | 部分执行 | `tools/ci/mem_baseline.py`、`tools/ci/test_suite.py` 记录资源口径，`tests/test_test_suite.py` 拒绝不完整证据 |
+| EP-46 | 仅评审 | 授权、版本、渠道与目标身份见工程交付基线 |
+| EP-47 | 仅评审 | 标签、Release、安装和 Workshop 分别核对，见版本交付收据 |
+| EP-48 | 仅评审 | 工程交付基线规定阻塞事实和渠道证据 |
+| EP-49 | 部分执行 | `tests/test_standard_generation_boundary.py`、`tests/test_repository_upgrade.py` 覆盖本地事务与恢复边界 |
+| EP-50 | 部分执行 | `tests/test_current_release_contract.py`、`tests/test_standard_generation_boundary.py` 核对既有产物保留 |
+| EP-51 | 仅评审 | 工程交付基线按渠道阶段记录部分失败和恢复 |
+| EP-52 | 仅评审 | 版本交付索引登记固定标签，冻结引用可复核，主线保护见贡献指南 |
+| EP-53 | 部分执行 | `tests/test_engineering_contract.py` 检查活动文档指向当前规范、状态及交付 |
+| EP-54 | 部分执行 | `tests/test_docs_consistency.py` 检查导航目标存在，其余权威职责靠评审 |
+| EP-55 | 部分执行 | `v3 verify --from-snapshot`、`tests/test_docs_consistency.py` 校验登记断言 |
+| EP-56 | 仅评审 | 治理和产品验收分别记录，`tests/test_engineering_contract.py` 锁定条文并核对部分文档边界 |
+| EP-57 | 仅评审 | 真实失败、解析缺口、当前运行未知与范围局限按收据登记 |
+| EP-58 | 仅评审 | 以目标主线完整差异核对每个提交目的及候选内容 |
+| EP-59 | 部分执行 | 精确 `requires-python`、解释器门和三平台 CI，`tests/test_run_check.py` 验证范围 |
+| EP-60 | 部分执行 | `pyproject.toml`、CI 与类型工具采用单一 Python 基线 |
+| EP-61 | 部分执行 | `pyproject.toml` 中 Ruff `UP` 规则和当前版本目标参与 CI |
+| EP-62 | 部分执行 | `research_catalog`、`information_catalog` 和 `tests/test_research_catalog_cli.py` 覆盖目录、结构、脚本、诊断与格式边界 |
+| EP-63 | 仅评审 | 现有依赖和标准库的复用由变更评审，专有 PDX 解析以实际语义和既有接口衡量 |
 | MP-50 | 仅评审 | 当前主线尚未核实到覆盖本条完整边界的自动检查入口；专项证据另行登记 |
 | MP-55 | 强执行 | `src/pdx/distribution.py`、`tests/test_localization_languages.py` |
 | MP-56 | 部分执行 | `src/pdx/distribution.py` 在 `v3 package` 时校验语言头、键集合、占位符和路径；CI 没有打包步骤，未核实到覆盖这些拒绝路径的测试 |
