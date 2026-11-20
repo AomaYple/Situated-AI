@@ -1100,30 +1100,15 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
         for path in (config.GAME / "common" / family).glob("*.txt")
     }
     installed_version = config.game_version()["caligula_branch"].removeprefix("release/")
-    with version_contracts.select_version(installed_version):
-        derived = company_sectors.derive(inputs)
-    # Independent AST inventory of each exact installed release; these values
-    # are handwritten witnesses, never copied from derive() at assertion time.
+    version_contracts.require_current(installed_version)
+    derived = company_sectors.derive(inputs)
+    # Independent AST inventory of the current installed release.
     expected_counts = {
-        "1.14.5": {
-            "companies": 221,
-            "explicit_weight": 195,
-            "implicit_weight": 26,
-            "primary_buildings": 48,
-        },
-        "1.15.0": {
-            "companies": 231,
-            "explicit_weight": 205,
-            "implicit_weight": 26,
-            "primary_buildings": 49,
-        },
-        version_contracts.CURRENT_VERSION: {
-            "companies": 231,
-            "explicit_weight": 205,
-            "implicit_weight": 26,
-            "primary_buildings": 49,
-        },
-    }[installed_version]
+        "companies": 231,
+        "explicit_weight": 205,
+        "implicit_weight": 26,
+        "primary_buildings": 49,
+    }
     assert derived["counts"] == expected_counts
     for company, output, required in (
         ("company_lkab", "iron", "tools"),
@@ -1137,16 +1122,14 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
     assert derived["profiles"]["company_basic_steel"]["common_inputs"] == ["coal", "iron"]
     assert derived["profiles"]["company_basic_metalworks"]["common_inputs"] == []
     assert any(row["field"] == "company_basic_steel.ai_weight" for row in derived["rules"])
-    with version_contracts.select_version(installed_version):
-        initialized = company_sectors.initialized_fields(derived)
+    initialized = company_sectors.initialized_fields(derived)
     assert len(initialized) == 26
     assert any(row["field"] == "company_basic_gold_mining.ai_weight" for row in initialized)
     assert len({row["field"] for row in derived["rules"]}) == expected_counts["companies"]
     assert any(row["field"] == "company_de_beers.ai_weight" for row in derived["rules"])
     gaps = company_sectors.unsupported_facets(derived)
     assert gaps == []
-    with version_contracts.select_version(installed_version):
-        assert len(company_sectors.query_source_hashes(derived)) == 14
+    assert len(company_sectors.query_source_hashes(derived)) == 14
 
 
 @pytest.mark.parametrize(

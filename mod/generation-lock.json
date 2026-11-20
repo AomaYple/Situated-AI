@@ -171,7 +171,7 @@
     "src/pdx/vanilla_index.py": "80aab14c8b03e1ad57d3101615f6088a5b4a482dc210fe36d66bae5f2a3daf31",
     "src/pdx/verify.py": "d79a476a6b12c73e48f4a9992d1a2d9f6c76a8161eca6b9da4572f1c16cc5d7f",
     "src/pdx/verify_claims_1152.py": "0cb092bbd306666a255d82f776116930eba45bbd1fa3d135acb274e5d1583075",
-    "src/pdx/version_contracts.py": "0801ff976896b2b89e3daedc42f8cde28a47812596d09cacbb2ffbc4fa568f8b",
+    "src/pdx/version_contracts.py": "513a3e1b771f3b8161d9ef27d270d962db1834b49b62bb9304c8cf1a75280ccc",
     "mod/decisions/action_families.toml": "8dc294d5d2f148fe3a8efd1e4b32574bc434aa72aaf1ae604a814436c9799d7c",
     "mod/decisions/action_layers.toml": "f22cfe2b6eefc6f046323750e4d85e8f39415a72d2b754910d7821643ff362dc",
     "mod/decisions/action_network_1152.toml": "0bbff68dc80ee02dfc2ce0bb120bace5e591a74156a8696e1fa30b1c64195f6d",

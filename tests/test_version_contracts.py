@@ -11,7 +11,7 @@ from pdx.parser import parse_text
 
 def test_current_environment_is_read_at_call_time_and_cannot_be_overridden(monkeypatch):
     monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
-    assert version_contracts.active_version() == "1.15.2"
+    assert version_contracts.require_current() == "1.15.2"
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, "1.15.1")
     with pytest.raises(ValueError, match="当前仅维护"):
         version_contracts.contract("1.15.2")
@@ -25,7 +25,7 @@ def test_current_environment_is_read_at_call_time_and_cannot_be_overridden(monke
 def test_noncurrent_version_cannot_select_a_contract(monkeypatch, version):
     monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
     with pytest.raises(ValueError, match="当前仅维护"):
-        version_contracts.contract(version)
+        version_contracts.require_current(version)
     monkeypatch.setenv(version_contracts.ENVIRONMENT_VARIABLE, version)
     with pytest.raises(ValueError, match="当前仅维护"):
         version_contracts.active_version()

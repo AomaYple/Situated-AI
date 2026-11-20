@@ -39,18 +39,17 @@ if TYPE_CHECKING:
 def test_current_native_authority_recapture_reproduces_reviewed_bytes_twice(tmp_path, monkeypatch):
     """Exercise the explicit writer against live sources, keeping frozen evidence untouched."""
     installed_version = config.game_version()["caligula_branch"].removeprefix("release/")
-    with version_contracts.select_version(installed_version):
-        reviewed = decision_adapters.native_authority_path().read_bytes()
-        assert hashlib.sha256(reviewed).hexdigest() == decision_adapters.native_authority_sha256()
+    version_contracts.require_current(installed_version)
+    reviewed = decision_adapters.native_authority_path().read_bytes()
+    assert hashlib.sha256(reviewed).hexdigest() == decision_adapters.native_authority_sha256()
     destination = tmp_path / "authority" / "native-authority.json"
     monkeypatch.setattr(decision_adapters, "native_authority_path", lambda: destination)
-    with version_contracts.select_version(installed_version):
-        assert decision_adapters.write_native_authority_115(config.GAME) == destination
-        first = destination.read_bytes()
-        assert first == reviewed
-        assert decision_adapters.write_native_authority_115(config.GAME) == destination
-        assert destination.read_bytes() == first
-        assert decision_adapters.native_authority_115()["game_version"] == installed_version
+    assert decision_adapters.write_native_authority_115(config.GAME) == destination
+    first = destination.read_bytes()
+    assert first == reviewed
+    assert decision_adapters.write_native_authority_115(config.GAME) == destination
+    assert destination.read_bytes() == first
+    assert decision_adapters.native_authority_115()["game_version"] == installed_version
 
 
 @pytest.mark.integration
@@ -68,10 +67,8 @@ def test_current_native_authority_recapture_rejects_existing_drift_without_overw
     preserved_file.write_bytes(b"existing evidence must survive")
     before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
     monkeypatch.setattr(decision_adapters, "native_authority_path", lambda: destination)
-    with (
-        version_contracts.select_version(version_contracts.CURRENT_VERSION),
-        pytest.raises(ValueError, match="frozen declaration drift"),
-    ):
+    version_contracts.require_current(version_contracts.CURRENT_VERSION)
+    with pytest.raises(ValueError, match="frozen declaration drift"):
         decision_adapters.write_native_authority_115(config.GAME)
     assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == before
 

@@ -5,16 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from .model import Block, Scalar
 from .textio import normalized_text
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 ENVIRONMENT_VARIABLE = "V3_CONTRACT_PROFILE"
 CURRENT_VERSION = "1.15.2"
@@ -173,13 +168,6 @@ def research_path(category: str, filename: str, version: str | None = None) -> P
         / active_version(version)
         / relative
     )
-
-
-@contextmanager
-def select_version(version: str) -> Iterator[None]:
-    """Assert the current release at the start of a bounded operation."""
-    require_current(version)
-    yield
 
 
 def journal_completion(journal: Block, *, effect: bool = False) -> Block:

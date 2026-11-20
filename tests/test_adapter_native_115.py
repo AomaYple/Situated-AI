@@ -143,11 +143,11 @@ def test_native_changes_keep_journal_aware_blocks_and_only_initialize_actual_mis
 
 @pytest.mark.integration
 def test_new_hyphenated_company_retains_native_identity_and_receives_sector_program():
-    with version_contracts.select_version(
+    version_contracts.require_current(
         config.game_version()["caligula_branch"].removeprefix("release/")
-    ):
-        data = company_sectors.verify_game(config.GAME)
-        adapters = decision_adapters.load()
+    )
+    data = company_sectors.verify_game(config.GAME)
+    adapters = decision_adapters.load()
     assert data["counts"] == {
         "companies": 231,
         "explicit_weight": 205,
@@ -185,26 +185,26 @@ def test_native_authority_cannot_bless_an_empty_numeric_block():
 
 @pytest.mark.integration
 def test_changed_default_cannot_hide_behind_an_updated_source_hash():
-    with version_contracts.select_version(
+    version_contracts.require_current(
         config.game_version()["caligula_branch"].removeprefix("release/")
-    ):
-        adapters = decision_adapters.load()
-        texts = decision_adapters.read_inputs(adapters)
-        source = "common/defines/00_ai.txt"
-        native = texts[source]
-        texts[source], substitutions = re.subn(
-            r"(PRODUCTION_BUILDING_BASE_VALUE\s*=\s*)1000", r"\g<1>1001", native, count=1
-        )
-        assert substitutions == 1
-        # Rehashing a source declaration is insufficient: exact defaults and
-        # parent ASTs remain independently pinned in the authority artifact.
-        from dataclasses import replace
+    )
+    adapters = decision_adapters.load()
+    texts = decision_adapters.read_inputs(adapters)
+    source = "common/defines/00_ai.txt"
+    native = texts[source]
+    texts[source], substitutions = re.subn(
+        r"(PRODUCTION_BUILDING_BASE_VALUE\s*=\s*)1000", r"\g<1>1001", native, count=1
+    )
+    assert substitutions == 1
+    # Rehashing a source declaration is insufficient: exact defaults and
+    # parent ASTs remain independently pinned in the authority artifact.
+    from dataclasses import replace
 
-        sources = dict(adapters.sources)
-        sources[source] = hashlib.sha256(texts[source].encode()).hexdigest()
-        changed = replace(adapters, sources=tuple(sorted(sources.items())))
-        with pytest.raises(ValueError, match="native parent/field/default AST drift"):
-            decision_adapters.read_inputs(changed, texts=texts)
+    sources = dict(adapters.sources)
+    sources[source] = hashlib.sha256(texts[source].encode()).hexdigest()
+    changed = replace(adapters, sources=tuple(sorted(sources.items())))
+    with pytest.raises(ValueError, match="native parent/field/default AST drift"):
+        decision_adapters.read_inputs(changed, texts=texts)
 
 
 @pytest.mark.unit
@@ -251,14 +251,14 @@ def test_current_state_witness_retains_optional_owner_and_victim_memory():
     )
     texts = {source: (config.GAME / source).read_text(encoding="utf-8-sig") for source in sources}
     assert "owner ?=" in texts[sources[0]]
-    with version_contracts.select_version(
+    version_contracts.require_current(
         config.game_version()["caligula_branch"].removeprefix("release/")
-    ):
-        references = decision_interfaces.verify_state_devastation_sources(texts)
-        assert len(references) == 3
-        changed = {**texts, sources[0]: texts[sources[0]].replace("owner ?=", "owner =")}
-        with pytest.raises(ValueError, match="来源漂移"):
-            decision_interfaces.verify_state_devastation_sources(changed)
+    )
+    references = decision_interfaces.verify_state_devastation_sources(texts)
+    assert len(references) == 3
+    changed = {**texts, sources[0]: texts[sources[0]].replace("owner ?=", "owner =")}
+    with pytest.raises(ValueError, match="来源漂移"):
+        decision_interfaces.verify_state_devastation_sources(changed)
 
 
 @pytest.mark.unit
