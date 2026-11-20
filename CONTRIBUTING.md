@@ -87,10 +87,10 @@ python -m pdx.cli analyze --raw-root <原件目录> --epoch <epoch摘要> --outp
 
 ### 查询研究目录
 
-将已生成的目录作为 `research-query` 的第一个参数。命令以只读方式验证目录身份、文件摘要和索引合同，将结果写为 JSON。下面的命令查看两个来源的格式元数据及结构位置，同时查询 `ig_industrialists` 的定义和引用候选，并包含逐项覆盖报告。
+将已生成的目录作为 `research-query` 的第一个参数。命令以只读方式验证目录身份、文件摘要和索引合同，将结果写为 JSON。下面的命令查看两个来源的格式元数据及结构位置，并包含逐项覆盖报告。
 
 ```text
-python -m pdx.cli research-query "tools/out/installation-research" --source game/common/ai_strategies/00_default_strategy.txt --source game/map_data/nodes.dat --source-details --coverage-report --symbol ig_industrialists --limit 25
+python -m pdx.cli research-query "tools/out/installation-research" --source game/common/ai_strategies/00_default_strategy.txt --source game/map_data/nodes.dat --source-details --coverage-report --limit 25
 ```
 
 - `--source` 使用安装根相对路径和正斜杠，可重复指定。`--source-details` 需要至少一个来源。`--key` 按精确结构键查询，结构位置以末条记录的 ID 通过 `--after` 续页。
