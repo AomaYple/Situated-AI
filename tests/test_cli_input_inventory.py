@@ -64,11 +64,11 @@ def test_input_inventory_reports_only_metadata_and_checks_version_source(
     (tmp_path / "empty").mkdir()
 
     expected_version = version_contracts.CURRENT_VERSION
-    contract = version_contracts.VERSION_SPECS[expected_version]
+    contract = version_contracts.CURRENT_CONTRACT
     expected_anchor = sha256(anchor.read_bytes() if matching else b"changed").hexdigest()
-    monkeypatch.setitem(
-        version_contracts.VERSION_SPECS,
-        expected_version,
+    monkeypatch.setattr(
+        version_contracts,
+        "CURRENT_CONTRACT",
         replace(contract, default_strategy_sha256=expected_anchor),
     )
     monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)
@@ -162,9 +162,9 @@ def test_input_inventory_binds_preflight_identity_to_the_scan(
     anchor.write_bytes(b"fixture_strategy = {}")
     _install_identity(root, monkeypatch)
     baseline = version_contracts.contract(version_contracts.CURRENT_VERSION)
-    monkeypatch.setitem(
-        version_contracts.VERSION_SPECS,
-        baseline.version,
+    monkeypatch.setattr(
+        version_contracts,
+        "CURRENT_CONTRACT",
         replace(baseline, default_strategy_sha256=sha256(anchor.read_bytes()).hexdigest()),
     )
     monkeypatch.delenv(version_contracts.ENVIRONMENT_VARIABLE, raising=False)

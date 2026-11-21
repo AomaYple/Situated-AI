@@ -7,7 +7,7 @@ import hashlib
 
 import pytest
 
-from pdx import decision_rules, version_contracts
+from pdx import decision_rules
 
 
 def _strategy_data():
@@ -273,12 +273,6 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
         "treaty_category_scores.economy",
     )
     school_field = "institution_scores.institution_schools"
-    has_r2_school_writer = version_contracts.active_version() in {
-        "1.15.1",
-        version_contracts.CURRENT_VERSION,
-    }
-    if not has_r2_school_writer:
-        fields += (school_field,)
     result = decision_rules.evaluate(policy, values, is_ai=True)
     # The current school consumer has one R2 additive writer. The retired
     # legacy multipliers must not survive in this rule-only evaluator.

@@ -1287,9 +1287,11 @@ def test_release_package_is_deterministic(standard_release_package, tmp_path):
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
-def test_release_sources_and_localization_match_actual_package(standard_release_package):
+def test_release_sources_and_localization_match_actual_package(
+    standard_release_package, engineering_release_inputs
+):
     path = standard_release_package
-    _, _, engineering_files = distribution.package_inputs(include_engineering_metadata=True)
+    _, _, engineering_files = engineering_release_inputs
     assert all(
         not line.endswith((" ", "\t"))
         for name, text in engineering_files.items()

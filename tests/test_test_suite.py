@@ -589,6 +589,31 @@ def acceptance_scheduler():
     return AcceptanceScheduling(config, None)
 
 
+def test_acceptance_scheduler_shares_release_inputs_without_grouping_negative_cases(
+    acceptance_scheduler,
+):
+    scheduler = acceptance_scheduler
+    assert (
+        scheduler._split_scope(
+            "tests/test_decision_modules.py::test_正式包启用模块与生命周期契约一致"
+        )
+        == scheduler._split_scope(
+            "tests/test_strategic_package.py::test_release_is_the_public_full_candidate"
+        )
+        == scheduler._split_scope("tests/test_decisions.py::test_生产ZIP清单携带实际包契约和源指纹")
+        == scheduler._split_scope(
+            "tests/test_full_information.py::test_release_sources_and_localization_match_actual_package"
+        )
+    )
+    assert (
+        scheduler._split_scope(
+            "tests/test_strategic_package.py::"
+            "test_release_rejects_localization_fallback_instead_of_erasing_it[fallback_languages]"
+        )
+        == "tests/test_strategic_package.py"
+    )
+
+
 def test_acceptance_scheduler_releases_replacement_with_one_item(acceptance_scheduler):
     scheduler = acceptance_scheduler
     node = Mock(shutting_down=False)

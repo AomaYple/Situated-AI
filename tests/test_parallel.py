@@ -15,6 +15,7 @@ def _isolate_worker_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     """外部 CI worker 配置不能污染预算与覆盖优先级的单元测试。"""
     monkeypatch.delenv("SITAI_XDIST_WORKERS", raising=False)
     monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.setattr(parallel.psutil.Process, "cpu_affinity", lambda _self: [], raising=False)
 
 
 def test_内存不足时至少保留一个worker() -> None:
@@ -25,6 +26,37 @@ def test_auto同时受可用内存和cpu限制() -> None:
     # (6144 - 2048) / 1536 = 2，CPU 还有余量。
     assert parallel.auto_worker_count(cpu=16, available=6144) == 2
     assert parallel.auto_worker_count(cpu=2, available=32_768) == 2
+
+
+def test_process_cpu_affinity限制自动worker数(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(parallel.os, "process_cpu_count", lambda: 16)
+    monkeypatch.setattr(parallel.psutil.Process, "cpu_affinity", lambda _self: [0, 1])
+    monkeypatch.setattr(parallel.psutil, "cpu_count", lambda logical=True: 16 if logical else 8)
+    assert parallel.auto_worker_count(available=32_768) == 2
+
+
+@pytest.mark.parametrize("error", [parallel.psutil.AccessDenied(1), NotImplementedError()])
+def test_affinity查询不可用时使用标准库进程数(monkeypatch: pytest.MonkeyPatch, error: Exception):
+    def unavailable(_self):
+        raise error
+
+    monkeypatch.setattr(parallel.os, "process_cpu_count", lambda: 2)
+    monkeypatch.setattr(parallel.psutil.Process, "cpu_affinity", unavailable)
+    monkeypatch.setattr(parallel.psutil, "cpu_count", lambda logical=True: 16 if logical else 8)
+    assert parallel.cpu_workers() == 2
+
+
+def test_process_cpu_count未知时回退物理核心启发(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(parallel.os, "process_cpu_count", lambda: None, raising=False)
+    monkeypatch.setattr(parallel.psutil, "cpu_count", lambda logical=True: 16 if logical else 6)
+    assert parallel.cpu_workers() == 6
+
+
+def test_affinity方法缺失时使用标准库进程数(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delattr(parallel.psutil.Process, "cpu_affinity")
+    monkeypatch.setattr(parallel.os, "process_cpu_count", lambda: 2)
+    monkeypatch.setattr(parallel.psutil, "cpu_count", lambda logical=True: 16 if logical else 8)
+    assert parallel.auto_worker_count(available=32_768) == 2
 
 
 def test_显式worker数优先于预算(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -69,3 +101,21 @@ def test_psutil权限异常时资源查询安全回退(monkeypatch: pytest.Monke
             lambda: (_ for _ in ()).throw(parallel.psutil.AccessDenied(1)),
         )
         assert reader() == 0
+
+
+def test_psutil_cpu查询失败时回退系统逻辑cpu数(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(parallel.os, "process_cpu_count", lambda: None, raising=False)
+    monkeypatch.setattr(
+        parallel.psutil,
+        "cpu_count",
+        lambda **_kwargs: (_ for _ in ()).throw(parallel.psutil.AccessDenied(1)),
+    )
+    monkeypatch.setattr(parallel.os, "cpu_count", lambda: 4)
+    assert parallel.cpu_workers() == 4
+
+
+def test所有cpu计数均未知时至少返回一个worker(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(parallel.os, "process_cpu_count", lambda: None, raising=False)
+    monkeypatch.setattr(parallel.psutil, "cpu_count", lambda **_kwargs: None)
+    monkeypatch.setattr(parallel.os, "cpu_count", lambda: None)
+    assert parallel.cpu_workers() == 1

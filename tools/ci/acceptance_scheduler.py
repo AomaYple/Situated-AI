@@ -2,24 +2,35 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
-from xdist.scheduler import LoadFileScheduling
+from xdist.scheduler import LoadFileScheduling  # type: ignore[import-untyped]
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from xdist.workermanage import WorkerController
+    from xdist.workermanage import WorkerController  # type: ignore[import-untyped]
+
+
+_ENGINEERING_RELEASE_READERS = {
+    "tests/test_decision_modules.py::test_正式包启用模块与生命周期契约一致",
+    "tests/test_decision_modules.py::test_正式候选生成所有脚本和全语言无回退",
+    "tests/test_strategic_package.py::test_release_freezes_shared_strategy_and_actual_consumers",
+    "tests/test_strategic_package.py::test_release_is_the_public_full_candidate",
+}
 
 
 class AcceptanceScheduling(LoadFileScheduling):
     def _split_scope(self, nodeid: str) -> str:
         module = nodeid.partition("::")[0]
-        if module in {"tests/test_decisions.py", "tests/test_full_information.py"}:
-            # These two modules consume the session-scoped standard release ZIP.
+        if nodeid in _ENGINEERING_RELEASE_READERS or module in {
+            "tests/test_decisions.py",
+            "tests/test_full_information.py",
+        }:
+            # Keep standard release ZIP and engineering input readers together.
             return "standard_release_package"
-        return super()._split_scope(nodeid)
+        return cast("str", super()._split_scope(nodeid))
 
     def add_node_collection(self, node: WorkerController, collection: Sequence[str]) -> None:
         super().add_node_collection(node, collection)

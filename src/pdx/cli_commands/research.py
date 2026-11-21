@@ -7,7 +7,7 @@ import sqlite3
 import time
 from dataclasses import asdict
 from pathlib import Path  # noqa: TC003 - Typer resolves annotations at runtime.
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, NoReturn
 
 import typer
 from rich.markup import escape
@@ -216,17 +216,22 @@ def research_query_cmd(
     ] = False,
 ) -> None:
     """核对完整研究目录，返回覆盖统计和所选位置的 JSON。"""
+
+    def fail_query(message: str, code: int = EXIT_USAGE) -> NoReturn:
+        typer.echo(message, err=True)
+        raise typer.Exit(code)
+
     if source_details and not source:
-        _fail("--source-details 须提供 --source")
+        fail_query("--source-details 须提供 --source")
     if script_references and not source:
-        _fail("--script-references 须提供 --source")
+        fail_query("--script-references 须提供 --source")
     if reference_after is not None:
         if not (symbol or script_references):
-            _fail("--reference-after 须提供 --symbol 或 --script-references")
+            fail_query("--reference-after 须提供 --symbol 或 --script-references")
         try:
             symbol_cursor = script_research_index.reference_cursor(reference_after)
         except ValueError as exc:
-            _fail(str(exc))
+            fail_query(str(exc))
     else:
         symbol_cursor = ("", -1)
     try:
@@ -289,7 +294,7 @@ def research_query_cmd(
                         ],
                     }
     except (OSError, ValueError, sqlite3.Error) as exc:
-        _fail(f"研究目录读取失败：{exc}", EXIT_FAILED)
+        fail_query(f"研究目录读取失败：{exc}", EXIT_FAILED)
     typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
 
 

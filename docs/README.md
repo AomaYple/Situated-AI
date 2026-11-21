@@ -24,7 +24,7 @@
 | 历史 A2 架构检查与逐项证据 | [执行文档索引](design/exec/README.md#工程与架构收据) |
 | 当前交付与历史版本证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.3.0 交付结果](design/exec/3.3.0-交付结果.md)；历史内核与分层收据由执行索引导航 |
 | 创意工坊文案（Steam BBCode，发布前核对固定包） | [全部 11 种语言](publishing/README.md) |
-| 本机安装盘点与原件研究 | [贡献指南](../CONTRIBUTING.md#完整安装研究) |
+| 本机安装盘点与原件研究 | [贡献指南](../CONTRIBUTING.md#完整安装研究)。旧版官方文档镜像和 1.15.0 AI 分类日志按原相对路径归档在仓库旁的 `Situated AI local archive/20261121-legacy-research/`。归档内的 `archive-manifest.json` 记录每个原件的路径、字节数和 SHA-256 |
 | 工具与诊断入口 | [工具手册](../tools/README.md) |
 | Victoria 3 当前知识库 | [Victoria 3 1.15.2 知识库](victoria3-modding-1.15.2/README.md) |
 | Victoria 3 历史知识库原件 | [1.14.5](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/victoria3-modding/README.md)、[1.15.0](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/victoria3-modding-1.15.0/README.md)、[1.15.1](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/victoria3-modding-1.15.1/README.md) |
