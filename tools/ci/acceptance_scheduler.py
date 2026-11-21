@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
-from xdist.scheduler import LoadFileScheduling
+from xdist.scheduler import LoadFileScheduling  # type: ignore[import-untyped]
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from xdist.workermanage import WorkerController
+    from xdist.workermanage import WorkerController  # type: ignore[import-untyped]
 
 
 _ENGINEERING_RELEASE_READERS = {
@@ -30,7 +30,7 @@ class AcceptanceScheduling(LoadFileScheduling):
         }:
             # Keep standard release ZIP and engineering input readers together.
             return "standard_release_package"
-        return super()._split_scope(nodeid)
+        return cast("str", super()._split_scope(nodeid))
 
     def add_node_collection(self, node: WorkerController, collection: Sequence[str]) -> None:
         super().add_node_collection(node, collection)
