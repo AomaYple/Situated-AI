@@ -351,9 +351,9 @@ def live_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
     monkeypatch.setattr(config, "ROOT", root)
-    monkeypatch.setitem(
-        version_contracts.VERSION_SPECS,
-        version,
+    monkeypatch.setattr(
+        version_contracts,
+        "CURRENT_CONTRACT",
         replace(
             version_contracts.contract(version),
             default_strategy_sha256=_sha(sources[_STRATEGY_ANCHOR]),
@@ -465,7 +465,16 @@ def test_research_query_rejects_marker_catalog_mismatch(
     marker_path.write_text(json.dumps(marker), encoding="utf-8")
     result = CliRunner().invoke(cli.app, query)
     assert result.exit_code == 1
-    assert "epoch" in result.output
+    assert result.stdout == ""
+    assert "epoch" in result.stderr
+
+
+def test_research_query_writes_usage_errors_to_stderr(tmp_path: Path) -> None:
+    result = CliRunner().invoke(cli.app, ["research-query", str(tmp_path), "--source-details"])
+
+    assert result.exit_code == cli.EXIT_USAGE
+    assert result.stdout == ""
+    assert "--source-details 须提供 --source" in result.stderr
 
 
 def test_research_query_reports_map_and_shader_structure_without_payload(

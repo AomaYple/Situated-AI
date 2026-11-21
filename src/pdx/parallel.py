@@ -32,12 +32,35 @@ def _positive_env(name: str) -> int | None:
 
 
 def cpu_workers() -> int:
-    """返回适合作为上限的 CPU worker 数。"""
+    """用当前进程可用的逻辑 CPU 数约束物理核心启发值。"""
     try:
-        count = psutil.cpu_count(logical=False) or psutil.cpu_count()
+        process_count = os.process_cpu_count()
+    except OSError:  # pragma: no cover - 系统拒绝查询
+        process_count = None
+
+    # Windows 上标准库可能返回宿主逻辑 CPU 数，仍需核对进程亲和性。
+    try:
+        affinity_count = len(psutil.Process().cpu_affinity())
+    except AttributeError, NotImplementedError, OSError, psutil.Error:
+        affinity_count = 0
+    if affinity_count:
+        process_count = min(process_count, affinity_count) if process_count else affinity_count
+
+    try:
+        physical_count = psutil.cpu_count(logical=False)
     except ImportError, OSError, psutil.Error:  # pragma: no cover - 系统拒绝查询
-        count = os.cpu_count()
-    return max(1, count or 1)
+        physical_count = None
+
+    if physical_count and process_count:
+        return min(physical_count, process_count)
+    if count := physical_count or process_count:
+        return count
+
+    try:
+        count = psutil.cpu_count()
+    except ImportError, OSError, psutil.Error:  # pragma: no cover - 系统拒绝查询
+        count = None
+    return count or os.cpu_count() or 1
 
 
 def available_mib() -> int:

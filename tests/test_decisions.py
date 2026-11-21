@@ -502,7 +502,7 @@ def test_生产ZIP不携带历史档案(standard_release_package):
 
 
 @pytest.mark.integration
-def test_生产ZIP清单携带实际包契约和源指纹(standard_release_package):
+def test_生产ZIP清单携带实际包契约和源指纹(standard_release_package, engineering_release_inputs):
     import zipfile
 
     from pdx import distribution
@@ -510,7 +510,7 @@ def test_生产ZIP清单携带实际包契约和源指纹(standard_release_packa
     with zipfile.ZipFile(standard_release_package) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         metadata = json.loads(archive.read(".metadata/metadata.json"))
-    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+    _, _, files = engineering_release_inputs
     source_metadata = json.loads(files[".metadata/metadata.json"])
     assert manifest["schema"] == 2
     assert manifest["contract"]["product_version"] == metadata["version"]
@@ -621,9 +621,9 @@ def test_关闭财政仍验证共享策略底本(tmp_path, monkeypatch, reform, 
     else:
         pinned_raw, pinned_text = raw, b"# another strategy fixture\n"
         expected = f"当前原版默认策略归一化摘要漂移：{strategy}"
-    monkeypatch.setitem(
-        version_contracts.VERSION_SPECS,
-        version_contracts.CURRENT_VERSION,
+    monkeypatch.setattr(
+        version_contracts,
+        "CURRENT_CONTRACT",
         replace(
             version_contracts.contract(),
             default_strategy_sha256=hashlib.sha256(pinned_raw).hexdigest(),

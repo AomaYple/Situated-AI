@@ -21,16 +21,20 @@ import os
 import shutil
 import tempfile
 import uuid
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from functools import lru_cache
 from pathlib import Path
-from typing import overload
+from types import MappingProxyType
+from typing import TYPE_CHECKING, overload
 
 import pytest
 
 from pdx import analyze, parallel, version_contracts
 from pdx import config as pdx_config
 from pdx.scan import walk_files
+
+if TYPE_CHECKING:
+    from pdx.decisions import Extensions, Policy
 
 
 def configure_current_identity(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -213,6 +217,15 @@ def pytest_collection_modifyitems(config, items):
 
 
 # ── 真实语料 ────────────────────────────────────────────────
+@pytest.fixture(scope="session")
+def engineering_release_inputs() -> tuple[Policy, Extensions, Mapping[str, str | bytes]]:
+    """Build the current package inputs once for read-only checks on this worker."""
+    from pdx import distribution
+
+    policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
+    return policy, extensions, MappingProxyType(files)
+
+
 @pytest.fixture(scope="session")
 def standard_release_package(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Share one complete, read-only standard package per pytest worker."""

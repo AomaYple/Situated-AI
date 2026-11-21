@@ -166,9 +166,9 @@ def test_current_default_strategy_accepts_only_pinned_raw_bytes(
     raw = b"\xef\xbb\xbf" + normalized.replace(b"\n", b"\r\n")
     original.write_bytes(raw)
     current = version_contracts.contract()
-    monkeypatch.setitem(
-        version_contracts.VERSION_SPECS,
-        current.version,
+    monkeypatch.setattr(
+        version_contracts,
+        "CURRENT_CONTRACT",
         replace(
             current,
             default_strategy_sha256=sha256(raw).hexdigest(),

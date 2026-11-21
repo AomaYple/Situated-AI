@@ -46,8 +46,7 @@ CURRENT_CONTRACT = VersionContract(
     "7fa4e018a796b1f1c04275e7fbc712ac39a4376e86db311f31079b12a8337760",
     "42088c06f326a6fd1f01ed120928c8888d29b776c9bacb9795c63f9c390d7d40",
 )
-VERSION_SPECS = {CURRENT_VERSION: CURRENT_CONTRACT}
-SUPPORTED_VERSIONS = frozenset(VERSION_SPECS)
+SUPPORTED_VERSIONS = frozenset({CURRENT_VERSION})
 
 
 def require_current(version: str | None = None) -> str:
@@ -65,7 +64,8 @@ def active_version(version: str | None = None) -> str:
 
 def contract(version: str | None = None) -> VersionContract:
     """Return the reviewed contract for the current release."""
-    return VERSION_SPECS[require_current(version)]
+    require_current(version)
+    return CURRENT_CONTRACT
 
 
 @dataclass(frozen=True, slots=True)
