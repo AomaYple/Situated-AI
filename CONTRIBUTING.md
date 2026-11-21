@@ -162,6 +162,60 @@ python -m pdx.native_authority_capture --profile 1.15.2 --installation <安装�
 入口核对实际安装身份，只向无链接的 `tools/out/` 写入候选；已有文件相同则幂等，不同则拒绝，不能自动改写历史或当前受控证据。
 retention 候选仅复核原版保留字段，不含学校等独立政策迁移收据，不是完整迁移合同；所有候选均只提供原版静态证据，运行行为仍为 `unknown`。
 
+## 一键发布
+
+在完成工程验收并合并后，从干净的 `main` 工作区运行 `v3 publish`。使用当前生产基线 **Victoria 3 1.15.2**
+和 **CPython 3.15.2**，将 `V3_ROOT` 指向锁定的游戏安装。版本默认为当前生产声明，正式标签默认为
+`v<version>`。执行时显式传入与 HEAD 相同的 40 位提交 SHA、持久收据目录和至少一个渠道。
+
+先运行不带 `--apply` 的命令。计划以只读方式核对各渠道，输出源、候选包和渠道状态的 JSON。
+计划模式下的源提交默认为 HEAD。显式选择渠道且源工作区符合条件时，计划会读取同一发布身份的已有收据和冻结包，
+或在系统临时目录构建和校验包。省略 `--channel` 可查看三个渠道的前置条件。重复指定 `--channel` 可选任意组合。
+仅选择本地或 Workshop 渠道时，使用显式 `--github-repo` 或 GitHub `origin` 公开回查源提交是否已进入远端 `main`。
+
+| 渠道 | 参数与权限 | 执行和独立回读 |
+|---|---|---|
+| `github` | `--github-repo OWNER/REPO`。在 `github.com` 使用已认证的 GitHub CLI（`gh`）。凭据须能读取目标公开仓库、创建正式标签、上传附件并发布 Release，远端 `main` 须包含源提交。 | 核对标签提交，上传标准 ZIP 和 `.zip.sha256` 到草稿，下载附件核对原始字节，再公开 Release 并复核状态和附件。 |
+| `local` | `--local-root` 指定已存在且可写的用户 `mod` 根目录的绝对路径，目标是其下的 `Situated AI`。传入 `--local-previous-sha256` 确认该目标当前目录树摘要，目标不存在时传 `absent`。 | 将已确认的旧树备份到收据目录下的 `local-previous`，校验后切换安装目录并回读全树。记录可读取的 launcher 启用状态，launcher、playset 与订阅选择由用户管理。 |
+| `workshop` | `--workshop-item` 和 `--workshop-owner` 指定既有创意工坊条目及其 SteamID64 所有者。用该账号登录 Steam，以 `--workshop-helper` 指定 Windows Steamworks 辅助程序的绝对路径。 | 从同一标准包更新内容与封面，发布各语言的描述。回读和运行环境见[创意工坊发布材料](docs/publishing/README.md)。 |
+
+第一次核对本地目标时，可在计划中只给 `--channel local --local-root <绝对路径>`。此时计划会要求确认并以非零状态退出。
+核对 `preflight.channels.local.target` 后，将该渠道的 `observed_tree_sha256` 作为 `--local-previous-sha256`。
+该摘要覆盖目录路径和文件字节。首次执行使用新的或空的专用收据目录，父目录须已存在。收据目录与用户 `mod` 根目录互不包含。
+
+本地切换使用操作系统的非覆盖式目录重命名。目标文件系统须支持此操作，切换过程中出现新的目标目录时发布会停止。
+目录回读后，命令先写入 `activated` 阶段，再清理切换暂存目录。此后检测到安装目录变更时，重试会报告冲突。
+
+以下 PowerShell 示例为新装时选择全部三个渠道。将示例值换成实际的发布身份及路径。更新已有本地安装时替换 `absent`。
+
+```powershell
+$publishArgs = @(
+    '--version', '<正式版本>', '--tag', '<v正式版本>', '--commit', '<40 位源提交 SHA>',
+    '--publication-dir', 'tools/out/publication-<正式版本>',
+    '--channel', 'github', '--github-repo', 'AomaYple/Situated-AI',
+    '--channel', 'local', '--local-root', '<用户 mod 根目录绝对路径>',
+    '--local-previous-sha256', 'absent',
+    '--channel', 'workshop', '--workshop-item', '<条目 ID>', '--workshop-owner', '<所有者 SteamID64>',
+    '--workshop-helper', '<Steamworks 辅助程序绝对路径>'
+)
+.venv/Scripts/python.exe -B -X utf8 -m pdx.cli publish @publishArgs
+# 确认计划身份和各渠道状态后执行
+.venv/Scripts/python.exe -B -X utf8 -m pdx.cli publish @publishArgs --apply
+```
+
+`--apply` 在持久目录冻结并校验同一份标准 ZIP 和 SHA-256 校验文件。所有所选渠道均通过预检后，依次执行所选的
+GitHub、Workshop 和本地渠道。
+`publication.json` 绑定发布身份和包摘要，记录各渠道的阶段和回读结果。`verified` 表示所有所选渠道均已回读通过。
+收到 `blocked` 或 `partial` 时，查看错误及各渠道阶段，确认已经执行的操作。
+
+失败或响应丢失时，保留收据、冻结包、备份和暂存目录，先根据已记录阶段核对远端和本地实际状态。修复环境或权限后，
+使用同一组参数和收据目录重试。命令复核目标现状，复用可验证的已完成步骤。遇到异字节附件、标签指向不同提交
+或已验证本地安装发生变化时停止。各渠道独立恢复，已完成的 GitHub 或 Workshop 更新仍在线上。
+GitHub 上传中断后若诊断显示附件状态为 `starter`，可按返回的 Release ID 和附件 ID 核实并在 GitHub 移除该未完成附件，
+再用同一收据续跑。
+在各自渠道确认完成后，将实际发布链接、包 SHA-256 和回读证据登记到
+[版本交付索引](docs/design/exec/版本交付-结果.md)。历史正式版本仍通过对应不可移动标签、原版 ZIP 与 SHA-256 附件及原始收据追溯。
+
 ## 验证
 
 按风险选择检查。阶段开发运行改动域测试；冻结最终候选后运行一次完整回归。静态收口至少运行：

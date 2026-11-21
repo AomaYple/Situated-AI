@@ -9,6 +9,7 @@ from pdx.cli_commands import (
     engine_evidence,
     game_data,
     maintenance,
+    publishing,
     release,
     research,
     situated,
@@ -94,6 +95,7 @@ app.command("ai-surface")(game_data.ai_surface_cmd)
 app.command("political-surface")(game_data.political_surface_cmd)
 app.command("modgen")(release.modgen_cmd)
 app.command("package")(release.package_cmd)
+app.command("publish")(publishing.publish_cmd)
 app.command("citations")(documentation.citations_cmd)
 app.command("modguard")(release.modguard_cmd)
 app.command("decision-audit")(release.decision_audit_cmd)

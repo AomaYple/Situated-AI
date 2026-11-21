@@ -1,7 +1,8 @@
 # 创意工坊发布材料
 
 本目录保存可直接粘贴到 Steam 创意工坊描述栏的 BBCode 正文。各语种统一使用目标、内容、兼容性和支持语言四部分，
-面向玩家介绍实际功能、使用方式和兼容提醒。只维护仓库材料，不自动上传工坊二进制或修改网页。
+面向玩家介绍实际功能、使用方式和兼容提醒。`v3 publish --channel workshop` 从这里读取各语言的正文，
+用同一份正式 Mod 包上传内容和封面。完整参数、发布计划和收据见[贡献与维护规范](../../CONTRIBUTING.md#一键发布)。
 
 正文不放工程检查、生成流程、包合同、内部术语、验收分工或要求玩家完成验证的说明；这些内容留在贡献指南、
 工程基线和交付收据中。译文保持功能范围一致，不虚构效果或作未经证实的效果保证。
@@ -22,3 +23,26 @@
 
 游戏内本地化由生产生成器维护，工坊正文是独立发布材料。语言分母来自锁定原版 `localization/`，与
 `pdx.localization_languages.DEFAULT_LANGUAGES` 一致。正文都附同一 GitHub 仓库链接。
+
+## Steamworks 辅助程序
+
+在 Windows x64 上从 Valve 获取 Steamworks SDK 1.53a（`ISteamUGC` 接口版本 `016`）。[Steamworks SDK](https://partner.steamgames.com/doc/sdk)
+
+打开 Visual Studio 的 x64 Developer PowerShell，从仓库根运行构建脚本，分别传入包含 `isteamugc.h` 的 SDK 目录
+和 Victoria 3 安装根。脚本使用游戏 `binaries/` 中的 `steam_api64.lib` 和 Valve 签名的 `steam_api64.dll`。
+
+```powershell
+./tools/steam_workshop/build.ps1 -SdkIncludeDir '<Steamworks SDK 根目录>/public/steam' -GameRoot '<Victoria 3 安装根>'
+```
+
+默认输出为 `tools/out/steam-workshop-helper/situated-ai-steam-workshop.exe`，运行库保存在同一目录。
+可用 `-OutputDir` 选择其他目录。运行 `v3 publish` 时用 `--workshop-helper` 指定辅助程序的绝对路径。
+
+启动 Steam 客户端，以拥有该条目的账号登录。首次建条目和接受 Workshop 协议在 Steam 中完成。
+发布前核对条目 ID、所有者 SteamID64、Victoria 3 App ID `529340` 和英文标题 `Situated AI`。
+发布按表中的 11 种 Steam 语言分别更新描述，并回读文本及绑定 ZIP 和 manifest 的指纹标记。上传后的独立回读包含两项
+字节检查。工具重新下载 Steam CDN 主预览，比对正式包封面的 SHA-256。工具再读取 Steamworks 确认的当前订阅安装，
+将其中的目录和文件逐项与正式包载荷比对，包括 manifest 和包内封面。
+
+如果 Steam 尚未提供当前订阅安装，Workshop 收据保留 `uploaded`，整轮发布保留 `partial`。订阅状态由操作者管理。
+在 Steam 客户端完成订阅或等待该条目更新完成后，使用同样的发布参数和收据目录重跑。命令先核对线上状态，再补完缺失的验证。
