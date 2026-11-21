@@ -11,7 +11,7 @@ annotated-types==0.8.0
 ast-serialize==0.13.1
 cfgv==3.5.0
 colorama==0.4.6
-coverage==7.17.3
+coverage==7.17.4
 distlib==0.4.4
 execnet==2.1.2
 filelock==4.2.12
@@ -45,7 +45,7 @@ pytest-regressions==2.11.0
 pytest-timeout==2.4.0
 pytest-xdist==3.8.0
 python-discovery==1.9.6
-pyyaml==6.0.3
+pyyaml==6.0.4
 rich==15.0.0
 ruff==0.17.6
 shellingham==1.5.4
@@ -55,4 +55,4 @@ types-networkx==3.6.1.20261119
 types-psutil==7.2.2.20261111
 typing-extensions==4.16.0
 typing-inspection==0.4.5
-virtualenv==21.15.9
+virtualenv==21.15.11
