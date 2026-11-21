@@ -89,7 +89,7 @@
     "src/pdx/native_rename.py": "b330f322347a9c8403ee572b7e36723b2ab398717e8771cef5df44cfc51f7bd9",
     "src/pdx/normalize_repo.py": "62cea3439f7fba6d3f3b3b4fc17e0069a14c05456b3623e3005c58c6320e9e61",
     "src/pdx/observation_queries.py": "7658f8c42bc49c06f7f599c6841b5acbd6f776a557e391ee3ae9fee0ba4da85b",
-    "src/pdx/parallel.py": "c9b50830f04c93f92d5fcf46fcfab8af0a2ca005c356b6c007af2f5b80df936c",
+    "src/pdx/parallel.py": "82c0add7edcff54374beaaf985709e8c496ca92fe7fc53bdc4738d736fb48ad0",
     "src/pdx/parser.py": "23ec55f14051e2ee419de3771aa85b14f728a88d1c23c216ca5ff6a2ad5d5557",
     "src/pdx/performance.py": "695c1ae6213e28de340d58f6e50f012f41faba4d620f86da0a93260305563139",
     "src/pdx/platform_support.py": "68f6755e63e10d852638d83188fe8b7fa61869888d2bb1ffcd9b9e778cb3ac5e",

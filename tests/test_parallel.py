@@ -52,6 +52,13 @@ def test_process_cpu_count未知时回退物理核心启发(monkeypatch: pytest.
     assert parallel.cpu_workers() == 6
 
 
+def test_affinity方法缺失时使用标准库进程数(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delattr(parallel.psutil.Process, "cpu_affinity")
+    monkeypatch.setattr(parallel.os, "process_cpu_count", lambda: 2)
+    monkeypatch.setattr(parallel.psutil, "cpu_count", lambda logical=True: 16 if logical else 8)
+    assert parallel.auto_worker_count(available=32_768) == 2
+
+
 def test_显式worker数优先于预算(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SITAI_XDIST_WORKERS", "7")
     assert parallel.auto_worker_count(cpu=2, available=2048) == 7

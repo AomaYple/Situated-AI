@@ -40,7 +40,8 @@ def cpu_workers() -> int:
 
     # Windows 上标准库可能返回宿主逻辑 CPU 数，仍需核对进程亲和性。
     try:
-        affinity_count = len(psutil.Process().cpu_affinity())
+        read_affinity = getattr(psutil.Process(), "cpu_affinity", None)
+        affinity_count = len(read_affinity()) if callable(read_affinity) else 0
     except AttributeError, NotImplementedError, OSError, psutil.Error:
         affinity_count = 0
     if affinity_count:
