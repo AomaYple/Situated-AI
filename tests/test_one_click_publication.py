@@ -52,7 +52,7 @@ def identity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReleaseIdentity
     repo.mkdir()
 
     def git(*args: str) -> str:
-        return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
+        return subprocess.check_output(["git", "-C", str(repo), *args], encoding="utf-8").strip()
 
     git("init", "-b", "main")
     git(
