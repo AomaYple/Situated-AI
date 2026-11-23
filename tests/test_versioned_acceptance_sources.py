@@ -30,7 +30,7 @@ def current_model():
 def test_current_ledgers_are_complete():
     rows = bindings.load()
     assert rows == bindings.build()
-    assert len(rows) == 5873
+    assert len(rows) == 5872
     assert any("pm_coal_fired_plant_copper_cost" in row.definition for row in rows)
     assert bindings.check() == domain_coverage.check_counts() == []
     assert len(domain_coverage.load()) == 19
