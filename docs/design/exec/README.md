@@ -5,12 +5,12 @@
 ## 当前入口
 
 - [工程交付基线](工程基线-1.0.md)维护生成、包结构、证据分类和恢复合同。
-- [版本交付索引](版本交付-结果.md)登记主线标准包、正式标签及发布收据。
+- [版本交付索引](版本交付-结果.md)登记主线标准包、正式标签及发布收据。共用架构首版的渠道回读见 [3.4.0 交付结果](3.4.0-交付结果.md)。
 - 共用架构首版的开发与发布见[架构主计划](../架构主计划.md)。首版发布后的领域与方面阶段见[架构子计划](../架构子计划.md)。
 
 ## 工程与架构收据
 
-- [架构主计划实施结果](架构主计划实施-结果.md)登记首版实施证据、复现入口及待完成的候选验收与发布。
+- [架构主计划实施结果](架构主计划实施-结果.md)登记首版实施、固定候选验收和对应的工程与实机证据。
 - [Mod 分阶段开发与发布规划结果](Mod分阶段开发发布-结果.md)登记主子计划阶段、文档入口和独立复核。
 - 深化设计的四阶段产物、原版安装分母、独立复核和完整工程验收随当时的主线提交查阅。[Mod 架构深化结果](https://github.com/AomaYple/Situated-AI/blob/818bfa82d50a0811d25def5fffff7173ad0c2a1e/docs/design/exec/Mod%E6%9E%B6%E6%9E%84%E6%B7%B1%E5%8C%96-%E7%BB%93%E6%9E%9C.md)
 - 重设计时的主子计划原件、选型验算、独立复核和工程验证随当时的主线提交查阅。[Mod 架构重设计结果](https://github.com/AomaYple/Situated-AI/blob/e9ed9e19bdb5c243bfc7fc8fb998c7036526fd66/docs/design/exec/Mod%E6%9E%B6%E6%9E%84%E9%87%8D%E8%AE%BE%E8%AE%A1-%E7%BB%93%E6%9E%9C.md)
@@ -26,6 +26,8 @@
 3.3.0 的交付与渠道状态见[正式交付结果](3.3.0-交付结果.md)。迁移过程和复核细节保留于冻结提交的[发布计划](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-%E8%BF%81%E7%A7%BB%E5%8F%91%E5%B8%83%E8%AE%A1%E5%88%92.md)、[工程结果](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-%E5%B7%A5%E7%A8%8B%E8%BF%81%E7%A7%BB-%E7%BB%93%E6%9E%9C.md)、[Mod 静态复核](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-Mod%E9%9D%99%E6%80%81%E5%A4%8D%E6%A0%B8-%E7%BB%93%E6%9E%9C.md)、[二进制独立复核](https://github.com/AomaYple/Situated-AI/blob/b3c3356e61b7c080038f7d6a61b84d69aedc58d3/docs/design/exec/1.15.1-%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%8B%AC%E7%AB%8B%E5%A4%8D%E6%A0%B8-%E7%BB%93%E6%9E%9C.md)。
 
 ## 旧 D/K 阶段收据与已撤回候选
+
+3.4.0 开发期已替换候选及其原始失败、实机与复核材料，随[主计划实施结果](架构主计划实施-结果.md)的原候选身份和[证据库入口](3.4.0-交付结果.md#本机证据定位)追溯。
 
 以下页面保留原路径与原始内容，只作历史追溯；其中的未完成项和失败仍然保留，不关闭对应阶段，也不证明当前目标已实现。
 
