@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "3.3.1"
+RELEASE_VERSION = "3.4.0"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"

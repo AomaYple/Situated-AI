@@ -1,7 +1,7 @@
 {
   "name": "Situated AI",
   "id": "situated-ai",
-  "version": "3.3.1",
+  "version": "3.4.0",
   "supported_game_version": "1.15.2",
   "short_description": "依据国家处境综合调整政治、经济、外交与军事 AI 倾向，保留原版资格、成本和行动执行。",
   "picture": "thumbnail.png",

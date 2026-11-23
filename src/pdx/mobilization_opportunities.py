@@ -373,6 +373,7 @@ def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError(f"原版动员补给资格或撤销语义漂移：{option_id}")
         stages[option] = {
             "field": row["field"],
+            "definition": dict(row["definition"]),
             "bootstrap_technology": _SUPPLY_TECH[option],
             "potential_supply_goods": list(_SUPPLY_GOODS[option]),
             "upkeep_goods": dict(row["goods"]),
@@ -401,6 +402,42 @@ def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
         },
         "projection": "native_rules_only_pending_calibration",
     }
+
+
+def verify_generated_supply_stages(
+    text: str, selected_fields: set[tuple[str, ...]], *, expected: str
+) -> dict[str, object]:
+    """Check shipped native definitions around the single owned weight extension."""
+    contract = supply_chain_contract()
+    parsed = parse_text(text, path=SOURCE)
+    authorized = parse_text(expected, path=SOURCE)
+    if parsed.errors or authorized.errors:
+        raise ValueError("生产补给阶段无法回读")
+    verified: dict[str, object] = {}
+    for option, stage in contract["stages"].items():
+        field = tuple(stage["field"].split("."))
+        definition = _node(parsed.root, field[0])
+        weight = _node(parsed.root, *field)
+        emitted = field in selected_fields
+        if emitted:
+            expected_weight = _node(authorized.root, *field)
+            if not isinstance(weight.value, Block) or not isinstance(expected_weight.value, Block):
+                raise ValueError(f"生产补给权重不是已核实的脚本块：{option}")
+            if (
+                not weight.value.items
+                or not expected_weight.value.items
+                or _ast(weight.value.items[-1]) != _ast(expected_weight.value.items[-1])
+            ):
+                raise ValueError(f"生产补给权重偏离已授权联合贡献：{option}")
+            # Only the bound compiler output may be removed before checking vanilla.
+            weight.value.items.pop()
+            expected_weight.value.items.pop()
+            if _digest(_ast(_node(authorized.root, field[0]))) != stage["definition"]["sha256"]:
+                raise ValueError(f"生产补给权重预期未保留原版定义：{option}")
+        if _digest(_ast(definition)) != stage["definition"]["sha256"]:
+            raise ValueError(f"生产补给阶段原版资格、权重、维持或生命周期漂移：{option}")
+        verified[option] = {**stage, "weight_extension_emitted": emitted}
+    return verified
 
 
 def _canonical(value: object) -> str:
@@ -759,10 +796,14 @@ def derive(
         if key in adapters["readers"] and adapters["readers"][key] != spec:
             raise ValueError("动员reader完整签名漂移")
     candidates = candidate_catalog(frozen)
+    supply = _supply_chain_contract(frozen)
     for identity, row in candidates.items():
+        supply_stage = supply["stages"].get(identity.removeprefix("mobilization_option_"))
+        goods = _ALL_BASKETS[identity] if supply_stage is None else supply_stage["upkeep_goods"]
+        field = row["field"] if supply_stage is None else supply_stage["field"]
         core = ["mobilization_owner_ai"]
         if identity in _BASKETS:
-            core.extend(f"mobilization_{good}_balance" for good in row["goods"])
+            core.extend(f"mobilization_{good}_balance" for good in goods)
 
         def rule(
             suffix: str,
@@ -772,14 +813,14 @@ def derive(
             why: str,
             *,
             identity: str = identity,
-            row: Mapping[str, Any] = row,
+            field: str = field,
             core: list[str] = core,
         ) -> None:
             rules.append(
                 {
                     "id": f"mobilization_{identity.removeprefix('mobilization_option_')}_{suffix}",
                     "source": SOURCE,
-                    "field": row["field"],
+                    "field": field,
                     "domain": "military",
                     "operation": "multiply",
                     "value": value,
@@ -806,7 +847,7 @@ def derive(
             [{"fact": "mobilization_default", "op": "=", "value": True}],
             "所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出",
         )
-        for good in _ALL_BASKETS[identity]:
+        for good in goods:
             balance = {"fact": f"mobilization_{good}_balance", "op": "<", "value": 0.0}
             cause = f"mobilization_material_{good}_pressure"
             rule(
@@ -814,7 +855,7 @@ def derive(
                 chosen["scarcity_multiplier"],
                 cause,
                 [balance],
-                f"本候选真实投入{good}的卖单减买单为负，表达独立材料机会成本；原始数量系数{row['goods'][good]}不是采购量或货币",
+                f"本候选真实投入{good}的卖单减买单为负，表达独立材料机会成本；原始数量系数{goods[good]}不是采购量或货币",
             )
             rule(
                 f"{good}_price_pressure",
@@ -843,7 +884,7 @@ def derive(
         "readers": dict(sorted(readers.items())),
         "rules": rules,
         "actors": {SOURCE: ["owner"]},
-        "supply_chain": _supply_chain_contract(frozen),
+        "supply_chain": supply,
         "covered": [
             {
                 "id": identity,

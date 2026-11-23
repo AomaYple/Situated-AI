@@ -13,6 +13,7 @@ import json
 import re
 import tomllib
 from dataclasses import dataclass, replace
+from functools import partial
 from itertools import pairwise
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, cast
@@ -366,6 +367,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     treaty_fields = None
     mobilization_digest = None
     mobilization_fields = None
+    mobilization_contract = None
     law_digest = None
     technology_digest = None
     if source == SOURCE:
@@ -415,6 +417,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ).hexdigest()
         medical = mobilization_opportunities.derive(data)
         mobilization_fields = {(row["source"], row["field"]) for row in medical["covered"]}
+        mobilization_contract = medical["supply_chain"]
         _merge_derivation(data, medical, "医疗动员实际投入机会")
         actor_bindings = data.setdefault("actors", {})
         if not isinstance(actor_bindings, dict):
@@ -554,10 +557,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         mobilization = name.startswith("common/mobilization_options/")
         if mobilization:
             if mobilization_fields is None:
+                derived_mobilization = mobilization_opportunities.derive(data)
                 mobilization_fields = {
-                    (row["source"], row["field"])
-                    for row in mobilization_opportunities.derive(data)["covered"]
+                    (row["source"], row["field"]) for row in derived_mobilization["covered"]
                 }
+                mobilization_contract = derived_mobilization["supply_chain"]
             if any(
                 (name, rule["field"]) not in mobilization_fields or rule["operation"] != "multiply"
                 for rule in rules
@@ -591,7 +595,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             for rule in rules
         ):
             raise ValueError("舰船改装适配只许可已证明的具名候选评分块")
-        expected_actor = ["owner"] if name.startswith("common/buildings/") or mobilization else []
+        expected_actor = ["owner"] if name.startswith("common/buildings/") else []
+        native_root = "state" if expected_actor else "country"
+        if mobilization:
+            assert mobilization_contract is not None
+            expected_actor = mobilization_contract["actor_path"]
+            native_root = mobilization_contract["native_root"]
         if actors.get(name, []) != expected_actor:
             raise ValueError("消费者 AI 所有者与锁定接口作用域不一致")
         try:
@@ -621,11 +630,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                     "schema": 1,
                     "baseline_sha256": data["sources"][name],
                     "actor_path": actors.get(name, []),
-                    "native_root": "military_formation"
-                    if mobilization
-                    else "state"
-                    if expected_actor
-                    else "country",
+                    "native_root": native_root,
                     "readers": {key: data["readers"][key] for key in readers},
                     "domains": {key: data["domains"][key] for key in domains},
                     "rules": rules,
@@ -1213,9 +1218,9 @@ def build(
         }
         if scalar_fields:
             text = _wrap_scalars(text, scalar_fields)
-        files[name] = decision_rules.patch(
-            text,
-            policy,
+        patch_consumer = partial(
+            decision_rules.patch,
+            rules=policy,
             baseline=inputs[name],
             enabled_domains=selected,
             default_strategy=False,
@@ -1225,6 +1230,7 @@ def build(
             consumer_ir=consumer_ir,
             consumer_source=name,
         )
+        files[name] = patch_consumer(text)
         if name == _FLEET_SOURCE and _FLEET_FIELD in scalar_fields:
             if _FLEET_VALUE in words or _VALUE_SOURCE in (overlays or {}):
                 raise ValueError("舰队具名评分与已有定义冲突")
@@ -1243,16 +1249,20 @@ def build(
             if reader.key in used_keys and reader.engine == "is_production_method_active":
                 parameters = dict(reader.parameters)
                 active_methods.add((parameters["building_type"], parameters["production_method"]))
-        contracts.append(
-            {
-                "source": name,
-                **decision_rules.contract(
-                    replace(policy, enabled_domains=selected),
-                    owner="consumer_adapters",
-                    source=name,
-                ),
-            }
+        contract = decision_rules.contract(
+            replace(policy, enabled_domains=selected),
+            owner="consumer_adapters",
+            source=name,
         )
+        if name == mobilization_opportunities.SOURCE:
+            contract["native_supply_stages"] = (
+                mobilization_opportunities.verify_generated_supply_stages(
+                    files[name],
+                    set(policy.groups(selected)),
+                    expected=patch_consumer(inputs[name]),
+                )
+            )
+        contracts.append({"source": name, **contract})
     supply = adapters.supply
     supply_enabled = supply is not None and (
         any("market" in policy.enabled_domains for _, policy in adapters.policies)
