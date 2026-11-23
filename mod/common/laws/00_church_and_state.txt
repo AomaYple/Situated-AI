@@ -415,9 +415,9 @@ law_millet_system = { # Ottoman Empire
 			# GROUP program_9df07ba771f8d939_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_millet_system_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_millet_system } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.25 } has_law = law_type:law_millet_system } } add = -10 }
 				# law_context_law_millet_system_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_millet_system } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_millet_system value > neutral } political_movement_support >= 0.1 } has_law = law_type:law_millet_system } } add = -6 }
 			}
 			min = -20
 			max = 16
@@ -560,9 +560,9 @@ law_people_of_the_book = { # Other Muslim states
 			# GROUP program_e800d71a9436f6b2_law_observed_agenda_negative
 			add = { value = 0
 				# law_context_law_people_of_the_book_adopted_agenda_strong [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.25 } has_law_or_variant = law_type:law_people_of_the_book } } add = -10 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.25 } has_law = law_type:law_people_of_the_book } } add = -10 }
 				# law_context_law_people_of_the_book_adopted_agenda_base [political]; 候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.1 } has_law_or_variant = law_type:law_people_of_the_book } } add = -6 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_people_of_the_book value > neutral } political_movement_support >= 0.1 } has_law = law_type:law_people_of_the_book } } add = -6 }
 			}
 			min = -20
 			max = 16
@@ -682,9 +682,9 @@ law_freedom_of_conscience = {
 				# law_context_law_freedom_of_conscience_law_state_atheism_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_atheism authority < 100 } } add = -8 }
 				# law_context_law_freedom_of_conscience_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 100 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law = law_type:law_people_of_the_book authority < 100 } } add = -8 }
 				# law_context_law_freedom_of_conscience_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 100 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law = law_type:law_millet_system authority < 100 } } add = -8 }
 				# law_context_law_freedom_of_conscience_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 100 } } add = -8 }
 			}
@@ -799,9 +799,9 @@ law_total_separation = {
 				# law_context_law_total_separation_law_freedom_of_conscience_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_freedom_of_conscience authority < 100 } } add = -8 }
 				# law_context_law_total_separation_law_people_of_the_book_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_people_of_the_book authority < 200 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law = law_type:law_people_of_the_book authority < 200 } } add = -8 }
 				# law_context_law_total_separation_law_millet_system_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_millet_system authority < 200 } } add = -8 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law = law_type:law_millet_system authority < 200 } } add = -8 }
 				# law_context_law_total_separation_law_state_religion_authority_transition [political]; 比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_state_religion authority < 200 } } add = -8 }
 			}

@@ -13,7 +13,7 @@ from pdx import country_state, decision_adapters, decision_interfaces, decision_
 from pdx import mobilization_opportunities as medical
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
-from pdx.situated import compiler, decision_ir, pdx_eval
+from pdx.situated import compiler, decision_ir, pdx_eval, programs
 
 pytestmark = pytest.mark.integration
 SOURCE = "common/mobilization_options/00_mobilization_option.txt"
@@ -497,3 +497,131 @@ def test_every_added_choice_has_independent_need_cost_tiers_unknown_and_exit(
     assert decision_rules.evaluate_ir(policy, values, is_ai=True, enabled_domains=frozenset()) == {}
     values["mobilization_owner_ai"] = None
     check(1)
+
+
+def test_production_supply_receipt_and_weight_output_match_pinned_baseline(production):
+    baseline = (medical.config.REPO / "mod" / SOURCE).read_text(encoding="utf-8")
+    finalized = re.sub(r"(?m)[\t ]+$", "", production[4][SOURCE]).rstrip("\n") + "\n"
+    assert finalized == baseline
+    contracts = production[6]
+    verified = contracts["native_supply_stages"]
+    baseline_stages = medical.supply_chain_contract()["stages"]
+    assert {
+        option: {**stage, "weight_extension_emitted": True}
+        for option, stage in baseline_stages.items()
+    } == verified
+
+
+@pytest.mark.parametrize(
+    ("original", "mutation", "error"),
+    [
+        (
+            "has_mobilization_option = mobilization_option:mobilization_option_extra_supplies",
+            "has_mobilization_option = mobilization_option:mobilization_option_basic_supplies",
+            "编队补给原版资格读取",
+        ),
+        (
+            "scope:military_formation = { has_mobilization_option",
+            "ROOT = { has_mobilization_option",
+            "编队补给原版资格读取",
+        ),
+        (
+            "scope:military_formation = { has_mobilization_option",
+            "scope:military_formation = { has_mobilization_option != no has_mobilization_option",
+            "编队补给原版资格读取",
+        ),
+        ("multiply = -0.5", "multiply = -0.4", "生命周期漂移"),
+        ("add = -1000000", "add = -100000", "生命周期漂移"),
+    ],
+)
+def test_production_supply_verifier_rejects_native_scope_lifecycle_or_weight_change(
+    production, original, mutation, error
+):
+    text = production[4][SOURCE]
+    assert original in text
+    candidate = text.replace(original, mutation, 1)
+    policy = dict(production[1].policies)[SOURCE]
+    with pytest.raises(ValueError, match=error):
+        medical.verify_generated_supply_stages(candidate, set(policy.groups()), expected=text)
+
+
+def test_retracting_extra_supply_extension_keeps_native_gate_and_luxury_weight(production):
+    text = production[4][SOURCE]
+    extra = "mobilization_option_extra_supplies.ai_weight"
+    candidate = re.sub(
+        rf"^[ \t]*# SITAI BEGIN information:{re.escape(extra)}\n"
+        rf".*?^[ \t]*# SITAI END information:{re.escape(extra)}\n?",
+        "",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    policy = dict(production[1].policies)[SOURCE]
+    fields = set(policy.groups()) - {tuple(extra.split("."))}
+    verified = medical.verify_generated_supply_stages(candidate, fields, expected=text)
+    extra_stage, luxury_stage = verified["extra_supplies"], verified["luxurious_supplies"]
+    assert isinstance(extra_stage, dict)
+    assert isinstance(luxury_stage, dict)
+    assert not extra_stage["weight_extension_emitted"]
+    assert luxury_stage["weight_extension_emitted"]
+    before = parse_text(text).root
+    after = parse_text(candidate).root
+    extra_id, luxury_id = (
+        "mobilization_option_extra_supplies",
+        "mobilization_option_luxurious_supplies",
+    )
+    native = parse_text(production[3][SOURCE]).root
+    assert _tree(native.first(extra_id)) == _tree(after.first(extra_id))
+    assert _tree(before.first(luxury_id)) == _tree(after.first(luxury_id))
+
+
+def test_supply_weight_readback_rejects_unmarked_replacement_tail(production):
+    text = production[4][SOURCE]
+    original_marker = (
+        r"^[ \t]*# SITAI BEGIN information:mobilization_option_extra_supplies\.ai_weight\n"
+    )
+    end_marker = r"^[ \t]*# SITAI END information:mobilization_option_extra_supplies\.ai_weight\n"
+    candidate, replaced = re.subn(
+        original_marker + r".*?" + end_marker,
+        "\t\tif = { limit = { always = yes } add = 999 }\n",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    assert replaced == 1
+    policy = dict(production[1].policies)[SOURCE]
+    with pytest.raises(ValueError, match="授权联合贡献"):
+        medical.verify_generated_supply_stages(candidate, set(policy.groups()), expected=text)
+
+
+def test_supply_weight_readback_binds_condition_as_well_as_author(production):
+    text = production[4][SOURCE]
+    owner_guard = "is_ai = yes is_at_war = yes"
+    candidate = text.replace(owner_guard, "is_ai = yes is_at_war = no", 1)
+    assert candidate != text
+    policy = dict(production[1].policies)[SOURCE]
+    fields = set(policy.groups())
+    with pytest.raises(ValueError, match="授权联合贡献"):
+        medical.verify_generated_supply_stages(candidate, fields, expected=text)
+    war_rule = next(
+        rule for rule in policy.rules if rule.id == "mobilization_extra_supplies_war_need"
+    )
+    revised = replace(war_rule, conditions=(replace(war_rule.conditions[0], value=False),))
+    revised_policy = programs.enable(
+        replace(
+            policy,
+            rules=tuple(revised if rule.id == revised.id else rule for rule in policy.rules),
+            semantic_ir=(),
+            consumer_programs=(),
+        ),
+        source=SOURCE,
+    )
+    inputs = production[3]
+    updated = decision_rules.patch(
+        inputs[SOURCE],
+        revised_policy,
+        baseline=inputs[SOURCE],
+        default_strategy=False,
+        reader_words=frozenset(decision_adapters.reader_evidence(inputs)),
+    )
+    assert medical.verify_generated_supply_stages(candidate, fields, expected=updated) == (
+        medical.verify_generated_supply_stages(text, fields, expected=text)
+    )

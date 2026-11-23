@@ -62,25 +62,6 @@ def proven_words() -> frozenset[str]:
     return frozenset({"num_defensive_pacts", *NATIVE_VALUES})
 
 
-def project_information_readers(readers: dict) -> None:
-    """Correct two units in the current view while preserving the historical TOML.
-
-    These named original script values are consumed as barracks targets. There
-    is no battalion conversion, and unrelated battalion-valued readers retain
-    their existing unit.
-    """
-    snapshot()
-    expected = {
-        "native_army_capacity": "wanted_army_size_script_value",
-        "native_marine_capacity": "wanted_marines_size_script_value",
-    }
-    for key, engine in expected.items():
-        row = readers[key]
-        if row != {"engine": engine, "scope": "root", "unit": "battalions", "kind": "number"}:
-            raise ValueError("1.15 LJ10 reader: historical declaration identity drift")
-        readers[key] = {**row, "unit": "barracks_levels"}
-
-
 def project_population_readers(readers: dict) -> None:
     """Project historical country declarations onto the current native signature.
 

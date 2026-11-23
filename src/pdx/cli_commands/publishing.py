@@ -45,6 +45,14 @@ def publish_cmd(
         Path | None, typer.Option("--workshop-helper", help="Steamworks SDK 助手的绝对路径")
     ] = None,
     apply: Annotated[bool, typer.Option("--apply", help="执行已计划的外部操作")] = False,
+    github_notes_file: Annotated[
+        Path | None,
+        typer.Option("--github-notes-file", help="附加到 GitHub Release 的 UTF-8 Markdown"),
+    ] = None,
+    expected_github_notes_sha256: Annotated[
+        str | None,
+        typer.Option("--expected-github-notes-sha256", help="预审后的 GitHub 发布说明 SHA-256"),
+    ] = None,
 ) -> None:
     """Build, validate, publish, and install the same release package."""
     require_workspace()
@@ -65,7 +73,17 @@ def publish_cmd(
             workshop_item=workshop_item,
             workshop_owner=workshop_owner,
             workshop_helper=workshop_helper,
+            github_notes=(
+                github_notes_file.read_bytes().decode("utf-8")
+                if github_notes_file is not None
+                else None
+            ),
         )
+        if expected_github_notes_sha256 is not None:
+            if identity.github_notes is None:
+                raise ValueError("--expected-github-notes-sha256 需要 --github-notes-file")
+            if identity.github_notes_sha256 != expected_github_notes_sha256.lower():
+                raise ValueError("GitHub 发布说明的 SHA-256 与预审摘要不同")
         if apply:
             result = run_release(identity)
         else:

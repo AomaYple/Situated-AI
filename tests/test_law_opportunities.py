@@ -9,7 +9,8 @@ from collections import Counter
 import pytest
 
 from pdx import config, decision_rules, law_opportunities
-from pdx.situated import programs
+from pdx.parser import parse_text
+from pdx.situated import pdx_eval, programs
 
 pytestmark = pytest.mark.unit
 
@@ -54,6 +55,33 @@ def _value(derived, law, changes):
         f"{law}.ai_enact_weight_modifier"
     )
     return result[1] if result else 0
+
+
+def test_current_church_law_readers_preserve_exact_variants_and_parent_family(derived):
+    source = "common/laws/00_church_and_state.txt"
+    policy = _policy(derived, source)
+    readers = {reader.key: reader for reader in policy.readers}
+    for law, engine in (
+        ("law_millet_system", "has_law"),
+        ("law_people_of_the_book", "has_law"),
+        ("law_state_religion", "has_law_or_variant"),
+    ):
+        reader = readers[f"law_context_current_{law}"]
+        assert (reader.engine, reader.argument) == (engine, f"law_type:{law}")
+
+
+def test_exact_law_and_parent_queries_use_distinct_observations():
+    exact = parse_text("has_law = law_type:law_millet_system").root
+    family = parse_text("has_law_or_variant = law_type:law_state_religion").root
+    millet = (("argument", "law_type:law_millet_system"),)
+    people = (("argument", "law_type:law_people_of_the_book"),)
+    religion = (("argument", "law_type:law_state_religion"),)
+    facts = {
+        "has_law": {millet: False, people: True},
+        "has_law_or_variant": {religion: True},
+    }
+    assert pdx_eval.condition(exact, facts) is False
+    assert pdx_eval.condition(family, facts) is True
 
 
 def test_law_fixture_preserves_rural_transition_under_current_population_contract(derived):

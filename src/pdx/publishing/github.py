@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlencode
 
@@ -221,6 +222,7 @@ class GitHubClient:
         *,
         owned_draft: str | None = None,
         previous: Mapping[str, object] | None = None,
+        verify_published_body: bool = False,
     ) -> dict[str, object]:
         authority = self._check_repository(commit)
         tagged = self._tag_commit(tag)
@@ -252,6 +254,8 @@ class GitHubClient:
             raise ValueError("GitHub Release 身份或正式状态不符")
         if draft and (owned_draft is None or release.get("body") != owned_draft):
             raise ValueError("同一标签已有其他 GitHub Release 草稿，拒绝修改")
+        if not draft and verify_published_body and release.get("body") != owned_draft:
+            raise ValueError("已公开 GitHub Release 的正文与冻结发布说明不同")
         if draft and release.get("target_commitish") != commit:
             raise ValueError("已记录的 GitHub Release 草稿源提交发生变化")
         if draft and previous and previous.get("status") == "verified":
@@ -272,8 +276,17 @@ class GitHubClient:
         draft_body: str,
         checkpoint: Callable[[Mapping[str, object]], None],
         previous: Mapping[str, object] | None = None,
+        verify_published_body: bool = False,
     ) -> dict[str, object]:
-        state = self.inspect(tag, commit, files, owned_draft=draft_body, previous=previous)
+        inspect = partial(
+            self.inspect,
+            tag,
+            commit,
+            files,
+            owned_draft=draft_body,
+            verify_published_body=verify_published_body,
+        )
+        state = inspect(previous=previous)
         if state.get("draft") is False:
             return {**state, "status": "verified", "tag": tag}
         if state["tag_commit"] is None:
@@ -301,7 +314,7 @@ class GitHubClient:
                 raise ValueError("GitHub 创建草稿响应缺少 Release ID")
             previous = {"status": "draft_created", "release_id": created["id"]}
             checkpoint(previous)
-            state = self.inspect(tag, commit, files, owned_draft=draft_body, previous=previous)
+            state = inspect(previous=previous)
             release_id = state["release_id"]
         if type(release_id) is not int or state.get("draft") is not True:
             raise ValueError("GitHub Release 草稿回读失败")
@@ -312,7 +325,7 @@ class GitHubClient:
                 checkpoint({"status": "uploading_asset", "release_id": release_id, "asset": name})
                 self._upload(release_id, name, raw)
         expected_release = {"release_id": release_id}
-        state = self.inspect(tag, commit, files, owned_draft=draft_body, previous=expected_release)
+        state = inspect(previous=expected_release)
         if (
             state.get("release_id") != release_id
             or set(cast("list[str]", state["assets"])) != files.keys()
@@ -321,7 +334,7 @@ class GitHubClient:
         if state.get("draft") is True:
             checkpoint({"status": "publishing_draft", "release_id": release_id})
             self._api(f"releases/{release_id}", method="PATCH", data={"draft": False})
-        final = self.inspect(tag, commit, files, owned_draft=draft_body, previous=expected_release)
+        final = inspect(previous=expected_release)
         if final.get("release_id") != release_id or final.get("draft") is not False:
             raise ValueError("GitHub 正式发布和附件回读失败")
         return {

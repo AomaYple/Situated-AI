@@ -21,7 +21,7 @@ Mod zmienia preferencje SI, zachowując oryginalne wymagania działań i rzeczyw
 
 [h2]Zgodność[/h2]
 
-Przeznaczony do podstawowej wersji Victoria 3 na Windows, macOS i Linux. Podczas gry nie wymaga uruchamiania dodatkowego programu. Zalecany jest osobny zestaw modów oraz nowa rozgrywka lub kopia zapisu.
+Do Victoria 3 1.15.2 (kompilacja Steam 26763837). Włącz wszystkie 11 oficjalnych DLC wpływających na rozgrywkę i aktywuj wyłącznie ten mod, a następnie rozpocznij nową grę jednoosobową. Możesz zapisywać i wczytywać tę rozgrywkę przy tej samej kompilacji gry, wersji moda i kombinacji DLC. DLC muzyczne i kosmetyczne są opcjonalne. Tryb wieloosobowy czeka na weryfikację.
 
 Inne mody zmieniające te same pliki strategii SI, praw, budynków, technologii, dyplomacji, wojska lub powiązanej zawartości mogą powodować konflikty. Zgodność takich połączeń nie jest gwarantowana.
 

@@ -21,7 +21,7 @@ The mod adjusts AI preferences while preserving vanilla action requirements and 
 
 [h2]Compatibility[/h2]
 
-Designed for vanilla Victoria 3 on Windows, macOS and Linux. No additional program needs to run while you play. A separate playset and a new game or backed-up save are recommended.
+For Victoria 3 1.15.2 (Steam build 26763837). Enable all 11 official gameplay DLCs, activate only this mod, and start a new single-player game. You can save and reload that campaign with the same game build, mod version, and DLC combination. Music and cosmetic DLCs are optional. Multiplayer verification is pending.
 
 Other mods that change the same AI strategy, law, building, technology, diplomatic, military or related content files may conflict. Compatibility with those combinations is not guaranteed.
 

@@ -296,7 +296,12 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
     def current(law: str) -> str:
         key = f"law_context_current_{law}"
         readers[key] = {
-            "engine": "has_law_or_variant",
+            # These two identities are variants of law_state_religion in the locked source.
+            "engine": (
+                "has_law"
+                if law in {"law_millet_system", "law_people_of_the_book"}
+                else "has_law_or_variant"
+            ),
             "scope": "root",
             "kind": "boolean",
             "unit": "boolean",

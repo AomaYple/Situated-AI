@@ -64121,17 +64121,6 @@ disposition = "migrate"
 consumer = "institution_scores.institution_social_security"
 
 [[bindings]]
-binding_id = "binding_mod_decisions_information_toml_lj10_defensive_pact_flow_pressure"
-source = "mod/decisions/information.toml"
-definition = "lj10_defensive_pact_flow_pressure"
-field = "wanted_army_size"
-actor = "root"
-target = "none"
-operation = "multiply"
-disposition = "migrate"
-consumer = "wanted_army_size"
-
-[[bindings]]
 binding_id = "binding_mod_decisions_information_toml_lj14_connected_homeland_foundation"
 source = "mod/decisions/information.toml"
 definition = "lj14_connected_homeland_foundation"

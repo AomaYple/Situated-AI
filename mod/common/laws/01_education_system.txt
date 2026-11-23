@@ -135,11 +135,11 @@ law_religious_schools = {
 			# GROUP program_a1e8e1a7a5d70541_school_access_positive
 			add = { value = 0
 				# social_reform_religious_schools_from_private_access_peasant [political]; 普通私校转宗教学校增加固定教育access；低SoL与农民份额仅代理财富教育覆盖不足，不把conversion或IG强化当普遍收益
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 14 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { target = pop_type:peasants value >= 0 } pop_type_percent_country = { target = pop_type:peasants value <= 1 } pop_type_percent_country = { target = pop_type:peasants value >= 0.6 } } } add = 14 }
 				# social_reform_religious_schools_new_access [political]; 当前确无学校与制度，低识字形成启用该原版教育机制的直接需要；私校财富机制与宗教普遍access区别保留
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 12 }
 				# social_reform_religious_schools_from_private_access_low_sol [political]; 普通私校转宗教学校增加固定教育access；低SoL与农民份额仅代理财富教育覆盖不足，不把conversion或IG强化当普遍收益
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 } } add = 10 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 } } add = 10 }
 			}
 			# GROUP program_a1e8e1a7a5d70541_school_access_negative
 			add = { value = 0
@@ -156,7 +156,7 @@ law_religious_schools = {
 				# social_reform_religious_schools_new_administration [political]; 明确新启学校制度时实际行政缺口是独立承载压力；既有制度切换改按折扣差计算
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } bureaucracy < 0 } } add = -8 }
 				# social_reform_religious_schools_from_private_administration_loss [political]; 已有真实学校投资时，私校转宗教校失去部分原版制度行政折扣（40%到20%）
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools bureaucracy < 0 } } add = -4 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools bureaucracy < 0 } } add = -4 }
 			}
 			# GROUP program_a1e8e1a7a5d70541_school_financing_negative
 			add = { value = 0

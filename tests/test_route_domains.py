@@ -84,9 +84,6 @@ def _values(changes):
         "legitimacy": 60,
         "insurrection": False,
         "income": 100,
-        "defensive_pact_articles": 0,
-        "native_army_capacity": 100,
-        "native_marine_capacity": 20,
     }
     values.update(changes)
     country = country_state.load()
@@ -124,12 +121,12 @@ def _values(changes):
             1.08,
         ),
         ("wanted_army_size", {"war": True, "default": True, "bureaucracy": None}, 0.93),
-        ("wanted_army_size", {"war": False, "net_surplus": -1, "defensive_pact_articles": 1}, 0.95),
-        ("wanted_army_size", {"war": True, "net_surplus": -1, "defensive_pact_articles": 1}, 1.11),
-        ("wanted_army_size", {"war": None, "net_surplus": -1, "defensive_pact_articles": 1}, 1),
+        ("wanted_army_size", {"war": False, "net_surplus": -1}, 1),
+        ("wanted_army_size", {"war": True, "net_surplus": -1}, 1.11),
+        ("wanted_army_size", {"war": None, "net_surplus": -1}, 1),
     ],
 )
-def test_local_crisis_war_and_pact_match_hand_values_and_actual_pdx(
+def test_local_crisis_and_war_match_hand_values_and_actual_pdx(
     production, field, changes, expected
 ):
     _source, policy, generated, _adapters, _model = production

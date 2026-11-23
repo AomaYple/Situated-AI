@@ -324,23 +324,15 @@ def test_required_knowledge_is_typed_traced_and_counted(engineering_metadata, mu
         decision_report.build(broken)
 
 
-def test_native_target_readers_are_demand_not_actual_force(engineering_metadata):
+def test_withdrawn_pact_rule_readers_are_absent_from_production_report(engineering_metadata):
     report = decision_report.build(engineering_metadata)
-    roles = {
-        row["engine"]: row["profile_dimension"]
-        for row in report["facts"]
-        if row["engine"]
-        in {
+    assert {row["engine"] for row in report["facts"]}.isdisjoint(
+        {
             "wanted_army_size_script_value",
             "wanted_marines_size_script_value",
             "num_defensive_pacts",
         }
-    }
-    assert roles == {
-        "wanted_army_size_script_value": "native_demand",
-        "wanted_marines_size_script_value": "native_demand",
-        "num_defensive_pacts": "external_opportunity",
-    }
+    )
 
 
 def test_local_tax_labor_and_damage_observations_keep_their_own_dimensions(engineering_metadata):

@@ -35,7 +35,6 @@ from pdx import (
 from pdx.consumer_matrix import ConsumerMatrix
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
-from pdx.situated import engine_reader_115
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -63,7 +62,6 @@ def _source_data():
     data["baseline_sha256"] = decision_adapters.native_authority_115()["sources"][
         "common/ai_strategies/00_default_strategy.txt"
     ]
-    engine_reader_115.project_information_readers(data["readers"])
     # Independent declaration oracle: name the complete retired set here,
     # rather than deriving expected rule identities from the production loader.
     retired = {
@@ -85,7 +83,7 @@ def _source_data():
     return data
 
 
-def test_current_information_projection_changes_only_reviewed_native_identity_and_two_units():
+def test_current_information_projection_changes_only_reviewed_native_identity_and_school_rules():
     declared = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
     current = _source_data()
     assert current["baseline_sha256"] == version_contracts.contract().baseline_strategy_sha256
@@ -96,21 +94,8 @@ def test_current_information_projection_changes_only_reviewed_native_identity_an
     ]
     assert len(retired) == 6
     assert current["rules"] == [row for row in declared["rules"] if row not in retired]
-    for key, row in current["readers"].items():
-        if key in {"native_army_capacity", "native_marine_capacity"}:
-            assert row == {**declared["readers"][key], "unit": "barracks_levels"}
-        else:
-            assert row == declared["readers"][key]
+    assert all(row == declared["readers"][key] for key, row in current["readers"].items())
     assert current["readers"]["army"]["unit"] == "battalions"
-
-
-@pytest.mark.parametrize("scope", ["target_country", "overlord", "enemy_country"])
-def test_current_native_target_units_do_not_authorize_foreign_country_context(scope):
-    rules = decision_rules.load()
-    for key in ("native_army_capacity", "native_marine_capacity"):
-        reader = next(row for row in rules.readers if row.key == key)
-        with pytest.raises(ValueError, match="本国根"):
-            decision_interfaces.reader_scope(replace(reader, scope=scope), ())
 
 
 @pytest.mark.parametrize("excess", ["candidates", "field_predicates", "rule_predicates"])
@@ -277,9 +262,6 @@ def _values(**overrides: object) -> dict[str, object]:
         "bureaucracy": 100,
         "legitimacy": 60,
         "army": 0,
-        "defensive_pact_articles": 0,
-        "native_army_capacity": 100,
-        "native_marine_capacity": 10,
         "insurrection": False,
         "navy": 50,
         "subject": False,

@@ -150,25 +150,6 @@ scope = "root"
 unit = "currency_per_week"
 kind = "number"
 
-[readers.defensive_pact_articles]
-engine = "num_defensive_pacts"
-scope = "root"
-unit = "treaty_article_count"
-kind = "number"
-minimum = 0
-
-[readers.native_army_capacity]
-engine = "wanted_army_size_script_value"
-scope = "root"
-unit = "battalions"
-kind = "number"
-
-[readers.native_marine_capacity]
-engine = "wanted_marines_size_script_value"
-scope = "root"
-unit = "battalions"
-kind = "number"
-
 [readers.bureaucracy]
 engine = "bureaucracy"
 scope = "root"
@@ -521,22 +502,6 @@ conditions = [
 ]
 why = "违约使新增常备军目标承担独立财政代价；战争需求仍在同一消费者中联合评估，不因战争而删除已知成本"
 counterexample = "仅降低新增目标的相对倾向，不删除军队、不改战斗属性或实际军费；违约未知只跳过成本，不假设财政健康，不关闭已证战争需求，原版基值、资格和执行保持"
-
-[[rules]]
-id = "lj10_defensive_pact_flow_pressure"
-domain = "military"
-field = "wanted_army_size"
-priority = 60
-value = 0.95
-conditions = [
-  { fact = "war", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-  { fact = "net_surplus", op = "<", value = 0 },
-  { fact = "defensive_pact_articles", op = ">=", value = 1 },
-  { fact = "native_army_capacity", op = ">", value = { fact = "native_marine_capacity" } },
-]
-why = "和平且净流量承压时，本国已关联的防御协定标记条款作为小幅减少重复新增军备承诺的信号；高优先防御及明确威胁仍优先"
-counterexample = "条款数不等于伙伴数、履约、军力或完全安全，不保证active/ratified状态；不按数量累乘，不删除军队，不把提案或选中条约当当前关系；核心未知回退原版，玩家与关闭不变"
 
 [[rules]]
 # Historical identity retained; the default cost is independent of peace/war.

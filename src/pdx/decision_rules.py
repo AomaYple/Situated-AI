@@ -205,19 +205,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     data = tomllib.loads(raw.decode("utf-8"))
     source_digest = hashlib.sha256(raw).hexdigest()
     if source == SOURCE:
-        # Keep the historical TOML identity intact. The new complete native AST
-        # authority supplies this version's reviewed default-strategy input.
+        # The native AST authority supplies the reviewed default-strategy input.
         from .decision_adapters import native_authority_115  # noqa: PLC0415
 
         data["baseline_sha256"] = native_authority_115()["sources"][
             "common/ai_strategies/00_default_strategy.txt"
         ]
-        from .situated import engine_reader_115  # noqa: PLC0415
-
-        engine_reader_115.project_information_readers(data["readers"])
-        source_digest = hashlib.sha256(
-            raw + b"\0current_reader:" + engine_reader_115.snapshot()
-        ).hexdigest()
     if source == SOURCE:
         from .situated import network_profile  # noqa: PLC0415
 
@@ -631,6 +624,7 @@ def from_data(
                     "is_production_method_active",
                     "owner",
                     "has_technology_researched",
+                    "has_law",
                     "has_law_or_variant",
                     "can_enact_law",
                     "is_ai",

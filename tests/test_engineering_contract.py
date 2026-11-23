@@ -323,8 +323,10 @@ def test_current_plan_routes_stage_exits_and_delivery_evidence() -> None:
     assert stages is not None
     rows = [_table_cells(line) for line in stages[1].splitlines() if line.startswith("|")]
     assert rows[0] == ["阶段", "交付物", "出口与失败路线"]
-    assert rows[2:]
-    assert all(len(cells) == 3 and all(cells) for cells in rows[2:])
+    assert len(rows) == 3
+    assert len(rows[2]) == 3
+    assert all(rows[2])
+    assert "架构子计划.md#领域与方面的阶段边界" in _MARKDOWN_LINK.findall(stages[1])
     assert "### 阶段出口\n" not in checklist
 
     workflow = _document_section((root / "CONTRIBUTING.md").read_text(encoding="utf-8"), "验证")
@@ -338,6 +340,8 @@ def test_aspect_interfaces_have_unique_ids_owners_and_evidence_entries() -> None
     design = Path(__file__).resolve().parents[1] / "docs/design"
     index_path = design / "架构子计划.md"
     plan = index_path.read_text(encoding="utf-8")
+    entry = _document_section(plan, "领域与方面的阶段边界")
+    assert "架构主计划.md#阶段出口" in _MARKDOWN_LINK.findall(entry)
     domains = _DOMAIN_HEADING.findall(plan)
     assert tuple(heading for heading, _ in domains) == _FROZEN_DOMAIN_HEADINGS
     assert {path.name for path in (design / "domains").glob("D*.md")} == {
@@ -347,6 +351,11 @@ def test_aspect_interfaces_have_unique_ids_owners_and_evidence_entries() -> None
     for heading, owner in domains:
         section = _document_section(plan, heading)
         assert f"domains/{owner}.md" in _MARKDOWN_LINK.findall(section), owner
+        integration = re.findall(r"^\*\*领域联调验收\*\*[^\S\n]+(.+)$", section, re.MULTILINE)
+        assert len(integration) == 1, owner
+        assert integration[0].strip(), owner
+        aspect_entries = re.findall(r"^\*\*方面阶段\*\*[^\S\n]+(.+)$", section, re.MULTILINE)
+        assert len(aspect_entries) == 1, owner
         domain_path = design / "domains" / f"{owner}.md"
         content = domain_path.read_text(encoding="utf-8")
         assert content.startswith(f"# {heading}\n"), owner
@@ -357,7 +366,8 @@ def test_aspect_interfaces_have_unique_ids_owners_and_evidence_entries() -> None
         assert frozen <= set(aspects), (owner, sorted(frozen - set(aspects)))
 
         # 目录路由与详细定义一一对应，链接落到实际 Markdown ID。
-        routes = _ASPECT_LINK.findall(section)
+        routes = _ASPECT_LINK.findall(aspect_entries[0])
+        assert routes == _ASPECT_LINK.findall(section), owner
         expected = {
             (aspect, f"domains/{owner}.md#{aspect.lower().replace('.', '')}") for aspect in aspects
         }

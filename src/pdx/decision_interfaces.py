@@ -198,6 +198,7 @@ _COUNTRY_BOOLEAN = frozenset(
         "is_subject_of",
         "has_insurrectionary_interest_groups",
         "has_variable",
+        "has_law",
         "has_law_or_variant",
         "has_strategy",
         "has_technology_researched",
