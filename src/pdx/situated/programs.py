@@ -231,10 +231,15 @@ def _groups(action_id: str, variants: tuple[ActionIR, ...] | list[ActionIR], neu
 
 
 def _bounds(groups: tuple[ContributionGroup, ...], neutral: float) -> tuple[float, float]:
-    # Group values use one physical consumer's unit; unrelated units never join.
-    low = neutral + sum(min(0.0, *(i.value - neutral for i in g.variants)) for g in groups)
-    high = neutral + sum(max(0.0, *(i.value - neutral for i in g.variants)) for g in groups)
-    return (max(0.5, low), min(1.5, high)) if neutral == 1 else (max(-50.0, low), min(50.0, high))
+    # Match the decimal operands rendered in the script before applying the clamp.
+    base = Decimal(str(neutral))
+    lower = upper = base
+    for group in groups:
+        values = [base, *(Decimal(str(item.value)) for item in group.variants)]
+        lower += min(values) - base
+        upper += max(values) - base
+    minimum, maximum = (Decimal("0.5"), Decimal("1.5")) if neutral == 1 else (-50, 50)
+    return float(max(minimum, lower)), float(min(maximum, upper))
 
 
 def enable(policy: RuleSet, *, source: str) -> RuleSet:

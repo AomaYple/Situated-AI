@@ -1848,7 +1848,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# lj04_welfare_zero_administration_foundation [political]; 行政缺口实际修复到零且民生需求仍在时提供低强度制度关注，正余量继续使用既有档；不以行政候选当作已修复
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 bureaucracy = 0 } } add = 0.02 }
 			}
-			min = 0.7000000000000001
+			min = 0.7
 			max = 1.12
 		} }
 		# SITAI END information:institution_scores.institution_social_security
@@ -3632,7 +3632,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# remaining_external_state_reconstruction_cost [geography]; 原版战败修复记忆使新增外部州让位于重建的机会成本
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_variable = recently_lost_war } exists = scope:target_state scope:target_state = { NOT = { owner = root } } } add = { value = -0.08 desc = SITAI_RULE_REMAINING_EXTERNAL_STATE_RECONSTRUCTION_COST_REASON } }
 			}
-			min = 0.5400000000000001
+			min = 0.54
 			max = 1.2
 		} }
 		# SITAI END information:state_value
