@@ -13,9 +13,9 @@
 | 任务接手与代码路由 | 本文件 |
 | 环境、验证、Git 和交付流程 | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | 工程持续约束 | [工程原则](docs/principles/工程原则.md) |
-| Mod 目标、设计和验收边界 | [Mod 开发原则](docs/principles/Mod开发原则.md) |
+| Mod 目标与持续设计约束 | [Mod 开发原则](docs/principles/Mod开发原则.md) |
 | 规则文件分工、原则编号与执行覆盖 | [原则索引](docs/principles/README.md) |
-| 生成、包结构、证据和恢复合同 | [工程交付基线](docs/design/exec/工程基线-1.0.md) |
+| 生成、包结构、验收、证据和恢复合同 | [工程交付基线](docs/design/exec/工程基线-1.0.md) |
 | 当前架构与计划入口 | [架构主计划](docs/design/架构主计划.md)、[架构子计划](docs/design/架构子计划.md) |
 | 当前事实与下一动作 | [当前工作清单](docs/design/当前工作清单.md) |
 | 阶段事实和交付收据 | `docs/design/exec/*-结果.md` 及其索引 |

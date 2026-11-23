@@ -14,14 +14,12 @@
 | 工程原则 | [工程原则](principles/工程原则.md) |
 | Mod 原则 | [Mod 开发原则](principles/Mod开发原则.md) |
 | 工具、快照和证据边界 | [工程交付基线](design/exec/工程基线-1.0.md) |
-| 1.15架构与实施入口 | [架构主计划](design/架构主计划.md) |
-| 仅目标的领域及跨域子计划 | [架构子计划](design/架构子计划.md) |
-| 新架构规范与底本依据 | [1.15架构设计](design/1.15架构设计.md)、[1.15底本勘察](design/1.15底本勘察.md)；R2 规范与已有候选能力分开登记 |
-| 旧候选设计与范围上下文 | [处境决策设计](design/03-处境决策设计.md)、[行动层深化设计](design/05-行动层深化设计.md)、[行动覆盖与验收](design/04-行动覆盖与验收.md) |
+| 当前架构、实施顺序和阶段出口 | [架构主计划](design/架构主计划.md) |
+| 各领域方面的接口和状态 | [架构子计划](design/架构子计划.md) |
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面-1.15.2.md)、[政治候选面](design/02-政治候选面.md) |
-| 历史实施计划（仅参考） | [历史归档](design/archive/README.md#冻结版本) |
+| 历史设计与实施计划 | [R2 设计与旧候选](design/README.md#历史设计与迁移依据)、[历史归档](design/archive/README.md#冻结版本) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
-| 历史 A2 架构检查与逐项证据 | [执行文档索引](design/exec/README.md#工程与架构收据) |
+| 历史工程、架构与逐项证据 | [执行文档索引](design/exec/README.md#工程与架构收据) |
 | 当前交付与历史版本证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.3.0 交付结果](design/exec/3.3.0-交付结果.md)；历史内核与分层收据由执行索引导航 |
 | 创意工坊文案（Steam BBCode，发布前核对固定包） | [全部 11 种语言](publishing/README.md) |
 | 本机安装盘点与原件研究 | [贡献指南](../CONTRIBUTING.md#完整安装研究)。旧版官方文档镜像和 1.15.0 AI 分类日志按原相对路径归档在仓库旁的 `Situated AI local archive/20261121-legacy-research/`。归档内的 `archive-manifest.json` 记录每个原件的路径、字节数和 SHA-256 |

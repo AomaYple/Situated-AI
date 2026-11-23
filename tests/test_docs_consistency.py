@@ -120,7 +120,7 @@ def test_合成文档里写对的值不会被报(tmp_path: Path) -> None:
 def test_交付文档明确区分工程正确性与用户验收() -> None:
     readme = (config.REPO / "README.md").read_text(encoding="utf-8")
     tools = (config.REPO / "tools" / "README.md").read_text(encoding="utf-8")
-    assert "工程通过不能代替这些结论" in readme
+    assert "[工程交付基线](docs/design/exec/工程基线-1.0.md#验收职责)" in readme
     assert "长期行为" in tools
     assert "由用户" in tools
     assert "AI 行为质量" in tools

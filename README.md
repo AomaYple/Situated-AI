@@ -3,7 +3,7 @@
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
-面向 Victoria 3 的 AI Mod 与开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
+面向 Victoria 3 的 AI Mod 与开发工具链。产品目标与设计约束见[Mod 开发原则](docs/principles/Mod开发原则.md)。
 
 Mod ID 为 `situated-ai`。现行游戏与 Python 基线、生产范围和推进状态见[当前工作清单](docs/design/当前工作清单.md)，标准包与公开发布身份见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
@@ -33,7 +33,7 @@ dist/                   可再生发布 ZIP（忽略）
 
 标准包的生成、内容与回读校验见[工程交付基线](docs/design/exec/工程基线-1.0.md)。各实际渠道的状态见版本交付索引。
 
-安装时将 ZIP 解压到 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset；不要覆盖游戏本体。文本编码规则见[工程原则](docs/principles/工程原则.md)。
+将 ZIP 解压到用户 Mod 目录 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset，开启新局。运行条件与存档适用范围见 [MP-41 和 MP-66](docs/principles/Mod开发原则.md)，各渠道实际交付以[版本交付索引](docs/design/exec/版本交付-结果.md)为准。
 
 ## 验证边界
 
@@ -42,7 +42,7 @@ dist/                   可再生发布 ZIP（忽略）
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py test-offline
 ```
 
-完整矩阵、性能口径、清理和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态检查、快照和模拟只能证明明确覆盖的工程合同。引擎运行期语义、AI 行为质量、长期行为、平衡、后期性能、本地化呈现和 Workshop 体验需要用户在固定包上验收；工程通过不能代替这些结论。日志和存档提供辅助证据，其摘要不能单独证明这些结果。
+检查矩阵、工程性能测量、清理和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。工程、Mod 静态语义、实际运行和长期体验的验收职责及证据口径见[工程交付基线](docs/design/exec/工程基线-1.0.md#验收职责)。
 
 ## 许可证
 
