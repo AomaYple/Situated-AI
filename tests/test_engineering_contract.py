@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 import pytest
 
@@ -81,7 +82,7 @@ def _assert_r2_acceptance_consistent(receipt: str, statuses: tuple[str, ...], ma
         if complete:
             assert not pending, state
             assert re.search(
-                r"(?:已|当时).*(?:验收|通过|完成|签署)|共同(?:通过|完成|签署)", state
+                r"(?:已|当时|该轮|曾).*(?:验收|通过|完成|签署)|共同(?:通过|完成|签署)", state
             ), state
         else:
             assert pending, state
@@ -123,60 +124,42 @@ def test_delivery_baseline_defines_distinct_acceptance_responsibilities() -> Non
     assert "R 和 U 依据各自取得的实机结果签署" in acceptance
 
 
-def test_plan_archival_and_quality_gate_are_explicit() -> None:
+def test_historical_r2_acceptance_and_navigation() -> None:
     root = Path(__file__).resolve().parents[1]
-    plan_entry = (root / "docs/design/架构主计划.md").read_text(encoding="utf-8")
-    subplan_entry = (root / "docs/design/架构子计划.md").read_text(encoding="utf-8")
-    plan = (root / "docs/design/archive/X1/架构主计划.md").read_text(encoding="utf-8")
-    subplans = (root / "docs/design/archive/X1/架构子计划.md").read_text(encoding="utf-8")
-    previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
-    checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
-    implementation = (root / "docs/design/exec/1.15架构-实施计划.md").read_text(encoding="utf-8")
-    architecture = (root / "docs/design/1.15架构设计.md").read_text(encoding="utf-8")
-    engineering = (root / "docs/principles/工程原则.md").read_text(encoding="utf-8")
-    assert plan.startswith("# Situated AI 架构主计划\n")
-    # These paragraphs describe the signed 1.15.0 round. The current migration
-    # introduction has its own gates and cannot inherit the historical signature.
-    receipt = (root / "docs/design/exec/1.15-R2-最终验收结果.md").read_text(encoding="utf-8")
-    matrix = (root / "docs/design/exec/1.15-R2-需求验收矩阵.md").read_text(encoding="utf-8")
-    for page, prefix in ((plan_entry, "exec/"), (implementation, ""), (checklist, "exec/")):
-        assert f"({prefix}1.15-R2-最终验收结果.md)" in page
-    a6 = [line for line in plan_entry.splitlines() if line.startswith("| A6 |")]
-    assert len(a6) == 1
+    design = root / "docs/design"
+    execution = design / "exec"
+    implementation = (execution / "1.15架构-实施计划.md").read_text(encoding="utf-8")
+    architecture = (design / "1.15架构设计.md").read_text(encoding="utf-8")
+    checklist = (design / "当前工作清单.md").read_text(encoding="utf-8")
+    historical = _document_section(checklist, "历史交付与治理")
+    index = (execution / "README.md").read_text(encoding="utf-8")
+    receipt_name = "1.15-R2-最终验收结果.md"
+    matrix_name = "1.15-R2-需求验收矩阵.md"
+    receipt = (execution / receipt_name).read_text(encoding="utf-8")
+    matrix = (execution / matrix_name).read_text(encoding="utf-8")
+    assert f"(exec/{receipt_name})" in architecture
+    assert f"({receipt_name})" in implementation
+    assert "(../1.15架构设计.md)" in implementation
+    for target in (receipt_name, matrix_name):
+        assert f"({target})" in index
+        assert f"(exec/{target})" in historical
+    checklist_status = [
+        line for line in historical.splitlines() if f"(exec/{receipt_name})" in line
+    ]
+    assert len(checklist_status) == 1
     _assert_r2_acceptance_consistent(
-        receipt,
-        (
-            next(
-                paragraph
-                for paragraph in plan_entry.split("\n\n")
-                if paragraph.startswith("架构实施基准为 **1.15 架构主计划 R2**")
-            ),
-            implementation.split("\n\n")[1],
-            _document_section(checklist, "1.15.0 架构阶段承接").strip().split("\n\n")[0],
-            a6[0].split("|")[-2],
-        ),
-        matrix,
-    )
-    assert "(1.15架构设计.md)" in plan_entry
-    assert "(exec/1.15架构-实施计划.md)" in plan_entry
-    assert "唯一架构规范" in plan_entry
-    assert "规范与稳定需求 ID 的唯一来源为[1.15架构设计](../1.15架构设计.md)" in implementation
-    assert "阶段状态只由[架构主计划](../架构主计划.md)维护" in implementation
-    assert "阶段状态只由[架构主计划](架构主计划.md)维护" in checklist
-    assert "(exec/1.15-R2-需求验收矩阵.md)" in plan_entry
-    assert "(exec/1.15-R2-实施结果.md)" in checklist
-    assert "不改写成R2证据" in plan_entry
-    assert "不证明R2完成" in checklist
-    assert any(
-        wording in checklist for wording in ("不能把定向通过签为整体完成", "定向通过不签发整体完成")
+        receipt, (implementation.split("\n\n")[1], checklist_status[0]), matrix
     )
     assert "工程门和 Mod 生产静态语义门均必需" in implementation
     assert "E 和 M 全部通过才可签署架构静态完成" in architecture
-    assert "工程治理与产品开发分别验收" in engineering
-    assert "保留未完成能力和有效失败的真实状态" in engineering
-    assert "仅目标，未启动" in subplan_entry
-    assert "(archive/X1/架构主计划.md)" in plan_entry
-    assert "(archive/X1/架构子计划.md)" in subplan_entry
+
+
+def test_plan_archive_preserves_historical_records() -> None:
+    root = Path(__file__).resolve().parents[1]
+    plan = (root / "docs/design/archive/X1/架构主计划.md").read_text(encoding="utf-8")
+    subplans = (root / "docs/design/archive/X1/架构子计划.md").read_text(encoding="utf-8")
+    previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
+    assert plan.startswith("# Situated AI 架构主计划\n")
     assert "已完成并归档" in plan
     assert "已完成并归档" in subplans
     assert "已授权实施" in plan
@@ -189,9 +172,6 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
         *(f"E{i}" for i in range(1, 5)),
     ]
     assert "具体实现随证据调整" in subplans
-    workflow = _document_section((root / "CONTRIBUTING.md").read_text(encoding="utf-8"), "验证")
-    assert "(docs/design/架构主计划.md)" in workflow
-    assert "(docs/design/exec/广度深度拓展-结果.md)" in workflow
     archive = root / "docs/design/archive"
     assert (archive / "manifest.json").is_file()
     assert "历史" in (archive / "README.md").read_text(encoding="utf-8")
@@ -221,22 +201,100 @@ def test_plan_archival_and_quality_gate_are_explicit() -> None:
     assert "由用户验收" in plan
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
-    assert "不能关闭新架构需求" in checklist
-    assert "X1的X0–X6及D1–D4、G1–G3、E1–E4已归档" in checklist
-    assert "长期行为" in checklist
-    assert distribution.RELEASE_VERSION in checklist
-    assert "发布" in checklist
-    assert "部署" in checklist
-    assert "(exec/版本交付-结果.md)" in checklist
-    # A new source version is a release target until its actual delivery exists.
-    delivery_index = (root / "docs/design/exec/版本交付-结果.md").read_text(encoding="utf-8")
-    delivered = re.findall(r"当前交付为 \*\*(\d+\.\d+\.\d+)\*\*", delivery_index)
-    assert len(delivered) == 1
-    receipt_link = f"{delivered[0]}-交付结果.md"
-    assert f"(exec/{receipt_link})" in checklist
-    assert (root / "docs/design/exec" / receipt_link).is_file()
-    assert "不得缩小源码哈希集合、刷新旧锁或跳过失败制造通过" in checklist
     assert "11 种语言" in previous
+
+
+_MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+_ASPECT_ID = re.compile(r"`(D\d{2})\.[a-z][a-z0-9_]*`")
+
+
+def _table_cells(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def _assert_plan_links(path: Path, text: str) -> None:
+    for target in _MARKDOWN_LINK.findall(text):
+        link = urlsplit(target)
+        if link.scheme or link.netloc:
+            continue
+        destination = path.parent / unquote(link.path) if link.path else path
+        assert destination.exists(), (path.name, target)
+        if link.fragment and destination.suffix.lower() == ".md":
+            headings = re.findall(
+                r"^#{1,6}\s+(.+)$", destination.read_text(encoding="utf-8"), re.MULTILINE
+            )
+            anchors = {
+                re.sub(r"[^\w\s-]", "", heading.strip().lower()).replace(" ", "-")
+                for heading in headings
+            }
+            assert unquote(link.fragment) in anchors, (path.name, target)
+
+
+def test_current_plan_routes_stage_exits_and_delivery_evidence() -> None:
+    root = Path(__file__).resolve().parents[1]
+    design = root / "docs/design"
+    plan_path = design / "架构主计划.md"
+    checklist_path = design / "当前工作清单.md"
+    plan = plan_path.read_text(encoding="utf-8")
+    checklist = checklist_path.read_text(encoding="utf-8")
+    route = _document_section(checklist, "当前设计与下一动作")
+    production = _document_section(checklist, "主线生产与交付")
+    historical = _document_section(checklist, "历史交付与治理")
+    assert {"架构子计划.md", "当前工作清单.md", "exec/工程基线-1.0.md"} <= set(
+        _MARKDOWN_LINK.findall(plan)
+    )
+    assert {"架构主计划.md", "架构子计划.md"} <= set(_MARKDOWN_LINK.findall(route))
+    assert any(link.startswith("架构主计划.md#") for link in _MARKDOWN_LINK.findall(route))
+    assert "exec/版本交付-结果.md" in _MARKDOWN_LINK.findall(production)
+    assert "archive/README.md" in _MARKDOWN_LINK.findall(historical)
+    assert distribution.RELEASE_VERSION in production
+
+    # 现行阶段出口由主计划维护，清单只导航到相应入口。
+    stages = re.search(r"^### 阶段出口\n(.*?)(?=^#{1,3} |\Z)", plan, re.MULTILINE | re.DOTALL)
+    assert stages is not None
+    rows = [_table_cells(line) for line in stages[1].splitlines() if line.startswith("|")]
+    assert rows[0] == ["阶段", "交付物", "出口与失败路线"]
+    assert rows[2:]
+    assert all(len(cells) == 3 and all(cells) for cells in rows[2:])
+    assert "### 阶段出口\n" not in checklist
+
+    workflow = _document_section((root / "CONTRIBUTING.md").read_text(encoding="utf-8"), "验证")
+    assert "docs/design/架构主计划.md" in _MARKDOWN_LINK.findall(workflow)
+    assert "docs/design/exec/广度深度拓展-结果.md" in _MARKDOWN_LINK.findall(workflow)
+    for path, contents in ((plan_path, plan), (checklist_path, checklist)):
+        _assert_plan_links(path, contents)
+
+
+def test_aspect_interfaces_have_unique_ids_owners_and_evidence_entries() -> None:
+    path = Path(__file__).resolve().parents[1] / "docs/design/架构子计划.md"
+    plan = path.read_text(encoding="utf-8")
+    domains = re.findall(r"^## ((D\d{2}) .+)$", plan, re.MULTILINE)
+    assert [owner for _, owner in domains] == [f"D{number:02}" for number in range(1, 26)]
+    ids = set()
+    for heading, owner in domains:
+        section = _document_section(plan, heading)
+        rows = [_table_cells(line) for line in section.splitlines() if line.startswith("|")]
+        assert rows[0] == [
+            "方面接口",
+            "合法观察候选",
+            "国家机会与原版接入",
+            "实际后果与反馈",
+            "证据入口",
+        ], owner
+        assert rows[2:], owner
+        for cells in rows[2:]:
+            assert len(cells) == 5, (owner, cells)
+            assert all(cells), (owner, cells)
+            aspect, _, _, _, evidence = cells
+            parsed = _ASPECT_ID.fullmatch(aspect)
+            assert parsed is not None, (owner, aspect)
+            assert parsed[1] == owner, (owner, aspect)
+            assert aspect not in ids, aspect
+            ids.add(aspect)
+            # 待证入口也可用原版字段或文件定位，实际读权由对应证据独立验收。
+            assert _MARKDOWN_LINK.search(evidence) or re.search(r"`[^`]+`", evidence), aspect
+    assert "架构主计划.md" in _MARKDOWN_LINK.findall(plan)
+    _assert_plan_links(path, plan)
 
 
 @pytest.mark.parametrize("engineering_passed", [False, True])
