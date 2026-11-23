@@ -2,7 +2,7 @@
 
 Bind original source and AST digests, derive joint-program inputs, and retain
 native utility multiplication, monetary costs, eligibility and effects.
-No evaluator, lifecycle state, or engine-runtime claim is introduced here.
+The bounded comparison is for diagnostic replay. Engine execution is native.
 """
 
 from __future__ import annotations
@@ -46,6 +46,17 @@ _OWNER = "common/on_actions/00_code_on_actions.txt"
 _COUNTRY = "events/tech_events/trench_warfare.txt"
 _MODIFIER = "common/modifier_type_definitions/00_modifier_types.txt"
 _REQUIRED = frozenset({SOURCE, _DOC, _OWNER, _COUNTRY, _MODIFIER})
+_AI_DEFINES = "common/defines/00_ai.txt"
+_AI_DEFINES_SHA256 = "a1c49bb95f9c3cd57375253fce7026ff90f5ca11635f61bfca95799ca029eff8"
+_OPTION_DEFINES = {
+    "MOBILIZATION_OPTION_RANDOM_FACTOR": Fraction(1, 2),
+    "MOBILIZATION_OPTION_MONEY_COST_FACTOR": Fraction(20),
+    "MOBILIZATION_OPTION_NUM_ACTIVE_OPTIONS_DIVISOR": Fraction(1, 4),
+    "MOBILIZATION_OPTION_GOODS_SHORTAGE_MULT": Fraction(0),
+    "MOBILIZATION_OPTIONS_MIN_EXTRA_EXPENSE_RATIO": Fraction(1, 10),
+    "MOBILIZATION_OPTIONS_MAX_EXTRA_EXPENSE_RATIO": Fraction(1),
+    "MOBILIZATION_OPTIONS_EXPENSE_HYSTERESIS": Fraction(1, 10),
+}
 _BASKETS = {
     "mobilization_option_first_aid": {"fabric": "1", "liquor": "2"},
     "mobilization_option_field_hospitals": {"opium": "2", "tools": "1"},
@@ -236,6 +247,115 @@ def supply_withdrawal_morale_change(morale: Fraction, *, mobilized: bool) -> Fra
     return -morale / 2 if mobilized else Fraction(0)
 
 
+@dataclass(frozen=True, slots=True)
+class SupplyComparisonObservation:
+    """Same-call original candidate inputs for the unactivated option comparison.
+
+    Count all options the engine classifies as already active in this formation.
+    Input shortage is the engine classification for this option's inputs.
+    A partial option list, trade deficit or potential supply cannot fill these facts.
+    The evidence recorder assigns a stable ID unique to each evaluation within the
+    timeline, even when the game time, formation and candidate are identical.
+    """
+
+    opportunity: SupplyOpportunity
+    evaluation_id: str
+    candidate_active: bool | None
+    active_options: int | None
+    input_shortage: bool | None
+    weighted_utility: Fraction | None = None
+    monetary_cost: Fraction | None = None
+
+    def __post_init__(self) -> None:
+        stable_id(self.evaluation_id, "SupplyComparisonObservation.evaluation_id")
+        if self.active_options is not None and (
+            type(self.active_options) is not int or self.active_options < 0
+        ):
+            raise ValueError("已启用选项数量必须为非负整数")
+        if self.monetary_cost is not None and self.monetary_cost < 0:
+            raise ValueError("原版货币成本必须为非负数")
+
+
+@dataclass(frozen=True, slots=True)
+class SupplyComparison:
+    """Bounds on only the documented adjustments, before unverified engine stages."""
+
+    active_option_factor: tuple[Fraction, Fraction]
+    adjusted_utility: tuple[Fraction, Fraction] | None
+    scaled_monetary_cost: Fraction | None
+
+
+def compare_supply_activation(
+    opportunity: SupplyOpportunity,
+    observed: SupplyComparisonObservation | None,
+    *,
+    evaluation_id: str,
+) -> SupplyComparison | None:
+    """Replay documented factors using the original recorded evaluation identity."""
+    stable_id(evaluation_id, "compare_supply_activation.evaluation_id")
+    if (
+        not opportunity.provided
+        or opportunity.control != "ai"
+        or observed is None
+        or observed.opportunity != opportunity
+        or observed.evaluation_id != evaluation_id
+        or observed.candidate_active is not False
+    ):
+        return None
+    zero, one = Fraction(0), Fraction(1)
+    count = observed.active_options
+    if count is None:
+        active_option_factor = (zero, one)
+    else:
+        factor = one / (
+            one + count * _OPTION_DEFINES["MOBILIZATION_OPTION_NUM_ACTIVE_OPTIONS_DIVISOR"]
+        )
+        active_option_factor = (factor, factor)
+    lower, upper = active_option_factor
+    shortage_factor = _OPTION_DEFINES["MOBILIZATION_OPTION_GOODS_SHORTAGE_MULT"]
+    if observed.input_shortage is True:
+        lower *= shortage_factor
+        upper *= shortage_factor
+    elif observed.input_shortage is None:
+        lower *= shortage_factor
+
+    utility = observed.weighted_utility
+    if zero in (upper, utility):
+        adjusted = (zero, zero)
+    elif utility is None:
+        adjusted = None
+    else:
+        adjusted = (min(utility * lower, utility * upper), max(utility * lower, utility * upper))
+    cost = observed.monetary_cost
+    return SupplyComparison(
+        active_option_factor,
+        adjusted,
+        None if cost is None else cost * _OPTION_DEFINES["MOBILIZATION_OPTION_MONEY_COST_FACTOR"],
+    )
+
+
+def verify_supply_comparison(game: Path) -> dict[str, Any]:
+    """Verify independent installed bytes and exact scalar AST for the native operation."""
+    version_contracts.require_current()
+    raw = (game / _AI_DEFINES).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _AI_DEFINES_SHA256:
+        raise ValueError("原版动员比较定义原字节漂移")
+    parsed = parse_text(raw.decode("utf-8-sig"), path=_AI_DEFINES)
+    if parsed.errors:
+        raise ValueError("原版动员比较定义解析失败")
+    evidence = {}
+    for key, expected in _OPTION_DEFINES.items():
+        node = _node(parsed.root, "NAI", key)
+        if (
+            not isinstance(node.value, Scalar)
+            or node.value.quoted
+            or Fraction(node.value.text) != expected
+        ):
+            raise ValueError(f"原版动员比较定义值漂移：{key}")
+        evidence[key] = _record(node)
+    return evidence
+
+
 def supply_chain_contract(baseline: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Expose the exact gates and effects for separately owned native phases."""
     data = load_baseline() if baseline is None else _validate(dict(baseline))
@@ -270,6 +390,15 @@ def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
             "value": "mobilization_option:mobilization_option_extra_supplies",
         },
         "withdrawal_effect": {"scope": "combat_unit", "morale_change_ratio": "-0.5"},
+        "native_activation_comparison": {
+            "source": _AI_DEFINES,
+            "source_sha256": _AI_DEFINES_SHA256,
+            "defines": {key: str(value) for key, value in _OPTION_DEFINES.items()},
+            "phase": "non_activated_candidate_on_same_formation",
+            "observation_identity": "recorded_evaluation_id_unique_within_timeline",
+            "operation": "divide_by_one_plus_active_options_times_define",
+            "unverified": ["native_order", "rank", "acceptance", "execution"],
+        },
         "projection": "native_rules_only_pending_calibration",
     }
 
@@ -483,6 +612,7 @@ def verify_game(game: Path) -> dict[str, Any]:
     frozen = load_baseline()
     if _inventory(read_inputs(game)) != frozen:
         raise ValueError("动员当前源集合/原文/AST漂移")
+    verify_supply_comparison(game)
     return frozen
 
 
