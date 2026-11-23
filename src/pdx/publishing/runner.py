@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import zipfile
 from contextlib import nullcontext
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -174,10 +174,13 @@ def _plan_package(identity: ReleaseIdentity, ledger: PublicationLedger | None) -
 
 
 def _draft_body(identity: ReleaseIdentity, package: FrozenPackage) -> str:
-    return (
+    introduction = (
         f"Situated AI {identity.version} 正式版本。\n\n"
         f"源提交 `{identity.commit}`。Mod ZIP SHA-256 `{package.sha256}`。"
     )
+    if identity.github_notes is None:
+        return introduction
+    return f"{introduction}\n\n{identity.github_notes}"
 
 
 def _workshop(identity: ReleaseIdentity, backend: SteamUGCBackend | None) -> steam.SteamWorkshop:
@@ -216,6 +219,7 @@ def _preflight(
                     package.assets if package else None,
                     owned_draft=_draft_body(identity, package) if package else None,
                     previous=ledger.channel(channel) if ledger else None,
+                    verify_published_body=package is not None and identity.github_notes is not None,
                 )
                 state = {"status": "ready", **remote}
                 source_authority = {"repository": identity.github_repo, "merged_main": True}
@@ -281,6 +285,8 @@ def plan_release(
 ) -> dict[str, object]:
     identity.validate(applying=False)
     source = _source_state(identity)
+    if not identity.commit:
+        identity = replace(identity, commit=str(source["head"]))
     package = None
     ledger = None
     # A default plan describes identities without building on an unready checkout.
@@ -298,7 +304,7 @@ def plan_release(
     )
     return {
         "status": "blocked" if checks["status"] == "blocked" else "planned",
-        "identity": {**identity.receipt(), "commit": identity.commit or source["head"]},
+        "identity": identity.receipt(),
         "source": source,
         "package": package.receipt() if package else None,
         "preflight": checks,
@@ -325,6 +331,7 @@ def _apply_channels(
                 draft_body=_draft_body(identity, package),
                 checkpoint=checkpoint,
                 previous=ledger.channel(channel),
+                verify_published_body=identity.github_notes is not None,
             )
         elif channel == "local":
             assert identity.local_root is not None

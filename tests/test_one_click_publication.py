@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from dataclasses import replace
@@ -369,6 +370,83 @@ def test_planning_has_no_external_writes(monkeypatch, identity, bundle):
     cli_result = CliRunner().invoke(cli.app, ["publish", "--apply"])
     assert cli_result.exit_code == cli.EXIT_FAILED
     assert "必须显式选择" in cli_result.output
+
+
+def test_github_notes_are_bound_to_release_and_verified_on_resume(
+    tmp_path, monkeypatch, identity, bundle
+):
+    gh = FakeGitHub(identity)
+    gh.lose_upload_response = True
+    monkeypatch.setattr(runner, "GitHubClient", lambda _repo: gh)
+    monkeypatch.setattr(runner, "_build", lambda _version: bundle)
+    monkeypatch.setattr(distribution, "validate_package", lambda _path: None)
+
+    notes = "## 实测记录\r\n\r\n- 单人模式\r\n"
+    original = notes.encode("utf-8")
+    path = tmp_path / "notes.md"
+    path.write_bytes(original)
+    arguments = [
+        "publish",
+        "--channel",
+        "github",
+        "--github-repo",
+        identity.github_repo,
+        "--publication-dir",
+        str(identity.publication_dir),
+        "--github-notes-file",
+        str(path),
+    ]
+    apply = [*arguments, "--commit", identity.commit, "--apply"]
+    cli_runner = CliRunner()
+    plan = cli_runner.invoke(cli.app, arguments)
+    assert plan.exit_code == 0, plan.output
+    declared = json.loads(plan.output)["identity"]
+    assert declared["github_notes_sha256"] == hashlib.sha256(original).hexdigest()
+    assert declared["commit"] == identity.commit
+    assert gh.mutations == []
+
+    checked_apply = [*apply, "--expected-github-notes-sha256", declared["github_notes_sha256"]]
+    path.write_bytes(original.replace(b"\r\n", b"\n"))
+    replaced = cli_runner.invoke(cli.app, checked_apply)
+    assert replaced.exit_code == cli.EXIT_FAILED
+    assert "GitHub 发布说明的 SHA-256 与预审摘要不同" in replaced.output
+    assert gh.mutations == []
+    assert identity.publication_dir is not None
+    assert not identity.publication_dir.exists()
+
+    path.write_bytes(original)
+    first = cli_runner.invoke(cli.app, checked_apply)
+    assert first.exit_code == cli.EXIT_FAILED
+    assert gh.release is not None
+    assert gh.release["draft"] is True
+    expected_body = (
+        f"Situated AI {identity.version} 正式版本。\n\n"
+        f"源提交 `{identity.commit}`。Mod ZIP SHA-256 `{bundle.sha256}`。\n\n{notes}"
+    )
+    assert gh.release["body"] == expected_body
+    assert json.loads(first.output)["identity"] == declared
+
+    writes = gh.mutations.copy()
+    path.write_bytes(original + b"\n")
+    changed = cli_runner.invoke(cli.app, apply)
+    assert changed.exit_code == cli.EXIT_FAILED
+    assert "已有发布收据绑定了不同的发布身份" in changed.output
+    assert gh.mutations == writes
+
+    path.write_bytes(original)
+    assert cli_runner.invoke(cli.app, arguments).exit_code == 0
+    resumed = cli_runner.invoke(cli.app, checked_apply)
+    assert resumed.exit_code == 0, resumed.output
+    assert gh.release["draft"] is False
+    assert gh.release["body"] == expected_body
+    assert json.loads(resumed.output)["status"] == "verified"
+
+    writes = gh.mutations.copy()
+    gh.release["body"] = "modified on GitHub"
+    drifted = cli_runner.invoke(cli.app, apply)
+    assert drifted.exit_code == cli.EXIT_FAILED
+    assert "正文与冻结发布说明不同" in drifted.output
+    assert gh.mutations == writes
 
 
 def test_local_second_rename_failure_restores_original(tmp_path, identity, bundle, monkeypatch):

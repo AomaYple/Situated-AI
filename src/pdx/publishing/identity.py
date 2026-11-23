@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -28,6 +28,7 @@ class ReleaseIdentity:
     workshop_item: str | None = None
     workshop_owner: str | None = None
     workshop_helper: Path | None = None
+    github_notes: str | None = field(default=None, repr=False)
 
     def validate(self, *, applying: bool) -> None:
         if (
@@ -41,6 +42,11 @@ class ReleaseIdentity:
             raise ValueError("源提交必须是完整 40 位小写 Git SHA")
         if len(set(self.channels)) != len(self.channels) or set(self.channels) - CHANNELS:
             raise ValueError("发布渠道重复或未知")
+        if self.github_notes is not None:
+            if "github" not in self.channels:
+                raise ValueError("GitHub 发布说明要求显式选择 --channel github")
+            if not self.github_notes.strip() or "\0" in self.github_notes:
+                raise ValueError("GitHub 发布说明须为非空的 UTF-8 文本")
         if self.github_repo and (
             re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_.-]{1,100}", self.github_repo)
             is None
@@ -99,8 +105,17 @@ class ReleaseIdentity:
             if applying and channel in self.channels and missing:
                 raise ValueError(f"{channel} 身份不完整：" + ", ".join(missing))
 
+    @property
+    def github_notes_sha256(self) -> str | None:
+        if self.github_notes is None:
+            return None
+        return hashlib.sha256(self.github_notes.encode("utf-8")).hexdigest()
+
     def receipt(self) -> dict[str, object]:
         payload: dict[str, object] = asdict(self)
+        payload.pop("github_notes")
+        if (notes_sha256 := self.github_notes_sha256) is not None:
+            payload["github_notes_sha256"] = notes_sha256
         payload["publication_dir"] = (
             str(self.publication_dir.absolute()) if self.publication_dir else None
         )

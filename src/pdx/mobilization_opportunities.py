@@ -12,15 +12,20 @@ import json
 import math
 import tomllib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, cast
+from dataclasses import dataclass
+from fractions import Fraction
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from . import config, decision_rules, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
+from .situated.core_contracts import stable_id
 from .textio import normalized_text
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from .situated.core_contracts import EntityKey, TimeIdentity
 
 BASELINE_SHA256 = "46a17a140bd2a7e38acdc2faed1d8838238353d07a8175ae60c67f8a2247257b"
 
@@ -108,6 +113,165 @@ _PARAMETERS = frozenset(
         "pressure_price_threshold",
     }
 )
+
+
+type SupplyOption = Literal["extra_supplies", "luxurious_supplies"]
+type SupplyControl = Literal["ai", "player", "unknown"]
+
+EXTRA_SUPPLIES = "extra_supplies"
+LUXURIOUS_SUPPLIES = "luxurious_supplies"
+_SUPPLY_TECH = {EXTRA_SUPPLIES: "army_reserves", LUXURIOUS_SUPPLIES: "military_statistics"}
+_SUPPLY_GOODS = {EXTRA_SUPPLIES: ("groceries",), LUXURIOUS_SUPPLIES: ("meat", "wine")}
+_SUPPLY_SECTIONS = {
+    EXTRA_SUPPLIES: {
+        "possible": "e17eb44754eaf1fb94edb97617429a14c5b5d2593eb74502986438fea5a6ceac",
+        "unlocking_technologies": "9caf52afd3fabdd812234510862293a53e3b06a4d296d74689af3480012b4019",
+    },
+    LUXURIOUS_SUPPLIES: {
+        "possible": "44cf676127884b0d5a8d234f5f60d521996b5d278d5f05607b4c05c7d13e3964",
+        "unlocking_technologies": "3426c41db31b39092dfbe3c6b0ead91899f94020bc1174791cf87ae6e3897429",
+    },
+}
+_SUPPLY_WITHDRAWAL = "4aad402343d34bf38f0e1c980f2da465cd6b2324ca03248d23c0ff840d03c39e"
+
+
+@dataclass(frozen=True, slots=True)
+class SupplyOpportunity:
+    """Actual native consideration of one option for the current formation.
+
+    The time epoch identifies the current game timeline. The control epoch
+    covers uninterrupted control and ownership of this formation.
+    """
+
+    actor: EntityKey
+    formation: EntityKey
+    option: SupplyOption
+    time: TimeIdentity
+    control: SupplyControl
+    control_epoch: str
+    provided: bool
+
+    def __post_init__(self) -> None:
+        if (
+            self.actor.kind != "country"
+            or self.formation.kind != "military_formation"
+            or self.option not in _SUPPLY_GOODS
+            or self.control not in {"ai", "player", "unknown"}
+        ):
+            raise ValueError("补给机会的国家、编队或相位无效")
+        stable_id(self.control_epoch, "SupplyOpportunity.control_epoch")
+
+
+@dataclass(frozen=True, slots=True)
+class SupplyObservation:
+    """Locally known state captured within the continuous control epoch.
+
+    Reacquire observations when the game timeline or formation control changes.
+    """
+
+    actor: EntityKey
+    formation: EntityKey
+    occurred_at: int
+    learned: TimeIdentity
+    control_epoch: str
+    valid_until: int
+    extra_enabled: bool | None
+    extra_in_effect: bool | None
+    technologies: frozenset[str] | None
+    potential_supply: frozenset[str] | None
+
+    def __post_init__(self) -> None:
+        if (
+            self.actor.kind != "country"
+            or self.formation.kind != "military_formation"
+            or not 0 <= self.occurred_at <= self.learned.evaluation <= self.valid_until
+            or (self.extra_in_effect is True and self.extra_enabled is not True)
+        ):
+            raise ValueError("补给观察的主体、时序或生效状态无效")
+        stable_id(self.control_epoch, "SupplyObservation.control_epoch")
+
+
+@dataclass(frozen=True, slots=True)
+class SupplyEligibility:
+    """Facts usable by the two native readers and by settlement evaluation."""
+
+    eligible: bool | None
+    extra_in_effect: bool | None
+
+
+def supply_eligibility(
+    opportunity: SupplyOpportunity, observation: SupplyObservation | None
+) -> SupplyEligibility:
+    """Check the named native gates at an actual AI opportunity."""
+    if (
+        not opportunity.provided
+        or opportunity.control != "ai"
+        or observation is None
+        or (opportunity.actor, opportunity.formation) != (observation.actor, observation.formation)
+        or opportunity.time.epoch != observation.learned.epoch
+        or opportunity.control_epoch != observation.control_epoch
+        or not observation.learned.evaluation
+        <= opportunity.time.evaluation
+        <= observation.valid_until
+    ):
+        return SupplyEligibility(None, None)
+    technology = _SUPPLY_TECH[opportunity.option]
+    goods = _SUPPLY_GOODS[opportunity.option]
+    gates = [
+        None if observation.technologies is None else technology in observation.technologies,
+        None
+        if observation.potential_supply is None
+        else set(goods) <= observation.potential_supply,
+    ]
+    if opportunity.option == LUXURIOUS_SUPPLIES:
+        gates.append(observation.extra_enabled)
+    eligible = False if False in gates else True if all(gates) else None
+    return SupplyEligibility(eligible, observation.extra_in_effect)
+
+
+def supply_withdrawal_morale_change(morale: Fraction, *, mobilized: bool) -> Fraction:
+    """Reference value for one observed vanilla deactivation, per combat unit."""
+    if morale < 0:
+        raise ValueError("撤销前的士气不能为负")
+    return -morale / 2 if mobilized else Fraction(0)
+
+
+def supply_chain_contract(baseline: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Expose the exact gates and effects for separately owned native phases."""
+    data = load_baseline() if baseline is None else _validate(dict(baseline))
+    return _supply_chain_contract(data)
+
+
+def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
+    stages = {}
+    for option, hashes in _SUPPLY_SECTIONS.items():
+        option_id = f"mobilization_option_{option}"
+        row = data["candidates"][option_id]
+        sections = row["sections"]
+        required = {**hashes, "on_deactivate_while_mobilized": _SUPPLY_WITHDRAWAL}
+        if any(sections[key]["sha256"] != digest for key, digest in required.items()):
+            raise ValueError(f"原版动员补给资格或撤销语义漂移：{option_id}")
+        stages[option] = {
+            "field": row["field"],
+            "bootstrap_technology": _SUPPLY_TECH[option],
+            "potential_supply_goods": list(_SUPPLY_GOODS[option]),
+            "upkeep_goods": dict(row["goods"]),
+            "proof": {key: dict(sections[key]) for key in required},
+        }
+    return {
+        "source": SOURCE,
+        "actor_path": ["owner"],
+        "native_root": "military_formation",
+        "stages": stages,
+        "eligibility_operator": {
+            "field": "mobilization_option_luxurious_supplies.possible",
+            "scope": "scope:military_formation",
+            "trigger": "has_mobilization_option",
+            "value": "mobilization_option:mobilization_option_extra_supplies",
+        },
+        "withdrawal_effect": {"scope": "combat_unit", "morale_change_ratio": "-0.5"},
+        "projection": "native_rules_only_pending_calibration",
+    }
 
 
 def _canonical(value: object) -> str:
@@ -549,6 +713,7 @@ def derive(
         "readers": dict(sorted(readers.items())),
         "rules": rules,
         "actors": {SOURCE: ["owner"]},
+        "supply_chain": _supply_chain_contract(frozen),
         "covered": [
             {
                 "id": identity,

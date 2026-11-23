@@ -10,6 +10,7 @@
 
 ## 工程与架构收据
 
+- [架构主计划实施结果](架构主计划实施-结果.md)登记首版实施证据、复现入口及待完成的候选验收与发布。
 - [Mod 分阶段开发与发布规划结果](Mod分阶段开发发布-结果.md)登记主子计划阶段、文档入口和独立复核。
 - 深化设计的四阶段产物、原版安装分母、独立复核和完整工程验收随当时的主线提交查阅。[Mod 架构深化结果](https://github.com/AomaYple/Situated-AI/blob/818bfa82d50a0811d25def5fffff7173ad0c2a1e/docs/design/exec/Mod%E6%9E%B6%E6%9E%84%E6%B7%B1%E5%8C%96-%E7%BB%93%E6%9E%9C.md)
 - 重设计时的主子计划原件、选型验算、独立复核和工程验证随当时的主线提交查阅。[Mod 架构重设计结果](https://github.com/AomaYple/Situated-AI/blob/e9ed9e19bdb5c243bfc7fc8fb998c7036526fd66/docs/design/exec/Mod%E6%9E%B6%E6%9E%84%E9%87%8D%E8%AE%BE%E8%AE%A1-%E7%BB%93%E6%9E%9C.md)
