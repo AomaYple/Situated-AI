@@ -21,7 +21,7 @@ Die Mod verändert KI-Präferenzen und bewahrt dabei die ursprünglichen Handlun
 
 [h2]Kompatibilität[/h2]
 
-Für das unveränderte Victoria 3 unter Windows, macOS und Linux entwickelt. Während des Spiels muss kein zusätzliches Programm laufen. Ein eigenes Playset und ein neues Spiel oder ein gesicherter Spielstand werden empfohlen.
+Für Victoria 3 1.15.2 (Steam-Build 26763837). Aktiviere alle 11 offiziellen spielrelevanten DLCs und ausschließlich diese Mod. Starte anschließend eine neue Einzelspielerpartie. Du kannst diese Partie mit demselben Spiel-Build, derselben Mod-Version und derselben DLC-Kombination speichern und laden. Musik- und Kosmetik-DLCs sind optional. Die Prüfung des Mehrspielermodus steht noch aus.
 
 Mods, die dieselben Dateien für KI-Strategien, Gesetze, Gebäude, Technologien, Diplomatie, Militär oder verwandte Inhalte verändern, können Konflikte verursachen. Die Kompatibilität solcher Kombinationen wird nicht garantiert.
 

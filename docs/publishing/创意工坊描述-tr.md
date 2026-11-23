@@ -21,7 +21,7 @@ Mod, özgün eylem koşullarını ve gerçek maliyetleri koruyarak yapay zekân�
 
 [h2]Uyumluluk[/h2]
 
-Windows, macOS ve Linux’taki temel Victoria 3 için tasarlanmıştır. Oyun sırasında ek bir program çalıştırmak gerekmez. Ayrı bir mod oynatma listesi ve yeni oyun ya da yedeklenmiş bir kayıt önerilir.
+Victoria 3 1.15.2 (Steam derlemesi 26763837) içindir. Oynanışı etkileyen 11 resmî DLC’nin tamamını ve yalnızca bu modu etkinleştirip yeni bir tek oyunculu oyun başlatın. Bu oyunu aynı oyun derlemesi, mod sürümü ve DLC bileşimiyle kaydedip yükleyebilirsiniz. Müzik ve kozmetik DLC’ler isteğe bağlıdır. Çok oyunculu modun doğrulaması henüz tamamlanmadı.
 
 Aynı yapay zekâ stratejisi, yasa, bina, teknoloji, diplomasi, askerî içerik veya ilgili dosyaları değiştiren diğer modlar çakışmalara yol açabilir. Bu birleşimlerin uyumluluğu garanti edilmez.
 

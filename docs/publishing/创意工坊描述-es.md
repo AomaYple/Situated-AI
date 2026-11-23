@@ -21,7 +21,7 @@ El mod ajusta las preferencias de la IA y conserva los requisitos y costes reale
 
 [h2]Compatibilidad[/h2]
 
-Diseñado para Victoria 3 sin otros mods en Windows, macOS y Linux. No necesita ningún programa adicional durante la partida. Se recomienda un conjunto de mods separado y una partida nueva o una copia de seguridad del guardado.
+Para Victoria 3 1.15.2 (compilación 26763837 de Steam). Activa los 11 DLC oficiales que afectan a la jugabilidad, habilita solo este mod y empieza una partida nueva en solitario. Puedes guardar y cargar esa partida con la misma compilación del juego, la misma versión del mod y la misma combinación de DLC. Los DLC musicales y cosméticos son opcionales. La verificación del multijugador está pendiente.
 
 Otros mods que modifiquen los mismos archivos de estrategias de IA, leyes, edificios, tecnologías, diplomacia, fuerzas armadas o contenido relacionado pueden causar conflictos. No se garantiza la compatibilidad de esas combinaciones.
 
