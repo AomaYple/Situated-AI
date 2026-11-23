@@ -137,6 +137,16 @@ def test_formal_derivation_reports_both_stages_and_no_uncalibrated_contribution(
     assert contract["projection"] == "native_rules_only_pending_calibration"
     assert len(derived["rules"]) == 72
     assert all("supply_chain" not in row["id"] for row in derived["rules"])
+    extra, luxury = (contract["stages"][option] for option in (EXTRA, LUXURY))
+    for stage in (extra, luxury):
+        schedule = stage["evaluation_schedule"]
+        assert stage["field"] == f"{schedule['consumer_id']}.ai_weight"
+        assert schedule["trigger"] == "consumer_on_demand"
+        assert schedule["save_boundary"] == "discard"
+    assert luxury["reassessment_after"] == extra["evaluation_schedule"]["consumer_id"]
+    assert luxury["eligibility_operator"] == contract["eligibility_operator"]
+    assert luxury["eligibility_operator"]["root"] == "country"
+    assert luxury["eligibility_operator"]["scope"] == "scope:military_formation"
 
 
 @pytest.mark.integration
@@ -169,6 +179,64 @@ def test_native_gate_and_withdrawal_are_preserved_as_separate_sections() -> None
     assert supply.supply_withdrawal_morale_change(Fraction(4, 5), mobilized=False) == 0
 
 
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        ("enabled", supply.SupplyEligibility(True, False)),
+        ("disabled", supply.SupplyEligibility(False, False)),
+        ("lost_technology", supply.SupplyEligibility(False, False)),
+        ("missing_goods", supply.SupplyEligibility(None, False)),
+        ("same_tick", None),
+        ("never_observed", None),
+        ("unknown_prior", None),
+        ("other_formation", None),
+        ("player", None),
+        ("load", None),
+        ("resumed_control", None),
+    ],
+)
+def test_supply_reassessment_uses_only_a_new_observed_formation_change(
+    change: str, expected: supply.SupplyEligibility | None
+) -> None:
+    extra = replace(_offer(EXTRA), time=TimeIdentity(TIMELINE, 1))
+    luxury = replace(_offer(), time=TimeIdentity(TIMELINE, 3))
+    previous = replace(
+        _observation(), extra_enabled=False, extra_in_effect=False, learned=extra.time
+    )
+    current = replace(_observation(), occurred_at=2, extra_in_effect=False, valid_until=3)
+    if change == "disabled":
+        previous = replace(previous, extra_enabled=True)
+        current = replace(current, extra_enabled=False)
+    elif change == "lost_technology":
+        current = replace(current, technologies=frozenset({"army_reserves"}))
+    elif change == "missing_goods":
+        current = replace(current, potential_supply=None)
+    elif change == "same_tick":
+        current = replace(current, occurred_at=1)
+    elif change == "never_observed":
+        current = replace(current, extra_enabled=False)
+    elif change == "unknown_prior":
+        previous = replace(previous, extra_enabled=None)
+    elif change in {"other_formation", "player", "load", "resumed_control"}:
+        # Use a perfectly valid observation for the destination. The edge still
+        # must not cross ownership of information, formation, or control epoch.
+        if change == "other_formation":
+            luxury = replace(luxury, formation=EntityKey("military_formation", "a-2"))
+        elif change == "player":
+            luxury = replace(luxury, control="player")
+        elif change == "load":
+            luxury = replace(luxury, time=TimeIdentity("loaded-game", 3))
+        elif change == "resumed_control":
+            luxury = replace(luxury, control_epoch="control-2")
+        current = replace(
+            current,
+            formation=luxury.formation,
+            learned=luxury.time,
+            control_epoch=luxury.control_epoch,
+        )
+    assert supply.reassess_supply_after_option(extra, luxury, previous, current) == expected
+
+
 def _endpoint(outcome: str, value: int, time: int) -> ref.Endpoint:
     return ref.Endpoint(
         ref.Attribution(
@@ -187,6 +255,15 @@ def _supply_problem(
     finish = ref.End(4)
     after_extra: ref.Node = finish
     technologies = frozenset({"military_statistics"}) if tech_retained else frozenset()
+    extra_offer = replace(_offer(EXTRA), time=TimeIdentity(TIMELINE, 0))
+    initial_state = replace(
+        _observation(),
+        occurred_at=0,
+        learned=extra_offer.time,
+        extra_enabled=False,
+        extra_in_effect=False,
+    )
+    assert supply.supply_eligibility(extra_offer, initial_state).eligible is True
     later_state = replace(
         _observation(),
         learned=TimeIdentity(TIMELINE, later_learned),
@@ -196,7 +273,10 @@ def _supply_problem(
     luxury_offer = replace(_offer(), provided=later_present)
     baseline_state = replace(later_state, extra_enabled=False, extra_in_effect=False)
     assert supply.supply_eligibility(luxury_offer, baseline_state).eligible is not True
-    if supply.supply_eligibility(luxury_offer, later_state).eligible is True:
+    reevaluated = supply.reassess_supply_after_option(
+        extra_offer, luxury_offer, initial_state, later_state
+    )
+    if reevaluated is not None and reevaluated.eligible is True:
         luxury = ref.Transition(
             2,
             "luxury-paid",

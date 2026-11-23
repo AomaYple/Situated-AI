@@ -14,12 +14,13 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
-from typing import TYPE_CHECKING, Any, Literal, cast
+from functools import cache
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from . import config, decision_rules, version_contracts
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
-from .situated.core_contracts import stable_id
+from .situated.core_contracts import EvaluationSchedule, EvidenceRef, stable_id
 from .textio import normalized_text
 
 if TYPE_CHECKING:
@@ -129,11 +130,11 @@ _PARAMETERS = frozenset(
 type SupplyOption = Literal["extra_supplies", "luxurious_supplies"]
 type SupplyControl = Literal["ai", "player", "unknown"]
 
-EXTRA_SUPPLIES = "extra_supplies"
-LUXURIOUS_SUPPLIES = "luxurious_supplies"
+EXTRA_SUPPLIES: Final = "extra_supplies"
+LUXURIOUS_SUPPLIES: Final = "luxurious_supplies"
 _SUPPLY_TECH = {EXTRA_SUPPLIES: "army_reserves", LUXURIOUS_SUPPLIES: "military_statistics"}
 _SUPPLY_GOODS = {EXTRA_SUPPLIES: ("groceries",), LUXURIOUS_SUPPLIES: ("meat", "wine")}
-_SUPPLY_SECTIONS = {
+_SUPPLY_SECTIONS: dict[SupplyOption, dict[str, str]] = {
     EXTRA_SUPPLIES: {
         "possible": "e17eb44754eaf1fb94edb97617429a14c5b5d2593eb74502986438fea5a6ceac",
         "unlocking_technologies": "9caf52afd3fabdd812234510862293a53e3b06a4d296d74689af3480012b4019",
@@ -210,34 +211,134 @@ class SupplyEligibility:
     extra_in_effect: bool | None
 
 
+@dataclass(frozen=True, slots=True)
+class _FormationOptionRead:
+    """Boolean membership of one named option in the current formation."""
+
+    option: SupplyOption
+
+    def describe(self, consumer: str) -> dict[str, str]:
+        return {
+            "field": f"{consumer}.possible",
+            "root": "country",
+            "scope": "scope:military_formation",
+            "trigger": "has_mobilization_option",
+            "value": f"mobilization_option:mobilization_option_{self.option}",
+            "kind": "boolean",
+            "unit": "boolean",
+        }
+
+    def verify(self, root: Block, consumer: str) -> None:
+        binding = self.describe(consumer)
+        error = f"编队补给原版资格读取的作用域、触发器或选项漂移：{consumer}"
+        try:
+            scope = _node(root, consumer, "possible", binding["scope"])
+        except ValueError as exc:
+            raise ValueError(error) from exc
+        trigger = binding["trigger"]
+        if _ast(scope.value) != [
+            "block",
+            [["assignment", trigger, "=", None, ["scalar", binding["value"], False]]],
+        ]:
+            raise ValueError(error)
+
+    def observe(self, observation: SupplyObservation) -> bool | None:
+        enabled: Mapping[SupplyOption, bool | None] = {EXTRA_SUPPLIES: observation.extra_enabled}
+        return enabled.get(self.option)
+
+
+@dataclass(frozen=True, slots=True)
+class _SupplyInterface:
+    option: SupplyOption
+    schedule: EvaluationSchedule
+    eligibility_read: _FormationOptionRead | None = None
+
+    def evaluate(
+        self, opportunity: SupplyOpportunity, observation: SupplyObservation | None
+    ) -> SupplyEligibility:
+        known = self.observe(opportunity, observation)
+        if known is None:
+            return SupplyEligibility(None, None)
+        technology = _SUPPLY_TECH[self.option]
+        goods = _SUPPLY_GOODS[self.option]
+        gates = [
+            None if known.technologies is None else technology in known.technologies,
+            None if known.potential_supply is None else set(goods) <= known.potential_supply,
+        ]
+        if self.eligibility_read is not None:
+            gates.append(self.eligibility_read.observe(known))
+        eligible = False if False in gates else True if all(gates) else None
+        return SupplyEligibility(eligible, known.extra_in_effect)
+
+    def observe(
+        self, opportunity: SupplyOpportunity, observation: SupplyObservation | None
+    ) -> SupplyObservation | None:
+        if (
+            opportunity.option != self.option
+            or not opportunity.provided
+            or opportunity.control != "ai"
+            or observation is None
+            or (opportunity.actor, opportunity.formation)
+            != (observation.actor, observation.formation)
+            or opportunity.time.epoch != observation.learned.epoch
+            or opportunity.control_epoch != observation.control_epoch
+            or not observation.learned.evaluation
+            <= opportunity.time.evaluation
+            <= observation.valid_until
+        ):
+            return None
+        return observation
+
+
+@cache
+def _default_supply_interfaces() -> dict[SupplyOption, _SupplyInterface]:
+    return _supply_interfaces(load_baseline())
+
+
 def supply_eligibility(
     opportunity: SupplyOpportunity, observation: SupplyObservation | None
 ) -> SupplyEligibility:
     """Check the named native gates at an actual AI opportunity."""
+    return _default_supply_interfaces()[opportunity.option].evaluate(opportunity, observation)
+
+
+def reassess_supply_after_option(
+    source: SupplyOpportunity,
+    destination: SupplyOpportunity,
+    previous: SupplyObservation | None,
+    current: SupplyObservation | None,
+) -> SupplyEligibility | None:
+    """Reassess a later offer after a real, newly known same-formation option change.
+
+    A prior offer alone does not identify the engine outcome. The observed change
+    cannot establish causation, and observations at the same tick as the prior
+    offer cannot establish the order.
+    """
+    interfaces = _default_supply_interfaces()
+    followup = interfaces[destination.option]
+    reader = followup.eligibility_read
+    if reader is None or reader.option != source.option:
+        return None
+    before = interfaces[source.option].observe(source, previous)
+    after = followup.observe(destination, current)
     if (
-        not opportunity.provided
-        or opportunity.control != "ai"
-        or observation is None
-        or (opportunity.actor, opportunity.formation) != (observation.actor, observation.formation)
-        or opportunity.time.epoch != observation.learned.epoch
-        or opportunity.control_epoch != observation.control_epoch
-        or not observation.learned.evaluation
-        <= opportunity.time.evaluation
-        <= observation.valid_until
+        before is None
+        or after is None
+        or (source.actor, source.formation, source.time.epoch, source.control_epoch)
+        != (
+            destination.actor,
+            destination.formation,
+            destination.time.epoch,
+            destination.control_epoch,
+        )
+        or after.occurred_at <= source.time.evaluation
     ):
-        return SupplyEligibility(None, None)
-    technology = _SUPPLY_TECH[opportunity.option]
-    goods = _SUPPLY_GOODS[opportunity.option]
-    gates = [
-        None if observation.technologies is None else technology in observation.technologies,
-        None
-        if observation.potential_supply is None
-        else set(goods) <= observation.potential_supply,
-    ]
-    if opportunity.option == LUXURIOUS_SUPPLIES:
-        gates.append(observation.extra_enabled)
-    eligible = False if False in gates else True if all(gates) else None
-    return SupplyEligibility(eligible, observation.extra_in_effect)
+        return None
+    prior = reader.observe(before)
+    latest = reader.observe(after)
+    if prior is None or latest is None or prior == latest:
+        return None
+    return followup.evaluate(destination, after)
 
 
 def supply_withdrawal_morale_change(morale: Fraction, *, mobilized: bool) -> Fraction:
@@ -362,8 +463,8 @@ def supply_chain_contract(baseline: Mapping[str, Any] | None = None) -> dict[str
     return _supply_chain_contract(data)
 
 
-def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
-    stages = {}
+def _supply_interfaces(data: Mapping[str, Any]) -> dict[SupplyOption, _SupplyInterface]:
+    interfaces = {}
     for option, hashes in _SUPPLY_SECTIONS.items():
         option_id = f"mobilization_option_{option}"
         row = data["candidates"][option_id]
@@ -371,6 +472,27 @@ def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
         required = {**hashes, "on_deactivate_while_mobilized": _SUPPLY_WITHDRAWAL}
         if any(sections[key]["sha256"] != digest for key, digest in required.items()):
             raise ValueError(f"原版动员补给资格或撤销语义漂移：{option_id}")
+        schedule = EvaluationSchedule(
+            id=f"schedule.{option_id}",
+            consumer_id=option_id,
+            sources=(EvidenceRef(SOURCE, row["weight"]["line"]),),
+        )
+        reader = _FormationOptionRead(EXTRA_SUPPLIES) if option == LUXURIOUS_SUPPLIES else None
+        interfaces[option] = _SupplyInterface(option, schedule, reader)
+    return interfaces
+
+
+def _supply_chain_contract(
+    data: Mapping[str, Any],
+    interfaces: Mapping[SupplyOption, _SupplyInterface] | None = None,
+) -> dict[str, Any]:
+    interfaces = _supply_interfaces(data) if interfaces is None else interfaces
+    stages = {}
+    for option, interface in interfaces.items():
+        row = data["candidates"][interface.schedule.consumer_id]
+        sections = row["sections"]
+        required = (*_SUPPLY_SECTIONS[option], "on_deactivate_while_mobilized")
+        reader = interface.eligibility_read
         stages[option] = {
             "field": row["field"],
             "definition": dict(row["definition"]),
@@ -378,18 +500,22 @@ def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
             "potential_supply_goods": list(_SUPPLY_GOODS[option]),
             "upkeep_goods": dict(row["goods"]),
             "proof": {key: dict(sections[key]) for key in required},
+            "evaluation_schedule": interface.schedule.as_dict(),
+            **(
+                {
+                    "eligibility_operator": reader.describe(interface.schedule.consumer_id),
+                    "reassessment_after": interfaces[reader.option].schedule.consumer_id,
+                }
+                if reader is not None
+                else {}
+            ),
         }
     return {
         "source": SOURCE,
         "actor_path": ["owner"],
         "native_root": "military_formation",
         "stages": stages,
-        "eligibility_operator": {
-            "field": "mobilization_option_luxurious_supplies.possible",
-            "scope": "scope:military_formation",
-            "trigger": "has_mobilization_option",
-            "value": "mobilization_option:mobilization_option_extra_supplies",
-        },
+        "eligibility_operator": stages[LUXURIOUS_SUPPLIES]["eligibility_operator"],
         "withdrawal_effect": {"scope": "combat_unit", "morale_change_ratio": "-0.5"},
         "native_activation_comparison": {
             "source": _AI_DEFINES,
@@ -409,13 +535,15 @@ def verify_generated_supply_stages(
 ) -> dict[str, object]:
     """Check the frozen native definitions and the full authorized weight extension."""
     baseline = load_baseline()
-    contract = _supply_chain_contract(baseline)
+    interfaces = _supply_interfaces(baseline)
+    contract = _supply_chain_contract(baseline, interfaces)
     parsed = parse_text(text, path=SOURCE)
     authorized = parse_text(expected, path=SOURCE)
     if parsed.errors or authorized.errors:
         raise ValueError("生产补给阶段无法回读")
     verified: dict[str, object] = {}
-    for option, stage in contract["stages"].items():
+    for option, interface in interfaces.items():
+        stage = contract["stages"][option]
         field = tuple(stage["field"].split("."))
         definition = _node(parsed.root, field[0])
         weight = _node(parsed.root, *field)
@@ -440,6 +568,9 @@ def verify_generated_supply_stages(
             del expected_items[native_size:]
             if _digest(_ast(_node(authorized.root, field[0]))) != stage["definition"]["sha256"]:
                 raise ValueError(f"生产补给权重预期未保留原版定义：{option}")
+        reader = interface.eligibility_read
+        if reader is not None:
+            reader.verify(parsed.root, interface.schedule.consumer_id)
         if _digest(_ast(definition)) != stage["definition"]["sha256"]:
             raise ValueError(f"生产补给阶段原版资格、权重、维持或生命周期漂移：{option}")
         verified[option] = {**stage, "weight_extension_emitted": emitted}
@@ -514,6 +645,8 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
             "the base AI value that is multiplied is set by the ai_value of the unit_modifier",
             "after multiplication, this is compared against the monetary cost",
             "root = military formation",
+            "root = country",
+            "scope:military_formation = military formation",
         )
     ):
         raise ValueError("动员字段局部ROOT/效用/货币比较合同缺失")

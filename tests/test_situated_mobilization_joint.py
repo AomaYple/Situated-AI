@@ -513,24 +513,35 @@ def test_production_supply_receipt_and_weight_output_match_pinned_baseline(produ
 
 
 @pytest.mark.parametrize(
-    ("original", "mutation"),
+    ("original", "mutation", "error"),
     [
         (
             "has_mobilization_option = mobilization_option:mobilization_option_extra_supplies",
             "has_mobilization_option = mobilization_option:mobilization_option_basic_supplies",
+            "编队补给原版资格读取",
         ),
-        ("multiply = -0.5", "multiply = -0.4"),
-        ("add = -1000000", "add = -100000"),
+        (
+            "scope:military_formation = { has_mobilization_option",
+            "ROOT = { has_mobilization_option",
+            "编队补给原版资格读取",
+        ),
+        (
+            "scope:military_formation = { has_mobilization_option",
+            "scope:military_formation = { has_mobilization_option != no has_mobilization_option",
+            "编队补给原版资格读取",
+        ),
+        ("multiply = -0.5", "multiply = -0.4", "生命周期漂移"),
+        ("add = -1000000", "add = -100000", "生命周期漂移"),
     ],
 )
 def test_production_supply_verifier_rejects_native_scope_lifecycle_or_weight_change(
-    production, original, mutation
+    production, original, mutation, error
 ):
     text = production[4][SOURCE]
     assert original in text
     candidate = text.replace(original, mutation, 1)
     policy = dict(production[1].policies)[SOURCE]
-    with pytest.raises(ValueError, match="生命周期漂移"):
+    with pytest.raises(ValueError, match=error):
         medical.verify_generated_supply_stages(candidate, set(policy.groups()), expected=text)
 
 
