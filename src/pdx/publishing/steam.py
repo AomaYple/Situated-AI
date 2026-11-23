@@ -15,7 +15,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 WORKSHOP_TITLE = "Situated AI"
 DESCRIPTION_LIMIT_BYTES = 8000
 TITLE_LIMIT_BYTES = 128
+_ITEM_SUBSCRIBED = 1
+_ITEM_INSTALLED = 4
 _PACKAGE_METADATA_SCHEMA = "situated-ai-workshop-v1"
 _LANGUAGE_ROWS = (
     ("simp_chinese", "创意工坊描述.md", "schinese"),
@@ -155,6 +157,16 @@ class SteamUGCBackend(Protocol):
     def installed_item(self, published_file_id: int) -> Path | None: ...
 
     def preview_sha256(self, item: WorkshopItem) -> str: ...
+
+
+@runtime_checkable
+class SteamCacheBackend(Protocol):
+    @property
+    def supports_cache_download(self) -> bool: ...
+
+    def download_cache(self, published_file_id: int) -> tuple[Path, int, int]: ...
+
+    def cached_item(self, published_file_id: int) -> Path | None: ...
 
 
 def load_descriptions(repository_root: Path = _REPOSITORY_ROOT) -> dict[str, str]:
@@ -339,6 +351,7 @@ class _NativeHelperBackend:
         version = self._request("version")
         if version.get("protocol") != 2:
             raise RuntimeError("Unsupported Steamworks helper protocol")
+        self.supports_cache_download = version.get("download_cache") is True
 
     def _request(self, *arguments: str, timeout: int = 45) -> dict[str, object]:
         with tempfile.TemporaryDirectory(prefix="sitai-steam-app-") as work:
@@ -472,6 +485,35 @@ class _NativeHelperBackend:
         raw = _helper_value(data, "install_path", str)
         return checked_path(Path(raw)) if raw else None
 
+    def download_cache(self, published_file_id: int) -> tuple[Path, int, int]:
+        if published_file_id != self._item_id or not self.supports_cache_download:
+            raise RuntimeError("Steamworks cache download is unavailable for the target")
+        data = self._request("download-cache", str(published_file_id), self._owner_id, timeout=225)
+        before = _helper_value(data, "state_before", int)
+        after = _helper_value(data, "state_after", int)
+        path = Path(_helper_value(data, "install_path", str))
+        # ISteamUGC v016 EItemState: only the Installed bit may remain.
+        if (
+            _helper_value(data, "app_id", int) != config.APP_ID
+            or _helper_value(data, "item_id", int) != published_file_id
+            or _helper_value(data, "result_code", int) != 1
+            or before < 0
+            or before & _ITEM_SUBSCRIBED
+            or after != _ITEM_INSTALLED
+            or not path.is_absolute()
+        ):
+            raise RuntimeError("Steamworks cache download confirmation is invalid")
+        return checked_path(path), before, after
+
+    def cached_item(self, published_file_id: int) -> Path | None:
+        if published_file_id != self._item_id or not self.supports_cache_download:
+            raise RuntimeError("Steamworks cache inspection is unavailable for the target")
+        data = self._request("cached", str(published_file_id), self._owner_id)
+        raw = _helper_value(data, "install_path", str)
+        if raw and not Path(raw).is_absolute():
+            raise RuntimeError("Steamworks cache path is not absolute")
+        return checked_path(Path(raw)) if raw else None
+
     def preview_sha256(self, item: WorkshopItem) -> str:
         _validate_preview_url(item.preview_url)
         request = Request(item.preview_url, headers={"Accept": "image/*"})
@@ -562,6 +604,7 @@ class SteamWorkshop:
         *,
         package_sha256: str,
         previous: Mapping[str, object] | None = None,
+        refresh_cached_readback: bool = False,
     ) -> dict[str, object]:
         """Validate package, localized text and the Steam target without updating."""
         if package_files:
@@ -570,9 +613,15 @@ class SteamWorkshop:
         identity = self._release_identity(package_files, descriptions, package_sha256)
         items = self._observe(descriptions)
         state = self._resume(identity, descriptions, items, previous)
+        readback_ready = True
         if previous and previous.get("status") == "verified":
-            self._verify_assets(
-                items[next(iter(descriptions))], package_files, state, lambda _: None
+            readback_ready = self._verify_assets(
+                items[next(iter(descriptions))],
+                package_files,
+                state,
+                lambda _: None,
+                download_cache=False,
+                refresh_cached_readback=refresh_cached_readback,
             )
         installed = (
             self.backend.installed_item(self.item_id) if self.installation is not None else None
@@ -585,6 +634,7 @@ class SteamWorkshop:
             "public": True,
             "languages": list(descriptions),
             "checkpoint": state,
+            **({} if readback_ready else {"cache_readback": "refresh_required"}),
         }
 
     def _release_identity(
@@ -766,7 +816,10 @@ class SteamWorkshop:
         files: Mapping[str, bytes],
         state: dict[str, object],
         checkpoint: Callable[[dict[str, object]], None],
-    ) -> None:
+        *,
+        download_cache: bool = True,
+        refresh_cached_readback: bool = False,
+    ) -> bool:
         expected_preview = hashlib.sha256(files[distribution.THUMBNAIL_NAME]).hexdigest()
         state["preview"] = {"status": "checking", "expected_sha256": expected_preview}
         checkpoint(dict(state))
@@ -780,6 +833,19 @@ class SteamWorkshop:
             checkpoint(dict(state))
             raise RuntimeError("Steam 主预览 CDN 字节与正式封面不一致")
         installed = self.backend.installed_item(self.item_id)
+        if (
+            installed is None
+            and self.installation is None
+            and isinstance(self.backend, SteamCacheBackend)
+            and self.backend.supports_cache_download
+            and not current.item_state & _ITEM_SUBSCRIBED
+        ):
+            if refresh_cached_readback:
+                return False
+            return self._verify_cached_assets(
+                self.backend, files, state, checkpoint, download_cache
+            )
+        state.pop("download_cache", None)
         if installed is None:
             state["subscription"] = {"status": "awaiting_current_installation"}
             checkpoint(dict(state))
@@ -799,6 +865,50 @@ class SteamWorkshop:
             "files": len(files),
             "transformations": [],
         }
+        return True
+
+    def _verify_cached_assets(
+        self,
+        backend: SteamCacheBackend,
+        files: Mapping[str, bytes],
+        state: dict[str, object],
+        checkpoint: Callable[[dict[str, object]], None],
+        download_cache: bool,
+    ) -> bool:
+        if download_cache:
+            state.pop("subscription", None)
+            state["download_cache"] = {"status": "downloading"}
+            checkpoint(dict(state))
+            path, before, after = backend.download_cache(self.item_id)
+            evidence = {
+                "app_id": config.APP_ID,
+                "item_id": self.item_id,
+                "result_code": 1,
+                "state_before": before,
+                "state_after": after,
+                "path": str(path),
+            }
+            state["download_cache"] = {"status": "checking", **evidence}
+            checkpoint(dict(state))
+        else:
+            receipt = state.get("download_cache")
+            if not isinstance(receipt, dict) or receipt.get("status") != "verified":
+                return False
+            cached = backend.cached_item(self.item_id)
+            if cached is None or str(cached) != receipt.get("path"):
+                return False
+            path = cached
+            evidence = receipt
+        _verify_download_tree(path, files)
+        if backend.cached_item(self.item_id) != path:
+            raise RuntimeError("核对文件期间 Steam 临时缓存状态发生变化")
+        state["download_cache"] = {
+            **evidence,
+            "status": "verified",
+            "files": len(files),
+            "transformations": [],
+        }
+        return True
 
     @staticmethod
     def _ensure_prestate(

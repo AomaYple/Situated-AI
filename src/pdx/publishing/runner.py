@@ -202,6 +202,7 @@ def _preflight(
     package: FrozenPackage | None = None,
     ledger: PublicationLedger | None = None,
     steam_backend: SteamUGCBackend | None = None,
+    applying: bool = False,
 ) -> dict[str, object]:
     channel_states = {}
     blockers = list(cast("list[str]", source["blockers"]))
@@ -241,6 +242,7 @@ def _preflight(
                         package.files if package else {},
                         package_sha256=package.sha256 if package else "0" * 64,
                         previous=ledger.channel(channel) if ledger else None,
+                        refresh_cached_readback=applying,
                     )
                 )
         except _OPERATION_ERRORS as error:
@@ -384,6 +386,7 @@ def run_release(
                 package=package,
                 ledger=ledger,
                 steam_backend=steam_backend,
+                applying=True,
             )
             ledger.data["preflight"] = checks
             if checks["status"] != "ready":

@@ -228,9 +228,9 @@ void update(ISteamUGC& ugc, ISteamUser& user, PublishedFileId_t id, uint64 owner
               << (result.m_bUserNeedsToAcceptWorkshopLegalAgreement ? "true" : "false") << "}\n";
 }
 
-std::string install_path(ISteamUGC& ugc, PublishedFileId_t id) {
+std::string install_path(ISteamUGC& ugc, PublishedFileId_t id, bool subscribed) {
     const auto state = ugc.GetItemState(id);
-    if (!(state & k_EItemStateInstalled) || !(state & k_EItemStateSubscribed)
+    if (!(state & k_EItemStateInstalled) || bool(state & k_EItemStateSubscribed) != subscribed
         || state & (k_EItemStateLegacyItem | k_EItemStateNeedsUpdate |
                     k_EItemStateDownloading | k_EItemStateDownloadPending)) {
         return {};
@@ -242,6 +242,43 @@ std::string install_path(ISteamUGC& ugc, PublishedFileId_t id) {
     return path;
 }
 
+struct DownloadResult {
+    const PublishedFileId_t id;
+    EResult result = k_EResultNone;
+    bool done = false;
+    CCallback<DownloadResult, DownloadItemResult_t> callback{this, &DownloadResult::receive};
+
+    void receive(DownloadItemResult_t* value) {
+        if (!done && value->m_unAppID == app_id && value->m_nPublishedFileId == id) {
+            result = value->m_eResult;
+            done = true;
+        }
+    }
+};
+
+void download_cache(ISteamUGC& ugc, PublishedFileId_t id) {
+    const auto before = ugc.GetItemState(id);
+    require(!(before & k_EItemStateSubscribed), "the item is subscribed");
+    DownloadResult response{id};
+    require(ugc.DownloadItem(id, false), "Steamworks rejected the cache download");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(180);
+    while (!response.done && std::chrono::steady_clock::now() < deadline) {
+        SteamAPI_RunCallbacks();
+        if (!response.done) std::this_thread::sleep_for(std::chrono::milliseconds(25));
+    }
+    require(response.done, "Steamworks download callback timed out");
+    if (response.result != k_EResultOK) {
+        throw std::runtime_error("Steamworks download result " + std::to_string(response.result));
+    }
+    const auto path = install_path(ugc, id, false);
+    const auto after = ugc.GetItemState(id);
+    require(!path.empty() && after == k_EItemStateInstalled,
+            "Steamworks did not provide a current unsubscribed cache directory");
+    std::cout << "{\"app_id\":" << app_id << ",\"item_id\":" << id
+              << ",\"result_code\":" << response.result << ",\"state_before\":" << before
+              << ",\"state_after\":" << after << ",\"install_path\":" << quote(path) << "}\n";
+}
+
 } // namespace
 
 int wmain(int argc, wchar_t** argv) {
@@ -249,16 +286,19 @@ int wmain(int argc, wchar_t** argv) {
     bool submitted = false;
     try {
         if (argc == 2 && command == L"version") {
-            std::cout << "{\"protocol\":2}\n";
+            std::cout << "{\"protocol\":2,\"download_cache\":true}\n";
             return 0;
         }
         const bool query_only = argc == 5 && command == L"query";
         const bool submit = (argc == 7 || argc == 14) && command == L"update";
         const bool installed = argc == 4 && command == L"installed";
-        require(query_only || submit || installed, "invalid helper command or argument count");
+        const bool download = argc == 4 && command == L"download-cache";
+        const bool cached = argc == 4 && command == L"cached";
+        require(query_only || submit || installed || download || cached,
+                "invalid helper command or argument count");
         const auto id = positive_id(argv[2]);
         const auto owner = positive_id(argv[3]);
-        const auto language = installed ? "english" : utf8(argv[4]);
+        const auto language = (installed || download || cached) ? "english" : utf8(argv[4]);
         const Session session;
         auto* user = SteamUser();
         auto* utils = SteamUtils();
@@ -276,7 +316,11 @@ int wmain(int argc, wchar_t** argv) {
         } else {
             const auto item = query(*ugc, id, language);
             require_owner(*user, item, owner);
-            std::cout << "{\"install_path\":" << quote(install_path(*ugc, id)) << "}\n";
+            if (download) {
+                download_cache(*ugc, id);
+            } else {
+                std::cout << "{\"install_path\":" << quote(install_path(*ugc, id, installed)) << "}\n";
+            }
         }
         return 0;
     } catch (const std::exception& error) {
