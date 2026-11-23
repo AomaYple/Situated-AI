@@ -49,4 +49,5 @@
 [Valve 的临时缓存下载接口](https://partner.steamgames.com/doc/api/ISteamUGC#DownloadItem)
 
 回读失败时，Workshop 收据保留 `uploaded`，整轮发布保留 `partial`。Steam 可能清理临时缓存。使用同一组发布参数和收据目录
-重跑时，工具先核对线上状态，再补完字节验证。若原来已指定辅助程序，重建到同一路径可沿用现有收据。
+重跑时，工具先核对线上状态，再补完字节验证。若预检显示 `cache_readback: refresh_required`，可用相同参数执行发布以刷新缓存回读。
+沿用现有收据时，使用收据绑定的源提交。若原来已指定辅助程序，可重建到同一路径。

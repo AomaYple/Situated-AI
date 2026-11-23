@@ -517,3 +517,63 @@ def test_old_uploaded_receipt_resumes_from_cache_and_rechecks_bytes(
         )
     assert checkpoints[-1]["status"] == "uploaded"
     assert backend.uploads == 1
+
+
+@pytest.mark.parametrize("previous_readback", ["subscription", "download_cache"])
+def test_verified_workshop_can_refresh_after_local_readback_disappears(
+    files: dict[str, bytes],
+    backend: FakeSteamUGC,
+    monkeypatch: pytest.MonkeyPatch,
+    previous_readback: str,
+) -> None:
+    downloads = []
+    cached = False
+
+    def download(item_id):
+        nonlocal cached
+        assert backend.preview == hashlib.sha256(files[distribution.THUMBNAIL_NAME]).hexdigest()
+        downloads.append(item_id)
+        cached = True
+        return backend.installed, 0, 4
+
+    monkeypatch.setattr(backend, "supports_cache_download", True, raising=False)
+    monkeypatch.setattr(backend, "download_cache", download, raising=False)
+    monkeypatch.setattr(
+        backend, "cached_item", lambda _: backend.installed if cached else None, raising=False
+    )
+    backend.installation_available = previous_readback == "subscription"
+    workshop = _workshop(backend)
+    checkpoints: list[dict[str, object]] = []
+    previous = workshop.publish(files, package_sha256=ZIP_SHA256, checkpoint=checkpoints.append)
+    assert previous["status"] == "verified"
+    assert previous_readback in previous
+    before_downloads = list(downloads)
+    backend.installation_available = False
+    cached = False
+
+    planned = workshop.preflight(files, package_sha256=ZIP_SHA256, previous=previous)
+    assert planned["status"] == "ready"
+    assert planned["cache_readback"] == "refresh_required"
+    assert downloads == before_downloads
+
+    preview = backend.preview
+    backend.preview = "incorrect"
+    with pytest.raises(RuntimeError, match="CDN 字节与正式封面不一致"):
+        workshop.preflight(
+            files, package_sha256=ZIP_SHA256, previous=previous, refresh_cached_readback=True
+        )
+    backend.preview = preview
+    ready = workshop.preflight(
+        files, package_sha256=ZIP_SHA256, previous=previous, refresh_cached_readback=True
+    )
+    assert ready["cache_readback"] == "refresh_required"
+    assert downloads == before_downloads
+
+    resumed = workshop.publish(
+        files, package_sha256=ZIP_SHA256, checkpoint=checkpoints.append, previous=previous
+    )
+    assert resumed["status"] == "verified"
+    assert "download_cache" in resumed
+    assert downloads == [*before_downloads, ITEM]
+    assert backend.uploads == 1
+    assert len(backend.updates) == 11

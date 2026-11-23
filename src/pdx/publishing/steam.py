@@ -613,17 +613,15 @@ class SteamWorkshop:
         identity = self._release_identity(package_files, descriptions, package_sha256)
         items = self._observe(descriptions)
         state = self._resume(identity, descriptions, items, previous)
-        if (
-            previous
-            and previous.get("status") == "verified"
-            and not (refresh_cached_readback and "download_cache" in previous)
-        ):
-            self._verify_assets(
+        readback_ready = True
+        if previous and previous.get("status") == "verified":
+            readback_ready = self._verify_assets(
                 items[next(iter(descriptions))],
                 package_files,
                 state,
                 lambda _: None,
                 download_cache=False,
+                refresh_cached_readback=refresh_cached_readback,
             )
         installed = (
             self.backend.installed_item(self.item_id) if self.installation is not None else None
@@ -636,6 +634,7 @@ class SteamWorkshop:
             "public": True,
             "languages": list(descriptions),
             "checkpoint": state,
+            **({} if readback_ready else {"cache_readback": "refresh_required"}),
         }
 
     def _release_identity(
@@ -819,7 +818,8 @@ class SteamWorkshop:
         checkpoint: Callable[[dict[str, object]], None],
         *,
         download_cache: bool = True,
-    ) -> None:
+        refresh_cached_readback: bool = False,
+    ) -> bool:
         expected_preview = hashlib.sha256(files[distribution.THUMBNAIL_NAME]).hexdigest()
         state["preview"] = {"status": "checking", "expected_sha256": expected_preview}
         checkpoint(dict(state))
@@ -840,8 +840,11 @@ class SteamWorkshop:
             and self.backend.supports_cache_download
             and not current.item_state & _ITEM_SUBSCRIBED
         ):
-            self._verify_cached_assets(self.backend, files, state, checkpoint, download_cache)
-            return
+            if refresh_cached_readback:
+                return False
+            return self._verify_cached_assets(
+                self.backend, files, state, checkpoint, download_cache
+            )
         state.pop("download_cache", None)
         if installed is None:
             state["subscription"] = {"status": "awaiting_current_installation"}
@@ -862,6 +865,7 @@ class SteamWorkshop:
             "files": len(files),
             "transformations": [],
         }
+        return True
 
     def _verify_cached_assets(
         self,
@@ -870,9 +874,9 @@ class SteamWorkshop:
         state: dict[str, object],
         checkpoint: Callable[[dict[str, object]], None],
         download_cache: bool,
-    ) -> None:
-        state.pop("subscription", None)
+    ) -> bool:
         if download_cache:
+            state.pop("subscription", None)
             state["download_cache"] = {"status": "downloading"}
             checkpoint(dict(state))
             path, before, after = backend.download_cache(self.item_id)
@@ -889,10 +893,10 @@ class SteamWorkshop:
         else:
             receipt = state.get("download_cache")
             if not isinstance(receipt, dict) or receipt.get("status") != "verified":
-                raise RuntimeError("缺少此条目的 Steam 临时缓存下载收据")
+                return False
             cached = backend.cached_item(self.item_id)
             if cached is None or str(cached) != receipt.get("path"):
-                raise RuntimeError("Steam 临时缓存已失效，需要重新读取")
+                return False
             path = cached
             evidence = receipt
         _verify_download_tree(path, files)
@@ -904,6 +908,7 @@ class SteamWorkshop:
             "files": len(files),
             "transformations": [],
         }
+        return True
 
     @staticmethod
     def _ensure_prestate(
