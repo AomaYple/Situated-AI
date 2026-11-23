@@ -416,3 +416,104 @@ def test_non_owner_is_rejected_before_any_update(
 def test_zero_item_id_is_rejected(backend: FakeSteamUGC) -> None:
     with pytest.raises(ValueError, match="positive 64-bit ID"):
         steam.SteamWorkshop(config.APP_ID, 0, OWNER, backend=backend)
+
+
+@pytest.mark.parametrize("advertised", [None, False, True])
+def test_native_protocol_v2_cache_capability_is_additive(tmp_path, monkeypatch, advertised):
+    helper = tmp_path / "helper.exe"
+    helper.touch()
+    data = {"protocol": 2}
+    if advertised is not None:
+        data["download_cache"] = advertised
+    monkeypatch.setattr(steam._NativeHelperBackend, "_request", lambda *_: data)
+    assert steam._NativeHelperBackend(ITEM, str(OWNER), helper).supports_cache_download is (
+        advertised is True
+    )
+
+
+@pytest.mark.parametrize(
+    "bad_confirmation",
+    [
+        {},
+        {"app_id": 1},
+        {"item_id": 1},
+        {"result_code": 2},
+        {"state_before": 1},
+        {"state_after": 5},
+        {"state_after": 12},
+        {"install_path": "untrusted-relative"},
+    ],
+)
+def test_native_cache_requires_matching_callback_and_unsubscribed_install(
+    tmp_path, monkeypatch, bad_confirmation
+):
+    helper = tmp_path / "helper.exe"
+    helper.touch()
+    confirmation = {
+        "app_id": config.APP_ID,
+        "item_id": ITEM,
+        "result_code": 1,
+        "state_before": 0,
+        "state_after": 4,
+        "install_path": str(tmp_path),
+        **bad_confirmation,
+    }
+
+    def request(self, *arguments, timeout=45):
+        if arguments == ("version",):
+            return {"protocol": 2, "download_cache": True}
+        assert arguments == ("download-cache", str(ITEM), str(OWNER))
+        assert timeout == 225
+        return confirmation
+
+    monkeypatch.setattr(steam._NativeHelperBackend, "_request", request)
+    native = steam._NativeHelperBackend(ITEM, str(OWNER), helper)
+    if bad_confirmation:
+        with pytest.raises(RuntimeError, match="confirmation is invalid"):
+            native.download_cache(ITEM)
+    else:
+        assert native.download_cache(ITEM) == (tmp_path, 0, 4)
+
+
+def test_old_uploaded_receipt_resumes_from_cache_and_rechecks_bytes(
+    files: dict[str, bytes], backend: FakeSteamUGC, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workshop = _workshop(backend)
+    backend.installation_available = False
+    checkpoints: list[dict[str, object]] = []
+    with pytest.raises(RuntimeError, match="无法核对订阅内容"):
+        workshop.publish(files, package_sha256=ZIP_SHA256, checkpoint=checkpoints.append)
+    old_receipt = checkpoints[-1]
+    assert old_receipt["status"] == "uploaded"
+
+    downloads = []
+
+    def download(item_id):
+        downloads.append(item_id)
+        return backend.installed, 0, 4
+
+    monkeypatch.setattr(backend, "supports_cache_download", True, raising=False)
+    monkeypatch.setattr(backend, "download_cache", download, raising=False)
+    monkeypatch.setattr(backend, "cached_item", lambda _: backend.installed, raising=False)
+    receipt = workshop.publish(
+        files, package_sha256=ZIP_SHA256, checkpoint=checkpoints.append, previous=old_receipt
+    )
+    assert receipt["status"] == "verified"
+    readback = receipt["download_cache"]
+    assert isinstance(readback, dict)
+    assert readback["files"] == len(files)
+    assert readback["state_after"] == 4
+    assert "subscription" not in receipt
+    assert downloads == [ITEM]
+    assert backend.uploads == 1
+    assert len(backend.updates) == 11
+    workshop.preflight(files, package_sha256=ZIP_SHA256, previous=receipt)
+    assert downloads == [ITEM]
+
+    (backend.installed / "README.md").write_bytes(b"x" * len(files["README.md"]))
+    with pytest.raises(RuntimeError, match="Steam 下载文件字节不符"):
+        workshop.publish(
+            files, package_sha256=ZIP_SHA256, checkpoint=checkpoints.append, previous=receipt
+        )
+    assert checkpoints[-1]["status"] == "uploaded"
+    assert backend.uploads == 1

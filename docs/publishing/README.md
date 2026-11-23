@@ -41,8 +41,12 @@
 启动 Steam 客户端，以拥有该条目的账号登录。首次建条目和接受 Workshop 协议在 Steam 中完成。
 发布前核对条目 ID、所有者 SteamID64、Victoria 3 App ID `529340` 和英文标题 `Situated AI`。
 发布按表中的 11 种 Steam 语言分别更新描述，并回读文本及绑定 ZIP 和 manifest 的指纹标记。上传后的独立回读包含两项
-字节检查。工具重新下载 Steam CDN 主预览，比对正式包封面的 SHA-256。工具再读取 Steamworks 确认的当前订阅安装，
+字节检查。工具重新下载 Steam CDN 主预览，比对正式包封面的 SHA-256。工具优先读取 Steamworks 确认的当前订阅安装，
 将其中的目录和文件逐项与正式包载荷比对，包括 manifest 和包内封面。
 
-如果 Steam 尚未提供当前订阅安装，Workshop 收据保留 `uploaded`，整轮发布保留 `partial`。订阅状态由操作者管理。
-在 Steam 客户端完成订阅或等待该条目更新完成后，使用同样的发布参数和收据目录重跑。命令先核对线上状态，再补完缺失的验证。
+所有者未订阅条目时，支持临时缓存下载的辅助程序可用 Steamworks 下载当前内容。工具等待 Victoria 3 与该条目的成功回调，
+使用 Steamworks 返回的目录比对全部文件，并在读取前后确认条目仍未订阅。订阅状态由操作者管理。旧版辅助程序继续支持订阅读回。
+[Valve 的临时缓存下载接口](https://partner.steamgames.com/doc/api/ISteamUGC#DownloadItem)
+
+回读失败时，Workshop 收据保留 `uploaded`，整轮发布保留 `partial`。Steam 可能清理临时缓存。使用同一组发布参数和收据目录
+重跑时，工具先核对线上状态，再补完字节验证。若原来已指定辅助程序，重建到同一路径可沿用现有收据。
