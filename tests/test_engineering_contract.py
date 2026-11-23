@@ -6,6 +6,7 @@ import gzip
 import hashlib
 import json
 import re
+import tomllib
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -205,7 +206,75 @@ def test_plan_archive_preserves_historical_records() -> None:
 
 
 _MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
-_ASPECT_ID = re.compile(r"`(D\d{2})\.[a-z][a-z0-9_]*`")
+_ASPECT_ID = r"D\d{2}\.[a-z][a-z0-9_]*"
+_ASPECT_HEADING = re.compile(rf"^## ({_ASPECT_ID})\n", re.MULTILINE)
+_ASPECT_LINK = re.compile(rf"\[({_ASPECT_ID})\]\(([^)]+)\)")
+_DOMAIN_HEADING = re.compile(r"^## ((D\d{2}) .+)$", re.MULTILINE)
+
+_ASPECT_FIELD = re.compile(
+    r"^(?:- )?\*\*(机会与基准|信息和接口证据|跨域取舍与结果反馈|反例和验证)\*\*[^\S\n]*(.*)$",
+    re.MULTILINE,
+)
+_ASPECT_FIELDS = {"机会与基准", "信息和接口证据", "跨域取舍与结果反馈", "反例和验证"}
+_INSTALL_SOURCE = re.compile(r"`game/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+(?:/|:[^`]+)?`")
+
+_FROZEN_DOMAIN_HEADINGS = (
+    "D01 财政、税收与债务",
+    "D02 行政、征税与国家能力",
+    "D03 建设能力与投资节奏",
+    "D04 农业、粮食与基础资源",
+    "D05 制造业与产业结构",
+    "D06 能源、运输与基础设施",
+    "D07 生产方式与技术采用",
+    "D08 所有权、资本、公司与投资关系",
+    "D09 国内市场与商品平衡",
+    "D10 国际贸易与供应韧性",
+    "D11 人口、就业、劳动力与资格",
+    "D12 迁移与人口流动",
+    "D13 教育、人力资本与社会流动",
+    "D14 研究、扩散与科技选择",
+    "D15 国内政治、政府与权力",
+    "D16 法律改革、运动与制度转换",
+    "D17 生活水平、公共健康与社会保障",
+    "D18 稳定、动荡与内部安全",
+    "D19 文化、宗教、公民身份与整合",
+    "D20 外交、条约与国际秩序",
+    "D21 宗主、附属与自治关系",
+    "D22 陆军、备战、动员与装备",
+    "D23 海军、海运与海外投射",
+    "D24 外交博弈、战争、和平与恢复",
+    "D25 殖民、海外与领土机会",
+)
+
+# 冻结 128 个方面 ID，包含 e9ed9e19bdb5c243bfc7fc8fb998c7036526fd66 的 119 项与本轮新增九项。
+# 已有 ID 即使同时从分片和索引删除，浅克隆也能发现。
+_FROZEN_ASPECT_SUFFIXES = {
+    "D01": "budget,taxation,wages,debt,subsidies,insolvency",
+    "D02": "bureaucracy,tax_capacity,incorporation,administration",
+    "D03": "construction_capacity,public_queue,investment_funding,auto_expansion,privatization,built_capacity_reduction",
+    "D04": "farming,extraction,plantations,food_security,land_reclamation",
+    "D05": "industrial_capacity,industrial_mix,strategic_industry",
+    "D06": "road_maintenance,decree_allocation,transport_network,power_supply,infrastructure_access,canals_monuments",
+    "D07": "methods,automation,conversion",
+    "D08": "companies,ownership,foreign_investment,monopolies,company_charters",
+    "D09": "market_balance,supply_stances,market_membership,pricing_access,market_formation",
+    "D10": "trade_flows,trade_policy,restrictions,supply_resilience,tariff_subsidy",
+    "D11": "demographics,employment,qualifications,military_manpower",
+    "D12": "migration_policy,internal_migration,international_migration,attraction",
+    "D13": "school_investment,school_law,universities,social_mobility",
+    "D14": "research,diffusion,knowledge_sharing",
+    "D15": "government,strategy_selection,elections,political_actors,characters,succession,events_journals,decisions_interactions",
+    "D16": "law_choice,enactment,constitutional_change,institutions,amendments",
+    "D17": "living_standards,public_health,welfare,relief",
+    "D18": "police_home_affairs,unrest,revolution_secession,recovery",
+    "D19": "citizenship,religion,culture,nation_formation",
+    "D20": "improve_relations,diplomatic_actions,treaty_articles,mutual_security,power_blocs,diplomacy_regions,strait_control,regional_objectives,foreign_interference",
+    "D21": "subject_relations,autonomy,market_control,subject_transfer",
+    "D22": "army_size,mobilization,military_supply,commanders,fronts,formation_organization",
+    "D23": "navy_size,fleet_composition,missions,naval_logistics,auto_replenishment,coastal_defense",
+    "D24": "plays,alignment,war_goals,conduct,peace,surrender,postwar",
+    "D25": "colonization,claims,territory_value,administration,release,capital_relocation,expeditions,cossack_hosts",
+}
 
 
 def _table_cells(line: str) -> list[str]:
@@ -266,35 +335,75 @@ def test_current_plan_routes_stage_exits_and_delivery_evidence() -> None:
 
 
 def test_aspect_interfaces_have_unique_ids_owners_and_evidence_entries() -> None:
-    path = Path(__file__).resolve().parents[1] / "docs/design/架构子计划.md"
-    plan = path.read_text(encoding="utf-8")
-    domains = re.findall(r"^## ((D\d{2}) .+)$", plan, re.MULTILINE)
-    assert [owner for _, owner in domains] == [f"D{number:02}" for number in range(1, 26)]
-    ids = set()
+    design = Path(__file__).resolve().parents[1] / "docs/design"
+    index_path = design / "架构子计划.md"
+    plan = index_path.read_text(encoding="utf-8")
+    domains = _DOMAIN_HEADING.findall(plan)
+    assert tuple(heading for heading, _ in domains) == _FROZEN_DOMAIN_HEADINGS
+    assert {path.name for path in (design / "domains").glob("D*.md")} == {
+        f"{owner}.md" for owner in _FROZEN_ASPECT_SUFFIXES
+    }
+
     for heading, owner in domains:
         section = _document_section(plan, heading)
-        rows = [_table_cells(line) for line in section.splitlines() if line.startswith("|")]
-        assert rows[0] == [
-            "方面接口",
-            "合法观察候选",
-            "国家机会与原版接入",
-            "实际后果与反馈",
-            "证据入口",
-        ], owner
-        assert rows[2:], owner
-        for cells in rows[2:]:
-            assert len(cells) == 5, (owner, cells)
-            assert all(cells), (owner, cells)
-            aspect, _, _, _, evidence = cells
-            parsed = _ASPECT_ID.fullmatch(aspect)
-            assert parsed is not None, (owner, aspect)
-            assert parsed[1] == owner, (owner, aspect)
-            assert aspect not in ids, aspect
-            ids.add(aspect)
-            # 待证入口也可用原版字段或文件定位，实际读权由对应证据独立验收。
-            assert _MARKDOWN_LINK.search(evidence) or re.search(r"`[^`]+`", evidence), aspect
-    assert "架构主计划.md" in _MARKDOWN_LINK.findall(plan)
-    _assert_plan_links(path, plan)
+        assert f"domains/{owner}.md" in _MARKDOWN_LINK.findall(section), owner
+        domain_path = design / "domains" / f"{owner}.md"
+        content = domain_path.read_text(encoding="utf-8")
+        assert content.startswith(f"# {heading}\n"), owner
+        aspects = _ASPECT_HEADING.findall(content)
+        assert len(aspects) == len(set(aspects)), (owner, aspects)
+        assert all(aspect.startswith(f"{owner}.") for aspect in aspects), (owner, aspects)
+        frozen = {f"{owner}.{suffix}" for suffix in _FROZEN_ASPECT_SUFFIXES[owner].split(",")}
+        assert frozen <= set(aspects), (owner, sorted(frozen - set(aspects)))
+
+        # 目录路由与详细定义一一对应，链接落到实际 Markdown ID。
+        routes = _ASPECT_LINK.findall(section)
+        expected = {
+            (aspect, f"domains/{owner}.md#{aspect.lower().replace('.', '')}") for aspect in aspects
+        }
+        assert set(routes) == expected, (owner, set(routes) ^ expected)
+        assert len(routes) == len(expected), (owner, routes)
+        for aspect in aspects:
+            section = _document_section(content, aspect)
+            fields = _ASPECT_FIELD.findall(section)
+            assert {label for label, _ in fields} == _ASPECT_FIELDS, (aspect, fields)
+            assert len(fields) == len(_ASPECT_FIELDS), (aspect, fields)
+            assert all(re.search(r"[^\W_]", body) for _, body in fields), (aspect, fields)
+            evidence = dict(fields)["信息和接口证据"]
+            assert _INSTALL_SOURCE.search(evidence), aspect
+        _assert_plan_links(domain_path, content)
+
+    _assert_plan_links(index_path, plan)
+
+
+def test_aspect_index_matches_r2_production_consumer_declarations() -> None:
+    root = Path(__file__).resolve().parents[1]
+    plan = (root / "docs/design/架构子计划.md").read_text(encoding="utf-8")
+    section = plan.split("### 现有接线的检索入口\n", 1)[1].split("\n### ", 1)[0]
+    source = root / "mod/decisions/architecture_1152.toml"
+    declarations = tomllib.loads(source.read_text(encoding="utf-8"))["consumer"]
+    expected = {
+        consumer["id"]: (consumer["source"], ".".join([consumer["definition"], *consumer["field"]]))
+        for consumer in declarations
+    }
+    owner_by_consumer = {
+        "a0-econ-road": "D06.road_maintenance",
+        "a0-pol-schools": "D13.school_investment",
+        "a0-dip-relations": "D20.improve_relations",
+    }
+    assert expected.keys() == owner_by_consumer.keys()
+    rows = [_table_cells(line) for line in section.splitlines() if line.startswith("|")][2:]
+    observed = {}
+    for name, path, selector, aspect in rows:
+        consumer = name.strip("`")
+        assert consumer in owner_by_consumer, consumer
+        assert consumer not in observed, consumer
+        observed[consumer] = path.strip("`"), selector.strip("`")
+        owner = owner_by_consumer[consumer]
+        assert _ASPECT_LINK.findall(aspect) == [
+            (owner, f"domains/{owner.split('.')[0]}.md#{owner.lower().replace('.', '')}")
+        ], consumer
+    assert observed == expected
 
 
 @pytest.mark.parametrize("engineering_passed", [False, True])
