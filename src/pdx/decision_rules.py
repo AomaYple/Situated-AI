@@ -631,6 +631,7 @@ def from_data(
                     "is_production_method_active",
                     "owner",
                     "has_technology_researched",
+                    "has_law",
                     "has_law_or_variant",
                     "can_enact_law",
                     "is_ai",

@@ -235,6 +235,7 @@ PROFILE_ROLES = {
             "devastation",
         ),
         "structure": (
+            "has_law",
             "has_law_or_variant",
             "has_strategy",
             "has_technology_researched",

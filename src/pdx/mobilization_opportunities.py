@@ -12,7 +12,7 @@ import json
 import math
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -407,8 +407,9 @@ def _supply_chain_contract(data: Mapping[str, Any]) -> dict[str, Any]:
 def verify_generated_supply_stages(
     text: str, selected_fields: set[tuple[str, ...]], *, expected: str
 ) -> dict[str, object]:
-    """Check shipped native definitions around the single owned weight extension."""
-    contract = supply_chain_contract()
+    """Check the frozen native definitions and the full authorized weight extension."""
+    baseline = load_baseline()
+    contract = _supply_chain_contract(baseline)
     parsed = parse_text(text, path=SOURCE)
     authorized = parse_text(expected, path=SOURCE)
     if parsed.errors or authorized.errors:
@@ -423,15 +424,20 @@ def verify_generated_supply_stages(
             expected_weight = _node(authorized.root, *field)
             if not isinstance(weight.value, Block) or not isinstance(expected_weight.value, Block):
                 raise ValueError(f"生产补给权重不是已核实的脚本块：{option}")
-            if (
-                not weight.value.items
-                or not expected_weight.value.items
-                or _ast(weight.value.items[-1]) != _ast(expected_weight.value.items[-1])
-            ):
+            native_weight = baseline["candidates"][field[0]]["weight"]["sha256"]
+            expected_items = expected_weight.value.items
+            # Bound the appended range by the frozen native weight, independent of branch count.
+            for native_size in range(len(expected_items)):
+                prefix = replace(expected_weight, value=Block(expected_items[:native_size]))
+                if _digest(_ast(prefix)) == native_weight:
+                    break
+            else:
+                raise ValueError(f"生产补给权重预期未保留原版定义或缺少授权联合贡献：{option}")
+            expected_extension = _ast(Block(expected_items[native_size:]))
+            if _ast(Block(weight.value.items[native_size:])) != expected_extension:
                 raise ValueError(f"生产补给权重偏离已授权联合贡献：{option}")
-            # Only the bound compiler output may be removed before checking vanilla.
-            weight.value.items.pop()
-            expected_weight.value.items.pop()
+            del weight.value.items[native_size:]
+            del expected_items[native_size:]
             if _digest(_ast(_node(authorized.root, field[0]))) != stage["definition"]["sha256"]:
                 raise ValueError(f"生产补给权重预期未保留原版定义：{option}")
         if _digest(_ast(definition)) != stage["definition"]["sha256"]:

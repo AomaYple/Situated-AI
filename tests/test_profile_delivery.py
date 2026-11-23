@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import Counter
 
 import pytest
 
@@ -84,3 +85,35 @@ def test_current_delivery_emits_exact_signed_envelope_bounds(engineering_release
             if actual != literal:
                 errors[path, action, bound] = (actual, literal)
     assert errors == {}
+
+
+@pytest.mark.integration
+def test_current_delivery_uses_exact_predicates_for_law_variants(engineering_release_inputs):
+    _, _, files = engineering_release_inputs
+    expected = {
+        "common/laws/00_church_and_state.txt": {
+            "law_millet_system": 4,
+            "law_people_of_the_book": 4,
+        },
+        "common/laws/01_education_system.txt": {"law_terakoya": 3},
+    }
+    for path, expected_variants in expected.items():
+        script = files[path]
+        assert isinstance(script, str)
+        native = (config.GAME / path).read_text(encoding="utf-8-sig")
+        variants = "|".join(expected_variants)
+        pattern = rf"\b(has_law_or_variant|has_law)\s*=\s*law_type:({variants})\b"
+        added = Counter(re.findall(pattern, script)) - Counter(re.findall(pattern, native))
+        assert added == Counter(
+            {("has_law", law): count for law, count in expected_variants.items()}
+        )
+
+    schools = files["common/laws/01_education_system.txt"]
+    assert isinstance(schools, str)
+    assert (
+        schools.count(
+            "has_law_or_variant = law_type:law_private_schools "
+            "NOT = { has_law = law_type:law_terakoya }"
+        )
+        == 3
+    )

@@ -504,8 +504,7 @@ def test_production_supply_receipt_and_weight_output_match_pinned_baseline(produ
     finalized = re.sub(r"(?m)[\t ]+$", "", production[4][SOURCE]).rstrip("\n") + "\n"
     assert finalized == baseline
     contracts = production[6]
-    row = next(item for item in contracts["consumers"] if item["source"] == SOURCE)
-    verified = row["native_supply_stages"]
+    verified = contracts["native_supply_stages"]
     baseline_stages = medical.supply_chain_contract()["stages"]
     assert {
         option: {**stage, "weight_extension_emitted": True}

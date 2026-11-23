@@ -19632,7 +19632,7 @@ unit = "boolean"
 argument = "law_type:law_public_schools"
 
 [readers.current_terakoya]
-engine = "has_law_or_variant"
+engine = "has_law"
 scope = "root"
 kind = "boolean"
 unit = "boolean"

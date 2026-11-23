@@ -1166,6 +1166,7 @@ def build(
     query_evidence = {}
     consumption_evidence = False
     named_fleet = False
+    native_supply_stages: dict[str, object] | None = None
     for name, policy in adapters.policies:
         selected = (
             policy.enabled_domains
@@ -1255,12 +1256,11 @@ def build(
             source=name,
         )
         if name == mobilization_opportunities.SOURCE:
-            contract["native_supply_stages"] = (
-                mobilization_opportunities.verify_generated_supply_stages(
-                    files[name],
-                    set(policy.groups(selected)),
-                    expected=patch_consumer(inputs[name]),
-                )
+            # Reader authorization compares each consumer with its exact static rule contract.
+            native_supply_stages = mobilization_opportunities.verify_generated_supply_stages(
+                files[name],
+                set(policy.groups(selected)),
+                expected=patch_consumer(inputs[name]),
             )
         contracts.append({"source": name, **contract})
     supply = adapters.supply
@@ -1278,6 +1278,11 @@ def build(
         "evidence": "source_locked_generated_consumer_patches",
         "behavior_verified": False,
         "source_sha256": adapters.source_sha256,
+        **(
+            {"native_supply_stages": native_supply_stages}
+            if native_supply_stages is not None
+            else {}
+        ),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "supply_program_generator_sha256": hashlib.sha256(
             Path(supply_program.__file__).read_bytes()

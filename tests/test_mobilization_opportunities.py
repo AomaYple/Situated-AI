@@ -5,15 +5,16 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from typing import Any
 
 import pytest
 
-from pdx import config
+from pdx import config, country_state, decision_adapters, decision_rules
 from pdx import mobilization_opportunities as mobilization
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
-from pdx.situated import compiler
+from pdx.situated import compiler, native_treatments
 from pdx.textio import normalized_text
 
 pytestmark = pytest.mark.unit
@@ -499,3 +500,116 @@ def test_live_locked_sources_match_frozen_bytes_when_available(baseline):
     if not (config.GAME / DOC).is_file():
         pytest.skip("锁定原版安装不可用；离线原始证据已覆盖")
     assert mobilization.verify_game(config.GAME) == baseline
+
+
+@pytest.fixture(scope="module")
+def legacy_supply_output():
+    if not (config.GAME / SOURCE).is_file():
+        pytest.skip("锁定原版安装不可用")
+    adapters = decision_adapters.load()
+    policy = dict(adapters.policies)[SOURCE]
+    scoped = decision_adapters.AdapterSet(
+        adapters.sources, ((SOURCE, policy),), adapters.source_sha256
+    )
+    files, report = decision_adapters.build(scoped, country_policy=country_state.load())
+    return files[SOURCE], policy, report
+
+
+@pytest.mark.integration
+def test_legacy_supply_weight_readback_checks_all_ordered_branches(legacy_supply_output):
+    expected, policy, report = legacy_supply_output
+    fields = set(policy.groups())
+    root = parse_text(expected).root
+    native = parse_text((config.GAME / SOURCE).read_text(encoding="utf-8-sig")).root
+    verified = report["native_supply_stages"]
+    for option, branch_count in (("extra_supplies", 7), ("luxurious_supplies", 11)):
+        field = (f"mobilization_option_{option}", "ai_weight")
+        original_weight = _node(native, *field).value
+        expected_weight = _node(root, *field).value
+        assert isinstance(original_weight, Block)
+        assert isinstance(expected_weight, Block)
+        extension = expected_weight.items[len(original_weight.items) :]
+        assert [node.key for node in extension if isinstance(node, Assignment)] == (
+            ["if", *["else_if"] * (branch_count - 1)]
+        )
+        assert verified[option]["weight_extension_emitted"]
+
+    extra = "mobilization_option_extra_supplies"
+    luxury = "mobilization_option_luxurious_supplies"
+    append_range = (
+        rf"^[ \t]*# SITAI BEGIN information:{extra}\.ai_weight\n"
+        rf"(.*?)^[ \t]*# SITAI END information:{extra}\.ai_weight\n"
+    )
+    match = re.search(append_range, expected, flags=re.MULTILINE | re.DOTALL)
+    assert match is not None
+    fragment = match[1]
+    changed_guard = fragment.replace("market_goods_pricier > 0.5", "market_goods_pricier > 0.6", 1)
+    changed_value = fragment.replace("multiply = 0.8", "multiply = 0.7", 1)
+    lines = fragment.splitlines(keepends=True)
+    else_if_lines = [i for i, line in enumerate(lines) if line.lstrip().startswith("else_if =")]
+    left, right = else_if_lines[:2]
+    lines[left], lines[right] = lines[right], lines[left]
+    moved = "".join(lines)
+    for revised in (changed_guard, changed_value, moved):
+        assert revised != fragment
+        candidate = expected[: match.start(1)] + revised + expected[match.end(1) :]
+        with pytest.raises(ValueError, match="偏离已授权联合贡献"):
+            mobilization.verify_generated_supply_stages(candidate, fields, expected=expected)
+
+    retracted = expected[: match.start()] + expected[match.end() :]
+    retracted_fields = fields - {(extra, "ai_weight")}
+    retracted_stages = mobilization.verify_generated_supply_stages(
+        retracted, retracted_fields, expected=expected
+    )
+    extra_stage = retracted_stages["extra_supplies"]
+    luxury_stage = retracted_stages["luxurious_supplies"]
+    assert isinstance(extra_stage, dict)
+    assert isinstance(luxury_stage, dict)
+    assert not extra_stage["weight_extension_emitted"]
+    assert luxury_stage["weight_extension_emitted"]
+    retracted_root = parse_text(retracted).root
+    assert _ast(_node(retracted_root, extra)) == _ast(_node(native, extra))
+    assert _ast(_node(retracted_root, luxury)) == _ast(_node(root, luxury))
+
+
+@pytest.mark.integration
+def test_native_supply_stage_metadata_preserves_parameter_reader_contract(legacy_supply_output):
+    text, policy, report = legacy_supply_output
+    expected_consumer = {
+        "source": SOURCE,
+        **decision_rules.contract(policy, owner="consumer_adapters", source=SOURCE),
+    }
+    assert report["consumers"] == [expected_consumer]
+    assert set(report["native_supply_stages"]) == {"extra_supplies", "luxurious_supplies"}
+    goods_source = "common/goods/00_goods.txt"
+    native = {name: (config.GAME / name).read_bytes() for name in (SOURCE, goods_source)}
+    native_sources = native_treatments._Sources(native)
+
+    def reader_proofs(metadata):
+        effective = {
+            **native,
+            SOURCE: text.encode(),
+            ".metadata/metadata.json": json.dumps({"consumer_adapters": metadata}).encode(),
+        }
+        effective_sources = native_treatments._Sources(effective, reuse=native_sources)
+        audit = native_treatments._Dependencies(
+            native_sources, effective_sources, native, effective, {}, production_complete=True
+        )
+        return {
+            definition: audit.parameter_readers(SOURCE, definition, field, "military_formation")
+            for definition, field in policy.groups()
+        }
+
+    proofs = reader_proofs(report)
+    assert len(proofs) == 15
+    assert all(
+        row["status"] == "proven_parameter_reader" and row["clauses"] for row in proofs.values()
+    )
+    previous = {key: value for key, value in report.items() if key != "native_supply_stages"}
+    assert reader_proofs(previous) == proofs
+    forged_consumer = {
+        **expected_consumer,
+        "native_supply_stages": report["native_supply_stages"],
+    }
+    forged = {**previous, "consumers": [forged_consumer]}
+    assert all(not row for row in reader_proofs(forged).values())

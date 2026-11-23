@@ -42,6 +42,7 @@ _NUMERIC_OPS = frozenset({"=", "<", "<=", ">", ">="})
 _PARAMETER_QUERIES = frozenset(
     {
         "has_diplomatic_pact",
+        "has_law",
         "has_law_or_variant",
         "has_potential_resource",
         "has_strategy",
