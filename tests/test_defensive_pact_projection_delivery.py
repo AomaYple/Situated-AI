@@ -15,6 +15,9 @@ pytestmark = pytest.mark.integration
 ARTICLE = "common/treaty_articles/01_defensive_pact.txt"
 BEGIN = "# SITAI BEGIN information:defensive_pact.ai.proposal_weight"
 END = "# SITAI END information:defensive_pact.ai.proposal_weight"
+STRATEGY = "common/ai_strategies/00_default_strategy.txt"
+ARMY_BEGIN = "# SITAI BEGIN information:wanted_army_size"
+ARMY_END = "# SITAI END information:wanted_army_size"
 
 
 def _parse(text: str) -> Block:
@@ -127,3 +130,35 @@ def test_standard_zip_proposal_adjustment_uses_the_composing_country_only(
     )
     assert player.operation is None
     assert player.fallback == "vanilla"
+
+
+def test_standard_zip_leaves_draft_count_out_of_army_target(standard_release_package: Path) -> None:
+    with ZipFile(standard_release_package) as archive:
+        strategy = archive.read(STRATEGY).decode("utf-8-sig")
+    vanilla = (config.GAME / STRATEGY).read_text(encoding="utf-8-sig")
+    vanilla_army = _child(_child(_parse(vanilla), "ai_strategy_default"), "wanted_army_size")
+    packaged_army = _child(_child(_parse(strategy), "ai_strategy_default"), "wanted_army_size")
+    assert strategy.count(ARMY_BEGIN) == strategy.count(ARMY_END) == 1
+    overlay = strategy.split(ARMY_BEGIN, 1)[1].split(ARMY_END, 1)[0]
+    [addition] = _parse(overlay).items
+    assert _ast(packaged_army.items[-1]) == _ast(addition)
+    assert _ast(Block(packaged_army.items[:-1])) == _ast(vanilla_army)
+    assert "num_defensive_pacts" not in overlay
+
+    # 1836-02-11 Belgian draft control. Raw count and the positive original
+    # target gap used to lower this country's target despite the draft phase.
+    root = {
+        "is_ai": True,
+        "is_at_war": False,
+        "in_default": False,
+        "net_total_income": -10170.58878,
+        "num_defensive_pacts": 1,
+        "wanted_army_size_script_value": 25,
+        "wanted_marines_size_script_value": 0,
+        "army_size": 50,
+        "infamy": 0,
+    }
+    for changes, expected in (({}, 1), ({"is_at_war": True}, 1.08), ({"in_default": True}, 0.85)):
+        decision = pdx_eval.select(overlay, {"ROOT": {**root, **changes}})
+        assert decision.operation == "multiply"
+        assert decision.delta == pytest.approx(expected)

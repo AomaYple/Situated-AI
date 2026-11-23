@@ -426,26 +426,9 @@ _STRICT_TARGETS = (
         "none",
         "multiply",
     ),
-    (
-        "LJ10",
-        "LJ10.defensive_pact_flow_pressure",
-        INFO_SOURCE,
-        "lj10_defensive_pact_flow_pressure",
-        "wanted_army_size",
-        "root",
-        "none",
-        "multiply",
-    ),
 )
 
 _EXPECTED_CONDITIONS = {
-    "lj10_defensive_pact_flow_pressure": (
-        ("war", "=", False),
-        ("default", "=", False),
-        ("net_surplus", "<", 0),
-        ("defensive_pact_articles", ">=", 1),
-        ("native_army_capacity", ">", {"fact_reference": "ROOT.wanted_marines_size_script_value"}),
-    ),
     "lj02_coal_output_transport_foundation": (
         ("pm_active_building_coal_mine_pm_picks_and_shovels_building_coal_mine", "=", True),
         ("state_owner_default", "=", False),
@@ -636,7 +619,6 @@ _PRODUCTION_METHODS = {
 
 
 _COMPLETION_STATES = {
-    "lj10_defensive_pact_flow_pressure": "observed_own_treaty_flagged_articles_and_current_negative_flow",
     "lj02_coal_output_transport_foundation": "active_coal_recipe_and_market_pressure",
     "infrastructure_railway_prepared_pm_early_trains": "active_railway_recipe_and_local_infrastructure_pressure",
     "lj01_iron_tooling_input_repair": "active_recipe_and_input_pressure",
@@ -674,9 +656,7 @@ _EXPECTED_REQUIRED_KNOWN = {
     "lj06_employment_textile_unemployment_support": ("state_owner_loans",),
 }
 
-_EXPECTED_REFERENCE_FACTS = {
-    "lj10_defensive_pact_flow_pressure": ("native_marine_capacity",),
-}
+_EXPECTED_REFERENCE_FACTS: dict[str, tuple[str, ...]] = {}
 
 
 def _fingerprint(rule: Any) -> str:
@@ -795,7 +775,6 @@ def _reader_copy(reader: Any) -> ChainReaderSpec:
 
 def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
     """Frozen field-level contract for the observed local writer links."""
-    native_target_unit = "barracks_levels"
     if key == "country_goods_paper_balance":
         return (
             "market_goods_delta",
@@ -819,42 +798,6 @@ def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
             (),
             None,
             "boolean",
-            None,
-            None,
-        ),
-        "defensive_pact_articles": (
-            "num_defensive_pacts",
-            "number",
-            "root",
-            (),
-            None,
-            (),
-            None,
-            "treaty_article_count",
-            0,
-            None,
-        ),
-        "native_army_capacity": (
-            "wanted_army_size_script_value",
-            "number",
-            "root",
-            (),
-            None,
-            (),
-            None,
-            native_target_unit,
-            None,
-            None,
-        ),
-        "native_marine_capacity": (
-            "wanted_marines_size_script_value",
-            "number",
-            "root",
-            (),
-            None,
-            (),
-            None,
-            native_target_unit,
             None,
             None,
         ),

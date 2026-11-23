@@ -6743,9 +6743,6 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			add = { value = 0
 				# military_peacetime_budget [military]; 违约使新增常备军目标承担独立财政代价；战争需求仍在同一消费者中联合评估，不因战争而删除已知成本
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
-				# SITAI CHAIN LJ10/LJ10.defensive_pact_flow_pressure writer=rule_action_mod_decisions_information_toml_lj10_defensive_pact_flow_pressure
-				# lj10_defensive_pact_flow_pressure [military]; 和平且净流量承压时，本国已关联的防御协定标记条款作为小幅减少重复新增军备承诺的信号；高优先防御及明确威胁仍优先
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no net_total_income < 0 num_defensive_pacts >= 0 num_defensive_pacts >= 1 wanted_army_size_script_value > "ROOT.wanted_marines_size_script_value" } } add = -0.05 }
 			}
 			# GROUP program_411c7092a1697cba_military_target_demand_positive
 			add = { value = 0

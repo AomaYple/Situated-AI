@@ -233,7 +233,7 @@ def _opposite_value(operator: str, value: object) -> object:
 
 def test_local_links_preserve_each_condition_unknown_and_player_boundary(generated) -> None:
     policies, files, info_text, evidence = generated
-    assert len(evidence) == 31
+    assert len(evidence) == 30
     assert not any(item.spec.field == "colonial_interest_ratio" for item in evidence)
     assert {item.spec.chain_id for item in evidence} == {
         "LJ01",
@@ -245,7 +245,6 @@ def test_local_links_preserve_each_condition_unknown_and_player_boundary(generat
         "LJ07",
         "LJ08",
         "LJ09",
-        "LJ10",
         "LJ11",
         "LJ12",
         "LJ13",
@@ -329,9 +328,9 @@ def test_local_link_receipt_does_not_close_any_full_d9_chain(generated) -> None:
     _policies, _files, _info_text, evidence = generated
     contract = joint_chain_contract.strict_contract(evidence)
     assert contract["status"] == "observed_static_only"
-    assert contract["locally_witnessed_chains"] == [f"LJ{i:02d}" for i in range(1, 15)]
+    assert contract["locally_witnessed_chains"] == [f"LJ{i:02d}" for i in range(1, 15) if i != 10]
     assert contract["pending_chain_closure"] == [f"LJ{index:02d}" for index in range(1, 15)]
-    assert contract["pending_uncovered_chains"] == []
+    assert contract["pending_uncovered_chains"] == ["LJ10"]
 
 
 DEFAULT_STRATEGY = "common/ai_strategies/00_default_strategy.txt"

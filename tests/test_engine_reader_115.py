@@ -5,13 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import tomllib
 from dataclasses import replace
 
 import pytest
 
 from pdx import config, decision_interfaces, decision_rules, distribution, version_contracts
-from pdx.situated import engine_reader_115, engine_scope_115, joint_chain_contract
+from pdx.situated import engine_reader_115, engine_scope_115
 from pdx.situated import production_profile as native
 
 
@@ -25,23 +24,14 @@ def test_current_reader_has_independent_executable_and_native_source_identity():
     assert hashes["@engine/binaries/victoria3.exe"] == engine_scope_115.executable_identity()[0]
 
 
-def test_current_reader_and_joint_chain_use_barracks_levels_without_rewriting_history(monkeypatch):
-    original = decision_rules.SOURCE.read_bytes()
-    historical = tomllib.loads(original.decode())
-    monkeypatch.setenv("V3_CONTRACT_PROFILE", version_contracts.CURRENT_VERSION)
-    current = decision_rules.load()
-    readers = {reader.key: reader for reader in current.readers}
-    for key in ("native_army_capacity", "native_marine_capacity"):
-        reader = readers[key]
+def test_frozen_original_demand_uses_barracks_levels():
+    data = json.loads(engine_reader_115.snapshot())
+    for row in data["positive_native_guard"]["readers"]:
+        reader = decision_rules.Reader(row["engine"], **row)
         assert reader.unit == "barracks_levels"
         assert decision_interfaces.reader_scope(reader, ()) == "country"
-        signature = joint_chain_contract._expected_reader_signature(key)
-        assert signature is not None
-        assert signature[7] == "barracks_levels"
         with pytest.raises(ValueError, match="单位"):
             decision_interfaces.reader_scope(replace(reader, unit="battalions"), ())
-        assert historical["readers"][key]["unit"] == "battalions"
-    assert decision_rules.SOURCE.read_bytes() == original
 
 
 @pytest.mark.parametrize(
