@@ -11,10 +11,12 @@ Mod 内容，体积较大。把整份文本塞进 git 会让仓库迅速劣化�
 序列化一遍。否则测试和实现会各自演化，测的就不是真正交付的东西了。
 
 产物写到 ``tmp_path``，不覆盖 ``tools/out/`` 里的正式产物。
+原版指纹沿用 1.15.2 安装输入，Mod 与交叉指纹使用固定的合成文件。
+``test_artifact_digests_1152.yml`` 保留历史 Workshop 采集的指纹。
 
 更新方式::
 
-    pytest tests/test_golden.py --force-regen
+    pytest tests/test_golden.py::test_artifact_digests --force-regen
 
 **只在确认新结果确实正确之后才更新** —— 这个文件的唯一价值就是
 "结果不该变的时候它会响"。
@@ -41,6 +43,34 @@ pytestmark = [pytest.mark.integration, pytest.mark.regression, pytest.mark.slow]
 #: 所以测试内读 ``config.OUT`` 拿到的可能是被改过的值（踩过）。
 _OFFICIAL_OUT = config.OUT
 _OFFICIAL_REPORTS = config.REPORTS
+_VANILLA_OVERRIDE = "common/treaty_articles/04_take_on_debt.txt"
+_WORKSHOP_ID = "101"
+
+
+def _fixture_mods(root: Path) -> analyze.ModsAnalysis:
+    workshop = root / "workshop"
+    mod = workshop / _WORKSHOP_ID
+    files = {
+        mod / ".metadata/metadata.json": '{"name": "Golden Workshop fixture"}\n',
+        mod / _VANILLA_OVERRIDE: "REPLACE_OR_CREATE:take_on_debt = { cost = 1 }\n",
+        mod / "localization/english/golden_l_english.yml": (
+            'l_english:\n golden_fixture:0 "Fixture for $COUNTRY$"\n'
+        ),
+    }
+    local = root / "local"
+    local.mkdir(parents=True)
+    for path, content in files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8", newline="\n")
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(config, "WORKSHOP", workshop)
+        patch.setattr(config, "LOCAL_MODS", local)
+        return analyze.mods_analysis()
+
+
+@pytest.fixture(scope="module")
+def ma(tmp_path_factory: pytest.TempPathFactory) -> analyze.ModsAnalysis:
+    return _fixture_mods(tmp_path_factory.mktemp("golden-mods"))
 
 
 def _sha256(path: Path) -> str:
@@ -72,7 +102,7 @@ def artifacts(tmp_path_factory: pytest.TempPathFactory, ga, ma, ca) -> dict[str,
         return _write_to(out, ga, ma, ca, patch)
 
 
-def test_artifact_digests(artifacts, data_regression, ga) -> None:
+def test_artifact_digests(artifacts, data_regression, ga, ma, ca) -> None:
     """每个产物的字节数与 sha256 必须与冻结值一致。"""
     snap = verify.latest_compact_snapshot()
     assert snap is not None
@@ -95,12 +125,44 @@ def test_artifact_digests(artifacts, data_regression, ga) -> None:
     assert ga.official_docs == {
         key: int(str(value["字节"])) for key, value in docs_mirror.entries().items()
     }
+    assert [mod.overrides for mod in ma.mods] == [[_VANILLA_OVERRIDE]]
+    assert ma.mods[0].localization_values == {
+        "golden_fixture": {"l_english": "Fixture for $COUNTRY$"}
+    }
+    assert ca.changed_entries == {"common": {"take_on_debt": [_WORKSHOP_ID]}}
     digests = {
         name: {"字节": p.stat().st_size, "sha256": _sha256(p)}
         for name, p in sorted(artifacts.items())
     }
     assert digests, "至少要有产物"
-    data_regression.check(digests, basename="test_artifact_digests_1152")
+    data_regression.check(digests, basename="test_artifact_digests_1152_fixture")
+
+
+def test_固定Mod输入独立于现场工坊与本地Mod(tmp_path, monkeypatch) -> None:
+    game = tmp_path / "game"
+    vanilla = game / _VANILLA_OVERRIDE
+    vanilla.parent.mkdir(parents=True)
+    vanilla.write_text("take_on_debt = { cost = 0 }\n", encoding="utf-8")
+    workshop = tmp_path / "ambient-workshop"
+    local = tmp_path / "ambient-local"
+    monkeypatch.setattr(config, "GAME", game)
+    monkeypatch.setattr(config, "WORKSHOP", workshop)
+    monkeypatch.setattr(config, "LOCAL_MODS", local)
+
+    before = _fixture_mods(tmp_path / "before")
+    for root in (workshop / "202", local / "ambient"):
+        root.mkdir(parents=True)
+        (root / "ambient.txt").write_text("ambient = {}\n", encoding="utf-8")
+    assert [mod.target for mod in analyze.mods_analysis().mods] == ["202", "ambient"]
+    after = _fixture_mods(tmp_path / "after")
+
+    assert workshop == config.WORKSHOP
+    assert local == config.LOCAL_MODS
+    assert analyze.to_mods_dict(before) == analyze.to_mods_dict(after)
+    before_cross = analyze.cross_analysis(before)
+    after_cross = analyze.cross_analysis(after)
+    assert before_cross.changed_entries == {"common": {"take_on_debt": [_WORKSHOP_ID]}}
+    assert analyze.to_cross_dict(before_cross) == analyze.to_cross_dict(after_cross)
 
 
 def test_全部产物都非空(artifacts) -> None:
