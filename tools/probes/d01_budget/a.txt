@@ -1,0 +1,5 @@
+INJECT:ai_strategy_agricultural_expansion = {
+	economic_vs_government_spending_balance = {
+		value = 0
+	}
+}
