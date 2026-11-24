@@ -1,0 +1,30 @@
+# The engine's default strategy supplies the native base and sibling scores.
+INJECT:ai_strategy_default = {
+	institution_scores = {
+		institution_schools = {
+			add = {
+				value = 0
+				if = {
+					limit = {
+						exists = ROOT
+						ROOT = {
+							is_ai = yes
+							has_institution = institution_schools
+							has_law = law_type:law_public_schools
+							literacy_rate >= 0
+							literacy_rate < 0.5
+							bureaucracy > 0
+							in_default = no
+							net_total_income > 0
+							any_scope_state = {
+								is_incorporated = yes
+								state_population > 0
+							}
+						}
+					}
+					add = 0.25
+				}
+			}
+		}
+	}
+}
