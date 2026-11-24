@@ -1,0 +1,15 @@
+je_sitai_d01_budget_observer = {
+	context = country
+	is_shown_when_inactive = { always = no }
+	should_be_pinned_by_default_uninvolved_or_context = no
+	immediate = {
+		debug_log = "SITAI_D01_OBSERVER journal_entry begin"
+		sitai_d01_budget_log_conditions = yes
+		debug_log = "SITAI_D01_OBSERVER journal_entry end"
+	}
+	timeout = 1
+	outcome = {
+		flags = { hidden timeout }
+		conclusion_desc = je_sitai_d01_budget_observer_expired
+	}
+}

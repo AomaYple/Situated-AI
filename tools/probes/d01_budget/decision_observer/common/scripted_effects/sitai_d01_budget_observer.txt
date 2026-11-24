@@ -1,0 +1,59 @@
+sitai_d01_budget_log_conditions = {
+	debug_log = "SITAI_D01_OBSERVER country=[THIS.GetCountry.GetNameNoFormatting] date=[TimeKeeper.GetCurrentDate.GetString] tick_of_day=[TimeKeeper.GetTickOfDay]"
+	if = {
+		limit = { this = c:MNL }
+		debug_log = "SITAI_D01_OBSERVER this_is_mnl=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER this_is_mnl=no" }
+	if = {
+		limit = { exists = ROOT }
+		debug_log = "SITAI_D01_OBSERVER root_exists=yes root=[ROOT.GetCountry.GetNameNoFormatting]"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER root_exists=no" }
+	if = {
+		limit = {
+			exists = ROOT
+			this = ROOT
+		}
+		debug_log = "SITAI_D01_OBSERVER this_is_root=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER this_is_root=no" }
+	if = {
+		limit = {
+			exists = c:FRA
+			c:FRA = { is_ai = no }
+		}
+		debug_log = "SITAI_D01_OBSERVER france_human=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER france_human=no" }
+	if = {
+		limit = { is_ai = yes }
+		debug_log = "SITAI_D01_OBSERVER is_ai=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER is_ai=no" }
+	if = {
+		limit = { credit > 0 }
+		debug_log = "SITAI_D01_OBSERVER credit_gt_0=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER credit_gt_0=no" }
+	if = {
+		limit = { scaled_debt > 0 }
+		debug_log = "SITAI_D01_OBSERVER scaled_debt_gt_0=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER scaled_debt_gt_0=no" }
+	if = {
+		limit = { scaled_debt < 0.4 }
+		debug_log = "SITAI_D01_OBSERVER scaled_debt_lt_0_4=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER scaled_debt_lt_0_4=no" }
+	if = {
+		limit = { net_fixed_income < 0 }
+		debug_log = "SITAI_D01_OBSERVER net_fixed_income_lt_0=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER net_fixed_income_lt_0=no" }
+	if = {
+		limit = { net_total_income > 0 }
+		debug_log = "SITAI_D01_OBSERVER net_total_income_gt_0=yes"
+	}
+	else = { debug_log = "SITAI_D01_OBSERVER net_total_income_gt_0=no" }
+}
