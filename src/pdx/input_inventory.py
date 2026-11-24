@@ -1001,58 +1001,6 @@ def summarize_directories(scan: InventoryScan) -> tuple[DirectorySummary, ...]:
 
 
 @dataclass(frozen=True, slots=True)
-class LegacyScopeDisposition:
-    path: str
-    config_status: Literal["scriptable", "asset", "ignored", "excluded", "outside"]
-    version_status: Literal["included", "excluded_suffix", "outside"]
-    reasons: tuple[str, ...]
-
-
-def compare_legacy_scope(scan: InventoryScan) -> tuple[LegacyScopeDisposition, ...]:
-    """按现有常量/生产判定逐路径解释旧范围，不过滤本次分母。
-
-    这里只评价旧范围的静态选择规则；不运行旧 scanner，也不宣称其读取或
-    解析一定成功。包含这次因 schema 路径限制而不能构造合同的存在性行。
-    """
-    # 延迟导入避免纯枚举依赖 PDX parser 初始化；规则仍取唯一当前来源。
-    from . import config  # noqa: PLC0415
-    from .situated.version_inventory import (  # noqa: PLC0415
-        IDENTITY_PATHS,
-        TEXT_EXTENSIONS,
-    )
-
-    if not scan.is_installation:
-        raise ValueError("旧安装范围只能与独立原版安装分母对账")
-    rows = []
-    for relative in scan.observed_paths:
-        parts = PurePosixPath(relative).parts
-        within_content = len(parts) > 1 and parts[0] in CONTENT_ROOTS
-        content_parts = parts[1:] if within_content else parts
-        suffix = PurePosixPath(relative).suffix.lower()
-        status: Literal["scriptable", "asset", "ignored", "excluded", "outside"] = "outside"
-        if content_parts and content_parts[0] in config.IGNORED_DIRS:
-            status = "ignored"
-        elif within_content and config.is_excluded(content_parts):
-            status = "excluded"
-        elif within_content and config.is_scriptable(content_parts, suffix):
-            status = "scriptable"
-        elif within_content and content_parts[0] in config.ASSET_DIRS:
-            status = "asset"
-        version: Literal["included", "excluded_suffix", "outside"] = "outside"
-        if relative in IDENTITY_PATHS or (within_content and suffix in TEXT_EXTENSIONS):
-            version = "included"
-        elif within_content:
-            version = "excluded_suffix"
-        reasons = (
-            f"config.py: SCRIPTABLE_DIRS/SCRIPTABLE_SUFFIXES, ASSET_DIRS, IGNORED_DIRS, EXCLUDED_SUBTREES -> {status}",
-            f"situated/version_inventory.py: CONTENT_ROOTS/TEXT_EXTENSIONS/IDENTITY_PATHS -> {version}",
-            "ENG-01: 存在性保留；旧范围处置不缩减分母，研究价值与解析另行评价",
-        )
-        rows.append(LegacyScopeDisposition(relative, status, version, reasons))
-    return tuple(rows)
-
-
-@dataclass(frozen=True, slots=True)
 class CapacityEstimate:
     source_bytes: int
     largest_file_bytes: int
