@@ -1,0 +1,20 @@
+sitai_d06_playtest_recovery = {
+    state_infrastructure_add = 20
+}
+
+sitai_d06_playtest_high_multiplier = {
+    state_infrastructure_mult = 1
+    state_infrastructure_add = -12
+}
+
+sitai_d06_playtest_trim_capacity = {
+    state_infrastructure_add = -2.5
+}
+
+sitai_d06_playtest_authority_limit = {
+    country_authority_add = -600
+}
+
+sitai_d06_playtest_authority_competition = {
+    country_authority_add = -575
+}

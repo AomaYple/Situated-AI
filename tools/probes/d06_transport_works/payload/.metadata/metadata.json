@@ -1,0 +1,12 @@
+{
+  "id": "situated-ai-d06-transport-works-candidate",
+  "name": "Situated AI D06 Transport Works Candidate",
+  "version": "0.1.0-d06.rc2",
+  "supported_game_version": "1.15.2",
+  "short_description": "Local candidate for a state infrastructure relief decree.",
+  "tags": [],
+  "relationships": [],
+  "game_custom_data": {
+    "multiplayer_synchronized": true
+  }
+}

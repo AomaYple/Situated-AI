@@ -1,0 +1,29 @@
+sitai_decree_transport_works = {
+    texture = "gfx/interface/icons/decree/decree_road_maintenance.dds"
+    modifier = { state_infrastructure_add = 5 }
+    unlocking_technologies = { centralization }
+    cost = 60
+
+    state_trigger = {
+        NOT = { has_decree = decree_road_maintenance }
+        infrastructure > 0
+        OR = {
+            AND = {
+                NOT = { has_decree = sitai_decree_transport_works }
+                state_infrastructure_balance <= -5
+            }
+            AND = {
+                has_decree = sitai_decree_transport_works
+                state_infrastructure_balance < sitai_d06_transport_works_release_threshold
+            }
+        }
+    }
+
+    ai_weight = {
+        value = 75
+        if = {
+            limit = { state_infrastructure_balance <= -15 }
+            add = 25
+        }
+    }
+}
