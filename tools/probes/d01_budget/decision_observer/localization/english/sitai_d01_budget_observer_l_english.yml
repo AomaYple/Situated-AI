@@ -5,3 +5,4 @@ l_english:
  je_sitai_d01_budget_observer: "Mingrelia Budget Observation"
  je_sitai_d01_budget_observer_reason: "Record the budget conditions when this journal entry activates."
  je_sitai_d01_budget_observer_status: "Budget observation recorded in the debug log."
+ je_sitai_d01_budget_observer_expired: "The observation window has closed."

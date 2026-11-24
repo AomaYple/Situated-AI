@@ -8,10 +8,11 @@ from zipfile import ZipFile
 lazy from pathlib import Path
 
 import pytest
-from build import ARMS, FIELD, SOURCE, STRATEGY, freeze, freeze_decision_observer
 
 from pdx.model import Block, Node, Scalar
 from pdx.parser import parse_file, parse_text
+from tools.probes.d01_budget import build as budget_probe
+from tools.probes.d01_budget.build import ARMS, FIELD, SOURCE, STRATEGY, freeze
 
 
 def test_arms_are_byte_reproducible(tmp_path: Path) -> None:
@@ -50,9 +51,9 @@ def test_payload_contains_one_country_budget_contribution() -> None:
 
 def test_decision_observer_package_matches_candidate_conditions(tmp_path: Path) -> None:
     output = tmp_path / "first"
-    name = "sitai-d01-budget-decision-observer.zip"
-    manifest = freeze_decision_observer(output)
-    assert manifest == freeze_decision_observer(tmp_path / "second")
+    name = "sitai-d01-budget-decision-observer-0.0.2.zip"
+    manifest = budget_probe.freeze_decision_observer(output)
+    assert manifest == budget_probe.freeze_decision_observer(tmp_path / "second")
     assert (output / name).read_bytes() == (tmp_path / "second" / name).read_bytes()
     with ZipFile(output / name) as archive:
         assert archive.namelist() == [
@@ -65,6 +66,7 @@ def test_decision_observer_package_matches_candidate_conditions(tmp_path: Path) 
         decision = probe_block(archive, "decisions", "sitai_d01_budget_observer_decision")
         journal = probe_block(archive, "journal_entries", "je_sitai_d01_budget_observer")
         observer = probe_block(archive, "scripted_effects", "sitai_d01_budget_log_conditions")
+        localization = archive.read(budget_probe.DECISION_OBSERVER_LOCALIZATION)
 
     visibility = nested(decision, "is_shown")
     assert scalar(visibility, "this") == "c:FRA"
@@ -80,6 +82,15 @@ def test_decision_observer_package_matches_candidate_conditions(tmp_path: Path) 
     assert scalar(journal, "context") == "country"
     assert scalar(nested(journal, "is_shown_when_inactive"), "always") == "no"
     assert scalar(nested(journal, "immediate"), "sitai_d01_budget_log_conditions") == "yes"
+    assert scalar(journal, "timeout") == "1"
+    assert len(journal.all("outcome")) == 1
+    outcome = nested(journal, "outcome")
+    assert set(outcome.keys()) == {"flags", "conclusion_desc"}
+    flags = nested(outcome, "flags")
+    assert [flag.text for flag in flags.scalars()] == ["hidden", "timeout"]
+    assert len(flags.items) == 2
+    conclusion = scalar(outcome, "conclusion_desc")
+    assert f" {conclusion}:" in localization.decode("utf-8-sig")
 
     candidate = nested(nested(read_budget("b"), "if"), "limit")
     exact_conditions = {

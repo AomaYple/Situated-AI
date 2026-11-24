@@ -19,6 +19,7 @@ STRATEGY = "ai_strategy_agricultural_expansion"
 FIELD = "economic_vs_government_spending_balance"
 SCRIPT = "common/ai_strategies/zz_sitai_d01_budget.txt"
 OBSERVER = "common/scripted_effects/sitai_d01_observe_budget.txt"
+DECISION_OBSERVER_VERSION = "0.0.2"
 DECISION_OBSERVER_MEMBERS = {
     "common/decisions/sitai_d01_budget_observer.txt": "sitai_d01_budget_observer_decision",
     "common/journal_entries/sitai_d01_budget_observer.txt": "je_sitai_d01_budget_observer",
@@ -84,7 +85,7 @@ def decision_observer_members() -> dict[str, bytes]:
     metadata = {
         "name": "Situated AI D01 Budget Decision Observer",
         "id": "sitai-d01-budget-decision-observer",
-        "version": "0.0.1",
+        "version": DECISION_OBSERVER_VERSION,
         "supported_game_version": CURRENT_VERSION,
         "short_description": "Single-player diagnostic for AI Mingrelia budget conditions.",
         "tags": [],
@@ -126,7 +127,8 @@ def freeze(output: Path) -> dict[str, dict[str, str]]:
 
 
 def freeze_decision_observer(output: Path) -> dict[str, dict[str, str]]:
-    return freeze_archives(output, {"decision-observer": decision_observer_members()})
+    arm = f"decision-observer-{DECISION_OBSERVER_VERSION}"
+    return freeze_archives(output, {arm: decision_observer_members()})
 
 
 if __name__ == "__main__":

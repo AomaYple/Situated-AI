@@ -31,9 +31,9 @@
 ```powershell
 $env:PYTHONPATH = 'src'
 python -B -X utf8 tools/probes/d01_budget/build.py tools/out/d01-budget-original
-python -B -X utf8 -m pytest -q -n 0 -p no:cacheprovider tools/probes/d01_budget/test_probe.py
-python -B -X utf8 -m ruff check --no-cache tools/probes/d01_budget
-python -B -X utf8 -m ruff format --check --no-cache tools/probes/d01_budget
+python -B -X utf8 -m pytest -q -n 0 -p no:cacheprovider tests/test_d01_budget_probe.py
+python -B -X utf8 -m ruff check --no-cache tools/probes/d01_budget tests/test_d01_budget_probe.py
+python -B -X utf8 -m ruff format --check --no-cache tools/probes/d01_budget tests/test_d01_budget_probe.py
 ```
 
 ## 无控制台观察试片
@@ -42,16 +42,16 @@ python -B -X utf8 -m ruff format --check --no-cache tools/probes/d01_budget
 
 ```powershell
 $env:PYTHONPATH = 'src'
-python -B -X utf8 tools/probes/d01_budget/build.py tools/out/d01-budget-decision-observer --decision-observer
+python -B -X utf8 tools/probes/d01_budget/build.py tools/out/d01-budget-decision-observer-0.0.2 --decision-observer
 ```
 
-固定的 `sitai-d01-budget-decision-observer.zip` 含五个成员，SHA-256 为 `2b657675fb08bf06f626eae59143ef44f62e49e0c82a6fcaf46042b4ef62483f`。固定 ZIP 与逐成员 `manifest.json` 位于四个原试片证据目录下的 `decision-observer/`。
+固定的 `sitai-d01-budget-decision-observer-0.0.2.zip` 含五个成员，SHA-256 为 `6fcfc4d6b8a26c63fa87f1b999a5ca63bf7db214b2bb3bef80215ea7db6e1237`。固定 ZIP 与逐成员 `manifest.json` 位于四个原试片证据目录下的 `decision-observer-0.0.2/`。旧版 0.0.1 缺少日志条目超时所需的结果定义，其原始 ZIP 保存在 `decision-observer/`。
 
 1. 单独挂载输出 ZIP 内的五个成员，载入法国人控的同一存档副本并保持暂停。点击决议栏中英文名为 **Observe Mingrelia's Budget** 的决议。该决议只对人控法国可见，AI 权重为零，且明格列利亚须存在并由 AI 控制。
-2. 查本次档案的调试日志，查找 `SITAI_D01_OBSERVER`。决议先在嵌套 `c:MNL` 中记录日期、日内刻、当前国、`ROOT`、人控状态，以及每个财政谓词的真或假。接着在明格列利亚添加一个诊断日志条目，该条目的 `immediate` 独立记录同一组字段。条目已激活时，只记录决议作用域。每个需要重新验证日志条目激活的观察点可从独立存档副本进入，或等条目退出后再触发。条目配置为一天后超时。
+2. 查本次档案的调试日志，查找 `SITAI_D01_OBSERVER`。决议先在嵌套 `c:MNL` 中记录日期、日内刻、当前国、`ROOT`、人控状态，以及每个财政谓词的真或假。接着在明格列利亚添加一个诊断日志条目，该条目的 `immediate` 独立记录同一组字段。条目已激活时，只记录决议作用域。每个需要重新验证日志条目激活的观察点可从独立存档副本进入，或等条目退出后再触发。条目一天后经隐藏结果结案，结案只提供说明文字。
 3. 先用决议、发起添加、日志条目、添加返回四组标记确认日志顺序，并与暂停存档时点交叉核对。解析器只核了脚本结构。首轮实机须验证 `tick_of_day` 确实展开、两处 `this_is_mnl=yes`、两处 AI 和法国人控状态，以及实际 `ROOT`。对照原版界面使用的日内刻标记 0、1、2、3 对应 00:00、06:00、12:00、18:00。游戏脚本的观察时点仍需与原版预算消费者的首次选择及项目实付单独绑定。
 
-定位依据为目标构建的 `game/common/decisions/000_decisions_help.txt`、`game/common/journal_entries/journal_entries.md`、`game/common/character_roles/01_appointment_roles.txt:18` 和 `game/gui/timemanip.gui:82`。如日志条目实测无法获得明格列利亚的根作用域，可另编译原版国家月脉冲的私有子回调，记录其实际触发时点。原版父回调定位在 `game/common/on_actions/00_code_on_actions.txt:167`。
+定位依据为目标构建的 `game/common/decisions/000_decisions_help.txt`、`game/common/journal_entries/journal_entries.md`、`game/common/character_roles/01_appointment_roles.txt:18` 和 `game/gui/timemanip.gui:82`。官方说明在 `journal_entries.md:144` 定义结果字段，在第 302 行说明超时结果要求。原版 `game/common/journal_entries/09_forest_of_bayonets.txt:191` 也使用无脚本效果的超时结果。如日志条目实测无法获得明格列利亚的根作用域，可另编译原版国家月脉冲的私有子回调，记录其实际触发时点。原版父回调定位在 `game/common/on_actions/00_code_on_actions.txt:167`。
 
 ## 实机配对和停止点
 
