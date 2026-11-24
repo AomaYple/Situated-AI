@@ -307,31 +307,32 @@ def test_external_materials_require_authorization_and_stay_separate(tmp_path: Pa
         )
 
 
-def test_legacy_ledger_explains_every_path_without_filtering(tmp_path: Path) -> None:
+def test_full_inventory_includes_paths_outside_the_script_scan(tmp_path: Path) -> None:
     root = _installation(tmp_path)
-    payloads = {
-        "game/gfx/map/map_object_data/generated/map.txt": b"generated",
-        "game/soundtrack/track.ogg": b"audio",
-        "binaries/game.exe": b"MZ",
-        "launcher/launcher-settings.json": b"{}",
-        "unknown/new.blob": b"unknown",
+    fixtures = {
+        "game/a.txt": (b"abc", "pdx_script"),
+        "game/gfx/map/map_object_data/generated/map.txt": (b"generated", "pdx_script"),
+        "game/soundtrack/track.ogg": (b"audio", "audio_video"),
+        "binaries/game.exe": (b"MZ", "binary"),
+        "launcher/launcher-settings.json": (b"{}", "structured_configuration"),
+        "unknown/new.blob": (b"unknown", "unknown"),
     }
-    for relative, raw in payloads.items():
+    for relative, (raw, _) in fixtures.items():
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
+
     result = inventory.inventory_installation(root)
-    ledger = {row.path: row for row in inventory.compare_legacy_scope(result)}
-    assert len(ledger) == 6
-    assert ledger["game/a.txt"].config_status == "outside"
-    assert ledger["game/gfx/map/map_object_data/generated/map.txt"].config_status == "excluded"
-    assert ledger["game/soundtrack/track.ogg"].config_status == "asset"
-    assert ledger["game/soundtrack/track.ogg"].version_status == "excluded_suffix"
-    assert ledger["binaries/game.exe"].config_status == "ignored"
-    assert ledger["binaries/game.exe"].version_status == "outside"
-    assert ledger["launcher/launcher-settings.json"].version_status == "included"
-    assert ledger["unknown/new.blob"].reasons
-    assert result.summary.file_count == 6
+
+    assert result.scan_status == "complete", result.diagnostics
+    assert result.observed_paths == tuple(sorted(fixtures))
+    assert result.summary.file_count == len(fixtures)
+    assert {
+        record.path: (record.size, record.sha256, record.category) for record in result.records
+    } == {
+        relative: (len(raw), hashlib.sha256(raw).hexdigest(), category)
+        for relative, (raw, category) in fixtures.items()
+    }
 
 
 def test_capacity_assumes_no_compression_and_preserves_redundancies(tmp_path: Path) -> None:
