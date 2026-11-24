@@ -695,14 +695,19 @@ def test_successor_publication_gates_plan_apply_and_resume(
     monkeypatch.setattr(runner, "_build", lambda _version: candidate)
     monkeypatch.setattr(distribution, "validate_package", lambda _archive: None)
     review = tmp_path / "review.json"
-    review.write_bytes(b"{}")
+    approved_review = b'{"review_status": "independently_reviewed"}\n'
+    review.write_bytes(approved_review)
     previous_zip = tmp_path / "previous.zip"
     previous_zip.write_bytes(b"previous")
-    evidence = runner.SuccessorReview(review, "1" * 64, previous_zip)
-    if publication_origin == "original":
-        evidence = replace(evidence, previous_release_zip=None)
+    evidence = runner.SuccessorReview(
+        review,
+        hashlib.sha256(approved_review).hexdigest(),
+        previous_zip if publication_origin == "writer_transition_3_4_0" else None,
+    )
     writes = []
     calls = []
+    writer_disposition_complete = True
+    verify_reviewed_package = runner.verify_reviewed_package
 
     def apply_channels(_identity, ledger, frozen, _backend):
         writes.append(frozen.sha256)
@@ -712,13 +717,19 @@ def test_successor_publication_gates_plan_apply_and_resume(
         assert repo == config.REPO
         assert source_commit == identity.commit
         assert archive == candidate.archive
-        assert baseline_archive == (
-            previous_zip if publication_origin == "writer_transition_3_4_0" else None
-        )
-        assert review_bytes == b"{}"
-        calls.append(review_sha256)
+        assert baseline_archive == evidence.previous_release_zip
+        calls.append((review_bytes, review_sha256))
+        if hashlib.sha256(review_bytes).hexdigest() != review_sha256:
+            return verify_reviewed_package(
+                repo,
+                source_commit,
+                archive,
+                review_bytes,
+                review_sha256,
+                baseline_archive=baseline_archive,
+            )
         return {
-            "writer_disposition_complete": review_sha256 != "0" * 64,
+            "writer_disposition_complete": writer_disposition_complete,
             "unresolved_writers": 1,
             "unresolved_auxiliary_retirements": [],
             "source_commit": source_commit,
@@ -748,68 +759,90 @@ def test_successor_publication_gates_plan_apply_and_resume(
         assert runner.run_release(identity, successor_review=evidence)["status"] == "blocked"
         assert not calls
         assert not writes
-        if publication_origin == "original":
-            # A later merged source can reuse the package-origin review without the
-            # legacy ZIP or writer inventory only after a verified transition source.
-            monkeypatch.setattr(
-                successor_verification, "COMPLETED_WRITER_TRANSITION_COMMIT", identity.commit
-            )
-            git = ["git", "-C", str(config.REPO)]
-            subprocess.run(
-                [
-                    *git,
-                    "-c",
-                    "user.name=Fixture",
-                    "-c",
-                    "user.email=fixture@example.invalid",
-                    "-c",
-                    "commit.gpgsign=false",
-                    "commit",
-                    "--allow-empty",
-                    "-qm",
-                    "later",
-                ],
-                check=True,
-            )
-            later = subprocess.check_output([*git, "rev-parse", "HEAD"], encoding="utf-8").strip()
-            identity = replace(identity, commit=later, publication_dir=tmp_path / "later-release")
-            assert runner.plan_release(identity, successor_review=evidence)["status"] == "planned"
-            applied = runner.run_release(identity, successor_review=evidence)
-            assert applied["status"] == "verified"
-            assert applied["successor_provenance"] == {
-                "publication_origin": "original",
-                "source_commit": later,
-                "generation_lock_sha256": "2" * 64,
-                "archive_sha256": candidate.sha256,
-                "review_sha256": evidence.sha256,
-            }
+    if publication_origin is None:
         return
+    if publication_origin == "original":
+        # Exercise the original route after the trusted transition-ancestry gate.
+        monkeypatch.setattr(
+            successor_verification, "COMPLETED_WRITER_TRANSITION_COMMIT", identity.commit
+        )
+        git = ["git", "-C", str(config.REPO)]
+        subprocess.run(
+            [
+                *git,
+                "-c",
+                "user.name=Fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "--allow-empty",
+                "-qm",
+                "later",
+            ],
+            check=True,
+        )
+        later = subprocess.check_output([*git, "rev-parse", "HEAD"], encoding="utf-8").strip()
+        identity = replace(identity, commit=later, publication_dir=tmp_path / "later-release")
 
-    incomplete = replace(evidence, sha256="0" * 64)
-    rejected = runner.run_release(identity, successor_review=incomplete)
-    assert rejected["status"] == "blocked"
-    assert "待处置" in str(rejected["error"])
-    assert not writes
     draft = tmp_path / "draft.json"
-    draft.write_text('{"review_status": "awaiting_independent_review"}', encoding="utf-8")
-    rejected = runner.run_release(identity, successor_review=replace(evidence, review=draft))
+    for status in ("pending_independent_review", "awaiting_independent_review", "unknown", None):
+        raw = json.dumps({} if status is None else {"review_status": status}).encode()
+        draft.write_bytes(raw)
+        unapproved = replace(evidence, review=draft, sha256=hashlib.sha256(raw).hexdigest())
+        plan = runner.plan_release(identity, successor_review=unapproved)
+        assert plan["status"] == "blocked", status
+        assert "独立核定" in str(plan["preflight"])
+        rejected = runner.run_release(identity, successor_review=unapproved)
+        assert rejected["status"] == "blocked", status
+        assert "独立核定" in str(rejected["error"])
+    assert not calls
+    assert not writes
+
+    bad_digest = replace(evidence, sha256="0" * 64)
+    rejected = runner.run_release(identity, successor_review=bad_digest)
     assert rejected["status"] == "blocked"
-    assert "待独立核定" in str(rejected["error"])
-    assert runner.plan_release(identity, successor_review=evidence)["status"] == "planned"
-    applied = runner.run_release(identity, successor_review=evidence)
-    assert applied["status"] == "verified"
-    assert applied["successor_provenance"] == {
+    assert "differs from independent approval" in str(rejected["error"])
+    assert calls == [(approved_review, bad_digest.sha256)]
+    if publication_origin == "writer_transition_3_4_0":
+        writer_disposition_complete = False
+        rejected = runner.run_release(identity, successor_review=evidence)
+        assert rejected["status"] == "blocked"
+        assert "待处置" in str(rejected["error"])
+        writer_disposition_complete = True
+    assert not writes
+
+    expected_provenance = {
         "publication_origin": publication_origin,
         "source_commit": identity.commit,
         "generation_lock_sha256": "2" * 64,
         "archive_sha256": candidate.sha256,
         "review_sha256": evidence.sha256,
-        "baseline": {"commit": tr_commit},
     }
-    replaced = runner.run_release(identity, successor_review=replace(evidence, sha256="9" * 64))
+    if publication_origin == "writer_transition_3_4_0":
+        expected_provenance["baseline"] = {"commit": tr_commit}
+    plan = runner.plan_release(identity, successor_review=evidence)
+    assert plan["status"] == "planned"
+    assert plan["successor_provenance"] == expected_provenance
+    applied = runner.run_release(identity, successor_review=evidence)
+    assert applied["status"] == "verified"
+    assert applied["successor_provenance"] == expected_provenance
+
+    revised_review = approved_review + b"\n"
+    revised_path = tmp_path / "revised.json"
+    revised_path.write_bytes(revised_review)
+    revised = replace(
+        evidence, review=revised_path, sha256=hashlib.sha256(revised_review).hexdigest()
+    )
+    replaced = runner.run_release(identity, successor_review=revised)
     assert replaced["status"] == "partial"
     assert "原收据不同" in str(replaced["error"])
+    assert calls[-3:] == [
+        (approved_review, evidence.sha256),
+        (approved_review, evidence.sha256),
+        (revised_review, revised.sha256),
+    ]
     assert writes == [candidate.sha256]
     assert runner.run_release(identity, successor_review=evidence)["status"] == "verified"
     assert writes == [candidate.sha256] * 2
-    assert calls == ["0" * 64, "1" * 64, "1" * 64, "9" * 64, "1" * 64]

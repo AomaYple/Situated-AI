@@ -214,8 +214,8 @@ def _successor_provenance(
         else None
     )
     review_bytes = review.read_bytes()
-    if object_from_json(review_bytes).get("review_status") == "awaiting_independent_review":
-        raise ValueError("后继来源审查仍待独立核定")
+    if object_from_json(review_bytes).get("review_status") != "independently_reviewed":
+        raise ValueError("后继来源审查须经独立核定并登记 review_status 为 independently_reviewed")
     result = verify_reviewed_package(
         config.REPO,
         identity.commit,
