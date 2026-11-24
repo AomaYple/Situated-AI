@@ -6,10 +6,12 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 from pdx import cli, decisions, distribution
 from pdx import original_candidate as candidate
+from pdx.cli_commands import release
 from pdx.publishing import local
 
 
@@ -44,10 +46,12 @@ def test_cli_uses_only_candidate_renderer(tmp_path, monkeypatch):
 
     monkeypatch.setattr(distribution, "package", forbidden)
     monkeypatch.setattr(decisions, "build", forbidden)
-    monkeypatch.setattr(candidate, "build", lambda: tmp_path / "candidate.zip")
+    archive = tmp_path / "candidate.zip"
+    monkeypatch.setattr(candidate, "build", lambda: archive)
+    monkeypatch.setattr(release, "console", Console(width=len(str(archive)) + 40))
     result = CliRunner().invoke(cli.app, ["package", "--original-candidate"])
     assert result.exit_code == 0, result.output
-    assert "candidate.zip" in result.output
+    assert str(archive) in result.output
     result = CliRunner().invoke(
         cli.app, ["package", "--original-candidate", "--output", str(tmp_path / "release.zip")]
     )
