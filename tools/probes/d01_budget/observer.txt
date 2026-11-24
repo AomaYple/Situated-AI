@@ -1,0 +1,28 @@
+sitai_d01_observe_budget = {
+	debug_log = "SITAI_D01 begin country=[THIS.GetCountry.GetNameNoFormatting] date=[TimeKeeper.GetCurrentDate.GetString]"
+	if = {
+		limit = { is_ai = yes }
+		debug_log = "SITAI_D01 ai=yes"
+	}
+	if = {
+		limit = { is_ai = no }
+		debug_log = "SITAI_D01 ai=no"
+	}
+	if = {
+		limit = { credit > 0 }
+		debug_log = "SITAI_D01 positive_credit=yes"
+	}
+	if = {
+		limit = { scaled_debt > 0 scaled_debt < 0.4 }
+		debug_log = "SITAI_D01 below_debt_cap=yes"
+	}
+	if = {
+		limit = { net_fixed_income < 0 }
+		debug_log = "SITAI_D01 negative_fixed=yes"
+	}
+	if = {
+		limit = { net_total_income > 0 }
+		debug_log = "SITAI_D01 positive_total=yes"
+	}
+	debug_log = "SITAI_D01 end"
+}

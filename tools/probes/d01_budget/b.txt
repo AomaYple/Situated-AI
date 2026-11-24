@@ -1,0 +1,18 @@
+INJECT:ai_strategy_agricultural_expansion = {
+	economic_vs_government_spending_balance = {
+		value = 0
+		if = {
+			limit = {
+				exists = ROOT
+				this = ROOT
+				is_ai = yes
+				credit > 0
+				scaled_debt > 0
+				scaled_debt < 0.4
+				net_fixed_income < 0
+				net_total_income > 0
+			}
+			add = -0.10
+		}
+	}
+}
