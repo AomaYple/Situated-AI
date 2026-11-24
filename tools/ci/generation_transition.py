@@ -61,7 +61,15 @@ def _outputs(raw: bytes) -> dict[str, str]:
 
 def _git(repo: Path, *args: str) -> bytes:
     result = subprocess.run(
-        ["git", "--no-lazy-fetch", "--no-replace-objects", "-C", str(repo), *args],
+        [
+            "git",
+            "--no-optional-locks",
+            "--no-lazy-fetch",
+            "--no-replace-objects",
+            "-C",
+            str(repo),
+            *args,
+        ],
         env={key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")},
         capture_output=True,
         check=False,
@@ -138,6 +146,7 @@ def _working_files(root: Path, outputs: list[str]) -> dict[str, Path]:
             if parent.parts:
                 register(parent.as_posix(), True)
 
+    unseen_parents = {name for name, directory in topology.values() if directory}
     files = {}
     pending = [checked_path(root)]
     while pending:
@@ -151,11 +160,19 @@ def _working_files(root: Path, outputs: list[str]) -> dict[str, Path]:
             directory = stat.S_ISDIR(info.st_mode)
             register(name, directory)
             if directory:
+                unseen_parents.discard(name)
                 pending.append(path)
             elif not stat.S_ISREG(info.st_mode):
                 raise ValueError(f"generated tree contains a special file: {name}")
             elif _owned(name) or name == LOCK:
                 files[name] = path
+    # NTFS short names may resolve even though iteration yielded only the long name.
+    for name in sorted(unseen_parents):
+        try:
+            (root / name).lstat()
+        except FileNotFoundError:
+            continue
+        raise ValueError(f"successor directory conflicts with an existing path: {name}")
     return files
 
 
@@ -183,6 +200,25 @@ def plan_transition(
         repo, None
     ):
         raise ValueError("generated HEAD or index differs from the predecessor")
+    # The stage listing gives an intent-to-add entry the same identity as an empty blob.
+    # Hiding those entries from the cached diff exposes deletions after the identity check.
+    hidden_deletions = _git(
+        repo,
+        "diff-index",
+        "--cached",
+        "--ita-invisible-in-index",
+        "--no-ext-diff",
+        "--no-renames",
+        "--diff-filter=D",
+        "--name-only",
+        "-z",
+        head,
+        "--",
+        *(f"mod/{name}" for name in (*DIRECTORIES, LOCK, distribution.THUMBNAIL_NAME)),
+    )
+    if hidden_deletions:
+        path = hidden_deletions.split(b"\0", 1)[0]
+        raise ValueError(f"generated index has an intent-to-add entry: {path!r}")
     historical_lock = _git(repo, "show", f"{previous_commit}:mod/{LOCK}")
     previous = _outputs(historical_lock)
     # Consider both generations together: a case-only rename is ambiguous on Windows.

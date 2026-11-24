@@ -6,14 +6,12 @@ import shutil
 import stat
 import subprocess
 import zlib
-from typing import TYPE_CHECKING
+from pathlib import Path
+lazy import os
 
 import pytest
 
 from tools.ci.generation_transition import LOCK, plan_transition
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def digest(raw: bytes) -> str:
@@ -58,17 +56,21 @@ def test_plans_all_four_actions_and_preserves_files_and_index(history):
     git(repo, "commit", "--allow-empty", "-qm", "later")
     (repo / "other").write_bytes(b"unrelated work")
     git(repo, "add", "other")
+    (repo / "intent-only").touch()
+    git(repo, "add", "--intent-to-add", "intent-only")
     before = git(repo, "status", "--porcelain")
     report = plan_transition(repo, commit, new, digest(new))
     assert report["head"] == git(repo, "rev-parse", "HEAD")
     assert report["previous_lock_sha256"] == digest(lock(old))
-    assert {row["path"]: row["action"] for row in report["outputs"]} == {
+    rows = report["outputs"]
+    assert isinstance(rows, list)
+    assert {row["path"]: row["action"] for row in rows} == {
         "common/added.txt": "add",
         "common/keep.txt": "keep",
         "common/replace.txt": "replace",
         "common/retire.txt": "retire",
     }
-    retired = next(row for row in report["outputs"] if row["action"] == "retire")
+    retired = next(row for row in rows if row["action"] == "retire")
     assert retired["previous_blob"] == git(repo, "rev-parse", f"{commit}:mod/common/retire.txt")
     assert retired["previous_sha256"] == digest(b"y")
     assert retired["successor_sha256"] is None
@@ -241,4 +243,44 @@ def test_unmerged_generated_index_entry_is_rejected(history):
         check=True,
     )
     with pytest.raises(ValueError, match="unmerged"):
+        plan_transition(repo, commit, new, digest(new))
+
+
+def test_rejects_an_intent_to_add_entry_for_an_empty_historical_blob(history):
+    repo, _, previous = history
+    path = "common/empty.txt"
+    previous[path] = b""
+    (repo / "mod" / path).touch()
+    new = lock(previous)
+    (repo / "mod" / LOCK).write_bytes(new)
+    git(repo, "add", "mod")
+    git(repo, "commit", "-qm", "empty generated blob")
+    commit = git(repo, "rev-parse", "HEAD")
+    index_entries = git(repo, "ls-files", "--stage", "-z", "mod")
+    plan_transition(repo, commit, new, digest(new))
+
+    git(repo, "update-index", "--force-remove", "--", f"mod/{path}")
+    git(repo, "add", "--intent-to-add", "--", f"mod/{path}")
+    assert git(repo, "ls-files", "--stage", "-z", "mod") == index_entries
+    before = (repo / ".git/index").read_bytes()
+    with pytest.raises(ValueError, match="intent-to-add"):
+        plan_transition(repo, commit, new, digest(new))
+    assert (repo / ".git/index").read_bytes() == before
+
+
+def test_rejects_a_short_alias_of_an_existing_output_parent(history, monkeypatch):
+    repo, commit, previous = history
+    common = repo.resolve() / "mod/common"
+    directory = common / "Long Output Subdirectory"
+    directory.mkdir()
+    alias = common / "LONGOU~1"
+    current_lstat = Path.lstat
+
+    def lstat_through_alias(path: Path) -> os.stat_result:
+        # Directory enumeration yields the long name, while lookup accepts the short alias.
+        return current_lstat(directory if path == alias else path)
+
+    monkeypatch.setattr(Path, "lstat", lstat_through_alias)
+    new = lock({**previous, "common/LONGOU~1/missing/added.txt": b"new"})
+    with pytest.raises(ValueError, match="existing path"):
         plan_transition(repo, commit, new, digest(new))
