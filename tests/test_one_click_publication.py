@@ -365,8 +365,10 @@ def test_known_payload_blocks_public_writes_even_after_package_metadata_changes(
         for _ in range(2):
             result = runner.run_release(identity)
             assert result["status"] == "blocked"
-            assert "common/renamed.txt" in result["error"]
-            assert historical_path in result["error"]
+            error = result["error"]
+            assert isinstance(error, str)
+            assert "common/renamed.txt" in error
+            assert historical_path in error
 
     receipt = identity.publication_dir / "publication.json"
     before = receipt.read_bytes()
