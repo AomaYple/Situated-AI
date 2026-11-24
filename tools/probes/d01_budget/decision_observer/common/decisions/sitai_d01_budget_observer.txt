@@ -1,0 +1,29 @@
+sitai_d01_budget_observer_decision = {
+	is_shown = {
+		this = c:FRA
+		is_ai = no
+	}
+	possible = {
+		exists = c:MNL
+		c:MNL = { is_ai = yes }
+	}
+	when_taken = {
+		hidden_effect = {
+			c:MNL = {
+				debug_log = "SITAI_D01_OBSERVER decision begin"
+				sitai_d01_budget_log_conditions = yes
+				if = {
+					limit = { NOT = { has_journal_entry = je_sitai_d01_budget_observer } }
+					debug_log = "SITAI_D01_OBSERVER decision adding journal_entry"
+					add_journal_entry = { type = je_sitai_d01_budget_observer }
+					debug_log = "SITAI_D01_OBSERVER decision add_journal_entry returned"
+				}
+				else = {
+					debug_log = "SITAI_D01_OBSERVER decision journal_entry already active"
+				}
+				debug_log = "SITAI_D01_OBSERVER decision end"
+			}
+		}
+	}
+	ai_chance = { value = 0 }
+}

@@ -1,0 +1,7 @@
+l_english:
+ sitai_d01_budget_observer_decision: "Observe Mingrelia's Budget"
+ sitai_d01_budget_observer_decision_desc: "Record Mingrelia's budget conditions in the debug log."
+ sitai_d01_budget_observer_decision_tooltip: "Record budget conditions and add a temporary diagnostic journal entry in Mingrelia."
+ je_sitai_d01_budget_observer: "Mingrelia Budget Observation"
+ je_sitai_d01_budget_observer_reason: "Record the budget conditions when this journal entry activates."
+ je_sitai_d01_budget_observer_status: "Budget observation recorded in the debug log."

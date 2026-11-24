@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from decimal import Decimal
 from operator import eq, gt, lt
+from zipfile import ZipFile
 lazy from pathlib import Path
 
 import pytest
-from build import ARMS, FIELD, SOURCE, STRATEGY, freeze
+from build import ARMS, FIELD, SOURCE, STRATEGY, freeze, freeze_decision_observer
 
 from pdx.model import Block, Node, Scalar
-from pdx.parser import parse_file
+from pdx.parser import parse_file, parse_text
 
 
 def test_arms_are_byte_reproducible(tmp_path: Path) -> None:
@@ -45,6 +46,69 @@ def test_payload_contains_one_country_budget_contribution() -> None:
         ("net_fixed_income", "<", "0"),
         ("net_total_income", ">", "0"),
     ]
+
+
+def test_decision_observer_package_matches_candidate_conditions(tmp_path: Path) -> None:
+    output = tmp_path / "first"
+    name = "sitai-d01-budget-decision-observer.zip"
+    manifest = freeze_decision_observer(output)
+    assert manifest == freeze_decision_observer(tmp_path / "second")
+    assert (output / name).read_bytes() == (tmp_path / "second" / name).read_bytes()
+    with ZipFile(output / name) as archive:
+        assert archive.namelist() == [
+            ".metadata/metadata.json",
+            "common/decisions/sitai_d01_budget_observer.txt",
+            "common/journal_entries/sitai_d01_budget_observer.txt",
+            "common/scripted_effects/sitai_d01_budget_observer.txt",
+            "localization/english/sitai_d01_budget_observer_l_english.yml",
+        ]
+        decision = probe_block(archive, "decisions", "sitai_d01_budget_observer_decision")
+        journal = probe_block(archive, "journal_entries", "je_sitai_d01_budget_observer")
+        observer = probe_block(archive, "scripted_effects", "sitai_d01_budget_log_conditions")
+
+    visibility = nested(decision, "is_shown")
+    assert scalar(visibility, "this") == "c:FRA"
+    assert scalar(visibility, "is_ai") == "no"
+    assert scalar(nested(decision, "ai_chance"), "value") == "0"
+    assert scalar(nested(nested(decision, "possible"), "c:MNL"), "is_ai") == "yes"
+
+    target = nested(nested(nested(decision, "when_taken"), "hidden_effect"), "c:MNL")
+    assert scalar(target, "sitai_d01_budget_log_conditions") == "yes"
+    assert scalar(nested(nested(target, "if"), "add_journal_entry"), "type") == (
+        "je_sitai_d01_budget_observer"
+    )
+    assert scalar(journal, "context") == "country"
+    assert scalar(nested(journal, "is_shown_when_inactive"), "always") == "no"
+    assert scalar(nested(journal, "immediate"), "sitai_d01_budget_log_conditions") == "yes"
+
+    candidate = nested(nested(read_budget("b"), "if"), "limit")
+    exact_conditions = {
+        (rule.key, rule.op, scalar_value(rule.value)) for rule in candidate.assignments()
+    }
+    observed_conditions = set()
+    branches = list(observer.assignments())[1:]
+    for affirmative, negative in zip(branches[::2], branches[1::2], strict=True):
+        assert affirmative.key == "if"
+        assert negative.key == "else"
+        assert isinstance(affirmative.value, Block)
+        assert isinstance(negative.value, Block)
+        yes = scalar(affirmative.value, "debug_log").strip('"')
+        no = scalar(negative.value, "debug_log").strip('"')
+        label = yes.split("=", 1)[0]
+        assert yes.startswith(f"{label}=yes")
+        assert no == f"{label}=no"
+        for condition in nested(affirmative.value, "limit").assignments():
+            if isinstance(condition.value, Scalar):
+                observed_conditions.add((condition.key, condition.op, condition.value.text))
+    assert exact_conditions <= observed_conditions
+
+
+def probe_block(archive: ZipFile, directory: str, key: str) -> Block:
+    raw = archive.read(f"common/{directory}/sitai_d01_budget_observer.txt")
+    assert raw.startswith(b"\xef\xbb\xbf")
+    script = parse_text(raw.decode("utf-8-sig"))
+    script.require_complete()
+    return nested(script.root, key)
 
 
 def scalar_value(value: Node | None) -> str:
