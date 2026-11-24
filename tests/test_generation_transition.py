@@ -2,7 +2,10 @@
 
 import hashlib
 import json
+import shutil
+import stat
 import subprocess
+import zlib
 from typing import TYPE_CHECKING
 
 import pytest
@@ -122,6 +125,8 @@ def test_binds_successor_and_requires_predecessor_ancestry(history):
         "common/keep.txt/child",
         "common/alias/file.txt",
         "common/con.txt",
+        "common/CONIN$.txt",
+        "common/CON .txt",
     ],
 )
 def test_rejects_conflicting_or_out_of_scope_successor(history, path):
@@ -153,3 +158,87 @@ def test_reserved_successor_path_is_an_existing_directory(history):
     with pytest.raises(ValueError, match="existing path"):
         plan_transition(repo, commit, new, digest(new))
     assert directory.is_dir()
+
+
+@pytest.mark.parametrize("damage", ["truncated", "checksum", "wrong-object"])
+def test_reads_historical_blob_body(history, damage):
+    repo, commit, previous = history
+    target = "common/retire.txt"
+    oid = git(repo, "rev-parse", f"{commit}:mod/{target}")
+    obj = repo / ".git/objects" / oid[:2] / oid[2:]
+    compressed = obj.read_bytes()
+    if damage == "truncated":
+        corrupted = compressed[:-2]
+    elif damage == "checksum":
+        corrupted = compressed[:-1] + bytes([compressed[-1] ^ 1])
+    else:
+        corrupted = zlib.compress(b"blob 1\0z")
+    obj.chmod(stat.S_IREAD | stat.S_IWRITE)
+    obj.write_bytes(corrupted)
+    new = lock({name: raw for name, raw in previous.items() if name != target})
+    with pytest.raises(ValueError):
+        plan_transition(repo, commit, new, digest(new))
+
+
+def test_requires_physical_repository_root_and_its_own_index(history, monkeypatch):
+    repo, commit, previous = history
+    new = lock(previous)
+    nested = repo / "child"
+    shutil.copytree(repo / "mod", nested / "mod")
+    monkeypatch.setenv("GIT_DIR", str(repo / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(nested))
+    with pytest.raises(ValueError, match="physical root"):
+        plan_transition(nested, commit, new, digest(new))
+    monkeypatch.delenv("GIT_DIR")
+    monkeypatch.delenv("GIT_WORK_TREE")
+    clean_index = repo / "clean-index"
+    shutil.copyfile(repo / ".git/index", clean_index)
+    target = repo / "mod/common/retire.txt"
+    target.write_bytes(b"staged")
+    git(repo, "add", "mod")
+    target.write_bytes(previous["common/retire.txt"])
+    monkeypatch.setenv("GIT_INDEX_FILE", str(clean_index))
+    with pytest.raises(ValueError, match="index"):
+        plan_transition(repo, commit, new, digest(new))
+
+
+@pytest.mark.parametrize("existing", ["Localization/notes.txt", "common/Notes"])
+def test_rejects_occupied_directory_aliases(history, existing):
+    repo, commit, previous = history
+    occupied = repo / "mod" / existing
+    if occupied.suffix:
+        occupied.parent.mkdir()
+        occupied.write_bytes(b"user")
+    else:
+        occupied.mkdir()
+    new = lock({**previous, "common/notes/added.txt": b"new"})
+    with pytest.raises(ValueError, match="casing"):
+        plan_transition(repo, commit, new, digest(new))
+
+
+def test_rejects_tag_objects_and_staged_gitlinks_despite_diff_configuration(history):
+    repo, commit, previous = history
+    new = lock(previous)
+    git(repo, "tag", "-a", "example", "-m", "example")
+    tag = git(repo, "rev-parse", "example")
+    with pytest.raises(ValueError, match="commit object"):
+        plan_transition(repo, tag, new, digest(new))
+    git(repo, "config", "diff.ignoreSubmodules", "all")
+    git(repo, "update-index", "--add", "--cacheinfo", f"160000,{commit},mod/common/extra")
+    with pytest.raises(ValueError, match="regular generated blob"):
+        plan_transition(repo, commit, new, digest(new))
+
+
+def test_unmerged_generated_index_entry_is_rejected(history):
+    repo, commit, previous = history
+    new = lock(previous)
+    path = "mod/common/retire.txt"
+    oid = git(repo, "rev-parse", f"{commit}:{path}")
+    git(repo, "update-index", "--force-remove", "--", path)
+    subprocess.run(
+        ["git", "-C", str(repo), "update-index", "--index-info"],
+        input=f"100644 {oid} 2\t{path}\n".encode(),
+        check=True,
+    )
+    with pytest.raises(ValueError, match="unmerged"):
+        plan_transition(repo, commit, new, digest(new))

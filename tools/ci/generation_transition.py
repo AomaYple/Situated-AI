@@ -5,15 +5,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import ntpath
+import os
 import re
+import stat
 import subprocess
 from pathlib import Path, PurePosixPath
 
 from pdx import distribution
+from pdx.publishing.local import checked_path
 
 LOCK = "generation-lock.json"
 DIRECTORIES = ("common", "localization", ".metadata")
-PATHS = [f"mod/{name}" for name in (*DIRECTORIES, distribution.THUMBNAIL_NAME, LOCK)]
+GENERATED_ROOTS = {name.casefold() for name in (*DIRECTORIES, distribution.THUMBNAIL_NAME, LOCK)}
 
 
 def _owned(name: str) -> bool:
@@ -55,23 +59,104 @@ def _outputs(raw: bytes) -> dict[str, str]:
     return reviewed
 
 
-def _git(repo: Path, *args: str, data: bytes | None = None) -> bytes:
+def _git(repo: Path, *args: str) -> bytes:
     result = subprocess.run(
         ["git", "--no-lazy-fetch", "--no-replace-objects", "-C", str(repo), *args],
-        input=data,
+        env={key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")},
         capture_output=True,
         check=False,
     )
     if result.returncode:
         reason = result.stderr.decode("utf-8", errors="replace").strip()
-        if not reason:
-            reason = (
-                "generated index or committed output differs from predecessor"
-                if args[0] == "diff"
-                else "comparison failed"
-            )
-        raise ValueError(f"git {args[0]}: {reason}")
+        raise ValueError(f"git {args[0]}: {reason or 'comparison failed'}")
     return result.stdout
+
+
+def _check_worktree(repo: Path) -> None:
+    top, gitdir, index = (
+        _git(
+            repo,
+            "rev-parse",
+            "--path-format=absolute",
+            "--show-toplevel",
+            "--absolute-git-dir",
+            "--git-path",
+            "index",
+        )
+        .decode()
+        .splitlines()
+    )
+    if not repo.samefile(top) or checked_path(Path(index)) != Path(gitdir) / "index":
+        raise ValueError("expected the physical root and index of the selected Git worktree")
+
+
+def _git_outputs(repo: Path, commit: str | None) -> dict[str, str]:
+    if commit is None:
+        raw = _git(repo, "ls-files", "--stage", "-z")
+    else:
+        raw = _git(repo, "ls-tree", "-rz", commit)
+    result = {}
+    for row in raw.split(b"\0"):
+        if not row:
+            continue
+        metadata, path = row.split(b"\t", 1)
+        parts = path.decode("utf-8", errors="surrogateescape").split("/")
+        if parts[0].casefold() != "mod":
+            continue
+        if len(parts) == 1 or parts[0] != "mod":
+            raise ValueError(f"conflicting Git output root: {path!r}")
+        if parts[1].casefold() not in GENERATED_ROOTS:
+            continue
+        if commit is None:
+            mode, oid, stage = metadata.split()
+            if stage != b"0":
+                raise ValueError(f"unmerged generated index entry: {path!r}")
+        else:
+            mode, _, oid = metadata.split()
+        if mode != b"100644":
+            raise ValueError(f"expected a regular generated blob: {path!r}")
+        result["/".join(parts[1:])] = oid.decode()
+    return result
+
+
+def _working_files(root: Path, outputs: list[str]) -> dict[str, Path]:
+    """Compare actual files and empty directories with the entire proposed Windows namespace."""
+    topology: dict[str, tuple[str, bool]] = {}
+
+    def register(name: str, directory: bool) -> None:
+        identity = name.casefold()
+        if topology.setdefault(identity, (name, directory)) != (name, directory):
+            raise ValueError(f"conflicting directory, casing or existing path: {name}")
+        if any(ntpath.isreserved(part) for part in PurePosixPath(name).parts):
+            raise ValueError(f"reserved Windows output path: {name}")
+
+    for name in DIRECTORIES:
+        register(name, True)
+    for name in [*outputs, LOCK, distribution.THUMBNAIL_NAME]:
+        register(name, False)
+        for parent in PurePosixPath(name).parents:
+            if parent.parts:
+                register(parent.as_posix(), True)
+
+    files = {}
+    pending = [checked_path(root)]
+    while pending:
+        for path in pending.pop().iterdir():
+            info = path.lstat()
+            if stat.S_ISLNK(info.st_mode) or (
+                getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+            ):
+                raise ValueError(f"generated tree contains a redirect: {path}")
+            name = path.relative_to(root).as_posix()
+            directory = stat.S_ISDIR(info.st_mode)
+            register(name, directory)
+            if directory:
+                pending.append(path)
+            elif not stat.S_ISREG(info.st_mode):
+                raise ValueError(f"generated tree contains a special file: {name}")
+            elif _owned(name) or name == LOCK:
+                files[name] = path
+    return files
 
 
 def plan_transition(
@@ -87,46 +172,24 @@ def plan_transition(
     if hashlib.sha256(successor_lock).hexdigest() != successor_sha256:
         raise ValueError("successor lock differs from the reviewed digest")
     successor = _outputs(successor_lock)
+    repo = repo.resolve(strict=True)
+    _check_worktree(repo)
+    if _git(repo, "cat-file", "-t", previous_commit) != b"commit\n":
+        raise ValueError("predecessor must identify the commit object itself")
     head = _git(repo, "rev-parse", "HEAD").decode().strip()
     _git(repo, "merge-base", "--is-ancestor", previous_commit, head)
-    _git(repo, "diff", "--quiet", previous_commit, head, "--", *PATHS)
-    _git(repo, "diff", "--quiet", "--cached", previous_commit, "--", *PATHS)
+    tracked = _git_outputs(repo, previous_commit)
+    if (head != previous_commit and tracked != _git_outputs(repo, head)) or tracked != _git_outputs(
+        repo, None
+    ):
+        raise ValueError("generated HEAD or index differs from the predecessor")
     historical_lock = _git(repo, "show", f"{previous_commit}:mod/{LOCK}")
     previous = _outputs(historical_lock)
     # Consider both generations together: a case-only rename is ambiguous on Windows.
     all_names = sorted(previous.keys() | successor.keys())
     distribution._validate_paths(all_names)
-    directories: dict[str, str] = {}
-    folded = {name.casefold() for name in all_names}
-    for name in all_names:
-        for parent in PurePosixPath(name).parents:
-            spelling = parent.as_posix()
-            key = spelling.casefold()
-            if key in folded or directories.setdefault(key, spelling) != spelling:
-                raise ValueError(f"conflicting output directory: {spelling}")
+    files = _working_files(repo / "mod", all_names)
 
-    tracked: dict[str, str] = {}
-    for row in _git(repo, "ls-tree", "-rz", previous_commit, "--", *PATHS).split(b"\0"):
-        if row:
-            metadata, raw_path = row.split(b"\t", 1)
-            mode, kind, oid = metadata.split()
-            if mode != b"100644" or kind != b"blob":
-                raise ValueError(f"expected a regular generated blob: {raw_path!r}")
-            tracked[raw_path.decode().removeprefix("mod/")] = oid.decode()
-    object_ids = [oid.encode() for oid in tracked.values()]
-    available = _git(
-        repo,
-        "cat-file",
-        "--batch-check=%(objectname) %(objecttype)",
-        data=b"\n".join(object_ids) + b"\n",
-    ).splitlines()
-    if available != [oid + b" blob" for oid in object_ids]:
-        raise ValueError("local predecessor objects for recovery are incomplete")
-    files = {
-        name: path
-        for name, path in distribution._profile_directory_files(repo / "mod").items()
-        if _owned(name) or name == LOCK
-    }
     original = {**previous, LOCK: hashlib.sha256(historical_lock).hexdigest()}
     for source, names in (("historical tree", tracked.keys()), ("working tree", files.keys())):
         if names != original.keys():
@@ -135,14 +198,15 @@ def plan_transition(
             )
     object_format = _git(repo, "rev-parse", "--show-object-format").decode().strip()
     for name, expected in original.items():
-        path = files[name]
-        content_hash = hashlib.sha256()
-        git_hash = hashlib.new(object_format, f"blob {path.stat().st_size}\0".encode("ascii"))
-        with path.open("rb") as stream:
-            while chunk := stream.read(128 * 1024):
-                content_hash.update(chunk)
-                git_hash.update(chunk)
-        if content_hash.hexdigest() != expected or git_hash.hexdigest() != tracked[name]:
+        # Decode the recoverable object, including packed/delta objects. Only hashes leave RAM.
+        raw = _git(repo, "cat-file", "blob", tracked[name])
+        git_hash = hashlib.new(object_format, f"blob {len(raw)}\0".encode("ascii"))
+        git_hash.update(raw)
+        if git_hash.hexdigest() != tracked[name] or hashlib.sha256(raw).hexdigest() != expected:
+            raise ValueError(f"predecessor object bytes differ from lock or Git identity: {name}")
+        with files[name].open("rb") as stream:
+            working_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if working_digest != expected:
             raise ValueError(f"working bytes, predecessor blob or lock differ: {name}")
 
     outputs = []
