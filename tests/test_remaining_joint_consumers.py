@@ -17,7 +17,6 @@ from pdx import (
     decision_adapters,
     decision_interfaces,
     decision_rules,
-    version_contracts,
 )
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
@@ -36,7 +35,7 @@ OVERLORD = "ai_strategy_default.become_subject_value"
 PORT = "ai_strategy_default.treaty_port_value"
 NEGOTIATION = "ai_strategy_default.negotiation_chance"
 FIELDS = {
-    INFO: (CONSTRUCTION, SCHOOL, TRADE, ECONOMY, STATE),
+    INFO: (CONSTRUCTION, TRADE, ECONOMY, STATE),
     DEFAULT: (SUBJECT, OVERLORD, PORT, NEGOTIATION),
 }
 
@@ -306,12 +305,8 @@ def test_complete_need_cost_and_capacity_match_generated_pdx(production, field, 
 
 def test_every_consumer_retains_native_ast_and_player_and_missing_boundaries(production):
     policies, generated, native, _model = production
-    version = version_contracts.active_version()
-    for source, declared_fields in FIELDS.items():
-        fields = declared_fields
-        if version in {"1.15.1", "1.15.2"} and source == INFO:
-            assert ("institution_scores", "institution_schools") not in policies[source].groups()
-            fields = tuple(field for field in fields if field != SCHOOL)
+    assert ("institution_scores", "institution_schools") not in policies[INFO].groups()
+    for source, fields in FIELDS.items():
         policy = policies[source]
         assert decision_rules.evaluate(policy, {}, is_ai=True) == {}
         assert decision_rules.evaluate(policy, _values(policy, {}), is_ai=False) == {}

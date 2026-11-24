@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pdx import scan, version_contracts
+from pdx import scan
 from pdx.scan import (
     TEXT_SUFFIXES,
     count_files,
@@ -176,17 +176,12 @@ class TestRealGameTree(unittest.TestCase):
         if not cls.game.is_dir():
             raise unittest.SkipTest("游戏目录不可用")
 
-    def test_common_has_138_subdirs(self):
+    def test_common_subdirectory_count(self):
         from pdx.config import GAME
 
         common = GAME / "common"
         n = sum(1 for p in common.iterdir() if p.is_dir())
-        self.assertEqual(
-            n,
-            {"1.14.5": 138, "1.15.0": 140, "1.15.1": 141, "1.15.2": 141}[
-                version_contracts.active_version()
-            ],
-        )
+        self.assertEqual(n, 141)
 
     def test_common_txt_count(self):
         """common 下 .txt 数。
@@ -194,38 +189,22 @@ class TestRealGameTree(unittest.TestCase):
         注意区分：**.txt 数**与 **全部文件数**是两个口径，
         极易混淆（doc 08 与 doc 13 用的就不是同一个）。
 
-        本值随游戏版本变化：1.14.2 是 3024，1.14.3 是 3026，1.14.4 是 3028。
-        改这个数字前请先确认游戏版本，不要为了让测试通过而改。
+        计数以当前锁定的游戏构建为准。
         """
         from pdx.config import GAME
 
         n = count_files(GAME / "common", ".txt")
-        self.assertEqual(
-            n,
-            {"1.14.5": 3030, "1.15.0": 3191, "1.15.1": 3192, "1.15.2": 3192}[
-                version_contracts.active_version()
-            ],
-        )
+        self.assertEqual(n, 3192)
 
     def test_common_total_file_count(self):
         from pdx.config import GAME
 
-        self.assertEqual(
-            count_files(GAME / "common"),
-            {"1.14.5": 3107, "1.15.0": 3271, "1.15.1": 3273, "1.15.2": 3273}[
-                version_contracts.active_version()
-            ],
-        )
+        self.assertEqual(count_files(GAME / "common"), 3273)
 
-    def test_common_md_count_is_77(self):
+    def test_common_md_count(self):
         from pdx.config import GAME
 
-        self.assertEqual(
-            count_files(GAME / "common", ".md"),
-            {"1.14.5": 77, "1.15.0": 80, "1.15.1": 81, "1.15.2": 81}[
-                version_contracts.active_version()
-            ],
-        )
+        self.assertEqual(count_files(GAME / "common", ".md"), 81)
 
     def test_game_root_files_present(self):
         from pdx.config import GAME
