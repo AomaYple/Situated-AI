@@ -61,6 +61,8 @@ def test_plans_all_four_actions_and_preserves_files_and_index(history):
     before = git(repo, "status", "--porcelain")
     report = plan_transition(repo, commit, new, digest(new))
     assert report["head"] == git(repo, "rev-parse", "HEAD")
+    assert report["check_scope"] == "file_ownership_only"
+    assert report["retirement_authorized"] is False
     assert report["previous_lock_sha256"] == digest(lock(old))
     rows = report["outputs"]
     assert isinstance(rows, list)
