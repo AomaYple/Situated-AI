@@ -129,7 +129,8 @@ def test_historical_r2_acceptance_and_navigation() -> None:
     root = Path(__file__).resolve().parents[1]
     design = root / "docs/design"
     execution = design / "exec"
-    implementation = (execution / "1.15架构-实施计划.md").read_text(encoding="utf-8")
+    archive = design / "archive"
+    implementation = (archive / "1.15架构-实施计划.md").read_text(encoding="utf-8")
     architecture = (design / "1.15架构设计.md").read_text(encoding="utf-8")
     checklist = (design / "当前工作清单.md").read_text(encoding="utf-8")
     historical = _document_section(checklist, "历史交付与治理")
@@ -139,7 +140,10 @@ def test_historical_r2_acceptance_and_navigation() -> None:
     receipt = (execution / receipt_name).read_text(encoding="utf-8")
     matrix = (execution / matrix_name).read_text(encoding="utf-8")
     assert f"(exec/{receipt_name})" in architecture
-    assert f"({receipt_name})" in implementation
+    assert f"(../exec/{receipt_name})" in implementation
+    assert "(archive/1.15架构-实施计划.md)" in architecture
+    assert "(1.15架构-实施计划.md)" in (archive / "README.md").read_text(encoding="utf-8")
+    assert "(../archive/README.md#victoria-3-1150-的-r2-实施计划)" in index
     assert "(../1.15架构设计.md)" in implementation
     for target in (receipt_name, matrix_name):
         assert f"({target})" in index
