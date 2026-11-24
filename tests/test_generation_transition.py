@@ -415,7 +415,7 @@ def test_successor_cli_reconciles_a_second_database(tmp_path, monkeypatch, capsy
     monkeypatch.setattr(tr, "LEDGER_SHA256", digest(ledger.read_bytes()))
     monkeypatch.setattr(gt.version_contracts, "research_path", lambda *_args: ledger)
 
-    metadata = dict.fromkeys(distribution.LAUNCHER_METADATA_KEYS, "fixture")
+    metadata: dict[str, object] = dict.fromkeys(distribution.LAUNCHER_METADATA_KEYS, "fixture")
     metadata.update(id=distribution.MOD_ID, tags=[], relationships=[], game_custom_data={})
     projection = "INJECT:law_one = { score = { value = 1 add = 3 } }\n"
     new_script = "law_two = { approved = yes }\n"
@@ -562,7 +562,7 @@ def test_successor_cli_reconciles_a_second_database(tmp_path, monkeypatch, capsy
         "schema": 2,
         "baseline": {
             "commit": prior,
-            "release_commit": prior,
+            "release_commit": "0" * 40 if mutation == "wrong_baseline" else prior,
             "archive_sha256": tr.BASE_ZIP_SHA256,
             "generation_lock_sha256": digest(lock(previous)),
             "writer_inventory_sha256": tr.LEDGER_SHA256,
@@ -589,8 +589,6 @@ def test_successor_cli_reconciles_a_second_database(tmp_path, monkeypatch, capsy
         "opportunities": opportunities,
         "auxiliary_retirements": [],
     }
-    if mutation == "wrong_baseline":
-        review_doc["baseline"]["release_commit"] = "0" * 40
     review = tmp_path / "review.json"
     review.write_bytes(json.dumps(review_doc).encode())
     reviewed_sha = "0" * 64 if mutation == "untrusted_review" else digest(review.read_bytes())
