@@ -238,7 +238,7 @@ python tools/ci/run_check.py types
 python tools/ci/run_check.py baseline-offline
 ```
 
-`baseline-offline` 与三平台 CI 使用同一入口，依次核对依赖、离线断言、离线生成表格、Mod 门禁、情境决策合同、AI 可执行面和死代码报告。`baseline` 复用这七项，然后对本机锁定安装运行 `modgen --check`。
+`baseline-offline` 与三平台 CI 使用同一入口，依次核对依赖、离线断言、离线生成表格、Mod 门禁、情境决策合同、AI 可执行面和死代码报告。`baseline` 复用这七项，然后对本机锁定安装运行 `political-surface --check` 和 `modgen --check`。
 
 完整验收始终核对当前安装身份。
 

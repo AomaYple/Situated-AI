@@ -187,7 +187,11 @@ def test_baseline_runs_shared_gates_once_and_checks_live_generation(monkeypatch,
     monkeypatch.setattr(run_check.subprocess, "run", run)
     assert run_check.main() == 0
     original = [command for _, command in run_check.BASELINE_COMMANDS]
-    assert calls == [*original, ["pdx.cli", "modgen", "--profile", selected, "--check"]]
+    assert calls == [
+        *original,
+        ["pdx.cli", "political-surface", "--check"],
+        ["pdx.cli", "modgen", "--profile", selected, "--check"],
+    ]
 
 
 def test_offline_baseline_runs_the_shared_gates_without_live_generation(monkeypatch):
