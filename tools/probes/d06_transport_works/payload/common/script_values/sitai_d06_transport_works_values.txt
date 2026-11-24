@@ -1,0 +1,8 @@
+# Reserve at least the decree's flat value, scaling it up with the state multiplier.
+sitai_d06_transport_works_release_threshold = {
+    value = modifier:state_infrastructure_mult
+    add = 1
+    min = 1
+    multiply = 5
+    add = 3
+}
