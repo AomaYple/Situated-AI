@@ -324,6 +324,42 @@ def test_preflight_block_prevents_any_channel_mutation(monkeypatch, identity, bu
     assert gh.mutations == []
 
 
+@pytest.mark.parametrize("channel", ["github", "workshop"])
+def test_known_payload_blocks_public_writes_even_after_package_metadata_changes(
+    monkeypatch, identity, bundle, channel
+):
+    identity = replace(identity, channels=(channel,))
+    if channel == "workshop":
+        identity = replace(identity, workshop_item="123", workshop_owner="76561198000000001")
+    retained = b"\xef\xbb\xbfsynthetic = yes\n"
+    monkeypatch.setattr(
+        runner, "_RETAINED_VANILLA_PAYLOAD_SHA256", hashlib.sha256(retained).hexdigest()
+    )
+    version_metadata = bundle.files[distribution.METADATA_NAME]
+    repacked = distribution.write_zip(
+        {
+            distribution.METADATA_NAME: version_metadata.replace(b"example", b"changed metadata"),
+            "common/renamed.txt": retained,
+        },
+        identity.publication_dir.parent / "repacked.zip",
+        generation=distribution.generation_contract(),
+    )
+    repacked_bundle = runner._read_bundle(repacked.read_bytes(), identity.version)
+    assert repacked_bundle.sha256 != bundle.sha256
+    monkeypatch.setattr(runner, "_build", lambda _version: repacked_bundle)
+    monkeypatch.setattr(distribution, "validate_package", lambda _path: None)
+
+    def fail_if_channel_reached(*_args, **_kwargs):
+        pytest.fail("A blocked payload reached channel preflight or apply")
+
+    monkeypatch.setattr(runner, "_preflight", fail_if_channel_reached)
+    monkeypatch.setattr(runner, "_apply_channels", fail_if_channel_reached)
+    for _ in range(2):
+        result = runner.run_release(identity)
+        assert result["status"] == "blocked"
+        assert "common/renamed.txt" in result["error"]
+
+
 def test_bad_local_staging_blocks_before_github_write(monkeypatch, identity, bundle):
     identity = replace(identity, channels=("github", "local"))
     gh = FakeGitHub(identity)

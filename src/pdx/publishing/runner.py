@@ -35,6 +35,10 @@ _OPERATION_ERRORS = (
     subprocess.SubprocessError,
     zipfile.BadZipFile,
 )
+# 3.4.0 default strategy member. Evidence in 发布载荷来源校验设计.md.
+_RETAINED_VANILLA_PAYLOAD_SHA256 = (
+    "64435666ed847f0308d791a9fae211263fa341a0f681e9ced383a007cf6ebcf3"
+)
 
 
 @dataclass(frozen=True)
@@ -380,6 +384,12 @@ def run_release(
         ledger.data["receipt_path"] = str(ledger.path)
         try:
             package = _freeze(identity, ledger)
+            if {"github", "workshop"}.intersection(identity.channels):
+                for path, raw in sorted(package.files.items()):
+                    if hashlib.sha256(raw).hexdigest() == _RETAINED_VANILLA_PAYLOAD_SHA256:
+                        raise ValueError(
+                            f"公开发布阻塞：{path} 与已证实保留原版字节的 3.4.0 成员完全一致"
+                        )
             checks = _preflight(
                 identity,
                 _source_state(identity),
