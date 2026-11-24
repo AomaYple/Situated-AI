@@ -1,0 +1,69 @@
+{
+  "archive_sha256": "9f3bb81b687f523112e8e0bab6f6cfc9c7e642a09c892756b0cdbede33af95ce",
+  "generation_lock_sha256": "26a9615185d0f8dfd916b807c60355bc86c26db0595e2c841dc7901f990f6224",
+  "manifest_sha256": "76f56ff1275e8b33b6bd9898f53bce6ff346a82a4d479f25d57eeb8220e1f6a9",
+  "members": {
+    ".metadata/metadata.json": {
+      "delivery_sha256": "bd56e31bf9f2b54d1aba81babff56f5dd1c1400524f7444e111e84827a16ef7c",
+      "origin": "pdx.original_candidate._payload / launcher_metadata"
+    },
+    "README.md": {
+      "delivery_sha256": "0749b17ea8982ace9948d0f30ae997e33bf6b55eed19d77c24d4acfabf65cb94",
+      "origin": "pdx.original_candidate._guide"
+    },
+    "common/company_types/zz_sitai_company_ai_weights.txt": {
+      "delivery_sha256": "c5678d1baa434cd0abe6272af683ce9e55970342f9b8f9fc38ed74b13cb3e282",
+      "origin": "f51d97ede2f0b5bdd9218e4e7fed62a4e30889d7:company_injection.render_injections"
+    },
+    "localization/braz_por/sitai_original_company_candidate_l_braz_por.yml": {
+      "delivery_sha256": "32462f4d55e614cb462992f97e8b484c4dcbb2882e6ea54c0fd8e436ba5a7ba3",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[braz_por]"
+    },
+    "localization/english/sitai_original_company_candidate_l_english.yml": {
+      "delivery_sha256": "13ed401a553c0c124234fe36f268d5421bcf398c3f4ff4d0c3c1d3f287abf475",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[english]"
+    },
+    "localization/french/sitai_original_company_candidate_l_french.yml": {
+      "delivery_sha256": "30cfd59241ce06938f62dc8b8c63c4ba8847a79b4b0b31d58d5a30027fa02df4",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[french]"
+    },
+    "localization/german/sitai_original_company_candidate_l_german.yml": {
+      "delivery_sha256": "2a871ff0597bd35495ad5713ab42dd7f34eccadb315822d6f417ff76b69c3c55",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[german]"
+    },
+    "localization/japanese/sitai_original_company_candidate_l_japanese.yml": {
+      "delivery_sha256": "3c29239bdfa4410f384b1a8f6c602f2da80c236fab4dd56d8060cfcdb7e77a24",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[japanese]"
+    },
+    "localization/korean/sitai_original_company_candidate_l_korean.yml": {
+      "delivery_sha256": "8488742e48dec01ad8c6527e061f1993139d179ba897eac2ecda882d7030a66a",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[korean]"
+    },
+    "localization/polish/sitai_original_company_candidate_l_polish.yml": {
+      "delivery_sha256": "f04fb3b27af16cedd39d057f1a1bf608c54514fbbb7ef86d3c88d86033dd9af8",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[polish]"
+    },
+    "localization/russian/sitai_original_company_candidate_l_russian.yml": {
+      "delivery_sha256": "8ddf561b19d5aebe1b22a55e71d7140c3ea90f205a478ea00c3ff4674e0fb5eb",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[russian]"
+    },
+    "localization/simp_chinese/sitai_original_company_candidate_l_simp_chinese.yml": {
+      "delivery_sha256": "0bf48f9d5034552e0a15bd5c5377a901475b80ac23087522820540a669e12d3f",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[simp_chinese]"
+    },
+    "localization/spanish/sitai_original_company_candidate_l_spanish.yml": {
+      "delivery_sha256": "68bb51ab0dc9d289e3cfdbd1749cd85ed7ec2a9e42a3c659e49b24a5c7e58942",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[spanish]"
+    },
+    "localization/turkish/sitai_original_company_candidate_l_turkish.yml": {
+      "delivery_sha256": "41c5cda112bfa261f74153d1f566b0339fc24f598d30670cfe39c32f76aa514f",
+      "origin": "pdx.original_candidate.SCOPE_TEXT[turkish]"
+    },
+    "thumbnail.png": {
+      "delivery_sha256": "d9dba46a83b9348372ad538e59c11badd1e4e7deae6a90e7fe6fecf68a77d2e8",
+      "origin": "53ce21be:mod/thumbnail.png"
+    }
+  },
+  "schema": 1,
+  "source_commit": "4d5355b4205906e6ae0b8844d1b16539b3cc9e17"
+}

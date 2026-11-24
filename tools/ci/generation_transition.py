@@ -267,6 +267,8 @@ def plan_transition(
             }
         )
     return {
+        "check_scope": "file_ownership_only",
+        "retirement_authorized": False,
         "head": head,
         "previous_commit": previous_commit,
         "previous_lock_sha256": original[LOCK],
@@ -281,14 +283,29 @@ def main() -> int:
     parser.add_argument("--previous-commit", required=True)
     parser.add_argument("--successor-lock", type=Path, required=True)
     parser.add_argument("--successor-sha256", required=True)
+    parser.add_argument(
+        "--writer-candidate",
+        type=Path,
+        help="Require the original company's frozen ZIP and per-writer retirement evidence",
+    )
     args = parser.parse_args()
     try:
+        successor_lock = args.successor_lock.read_bytes()
         report = plan_transition(
             args.repo.resolve(strict=True),
             args.previous_commit,
-            args.successor_lock.read_bytes(),
+            successor_lock,
             args.successor_sha256,
         )
+        if args.writer_candidate is not None:
+            from pdx.writer_transition import check_candidate  # noqa: PLC0415
+
+            previous = _git(args.repo, "show", f"{args.previous_commit}:mod/{LOCK}")
+            report["writer_transition"] = check_candidate(
+                args.writer_candidate,
+                successor_files=_outputs(successor_lock),
+                previous_files=_outputs(previous),
+            )
     except (OSError, ValueError) as exc:
         parser.exit(1, f"{exc}\n")
     print(json.dumps(report, indent=2, ensure_ascii=False))

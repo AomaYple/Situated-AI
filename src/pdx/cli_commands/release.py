@@ -165,10 +165,22 @@ def modguard_cmd(
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
     ] = None,
+    writer_transition: Annotated[
+        Path | None,
+        typer.Option("--writer-transition", help="从冻结原创候选 ZIP 核对 3.4.0 逐写点处置"),
+    ] = None,
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     require_workspace()
     try:
+        if writer_transition is not None:
+            from pdx.writer_transition import check_candidate  # noqa: PLC0415
+
+            version_contracts.require_current(profile)
+            if configuration is not None:
+                raise ValueError("逐写点核对使用已冻结候选的配置")
+            console.print_json(data=check_candidate(writer_transition))
+            return
         _production_profile(profile, offline=offline)
         if offline:
             distribution.check_generation_lock()
