@@ -238,9 +238,9 @@ python tools/ci/run_check.py types
 python tools/ci/run_check.py baseline-offline
 ```
 
-`baseline-offline` 与三平台 CI 使用同一入口，依次核对依赖、离线断言、离线生成表格、Mod 门禁、情境决策合同、AI 可执行面和死代码报告。`baseline` 复用这七项，指定 `--profile` 时追加实装检查。
+`baseline-offline` 与三平台 CI 使用同一入口，依次核对依赖、离线断言、离线生成表格、Mod 门禁、情境决策合同、AI 可执行面和死代码报告。`baseline` 复用这七项，然后对本机锁定安装运行 `political-surface --check` 和 `modgen --check`。
 
-带 `--profile` 的静态基线追加生产生成检查，需要本机锁定安装。完整验收始终核对当前安装身份。
+完整验收始终核对当前安装身份。
 
 ```text
 python tools/ci/run_check.py baseline --profile 1.15.2

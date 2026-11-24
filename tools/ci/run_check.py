@@ -169,12 +169,13 @@ def main() -> int:
         commands = list(BASELINE_COMMANDS)
         if check == "baseline":
             commands.extend(
-                (f"{current} {name}", ["pdx.cli", name, "--profile", current, *options])
-                for name, options in (
-                    ("modgen", ["--check"]),
-                    ("modguard", ["--offline"]),
-                    ("decision-audit", ["--offline"]),
-                )
+                [
+                    (
+                        f"{current} political-surface",
+                        ["pdx.cli", "political-surface", "--check"],
+                    ),
+                    (f"{current} modgen", ["pdx.cli", "modgen", "--profile", current, "--check"]),
+                ]
             )
         for label, command in commands:
             print(f"[{check}] {label}", flush=True)
