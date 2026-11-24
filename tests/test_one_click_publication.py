@@ -324,6 +324,84 @@ def test_preflight_block_prevents_any_channel_mutation(monkeypatch, identity, bu
     assert gh.mutations == []
 
 
+@pytest.mark.parametrize("channel", ["github", "workshop"])
+def test_known_payload_blocks_public_writes_even_after_package_metadata_changes(
+    monkeypatch, identity, bundle, channel
+):
+    identity = replace(identity, channels=(channel,))
+    if channel == "workshop":
+        identity = replace(identity, workshop_item="123", workshop_owner="76561198000000001")
+    historical_path = next(
+        path
+        for path in runner._RETAINED_VANILLA_PAYLOADS.values()
+        if path != "common/ai_strategies/00_default_strategy.txt"
+    )
+    retained = b"\xef\xbb\xbfsynthetic = yes\n"
+    monkeypatch.setitem(
+        runner._RETAINED_VANILLA_PAYLOADS, hashlib.sha256(retained).hexdigest(), historical_path
+    )
+    assert identity.publication_dir is not None
+    version_metadata = bundle.files[distribution.METADATA_NAME]
+    repacked = distribution.write_zip(
+        {
+            distribution.METADATA_NAME: version_metadata.replace(b"example", b"changed metadata"),
+            "common/renamed.txt": retained,
+            "common/independent.txt": "independent = yes\n",
+        },
+        identity.publication_dir.parent / "repacked.zip",
+        generation=distribution.generation_contract(),
+    )
+    repacked_bundle = runner._read_bundle(repacked.read_bytes(), identity.version)
+    assert repacked_bundle.sha256 != bundle.sha256
+    monkeypatch.setattr(runner, "_build", lambda _version: repacked_bundle)
+    monkeypatch.setattr(distribution, "validate_package", lambda _path: None)
+
+    def fail_if_channel_reached(*_args, **_kwargs):
+        pytest.fail("A blocked payload reached channel preflight or apply")
+
+    with monkeypatch.context() as apply:
+        apply.setattr(runner, "_preflight", fail_if_channel_reached)
+        apply.setattr(runner, "_apply_channels", fail_if_channel_reached)
+        for _ in range(2):
+            result = runner.run_release(identity)
+            assert result["status"] == "blocked"
+            error = result["error"]
+            assert isinstance(error, str)
+            assert "common/renamed.txt" in error
+            assert historical_path in error
+
+    receipt = identity.publication_dir / "publication.json"
+    before = receipt.read_bytes()
+    monkeypatch.setattr(runner, "_preflight", lambda *_args, **_kwargs: {"status": "ready"})
+    monkeypatch.setattr(runner, "_apply_channels", fail_if_channel_reached)
+    planned = runner.plan_release(identity)
+    assert planned["status"] == "planned"
+    assert planned["package"] == repacked_bundle.receipt()
+    assert receipt.read_bytes() == before
+
+
+def test_original_bytes_at_a_registered_path_follow_existing_publication_checks(
+    monkeypatch, identity, bundle
+):
+    identity = replace(identity, channels=("github",))
+    historical_path = next(iter(runner._RETAINED_VANILLA_PAYLOADS.values()))
+    assert identity.publication_dir is not None
+    archive = distribution.write_zip(
+        {
+            distribution.METADATA_NAME: bundle.files[distribution.METADATA_NAME],
+            historical_path: "independently_authored = yes\n",
+        },
+        identity.publication_dir.parent / "original.zip",
+        generation=distribution.generation_contract(),
+    )
+    original = runner._read_bundle(archive.read_bytes(), identity.version)
+    gh = FakeGitHub(identity)
+    monkeypatch.setattr(runner, "GitHubClient", lambda _repo: gh)
+    monkeypatch.setattr(runner, "_build", lambda _version: original)
+    assert runner.run_release(identity)["status"] == "verified"
+    assert gh.mutations
+
+
 def test_bad_local_staging_blocks_before_github_write(monkeypatch, identity, bundle):
     identity = replace(identity, channels=("github", "local"))
     gh = FakeGitHub(identity)
