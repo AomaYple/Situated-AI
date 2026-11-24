@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import sys
 import zipfile
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
@@ -11,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from pdx import decision_adapters, decision_rules
-from pdx.model import Assignment, Block, Scalar
+from pdx.model import Assignment, Block, ParseError, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, engine_scope, pdx_eval
 from pdx.textio import text_bytes
@@ -297,10 +299,10 @@ def test_rejects_installation_read_drift(fixture, tmp_path, monkeypatch):
         (game / reader_source).write_text(reader_text + " updated", encoding="utf-8")
         return result
 
-    assert probe.render_installation(tmp_path) == probe.render(snapshot_adapters, **params)
+    assert probe._render_installation(tmp_path) == probe.render(snapshot_adapters, **params)
     monkeypatch.setattr(probe, "render", render_then_change)
     with pytest.raises(ValueError, match="bytes changed"):
-        probe.render_installation(tmp_path)
+        probe._render_installation(tmp_path)
 
 
 def test_verify_candidate_binds_archive_member_and_installation(tmp_path, monkeypatch):
@@ -316,13 +318,15 @@ def test_verify_candidate_binds_archive_member_and_installation(tmp_path, monkey
 
     installation = tmp_path / "installation"
 
-    def render(root):
-        assert root == installation
-        return {probe.OUTPUT: score.replace("value = 1\n", "value = 1 \n")}
+    def compile_in_selected_environment(command, **options):
+        assert command[-1] == str(installation)
+        assert options["env"]["V3_ROOT"] == str(installation)
+        output = hashlib.sha256(member).hexdigest() + "\n"
+        return subprocess.CompletedProcess(command, 0, stdout=output, stderr="")
 
-    monkeypatch.setattr(probe, "render_installation", render)
+    monkeypatch.setattr(subprocess, "run", compile_in_selected_environment)
     assert probe.verify_candidate(archive_path, installation) == digest
-    monkeypatch.setattr(probe, "render_installation", lambda _: {probe.OUTPUT: score + "# drift"})
+    monkeypatch.setattr(probe, "_installation_digest", lambda _: "different bytes")
     with pytest.raises(ValueError, match="Installation render differs"):
         probe.verify_candidate(archive_path, installation)
     monkeypatch.setattr(probe, "MEMBER_SHA256", "wrong")
@@ -332,3 +336,37 @@ def test_verify_candidate_binds_archive_member_and_installation(tmp_path, monkey
         stream.write(b"extra")
     with pytest.raises(ValueError, match="frozen D08 candidate"):
         probe.verify_candidate(archive_path)
+
+
+def test_worker_reports_parse_failure_without_traceback(tmp_path, monkeypatch, capsys):
+    def fail(*_args):
+        raise ParseError("unclosed block", probe.SOURCE, 2)
+
+    monkeypatch.setattr(probe, "_render_installation", fail)
+    assert probe._render_member_digest(tmp_path) == 2
+    output = capsys.readouterr()
+    assert not output.out
+    assert output.err == f"{probe.SOURCE}:2: unclosed block\n"
+
+
+def test_cli_reports_worker_failure_without_traceback(tmp_path, monkeypatch, capsys):
+    def fail(*_args, **_kwargs):
+        return subprocess.CompletedProcess(["worker"], 2, stdout="", stderr="unclosed block\n")
+
+    archive_path = tmp_path / "candidate.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr(probe.OUTPUT, b"synthetic company member")
+    monkeypatch.setattr(
+        probe, "FROZEN_SHA256", hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    )
+    monkeypatch.setattr(
+        probe, "MEMBER_SHA256", hashlib.sha256(b"synthetic company member").hexdigest()
+    )
+    monkeypatch.setattr(subprocess, "run", fail)
+    monkeypatch.setattr(
+        sys, "argv", ["probe", "--archive", str(archive_path), "--installation", str(tmp_path)]
+    )
+    assert probe.main() == 2
+    output = capsys.readouterr()
+    assert not output.out
+    assert output.err == "unclosed block\n"
