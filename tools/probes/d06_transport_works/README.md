@@ -21,7 +21,7 @@
 
 - 诊断的固定 `+3` 在入场余量恰好 `−5` 且 `G ≥ 8` 时可触发自撤销与再次施行。候选在直接有效增量受预留覆盖时，回收后的外部余量至少为 `+3`，和重新入场的 `−5` 相差 8。只要真实增量比预留多的小于 8，固定外部条件下也不会立即重新合资格。
 - 若外部条件改善使在位有效余量过线，候选可回收权威。非正乘数下会比精确扣除稍晚，外部余量约 `+3` 到 `+8` 时可能阶段性保留。若以后独立缺口重新落到 `−5`，原版可重新施行。
-- 原版州具名值以有效容量减用量。原版脚本使用州作用域修饰查询，目标修饰由原版定义为百分比型。此前 Bahia 存档中的 `+5 → 有效差 +4.5` 与上述模型一致，当时两臂还相差两个游戏刻。当前证据尚未校准州读点的修饰聚合、容量刷新相位或高乘数下的实际增益。回收阈值、退款、AI 再采纳及州易主须实机签收。 [原版值](<C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game/common/script_values/objective_values.txt:3>) · [州修饰读取](<C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game/common/script_values/building_values.txt:42>) · [州修饰类型](<C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game/common/modifier_type_definitions/00_modifier_types.txt:2116>)
+- 原版州具名值以有效容量减用量。原版脚本使用州作用域修饰查询，目标修饰由原版定义为百分比型。此前 Bahia 存档中的 `+5 → 有效差 +4.5` 与上述模型一致，当时两臂还相差两个游戏刻。当前证据尚未校准州读点的修饰聚合、容量刷新相位或高乘数下的实际增益。回收阈值、退款、AI 再采纳及州易主须实机签收。 原版值见 `C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game/common/script_values/objective_values.txt:3`，州修饰读取见 `C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game/common/script_values/building_values.txt:42`，州修饰类型见 `C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game/common/modifier_type_definitions/00_modifier_types.txt:2116`。
 
 动态门只在原版法令求值时读取州。曾考虑独立定时冷却，不过需要写入逐州标记和处理州易主、手动撤销与旧存档恢复，也无法直接判断恢复后的容量。本候选优先验证州作用域读取和原版周度失效。若引擎读点漏掉参与该容量计算的乘数来源，需以同档施行和移除对照重估边界，不能据离线模型给更广的资格承诺。
 
