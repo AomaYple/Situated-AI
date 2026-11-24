@@ -136,10 +136,22 @@ def package_cmd(
     configuration: Annotated[
         Path | None, typer.Option("--configuration", help="1.15 profile TOML 配置")
     ] = None,
+    original_candidate: Annotated[
+        bool, typer.Option("--original-candidate", help="从原创生成器冻结独立候选安装树和 ZIP")
+    ] = False,
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
     require_workspace()
     try:
+        if original_candidate:
+            if output != distribution.DEFAULT_PACKAGE_PATH or configuration is not None:
+                raise ValueError("原创候选使用固定的隔离目录与已审功能范围")
+            version_contracts.require_current(profile)
+            from pdx import original_candidate as candidate  # noqa: PLC0415
+
+            target = candidate.build()
+            console.print(f"[green]已冻结原创本地候选[/] {escape(str(target))}")
+            return
         _production_profile(profile)
         target = distribution.package(output, configuration=_profile_configuration(configuration))
     except (ValueError, OSError) as exc:

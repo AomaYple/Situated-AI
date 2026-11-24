@@ -11,7 +11,7 @@ import stat
 import struct
 import tempfile
 import zipfile
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
@@ -65,6 +65,22 @@ INSTALL_DIRECTORY_NAME = "Situated AI"
 DEFAULT_PACKAGE_PATH = Path("dist") / f"situated-ai-{RELEASE_VERSION}.zip"
 
 
+@dataclass(frozen=True, slots=True)
+class CandidateIdentity:
+    mod_id: str
+    install_directory: str
+
+    def __post_init__(self) -> None:
+        if (
+            re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", self.mod_id) is None
+            or self.mod_id == MOD_ID
+            or "/" in self.install_directory
+            or self.install_directory.casefold() in {".", INSTALL_DIRECTORY_NAME.casefold()}
+        ):
+            raise ValueError("独立候选包需要独立 Mod 身份和安装目录")
+        _validate_paths([self.install_directory])
+
+
 def generation_contract() -> dict[str, object]:
     """返回生成、部署、测试和发布共用的正式交付契约。
 
@@ -85,13 +101,18 @@ def generation_contract() -> dict[str, object]:
 
 
 def _manifest_for_payloads(
-    data: Mapping[str, bytes], *, generation: Mapping[str, object] | None = None
+    data: Mapping[str, bytes],
+    *,
+    generation: Mapping[str, object] | None = None,
+    candidate: CandidateIdentity | None = None,
 ) -> dict[str, object]:
     """从最终交付字节构造清单；ZIP 与发布校验共用这一份逻辑。"""
+    mod_id = MOD_ID if candidate is None else candidate.mod_id
+    install_directory = INSTALL_DIRECTORY_NAME if candidate is None else candidate.install_directory
     manifest: dict[str, object] = {
         "schema": 2,
-        "mod_id": MOD_ID,
-        "install_directory": INSTALL_DIRECTORY_NAME,
+        "mod_id": mod_id,
+        "install_directory": install_directory,
         "encoding": "游戏 .txt/.yml：UTF-8 含 BOM、LF；其他文本：UTF-8 无 BOM、LF",
         "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in data.items()},
     }
@@ -113,11 +134,10 @@ def _manifest_for_payloads(
         }
         if (
             not isinstance(contract, dict)
-            or contract.get("id") != MOD_ID
+            or contract.get("id") != mod_id
             or not isinstance(contract.get("name"), str)
         ):
             raise ValueError("交付元数据缺少稳定 Mod 身份")
-        manifest["mod_id"] = contract["id"]
         if not required <= contract.keys():
             raise ValueError("交付元数据缺少包契约字段")
         if not isinstance(contract["tags"], list) or not isinstance(
@@ -128,6 +148,8 @@ def _manifest_for_payloads(
             "product_version": contract["version"],
             "game_version": contract["supported_game_version"],
         }
+    elif candidate is not None:
+        raise ValueError("候选包缺少启动器元数据")
     if generation is not None:
         manifest["generation"] = dict(generation)
         product_contract = generation.get("product_contract")
@@ -147,8 +169,13 @@ def _validate_archive(
     expected_data: Mapping[str, bytes] | None,
     expected_generation: Mapping[str, object] | None,
     release: bool,
+    candidate: CandidateIdentity | None = None,
 ) -> dict[str, object]:
     """校验 ZIP；公开发布校验额外要求与当前生产源逐字节一致。"""
+    if release and candidate is not None:
+        raise ValueError("正式包不能使用候选身份")
+    mod_id = MOD_ID if candidate is None else candidate.mod_id
+    install_directory = INSTALL_DIRECTORY_NAME if candidate is None else candidate.install_directory
     with zipfile.ZipFile(archive_path) as archive:
         broken = archive.testzip()
         if broken:
@@ -167,10 +194,9 @@ def _validate_archive(
             raise ValueError("交付清单必须是 JSON 对象")
         if manifest.get("schema") != 2:
             raise ValueError("交付清单版本不受支持")
-        mod_id = manifest.get("mod_id")
-        if mod_id != MOD_ID:
+        if manifest.get("mod_id") != mod_id:
             raise ValueError("交付清单的稳定 Mod 身份不符")
-        if manifest.get("install_directory") != INSTALL_DIRECTORY_NAME:
+        if manifest.get("install_directory") != install_directory:
             raise ValueError("交付清单的安装目录不符")
         generation = manifest.get("generation")
         if expected_generation is not None:
@@ -198,7 +224,7 @@ def _validate_archive(
                 raise ValueError(f"交付文件不是 UTF-8：{name}") from exc
             if raw.startswith(codecs.BOM_UTF8) != game or "\ufeff" in decoded or "\r" in decoded:
                 raise ValueError(f"交付文件 BOM/LF 不符：{name}")
-        regenerated = _manifest_for_payloads(data, generation=generation)
+        regenerated = _manifest_for_payloads(data, generation=generation, candidate=candidate)
         if manifest != regenerated:
             raise ValueError("交付清单与元数据契约不一致")
         if expected_data is not None:
@@ -471,11 +497,14 @@ def write_zip(
     *,
     generation: Mapping[str, object] | None = None,
     release: bool = False,
+    candidate: CandidateIdentity | None = None,
     before_replace: Callable[[], None] | None = None,
 ) -> Path:
     """先完成并核验临时 ZIP，再原子替换目标；不修改仓库产物。"""
+    if release and candidate is not None:
+        raise ValueError("正式包不能使用候选身份")
     data = payloads(files)
-    manifest = _manifest_for_payloads(data, generation=generation)
+    manifest = _manifest_for_payloads(data, generation=generation, candidate=candidate)
     data[MANIFEST_NAME] = text_bytes(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=destination.parent, suffix=".zip", delete=False) as stream:
@@ -501,6 +530,7 @@ def write_zip(
             expected_data=payloads(files),
             expected_generation=generation,
             release=release,
+            candidate=candidate,
         )
         if before_replace is not None:
             before_replace()
