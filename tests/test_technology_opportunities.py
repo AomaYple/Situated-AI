@@ -270,7 +270,6 @@ def test_labor_query_keeps_actual_method_employment_and_reserve_pool_on_same_sta
     catalog = module.inventory(
         _native_inputs(), {"threshing_machine": "common/technology/technologies/20_military.txt"}
     )
-    # Bind the actual resolver in every profile; 1.15.1 has a separate cache.
     monkeypatch.setattr(module, "_query_catalog", lambda: catalog)
     query = module.query_from_reader(
         "any_scope_state",
@@ -356,7 +355,6 @@ def test_output_shortage_is_a_supply_opportunity_but_consuming_unit_is_not(monke
     catalog = module.inventory(
         _native_inputs(), dict.fromkeys(("artillery", "general_staff", "threshing_machine"), source)
     )
-    # Bind the actual resolver in every profile; 1.15.1 has a separate cache.
     monkeypatch.setattr(module, "_query_catalog", lambda: catalog)
     derived = module.derive({"sources": catalog["sources"], "readers": {}, "rules": []}, catalog)
     artillery = _policy(derived, "artillery")

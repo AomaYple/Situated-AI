@@ -5,7 +5,7 @@ from dataclasses import FrozenInstanceError, asdict, replace
 
 import pytest
 
-from pdx import country_state, decision_adapters, decision_rules, decisions, version_contracts
+from pdx import country_state, decision_adapters, decision_rules, decisions
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -215,8 +215,7 @@ def test_production_compiler_contains_each_configured_enum_once():
         writer.supply_program is program for writer, program in zip(rows, programs, strict=True)
     )
     assert all(writer.owner == "supply_plan" for writer in rows)
-    version = version_contracts.active_version()
-    merged = {"radios", "telephones", "oil"} if version in {"1.15.1", "1.15.2"} else set()
+    merged = {"radios", "telephones", "oil"}
     operations = {}
     for writer in rows:
         assert writer.supply_program is not None
