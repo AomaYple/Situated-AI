@@ -17,6 +17,8 @@ R2 的 S0 设计和 A0–A6 在道路、学校与改善关系三个消费者上�
 
 可读归档只调整相对链接。原件为 24,096 字节，SHA-256 为 `cfa22a7f4082c9d9c62b92e96b43aba4c27017e412b8c7c7c91adfc237bd1077`。 [原始实施计划](https://github.com/AomaYple/Situated-AI/blob/68d3f16921cb0545a7fe56a167135b30bd631423/docs/design/exec/1.15%E6%9E%B6%E6%9E%84-%E5%AE%9E%E6%96%BD%E8%AE%A1%E5%88%92.md)
 
+同时保留当时的安装身份、AST 比较和旧快照对照。可读归档只调整两个相对链接。原件为 4,389 字节，SHA-256 为 `4591da19b137eed93bc081fa512be22c3ce573e73dc95280438d8b07114b7c88`。 [底本勘察](1.15底本勘察.md) · [原始底本勘察](https://github.com/AomaYple/Situated-AI/blob/4c8477e5d4f0fb8f62d1faee9bd5287e285b0236/docs/design/1.15%E5%BA%95%E6%9C%AC%E5%8B%98%E5%AF%9F.md)
+
 ## X1 广度深度拓展计划
 
 [X1主计划](X1/架构主计划.md)与[X1子计划](X1/架构子计划.md)的 X0–X6 和十一项小计划已完成，随3.2.0交付。
