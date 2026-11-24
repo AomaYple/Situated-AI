@@ -9,7 +9,13 @@ import typer
 
 from pdx import distribution
 from pdx.cli_commands.common import EXIT_FAILED, console, fail, require_workspace
-from pdx.publishing.runner import CHANNELS, ReleaseIdentity, plan_release, run_release
+from pdx.publishing.runner import (
+    CHANNELS,
+    ReleaseIdentity,
+    SuccessorReview,
+    plan_release,
+    run_release,
+)
 
 
 def publish_cmd(
@@ -53,6 +59,18 @@ def publish_cmd(
         str | None,
         typer.Option("--expected-github-notes-sha256", help="预审后的 GitHub 发布说明 SHA-256"),
     ] = None,
+    successor_review: Annotated[
+        Path | None,
+        typer.Option("--successor-review", help="包外后继来源审查 JSON"),
+    ] = None,
+    successor_review_sha256: Annotated[
+        str | None,
+        typer.Option("--successor-review-sha256", help="独立固定的审查原字节 SHA-256"),
+    ] = None,
+    previous_release_zip: Annotated[
+        Path | None,
+        typer.Option("--previous-release-zip", help="首次切换所用的正式 3.4.0 ZIP"),
+    ] = None,
 ) -> None:
     """Build, validate, publish, and install the same release package."""
     require_workspace()
@@ -60,7 +78,19 @@ def publish_cmd(
     unknown = set(selected) - CHANNELS
     if unknown:
         fail("未知发布渠道：" + ", ".join(sorted(unknown)))
+
     try:
+        proof = None
+        if (
+            successor_review is not None
+            or successor_review_sha256 is not None
+            or previous_release_zip is not None
+        ):
+            if successor_review is None or successor_review_sha256 is None:
+                raise ValueError("后继来源核对要求同时指定审查文件和独立摘要")
+            proof = SuccessorReview(
+                successor_review, successor_review_sha256.lower(), previous_release_zip
+            )
         identity = ReleaseIdentity(
             version=version,
             tag=tag or f"v{version}",
@@ -85,9 +115,9 @@ def publish_cmd(
             if identity.github_notes_sha256 != expected_github_notes_sha256.lower():
                 raise ValueError("GitHub 发布说明的 SHA-256 与预审摘要不同")
         if apply:
-            result = run_release(identity)
+            result = run_release(identity, successor_review=proof)
         else:
-            result = plan_release(identity)
+            result = plan_release(identity, successor_review=proof)
     except (ValueError, OSError, RuntimeError) as exc:
         fail(f"发布受阻：{exc}", EXIT_FAILED)
     console.print_json(data=result)

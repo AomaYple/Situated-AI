@@ -413,7 +413,7 @@ def test_successor_cli_reconciles_a_second_database(tmp_path, monkeypatch, capsy
     monkeypatch.setattr(tr, "BASE_ZIP_SHA256", digest(baseline_zip.read_bytes()))
     monkeypatch.setattr(tr, "BASE_WRITERS", len(rows))
     monkeypatch.setattr(tr, "LEDGER_SHA256", digest(ledger.read_bytes()))
-    monkeypatch.setattr(gt.version_contracts, "research_path", lambda *_args: ledger)
+    monkeypatch.setattr(tr.version_contracts, "research_path", lambda *_args: ledger)
 
     metadata: dict[str, object] = dict.fromkeys(distribution.LAUNCHER_METADATA_KEYS, "fixture")
     metadata.update(id=distribution.MOD_ID, tags=[], relationships=[], game_custom_data={})
