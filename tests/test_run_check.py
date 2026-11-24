@@ -172,9 +172,7 @@ def test_python_package_uses_existing_module_and_preserves_exit_status(monkeypat
 
 
 @pytest.mark.parametrize("profile", [version_contracts.CURRENT_VERSION, None])
-def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
-    monkeypatch, profile
-):
+def test_baseline_runs_shared_gates_once_and_checks_live_generation(monkeypatch, profile):
     selected = profile or version_contracts.CURRENT_VERSION
     calls = []
 
@@ -189,12 +187,7 @@ def test_versioned_baseline_retains_every_existing_gate_and_adds_profile_checks(
     monkeypatch.setattr(run_check.subprocess, "run", run)
     assert run_check.main() == 0
     original = [command for _, command in run_check.BASELINE_COMMANDS]
-    assert calls[: len(original)] == original
-    assert calls[len(original) :] == [
-        ["pdx.cli", "modgen", "--profile", selected, "--check"],
-        ["pdx.cli", "modguard", "--profile", selected, "--offline"],
-        ["pdx.cli", "decision-audit", "--profile", selected, "--offline"],
-    ]
+    assert calls == [*original, ["pdx.cli", "modgen", "--profile", selected, "--check"]]
 
 
 def test_offline_baseline_runs_the_shared_gates_without_live_generation(monkeypatch):

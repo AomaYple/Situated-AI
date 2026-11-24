@@ -168,13 +168,8 @@ def main() -> int:
         assert current is not None
         commands = list(BASELINE_COMMANDS)
         if check == "baseline":
-            commands.extend(
-                (f"{current} {name}", ["pdx.cli", name, "--profile", current, *options])
-                for name, options in (
-                    ("modgen", ["--check"]),
-                    ("modguard", ["--offline"]),
-                    ("decision-audit", ["--offline"]),
-                )
+            commands.append(
+                (f"{current} modgen", ["pdx.cli", "modgen", "--profile", current, "--check"])
             )
         for label, command in commands:
             print(f"[{check}] {label}", flush=True)
