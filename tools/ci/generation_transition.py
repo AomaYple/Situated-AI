@@ -10,10 +10,15 @@ import os
 import re
 import stat
 import subprocess
+import zipfile
+from functools import cache
 from pathlib import Path, PurePosixPath
 
-from pdx import distribution
+from pdx import distribution, version_contracts, writer_transition
+from pdx.model import ParseError
 from pdx.publishing.local import checked_path
+from pdx.publishing.runner import _RETAINED_VANILLA_PAYLOADS
+from pdx.successor_sources import check_reviewed_sources, object_from_json, sha256
 
 LOCK = "generation-lock.json"
 DIRECTORIES = ("common", "localization", ".metadata")
@@ -277,6 +282,116 @@ def plan_transition(
     }
 
 
+def _reviewed_commit(repo: Path, commit: object) -> str:
+    if not isinstance(commit, str) or not re.fullmatch(r"(?:[a-f0-9]{40}|[a-f0-9]{64})", commit):
+        raise ValueError("Expected an immutable reviewed Git commit")
+    if _git(repo, "cat-file", "-t", commit) != b"commit\n":
+        raise ValueError("Reviewed Git identity must be a commit object")
+    return commit
+
+
+def _read_blob(repo: Path, commit: str, path: str) -> bytes:
+    entries = _git(repo, "ls-tree", "-z", commit, "--", f":(literal){path}").split(b"\0")
+    if (
+        len(entries) != 2
+        or not entries[0].startswith(b"100644 blob ")
+        or entries[0].partition(b"\t")[2] != path.encode()
+    ):
+        raise ValueError(f"Expected a recoverable regular Git source: {path}")
+    oid = entries[0].split(None, 3)[2].decode()
+    return _git(repo, "cat-file", "blob", oid)
+
+
+def verify_successor(
+    repo: Path,
+    plan: dict[str, object],
+    successor_lock: bytes,
+    baseline_archive: Path,
+    candidate_archive: Path,
+    review: bytes,
+    review_sha256: str,
+    *,
+    installation: Path | None = None,
+) -> dict[str, object]:
+    """Check the paired Git, lock, ZIP, source and writer identities without a renderer."""
+    if sha256(review) != review_sha256:
+        raise ValueError("Package source review differs from independent approval")
+    decision = object_from_json(review)
+    previous_commit = _reviewed_commit(repo, plan["previous_commit"])
+    release_commit = _reviewed_commit(repo, writer_transition.BASE_RELEASE_COMMIT)
+    previous_lock = _read_blob(repo, previous_commit, f"mod/{LOCK}")
+    release_lock = _read_blob(repo, release_commit, f"mod/{LOCK}")
+    previous_files = _outputs(previous_lock)
+    if (
+        previous_files != _outputs(release_lock)
+        or sha256(previous_lock) != plan["previous_lock_sha256"]
+    ):
+        raise ValueError("Predecessor generation differs from the 3.4.0 release payload")
+    expected_baseline = {
+        "commit": previous_commit,
+        "release_commit": release_commit,
+        "generation_lock_sha256": sha256(previous_lock),
+        "archive_sha256": writer_transition.BASE_ZIP_SHA256,
+        "writer_inventory_sha256": writer_transition.LEDGER_SHA256,
+    }
+    if decision.get("schema") != 2 or decision.get("baseline") != expected_baseline:
+        raise ValueError("Successor review does not identify the frozen predecessor")
+    with baseline_archive.open("rb") as stream:
+        if hashlib.file_digest(stream, "sha256").hexdigest() != expected_baseline["archive_sha256"]:
+            raise ValueError("Predecessor ZIP differs from the 3.4.0 release")
+    successor_commit = _reviewed_commit(repo, decision.get("source_commit"))
+    lock_sha = sha256(successor_lock)
+    if (
+        lock_sha != plan["successor_lock_sha256"]
+        or lock_sha != decision.get("generation_lock_sha256")
+        or successor_lock != _read_blob(repo, successor_commit, f"mod/{LOCK}")
+    ):
+        raise ValueError("Successor lock differs from the approved Git source")
+
+    @cache
+    def source(path: str) -> bytes:
+        return _read_blob(repo, successor_commit, path)
+
+    successor_files = _outputs(successor_lock)
+    if _git_outputs(repo, successor_commit).keys() != {*successor_files, LOCK}:
+        raise ValueError("Successor Git generation differs from its lock")
+    locked_sources = object_from_json(successor_lock).get("sources")
+    if not isinstance(locked_sources, dict) or not locked_sources:
+        raise ValueError("Successor lock lacks generation source identities")
+    payload = writer_transition.verify_package_sources(
+        candidate_archive.read_bytes(), review, trusted_review_sha256=review_sha256
+    )
+    for name, raw in payload.items():
+        if previous_name := _RETAINED_VANILLA_PAYLOADS.get(sha256(raw)):
+            raise ValueError(
+                f"Candidate member {name} reproduces retained 3.4.0 bytes: {previous_name}"
+            )
+    check_reviewed_sources(payload, decision["members"], successor_files, locked_sources, source)
+    raw = version_contracts.research_path("situated", writer_transition.LEDGER).read_bytes()
+    if sha256(raw) != writer_transition.LEDGER_SHA256:
+        raise ValueError("Reviewed writer inventory changed")
+    rows = writer_transition._inventory(raw)
+    if len(rows) != writer_transition.BASE_WRITERS:
+        raise ValueError("Unexpected 3.4.0 writer denominator")
+    old_payload = {
+        name: _read_blob(repo, previous_commit, f"mod/{name}")
+        for name in previous_files
+        if name != distribution.THUMBNAIL_NAME
+    }
+    result = writer_transition.reconcile_successor_writers(
+        old_payload, payload, rows, decision, source, installation=installation
+    )
+    return {
+        "baseline": expected_baseline,
+        "source_commit": successor_commit,
+        "generation_lock_sha256": lock_sha,
+        "candidate_zip_sha256": decision["archive_sha256"],
+        "package_source_review_sha256": review_sha256,
+        "reviewed_payload_members": len(payload),
+        **result,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, required=True)
@@ -288,7 +403,28 @@ def main() -> int:
         type=Path,
         help="Require the original company's frozen ZIP and per-writer retirement evidence",
     )
+    parser.add_argument("--successor-archive", type=Path, help="Frozen successor ZIP")
+    parser.add_argument("--baseline-archive", type=Path, help="Published 3.4.0 ZIP")
+    parser.add_argument("--successor-review", type=Path, help="Independent package/writer review")
+    parser.add_argument("--successor-review-sha256", help="Digest from independent review")
+    parser.add_argument(
+        "--installation",
+        type=Path,
+        help="Read-only locked Victoria 3 installation for original values (default: V3_ROOT or Steam)",
+    )
     args = parser.parse_args()
+    review_args = (
+        args.successor_archive,
+        args.baseline_archive,
+        args.successor_review,
+        args.successor_review_sha256,
+    )
+    use_review = any(value is not None for value in review_args)
+    if use_review and (not all(review_args) or args.writer_candidate is not None):
+        parser.error(
+            "Use the four successor review arguments together, separately from --writer-candidate"
+        )
+    exit_code = 0
     try:
         successor_lock = args.successor_lock.read_bytes()
         report = plan_transition(
@@ -298,18 +434,30 @@ def main() -> int:
             args.successor_sha256,
         )
         if args.writer_candidate is not None:
-            from pdx.writer_transition import check_candidate  # noqa: PLC0415
-
             previous = _git(args.repo, "show", f"{args.previous_commit}:mod/{LOCK}")
-            report["writer_transition"] = check_candidate(
+            report["writer_transition"] = writer_transition.check_candidate(
                 args.writer_candidate,
                 successor_files=_outputs(successor_lock),
                 previous_files=_outputs(previous),
             )
-    except (OSError, ValueError) as exc:
+        if use_review:
+            successor_result = verify_successor(
+                args.repo,
+                report,
+                successor_lock,
+                args.baseline_archive,
+                args.successor_archive,
+                args.successor_review.read_bytes(),
+                args.successor_review_sha256,
+                installation=args.installation,
+            )
+            report["writer_transition"] = successor_result
+            if not successor_result["writer_disposition_complete"]:
+                exit_code = 1
+    except (OSError, ValueError, ParseError, zipfile.BadZipFile) as exc:
         parser.exit(1, f"{exc}\n")
     print(json.dumps(report, indent=2, ensure_ascii=False))
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":
